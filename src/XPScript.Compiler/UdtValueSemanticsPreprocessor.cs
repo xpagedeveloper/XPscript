@@ -20,6 +20,7 @@ internal sealed class UdtValueSemanticsPreprocessor
 
         var variables = CollectVariables(lines);
         RewriteValueAssignments(lines, variables);
+        RewriteArrayMemberUses(lines, variables);
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -113,19 +114,109 @@ internal sealed class UdtValueSemanticsPreprocessor
                 !_types.TryGetValue(destinationInfo.Type, out var typeInfo))
                 continue;
 
-            if (typeInfo.Fields.Any(x => x.IsArray))
-                continue; // Deep-copy of array fields is added in the Type-array phase.
-
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var expanded = new List<string>();
             if (!destinationInfo.IsModuleGlobal)
                 expanded.Add(indent + $"Set {destination} = New {destinationInfo.Type}");
 
             foreach (var field in typeInfo.Fields)
-                expanded.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
+            {
+                if (field.IsArray)
+                    expanded.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({source}.{field.Name})");
+                else
+                    expanded.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
+            }
 
             lines[i] = string.Join(Environment.NewLine, expanded);
         }
+    }
+
+    private void RewriteArrayMemberUses(IList<string> lines, IReadOnlyDictionary<string, VariableInfo> variables)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var raw = lines[i];
+            var code = StripComment(raw);
+            var trimmed = code.Trim();
+            if (Regex.IsMatch(trimmed, @"^(?:(?:Public|Private)\s+)?Type\b", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(trimmed, @"^End\s+Type$", RegexOptions.IgnoreCase))
+                continue;
+
+            var rewritten = raw;
+            foreach (var variable in variables.OrderByDescending(x => x.Key.Length))
+            {
+                if (!_types.TryGetValue(variable.Value.Type, out var typeInfo)) continue;
+                foreach (var field in typeInfo.Fields.Where(x => x.IsArray).OrderByDescending(x => x.Name.Length))
+                {
+                    var variableName = Regex.Escape(variable.Key);
+                    var fieldName = Regex.Escape(field.Name);
+                    var target = variable.Key + "." + field.Name;
+
+                    var setter = Regex.Match(StripComment(rewritten).Trim(),
+                        $@"^{variableName}\.{fieldName}\s*\((.*)\)\s*=\s*(.+)$",
+                        RegexOptions.IgnoreCase);
+                    if (setter.Success)
+                    {
+                        var indexes = SplitArguments(setter.Groups[1].Value);
+                        var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
+                        rewritten = indent + "Call LSArrayRuntime.Set(" + target + ", " + setter.Groups[2].Value.Trim() +
+                                    (indexes.Count > 0 ? ", " + string.Join(", ", indexes) : "") + ")";
+                        continue;
+                    }
+
+                    var redim = Regex.Match(StripComment(rewritten).Trim(),
+                        $@"^ReDim\s+(Preserve\s+)?{variableName}\.{fieldName}\s*\((.*)\)\s*$",
+                        RegexOptions.IgnoreCase);
+                    if (redim.Success)
+                    {
+                        var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
+                        var args = BuildRuntimeBoundArguments(redim.Groups[2].Value);
+                        rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + field.Type + "\", " +
+                                    (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
+                        continue;
+                    }
+
+                    if (Regex.IsMatch(StripComment(rewritten).Trim(), $@"^Erase\s+{variableName}\.{fieldName}$", RegexOptions.IgnoreCase))
+                    {
+                        var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
+                        rewritten = indent + "Call LSArrayRuntime.Erase(" + target + ")";
+                        continue;
+                    }
+
+                    rewritten = ReplaceOutsideStrings(rewritten,
+                        $@"\bLBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)",
+                        m => "LSArrayRuntime.LBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten,
+                        $@"\bUBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)",
+                        m => "LSArrayRuntime.UBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten,
+                        $@"(?<![\w.]){variableName}\.{fieldName}\s*\(([^()]*)\)",
+                        m => "LSArrayRuntime.Get(" + target + (string.IsNullOrWhiteSpace(m.Groups[1].Value) ? "" : ", " + m.Groups[1].Value) + ")");
+                }
+            }
+            lines[i] = rewritten;
+        }
+    }
+
+    private static List<string> BuildRuntimeBoundArguments(string raw)
+    {
+        var dimensions = SplitArguments(raw);
+        var result = new List<string>(dimensions.Count * 2);
+        foreach (var dimension in dimensions)
+        {
+            var range = Regex.Match(dimension, @"^(.+?)\s+To\s+(.+)$", RegexOptions.IgnoreCase);
+            if (range.Success)
+            {
+                result.Add(range.Groups[1].Value.Trim());
+                result.Add(range.Groups[2].Value.Trim());
+            }
+            else
+            {
+                result.Add("0");
+                result.Add(dimension.Trim());
+            }
+        }
+        return result;
     }
 
     private static List<string> SplitArguments(string value)
@@ -152,6 +243,14 @@ internal sealed class UdtValueSemanticsPreprocessor
         }
         result.Add(value[start..].Trim());
         return result;
+    }
+
+    private static string ReplaceOutsideStrings(string input, string pattern, MatchEvaluator evaluator)
+    {
+        var parts = Regex.Split(input, "(\"(?:\"\"|[^\"])*\")");
+        for (var i = 0; i < parts.Length; i += 2)
+            parts[i] = Regex.Replace(parts[i], pattern, evaluator, RegexOptions.IgnoreCase);
+        return string.Concat(parts);
     }
 
     private static string StripComment(string line)
