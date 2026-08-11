@@ -121,8 +121,9 @@ Status:
 
 ## Documentation and examples
 
-- [ ] document `Evaluate(sourceText)` and `Evaluate(sourceText, callvar)` under `docs/`
-- [ ] reusable scalar/array/list examples under `examples/`
+- [>] `Evaluate(sourceText)` and `Evaluate(sourceText, callvar)` documented in `docs/evaluate.md`
+- [>] documentation examples intentionally reuse existing source fixtures under `samples/` rather than introducing unverified duplicate example programs
+- [>] scalar, array, List, error, security and budget samples are linked directly from `docs/evaluate.md`
 - [>] source regression coverage exists under `samples/`
 - [ ] negative concurrency/isolation tests when execution is re-enabled
 
