@@ -4,6 +4,27 @@
 
 XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 
+## Documentation
+
+The language/runtime reference is maintained under `docs/` and intentionally reuses source fixtures already present under `samples/`.
+
+Start with:
+
+- `docs/index.md` — documentation index mapped to sample files
+- `docs/core-language.md`
+- `docs/arrays-lists-operators.md`
+- `docs/types-classes-modules.md`
+- `docs/strings-conversion-base64.md`
+- `docs/math-functions.md`
+- `docs/date-time.md`
+- `docs/file-io-filesystem.md`
+- `docs/console-process-formatting.md`
+- `docs/platform-native.md`
+- `docs/native-http-json.md`
+- `docs/evaluate.md`
+
+Negative samples intentionally demonstrate errors and are identified as such in the documentation. Older compatibility fixtures are not automatically presented as the preferred standalone XPScript API.
+
 ## Compiler
 
 Build the compiler:
@@ -107,7 +128,7 @@ Declare Function NativeProcessId Lib "native-process" _
 
 Selection is based on the target RID passed to the compiler, not the operating system on which the compiler itself is running.
 
-Application-local native-library packaging and architecture-specific native asset staging remain tracked implementation items. See `todo/cross-platform-runtime-todo.md`.
+Application-local native-library packaging and exact x64/arm64 asset selection are implemented on the no-CI development branch and documented in `docs/platform-native.md`. Runtime verification on each target OS remains pending while execution is disabled.
 
 ## Operators and coercion
 
@@ -151,7 +172,7 @@ Binary lock ranges are byte based and 1-based at the XPScript surface. Random ra
 
 General file/path operations use .NET filesystem APIs so Windows, Linux and macOS retain their native path and filesystem behavior. `ChDrive` is intentionally Windows-only. Cross-platform differences such as file locking, case sensitivity, permissions, open-file deletion, symlinks, newline handling and file sharing are tracked in `todo/cross-platform-runtime-todo.md` and must be verified independently on each OS.
 
-Text I/O supports `Charset` and the independent `Encoding "base64"` storage layer. See `docs/text-io-console.md`.
+Text I/O supports `Charset` and the independent `Encoding "base64"` storage layer. See `docs/file-io-filesystem.md` and `docs/text-io-console.md`.
 
 ## Process execution
 
@@ -161,6 +182,8 @@ Text I/O supports `Charset` and the independent `Encoding "base64"` storage laye
 - Linux/macOS: executables, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` when PowerShell is installed
 
 Arguments are passed using structured process arguments where possible to avoid unnecessary shell re-parsing. Explicit shell syntax such as pipes/redirection remains a separate compatibility/security design item.
+
+See `docs/platform-native.md` and `docs/console-process-formatting.md`.
 
 ## HTTP
 
@@ -199,7 +222,7 @@ Available APIs include:
 - `JsonElement.Type`, `Value`
 - `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
 
-See `docs/http-json-compatibility.md` for the current API surface.
+See `docs/native-http-json.md` for the preferred standalone API.
 
 ## Runtime helpers
 
@@ -213,9 +236,13 @@ The standard runtime includes string, conversion, inspection, math, date/time, f
 - filesystem: `ChDir`, `ChDrive`, `CurDir`, `Dir`, `FileCopy`, `Kill`, `MkDir`, `RmDir`
 - Base64/URL: `Base64Encode`, `Base64Decode`, `Base64DecodeBinary`, `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
 
+The complete sample-based grouping is in `docs/index.md`.
+
 ## Samples
 
-The `samples` directory contains standalone `.xps` examples for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries and compiler compatibility behavior.
+The `samples` directory contains XPScript source fixtures for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries, Evaluate, security diagnostics and compiler compatibility behavior.
+
+Documentation should reuse these samples instead of creating duplicate example programs unless a new example is explicitly needed.
 
 ## Implementation status
 
@@ -223,6 +250,7 @@ The tracked implementation plan is maintained in:
 
 - `todo/runtime-reference-todo.md`
 - `todo/cross-platform-runtime-todo.md`
+- `todo/evaluate-callvar-todo.md`
 
 Items marked `[>]` are implemented or in progress but are waiting for explicit verification while automated workflows are disabled.
 
@@ -233,9 +261,8 @@ Current development that must not trigger CI is kept on branch:
 ## Project structure
 
 - `src/XPScript.Compiler` — compiler, preprocessors, transpilers and generated runtime sources
-- `samples` — XPScript test and regression programs
-- `examples` — reusable end-user example programs as documentation is expanded
-- `docs` — language/runtime documentation
+- `samples` — XPScript source fixtures, including positive and negative regression programs
+- `docs` — sample-based language/runtime documentation
 - `todo` — implementation tracking
 
 XPScript source code and public documentation use XPScript naming and `.xps` source files consistently.
