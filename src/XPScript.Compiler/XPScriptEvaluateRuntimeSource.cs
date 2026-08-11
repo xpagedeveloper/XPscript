@@ -7,13 +7,18 @@ internal static class XPScriptEvaluateRuntimeSource
     public const string Code = """
 internal static class XPScriptEvaluateRuntime
 {
-    public static object? Evaluate(object? sourceText)
+    public static object? Evaluate(object? sourceText) => Evaluate(sourceText, null, false);
+
+    public static object? Evaluate(object? sourceText, object? callvar) => Evaluate(sourceText, callvar, true);
+
+    private static object? Evaluate(object? sourceText, object? callvar, bool hasCallVar)
     {
         var source = XPScriptRuntime.CStr(sourceText);
         if (string.IsNullOrWhiteSpace(source)) return null;
         try
         {
-            return new Evaluator(source).Run();
+            var input = hasCallVar ? RestrictedCallVar.Create(callvar) : null;
+            return new Evaluator(source, input).Run();
         }
         catch (XPScriptRuntimeException) { throw; }
         catch (Exception ex)
@@ -22,13 +27,122 @@ internal static class XPScriptEvaluateRuntime
         }
     }
 
+    private sealed class RestrictedCallVar
+    {
+        private readonly object? _snapshot;
+
+        private RestrictedCallVar(object? snapshot) => _snapshot = snapshot;
+
+        public static RestrictedCallVar Create(object? value) => new(CloneValue(value));
+
+        public object? Read() => CloneValue(_snapshot);
+
+        public object? Read(object? key)
+        {
+            if (_snapshot is LSArray array)
+                return CloneValue(array.Get(key));
+
+            if (_snapshot is Array clrArray)
+            {
+                var index = XPScriptRuntime.CInt(key);
+                if (index < 0 || index >= clrArray.Length)
+                    throw new IndexOutOfRangeException("callvar array index out of range: " + index);
+                return CloneValue(clrArray.GetValue(index));
+            }
+
+            if (_snapshot is ILSList)
+            {
+                var property = _snapshot.GetType().GetProperty("Item");
+                if (property is null)
+                    throw new XPScriptRuntimeException(5, "callvar list does not expose an indexed value accessor.");
+                try { return CloneValue(property.GetValue(_snapshot, [key])); }
+                catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw ex.InnerException; }
+            }
+
+            throw new XPScriptRuntimeException(5, "callvar(index) requires an Array or List input.");
+        }
+
+        private static object? CloneValue(object? value)
+        {
+            if (value is null || value is string || value.GetType().IsValueType)
+                return value;
+
+            if (value is LSArray array)
+                return CloneXpsArray(array);
+
+            if (value is Array clrArray)
+                return clrArray.Clone();
+
+            if (value is ILSList)
+                return CloneXpsList(value);
+
+            // Objects are intentionally passed as opaque references only when the caller explicitly supplies one.
+            // Evaluate cannot discover caller locals/globals and cannot assign to callvar itself.
+            return value;
+        }
+
+        private static LSArray CloneXpsArray(LSArray source)
+        {
+            if (!source.IsAllocated)
+                return new LSArray(source.ElementType, source.IsDynamic);
+
+            var lower = source.LowerBounds.ToArray();
+            var upper = source.UpperBounds.ToArray();
+            var copy = new LSArray(source.ElementType, source.IsDynamic, lower, upper);
+            var indices = new int[source.Rank];
+            CopyDimension(0);
+            return copy;
+
+            void CopyDimension(int dimension)
+            {
+                for (var i = lower[dimension]; i <= upper[dimension]; i++)
+                {
+                    indices[dimension] = i;
+                    if (dimension + 1 < indices.Length)
+                    {
+                        CopyDimension(dimension + 1);
+                        continue;
+                    }
+                    var boxed = indices.Cast<object?>().ToArray();
+                    copy.Set(CloneValue(source.Get(boxed)), boxed);
+                }
+            }
+        }
+
+        private static object CloneXpsList(object source)
+        {
+            var type = source.GetType();
+            var copy = Activator.CreateInstance(type)
+                ?? throw new XPScriptRuntimeException(5, "Unable to clone callvar List.");
+            var aliases = type.GetMethod("Aliases")?.Invoke(source, null) as System.Collections.IEnumerable
+                ?? throw new XPScriptRuntimeException(5, "Unable to enumerate callvar List.");
+            var item = type.GetProperty("Item")
+                ?? throw new XPScriptRuntimeException(5, "Unable to access callvar List values.");
+
+            foreach (var alias in aliases)
+            {
+                if (alias is null) continue;
+                var aliasType = alias.GetType();
+                var tag = aliasType.GetProperty("Tag")?.GetValue(alias);
+                var value = aliasType.GetProperty("Value")?.GetValue(alias);
+                item.SetValue(copy, CloneValue(value), [tag]);
+            }
+            return copy;
+        }
+    }
+
     private sealed class Evaluator
     {
         private readonly Dictionary<string, object?> _variables = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<Token> _tokens;
+        private readonly RestrictedCallVar? _callvar;
         private int _position;
 
-        public Evaluator(string source) => _tokens = Tokenize(source);
+        public Evaluator(string source, RestrictedCallVar? callvar)
+        {
+            _tokens = Tokenize(source);
+            _callvar = callvar;
+        }
 
         public object? Run()
         {
@@ -46,12 +160,14 @@ internal static class XPScriptEvaluateRuntime
                 }
 
                 if (MatchKeyword("Return"))
-                    return ParseExpression();
+                    return RestrictedReturn(ParseExpression());
 
                 if (Check(TokenKind.Identifier) && Peek(1).Kind == TokenKind.Equal)
                 {
                     var name = Advance().Text;
                     Advance();
+                    if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                        throw Error("callvar is read-only inside Evaluate.");
                     if (!_variables.ContainsKey(name))
                         throw Error("Assignment requires a local variable declared with Dim: " + name);
                     last = ParseExpression();
@@ -63,12 +179,16 @@ internal static class XPScriptEvaluateRuntime
                 last = ParseExpression();
                 SkipStatementTail();
             }
-            return last;
+            return RestrictedReturn(last);
         }
+
+        private static object? RestrictedReturn(object? value) => RestrictedCallVar.Create(value).Read();
 
         private void ParseDim()
         {
             var name = Consume(TokenKind.Identifier, "Expected variable name after Dim.").Text;
+            if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                throw Error("callvar is reserved and cannot be redeclared inside Evaluate.");
             object? initial = null;
             if (MatchKeyword("As"))
             {
@@ -219,8 +339,19 @@ internal static class XPScriptEvaluateRuntime
                     {
                         do { args.Add(ParseExpression()); } while (Match(TokenKind.Comma));
                     }
-                    Consume(TokenKind.RightParen, "Expected ')' after function arguments.");
+                    Consume(TokenKind.RightParen, "Expected ')' after arguments.");
+                    if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (_callvar is null) throw Error("callvar was not supplied to Evaluate.");
+                        if (args.Count != 1) throw Error("callvar(index) requires exactly one index or list tag.");
+                        return _callvar.Read(args[0]);
+                    }
                     return InvokeFunction(name, args);
+                }
+                if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_callvar is null) throw Error("callvar was not supplied to Evaluate.");
+                    return _callvar.Read();
                 }
                 if (_variables.TryGetValue(name, out var value)) return value;
                 throw Error("Unknown identifier in Evaluate scope: " + name);
@@ -273,17 +404,12 @@ internal static class XPScriptEvaluateRuntime
         {
             int comparison;
             if (left is DateTime || right is DateTime)
-            {
                 comparison = DateTime.Compare(XPScriptRuntime.CDate(left), XPScriptRuntime.CDate(right));
-            }
             else if (XPScriptRuntime.IsNumeric(left) && XPScriptRuntime.IsNumeric(right))
-            {
                 comparison = XPScriptRuntime.CDbl(left).CompareTo(XPScriptRuntime.CDbl(right));
-            }
             else
-            {
                 comparison = string.Compare(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right), StringComparison.CurrentCulture);
-            }
+
             return op switch
             {
                 TokenKind.Equal => comparison == 0,
