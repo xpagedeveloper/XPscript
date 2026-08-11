@@ -74,14 +74,51 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/json-http.xps -o ./out/json-http.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'HTTP/JSON compilation failed.' }
-          $server = Start-Process python -ArgumentList './samples/http-test-server.py' -PassThru
+
+          $stdoutPath = Join-Path $env:RUNNER_TEMP 'xpscript-http-server.out.log'
+          $stderrPath = Join-Path $env:RUNNER_TEMP 'xpscript-http-server.err.log'
+          Remove-Item $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
+          $server = Start-Process python -ArgumentList './samples/http-test-server.py' -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+
           try {
-            Start-Sleep -Seconds 2
+            $ready = $false
+            for ($attempt = 1; $attempt -le 50; $attempt++) {
+              if ($server.HasExited) {
+                $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+                $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+                throw "HTTP test server exited before becoming ready. ExitCode=$($server.ExitCode)`nSTDOUT:`n$stdout`nSTDERR:`n$stderr"
+              }
+
+              $client = [System.Net.Sockets.TcpClient]::new()
+              try {
+                $connect = $client.ConnectAsync('127.0.0.1', 18999)
+                if ($connect.Wait(200) -and $client.Connected) {
+                  $ready = $true
+                  break
+                }
+              } catch {
+                # Server is still starting. Retry below.
+              } finally {
+                $client.Dispose()
+              }
+
+              Start-Sleep -Milliseconds 200
+            }
+
+            if (-not $ready) {
+              $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+              $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+              throw "HTTP test server did not listen on 127.0.0.1:18999 within 10 seconds.`nSTDOUT:`n$stdout`nSTDERR:`n$stderr"
+            }
+
             $output = & ./out/json-http.exe
+            if ($LASTEXITCODE -ne 0) { throw "HTTP/JSON runtime exited with code $LASTEXITCODE." }
             foreach ($value in @('OBJECTSIZE=2','ARRAYSIZE=2','ELEMENT=name:3:Fredrik','POINTER=2','NTH=developer','ITER=admin:developer','COPY={"copy":{"city":"Linkoping","country":"Sweden"}}','JSONCONSTANTS=OK','GETCODE=200','POSTCODE=200','PUTCODE=200','PATCHCODE=200','DELETECODE=200','HEADERS=OK','PROXY=OK','HTTPJSON=POST')) {
               if ($output -notcontains $value) { throw "HTTP/JSON output missing: $value" }
             }
-          } finally { if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force } }
+          } finally {
+            if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
+          }
 
       - name: Compile and run charset/Base64/console sample
         shell: pwsh
