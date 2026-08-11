@@ -9,6 +9,7 @@ public sealed class XPScriptTranspiler
     {
         var udtValues = new UdtValueSemanticsPreprocessor();
         source = udtValues.Transform(source);
+        source = new TypeDeclarationPreprocessor().Transform(source);
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
@@ -43,6 +44,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
+        generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
