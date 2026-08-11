@@ -119,14 +119,48 @@ internal static class XPScriptFileIO
 
     private static void LockRegion(FileStream stream, long offset, long length)
     {
-        try { stream.Lock(offset, length); }
-        catch (PlatformNotSupportedException ex) { throw new XPScriptRuntimeException(5, "Operating-system file locking is not supported on this platform: " + ex.Message); }
+        try
+        {
+            stream.Lock(offset, length);
+        }
+        catch (PlatformNotSupportedException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Operating-system file locking is not supported on this platform: " + ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new XPScriptRuntimeException(70, "Permission denied while locking file region: " + ex.Message);
+        }
+        catch (IOException ex)
+        {
+            throw new XPScriptRuntimeException(70,
+                "Unable to lock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                " length " + length.ToString(CultureInfo.InvariantCulture) +
+                ". Another process or handle may hold an overlapping lock. " + ex.Message);
+        }
     }
 
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
-        try { stream.Unlock(offset, length); }
-        catch (PlatformNotSupportedException ex) { throw new XPScriptRuntimeException(5, "Operating-system file unlocking is not supported on this platform: " + ex.Message); }
+        try
+        {
+            stream.Unlock(offset, length);
+        }
+        catch (PlatformNotSupportedException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Operating-system file unlocking is not supported on this platform: " + ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new XPScriptRuntimeException(70, "Permission denied while unlocking file region: " + ex.Message);
+        }
+        catch (IOException ex)
+        {
+            throw new XPScriptRuntimeException(70,
+                "Unable to unlock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                " length " + length.ToString(CultureInfo.InvariantCulture) +
+                ". The current handle may not own the requested lock. " + ex.Message);
+        }
     }
 
     private static object GetOpenState(int number)
