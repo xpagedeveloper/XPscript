@@ -1,0 +1,13 @@
+Sub Main()
+    Print "PLATFORM=" & Platform()
+
+    If Platform() = "Windows" Then
+        Call Shell("cmd.exe /c echo XPScript-Windows")
+    ElseIf Platform() = "Linux" Then
+        Call Shell("/bin/sh -c \"echo XPScript-Linux\"")
+    ElseIf Platform() = "MacOS" Then
+        Call Shell("/bin/sh -c \"echo XPScript-MacOS\"")
+    Else
+        Print "Shell sample skipped for unsupported platform"
+    End If
+End Sub
