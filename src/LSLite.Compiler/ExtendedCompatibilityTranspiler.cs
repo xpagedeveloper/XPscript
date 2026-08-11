@@ -94,6 +94,7 @@ internal sealed class ExtendedCompatibilityTranspiler
 
             line = ReplaceOutsideStrings(line, @"(?<![\w.])Err\s*\(\s*\)", "Err");
             line = ReplaceOutsideStrings(line, @"(?<![\w.])Erl\s*\(\s*\)", "Erl");
+            line = ReplaceOutsideStrings(line, @"(?<![\w.])Error\$(?!\s*\()", "Error()");
 
             foreach (var type in SaxTypes)
                 line = ReplaceOutsideStrings(line, $@"\b{type}\b", "Variant");
