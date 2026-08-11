@@ -11,6 +11,7 @@ public sealed class XPScriptTranspiler
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
+        source = new FileIoExtensionsPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
@@ -30,6 +31,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
@@ -112,8 +114,7 @@ public sealed class XPScriptTranspiler
         }.Where(x => x >= 0).ToArray();
         if (activationIndexes.Length == 0) return generated;
 
-        var activation = activationIndexes.Min();
-        var prefix = generated[..activation]; var suffix = generated[activation..]; var removedIds = new HashSet<int>();
+        var activation = activationIndexes.Min(); var prefix = generated[..activation]; var suffix = generated[activation..]; var removedIds = new HashSet<int>();
         var wrapperPattern = new Regex(@"(?m)^(?<indent>[ \t]*)__ls_stmt_before_(?<id>\d+):;\r?\n[ \t]*try \{ (?<statement>.*) \}\r?\n[ \t]*catch \(Exception __lsEx\) \{.*\}\r?\n[ \t]*__ls_stmt_after_\d+:;\r?\n?", RegexOptions.CultureInvariant);
         prefix = wrapperPattern.Replace(prefix, match =>
         {
