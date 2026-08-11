@@ -36,6 +36,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])Join\$?\s*\(", "LSOperatorArrayRuntime.Join(", RegexOptions.IgnoreCase);
 
+            line = RewriteLogicalComparisonCondition(line);
             line = RewriteSymbolOperator(line, '^', "Pow");
             line = RewriteSymbolOperator(line, '\\', "IntDiv");
             line = RewriteBinaryWordOperator(line, "Like", "Like");
@@ -57,6 +58,74 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private const string Operand = "(?:\\([^()]+\\)|[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)*(?:\\([^()]*\\))?|-?\\d+(?:\\.\\d+)?|\"[^\"]*\")";
 
+    private static string RewriteLogicalComparisonCondition(string line)
+    {
+        var match = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then\s*)$", RegexOptions.IgnoreCase);
+        if (!match.Success) return line;
+        var condition = match.Groups["condition"].Value;
+        if (!Regex.IsMatch(condition, @"(?:=|<>|<=|>=|<|>)") || !Regex.IsMatch(condition, @"\s+(?:And|Or)\s+", RegexOptions.IgnoreCase)) return line;
+        var rewritten = RewriteLogicalExpression(condition);
+        return match.Groups["prefix"].Value + rewritten + match.Groups["suffix"].Value;
+    }
+
+    private static string RewriteLogicalExpression(string expression)
+    {
+        var orParts = SplitTopLevelWord(expression, "Or");
+        if (orParts.Count > 1)
+        {
+            var result = RewriteLogicalExpression(orParts[0]);
+            for (var i = 1; i < orParts.Count; i++)
+                result = $"LSOperatorArrayRuntime.LogicalOr(({result}), ({RewriteLogicalExpression(orParts[i])}))";
+            return result;
+        }
+
+        var andParts = SplitTopLevelWord(expression, "And");
+        if (andParts.Count > 1)
+        {
+            var result = ParenthesizeComparison(andParts[0]);
+            for (var i = 1; i < andParts.Count; i++)
+                result = $"LSOperatorArrayRuntime.LogicalAnd(({result}), ({ParenthesizeComparison(andParts[i])}))";
+            return result;
+        }
+        return expression.Trim();
+    }
+
+    private static string ParenthesizeComparison(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.StartsWith("(", StringComparison.Ordinal) && trimmed.EndsWith(")", StringComparison.Ordinal) ? trimmed : $"({trimmed})";
+    }
+
+    private static List<string> SplitTopLevelWord(string value, string word)
+    {
+        var result = new List<string>();
+        var start = 0; var depth = 0; var inString = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString; continue;
+            }
+            if (inString) continue;
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0 || i + word.Length > value.Length) continue;
+            if (!value.AsSpan(i, word.Length).Equals(word, StringComparison.OrdinalIgnoreCase)) continue;
+            var beforeOk = i == 0 || !char.IsLetterOrDigit(value[i - 1]) && value[i - 1] != '_';
+            var after = i + word.Length;
+            var afterOk = after >= value.Length || !char.IsLetterOrDigit(value[after]) && value[after] != '_';
+            if (!beforeOk || !afterOk) continue;
+            result.Add(value[start..i].Trim());
+            start = after;
+            i = after - 1;
+        }
+        if (result.Count > 0) result.Add(value[start..].Trim());
+        else result.Add(value.Trim());
+        return result;
+    }
+
     private static string RewriteBinaryWordOperator(string line, string op, string method)
     {
         var regex = new Regex($@"(?<left>{Operand})\s+{op}\s+(?<right>{Operand})", RegexOptions.IgnoreCase);
@@ -77,10 +146,8 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         });
     }
 
-    private static string RewriteUnaryNot(string line)
-    {
-        return Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.LogicalNot({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
-    }
+    private static string RewriteUnaryNot(string line) =>
+        Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.LogicalNot({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
 
     private static string RewriteSymbolOperator(string line, char op, string method)
     {
@@ -95,18 +162,15 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
     private static string NormalizeLineContinuations(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var result = new List<string>();
-        var pending = new StringBuilder();
+        var result = new List<string>(); var pending = new StringBuilder();
         foreach (var raw in lines)
         {
-            var trimmed = raw.TrimEnd();
-            var continued = EndsWithContinuation(trimmed);
+            var trimmed = raw.TrimEnd(); var continued = EndsWithContinuation(trimmed);
             var part = continued ? trimmed[..^1].TrimEnd() : raw;
             if (pending.Length > 0) pending.Append(' ');
             pending.Append(part);
             if (continued) continue;
-            result.Add(pending.ToString());
-            pending.Clear();
+            result.Add(pending.ToString()); pending.Clear();
         }
         if (pending.Length > 0) result.Add(pending.ToString());
         return string.Join(Environment.NewLine, result);
@@ -159,14 +223,8 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             var c = source[i];
             if (c == close)
             {
-                if (i + 1 < source.Length && source[i + 1] == close)
-                {
-                    sb.Append(close);
-                    i++;
-                    continue;
-                }
-                sb.Append('"');
-                return;
+                if (i + 1 < source.Length && source[i + 1] == close) { sb.Append(close); i++; continue; }
+                sb.Append('"'); return;
             }
             if (c == '"') sb.Append("\"\"");
             else if (c != '\r') sb.Append(c);
