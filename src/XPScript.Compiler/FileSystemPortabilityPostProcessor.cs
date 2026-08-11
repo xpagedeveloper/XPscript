@@ -121,7 +121,49 @@ internal sealed class FileSystemPortabilityPostProcessor
 """;
         generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
 
+        // Evaluate uses the same dynamic '+' coercion and comparison rules as the main
+        // XPScript runtime instead of maintaining subtly different evaluator-only behavior.
+        generated = generated.Replace(
+            "if (Match(TokenKind.Plus)) value = Add(value, ParseMultiplicative());",
+            "if (Match(TokenKind.Plus)) value = XPScriptCoercion.AddVariant(value, ParseMultiplicative());",
+            StringComparison.Ordinal);
+
+        const string oldCompare = """
+        private static bool Compare(object? left, object? right, TokenKind op)
+        {
+            int comparison;
+            if (left is DateTime || right is DateTime) comparison = DateTime.Compare(XPScriptRuntime.CDate(left), XPScriptRuntime.CDate(right));
+            else if (XPScriptRuntime.IsNumeric(left) && XPScriptRuntime.IsNumeric(right)) comparison = XPScriptRuntime.CDbl(left).CompareTo(XPScriptRuntime.CDbl(right));
+            else comparison = string.Compare(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right), StringComparison.CurrentCulture);
+            return op switch { TokenKind.Equal => comparison == 0, TokenKind.NotEqual => comparison != 0, TokenKind.Less => comparison < 0, TokenKind.LessEqual => comparison <= 0, TokenKind.Greater => comparison > 0, TokenKind.GreaterEqual => comparison >= 0, _ => false };
+        }
+""";
+
+        const string newCompare = """
+        private static bool Compare(object? left, object? right, TokenKind op)
+        {
+            var operation = op switch
+            {
+                TokenKind.Equal => "=",
+                TokenKind.NotEqual => "<>",
+                TokenKind.Less => "<",
+                TokenKind.LessEqual => "<=",
+                TokenKind.Greater => ">",
+                TokenKind.GreaterEqual => ">=",
+                _ => throw new XPScriptRuntimeException(5, "Unsupported Evaluate comparison operator.")
+            };
+            return XPScriptEvaluateSemanticsRuntime.Compare(left, right, operation);
+        }
+""";
+        generated = generated.Replace(oldCompare, newCompare, StringComparison.Ordinal);
+
+        generated = generated.Replace(
+            "throw new XPScriptRuntimeException(5, \"Evaluate failed: \" + ex.Message);",
+            "throw XPScriptEvaluateSemanticsRuntime.Normalize(ex);",
+            StringComparison.Ordinal);
+
         generated += "\n\n" + EvaluateCollectionIsolationRuntimeSource.Code + "\n";
+        generated += "\n\n" + EvaluateSemanticsRuntimeSource.Code + "\n";
         return generated;
     }
 }
