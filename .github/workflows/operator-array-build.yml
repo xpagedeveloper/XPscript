@@ -19,44 +19,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Restore
-        run: dotnet restore ./src/LSLite.Compiler/LSLite.Compiler.csproj
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
-        run: dotnet build ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-restore
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-restore
       - name: Compile operator and array sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/operators-arrays.ls -o ./out/operators-arrays.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/operators-arrays.xps -o ./out/operators-arrays.exe --framework-dependent
       - name: Run operator and array sample
         shell: pwsh
         run: |
           $output = & ./out/operators-arrays.exe
-          $output | ForEach-Object { Write-Host $_ }
-          $expected = @(
-            'LIKE-DIGITS=OK',
-            'LIKE-QUESTION=OK',
-            'LIKE-RANGE=OK',
-            'LIKE-NEGATE=OK',
-            'BRACE=Hello "Fredrik"',
-            'BAR=Hello | Fredrik',
-            'LINE-CONTINUE',
-            'POW=64',
-            'INTDIV=2',
-            'MOD=2',
-            'XORBOOL=True',
-            'EQVBOOL=True',
-            'IMPBOOL=False',
-            'ANDBITS=0',
-            'ORBITS=15',
-            'XORBITS=255',
-            'NOTBITS=-4',
-            'TYPEDARRAY=1:4:One|Two|Three|Four',
-            'REDIM=One|Two|Three|Four|Five',
-            'APPEND=1:6:One|Two|Three|Four|Five|Six',
-            'GETINDEX=5',
-            'EXPLODE=A|a|B|b|B',
-            'UNIQUE=A|B',
-            'SLICE=a|B|b',
-            'SPLICE-REMOVED=a|B',
-            'SPLICE-ARRAY=A|X|Y|b|B'
-          )
+          $expected = @('LIKE-DIGITS=OK','LIKE-QUESTION=OK','LIKE-RANGE=OK','LIKE-NEGATE=OK','BRACE=Hello "Fredrik"','BAR=Hello | Fredrik','LINE-CONTINUE','POW=64','INTDIV=2','MOD=2','XORBOOL=True','EQVBOOL=True','IMPBOOL=False','ANDBITS=0','ORBITS=15','XORBITS=255','NOTBITS=-4','TYPEDARRAY=1:4:One|Two|Three|Four','REDIM=One|Two|Three|Four|Five','APPEND=1:6:One|Two|Three|Four|Five|Six','GETINDEX=5','EXPLODE=A|a|B|b|B','UNIQUE=A|B','SLICE=a|B|b','SPLICE-REMOVED=a|B','SPLICE-ARRAY=A|X|Y|b|B')
           foreach ($value in $expected) {
             if ($output -notcontains $value) { throw "Missing operator/array output: $value" }
           }
