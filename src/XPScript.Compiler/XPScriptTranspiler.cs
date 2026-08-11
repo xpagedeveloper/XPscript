@@ -14,6 +14,8 @@ public sealed class XPScriptTranspiler
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
+        source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleGlobals.Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
@@ -45,6 +47,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
+        generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
