@@ -174,8 +174,8 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 - [>] scalar/Variant and defensive-copy array semantics implemented
 - [>] evaluator scope isolated from caller locals
 - [>] `Return expression` is explicit result path
-- [>] no `Return` now yields Nothing/Empty instead of leaking last expression value
-- [>] `TypeName`, `LBound`, `UBound` plus basic conversions/string/math helpers available inside Evaluate
+- [>] no `Return` yields Nothing/Empty; source: `samples/evaluate-no-return.xps`
+- [>] `TypeName`, `LBound`, `UBound` plus basic conversions/string/math helpers available inside Evaluate; source: `samples/evaluate-array-helpers.xps`
 - [ ] remove old unused DataTable-based evaluator implementation
 - [ ] broaden standard XPScript function coverage inside Evaluate
 - [ ] full List/nested collection snapshot validation
