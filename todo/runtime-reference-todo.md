@@ -138,7 +138,68 @@ Implemented but intentionally unverified while workflows are disabled:
 - [>] `JsonElement.Type`, `JsonElement.Value`
 - [>] `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
 
-## 14. Quality gates
+## 14. Cross-platform compiler and runtime
+
+- [ ] support publishing generated executables for Windows, Linux and macOS
+- [ ] add compiler target/runtime selection for at least `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`
+- [ ] decide/default target behavior when no target platform is supplied
+- [ ] add `Platform` command/function that returns the current runtime platform name
+- [ ] define stable `Platform` return values suitable for branching in XPScript code, e.g. `Windows`, `Linux`, `MacOS`
+- [ ] document conditional platform-specific code patterns using `Platform`
+- [ ] make `Shell` platform-aware
+- [ ] Windows `Shell`: execute `.exe`, `.cmd`, `.bat`, `.ps1` and normal commands using appropriate Windows process handling
+- [ ] Linux `Shell`: execute binaries, shell scripts and commands using executable bit/shebang or an appropriate shell when needed
+- [ ] macOS `Shell`: execute binaries, shell scripts and commands using executable bit/shebang or an appropriate shell when needed
+- [ ] preserve argument quoting and avoid accidental shell re-parsing unless explicitly required
+- [ ] return clear runtime errors when a program/script cannot be executed on the current platform
+
+## 15. Evaluate
+
+- [ ] remove all references to `@Formula` from source code, documentation, samples and public terminology
+- [ ] redefine `Evaluate(sourceText)` to execute only XPScript code supplied as a string
+- [ ] `Evaluate` must not expose or emulate any external formula language
+- [ ] define whether `Evaluate` accepts an expression, statements, or a complete XPScript snippet; preferred target is XPScript expressions/statements only
+- [ ] isolate evaluated code from compiler/runtime internals unless explicitly exposed
+- [ ] return XPScript values using normal XPScript type/coercion rules
+- [ ] propagate syntax/type/runtime errors using normal XPScript diagnostics/error handling
+- [ ] document examples of safe `Evaluate` use
+
+## 16. Security review and isolation
+
+- [ ] perform a dedicated security review of compiler, preprocessors, generated runtime and temp-build handling
+- [ ] verify that values/variables from one scope cannot overwrite unrelated variables through generated-name collisions
+- [ ] verify generated internal identifiers cannot collide with user-defined identifiers
+- [ ] reserve or safely namespace all compiler-generated identifiers
+- [ ] verify procedure locals, module globals, class fields, `Static` variables, arrays, lists and ByRef cells are isolated correctly
+- [ ] verify one compiled source/module cannot overwrite another module's state unexpectedly
+- [ ] verify concurrent compiler invocations use separate temporary directories/files and cannot overwrite each other
+- [ ] verify generated output paths cannot overwrite unrelated files through path traversal or malformed source/output names
+- [ ] review temporary file permissions and cleanup
+- [ ] review `Shell`, file I/O, HTTP, dynamic `Evaluate`, P/Invoke and COM-related functionality for command/path/code injection risks
+- [ ] review JSON/HTTP header/body handling for injection and unsafe implicit conversions
+- [ ] review file `Lock/Unlock` behavior for race conditions and incorrect cross-process assumptions
+- [ ] add negative security regression sources/tests once workflow execution is re-enabled
+- [ ] document security boundaries and intentionally unsafe/powerful language features
+
+## 17. Documentation and examples
+
+- [ ] create complete English documentation for every supported XPScript statement, function, class, property and operator
+- [ ] store all end-user documentation under `docs/`
+- [ ] create/use an `examples/` directory for reusable `.xps` example programs
+- [ ] migrate reusable examples from `samples/` to `examples/` where appropriate; keep test-only fixtures separate
+- [ ] every documented function/statement/class should include at least one practical example or link to an example under `examples/`
+- [ ] create `docs/index.md` as the documentation entry point
+- [ ] create a language-reference index grouped by declarations, control flow, operators, strings, math, date/time, arrays/lists, file I/O, HTTP, JSON, process/platform and diagnostics
+- [ ] create per-function/per-feature documentation pages or logically grouped pages with syntax, parameters, return value, errors and examples
+- [ ] document type coercion rules and forgiving conversion behavior
+- [ ] document compiler CLI including output format, target platform/runtime and exit codes
+- [ ] document file `Input$` separately from interactive console input
+- [ ] document OS file locking semantics for `Lock/Unlock`
+- [ ] document `Platform`, cross-platform `Shell`, and target-platform publishing
+- [ ] document `Evaluate` as XPScript-only dynamic code execution
+- [ ] ensure public documentation contains XPScript branding only and no legacy product names or `@Formula` references
+
+## 18. Quality gates
 
 A feature is promoted from `[>]` to `[x]` only when requested verification is enabled and it passes:
 
@@ -149,3 +210,6 @@ A feature is promoted from `[>]` to `[x]` only when requested verification is en
 5. Existing language/runtime regressions.
 6. XPScript-only public branding.
 7. OS cross-handle verification for `Lock/Unlock`.
+8. Cross-platform features must be validated on their target operating system when workflow/test execution is re-enabled.
+9. Security-sensitive features require negative/adversarial regression coverage before being marked `[x]`.
+10. Documentation work is complete only when the documented item links to a valid `examples/` source or contains an equivalent inline example.
