@@ -11,6 +11,13 @@ public sealed class LotusTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+
+        // AdvancedLotusTranspiler rewrites LotusScript And to C# && and later rewrites
+        // LotusScript string concatenation (&) to +. Preserve the logical operator when
+        // both transformations occur in the same expression. LotusScript has no ++
+        // operator, so a spaced ++ token here can only originate from the && rewrite.
+        generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
+
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
