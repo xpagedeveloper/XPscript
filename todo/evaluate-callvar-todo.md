@@ -66,7 +66,21 @@ Status:
 - [>] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`
 - [>] source: `samples/evaluate-standard-functions.xps`
 - [ ] continue broadening standard XPScript function coverage where functions remain side-effect free and isolation-safe
-- [ ] align every evaluator diagnostic/coercion edge case with the main compiler/runtime
+
+## Coercion and diagnostics alignment
+
+- [>] dynamic `+` uses shared `XPScriptCoercion.AddVariant` instead of evaluator-only coercion logic
+- [>] String + scalar concatenation and scalar + numeric-String addition follow the shared forgiving XPScript coercion path
+- [>] comparison operators route through the main `LSCoreCompare.Rel` semantics, including numeric and Date comparison behavior
+- [>] evaluator exceptions are normalized through the same runtime error mapping used by normal XPScript execution
+- [>] conversion/type mismatch maps to XPScript error 13
+- [>] divide-by-zero maps to XPScript error 11
+- [>] overflow maps to XPScript error 6
+- [>] permission/access failures map to XPScript error 70
+- [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context
+- [>] source: `samples/evaluate-coercion-diagnostics.xps`
+- [ ] verify coercion/error parity against equivalent normal XPScript expressions when execution is re-enabled
+- [ ] improve wrong-function-arity diagnostics so known functions distinguish invalid argument count from unavailable function names
 
 ## Isolation and security
 
