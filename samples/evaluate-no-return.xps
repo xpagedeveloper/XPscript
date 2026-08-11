@@ -1,0 +1,5 @@
+Sub Initialize
+    Dim result As Variant
+    result = Evaluate("Dim x As Integer : x = 42")
+    Print "NORETURN=" & TypeName(result)
+End Sub
