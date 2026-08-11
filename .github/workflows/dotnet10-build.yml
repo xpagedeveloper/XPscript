@@ -259,6 +259,7 @@ jobs:
             "UTF8=UTF8-ÅÄÖ-é-漢字",
             "UTF16=UTF16-ÅÄÖ-é-漢字",
             "BASE64FILE=BASE64-FILE-åäö",
+            "BASE64UTF16=BASE64-UTF16-漢字",
             "TOBASE64=RnJlZHJpayDDpcOkw7Y=",
             "FROMBASE64=Fredrik åäö",
             "URLENCODE=hello%20world%2B%C3%A5",
@@ -278,6 +279,6 @@ jobs:
             throw "Input prompt/value behavior did not match expected output."
           }
 
-          foreach ($path in @('./lslite-utf8.txt','./lslite-utf16.txt','./lslite-base64.txt')) {
+          foreach ($path in @('./lslite-utf8.txt','./lslite-utf16.txt','./lslite-base64.txt','./lslite-base64-utf16.txt')) {
             if (Test-Path $path) { throw "Charset test did not remove temporary file: $path" }
           }
