@@ -36,16 +36,10 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])Join\$?\s*\(", "LSOperatorArrayRuntime.Join(", RegexOptions.IgnoreCase);
 
-            // Arithmetic precedence first. Repeated rewriting gives LotusScript's
-            // left-to-right behavior for repeated exponentiation.
             line = RewriteSymbolOperator(line, '^', "Pow");
             line = RewriteSymbolOperator(line, '\\', "IntDiv");
-
-            // Relational/object comparison.
             line = RewriteBinaryWordOperator(line, "Like", "Like");
             line = RewriteIsOperator(line);
-
-            // Logical precedence: Not, And, Or, Xor, Eqv, Imp.
             line = RewriteUnaryNot(line);
             line = RewriteBinaryWordOperator(line, "And", "And");
             line = RewriteBinaryWordOperator(line, "Or", "Or");
@@ -61,7 +55,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private const string Operand = @"(?:\([^()]+\)|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:\([^()]*\))?|-?\d+(?:\.\d+)?|\"[^\"]*\")";
+    private const string Operand = "(?:\\([^()]+\\)|[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)*(?:\\([^()]*\\))?|-?\\d+(?:\\.\\d+)?|\"[^\"]*\")";
 
     private static string RewriteBinaryWordOperator(string line, string op, string method)
     {
@@ -78,15 +72,14 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         return regex.Replace(line, m =>
         {
             var right = m.Groups["right"].Value;
-            if (right.Equals("Nothing", StringComparison.OrdinalIgnoreCase) || right.StartsWith("Not ", StringComparison.OrdinalIgnoreCase)) return m.Value;
+            if (right.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) return m.Value;
             return $"LSOperatorArrayRuntime.IsSame({m.Groups["left"].Value}, {right})";
         });
     }
 
     private static string RewriteUnaryNot(string line)
     {
-        // Leave the special object-reference phrase "Is Not Nothing" for the class layer.
-        return Regex.Replace(line, $@"(?<!\bIs\s)\bNot\s+(?<value>{Operand})", m => $"LSOperatorArrayRuntime.Not({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
+        return Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.Not({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
     }
 
     private static string RewriteSymbolOperator(string line, char op, string method)
