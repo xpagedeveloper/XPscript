@@ -5,6 +5,24 @@ public static class UdtArrayRuntimeSource
     public const string Code = """
 internal static class XPTypeArrayRuntime
 {
+    public static object Create(string elementType, bool dynamic, params object?[] bounds)
+    {
+        if (dynamic && bounds.Length == 0)
+            return new LSArray(elementType, true);
+        if (bounds.Length == 0 || bounds.Length % 2 != 0)
+            throw new InvalidOperationException("Type array bounds must be lower/upper pairs.");
+
+        var dimensions = bounds.Length / 2;
+        var lower = new int[dimensions];
+        var upper = new int[dimensions];
+        for (var i = 0; i < dimensions; i++)
+        {
+            lower[i] = XPScriptRuntime.CInt(bounds[i * 2]);
+            upper[i] = XPScriptRuntime.CInt(bounds[i * 2 + 1]);
+        }
+        return new LSArray(elementType, dynamic, lower, upper);
+    }
+
     public static object? Clone(object? value)
     {
         if (value is null) return null;
