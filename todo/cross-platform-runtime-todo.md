@@ -138,6 +138,9 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
 - [>] `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics instead of raw `IOException`
 - [>] delete-while-open semantics intentionally remain OS/filesystem-defined; XPScript handles do not request `FileShare.Delete` on Windows; source: `samples/file-delete-open-semantics.xps`
+- [>] portable charset names have defined BOM behavior: `utf-8` is BOM-less, `utf-8-bom` writes a UTF-8 BOM, `utf-16`/`utf-16le` and `utf-16be` write BOMs, and explicit `*-nobom` aliases suppress them
+- [>] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to the defined XPScript Latin-1 legacy encoding instead of an OS default; unsupported named encodings produce a clear runtime diagnostic
+- [>] source: `samples/file-charset-bom.xps` verifies the expected 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
 - [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
@@ -148,7 +151,7 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [ ] runtime-verify hidden-file behavior on Windows/Linux/macOS
 - [ ] runtime-verify same-filesystem and cross-filesystem `Name` behavior on supported OSes
 - [ ] runtime-verify delete-while-open behavior, which differs between Windows and Unix-like systems
-- [ ] verify charset/BOM handling on all platforms
+- [ ] runtime-verify charset/BOM handling on Windows/Linux/macOS
 - [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
 - [ ] verify Latin-1 explicitly on Windows/Linux/macOS
 - [>] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`, preserving CRLF on Windows and LF on Unix-like systems; runtime verification remains required
