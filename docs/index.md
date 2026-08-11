@@ -113,6 +113,25 @@ Main subjects:
 - Base64Encode / Base64Decode / Base64DecodeBinary / ToBase64 / FromBase64
 - UrlEncode / UrlDecode
 
+## Math functions
+
+See `docs/math-functions.md`.
+
+Covered samples:
+
+- `samples/compatibility.xps`
+- `samples/operators-arrays.xps`
+- `samples/evaluate-standard-functions.xps`
+- `samples/evaluate-coercion-diagnostics.xps`
+
+Main subjects:
+
+- Abs / Int / Fix / Round / Sqr / Sgn
+- Sin / Cos / Tan / ATn / ATn2 / ASin / ACos
+- Exp / Log / Fraction
+- Rnd / Randomize
+- arithmetic operators, integer division, Mod and exponentiation
+
 ## Date and time
 
 See `docs/date-time.md`.
