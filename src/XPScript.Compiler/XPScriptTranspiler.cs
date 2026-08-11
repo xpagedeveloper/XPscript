@@ -5,8 +5,13 @@ namespace XPScript.Compiler;
 
 public sealed class XPScriptTranspiler
 {
-    public string Transpile(string source, string sourceName)
+    public string Transpile(string source, string sourceName) =>
+        Transpile(source, sourceName, CompilerDriver.CurrentRuntimeIdentifier());
+
+    public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
+        source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
+
         var udtValues = new UdtValueSemanticsPreprocessor();
         source = udtValues.Transform(source);
         source = new TypeDeclarationPreprocessor().Transform(source);
