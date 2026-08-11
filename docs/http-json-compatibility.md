@@ -1,344 +1,159 @@
-# XPScript standalone HTTP and JSON compatibility
+# XPScript HTTP and JSON runtime
 
-XPScript implements a standalone compatibility layer for the XPScript HTTP and JSON APIs without loading or requiring XPScript Notes or XPScript.
+XPScript provides standalone HTTP and JSON APIs implemented on .NET 10. The public API uses XPScript-native names and does not require any external application runtime.
 
-The compatibility classes are implemented on .NET 10:
+## HttpClient
 
-- `NotesHTTPRequest` uses `HttpClient`
-- `NotesJSONNavigator`, `NotesJSONObject`, `NotesJSONArray`, and `NotesJSONElement` use `System.Text.Json`
+Create a client:
 
-## Direct construction instead of NotesSession
-
-In XPScript, these objects are normally created from `NotesSession`. In XPScript, the preferred standalone syntax is direct construction with `New`.
-
-```xpscriptscript
-Dim http As New NotesHTTPRequest
-Dim json As New NotesJSONNavigator("")
-Dim obj As New NotesJSONObject
-Dim arr As New NotesJSONArray
-Dim element As New NotesJSONElement("value", "name")
+```xpscript
+Dim http As New HttpClient
 ```
-
-The equivalent assignment form is also supported:
-
-```xpscriptscript
-Dim http As NotesHTTPRequest
-Dim json As NotesJSONNavigator
-
-Set http = New NotesHTTPRequest
-Set json = New NotesJSONNavigator("{""name"":""Fredrik""}")
-```
-
-For migration convenience, source that still contains `session.CreateHTTPRequest()` or `session.CreateJSONNavigator(...)` is normalized to the standalone factories by the compiler. No real XPScript `NotesSession` is created or required.
-
-## NotesHTTPRequest
 
 Supported methods:
 
 - `Get(url)`
-- `Post(url, data)`
-- `Put(url, data)`
-- `Patch(url, data)`
-- `DeleteResource(url)`
-- `SetHeaderField(name, value)`
-- `ResetHeaders()`
-- `GetResponseHeaders()`
-- `SetProxy(proxyHost, proxyPort)`
-- `SetProxyUser(userName, password)`
-- `ResetProxy()`
+- `Post(url, body)`
+- `Put(url, body)`
+- `Patch(url, body)`
+- `Delete(url)`
+- `SetHeader(name, value)`
+- `RemoveHeader(name)`
+- `ClearHeaders()`
 
-Supported properties:
+`Timeout` controls request timeout in seconds.
 
-- `ResponseCode`
-- `TimeoutSec`
-- `MaxRedirects`
-- `PreferStrings`
-- `PreferUTF8`
-- `PreferJSONNavigator`
+Example:
 
-`ResponseCode` contains the HTTP response status code after a request.
+```xpscript
+Dim http As New HttpClient
+Dim response As HttpResponse
 
-`TimeoutSec` defaults to 30 seconds. A value less than or equal to zero disables the `HttpClient` timeout.
+Call http.SetHeader("Accept", "application/json")
+http.Timeout = 30
+Set response = http.Get("https://api.example.com/users")
 
-`MaxRedirects` defaults to zero. A positive value enables automatic redirects and sets the maximum redirect count.
-
-`ResetHeaders()` restores these defaults:
-
-- `Accept: application/json`
-- `Content-Type: application/json`
-- `charsets: utf-8`
-
-Headers set with `SetHeaderField` persist across requests until changed or reset.
-
-### HTTP response type
-
-XPScript uses these standalone return rules:
-
-- `PreferJSONNavigator = True` returns a `NotesJSONNavigator`
-- otherwise `PreferStrings = True` returns a Unicode/.NET string decoded from UTF-8
-- otherwise the response is returned as a UTF-8 byte array
-
-`PreferUTF8` reflects the default byte-array response mode and is derived from the other response preferences.
-
-### POST, PUT, and PATCH bodies
-
-The data argument can be a string or one of the XPScript JSON compatibility objects. JSON objects are serialized automatically when supplied directly.
-
-```xpscriptscript
-Dim http As New NotesHTTPRequest
-Dim json As New NotesJSONNavigator("")
-Dim response As Variant
-
-Call json.AppendElement("Fredrik", "name")
-Call json.AppendElement("fredrik@example.com", "email")
-
-Call http.SetHeaderField("Content-Type", "application/json")
-Call http.SetHeaderField("Accept", "application/json")
-
-http.PreferStrings = True
-response = http.Post("https://api.example.com/users", json.Stringify())
-
-Print CStr(http.ResponseCode)
-Print response
+Print CStr(response.StatusCode)
+Print response.StatusText
+Print response.ContentType
+Print response.Body
+Print CStr(response.IsSuccess)
 ```
 
-### Proxy behavior
+## HttpResponse
 
-`SetProxy` configures a .NET `WebProxy` for subsequent requests. `SetProxyUser` supplies proxy credentials. `ResetProxy` removes both proxy address and proxy credentials.
+Response properties:
 
-TLS certificate validation follows the .NET/operating-system HTTP stack. XPScript does not use XPScript `notes.ini`, XPScript certificate stores, or XPScript HTTP configuration.
+- `StatusCode`
+- `StatusText`
+- `Body`
+- `ContentType`
+- `Headers`
+- `IsSuccess`
 
-## NotesJSONNavigator
+`Headers` contains the response headers exposed by the standalone runtime.
 
-`NotesJSONNavigator` is the main parser, builder, modifier, and serializer.
+## Sending JSON
 
-Supported methods:
+```xpscript
+Dim http As New HttpClient
+Dim body As New JsonObject
+Dim response As HttpResponse
 
-- `GetElementByName(name)`
-- `GetElementByPointer(pointer)`
-- `GetFirstElement()`
-- `GetNextElement()`
-- `GetNthElement(index [, suppressErrors])`
-- `Stringify()`
-- `AppendElement(value [, name])`
-- `AppendArray([name])`
-- `AppendObject([name])`
+Call body.Set("name", "Alice")
+Call body.Set("active", True)
 
-Supported properties:
-
-- `PreferJSONNavigator`
-- `PreferUTF8`
-
-Create an empty JSON object:
-
-```xpscriptscript
-Dim json As New NotesJSONNavigator("")
+Call http.SetHeader("Content-Type", "application/json")
+Set response = http.Post("https://api.example.com/users", JsonStringify(body))
+Print response.Body
 ```
+
+## JsonDocument
 
 Parse JSON:
 
-```xpscriptscript
-Dim json As New NotesJSONNavigator("{""name"":""Fredrik"",""age"":40}")
-Dim element As NotesJSONElement
-
-Set element = json.GetElementByName("name")
-Print CStr(element.Value)
+```xpscript
+Dim document As JsonDocument
+Set document = JsonDocument.Parse("{""name"":""Alice""}")
+Print document.Stringify()
 ```
 
-JSON Pointer is supported:
+## JsonObject
 
-```xpscriptscript
-Dim json As New NotesJSONNavigator("{""items"":[""one"",""two""]}")
-Dim element As NotesJSONElement
+```xpscript
+Dim obj As New JsonObject
+Call obj.Set("name", "Alice")
+Call obj.Set("age", 42)
 
-Set element = json.GetElementByPointer("/items/1")
-Print CStr(element.Value)
+Print CStr(obj.Contains("name"))
+Print CStr(obj.Count)
+Print CStr(obj.Get("age"))
+
+Call obj.Remove("age")
 ```
 
-JSON Pointer array positions are zero-based as defined by JSON Pointer. `GetNthElement`, by contrast, is one-based for XPScript compatibility.
+Supported operations:
 
-## NotesJSONObject
+- `Get(name)`
+- `Set(name, value)`
+- `Remove(name)`
+- `Contains(name)`
+- `Count`
 
-Supported property:
+## JsonArray
 
-- `Size`
+```xpscript
+Dim values As New JsonArray
+Call values.Add("one")
+Call values.Add("two")
 
-Supported methods:
-
-- `GetElementByName(name)`
-- `GetFirstElement()`
-- `GetNextElement()`
-- `GetNthElement(index [, suppressErrors])`
-- `AppendElement(value, name)`
-- `AppendArray(name)`
-- `AppendObject(name)`
-- `Copy(sourceObject)`
-
-Example:
-
-```xpscriptscript
-Dim obj As New NotesJSONObject
-Dim element As NotesJSONElement
-
-Call obj.AppendElement("Fredrik", "name")
-Call obj.AppendElement(40, "age")
-
-Set element = obj.GetElementByName("name")
-Print CStr(obj.Size)
-Print CStr(element.Value)
+Print CStr(values.Get(0))
+Call values.Set(1, "second")
+Call values.RemoveAt(0)
+Print CStr(values.Count)
 ```
 
-## NotesJSONArray
+Supported operations:
 
-Supported property:
+- `Add(value)`
+- `Get(index)`
+- `Set(index, value)`
+- `RemoveAt(index)`
+- `Count`
 
-- `Size`
+## JsonElement
 
-Supported methods:
+`JsonElement` exposes:
 
-- `GetFirstElement()`
-- `GetNextElement()`
-- `GetNthElement(index [, suppressErrors])`
-- `AppendElement(value)`
-- `AppendArray()`
-- `AppendObject()`
-- `Copy(sourceArray)`
-
-`GetNthElement` uses a one-based index.
-
-```xpscriptscript
-Dim arr As New NotesJSONArray
-Dim element As NotesJSONElement
-
-Call arr.AppendElement("one")
-Call arr.AppendElement("two")
-
-Set element = arr.GetNthElement(2)
-Print CStr(element.Value)
-```
-
-If the optional `suppressErrors` argument is true, an out-of-range lookup returns `Nothing` rather than raising the index error.
-
-## NotesJSONElement
-
-Supported properties:
-
-- `Name`
 - `Type`
 - `Value`
 
-Supported method:
+Recommended Type values are:
 
-- `Copy(sourceElement)`
+- `Object`
+- `Array`
+- `String`
+- `Number`
+- `Boolean`
+- `Null`
 
-`Value` can contain scalar values, `NotesJSONObject`, or `NotesJSONArray`.
+## JSON helper functions
 
-Example:
+XPScript also provides convenience functions:
 
-```xpscriptscript
-Dim element As New NotesJSONElement("Fredrik", "name")
-
-Print element.Name
-Print CStr(element.Type)
-Print CStr(element.Value)
+```xpscript
+Set value = JsonParse(text)
+text = JsonStringify(value)
+text = JsonEncode(value)
+Set value = JsonDecode(text)
 ```
 
-The supported JSON element constants are:
+`JsonEncode` is a serialization convenience alias and `JsonDecode` is a parsing convenience alias.
 
-- `Jsonelem_type_object = 1`
-- `Jsonelem_type_array = 2`
-- `Jsonelem_type_string = 3`
-- `Jsonelem_type_number = 4`
-- `Jsonelem_type_boolean = 5`
-- `Jsonelem_type_utf8_bytearray = 6`
-- `Jsonelem_type_empty = 64`
+## Implementation
 
-## Building nested JSON
+The HTTP runtime uses the .NET HTTP stack. JSON handling uses `System.Text.Json` / `System.Text.Json.Nodes` internally. These are implementation details; XPScript source uses the public APIs described above.
 
-```xpscriptscript
-Dim json As New NotesJSONNavigator("")
-Dim address As NotesJSONObject
-Dim roles As NotesJSONArray
+## Verification status
 
-Call json.AppendElement("Fredrik", "name")
-Call json.AppendElement(40, "age")
-Call json.AppendElement(True, "active")
-
-Set address = json.AppendObject("address")
-Call address.AppendElement("Linkoping", "city")
-Call address.AppendElement("Sweden", "country")
-
-Set roles = json.AppendArray("roles")
-Call roles.AppendElement("admin")
-Call roles.AppendElement("developer")
-
-Print json.Stringify()
-```
-
-This produces compact JSON equivalent to:
-
-```json
-{
-  "name": "Fredrik",
-  "age": 40,
-  "active": true,
-  "address": {
-    "city": "Linkoping",
-    "country": "Sweden"
-  },
-  "roles": ["admin", "developer"]
-}
-```
-
-## HTTP response directly as JSON
-
-```xpscriptscript
-Dim http As New NotesHTTPRequest
-Dim json As NotesJSONNavigator
-Dim element As NotesJSONElement
-
-http.PreferJSONNavigator = True
-Set json = http.Get("https://api.example.com/user/1")
-
-Set element = json.GetElementByName("name")
-Print CStr(element.Value)
-```
-
-## Compatibility boundaries
-
-The class names and the supported language surface intentionally resemble the XPScript XPScript APIs so existing integration code needs minimal changes. Internally these are XPScript classes, not Notes/XPScript classes.
-
-Notable standalone differences:
-
-- Direct `New` is the primary construction mechanism rather than `NotesSession` factories.
-- HTTP uses the .NET networking stack.
-- JSON uses `System.Text.Json`.
-- HTTP TLS trust follows the target operating system and .NET.
-- There is no dependency on a XPScript server, Notes client, Notes ID, `notes.ini`, or XPScript data directory.
-- JSON byte arrays are normal .NET byte arrays and are not subject to the classic XPScript 64 KB array limitation.
-
-## CI coverage
-
-`samples/json-http.xps` is compiled to a Windows executable by GitHub Actions. The workflow starts a local HTTP server and validates:
-
-- direct `New` construction of the compatibility classes
-- JSON creation and serialization
-- JSON parsing
-- JSON Pointer lookup
-- one-based `GetNthElement`
-- object, array, and element values
-- `Copy`
-- JSON element constants
-- GET
-- POST
-- PUT
-- PATCH
-- DELETE
-- response status codes
-- response headers
-- header persistence/reset behavior
-- proxy configuration API
-- string responses
-- `PreferJSONNavigator` responses
-
-This means the CI checks both compiler generation and the behavior of the generated standalone executable.
+The XPScript-native HTTP/JSON implementation and sample source are currently on branch `runtime-development-no-ci`. Automated GitHub workflow execution is intentionally disabled until explicitly re-enabled.
