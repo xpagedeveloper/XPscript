@@ -81,42 +81,18 @@ Status:
 
 ### Date object enhancements
 
-- [ ] add `Date.Adjust(years, months, days, hours, minutes, seconds)` for increasing or decreasing an existing Date value
-- [ ] all `Adjust` components accept positive, zero or negative integer values
-- [ ] `Adjust` must support changing years, months, days, hours, minutes and seconds in one call
-- [ ] define calendar-safe month/year adjustment semantics for month-end dates, e.g. adjusting January 31 by one month
-- [ ] define and test leap-year behavior, including February 29 when adding/subtracting years
-- [ ] preserve the Date value's time component when only year/month/day fields are adjusted
-- [ ] return a Date value from `Adjust`; the original Date value must not be mutated unless XPScript Date semantics explicitly define value assignment back to the variable
-- [ ] add `Date.Difference(otherDate)` returning the signed difference in seconds between the current Date value and `otherDate`
-- [ ] define `Difference` sign as `otherDate - currentDate`: a later supplied date returns positive seconds and an earlier supplied date returns negative seconds
-- [ ] `Difference` must include days, hours, minutes and seconds in the total returned seconds rather than returning only the Seconds component
-- [ ] define the `Difference` return type large enough for long date ranges, preferably `Double` or `Long` after reviewing precision/range requirements
-- [ ] Date comparison operators must work directly between Date values: `=`, `<>`, `<`, `<=`, `>`, `>=`
-- [ ] Date comparison must compare the complete date/time value, not formatted strings or only the calendar date
-- [ ] examples to support: `date1 > date2`, `date1 >= date2`, `date1 = date2`, `date1 <> date2`, `date1 < date2`, `date1 <= date2`
-- [ ] compiler/type-coercion rules must reject nonsensical Date comparisons rather than silently comparing incompatible strings unless an existing documented Date conversion rule explicitly applies
-- [ ] add positive and negative regression sources for `Date.Adjust`, `Date.Difference` and all Date comparison operators when test execution is re-enabled
-- [ ] add English documentation and examples for Date object operations under `docs/` and `examples/`
-
-Suggested surface examples:
-
-```xpscript
-Dim startDate As Date
-Dim adjustedDate As Date
-Dim endDate As Date
-Dim seconds As Double
-
-startDate = DateNumber(2026, 1, 31)
-adjustedDate = startDate.Adjust(0, 1, 0, 0, 0, 0)
-
-endDate = adjustedDate.Adjust(0, 0, 1, 2, 30, 15)
-seconds = adjustedDate.Difference(endDate)
-
-If endDate > adjustedDate Then
-    Print "endDate is later"
-End If
-```
+- [>] `Date.Adjust(years, months, days, hours, minutes, seconds)` implemented in runtime/preprocessor, awaiting verification
+- [>] all `Adjust` components accept positive, zero or negative integer values
+- [>] combined year/month/day/hour/minute/second adjustment supported
+- [>] calendar-safe month/year semantics rely on .NET `DateTime.AddYears/AddMonths`
+- [>] leap-year behavior follows .NET DateTime semantics
+- [>] Date time component is preserved for date-only adjustments
+- [>] `Adjust` returns a new Date value
+- [>] `Date.Difference(otherDate)` implemented as signed total seconds (`otherDate - currentDate`)
+- [>] Date comparison operators use full DateTime values where date typing is known
+- [ ] negative type diagnostics for nonsensical Date comparisons
+- [ ] runtime regression verification when test execution is re-enabled
+- [ ] English documentation/examples under `docs/` and `examples/`
 
 ## 8. Arrays and lists
 
@@ -194,17 +170,24 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 - [ ] remove all legacy formula-engine references from code/docs/samples/public terminology
 - [>] `Evaluate(sourceText)` executes XPScript supplied as text through an isolated evaluator
-- [>] initial grammar supports expressions, local `Dim`, assignments and `Return`; source: `samples/evaluate-xpscript.xps`
-- [>] evaluator scope is isolated from caller locals; negative source: `samples/evaluate-scope-error.xps`
-- [ ] remove the old unused DataTable-based evaluator implementation
-- [ ] broaden XPScript function coverage inside `Evaluate`
-- [ ] align evaluator coercion and diagnostics with the main compiler/runtime
+- [>] `Evaluate(sourceText, callvar)` restricted parameter bridge implemented
+- [>] scalar/Variant and defensive-copy array semantics implemented
+- [>] evaluator scope isolated from caller locals
+- [>] `Return expression` is explicit result path
+- [>] no `Return` now yields Nothing/Empty instead of leaking last expression value
+- [>] `TypeName`, `LBound`, `UBound` plus basic conversions/string/math helpers available inside Evaluate
+- [ ] remove old unused DataTable-based evaluator implementation
+- [ ] broaden standard XPScript function coverage inside Evaluate
+- [ ] full List/nested collection snapshot validation
+- [ ] align evaluator coercion and diagnostics with main compiler/runtime
 - [ ] safe-use documentation/examples
+- [ ] detailed checklist: `todo/evaluate-callvar-todo.md`
 
 ## 16. Security review and isolation
 
 - [ ] dedicated compiler/preprocessor/runtime/temp-build security review
-- [>] reserve compiler-generated identifiers beginning with `__` and protect runtime type names from user type declarations
+- [>] compiler-generated `__*` names are reserved and runtime/public type names protected from user type declarations
+- [>] reserved identifier validation runs before source rewrites
 - [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
 - [ ] verify modules cannot overwrite unrelated module state
 - [ ] verify concurrent compiler builds use isolated temp paths
@@ -260,180 +243,86 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] create form with title, optional width/height and optional resizable flag
 - [ ] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
 - [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
-- [ ] close/cancel behavior must be consistent across Windows, Linux and macOS
-- [ ] support rows/columns or simple vertical/group layout without requiring pixel-perfect platform-specific positioning
-- [ ] support sections/groups and optional labels/headings
-- [ ] support tab order and keyboard focus
-- [ ] default button and cancel button semantics
-- [ ] Enter activates default button where appropriate; Escape activates cancel where appropriate
-- [ ] optional minimum window size and automatic sizing from controls
+- [ ] close/cancel behavior consistent across Windows, Linux and macOS
+- [ ] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
 
-### 18.3 UI field/control inventory
+### 18.3 UI element inventory
 
-MVP controls:
+- [ ] Label
+- [ ] TextField
+- [ ] PasswordField
+- [ ] TextArea
+- [ ] NumberField
+- [ ] DateField
+- [ ] TimeField
+- [ ] DateTimeField
+- [ ] CheckBox
+- [ ] RadioButton/RadioGroup
+- [ ] ComboBox
+- [ ] ListBox
+- [ ] MultiListBox
+- [ ] Button
+- [ ] Separator/spacer
+- [ ] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
 
-- [ ] `UILabel` / static text
-- [ ] `UITextField` / single-line text input
-- [ ] `UIPasswordField` / masked single-line input
-- [ ] `UITextArea` / multiline text input
-- [ ] `UINumberField` supporting Integer/Long/Double/Currency constraints
-- [ ] `UIDateField`
-- [ ] `UITimeField`
-- [ ] `UIDateTimeField`
-- [ ] `UICheckBox` for Boolean values
-- [ ] `UIRadioButton` / radio group for one-of-many choices
-- [ ] `UIComboBox` for a single selection from a list
-- [ ] `UIListBox` for a single selection from a list
-- [ ] `UIMultiListBox` for multiple selections
-- [ ] `UIButton`
-- [ ] spacer/separator control
-- [ ] optional progress bar for later extension
-- [ ] optional image/icon control for later extension
+### 18.4 Validation
 
-Every input control should define where applicable:
+- [ ] required
+- [ ] min/max text length
+- [ ] numeric min/max
+- [ ] date min/max
+- [ ] regular expression
+- [ ] allowed values
+- [ ] custom XPScript validation callback
+- [ ] field-level validation errors and form-level validation before OK/submit
 
-- [ ] field/data name
-- [ ] label
-- [ ] default value
-- [ ] enabled/disabled
-- [ ] visible/hidden
-- [ ] required flag
-- [ ] read-only flag
-- [ ] tooltip/help text
-- [ ] placeholder text where supported
-- [ ] width/height hints rather than hard platform-specific dimensions
+### 18.5 Dialog inventory
 
-### 18.4 Choice/list data
-
-- [ ] define a choice model with display text and stored value separated, e.g. `UIChoice(label, value)`
-- [ ] allow simple string arrays as shorthand choices
-- [ ] single-select control returns one value
-- [ ] multi-select control returns an XPScript array
-- [ ] support a default selected value or default selected values
-- [ ] define behavior when the current/default value is not present in the available choices
-- [ ] optional sorted choices flag
-
-### 18.5 Validation
-
-- [ ] required-field validation
-- [ ] String minimum/maximum length
-- [ ] numeric minimum/maximum
-- [ ] Date minimum/maximum
-- [ ] regular-expression validation
-- [ ] allowed-values validation
-- [ ] custom validation callback to an XPScript Function returning Boolean or an error message
-- [ ] field-level validation messages
-- [ ] form-level validation before OK/submit closes the dialog
-- [ ] invalid form must remain open and focus/highlight the first invalid field where supported
-- [ ] validation must never execute arbitrary code outside explicitly registered XPScript callbacks
-
-### 18.6 Buttons and events
-
-- [ ] standard OK button
-- [ ] standard Cancel button
-- [ ] standard Yes/No buttons where appropriate
-- [ ] custom button captions
-- [ ] button click callback into a named XPScript Sub/Function
-- [ ] define whether button callbacks may modify `UIData`, form controls and validation state
-- [ ] prevent duplicate/reentrant callback execution from repeated rapid input
-- [ ] define exception propagation from UI callbacks to XPScript error handling
-
-### 18.7 Standard dialogs
-
-- [ ] `MessageBox` compatible surface with the language's established parameters and return codes
-- [ ] support common button combinations: OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel where platform supports it
-- [ ] support information, warning, error and question icons/types
-- [ ] preserve stable XPScript return constants independent of OS-native numeric return values
-- [ ] question/confirm helper returning Boolean where convenient, while retaining full `MessageBox` API
-- [ ] simple text input dialog with prompt, title and default value
+- [ ] MessageBox with stable XPScript parameters/return codes across platforms
+- [ ] OK
+- [ ] OK/Cancel
+- [ ] Yes/No
+- [ ] Yes/No/Cancel
+- [ ] Retry/Cancel
+- [ ] question/confirm
+- [ ] text input dialog
 - [ ] password input dialog
-- [ ] single-value list selection dialog
-- [ ] multi-value list selection dialog
+- [ ] single-select list dialog
+- [ ] multi-select list dialog
 - [ ] file-open dialog
 - [ ] multi-file-open dialog
 - [ ] file-save dialog
-- [ ] folder/directory selection dialog
+- [ ] folder selection dialog
+- [ ] file filters, initial directory, default filename, overwrite confirmation and correct Cancel semantics
 
-### 18.8 File dialog requirements
+### 18.6 Data binding semantics
 
-- [ ] initial/default directory
-- [ ] default file name for save dialog
-- [ ] extension filters such as `Text files (*.txt)` and `All files (*.*)`
-- [ ] multiple filter groups
-- [ ] default selected filter
-- [ ] multi-select for open dialog
-- [ ] overwrite confirmation for save dialog where appropriate
-- [ ] return `Null`/empty result consistently on Cancel
-- [ ] preserve native path format returned by the running platform
-- [ ] no implicit path normalization that changes a user-selected file unexpectedly
-- [ ] security review for symlinks, path traversal assumptions and permission failures
+- [ ] form starts with an isolated working copy of `UIData`
+- [ ] user edits update only the working copy while the dialog is open
+- [ ] OK commits form values to returned/form Data
+- [ ] Cancel discards working-copy changes unless explicitly configured otherwise
+- [ ] values preserve scalar/multivalue XPScript types where possible
 
-### 18.9 Proposed form construction surface
+### 18.7 Cross-platform backend inventory
 
-Inventory/example only; final naming may change during implementation:
+- [ ] investigate Windows backend
+- [ ] investigate Linux backend such as GTK or equivalent
+- [ ] investigate macOS backend
+- [ ] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
+- [ ] prefer native file/message dialogs where practical
+- [ ] define UI thread/event-loop integration
+- [ ] detect headless/server environment and return clear runtime errors
+- [ ] architecture-specific dependencies for x64/arm64
+- [ ] package UI dependencies only when generated program actually uses the UI extension where feasible
 
-```xpscript
-Dim form As New UIForm("Customer")
-Dim data As UIData
+### 18.8 UI security/lifetime
 
-Call form.AddTextField("Name", "Name", "Fredrik")
-Call form.AddNumberField("Age", "Age", 40)
-Call form.AddCheckBox("Active", "Active", True)
-Call form.AddComboBox("Country", "Country", Array("Sweden", "Norway", "Denmark"), "Sweden")
-Call form.AddMultiListBox("Roles", "Roles", Array("Admin", "Editor", "Reader"))
-
-Call form.Required("Name")
-Call form.NumberRange("Age", 0, 150)
-
-If form.ShowDialog() = UIResultOK Then
-    Set data = form.Data
-    Print data.GetItemValueString("Name")
-    Print CStr(data.GetItemValue("Roles"))
-End If
-```
-
-### 18.10 Backend/platform architecture inventory
-
-- [ ] define a platform-neutral UI abstraction used by XPScript-generated code
-- [ ] choose Windows backend technology after evaluation; candidates should support native dialogs and simple desktop controls
-- [ ] choose Linux backend technology after evaluation; assess availability/deployment cost of GTK or another maintained native toolkit
-- [ ] choose macOS backend technology after evaluation; native Cocoa/AppKit bridge or a maintained cross-platform backend
-- [ ] evaluate whether one maintained .NET cross-platform UI toolkit can provide all three backends without excessive output size or runtime dependencies
-- [ ] prefer native file/message dialogs even if general form rendering uses a cross-platform toolkit
-- [ ] UI backend selection must happen from runtime platform, not from assumptions about the compiler host
-- [ ] headless/server environments must fail clearly instead of hanging when a UI call is attempted
-- [ ] define main/UI thread requirements separately for Windows, Linux and macOS
-- [ ] define event-loop ownership when XPScript is a normal console application that opens one modal UI dialog
-- [ ] prevent UI toolkit initialization from interfering with console-only programs that never use UI
-- [ ] package required platform UI native libraries alongside output only when the UI extension is actually used
-- [ ] account for x64/arm64 native UI dependencies in publish output
-
-### 18.11 Data binding rules
-
-- [ ] controls bind by field name into the form's `UIData`
-- [ ] defaults populate `UIData` before the dialog is shown
-- [ ] user edits update an isolated working copy while the dialog is open
-- [ ] OK commits the working values to returned `UIData`
-- [ ] Cancel does not commit user edits unless explicitly configured otherwise
-- [ ] programmatic `ReplaceItemValue` before `ShowDialog()` updates the corresponding control default/current value
-- [ ] programmatic updates from button callbacks refresh bound controls
-- [ ] define conversion behavior when field control type and supplied value type differ
-- [ ] multivalue fields remain arrays and must never be silently collapsed to one scalar
-- [ ] no shared static dictionary for form values; each form/data object owns its own state
-
-### 18.12 UI security, resource lifetime and testing
-
-- [ ] UI values must not be able to overwrite compiler/runtime internal variables
-- [ ] validate callback names against XPScript procedures rather than invoking arbitrary reflection targets
-- [ ] safely dispose windows, native handles, dialogs, file pickers, icons and backend resources after close
-- [ ] closing a form must release references to callbacks/data unless retained by XPScript code
-- [ ] ensure password field values are not written to logs/diagnostics by default
-- [ ] document that String password contents cannot be guaranteed to be zeroed from managed memory immediately
-- [ ] platform-specific smoke tests for each control and standard dialog when workflows/tests are re-enabled
-- [ ] keyboard/accessibility checks: labels, focus, default/cancel buttons and basic screen-reader metadata where backend supports it
-- [ ] verify equivalent returned `UIData` values across Windows, Linux and macOS
-- [ ] English UI extension documentation under `docs/ui/`
-- [ ] reusable UI examples under `examples/ui/`
+- [ ] isolate all form/data instances
+- [ ] ensure password values are not logged in diagnostics or default debug output
+- [ ] validate callbacks cannot overwrite unrelated runtime/compiler state
+- [ ] deterministically release windows/dialog/native handles
+- [ ] close/dispose event loops and native UI resources correctly
+- [ ] include UI objects in memory/lifetime and security reviews
 
 ## 19. Documentation and examples
 
@@ -450,8 +339,8 @@ End If
 - [ ] OS `Lock/Unlock` semantics
 - [ ] `Platform`, cross-platform `Shell` and publishing
 - [ ] XPScript-only `Evaluate`
-- [ ] UI extension forms, controls, data binding, validation, standard dialogs and platform differences
-- [ ] XPScript branding only; no legacy product names or legacy formula-engine terminology
+- [ ] UI extension documentation and examples
+- [ ] XPScript branding only; no legacy product names or formula-engine terminology
 
 ## 20. Quality gates
 
@@ -468,4 +357,4 @@ A feature becomes `[x]` only after requested verification is re-enabled and pass
 9. adversarial coverage for security-sensitive features.
 10. reference-release and deterministic OS-resource cleanup tests for memory/lifetime changes.
 11. valid linked `examples/` source or equivalent inline example for documentation work.
-12. UI extension smoke tests on Windows, Linux and macOS including dialogs, validation, data binding and resource cleanup.
+12. UI backend validation on each supported desktop platform for UI features.
