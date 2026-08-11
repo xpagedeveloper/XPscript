@@ -129,6 +129,16 @@ jobs:
           }
           if (-not ($output | Where-Object { $_ -like 'NAME>*INPUT=Fredrik' })) { throw 'Input prompt/value behavior failed.' }
 
+      - name: Compile and run reference runtime batch 1
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/reference-runtime-batch1.xps -o ./out/reference-runtime-batch1.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Reference runtime batch 1 compilation failed.' }
+          $output = & ./out/reference-runtime-batch1.exe
+          foreach ($value in @('INSTRB=3','LEFTB=abc','RIGHTB=def','MIDB=bcd','STRLEFT=one','STRLEFTBACK=one/two','STRRIGHT=two/three','STRRIGHTBACK=three','STRTOKEN=two','LSET=abc  !','RSET=  abc!','UCHR=☃','UNI=65','CVDATE=2026','ISLIST=True','ISUNKNOWN=True','B64ENC=RnJlZHJpaw==','B64DEC=Fredrik')) {
+            if ($output -notcontains $value) { throw "Reference runtime batch 1 output missing: $value" }
+          }
+
       - name: Verify forgiving plus coercion
         shell: pwsh
         run: |
