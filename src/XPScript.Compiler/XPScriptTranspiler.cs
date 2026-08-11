@@ -35,6 +35,7 @@ public sealed class XPScriptTranspiler
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ReferenceRuntimeExtensionsPreprocessor().Transform(protectedSource);
         protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
+        protectedSource = new XPScriptEvaluatePreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
@@ -45,6 +46,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
+        generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
