@@ -157,7 +157,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 - [>] target-selected native library declarations with `WindowsLib`, `LinuxLib`, `MacOSLib`
 - [>] target-selected native entry points with `WindowsAlias`, `LinuxAlias`, `MacOSAlias`
 - [>] multiline platform-specific `Declare` statements with `_`; source: `samples/platform-native-library.xps`
-- [ ] package/copy application-local `.dll`, `.so`, `.dylib` dependencies alongside generated output when required
+- [>] application-local native `.dll`, `.so`, `.dylib` paths are validated and copied beside generated output; system-library names remain OS-resolved; path escape, missing-file, output-name collision and executable-overwrite checks are implemented; source: `samples/native-dependency-packaging.xps`
 - [ ] support architecture-specific native assets for x64 vs arm64
 - [ ] define managed .NET assembly references separately from native-library declarations, including assemblies with RID-specific native dependencies
 - [ ] validate native-library search paths and loading behavior on Windows, Linux and macOS
