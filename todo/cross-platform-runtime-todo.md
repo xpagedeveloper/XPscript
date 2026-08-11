@@ -48,16 +48,19 @@ XPScript `Declare ... Lib` must not assume that every platform uses a Windows DL
 - [>] multiline `Declare` statements using `_` are accepted by the platform-selection preprocessor
 - [>] application-local native library paths are copied beside generated output; system library names remain OS-resolved
 - [>] local native paths are constrained to the XPScript source tree and checked for missing files, output collisions and executable overwrite
+- [>] absolute application-local native paths are rejected; project-local dependencies must use relative paths
+- [>] application-local file names are validated against target RID: `.dll` on Windows, `.so`/versioned `.so.N` on Linux, `.dylib` on macOS
 - [>] architecture-specific native libraries supported with `WindowsX64Lib`, `WindowsArm64Lib`, `LinuxX64Lib`, `LinuxArm64Lib`, `MacOSX64Lib`, `MacOSArm64Lib`
 - [>] architecture-specific entry points supported with matching `*X64Alias` and `*Arm64Alias` keywords
 - [>] native target resolution order is exact RID -> OS-specific value -> base `Lib`/`Alias`; source: `samples/native-architecture-assets.xps`
+- [>] if an OS/architecture-specific library or alias is omitted, resolution falls back through OS-specific then base `Lib`/`Alias`
+- [>] generated native calls are wrapped so missing library, missing entry point and wrong binary architecture produce explicit XPScript runtime diagnostics; source: `samples/native-loader-diagnostics.xps`
+- [>] missing-library diagnostics state that application-local libraries are searched beside the generated application while bare system names remain OS-loader resolved
 - [ ] validate `.dll` P/Invoke on Windows x64 and ARM64
 - [ ] validate `.so` P/Invoke on Linux x64 and ARM64
 - [ ] validate `.dylib` P/Invoke on macOS x64 and ARM64
-- [ ] define behavior if an OS-specific library is omitted: current design falls back to the base `Lib` value
 - [ ] define platform-specific calling-convention support where required
 - [ ] define behavior when the native function signature itself differs by platform; likely require separate declarations plus `Platform()` branching
-- [ ] produce clear runtime diagnostics for missing library, missing entry point, wrong architecture and loader errors
 
 Example target syntax:
 
