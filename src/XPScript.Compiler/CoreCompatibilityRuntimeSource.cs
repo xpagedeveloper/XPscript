@@ -244,7 +244,7 @@ internal sealed class XPScriptRuntimeException : Exception
     public int Number { get; }
 }
 
-internal static class LotusErrorRuntime
+internal static class XPScriptErrorRuntime
 {
     [ThreadStatic] private static int _number;
     [ThreadStatic] private static string? _description;
@@ -460,23 +460,23 @@ internal static class LSFileRuntime
         };
     }
 
-    public static void Put(int number, object? recordNumber, object? value, string lotusType)
+    public static void Put(int number, object? recordNumber, object? value, string xpscriptType)
     {
         var state = Get(number);
         EnsureBinary(state);
         PositionForRecord(state, recordNumber);
         using var writer = new BinaryWriter(state.Stream, Encoding.Default, true);
-        WriteTyped(writer, state, value, lotusType);
+        WriteTyped(writer, state, value, xpscriptType);
         FinishRecord(state);
     }
 
-    public static object? GetValue(int number, object? recordNumber, string lotusType, object? currentValue)
+    public static object? GetValue(int number, object? recordNumber, string xpscriptType, object? currentValue)
     {
         var state = Get(number);
         EnsureBinary(state);
         PositionForRecord(state, recordNumber);
         using var reader = new BinaryReader(state.Stream, Encoding.Default, true);
-        var value = ReadTyped(reader, state, lotusType, currentValue);
+        var value = ReadTyped(reader, state, xpscriptType, currentValue);
         FinishRecord(state);
         return value;
     }

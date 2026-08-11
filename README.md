@@ -41,14 +41,14 @@ Then compile an XPScript source file:
 
 A source file must contain either:
 
-```lotusscript
+```xpscriptscript
 Sub Main()
 End Sub
 ```
 
 or:
 
-```lotusscript
+```xpscriptscript
 Sub Initialize()
 End Sub
 ```
@@ -117,7 +117,7 @@ Supported array features include:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Option Base 1
 
 Sub SetFirst(values() As Long)
@@ -148,7 +148,7 @@ End Sub
 
 Scalar parameters can be explicitly declared `ByRef`.
 
-```lotusscript
+```xpscriptscript
 Sub Increment(ByRef value As Long)
     value = value + 1
 End Sub
@@ -169,7 +169,7 @@ Arrays are passed as shared array objects and array element changes are visible 
 
 Supported forms include:
 
-```lotusscript
+```xpscriptscript
 Select Case value
 Case 1
     Print "one"
@@ -203,7 +203,7 @@ Supported forms include:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Sub ReadFile()
     On Error GoTo Handler
 
@@ -234,7 +234,7 @@ Common .NET/OS exceptions are normalized into XPScript-compatible numbers before
 
 Text labels can be used as branch targets.
 
-```lotusscript
+```xpscriptscript
 GoSub Worker
 Print "returned"
 GoTo Done
@@ -252,7 +252,7 @@ Done:
 
 `With` supports member access using leading dots.
 
-```lotusscript
+```xpscriptscript
 With person
     .Name = "Fredrik"
     Print .Name
@@ -265,7 +265,7 @@ Nested `With` blocks are supported by the compatibility preprocessor.
 
 Local `Static` variables retain their value between calls.
 
-```lotusscript
+```xpscriptscript
 Function Counter() As Long
     Static count As Long
     count = count + 1
@@ -279,7 +279,7 @@ End Function
 
 Default variable types can be selected by the first letter of a name.
 
-```lotusscript
+```xpscriptscript
 DefInt A-C
 
 Sub Main()
@@ -295,7 +295,7 @@ Letter ranges and comma-separated ranges are supported.
 
 Windows native functions and procedures can be declared using XPScript-style declarations.
 
-```lotusscript
+```xpscriptscript
 Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
 Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
 ```
@@ -324,7 +324,7 @@ Supported syntax and operations:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Dim users List As String
 
 users("admin") = "Fredrik"
@@ -390,7 +390,7 @@ On Windows, `.cmd` and `.bat` files are launched through `COMSPEC`/`cmd.exe`. A 
 
 `Sleep seconds` suspends the current thread for the requested number of seconds. Fractional seconds are accepted.
 
-```lotusscript
+```xpscriptscript
 Sleep 0.25
 ```
 
@@ -438,7 +438,7 @@ XPScript supports:
 
 For example:
 
-```lotusscript
+```xpscriptscript
 Print CStr(Evaluate("1+2*3"))
 ```
 
@@ -468,7 +468,7 @@ XPScript provides self-contained compatibility facades named `NotesSAXParser`, `
 
 The parser is event driven. Event handlers can be connected using XPScript-style syntax and are called synchronously while the XML stream is being parsed:
 
-```lotusscript
+```xpscriptscript
 Sub Main()
     Dim parser As NotesSAXParser
 

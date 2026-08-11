@@ -620,8 +620,8 @@ internal sealed class CoreCompatibilityTranspiler
         if (errorStmt.Success)
         {
             output.Add(string.IsNullOrWhiteSpace(errorStmt.Groups[2].Value)
-                ? $"Call LotusErrorRuntime.Raise({errorStmt.Groups[1].Value})"
-                : $"Call LotusErrorRuntime.Raise({errorStmt.Groups[1].Value}, {errorStmt.Groups[2].Value})");
+                ? $"Call XPScriptErrorRuntime.Raise({errorStmt.Groups[1].Value})"
+                : $"Call XPScriptErrorRuntime.Raise({errorStmt.Groups[1].Value}, {errorStmt.Groups[2].Value})");
             return output;
         }
 
@@ -756,10 +756,10 @@ internal sealed class CoreCompatibilityTranspiler
 
     private string RewriteErrorExpressions(string line)
     {
-        line = Regex.Replace(line, @"(?<![\w.])Error\$?\s*\(", "LotusErrorRuntime.Error(", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])Err\b", "LotusErrorRuntime.Err", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])Erl\b", "LotusErrorRuntime.Erl", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])Error\$?\b(?!\s*\()", "LotusErrorRuntime.Error()", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"(?<![\w.])Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"(?<![\w.])Err\b", "XPScriptErrorRuntime.Err", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"(?<![\w.])Erl\b", "XPScriptErrorRuntime.Erl", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"(?<![\w.])Error\$?\b(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\$?\s*\(\s*\)", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\b(?!\s*\()", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         foreach (var fn in new[] { "EOF", "LOF", "Seek", "Loc" })
@@ -906,7 +906,7 @@ internal sealed class CoreCompatibilityTranspiler
         return _defTypes.TryGetValue(char.ToUpperInvariant(name[0]), out var type) ? type : "Variant";
     }
 
-    private static string MapCSharpType(string lotusType) => lotusType.ToLowerInvariant() switch
+    private static string MapCSharpType(string xpscriptType) => xpscriptType.ToLowerInvariant() switch
     {
         "string" => "string",
         "integer" => "int",
@@ -920,7 +920,7 @@ internal sealed class CoreCompatibilityTranspiler
         "variant" => "dynamic",
         "object" => "object",
         "void" => "void",
-        _ => $"LSRef<{lotusType}>"
+        _ => $"LSRef<{xpscriptType}>"
     };
 
     private static string DefaultCSharp(string type) => type switch
@@ -933,7 +933,7 @@ internal sealed class CoreCompatibilityTranspiler
         _ => "0"
     };
 
-    private static string ConvertExpression(string lotusType, string expression) => lotusType.ToLowerInvariant() switch
+    private static string ConvertExpression(string xpscriptType, string expression) => xpscriptType.ToLowerInvariant() switch
     {
         "string" => $"XPScriptRuntime.CStr({expression})",
         "integer" => $"XPScriptRuntime.CInt({expression})",

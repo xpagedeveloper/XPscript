@@ -38,7 +38,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private sealed class FieldInfo
     {
         public required string Name { get; init; }
-        public required string LotusType { get; init; }
+        public required string XPScriptType { get; init; }
         public bool IsList { get; init; }
         public string Visibility { get; init; } = "private";
     }
@@ -46,7 +46,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private sealed class PropertyInfo
     {
         public required string Name { get; init; }
-        public required string LotusType { get; set; }
+        public required string XPScriptType { get; set; }
         public string Visibility { get; set; } = "public";
         public bool HasGet { get; set; }
         public bool HasSet { get; set; }
@@ -206,14 +206,14 @@ internal static class Script
             if (propertyMatch.Success)
             {
                 var name = propertyMatch.Groups[3].Value;
-                var lotusType = string.IsNullOrWhiteSpace(propertyMatch.Groups[5].Value) ? "Variant" : propertyMatch.Groups[5].Value;
+                var xpscriptType = string.IsNullOrWhiteSpace(propertyMatch.Groups[5].Value) ? "Variant" : propertyMatch.Groups[5].Value;
                 if (!current.Properties.TryGetValue(name, out var property))
                 {
-                    property = new PropertyInfo { Name = name, LotusType = lotusType };
+                    property = new PropertyInfo { Name = name, XPScriptType = xpscriptType };
                     current.Properties[name] = property;
                 }
 
-                property.LotusType = lotusType;
+                property.XPScriptType = xpscriptType;
                 property.Visibility = NormalizeVisibility(propertyMatch.Groups[1].Value, property.Visibility);
                 property.HasParameters |= !string.IsNullOrWhiteSpace(propertyMatch.Groups[4].Value);
                 if (propertyMatch.Groups[2].Value.Equals("Get", StringComparison.OrdinalIgnoreCase))
@@ -233,7 +233,7 @@ internal static class Script
                 current.Fields[fieldMatch.Groups[2].Value] = new FieldInfo
                 {
                     Name = fieldMatch.Groups[2].Value,
-                    LotusType = fieldMatch.Groups[4].Value,
+                    XPScriptType = fieldMatch.Groups[4].Value,
                     IsList = !string.IsNullOrWhiteSpace(fieldMatch.Groups[3].Value),
                     Visibility = NormalizeVisibility(fieldMatch.Groups[1].Value, "private")
                 };
@@ -323,16 +323,16 @@ internal static class Script
             return false;
 
         var name = fieldMatch.Groups[2].Value;
-        var lotusType = fieldMatch.Groups[4].Value;
+        var xpscriptType = fieldMatch.Groups[4].Value;
         var visibility = NormalizeVisibility(fieldMatch.Groups[1].Value, "private");
 
         if (!string.IsNullOrWhiteSpace(fieldMatch.Groups[3].Value))
         {
-            Write(sb, $"{visibility} LSList<{MapType(lotusType)}> {name} = new();");
+            Write(sb, $"{visibility} LSList<{MapType(xpscriptType)}> {name} = new();");
             return true;
         }
 
-        var type = MapType(lotusType);
+        var type = MapType(xpscriptType);
         Write(sb, $"{visibility} {type} {name} = {DefaultValue(type)};");
         return true;
     }
@@ -352,8 +352,8 @@ internal static class Script
             throw new CompilerException("Parameterized properties are not supported yet.");
 
         var name = match.Groups[3].Value;
-        var lotusType = string.IsNullOrWhiteSpace(match.Groups[5].Value) ? "Variant" : match.Groups[5].Value;
-        var type = MapType(lotusType);
+        var xpscriptType = string.IsNullOrWhiteSpace(match.Groups[5].Value) ? "Variant" : match.Groups[5].Value;
+        var type = MapType(xpscriptType);
         _currentProcedure = name;
         _currentProperty = name;
         _currentReturnType = type;
@@ -372,7 +372,7 @@ internal static class Script
         else
         {
             _procedureKind = ProcedureKind.PropertySet;
-            RegisterVariable(name, lotusType, false);
+            RegisterVariable(name, xpscriptType, false);
             Write(sb, $"private void __set_{name}({type} {name})");
             Write(sb, "{");
             _indent++;
@@ -434,8 +434,8 @@ internal static class Script
             return false;
 
         var nameFn = fn.Groups[2].Value;
-        var lotusReturnType = string.IsNullOrWhiteSpace(fn.Groups[4].Value) ? "Variant" : fn.Groups[4].Value;
-        var returnType = MapType(lotusReturnType);
+        var xpscriptReturnType = string.IsNullOrWhiteSpace(fn.Groups[4].Value) ? "Variant" : fn.Groups[4].Value;
+        var returnType = MapType(xpscriptReturnType);
         var arguments = ParseArguments(fn.Groups[3].Value);
         var visibilityFn = NormalizeVisibility(fn.Groups[1].Value, "public");
 
@@ -635,8 +635,8 @@ internal static class Script
 
         var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
         if (!dim.Success) return false;
-        var variable = dim.Groups[1].Value; var lotusType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
-        var mapped = MapType(lotusType); RegisterVariable(variable, lotusType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
+        var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
+        var mapped = MapType(xpscriptType); RegisterVariable(variable, xpscriptType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
     }
 
     private bool TryEmitErase(StringBuilder sb, string line)
@@ -745,7 +745,7 @@ internal static class Script
         foreach (var property in info.Properties.Values)
         {
             if (property.HasParameters) continue;
-            var type = MapType(property.LotusType);
+            var type = MapType(property.XPScriptType);
             Write(sb, $"{property.Visibility} {type} {property.Name}"); Write(sb, "{"); _indent++;
             if (property.HasGet) Write(sb, $"get => __get_{property.Name}();");
             if (property.HasSet) Write(sb, $"set => __set_{property.Name}(value);");
@@ -758,7 +758,7 @@ internal static class Script
         if (string.IsNullOrWhiteSpace(raw)) return;
         foreach (var part in SplitOutsideStrings(raw, ','))
         {
-            var declaration = ParseArgumentDeclaration(part.Trim()); RegisterVariable(declaration.Name, declaration.LotusType, declaration.IsList);
+            var declaration = ParseArgumentDeclaration(part.Trim()); RegisterVariable(declaration.Name, declaration.XPScriptType, declaration.IsList);
         }
     }
 
@@ -769,24 +769,24 @@ internal static class Script
         foreach (var part in SplitOutsideStrings(raw, ','))
         {
             var declaration = ParseArgumentDeclaration(part.Trim());
-            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.LotusType)) throw new CompilerException("ByRef scalar parameters are not supported yet.");
-            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.LotusType)}> {declaration.Name}" : $"{MapType(declaration.LotusType)} {declaration.Name}");
+            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.XPScriptType)) throw new CompilerException("ByRef scalar parameters are not supported yet.");
+            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.XPScriptType)}> {declaration.Name}" : $"{MapType(declaration.XPScriptType)} {declaration.Name}");
         }
         return string.Join(", ", result);
     }
 
-    private (string Name, string LotusType, bool IsList, bool IsByRef) ParseArgumentDeclaration(string raw)
+    private (string Name, string XPScriptType, bool IsList, bool IsByRef) ParseArgumentDeclaration(string raw)
     {
         var match = Regex.Match(raw, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:(List))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
         if (!match.Success) throw new CompilerException($"Unsupported argument declaration: {raw}");
         return (match.Groups[2].Value, string.IsNullOrWhiteSpace(match.Groups[4].Value) ? "Variant" : match.Groups[4].Value, !string.IsNullOrWhiteSpace(match.Groups[3].Value), match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase));
     }
 
-    private void RegisterVariable(string name, string lotusType, bool isList)
+    private void RegisterVariable(string name, string xpscriptType, bool isList)
     {
-        if (isList) { _listVariables[name] = MapType(lotusType); return; }
-        var type = MapType(lotusType); _variableTypes[name] = type;
-        if (_classes.ContainsKey(lotusType)) _objectVariables[name] = lotusType;
+        if (isList) { _listVariables[name] = MapType(xpscriptType); return; }
+        var type = MapType(xpscriptType); _variableTypes[name] = type;
+        if (_classes.ContainsKey(xpscriptType)) _objectVariables[name] = xpscriptType;
     }
 
     private string TransformCondition(string expression) => Regex.Replace(TransformExpression(expression), @"(?<![<>=!])=(?!=)", "==");
@@ -796,7 +796,7 @@ internal static class Script
         var prepared = TransformListSyntax(expression); var result = new StringBuilder();
         foreach (var piece in SplitStringLiterals(prepared))
         {
-            if (piece.IsString) { result.Append(ConvertLotusStringLiteral(piece.Text)); continue; }
+            if (piece.IsString) { result.Append(ConvertXPScriptStringLiteral(piece.Text)); continue; }
             result.Append(TransformNonStringExpression(piece.Text));
         }
         return result.ToString().Trim();
@@ -834,7 +834,7 @@ internal static class Script
         {
             foreach (var field in classInfo.Fields.Values)
             {
-                if (!_classes.ContainsKey(field.LotusType) || field.IsList) continue;
+                if (!_classes.ContainsKey(field.XPScriptType) || field.IsList) continue;
                 var name = Regex.Escape(field.Name);
                 text = Regex.Replace(text, $@"\bthis\.{name}\s+Is\s+Not\s+Nothing\b", $"!this.{field.Name}.IsNothing", RegexOptions.IgnoreCase);
                 text = Regex.Replace(text, $@"\bthis\.{name}\s+Is\s+Nothing\b", $"this.{field.Name}.IsNothing", RegexOptions.IgnoreCase);
@@ -880,7 +880,7 @@ internal static class Script
             if (classInfo.Properties.ContainsKey(text)) return "this." + text;
             foreach (var field in classInfo.Fields.Values)
             {
-                if (!_classes.ContainsKey(field.LotusType) || field.IsList) continue;
+                if (!_classes.ContainsKey(field.XPScriptType) || field.IsList) continue;
                 if (text.StartsWith(field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[(field.Name.Length + 1)..];
                 if (text.StartsWith("this." + field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[("this." + field.Name + ".").Length..];
             }
@@ -895,7 +895,7 @@ internal static class Script
             if (text.StartsWith(objectVariable.Key + ".", StringComparison.OrdinalIgnoreCase)) return objectVariable.Key + ".Value!." + text[(objectVariable.Key.Length + 1)..];
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
             foreach (var field in classInfo.Fields.Values)
-                if (_classes.ContainsKey(field.LotusType) && !field.IsList && text.StartsWith(field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[(field.Name.Length + 1)..];
+                if (_classes.ContainsKey(field.XPScriptType) && !field.IsList && text.StartsWith(field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[(field.Name.Length + 1)..];
         return text;
     }
 
@@ -905,18 +905,18 @@ internal static class Script
         if (_objectVariables.ContainsKey(text)) return text;
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var current))
         {
-            if (current.Fields.TryGetValue(text, out var field) && !field.IsList && _classes.ContainsKey(field.LotusType)) return "this." + text;
+            if (current.Fields.TryGetValue(text, out var field) && !field.IsList && _classes.ContainsKey(field.XPScriptType)) return "this." + text;
             if (text.StartsWith("this.", StringComparison.OrdinalIgnoreCase))
             {
                 var member = text["this.".Length..];
-                if (current.Fields.TryGetValue(member, out var meField) && !meField.IsList && _classes.ContainsKey(meField.LotusType)) return text;
+                if (current.Fields.TryGetValue(member, out var meField) && !meField.IsList && _classes.ContainsKey(meField.XPScriptType)) return text;
             }
         }
         var dot = text.IndexOf('.');
         if (dot > 0)
         {
             var root = text[..dot]; var member = text[(dot + 1)..];
-            if (_objectVariables.TryGetValue(root, out var className) && _classes.TryGetValue(className, out var classInfo) && classInfo.Fields.TryGetValue(member, out var memberField) && !memberField.IsList && _classes.ContainsKey(memberField.LotusType)) return $"{root}.Value!.{member}";
+            if (_objectVariables.TryGetValue(root, out var className) && _classes.TryGetValue(className, out var classInfo) && classInfo.Fields.TryGetValue(member, out var memberField) && !memberField.IsList && _classes.ContainsKey(memberField.XPScriptType)) return $"{root}.Value!.{member}";
         }
         return null;
     }
@@ -928,13 +928,13 @@ internal static class Script
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var current))
         {
             var member = text.StartsWith("this.", StringComparison.OrdinalIgnoreCase) ? text["this.".Length..] : text;
-            if (current.Fields.TryGetValue(member, out var field) && !field.IsList && _classes.ContainsKey(field.LotusType)) return field.LotusType;
+            if (current.Fields.TryGetValue(member, out var field) && !field.IsList && _classes.ContainsKey(field.XPScriptType)) return field.XPScriptType;
         }
         var dot = text.IndexOf('.');
         if (dot > 0)
         {
             var root = text[..dot]; var member = text[(dot + 1)..];
-            if (_objectVariables.TryGetValue(root, out var className) && _classes.TryGetValue(className, out var classInfo) && classInfo.Fields.TryGetValue(member, out var memberField) && !memberField.IsList && _classes.ContainsKey(memberField.LotusType)) return memberField.LotusType;
+            if (_objectVariables.TryGetValue(root, out var className) && _classes.TryGetValue(className, out var classInfo) && classInfo.Fields.TryGetValue(member, out var memberField) && !memberField.IsList && _classes.ContainsKey(memberField.XPScriptType)) return memberField.XPScriptType;
         }
         return null;
     }
@@ -950,7 +950,7 @@ internal static class Script
     private (string Expression, string ElementType)? ResolveList(string name)
     {
         if (_listVariables.TryGetValue(name, out var localType)) return (name, localType);
-        if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var info) && info.Fields.TryGetValue(name, out var field) && field.IsList) return ($"this.{name}", MapType(field.LotusType));
+        if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var info) && info.Fields.TryGetValue(name, out var field) && field.IsList) return ($"this.{name}", MapType(field.XPScriptType));
         return null;
     }
 
@@ -960,8 +960,8 @@ internal static class Script
         if (_currentClass is null || !_classes.TryGetValue(_currentClass, out var info)) yield break;
         foreach (var field in info.Fields.Values.Where(x => x.IsList))
         {
-            yield return (field.Name, $"this.{field.Name}", MapType(field.LotusType));
-            yield return ($"this.{field.Name}", $"this.{field.Name}", MapType(field.LotusType));
+            yield return (field.Name, $"this.{field.Name}", MapType(field.XPScriptType));
+            yield return ($"this.{field.Name}", $"this.{field.Name}", MapType(field.XPScriptType));
         }
     }
 
@@ -980,12 +980,12 @@ internal static class Script
         return type switch { "byte" => $"Convert.ToByte({raw})", "int" => $"Convert.ToInt32({raw})", "long" => $"Convert.ToInt64({raw})", "double" => $"Convert.ToDouble({raw})", "float" => $"Convert.ToSingle({raw})", "decimal" => $"Convert.ToDecimal({raw})", _ => raw };
     }
 
-    private string MapType(string lotusType)
+    private string MapType(string xpscriptType)
     {
-        var normalized = lotusType.Trim();
+        var normalized = xpscriptType.Trim();
         if (TypeMap.TryGetValue(normalized, out var type)) return type;
         if (_classes.ContainsKey(normalized)) return $"LSRef<{normalized}>";
-        throw new CompilerException($"Unsupported type: {lotusType}");
+        throw new CompilerException($"Unsupported type: {xpscriptType}");
     }
 
     private void EnsureClassType(string className) { if (!_classes.ContainsKey(className)) throw new CompilerException($"Unknown class: {className}"); }
@@ -1057,7 +1057,7 @@ internal static class Script
         return result;
     }
 
-    private static string ConvertLotusStringLiteral(string literal)
+    private static string ConvertXPScriptStringLiteral(string literal)
     {
         if (literal.Length < 2 || literal[0] != '"' || literal[^1] != '"') throw new CompilerException("Invalid string literal.");
         var inner = literal[1..^1].Replace("\"\"", "\\\"");

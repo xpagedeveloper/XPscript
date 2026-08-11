@@ -54,7 +54,7 @@ internal static class LSControlRuntime
         var context = (ErrorContext)contextValue;
         if (context.InHandler) return int.MinValue;
         context.Statement = statement;
-        var number = LotusErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), statement);
+        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), statement);
         if (context.ResumeNext) return -1;
         var handler = context.SpecificHandlers.TryGetValue(number, out var specific) ? specific : context.GeneralHandler;
         if (handler != 0) context.InHandler = true;
@@ -65,7 +65,7 @@ internal static class LSControlRuntime
     {
         var context = (ErrorContext)contextValue;
         context.InHandler = false;
-        LotusErrorRuntime.Clear();
+        XPScriptErrorRuntime.Clear();
     }
 
     public static void PushGosub(int procedureId, int returnId)

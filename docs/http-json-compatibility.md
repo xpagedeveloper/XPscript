@@ -11,7 +11,7 @@ The compatibility classes are implemented on .NET 10:
 
 In XPScript, these objects are normally created from `NotesSession`. In XPScript, the preferred standalone syntax is direct construction with `New`.
 
-```lotusscript
+```xpscriptscript
 Dim http As New NotesHTTPRequest
 Dim json As New NotesJSONNavigator("")
 Dim obj As New NotesJSONObject
@@ -21,7 +21,7 @@ Dim element As New NotesJSONElement("value", "name")
 
 The equivalent assignment form is also supported:
 
-```lotusscript
+```xpscriptscript
 Dim http As NotesHTTPRequest
 Dim json As NotesJSONNavigator
 
@@ -84,7 +84,7 @@ XPScript uses these standalone return rules:
 
 The data argument can be a string or one of the XPScript JSON compatibility objects. JSON objects are serialized automatically when supplied directly.
 
-```lotusscript
+```xpscriptscript
 Dim http As New NotesHTTPRequest
 Dim json As New NotesJSONNavigator("")
 Dim response As Variant
@@ -131,13 +131,13 @@ Supported properties:
 
 Create an empty JSON object:
 
-```lotusscript
+```xpscriptscript
 Dim json As New NotesJSONNavigator("")
 ```
 
 Parse JSON:
 
-```lotusscript
+```xpscriptscript
 Dim json As New NotesJSONNavigator("{""name"":""Fredrik"",""age"":40}")
 Dim element As NotesJSONElement
 
@@ -147,7 +147,7 @@ Print CStr(element.Value)
 
 JSON Pointer is supported:
 
-```lotusscript
+```xpscriptscript
 Dim json As New NotesJSONNavigator("{""items"":[""one"",""two""]}")
 Dim element As NotesJSONElement
 
@@ -176,7 +176,7 @@ Supported methods:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Dim obj As New NotesJSONObject
 Dim element As NotesJSONElement
 
@@ -206,7 +206,7 @@ Supported methods:
 
 `GetNthElement` uses a one-based index.
 
-```lotusscript
+```xpscriptscript
 Dim arr As New NotesJSONArray
 Dim element As NotesJSONElement
 
@@ -235,7 +235,7 @@ Supported method:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Dim element As New NotesJSONElement("Fredrik", "name")
 
 Print element.Name
@@ -255,7 +255,7 @@ The supported JSON element constants are:
 
 ## Building nested JSON
 
-```lotusscript
+```xpscriptscript
 Dim json As New NotesJSONNavigator("")
 Dim address As NotesJSONObject
 Dim roles As NotesJSONArray
@@ -292,7 +292,7 @@ This produces compact JSON equivalent to:
 
 ## HTTP response directly as JSON
 
-```lotusscript
+```xpscriptscript
 Dim http As New NotesHTTPRequest
 Dim json As NotesJSONNavigator
 Dim element As NotesJSONElement

@@ -70,7 +70,7 @@ internal static class LSJsonNodeRuntime
         return System.Text.Json.Nodes.JsonSerializer.SerializeToNode(value);
     }
 
-    public static object? ToLotusValue(System.Text.Json.Nodes.JsonNode? node)
+    public static object? ToXPScriptValue(System.Text.Json.Nodes.JsonNode? node)
     {
         if (node is null) return null;
         if (node is System.Text.Json.Nodes.JsonObject obj) return new NotesJSONObject(obj);
@@ -143,7 +143,7 @@ internal sealed class NotesJSONElement
 
     public object? Value
     {
-        get => LSJsonNodeRuntime.ToLotusValue(_node);
+        get => LSJsonNodeRuntime.ToXPScriptValue(_node);
         set
         {
             _node = LSJsonNodeRuntime.ToNode(value);

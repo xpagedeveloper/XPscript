@@ -18,7 +18,7 @@ Supported built-in aliases include:
 
 Examples:
 
-```lotusscript
+```xpscriptscript
 Dim f As Integer
 Dim value As String
 
@@ -35,7 +35,7 @@ Close #f
 
 UTF-16:
 
-```lotusscript
+```xpscriptscript
 f = FreeFile
 Open "unicode.txt" For Output As #f Charset "unicode"
 Print #f, "ÅÄÖ 漢字"
@@ -55,7 +55,7 @@ If `Encoding` is omitted, normal charset-encoded text is read or written.
 
 Base64 using the default charset:
 
-```lotusscript
+```xpscriptscript
 f = FreeFile
 Open "data.b64" For Output As #f Encoding "base64"
 Print #f, "Fredrik åäö"
@@ -66,13 +66,13 @@ Close #f
 
 `Charset` and `Encoding` can be combined. Their order in the `Open` statement is not significant.
 
-```lotusscript
+```xpscriptscript
 Open "data.b64" For Output As #f Charset "utf-16" Encoding "base64"
 ```
 
 and:
 
-```lotusscript
+```xpscriptscript
 Open "data.b64" For Input As #f Encoding "base64" Charset "unicode"
 ```
 
@@ -114,7 +114,7 @@ XPScript provides:
 
 UTF-8 is used by default.
 
-```lotusscript
+```xpscriptscript
 Dim encoded As String
 Dim decoded As String
 
@@ -133,7 +133,7 @@ XPScript provides:
 
 Example:
 
-```lotusscript
+```xpscriptscript
 Dim encoded As String
 
 encoded = UrlEncode("hello world+å")
@@ -147,7 +147,7 @@ Print UrlDecode(encoded)
 
 Both forms write to standard output:
 
-```lotusscript
+```xpscriptscript
 Print "Hello"
 Print$ "Hello"
 ```
@@ -156,7 +156,7 @@ A bare `Print` or `Print$` writes an empty line.
 
 File output retains its existing syntax:
 
-```lotusscript
+```xpscriptscript
 Print #f, "Hello"
 ```
 
@@ -166,20 +166,20 @@ The standalone console input statements read a complete line and wait until the 
 
 Without a prompt:
 
-```lotusscript
+```xpscriptscript
 Dim value As String
 Input value
 ```
 
 or:
 
-```lotusscript
+```xpscriptscript
 Input$ value
 ```
 
 With a prompt:
 
-```lotusscript
+```xpscriptscript
 Input "Name: ", value
 ```
 
@@ -187,7 +187,7 @@ The prompt is written without an automatic newline. The line entered by the user
 
 File input remains distinct and keeps the `#` syntax:
 
-```lotusscript
+```xpscriptscript
 Input #f, value
 Line Input #f, value
 ```
@@ -196,7 +196,7 @@ Line Input #f, value
 
 `Pause` waits for one key press without requiring Enter when the executable is connected to an interactive console.
 
-```lotusscript
+```xpscriptscript
 Print "Press any key"
 Pause
 ```
