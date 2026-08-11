@@ -13,6 +13,7 @@ public sealed class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
@@ -20,11 +21,6 @@ public sealed class XPScriptTranspiler
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
 
         generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
-        generated = Regex.Replace(
-            generated,
-            @"\bIsElement\s*\(\s*(?<list>[A-Za-z_]\w*)\s*\[(?<key>[^\]]+)\]\s*\)",
-            m => $"{m.Groups["list"].Value}.ContainsTag({m.Groups["key"].Value})",
-            RegexOptions.IgnoreCase);
 
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
@@ -50,6 +46,25 @@ public sealed class XPScriptTranspiler
     }
 
     public string Transpile(string source) => Transpile(source, "input.xps");
+
+    private static string RewriteListPresenceChecks(string source)
+    {
+        var listNames = Regex.Matches(source, @"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+List\s+As\s+[A-Za-z_]\w*\s*$")
+            .Select(m => m.Groups[1].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(x => x.Length)
+            .ToArray();
+
+        foreach (var listName in listNames)
+        {
+            source = Regex.Replace(
+                source,
+                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)",
+                m => $"{listName}.ContainsTag({m.Groups["key"].Value})",
+                RegexOptions.IgnoreCase);
+        }
+        return source;
+    }
 
     private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements)
     {
