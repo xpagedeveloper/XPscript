@@ -84,13 +84,32 @@ Declare Function NativeVersion Lib "native/default/nativecore.dll" Alias "native
 
 ### Managed .NET assemblies
 
-Managed assemblies are different from native libraries and must be treated separately.
+Managed assemblies are different from native libraries and are handled by explicit compiler directives, never by `Declare ... Lib`.
 
-- [ ] review whether XPScript should support explicit external managed `.dll` references
-- [ ] if supported, add compiler reference syntax/options without exposing arbitrary build-file injection
-- [ ] allow one managed assembly to carry RID-specific native dependencies where appropriate
-- [ ] prevent reference path traversal and accidental overwrite/copy of unrelated files
-- [ ] define deployment behavior for referenced managed assemblies in framework-dependent and self-contained builds
+- [>] explicit external managed `.dll` references use `Reference "relative/path/Assembly.dll"`
+- [>] managed references are staged into the compiler's unique temporary build directory and emitted as generated MSBuild `<Reference>` items
+- [>] users cannot provide raw MSBuild/XML through the reference syntax
+- [>] managed reference paths must be relative to and remain inside the XPScript source directory
+- [>] referenced managed assemblies are marked `Private` so publish can carry the dependency with the generated application
+- [>] RID-specific native dependencies for managed assemblies use repeatable `ReferenceNative "path" Runtime "rid"` directives
+- [>] only `ReferenceNative` entries matching the selected compiler target RID are packaged
+- [>] managed/native reference paths are checked for missing files, traversal, file-name collisions and executable overwrite
+- [>] reference directives are replaced by blank source lines before transpilation so physical diagnostic line numbers remain stable
+- [ ] add a real managed test assembly plus RID-native fixtures when execution/build verification is re-enabled
+- [ ] verify managed reference deployment in both self-contained and framework-dependent publish modes
+- [ ] decide whether direct CLR type/member interop should be exposed as a separate language feature; assembly reference support alone does not implicitly expose arbitrary CLR APIs
+
+Example:
+
+```xpscript
+Reference "managed/MyLibrary.dll"
+ReferenceNative "managed/runtimes/win-x64/native/helper.dll" Runtime "win-x64"
+ReferenceNative "managed/runtimes/win-arm64/native/helper.dll" Runtime "win-arm64"
+ReferenceNative "managed/runtimes/linux-x64/native/libhelper.so" Runtime "linux-x64"
+ReferenceNative "managed/runtimes/linux-arm64/native/libhelper.so" Runtime "linux-arm64"
+ReferenceNative "managed/runtimes/osx-x64/native/libhelper.dylib" Runtime "osx-x64"
+ReferenceNative "managed/runtimes/osx-arm64/native/libhelper.dylib" Runtime "osx-arm64"
+```
 
 ## File I/O portability
 
