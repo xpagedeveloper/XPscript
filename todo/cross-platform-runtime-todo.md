@@ -46,16 +46,17 @@ XPScript `Declare ... Lib` must not assume that every platform uses a Windows DL
 - [>] allow platform-specific exported function names using `WindowsAlias`, `LinuxAlias`, and `MacOSAlias`
 - [>] selection is made from the compiler target RID, not the compiler host OS
 - [>] multiline `Declare` statements using `_` are accepted by the platform-selection preprocessor
-- [ ] validate `.dll` P/Invoke on Windows
-- [ ] validate `.so` P/Invoke on Linux
-- [ ] validate `.dylib` P/Invoke on macOS
+- [>] application-local native library paths are copied beside generated output; system library names remain OS-resolved
+- [>] local native paths are constrained to the XPScript source tree and checked for missing files, output collisions and executable overwrite
+- [>] architecture-specific native libraries supported with `WindowsX64Lib`, `WindowsArm64Lib`, `LinuxX64Lib`, `LinuxArm64Lib`, `MacOSX64Lib`, `MacOSArm64Lib`
+- [>] architecture-specific entry points supported with matching `*X64Alias` and `*Arm64Alias` keywords
+- [>] native target resolution order is exact RID -> OS-specific value -> base `Lib`/`Alias`; source: `samples/native-architecture-assets.xps`
+- [ ] validate `.dll` P/Invoke on Windows x64 and ARM64
+- [ ] validate `.so` P/Invoke on Linux x64 and ARM64
+- [ ] validate `.dylib` P/Invoke on macOS x64 and ARM64
 - [ ] define behavior if an OS-specific library is omitted: current design falls back to the base `Lib` value
 - [ ] define platform-specific calling-convention support where required
 - [ ] define behavior when the native function signature itself differs by platform; likely require separate declarations plus `Platform()` branching
-- [ ] allow application-local native libraries to be copied/staged beside the generated executable
-- [ ] decide syntax or compiler option for native asset paths that should be included in publish output
-- [ ] prevent native asset paths from escaping allowed source/project directories
-- [ ] support architecture-specific native assets when x64 and ARM64 require different files
 - [ ] produce clear runtime diagnostics for missing library, missing entry point, wrong architecture and loader errors
 
 Example target syntax:
@@ -65,6 +66,19 @@ Declare Function NativeProcessId Lib "native-process" _
     WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
     LinuxLib "libc.so.6" LinuxAlias "getpid" _
     MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
+    () As Integer
+```
+
+Architecture-specific application-local example:
+
+```xpscript
+Declare Function NativeVersion Lib "native/default/nativecore.dll" Alias "native_version" _
+    WindowsX64Lib "native/windows/x64/nativecore.dll" _
+    WindowsArm64Lib "native/windows/arm64/nativecore.dll" _
+    LinuxX64Lib "native/linux/x64/libnativecore.so" _
+    LinuxArm64Lib "native/linux/arm64/libnativecore.so" _
+    MacOSX64Lib "native/macos/x64/libnativecore.dylib" _
+    MacOSArm64Lib "native/macos/arm64/libnativecore.dylib" _
     () As Integer
 ```
 
