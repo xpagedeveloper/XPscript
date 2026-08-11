@@ -3,6 +3,7 @@ Option Base 1
 DefInt A-C
 
 Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
+Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
 
 Class Person
     Public Name As String
@@ -12,21 +13,33 @@ Sub Increment(ByRef value As Long)
     value = value + 1
 End Sub
 
+Sub TouchArray(values() As Long)
+    values(1) = 99
+End Sub
+
 Function Counter() As Long
     Static count As Long
     count = count + 1
     Counter = count
 End Function
 
+Static Function ProcedureCounter() As Long
+    Dim count As Long
+    count = count + 1
+    ProcedureCounter = count
+End Function
+
 Sub Main()
     Dim aValue As Long
     Dim autoArray(2) As Long
     Dim matrix(1 To 2, 0 To 1) As Long
+    Dim passed(1 To 2) As Long
     Dim names() As String
     Dim p As Person
     Dim f As Integer
     Dim binaryValue As Long
     Dim randomValue As Long
+    Dim divisor As Long
     Dim apple
 
     aValue = 10
@@ -40,6 +53,10 @@ Sub Main()
     matrix(1, 0) = 12
     matrix(2, 1) = 24
     Print "MATRIX=" & CStr(LBound(matrix, 1)) & ":" & CStr(UBound(matrix, 2)) & ":" & CStr(matrix(2, 1))
+
+    passed(1) = 1
+    Call TouchArray(passed)
+    Print "ARRAYREF=" & CStr(passed(1))
 
     ReDim names(1 To 2) As String
     names(1) = "A"
@@ -66,9 +83,16 @@ Sub Main()
     End With
 
     Print "STATIC=" & CStr(Counter()) & ":" & CStr(Counter())
+    Print "STATICPROC=" & CStr(ProcedureCounter()) & ":" & CStr(ProcedureCounter())
 
     apple = 42
-    Print "DEFTYPE=" & CStr(apple)
+    Print "DEFTYPE=" & TypeName(apple) & ":" & CStr(apple)
+
+    Call Sleep(0)
+    aValue = GetTickCount()
+    If aValue >= 0 Then
+        Print "DECLARE=OK"
+    End If
 
     GoSub Worker
     Print "GOSUB=RETURNED"
@@ -83,6 +107,8 @@ AfterWorker:
 SkipLine:
     Print "GOTO=OK"
 
+    Print "ERRORFN=" & Error(53)
+
     On Error GoTo ErrorHandler
     Error 123, "expected-error"
     Print "RESUME=OK"
@@ -91,6 +117,29 @@ ErrorHandler:
     Print "ERR=" & CStr(Err) & ":" & Error()
     Resume Next
 ErrorDone:
+    On Error GoTo 0
+
+    divisor = 0
+    On Error GoTo RetryHandler
+    aValue = 10 / divisor
+    Print "RESUME-CURRENT=" & CStr(aValue)
+    GoTo RetryDone
+RetryHandler:
+    divisor = 2
+    Resume
+RetryDone:
+    On Error GoTo 0
+
+    On Error GoTo LabelHandler
+    Error 126, "resume-label-error"
+    Print "RESUME-LABEL=BAD"
+ResumeTarget:
+    Print "RESUME-LABEL=OK"
+    GoTo LabelDone
+LabelHandler:
+    Resume ResumeTarget
+LabelDone:
+    On Error GoTo 0
 
     On Error Resume Next
     Error 124, "resume-next-error"
