@@ -1,14 +1,14 @@
 # LS Lite Compiler
 
-LS Lite is a small LotusScript-inspired compiler written in C#/.NET. It intentionally does **not** implement Notes/Domino classes.
+LS Lite is a standalone LotusScript-inspired compiler written in C#/.NET 10. It intentionally does not implement HCL Notes/Domino classes.
 
-It transpiles supported LotusLite source to C# and then uses the installed .NET SDK to publish a Windows x64 single-file executable.
+LS Lite transpiles supported source code to C# and uses the .NET SDK to publish a Windows x64 executable.
 
 ## Requirements
 
-- .NET 10 SDK on the development/compile machine.
-- Windows is **not** required for the compiler itself, but the generated target is `win-x64`.
-- The generated executable is self-contained by default.
+- .NET 10 SDK on the development or compile machine
+- Windows is not required to run the compiler, but the generated target is currently `win-x64`
+- Generated executables are self-contained by default
 
 ## Build the compiler
 
@@ -22,13 +22,13 @@ Run it directly:
 dotnet run --project .\src\LSLite.Compiler -- .\samples\hello.ls -o .\out\Hello.exe
 ```
 
-Or publish the compiler itself:
+Publish the compiler itself:
 
 ```powershell
 dotnet publish .\src\LSLite.Compiler\LSLite.Compiler.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\compiler-publish
 ```
 
-Then:
+Then compile an LS Lite source file:
 
 ```powershell
 .\compiler-publish\lslitec.exe .\samples\hello.ls -o .\out\Hello.exe
@@ -50,104 +50,231 @@ Sub Initialize()
 End Sub
 ```
 
-`Main` takes precedence if both exist.
+`Main` takes precedence when both exist.
 
 ## Supported language features
 
-Current compiler support:
+Current compiler support includes:
 
-- `Option Declare` (accepted as a no-op)
-- `Sub` / `End Sub`
-- `Function` / `End Function`
-- LotusScript-style function return assignment:
-  `MyFunction = value`
-- `Return value`
-- `Dim name As Type`
-- assignment and `Let`
-- `If / ElseIf / Else / End If`
-- `For / To / Step / Next`
-- `While / Wend`
+- `Option Declare`
+- `Sub` and `Function`
+- LotusScript-style function return assignment
+- `Return`
+- `Dim`
+- scalar assignment and `Let`
+- `If`, `ElseIf`, `Else`, `End If`
+- `For`, `To`, `Step`, `Next`
+- `While`, `Wend`
 - `Do`, `Do While`, `Do Until`, `Loop`, `Loop While`, `Loop Until`
 - `Exit For`, `Exit Do`, `Exit While`, `Exit Sub`, `Exit Function`
-- `Call Procedure(...)`
-- normal procedure/function calls
-- `Print expression`
-- `'` comments
-- operators: `+ - * / Mod`, `= <> < <= > >=`, `And Or Not`, `&`
-- types: `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Date`, `Variant`, `Object`
+- `Call`
+- `Print`
+- comments using `'`
+- operators including `+ - * / Mod`, comparisons, `And`, `Or`, `Not`, and `&`
+- scalar types including `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Currency`, `Date`, `Variant`, and `Object`
 
-## Built-in functions
+## LotusScript List support
 
-Implemented in the first runtime:
+LS Lite implements tagged LotusScript-style lists separately from normal arrays.
 
-### Strings
-`Len`, `Left`, `Right`, `Mid`, `UCase`, `LCase`, `Trim`, `LTrim`, `RTrim`,
-`Chr`, `Asc`, `Instr`, `Replace`, `Space`, `String`, `Split`, `Join`
+Supported syntax and operations:
 
-### Conversion
-`CStr`, `CInt`, `CLng`, `CDbl`, `CSng`, `CBool`, `Val`, `IsNumeric`,
-`Hex`, `Oct`, `Format`
+- `Dim name List As Type`
+- tagged reads and writes with `list("tag")`
+- automatic creation of a list element when assigning a new tag
+- `IsElement(list("tag"))`
+- `ForAll value In list`
+- `ListTag(value)` inside `ForAll`
+- assignment to the `ForAll` alias updates the list element
+- `Exit ForAll`
+- `Erase list("tag")`
+- `Erase list`
+- list fields inside classes
 
-### Math
-`Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Rnd`
-
-### Date/time
-`Now`, `Today`, `Date`, `Time`, `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`
-
-### Console replacements
-`InputBox` reads from stdin.
-`MsgBox` writes to stdout and returns `1`.
-
-## Deliberately not implemented yet
-
-This is a basic compiler, not a complete LotusScript clone. The following need a later compiler/runtime phase:
-
-- Notes/Domino classes
-- classes and user-defined types
-- `ByRef`
-- arrays declared with LotusScript array syntax
-- `Select Case`
-- `On Error`, `Resume`, `Err`
-- file I/O statements
-- `New`, object lifetime semantics
-- `Set` assignment
-- `With`
-- labels / `GoTo`
-- `Declare` external native functions
-- all locale-specific LotusScript coercion edge cases
-- GUI implementation of `MsgBox` / `InputBox`
-
-## Example
+Example:
 
 ```lotusscript
-Option Declare
+Dim users List As String
 
-Function Square(n As Long) As Long
-    Square = n * n
-End Function
+users("admin") = "Fredrik"
+users("guest") = "Guest"
+
+ForAll value In users
+    Print ListTag(value) & ": " & value
+End ForAll
+
+If IsElement(users("guest")) Then
+    Erase users("guest")
+End If
+```
+
+## Class and object support
+
+LS Lite supports user-defined classes without Notes/Domino dependencies.
+
+Implemented features:
+
+- `Class` and `End Class`
+- class fields
+- methods using `Sub` and `Function`
+- constructors using `Sub New`
+- destructors using `Sub Delete`
+- parameterless `Property Get`
+- parameterless `Property Set`
+- public and private classes and members
+- object variables
+- shared object references
+- `Dim object As ClassName`
+- `Dim object As New ClassName(...)`
+- `Set object = New ClassName(...)`
+- `Set object2 = object1`
+- `Set object = Nothing`
+- `object Is Nothing`
+- `object Is Not Nothing`
+- `Delete object`
+- `Me`
+- method and property access through object references
+
+`Set object2 = object1` shares the LS Lite object reference. `Delete object1` invokes `Sub Delete` and invalidates the shared reference, so aliases such as `object2` also evaluate as `Nothing`.
+
+Example:
+
+```lotusscript
+Class Person
+    Private mName As String
+
+    Sub New(name As String)
+        Me.mName = name
+    End Sub
+
+    Public Property Get Name As String
+        Name = Me.mName
+    End Property
+
+    Public Property Set Name As String
+        Me.mName = Name
+    End Property
+
+    Public Function Describe() As String
+        Describe = Me.mName
+    End Function
+
+    Sub Delete()
+        Me.mName = ""
+    End Sub
+End Class
 
 Sub Main()
-    Dim i As Long
+    Dim person As Person
+    Dim alias As Person
 
-    For i = 1 To 5
-        Print "Square = " & CStr(Square(i))
-    Next i
+    Set person = New Person("Fredrik")
+    Set alias = person
+
+    Print alias.Name
+
+    Delete person
+
+    If alias Is Nothing Then
+        Print "Deleted"
+    End If
 End Sub
 ```
 
-Compile:
+See `samples/lists-classes.ls` for a CI-tested example combining lists, classes, properties, constructors, object references, `Set`, `New`, `Delete`, and `Me`.
 
-```powershell
-lslitec.exe program.ls -o program.exe
-```
+## Built-in functions
+
+The runtime implements a broad standalone subset of LotusScript standard functions.
+
+### Strings
+
+`Len`, `LenB`, `Left`, `Right`, `Mid`, `UCase`, `LCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Chr`, `Asc`, `Instr`, `StrComp`, `Replace`, `Space`, `String`, `Split`, `Join`, `Format`
+
+### Conversion and type inspection
+
+`CStr`, `CByte`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CBool`, `CVar`, `CDat`, `CDate`, `DataType`, `TypeName`, `Val`, `IsNumeric`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `Bin`, `Hex`, `Oct`, `Str`
+
+### Math
+
+`Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Rnd`, `Randomize`
+
+### Date and time
+
+`Now`, `Today`, `Date`, `Time`, `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateNumber`, `TimeNumber`, `DateValue`, `TimeValue`, `Weekday`, `MonthName`, `WeekdayName`, `DateAdd`, `DateDiff`, `DatePart`, `Timer`
+
+### File and environment
+
+Supported file operations include:
+
+- `FreeFile`
+- `Open ... For Input/Output/Append/Binary/Random As #n`
+- `Close`
+- `Print #`
+- `Write #`
+- `Input #`
+- `Line Input #`
+- `EOF`
+- `LOF`
+- `Seek`
+- `FileLen`
+- `FileDateTime`
+- `GetFileAttr`
+- `SetFileAttr`
+- `FileCopy`
+- `Kill`
+- `Name ... As ...`
+- `MkDir`
+- `RmDir`
+- `ChDir`
+- `CurDir`
+- `Dir`
+- `Environ`
+- `Command`
+
+### Console replacements
+
+- `InputBox` reads from standard input
+- `MsgBox` writes to standard output and returns `1`
+- `Beep` uses the console beep implementation where supported
+
+## Continuous integration
+
+The GitHub Actions workflow uses .NET 10 on Windows and performs:
+
+1. restore
+2. compiler build
+3. compilation of `samples/compatibility.ls`
+4. execution and verification of the standard runtime compatibility sample
+5. compilation of `samples/lists-classes.ls`
+6. execution and verification of the List and class compatibility sample
+
+This checks both the compiler itself and generated Windows executables.
+
+## Not implemented yet
+
+LS Lite is not yet a complete LotusScript clone. Remaining areas include:
+
+- Notes/Domino classes
+- LotusScript array declaration and full array semantics
+- scalar `ByRef` semantics
+- `Select Case`
+- `On Error`, `Resume`, and `Err`
+- `With`
+- labels and `GoTo`
+- external native functions using `Declare`
+- parameterized or indexed properties
+- complete class inheritance edge cases
+- every locale-specific LotusScript coercion rule
+- native GUI implementations of `MsgBox` and `InputBox`
 
 ## Architecture
 
-1. `LotusTranspiler` parses the supported line-oriented LotusScript subset.
-2. It emits a C# program.
-3. The generated C# embeds `LotusRuntime`.
-4. `CompilerDriver` creates a temporary SDK project.
-5. `dotnet publish` produces a self-contained, single-file `win-x64` EXE.
-6. The temporary project is removed and the EXE is copied to the requested path.
-
-The runtime is intentionally isolated so future LotusScript built-ins can be added without changing most of the compiler.
+1. `LotusTranspiler` invokes the advanced language transpiler.
+2. `AdvancedLotusTranspiler` parses the supported LotusScript-compatible syntax and emits C#.
+3. `LotusRuntime` provides standard functions and file operations.
+4. `LSList<T>` provides tagged List semantics and `ForAll` aliases.
+5. `LSRef<T>` provides shared object-reference semantics for `Set`, `Nothing`, and `Delete`.
+6. `CompilerDriver` creates a temporary .NET 10 SDK project.
+7. `dotnet publish` creates the requested Windows executable.
+8. Temporary compiler files are removed after publishing.
