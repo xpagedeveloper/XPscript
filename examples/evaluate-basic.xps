@@ -1,0 +1,12 @@
+Sub Main()
+    Dim result As Variant
+
+    result = Evaluate("Return 10 + 20")
+    Print "10 + 20 = " & CStr(result)
+
+    result = Evaluate("Return UCase(""xpscript"")")
+    Print CStr(result)
+
+    result = Evaluate("Dim x As Integer : x = 7 : Return x * x")
+    Print "7 squared = " & CStr(result)
+End Sub
