@@ -7,11 +7,13 @@ public sealed class XPScriptTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
+        var udtValues = new UdtValueSemanticsPreprocessor();
+        source = udtValues.Transform(source);
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
-        var moduleGlobals = new ModuleGlobalsPreprocessor();
+        var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleGlobals.Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
