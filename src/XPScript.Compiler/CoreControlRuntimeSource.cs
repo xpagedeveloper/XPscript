@@ -54,7 +54,8 @@ internal static class LSControlRuntime
         var context = (ErrorContext)contextValue;
         if (context.InHandler) return int.MinValue;
         context.Statement = statement;
-        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), statement);
+        var sourceLine = XPSourceLineRuntime.Current > 0 ? XPSourceLineRuntime.Current : statement;
+        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), sourceLine);
         if (context.ResumeNext) return -1;
         var handler = context.SpecificHandlers.TryGetValue(number, out var specific) ? specific : context.GeneralHandler;
         if (handler != 0) context.InHandler = true;
