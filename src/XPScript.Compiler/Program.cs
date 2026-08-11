@@ -9,14 +9,18 @@ XPScript Compiler
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscriptc <source.xps> [-o output.exe] [--framework-dependent] [--result-format text|json|xml]
+  xpscriptc <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
+
+Supported runtime identifiers:
+  win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
 
 Examples:
   xpscriptc hello.xps
-  xpscriptc hello.xps -o Hello.exe --result-format json
-  xpscriptc hello.xps --result-format xml
+  xpscriptc hello.xps --runtime linux-x64 -o hello
+  xpscriptc hello.xps --runtime osx-arm64 -o hello
+  xpscriptc hello.xps --runtime win-x64 -o Hello.exe --result-format json
 
-The default output is a self-contained Windows x64 single-file executable.
+If --runtime is omitted, XPScript targets the current operating system and process architecture.
 """);
     return 0;
 }
@@ -25,6 +29,7 @@ var sourcePath = Path.GetFullPath(args[0]);
 string? outputPath = null;
 var selfContained = true;
 var resultFormat = "text";
+var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
 
 try
 {
@@ -32,6 +37,8 @@ try
     {
         if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
             outputPath = Path.GetFullPath(args[++i]);
+        else if ((args[i] == "--runtime" || args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+            runtimeIdentifier = args[++i].ToLowerInvariant();
         else if (args[i] == "--framework-dependent")
             selfContained = false;
         else if (args[i] == "--result-format" && i + 1 < args.Length)
@@ -43,9 +50,12 @@ try
     if (resultFormat is not ("text" or "json" or "xml"))
         throw new ArgumentException("--result-format must be text, json, or xml.");
 
-    outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, Path.GetFileNameWithoutExtension(sourcePath) + ".exe");
+    var fileName = Path.GetFileNameWithoutExtension(sourcePath);
+    var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
+    outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
+
     var compiler = new CompilerDriver();
-    var result = await compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained);
+    var result = await compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
     WriteResult(result, resultFormat);
     return result.Success ? 0 : 2;
 }
