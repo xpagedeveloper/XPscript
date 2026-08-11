@@ -5,6 +5,19 @@ Sub Main()
     Dim part As String
     Dim line As String
 
+    If Command = "hold-lock" Then
+        f = FreeFile
+        Open "xpscript-lock-test.bin" For Binary As #f
+        Put #f, 1, "ABCDEF"
+        Lock #f, 1 To 3
+        Print "LOCKHELD"
+        Sleep 4
+        Unlock #f, 1 To 3
+        Close #f
+        Kill "xpscript-lock-test.bin"
+        Exit Sub
+    End If
+
     ' Explicit Latin-1 round trip.
     f = FreeFile
     Open "xpscript-latin1.txt" For Output As #f Charset "latin1"
@@ -19,7 +32,7 @@ Sub Main()
     Print "LATIN1REST=" & line
     Close #f
 
-    ' Lock/Unlock must operate on the OS file handle, not an XPScript-only flag.
+    ' Lock/Unlock operate on the underlying OS file handle.
     f = FreeFile
     Open "xpscript-latin1.txt" For Binary As #f
     Lock #f, 1 To 3
