@@ -54,11 +54,13 @@ Status:
 
 ## Function coverage inside Evaluate
 
-- [>] `TypeName`
-- [>] `LBound`
-- [>] `UBound`
-- [>] scalar conversions, `Len`, `LCase`, `UCase`, `Trim`, `Abs`, `Round`
-- [ ] continue broadening standard XPScript function coverage
+- [>] conversions: `CStr`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CByte`, `CBool`, `CDate`/`CDat`, `CVar`
+- [>] inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `IsNumeric`, `LBound`, `UBound`
+- [>] strings: `Len`, `Left`, `Right`, `Mid`, `LCase`, `UCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Instr`, `Replace`, `Space`, `String`, `Chr`, `Asc`
+- [>] math/number: `Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Val`, `Str`, `Bin`, `Hex`, `Oct`
+- [>] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`
+- [>] source: `samples/evaluate-standard-functions.xps`
+- [ ] continue broadening standard XPScript function coverage where functions remain side-effect free and isolation-safe
 - [ ] align every evaluator diagnostic/coercion edge case with the main compiler/runtime
 
 ## Isolation and security
