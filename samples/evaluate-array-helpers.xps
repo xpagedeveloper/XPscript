@@ -1,0 +1,8 @@
+Sub Initialize
+    Dim values As Variant
+    Dim result As Variant
+
+    values = Array(10, 20, 30)
+    result = Evaluate("Return TypeName(callvar) & \":\" & CStr(LBound(callvar)) & \":\" & CStr(UBound(callvar))", values)
+    Print "ARRAYHELPERS=" & result
+End Sub
