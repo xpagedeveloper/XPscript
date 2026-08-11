@@ -1,0 +1,35 @@
+Option Declare
+
+Sub Main()
+    Dim f As Integer
+    Dim part As String
+    Dim line As String
+
+    ' Explicit Latin-1 round trip.
+    f = FreeFile
+    Open "xpscript-latin1.txt" For Output As #f Charset "latin1"
+    Print #f, "ÅÄÖ-é"
+    Close #f
+
+    f = FreeFile
+    Open "xpscript-latin1.txt" For Input As #f Charset "latin1"
+    part = Input$(3, #f)
+    Print "FILEINPUT=" & part
+    Line Input #f, line
+    Print "LATIN1REST=" & line
+    Close #f
+
+    ' Lock/Unlock must operate on the OS file handle, not an XPScript-only flag.
+    f = FreeFile
+    Open "xpscript-latin1.txt" For Binary As #f
+    Lock #f, 1 To 3
+    Print "LOCK=OK"
+    Unlock #f, 1 To 3
+    Print "UNLOCK=OK"
+    Close #f
+
+    ChDrive "C"
+    Print "CHDRIVE=" & Left(CurDir, 3)
+
+    Kill "xpscript-latin1.txt"
+End Sub
