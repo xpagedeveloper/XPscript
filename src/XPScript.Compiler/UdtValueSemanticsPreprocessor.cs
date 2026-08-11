@@ -10,12 +10,14 @@ internal sealed class UdtValueSemanticsPreprocessor
 
     private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.OrdinalIgnoreCase);
     private int _optionBase;
+    private int _copyTempId;
     public IReadOnlySet<string> TypeNames => _types.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public string Transform(string source)
     {
         _types.Clear();
         _optionBase = 0;
+        _copyTempId = 0;
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
         _optionBase = DetectOptionBase(lines);
         CollectTypes(lines);
@@ -122,15 +124,37 @@ internal sealed class UdtValueSemanticsPreprocessor
             if (!destinationInfo.IsModuleGlobal)
                 expanded.Add(indent + $"Set {destination} = New {destinationInfo.Type}");
 
-            foreach (var field in typeInfo.Fields)
+            ExpandCopy(typeInfo, destination, source, indent, expanded, destinationInfo.IsModuleGlobal);
+            lines[i] = string.Join(Environment.NewLine, expanded);
+        }
+    }
+
+    private void ExpandCopy(TypeInfo typeInfo, string destination, string source, string indent, List<string> output, bool destinationIsModuleGlobal)
+    {
+        foreach (var field in typeInfo.Fields)
+        {
+            if (field.IsArray)
             {
-                if (field.IsArray)
-                    expanded.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({source}.{field.Name})");
-                else
-                    expanded.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
+                output.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({source}.{field.Name})");
+                continue;
             }
 
-            lines[i] = string.Join(Environment.NewLine, expanded);
+            if (!_types.TryGetValue(field.Type, out var nestedType))
+            {
+                output.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
+                continue;
+            }
+
+            // Type fields are represented internally by object references, so an ordinary assignment
+            // would alias the nested value. Materialize temporary typed references and recursively copy.
+            var id = ++_copyTempId;
+            var srcTemp = $"__xp_udtcopy_src_{id}";
+            var dstTemp = $"__xp_udtcopy_dst_{id}";
+            output.Add(indent + $"Dim {srcTemp} As {field.Type}");
+            output.Add(indent + $"Set {srcTemp} = {source}.{field.Name}");
+            output.Add(indent + $"Dim {dstTemp} As New {field.Type}");
+            ExpandCopy(nestedType, dstTemp, srcTemp, indent, output, false);
+            output.Add(indent + $"Set {destination}.{field.Name} = {dstTemp}");
         }
     }
 
