@@ -3,6 +3,9 @@ Option Declare
 Sub Main()
     Dim json As New NotesJSONNavigator("")
     Dim parsed As New NotesJSONNavigator("{""name"":""Fredrik"",""items"":[1,2,3]}")
+    Dim directObject As New NotesJSONObject
+    Dim directArray As New NotesJSONArray
+    Dim directElement As New NotesJSONElement("standalone", "direct")
     Dim address As NotesJSONObject
     Dim roles As NotesJSONArray
     Dim element As NotesJSONElement
@@ -13,6 +16,12 @@ Sub Main()
     Dim response As Variant
     Dim responseJson As NotesJSONNavigator
     Dim headers As Variant
+
+    Call directObject.AppendElement("value", "key")
+    Call directArray.AppendElement("one")
+    Print "DIRECTOBJECT=" & CStr(directObject.GetElementByName("key").Value)
+    Print "DIRECTARRAY=" & CStr(directArray.GetNthElement(1).Value)
+    Print "DIRECTELEMENT=" & directElement.Name & ":" & CStr(directElement.Type) & ":" & CStr(directElement.Value)
 
     Call json.AppendElement("Fredrik", "name")
     Call json.AppendElement(40, "age")
