@@ -10,6 +10,7 @@ public sealed class XPScriptTranspiler
 
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
+        source = new ReservedIdentifierPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
 
         var udtValues = new UdtValueSemanticsPreprocessor();
