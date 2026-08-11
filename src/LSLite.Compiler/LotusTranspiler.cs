@@ -7,16 +7,15 @@ public sealed class LotusTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
+        var operatorArray = new OperatorArrayCompatibilityPreprocessor();
+        source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
 
-        // AdvancedLotusTranspiler rewrites LotusScript And to C# && and later rewrites
-        // LotusScript string concatenation (&) to +. Preserve the logical operator when
-        // both transformations occur in the same expression. LotusScript has no ++
-        // operator, so a spaced ++ token here can only originate from the && rewrite.
         generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
 
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
@@ -24,9 +23,14 @@ public sealed class LotusTranspiler
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
 
-        // Normalize a couple of generated runtime snippets to valid C# without
-        // exposing those implementation details at the LS Lite language surface.
+        // Option Compare affects Like and the array comparison helpers.
+        generated = generated.Replace(
+            "LotusRuntime.SetArgs(args);",
+            $"LotusRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            StringComparison.Ordinal);
+
         generated = generated.Replace(
             "text.StartsWith('/', StringComparison.Ordinal)",
             "text.StartsWith(\"/\", StringComparison.Ordinal)",
@@ -36,37 +40,21 @@ public sealed class LotusTranspiler
             "byte[] requestBytes => System.Text.Encoding.UTF8.GetString(requestBytes),",
             StringComparison.Ordinal);
 
-        // Extended standalone compatibility includes optional Windows COM binding.
-        // Keep the generated source self-contained even when GetObject is not called.
         generated = generated.Replace(
             "using System.Text.RegularExpressions;",
             "using System.Text.RegularExpressions;\nusing System.Runtime.InteropServices;",
             StringComparison.Ordinal);
 
-        // The active error statement is recorded by LSControlRuntime.Capture when an
-        // exception actually occurs. Statements executed by an error handler must not
-        // replace that position before Resume or Resume Next executes.
         generated = Regex.Replace(
             generated,
             @"(?m)^\s*__lsErrCtx\.Statement\s*=\s*\d+;\s*\r?$\n?",
             "");
 
-        // The core preprocessor emits protection markers for all executable statements
-        // in a procedure that contains On Error. LotusScript only enables trapping after
-        // the On Error statement has executed. Strip the generated try/catch wrappers
-        // before the first activation point. This also keeps Resume labels out of C#
-        // nested scopes that can never be valid error-resume targets at that time.
         generated = ScopeErrorProtection(generated);
 
-        // Restore LotusScript string contents only after all keyword rewriting is done.
-        // This prevents identifiers such as Err, Error, Loc, Seek and FreeFile from being
-        // interpreted when they occur as plain text inside a string literal.
         foreach (var item in protectedStrings)
             generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
 
-        // Object-reference checks such as "q Is Nothing" are emitted through the
-        // shared LSRef<T> wrapper. Prevent a later member-access rewrite from
-        // turning q.IsNothing into q.Value!.IsNothing.
         return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
     }
 
