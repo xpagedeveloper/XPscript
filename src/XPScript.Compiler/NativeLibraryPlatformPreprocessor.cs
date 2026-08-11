@@ -23,27 +23,41 @@ internal sealed class NativeLibraryPlatformPreprocessor
     {
         var code = StripComment(raw);
         if (!Regex.IsMatch(code, @"^\s*Declare\b", RegexOptions.IgnoreCase)) return raw;
-        if (!Regex.IsMatch(code, @"\b(?:WindowsLib|LinuxLib|MacOSLib)\s+\"", RegexOptions.IgnoreCase)) return raw;
+        if (!Regex.IsMatch(code, @"\b(?:WindowsLib|LinuxLib|MacOSLib|WindowsAlias|LinuxAlias|MacOSAlias)\s+\"", RegexOptions.IgnoreCase)) return raw;
 
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         if (!baseLib.Success)
             throw new CompilerException("Platform-specific Declare requires a base Lib \"...\" value.");
 
-        var windows = Extract(code, "WindowsLib");
-        var linux = Extract(code, "LinuxLib");
-        var macos = Extract(code, "MacOSLib");
-        var selected = SelectLibrary(baseLib.Groups[1].Value, windows, linux, macos);
+        var baseAlias = Regex.Match(code, "\\bAlias\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
+        var selectedLibrary = Select(
+            baseLib.Groups[1].Value,
+            Extract(code, "WindowsLib"), Extract(code, "LinuxLib"), Extract(code, "MacOSLib"));
+        var selectedAlias = Select(
+            baseAlias.Success ? baseAlias.Groups[1].Value : null,
+            Extract(code, "WindowsAlias"), Extract(code, "LinuxAlias"), Extract(code, "MacOSAlias"));
 
-        var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(selected) + "\"", RegexOptions.IgnoreCase);
-        rewritten = Regex.Replace(rewritten, "\\s+WindowsLib\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
-        rewritten = Regex.Replace(rewritten, "\\s+LinuxLib\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
-        rewritten = Regex.Replace(rewritten, "\\s+MacOSLib\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
+        var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(selectedLibrary!) + "\"", RegexOptions.IgnoreCase);
+        foreach (var keyword in new[] { "WindowsLib", "LinuxLib", "MacOSLib", "WindowsAlias", "LinuxAlias", "MacOSAlias" })
+            rewritten = Regex.Replace(rewritten, "\\s+" + keyword + "\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(selectedAlias))
+        {
+            if (baseAlias.Success)
+                rewritten = Regex.Replace(rewritten, "\\bAlias\\s+\"[^\"]+\"", "Alias \"" + Escape(selectedAlias) + "\"", RegexOptions.IgnoreCase);
+            else
+            {
+                var argsIndex = rewritten.IndexOf('(');
+                if (argsIndex < 0) throw new CompilerException("Invalid Declare syntax while applying platform-specific Alias.");
+                rewritten = rewritten[..argsIndex].TrimEnd() + " Alias \"" + Escape(selectedAlias) + "\" " + rewritten[argsIndex..];
+            }
+        }
 
         var commentIndex = raw.Length > code.Length ? code.Length : -1;
         return commentIndex >= 0 ? rewritten + raw[commentIndex..] : rewritten;
     }
 
-    private string SelectLibrary(string fallback, string? windows, string? linux, string? macos)
+    private string? Select(string? fallback, string? windows, string? linux, string? macos)
     {
         if (_runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase)) return windows ?? fallback;
         if (_runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase)) return linux ?? fallback;
