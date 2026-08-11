@@ -33,17 +33,31 @@ Sub Main()
     Close #f
     Kill "lslite-utf16.txt"
 
+    ' Encoding is independent from Charset. Without Charset, Base64 uses the default charset.
     f = FreeFile
-    Open "lslite-base64.txt" For Output As #f Charset "base64"
+    Open "lslite-base64.txt" For Output As #f Encoding "base64"
     Print #f, "BASE64-FILE-åäö"
     Close #f
 
     f = FreeFile
-    Open "lslite-base64.txt" For Input As #f Charset "base64"
+    Open "lslite-base64.txt" For Input As #f Encoding "base64"
     Line Input #f, value
     Print "BASE64FILE=" & value
     Close #f
     Kill "lslite-base64.txt"
+
+    ' Charset and Encoding can be combined. This Base64 payload contains UTF-16LE bytes.
+    f = FreeFile
+    Open "lslite-base64-utf16.txt" For Output As #f Charset "utf-16" Encoding "base64"
+    Print #f, "BASE64-UTF16-漢字"
+    Close #f
+
+    f = FreeFile
+    Open "lslite-base64-utf16.txt" For Input As #f Encoding "base64" Charset "unicode"
+    Line Input #f, value
+    Print "BASE64UTF16=" & value
+    Close #f
+    Kill "lslite-base64-utf16.txt"
 
     encoded = ToBase64("Fredrik åäö")
     decoded = FromBase64(encoded)
