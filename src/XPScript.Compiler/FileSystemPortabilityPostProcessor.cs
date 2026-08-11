@@ -162,8 +162,16 @@ internal sealed class FileSystemPortabilityPostProcessor
             "throw XPScriptEvaluateSemanticsRuntime.Normalize(ex);",
             StringComparison.Ordinal);
 
+        // If the function name is known but no switch arm matched, the problem is the
+        // argument count. Keep genuinely unknown function names as unavailable-function errors.
+        generated = generated.Replace(
+            "_ => throw new XPScriptRuntimeException(5, \"Function is not available inside Evaluate: \" + name)",
+            "_ => XPScriptEvaluateFunctionArityRuntime.Throw(name, args.Count)",
+            StringComparison.Ordinal);
+
         generated += "\n\n" + EvaluateCollectionIsolationRuntimeSource.Code + "\n";
         generated += "\n\n" + EvaluateSemanticsRuntimeSource.Code + "\n";
+        generated += "\n\n" + EvaluateFunctionArityRuntimeSource.Code + "\n";
         return generated;
     }
 }
