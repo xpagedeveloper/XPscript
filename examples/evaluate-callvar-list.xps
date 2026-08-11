@@ -1,0 +1,14 @@
+Sub Main()
+    Dim parameters List As Variant
+    Dim result As Variant
+
+    parameters("price") = 125.5
+    parameters("quantity") = 4
+    parameters("customer") = "Example AB"
+
+    result = Evaluate("Return callvar(""price"") * callvar(""quantity"")", parameters)
+    Print "Total = " & CStr(result)
+
+    result = Evaluate("Return UCase(callvar(""customer""))", parameters)
+    Print CStr(result)
+End Sub
