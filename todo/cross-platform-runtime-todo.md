@@ -121,20 +121,30 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] `ChDrive` is explicitly Windows-only and returns a clear runtime error elsewhere
 - [>] general path operations use .NET `Path`, `File`, `Directory`, and `FileStream` APIs rather than hard-coded Windows separators
 - [>] core `Open` and Charset-aware `Open` now share `XPScriptFileSystemRuntime.ResolvePath`, which uses target-OS `Path.GetFullPath` semantics and rejects empty/invalid paths
-- [>] path resolution intentionally does not rewrite separators or resolve symlinks/reparse points; those remain target-filesystem semantics
+- [>] `FileLen`, `FileDateTime`, `GetFileAttr`, `SetFileAttr`, `FileCopy`, `Kill`, `Name`, `MkDir`, `RmDir`, `ChDir` and `Dir` are routed through the same portability runtime
+- [>] path resolution intentionally does not rewrite separators, force path-case normalization or resolve symlinks/reparse points; those remain target-filesystem semantics
 - [>] runtime contains symlink/reparse-point detection support for portability/security review without silently dereferencing paths itself
+- [>] source/destination identity checks are case-insensitive on Windows and ordinal on Unix-like targets
+- [>] `Dir` leaves case matching to the target filesystem/runtime instead of imposing Windows-style case-insensitivity on Unix
+- [>] Windows UNC/drive/long-path syntax is passed to `Path.GetFullPath`/filesystem APIs without hand-written path rewriting; real Windows validation remains required
+- [>] Linux/macOS absolute paths, mount points and symlink traversal are left to target OS filesystem semantics; real OS validation remains required
+- [>] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names when attributes are read
+- [>] `SetFileAttr Hidden` on Unix does not silently rename a file; it reports that hidden files require a leading-dot name and `Name` must be used explicitly
+- [>] `FileCopy` preserves Unix executable permission bits explicitly where supported
+- [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; real Linux/macOS validation remains required
+- [>] `Name` remains a real filesystem move/rename and does not silently fall back to copy+delete after a cross-filesystem failure, preserving atomicity/ownership/link semantics
+- [>] `Kill` uses native target filesystem delete behavior and adds an explanatory diagnostic when Windows/open-handle delete semantics prevent removal
 - [>] file `Lock` / `Unlock` use the OS-backed `FileStream` locking implementation and report unsupported platforms
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
 - [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
 - [ ] document that path separators differ (`\\` vs `/`) and recommend portable path construction where possible
-- [ ] review Windows drive letters, UNC paths and long paths
-- [>] Linux/macOS absolute-path and symlink behavior is left to the target OS through `Path.GetFullPath`/filesystem APIs; runtime verification remains required
-- [ ] review case sensitivity/case preservation differences by filesystem
-- [ ] review file permission and executable-bit semantics on Unix-like systems
-- [ ] review hidden-file conventions (`.` prefix vs Windows attributes)
-- [ ] review rename/move behavior across filesystems/mount points
-- [ ] review delete/open-file semantics, which differ between Windows and Unix-like systems
+- [ ] runtime-verify Windows drive letters, UNC paths and long paths
+- [ ] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems
+- [ ] runtime-verify Unix permissions/executable bits on Linux/macOS
+- [ ] runtime-verify hidden-file behavior on Windows/Linux/macOS
+- [ ] runtime-verify same-filesystem and cross-filesystem `Name` behavior on supported OSes
+- [ ] runtime-verify delete-while-open behavior, which differs between Windows and Unix-like systems
 - [ ] review file sharing modes and whether current `FileShare` choices behave consistently
 - [ ] verify charset/BOM handling on all platforms
 - [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
