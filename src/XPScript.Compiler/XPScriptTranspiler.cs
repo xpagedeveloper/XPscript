@@ -40,6 +40,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
+        generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
