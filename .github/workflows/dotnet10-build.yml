@@ -108,16 +108,22 @@ jobs:
             "BYREF=11",
             "AUTO=1:2:8",
             "MATRIX=1:1:24",
+            "ARRAYREF=99",
             "REDIM=ABC",
             "SELECT=HIGH",
             "WITH-OK",
             "STATIC=1:2",
-            "DEFTYPE=42",
+            "STATICPROC=1:2",
+            "DEFTYPE=INTEGER:42",
+            "DECLARE=OK",
             "GOSUB=CALLED",
             "GOSUB=RETURNED",
             "GOTO=OK",
+            "ERRORFN=File not found",
             "ERR=123:expected-error",
             "RESUME=OK",
+            "RESUME-CURRENT=5",
+            "RESUME-LABEL=OK",
             "RESUME-NEXT=124",
             "BINARY=123456:4",
             "RANDOM=77:2"
@@ -129,8 +135,15 @@ jobs:
             }
           }
 
-          if ($output -contains "GOTO=BAD") {
-            throw "GoTo failed to skip the target statement."
+          $forbidden = @(
+            "GOTO=BAD",
+            "RESUME-LABEL=BAD"
+          )
+
+          foreach ($value in $forbidden) {
+            if ($output -contains $value) {
+              throw "Advanced core test produced forbidden output: $value"
+            }
           }
 
       - name: Verify advanced core files are removed
