@@ -4,11 +4,13 @@
 
 This file tracks implementation against the standalone runtime reference supplied for XPScript.
 
+Development note: while GitHub workflows are disabled by user request, new implementation work is committed to branch `runtime-development-no-ci`. Items implemented there remain `[>]` until explicit test execution is re-enabled.
+
 Status legend:
 
-- `[x]` implemented and covered by CI or an existing regression sample
+- `[x]` implemented and covered by CI or an existing verified regression sample
 - `[-]` partially implemented; more semantics/tests are required
-- `[>]` implementation currently in progress or implemented but awaiting a clean CI verification
+- `[>]` implemented/in progress but awaiting explicit verification
 - `[ ]` not implemented yet
 
 ## 1. Core language and declarations
@@ -17,8 +19,8 @@ Status legend:
 - [x] scalar declarations: Variant, Boolean, Byte, Integer, Long, Single, Double, Currency, String, Date, Object
 - [x] `Dim`, `Static`, `ByVal`, explicit `ByRef`, `Set`, `New`, `Delete`
 - [x] `Optional` parameters including omitted trailing arguments, omitted slots and default values
-- [ ] module-level `Public` variables
-- [ ] module-level `Private` variables
+- [>] module-level `Public` scalar variables implemented as generated static Script fields; custom/object/array module globals remain to verify/extend
+- [>] module-level `Private` scalar variables implemented as generated static Script fields; custom/object/array module globals remain to verify/extend
 - [-] user-defined `Type ... End Type`: scalar fields and automatic initialization are implemented; true value-copy semantics and array members remain
 - [x] `Enum ... End Enum`, explicit values, auto-increment and qualified/unqualified members
 
@@ -90,12 +92,12 @@ Status legend:
 - [x] `FreeFile`, `Open`, `Close`, `Input #`, `Line Input`, `Print #`, `Write #`, `Get`, `Put`, `EOF`, `LOF`, `Loc`, `Seek`, `Reset`
 - [x] Charset-aware Input/Output/Append
 - [x] separate `Encoding "base64"` layer combinable with Charset
-- [>] file form `Input$(count, #fileNumber)` implemented as file I/O, separate from console/user input; regression test added and awaiting a clean CI run
-- [>] `Lock` implemented using the underlying OS `FileStream.Lock`; Binary ranges are 1-based byte ranges, Random ranges use record length where statically known, sequential modes lock the whole file; cross-handle OS lock test added and awaiting a clean CI run
-- [>] `Unlock` implemented using the matching OS `FileStream.Unlock` semantics; awaiting clean CI verification
+- [>] file form `Input$(count, #fileNumber)` implemented as file I/O, separate from console/user input; regression test added and awaiting explicit verification
+- [>] `Lock` implemented using the underlying OS `FileStream.Lock`; Binary ranges are 1-based byte ranges, Random ranges use record length where statically known, sequential modes lock the whole file; cross-handle OS lock test added and awaiting explicit verification
+- [>] `Unlock` implemented using matching OS `FileStream.Unlock` semantics; awaiting explicit verification
 - [x] `ChDir`, `CurDir`, `Dir`, `FileCopy`, `FileDateTime`, `FileLen`, `Kill`, `MkDir`, rename/move, `RmDir`
-- [>] `ChDrive` Windows implementation added; awaiting clean CI verification
-- [>] explicit `latin1` charset round-trip regression test added; awaiting clean CI verification
+- [>] `ChDrive` Windows implementation added; awaiting explicit verification
+- [>] explicit `latin1` charset round-trip regression test added; awaiting explicit verification
 
 ### File input separation
 
@@ -120,37 +122,37 @@ Status legend:
 
 ## 12. Standalone HTTP API
 
-The current compatibility HTTP implementation is functional, but the reference defines a new XPScript-native public API. Keep the old compatibility facade only as a migration layer while adding the new public surface.
+Native HTTP is implemented in `NativeHttpRuntimeSource` and exposed through the XPScript names below. It is independent from the previous compatibility facade. Verification is intentionally deferred while workflows are disabled.
 
-- [ ] `HttpClient`
-- [ ] `HttpClient.Get`
-- [ ] `HttpClient.Post`
-- [ ] `HttpClient.Put`
-- [ ] `HttpClient.Patch`
-- [ ] `HttpClient.Delete`
-- [ ] `HttpClient.SetHeader`
-- [ ] `HttpClient.RemoveHeader`
-- [ ] `HttpClient.ClearHeaders`
-- [ ] `HttpClient.Timeout`
-- [ ] `HttpResponse.StatusCode`
-- [ ] `HttpResponse.StatusText`
-- [ ] `HttpResponse.Body`
-- [ ] `HttpResponse.ContentType`
-- [ ] `HttpResponse.Headers`
-- [ ] `HttpResponse.IsSuccess`
+- [>] `HttpClient`
+- [>] `HttpClient.Get`
+- [>] `HttpClient.Post`
+- [>] `HttpClient.Put`
+- [>] `HttpClient.Patch`
+- [>] `HttpClient.Delete`
+- [>] `HttpClient.SetHeader`
+- [>] `HttpClient.RemoveHeader`
+- [>] `HttpClient.ClearHeaders`
+- [>] `HttpClient.Timeout` (seconds)
+- [>] `HttpResponse.StatusCode`
+- [>] `HttpResponse.StatusText`
+- [>] `HttpResponse.Body`
+- [>] `HttpResponse.ContentType`
+- [>] `HttpResponse.Headers`
+- [>] `HttpResponse.IsSuccess`
 
 ## 13. Standalone JSON API
 
-The current JSON compatibility implementation is functional, but the reference defines XPScript-native names and helper functions.
+Native JSON is implemented with `System.Text.Json.Nodes` in `NativeJsonRuntimeSource`. Public `.xps` syntax is normalized by `NativeHttpJsonPreprocessor`. Verification is intentionally deferred while workflows are disabled.
 
-- [ ] `JsonDocument.Parse`, `JsonDocument.Stringify`
-- [ ] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
-- [ ] `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
-- [ ] `JsonElement.Type`, `JsonElement.Value`
-- [ ] `JsonParse`
-- [ ] `JsonStringify`
-- [ ] `JsonEncode`
-- [ ] `JsonDecode`
+- [>] `JsonDocument.Parse`, `JsonDocument.Stringify`
+- [>] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
+- [>] `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
+- [>] `JsonElement.Type`, `JsonElement.Value`
+- [>] `JsonParse`
+- [>] `JsonStringify`
+- [>] `JsonEncode`
+- [>] `JsonDecode`
 
 ## 14. Quality gates
 
@@ -163,3 +165,4 @@ Every completed item above should satisfy these gates:
 5. Existing compatibility, class/list, core, HTTP/JSON, text I/O and operator/array tests remain green.
 6. New public API names use XPScript branding only.
 7. File `Lock`/`Unlock` tests must verify contention from a second operating-system file handle, not merely internal runtime state.
+8. While workflows are disabled, `[>]` means implemented but not yet promoted to verified `[x]`.
