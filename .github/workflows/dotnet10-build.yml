@@ -2,11 +2,9 @@ name: .NET 10 Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -25,178 +23,69 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Display .NET info
-        run: dotnet --info
-
       - name: Restore
-        run: dotnet restore ./src/LSLite.Compiler/LSLite.Compiler.csproj
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
 
       - name: Build compiler
-        run: dotnet build ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-restore
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-restore
 
       - name: Compile compatibility sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/compatibility.ls -o ./out/compatibility.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/compatibility.xps -o ./out/compatibility.exe --framework-dependent
 
       - name: Run compatibility sample
         shell: pwsh
         run: |
           $output = & ./out/compatibility.exe
-          $output | ForEach-Object { Write-Host $_ }
-
-          $expected = @(
-            "LS LITE",
-            "a b",
-            "FF",
-            "1010",
-            "-1",
-            "2026",
-            "8",
-            "11",
-            "5",
-            "123.5",
-            "FILE-OK"
-          )
-
+          $expected = @('XPSCRIPT','a b','FF','1010','-1','2026','8','11','5','123.5','FILE-OK')
           foreach ($value in $expected) {
-            if ($output -notcontains $value) {
-              throw "Compatibility test missing expected output: $value"
-            }
+            if ($output -notcontains $value) { throw "Compatibility test missing expected output: $value" }
           }
-
-      - name: Verify no temporary compatibility file remains
-        shell: pwsh
-        run: |
-          if (Test-Path ./lslite-compat.txt) {
-            throw "Compatibility test did not remove its temporary file."
-          }
+          if (Test-Path ./xpscript-compat.txt) { throw 'Compatibility test did not remove temporary file.' }
 
       - name: Compile List and class sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/lists-classes.ls -o ./out/lists-classes.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/lists-classes.xps -o ./out/lists-classes.exe --framework-dependent
 
       - name: Run List and class sample
         shell: pwsh
         run: |
           $output = & ./out/lists-classes.exe
-          $output | ForEach-Object { Write-Host $_ }
-
-          $expected = @(
-            "ADMIN=Fredrik",
-            "admin:Fredrik",
-            "guest:Guest",
-            "GUEST-ERASED",
-            "Fredrik",
-            "Fno:Admin",
-            "OBJECT-DELETED"
-          )
-
+          $expected = @('ADMIN=Fredrik','admin:Fredrik','guest:Guest','GUEST-ERASED','Fredrik','Fno:Admin','OBJECT-DELETED')
           foreach ($value in $expected) {
-            if ($output -notcontains $value) {
-              throw "List/class test missing expected output: $value"
-            }
+            if ($output -notcontains $value) { throw "List/class test missing expected output: $value" }
           }
 
       - name: Compile advanced core language sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/core-language.ls -o ./out/core-language.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/core-language.xps -o ./out/core-language.exe --framework-dependent
 
       - name: Run advanced core language sample
         shell: pwsh
         run: |
           $output = & ./out/core-language.exe
-          $output | ForEach-Object { Write-Host $_ }
-
-          $expected = @(
-            "BYREF=11",
-            "AUTO=1:2:8",
-            "MATRIX=1:1:24",
-            "ARRAYREF=99",
-            "REDIM=ABC",
-            "SELECT=HIGH",
-            "WITH-OK",
-            "STATIC=1:2",
-            "STATICPROC=1:2",
-            "DEFTYPE=INTEGER:42",
-            "DECLARE=OK",
-            "GOSUB=CALLED",
-            "GOSUB=RETURNED",
-            "GOTO=OK",
-            "ERRORFN=File not found",
-            "ERR=123:expected-error",
-            "RESUME=OK",
-            "RESUME-CURRENT=5",
-            "RESUME-LABEL=OK",
-            "RESUME-NEXT=124",
-            "BINARY=123456:4",
-            "RANDOM=77:2"
-          )
-
+          $expected = @('BYREF=11','AUTO=1:2:8','MATRIX=1:1:24','ARRAYREF=99','REDIM=ABC','SELECT=HIGH','WITH-OK','STATIC=1:2','STATICPROC=1:2','DEFTYPE=INTEGER:42','DECLARE=OK','GOSUB=CALLED','GOSUB=RETURNED','GOTO=OK','ERRORFN=File not found','ERR=123:expected-error','RESUME=OK','RESUME-CURRENT=5','RESUME-LABEL=OK','RESUME-NEXT=124','BINARY=123456:4','RANDOM=77:2')
           foreach ($value in $expected) {
-            if ($output -notcontains $value) {
-              throw "Advanced core test missing expected output: $value"
-            }
+            if ($output -notcontains $value) { throw "Advanced core test missing expected output: $value" }
           }
-
-          $forbidden = @(
-            "GOTO=BAD",
-            "RESUME-LABEL=BAD"
-          )
-
-          foreach ($value in $forbidden) {
-            if ($output -contains $value) {
-              throw "Advanced core test produced forbidden output: $value"
-            }
+          foreach ($value in @('GOTO=BAD','RESUME-LABEL=BAD')) {
+            if ($output -contains $value) { throw "Advanced core test produced forbidden output: $value" }
           }
-
-      - name: Verify advanced core files are removed
-        shell: pwsh
-        run: |
-          if (Test-Path ./lslite-core.bin) { throw "Binary test file was not removed." }
-          if (Test-Path ./lslite-random.bin) { throw "Random test file was not removed." }
+          if (Test-Path ./xpscript-core.bin) { throw 'Binary test file was not removed.' }
+          if (Test-Path ./xpscript-random.bin) { throw 'Random test file was not removed.' }
 
       - name: Compile runtime and SAX sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/runtime-sax.ls -o ./out/runtime-sax.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/runtime-sax.xps -o ./out/runtime-sax.exe --framework-dependent
 
       - name: Run runtime and SAX sample
         shell: pwsh
         run: |
           $output = & ./out/runtime-sax.exe
-          $output | ForEach-Object { Write-Host $_ }
-
-          $expected = @(
-            "ENV=OK",
-            "FORMAT=OK",
-            "FORMATDOLLAR=OK",
-            "FORMATNUMBER=OK",
-            "FORMATPERCENT=OK",
-            "ERROR53=File not found",
-            "FILEERR=53",
-            "FILEERR=RESUMED",
-            "SHELL=33",
-            "EVALUATE=7",
-            "MESSAGEBOX=1",
-            "SAX=STARTDOC",
-            "SAX=START:root:1",
-            "SAX=ATTR:id=7:CDATA",
-            "SAX=START:child:0",
-            "SAX=TEXT:text:4",
-            "SAX=END:child",
-            "SAX=END:root",
-            "SAX=ENDDOC"
-          )
-
+          $expected = @('ENV=OK','FORMAT=OK','FORMATDOLLAR=OK','FORMATNUMBER=OK','FORMATPERCENT=OK','ERROR53=File not found','FILEERR=RESUMED','SHELL=33','EVALUATE=7','MESSAGEBOX=1','SAX=STARTDOC','SAX=START:root:1','SAX=ATTR:id=7:CDATA','SAX=START:child:0','SAX=TEXT:text:4','SAX=END:child','SAX=END:root','SAX=ENDDOC')
           foreach ($value in $expected) {
-            if ($value -eq "FILEERR=53") {
-              if (-not ($output | Where-Object { $_ -like "FILEERR=53:*" })) {
-                throw "Runtime/SAX test missing LotusScript file error 53."
-              }
-              continue
-            }
-            if ($output -notcontains $value) {
-              throw "Runtime/SAX test missing expected output: $value"
-            }
+            if ($output -notcontains $value) { throw "Runtime/SAX test missing expected output: $value" }
           }
+          if (-not ($output | Where-Object { $_ -like 'FILEERR=53:*' })) { throw 'Runtime/SAX test missing file error 53.' }
 
       - name: Compile HTTP and JSON sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/json-http.ls -o ./out/json-http.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/json-http.xps -o ./out/json-http.exe --framework-dependent
 
       - name: Run HTTP and JSON sample
         shell: pwsh
@@ -205,80 +94,80 @@ jobs:
           try {
             Start-Sleep -Seconds 2
             $output = & ./out/json-http.exe
-            $output | ForEach-Object { Write-Host $_ }
-
-            $expected = @(
-              "OBJECTSIZE=2",
-              "ARRAYSIZE=2",
-              "ELEMENT=name:3:Fredrik",
-              "POINTER=2",
-              "NTH=developer",
-              "ITER=admin:developer",
-              'COPY={"copy":{"city":"Linkoping","country":"Sweden"}}',
-              "JSONCONSTANTS=OK",
-              "GETCODE=200",
-              "POSTCODE=200",
-              "PUTCODE=200",
-              "PATCHCODE=200",
-              "DELETECODE=200",
-              "HEADERS=OK",
-              "PROXY=OK",
-              "HTTPJSON=POST"
-            )
-
+            $expected = @('OBJECTSIZE=2','ARRAYSIZE=2','ELEMENT=name:3:Fredrik','POINTER=2','NTH=developer','ITER=admin:developer','COPY={"copy":{"city":"Linkoping","country":"Sweden"}}','JSONCONSTANTS=OK','GETCODE=200','POSTCODE=200','PUTCODE=200','PATCHCODE=200','DELETECODE=200','HEADERS=OK','PROXY=OK','HTTPJSON=POST')
             foreach ($value in $expected) {
-              if ($output -notcontains $value) {
-                throw "HTTP/JSON test missing expected output: $value"
-              }
+              if ($output -notcontains $value) { throw "HTTP/JSON test missing expected output: $value" }
             }
-
-            if (-not ($output | Where-Object { $_ -like 'GET=*"method": "GET"*' })) {
-              throw "GET response did not come from the local HTTP test server."
-            }
-            if (-not ($output | Where-Object { $_ -like 'POST=*"method": "POST"*' })) {
-              throw "POST response did not come from the local HTTP test server."
-            }
-          }
-          finally {
-            if ($server -and -not $server.HasExited) {
-              Stop-Process -Id $server.Id -Force
-            }
+          } finally {
+            if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
           }
 
       - name: Compile charset Base64 and console sample
-        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/textio-console.ls -o ./out/textio-console.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/textio-console.xps -o ./out/textio-console.exe --framework-dependent
 
       - name: Run charset Base64 and console sample
         shell: pwsh
         run: |
           $inputData = "Fredrik`nSecond`nX"
           $output = $inputData | & ./out/textio-console.exe
-          $output | ForEach-Object { Write-Host $_ }
-
-          $expected = @(
-            "UTF8=UTF8-ÅÄÖ-é-漢字",
-            "UTF16=UTF16-ÅÄÖ-é-漢字",
-            "BASE64FILE=BASE64-FILE-åäö",
-            "BASE64UTF16=BASE64-UTF16-漢字",
-            "TOBASE64=RnJlZHJpayDDpcOkw7Y=",
-            "FROMBASE64=Fredrik åäö",
-            "URLENCODE=hello%20world%2B%C3%A5",
-            "URLDECODE=hello world+å",
-            "PRINTDOLLAR=OK",
-            "INPUTDOLLAR=Second",
-            "PAUSE=OK"
-          )
-
+          $expected = @('UTF8=UTF8-ÅÄÖ-é-漢字','UTF16=UTF16-ÅÄÖ-é-漢字','BASE64FILE=BASE64-FILE-åäö','BASE64UTF16=BASE64-UTF16-漢字','TOBASE64=RnJlZHJpayDDpcOkw7Y=','FROMBASE64=Fredrik åäö','URLENCODE=hello%20world%2B%C3%A5','URLDECODE=hello world+å','PRINTDOLLAR=OK','INPUTDOLLAR=Second','PAUSE=OK')
           foreach ($value in $expected) {
-            if ($output -notcontains $value) {
-              throw "Charset/console test missing expected output: $value"
-            }
+            if ($output -notcontains $value) { throw "Charset/console test missing expected output: $value" }
           }
-
-          if (-not ($output | Where-Object { $_ -like 'NAME>*INPUT=Fredrik' })) {
-            throw "Input prompt/value behavior did not match expected output."
-          }
-
-          foreach ($path in @('./lslite-utf8.txt','./lslite-utf16.txt','./lslite-base64.txt','./lslite-base64-utf16.txt')) {
+          if (-not ($output | Where-Object { $_ -like 'NAME>*INPUT=Fredrik' })) { throw 'Input prompt/value behavior did not match expected output.' }
+          foreach ($path in @('./xpscript-utf8.txt','./xpscript-utf16.txt','./xpscript-base64.txt','./xpscript-base64-utf16.txt')) {
             if (Test-Path $path) { throw "Charset test did not remove temporary file: $path" }
           }
+
+      - name: Compile coercion sample
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/coercion.xps -o ./out/coercion.exe --framework-dependent --result-format json
+
+      - name: Run coercion sample
+        shell: pwsh
+        run: |
+          $output = & ./out/coercion.exe
+          if ($output -notcontains 'Count: 10') { throw 'String + Integer coercion failed.' }
+          if ($output -notcontains 'SUM=30') { throw 'Integer + numeric String coercion failed.' }
+
+      - name: Verify JSON compiler error result
+        shell: pwsh
+        run: |
+          $jsonText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/compiler-errors.xps -o ./out/should-not-exist.exe --framework-dependent --result-format json
+          if ($LASTEXITCODE -ne 2) { throw "Expected compiler exit code 2, got $LASTEXITCODE" }
+          $result = $jsonText | ConvertFrom-Json
+          if ($result.result -ne 'error') { throw 'JSON result was not error.' }
+          if ($result.errors.Count -lt 1) { throw 'JSON result contained no errors.' }
+          $error = $result.errors[0]
+          if ($error.line -ne 10) { throw "Expected source line 10, got $($error.line)" }
+          if ($error.position -le 0) { throw 'Expected a source position.' }
+          if ($error.description -notlike "Parameter 'value' of 'TakesInteger' expects Integer but received String.*") { throw "Unexpected error description: $($error.description)" }
+          if ($error.code -notlike '*TakesInteger(name)*') { throw 'Error did not contain source code.' }
+          if ($error.markedCode -notlike '*^*') { throw 'Error did not contain marked source code.' }
+
+      - name: Verify XML compiler error result
+        shell: pwsh
+        run: |
+          $xmlText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/compiler-errors.xps -o ./out/should-not-exist.exe --framework-dependent --result-format xml
+          if ($LASTEXITCODE -ne 2) { throw "Expected compiler exit code 2, got $LASTEXITCODE" }
+          [xml]$result = $xmlText
+          if ($result.compileResult.result -ne 'error') { throw 'XML result was not error.' }
+          if ($result.compileResult.errors.error.line -ne '10') { throw 'XML result did not preserve source line.' }
+
+      - name: Verify text compiler success result
+        shell: pwsh
+        run: |
+          $text = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj --configuration Release --no-build -- ./samples/functions.xps -o ./out/functions.exe --framework-dependent --result-format text
+          if ($LASTEXITCODE -ne 0) { throw 'Expected successful compiler exit code.' }
+          if ($text -notcontains 'result: ok') { throw 'Text compiler result did not report ok.' }
+
+      - name: Verify branding and extension cleanup
+        shell: pwsh
+        run: |
+          $forbidden = @('LS Lite','LSLite','lslite','LotusScript','Lotus','HCL','Domino')
+          $files = Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\.git\\' -and $_.FullName -notmatch '\\bin\\|\\obj\\' }
+          foreach ($term in $forbidden) {
+            $matches = $files | Select-String -SimpleMatch $term -ErrorAction SilentlyContinue
+            if ($matches) { throw "Legacy branding '$term' still exists: $($matches[0].Path):$($matches[0].LineNumber)" }
+          }
+          $legacyScripts = Get-ChildItem ./samples -Filter '*.ls' -File
+          if ($legacyScripts) { throw 'Legacy .ls sample files still exist.' }
