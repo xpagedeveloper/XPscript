@@ -13,6 +13,13 @@ public sealed class LotusTranspiler
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
 
+        // Extended standalone compatibility includes optional Windows COM binding.
+        // Keep the generated source self-contained even when GetObject is not called.
+        generated = generated.Replace(
+            "using System.Text.RegularExpressions;",
+            "using System.Text.RegularExpressions;\nusing System.Runtime.InteropServices;",
+            StringComparison.Ordinal);
+
         // The active error statement is recorded by LSControlRuntime.Capture when an
         // exception actually occurs. Statements executed by an error handler must not
         // replace that position before Resume or Resume Next executes.
