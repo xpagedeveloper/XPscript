@@ -11,10 +11,18 @@ Sub Main()
     Dim longText As String
     Dim idx As Variant
 
-    If "File123" Like "file###" Then Print "LIKE-DIGITS=OK"
-    If "abc" Like "a?c" Then Print "LIKE-QUESTION=OK"
-    If "abc5" Like "a*[0-9]" Then Print "LIKE-RANGE=OK"
-    If "abc" Like "a[!d]c" Then Print "LIKE-NEGATE=OK"
+    If "File123" Like "file###" Then
+        Print "LIKE-DIGITS=OK"
+    End If
+    If "abc" Like "a?c" Then
+        Print "LIKE-QUESTION=OK"
+    End If
+    If "abc5" Like "a*[0-9]" Then
+        Print "LIKE-RANGE=OK"
+    End If
+    If "abc" Like "a[!d]c" Then
+        Print "LIKE-NEGATE=OK"
+    End If
 
     Print "BRACE=" & {Hello "Fredrik"}
     Print "BAR=" & |Hello || Fredrik|
