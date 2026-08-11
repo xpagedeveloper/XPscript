@@ -136,12 +136,20 @@ Recommended practices:
 6. Keep resource limits enabled.
 7. If untrusted users must execute programmable code, run that workload in a separately isolated process/container with OS-level restrictions.
 
-## Examples
+## Samples used by this documentation
 
-Reusable programs are available under `examples/`:
+The documentation intentionally uses source fixtures that already exist under `samples/`:
 
-- `examples/evaluate-basic.xps`
-- `examples/evaluate-callvar-list.xps`
-- `examples/evaluate-error-handling.xps`
-
-Regression and negative fixtures remain under `samples/`.
+- `samples/evaluate-xpscript.xps` — basic evaluation and explicit Return
+- `samples/evaluate-callvar.xps` — scalar/array/List input through callvar
+- `samples/evaluate-array-helpers.xps` — TypeName, LBound and UBound
+- `samples/evaluate-standard-functions.xps` — supported side-effect-free functions
+- `samples/evaluate-nested-collections.xps` — nested List/array snapshots
+- `samples/evaluate-no-return.xps` — no-Return behavior
+- `samples/evaluate-callvar-readonly-error.xps` — read-only callvar enforcement
+- `samples/evaluate-scope-error.xps` — caller-scope isolation
+- `samples/evaluate-coercion-diagnostics.xps` — coercion/error semantics
+- `samples/evaluate-function-arity-errors.xps` — wrong-arity diagnostics
+- `samples/evaluate-collection-element-budget.xps` — element budget
+- `samples/evaluate-collection-payload-budget.xps` — payload budget
+- `samples/evaluate-diagnostic-sanitization.xps` — secret-safe diagnostics
