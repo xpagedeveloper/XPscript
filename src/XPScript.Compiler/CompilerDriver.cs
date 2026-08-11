@@ -65,6 +65,9 @@ public sealed class CompilerDriver
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         var source = await File.ReadAllTextAsync(sourcePath);
+        var nativeDependencies = new NativeDependencyPackager(rid).Collect(source);
+        ValidateNativeDependencies(sourcePath, nativeDependencies);
+
         var transpiler = new XPScriptTranspiler();
         var generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
@@ -110,6 +113,7 @@ public sealed class CompilerDriver
             var outputDirectory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrWhiteSpace(outputDirectory)) Directory.CreateDirectory(outputDirectory);
             File.Copy(generatedExecutable, outputPath, overwrite: true);
+            CopyNativeDependencies(sourcePath, outputPath, nativeDependencies);
 
             if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
             {
@@ -125,6 +129,54 @@ public sealed class CompilerDriver
         {
             try { Directory.Delete(tempRoot, recursive: true); } catch { }
         }
+    }
+
+    private static void ValidateNativeDependencies(string sourcePath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
+    {
+        if (dependencies.Count == 0) return;
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var seenOutputNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dependency in dependencies)
+        {
+            var resolved = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
+            if (!File.Exists(resolved))
+                throw new CompilerException("Application-local native dependency was not found: " + dependency.DeclaredPath);
+
+            if (seenOutputNames.TryGetValue(dependency.LoadName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + dependency.LoadName + "'. Use unique native library file names for one target.");
+            seenOutputNames[dependency.LoadName] = resolved;
+        }
+    }
+
+    private static void CopyNativeDependencies(string sourcePath, string outputPath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
+    {
+        if (dependencies.Count == 0) return;
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(outputDirectory);
+
+        foreach (var dependency in dependencies)
+        {
+            var sourceFile = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
+            var destination = Path.Combine(outputDirectory, dependency.LoadName);
+            if (Path.GetFullPath(destination).Equals(outputFullPath, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException("Native dependency '" + dependency.DeclaredPath + "' would overwrite the generated executable.");
+            File.Copy(sourceFile, destination, overwrite: true);
+        }
+    }
+
+    private static string ResolveNativeDependencyPath(string sourceDirectory, string declaredPath)
+    {
+        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(portable)) return Path.GetFullPath(portable);
+
+        var resolved = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
+        var prefix = sourceDirectory.EndsWith(Path.DirectorySeparatorChar) ? sourceDirectory : sourceDirectory + Path.DirectorySeparatorChar;
+        if (!resolved.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new CompilerException("Application-local native dependency path must stay inside the XPScript source directory: " + declaredPath);
+        return resolved;
     }
 
     private static string NormalizeRuntimeIdentifier(string value)
