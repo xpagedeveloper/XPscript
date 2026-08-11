@@ -1,0 +1,18 @@
+Option Base 1
+
+Type Bucket
+    Values() As Integer
+End Type
+
+Sub Main()
+    Dim value As Bucket
+
+    ReDim value.Values(3)
+    value.Values(1) = 10
+    value.Values(3) = 30
+
+    Print "LOW=" & CStr(LBound(value.Values))
+    Print "HIGH=" & CStr(UBound(value.Values))
+    Print "FIRST=" & CStr(value.Values(1))
+    Print "LAST=" & CStr(value.Values(3))
+End Sub
