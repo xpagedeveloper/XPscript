@@ -16,18 +16,18 @@ Status legend:
 - [x] `Sub`, `Function`, `Call`, `Exit Sub`, `Exit Function`
 - [x] scalar declarations: Variant, Boolean, Byte, Integer, Long, Single, Double, Currency, String, Date, Object
 - [x] `Dim`, `Static`, `ByVal`, explicit `ByRef`, `Set`, `New`, `Delete`
-- [ ] `Optional` parameters including omitted argument behavior and default values
+- [x] `Optional` parameters including omitted trailing arguments, omitted slots and default values
 - [ ] module-level `Public` variables
 - [ ] module-level `Private` variables
-- [ ] user-defined `Type ... End Type`
-- [ ] `Enum ... End Enum`
+- [-] user-defined `Type ... End Type`: scalar fields and automatic initialization are implemented; true value-copy semantics and array members remain
+- [x] `Enum ... End Enum`, explicit values, auto-increment and qualified/unqualified members
 
 ## 2. Classes and properties
 
 - [x] classes, methods, constructors, destructors, `Me`
 - [x] parameterless `Property Get`
 - [x] parameterless object `Property Set`
-- [ ] scalar `Property Let`
+- [x] scalar `Property Let`
 - [ ] parameterized/indexed properties
 
 ## 3. Control flow and error handling
@@ -57,7 +57,7 @@ Status legend:
 - [x] `Asc`, `Chr`, `Instr`, `LCase`, `UCase`, `Left`, `Right`, `Mid`, `Len`, `LenB`
 - [x] `LTrim`, `RTrim`, `Trim`, `Replace`, `Space`, `String`, `Str`, `StrCompare`
 - [x] `InstrB`, `LeftB`, `RightB`, `MidB`
-- [ ] `StrConv`
+- [x] `StrConv` supported conversions: upper, lower and proper case
 - [x] `StrLeft`, `StrLeftBack`, `StrRight`, `StrRightBack`, `StrToken`
 - [x] `LSet`, `RSet`
 - [x] `UChr`, `Uni`
@@ -65,7 +65,7 @@ Status legend:
 ## 6. Conversion and inspection
 
 - [x] `CBool`, `CByte`, `CCur`, `CDate`, `CDat`, `CDbl`, `CInt`, `CLng`, `CSng`, `CStr`, `Val`
-- [ ] `CType`
+- [x] `CType` for supported XPScript scalar type names
 - [x] `CVDate`
 - [x] `DataType`, `TypeName`, `IsArray`, `IsDate`, `IsNull`, `IsNumeric`, `IsObject`, `IsScalar`
 - [x] list element presence support
