@@ -1,0 +1,20 @@
+Type BuildInfo
+    Name As String
+    Number As Long
+End Type
+
+Public CurrentBuild As BuildInfo
+
+Sub SetBuild()
+    CurrentBuild.Name = "XPScript"
+    CurrentBuild.Number = 42
+End Sub
+
+Sub PrintBuild()
+    Print "BUILD=" & CurrentBuild.Name & ":" & CStr(CurrentBuild.Number)
+End Sub
+
+Sub Main()
+    Call SetBuild()
+    Call PrintBuild()
+End Sub
