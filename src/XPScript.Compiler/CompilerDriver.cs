@@ -6,6 +6,8 @@ namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
+    private sealed record StagedManagedReference(string Name, string Path);
+
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
     {
         "win-x64", "win-arm64",
@@ -64,9 +66,13 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
-        var source = await File.ReadAllTextAsync(sourcePath);
+        var originalSource = await File.ReadAllTextAsync(sourcePath);
+        var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(originalSource);
+        var source = managedReferences.Source;
+
         var nativeDependencies = new NativeDependencyPackager(rid).Collect(source);
         ValidateNativeDependencies(sourcePath, nativeDependencies);
+        ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
         var transpiler = new XPScriptTranspiler();
         var generatedSource = transpiler.Transpile(source, sourcePath, rid);
@@ -79,8 +85,9 @@ public sealed class CompilerDriver
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var publishDir = Path.Combine(tempRoot, "publish");
+            var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
-            var csproj = BuildGeneratedProject(rid, selfContained);
+            var csproj = BuildGeneratedProject(rid, selfContained, stagedManagedReferences);
             await File.WriteAllTextAsync(projectPath, csproj);
             await File.WriteAllTextAsync(programPath, generatedSource);
 
@@ -114,6 +121,7 @@ public sealed class CompilerDriver
             if (!string.IsNullOrWhiteSpace(outputDirectory)) Directory.CreateDirectory(outputDirectory);
             File.Copy(generatedExecutable, outputPath, overwrite: true);
             CopyNativeDependencies(sourcePath, outputPath, nativeDependencies);
+            CopyManagedNativeDependencies(sourcePath, outputPath, managedReferences.Native);
 
             if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
             {
@@ -134,7 +142,7 @@ public sealed class CompilerDriver
     private static void ValidateNativeDependencies(string sourcePath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
     {
         if (dependencies.Count == 0) return;
-        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var sourceDirectory = SourceDirectory(sourcePath);
         var seenOutputNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var dependency in dependencies)
@@ -149,10 +157,69 @@ public sealed class CompilerDriver
         }
     }
 
+    private static void ValidateManagedReferences(
+        string sourcePath,
+        ManagedAssemblyReferencePreprocessor.Result references,
+        IReadOnlyList<NativeDependencyPackager.Dependency> declaredNativeDependencies)
+    {
+        var sourceDirectory = SourceDirectory(sourcePath);
+        var managedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var nativeNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dependency in declaredNativeDependencies)
+            nativeNames[dependency.LoadName] = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
+
+        foreach (var reference in references.Managed)
+        {
+            var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "Managed Reference");
+            if (!File.Exists(resolved))
+                throw new CompilerException("Managed .NET assembly was not found: " + reference.DeclaredPath);
+            var fileName = Path.GetFileName(resolved);
+            if (managedNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException("Multiple managed references use the same file name '" + fileName + "'.");
+            managedNames[fileName] = resolved;
+        }
+
+        foreach (var reference in references.Native)
+        {
+            var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "ReferenceNative");
+            if (!File.Exists(resolved))
+                throw new CompilerException("RID-specific native dependency was not found: " + reference.DeclaredPath);
+            var fileName = Path.GetFileName(resolved);
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new CompilerException("ReferenceNative path must end with a file name: " + reference.DeclaredPath);
+            if (nativeNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + fileName + "'.");
+            nativeNames[fileName] = resolved;
+        }
+    }
+
+    private static IReadOnlyList<StagedManagedReference> StageManagedReferences(
+        string sourcePath,
+        string tempRoot,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference> references)
+    {
+        if (references.Count == 0) return [];
+        var sourceDirectory = SourceDirectory(sourcePath);
+        var referenceDirectory = Path.Combine(tempRoot, "references");
+        Directory.CreateDirectory(referenceDirectory);
+        var result = new List<StagedManagedReference>();
+
+        foreach (var reference in references)
+        {
+            var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "Managed Reference");
+            var fileName = Path.GetFileName(resolved);
+            var staged = Path.Combine(referenceDirectory, fileName);
+            File.Copy(resolved, staged, overwrite: true);
+            result.Add(new StagedManagedReference(Path.GetFileNameWithoutExtension(fileName), staged));
+        }
+        return result;
+    }
+
     private static void CopyNativeDependencies(string sourcePath, string outputPath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
     {
         if (dependencies.Count == 0) return;
-        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var sourceDirectory = SourceDirectory(sourcePath);
         var outputFullPath = Path.GetFullPath(outputPath);
         var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(outputDirectory);
@@ -161,11 +228,39 @@ public sealed class CompilerDriver
         {
             var sourceFile = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
             var destination = Path.Combine(outputDirectory, dependency.LoadName);
-            if (Path.GetFullPath(destination).Equals(outputFullPath, StringComparison.OrdinalIgnoreCase))
-                throw new CompilerException("Native dependency '" + dependency.DeclaredPath + "' would overwrite the generated executable.");
+            EnsureDoesNotOverwriteExecutable(outputFullPath, destination, dependency.DeclaredPath);
             File.Copy(sourceFile, destination, overwrite: true);
         }
     }
+
+    private static void CopyManagedNativeDependencies(
+        string sourcePath,
+        string outputPath,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> dependencies)
+    {
+        if (dependencies.Count == 0) return;
+        var sourceDirectory = SourceDirectory(sourcePath);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(outputDirectory);
+
+        foreach (var dependency in dependencies)
+        {
+            var sourceFile = ResolveProjectLocalPath(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
+            var destination = Path.Combine(outputDirectory, Path.GetFileName(sourceFile));
+            EnsureDoesNotOverwriteExecutable(outputFullPath, destination, dependency.DeclaredPath);
+            File.Copy(sourceFile, destination, overwrite: true);
+        }
+    }
+
+    private static void EnsureDoesNotOverwriteExecutable(string outputFullPath, string destination, string declaredPath)
+    {
+        if (Path.GetFullPath(destination).Equals(outputFullPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new CompilerException("Dependency '" + declaredPath + "' would overwrite the generated executable.");
+    }
+
+    private static string SourceDirectory(string sourcePath) =>
+        Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
 
     private static string ResolveNativeDependencyPath(string sourceDirectory, string declaredPath)
     {
@@ -179,6 +274,19 @@ public sealed class CompilerDriver
         return resolved;
     }
 
+    private static string ResolveProjectLocalPath(string sourceDirectory, string declaredPath, string kind)
+    {
+        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(portable))
+            throw new CompilerException(kind + " path must be relative to and remain inside the XPScript source directory: " + declaredPath);
+
+        var resolved = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
+        var prefix = sourceDirectory.EndsWith(Path.DirectorySeparatorChar) ? sourceDirectory : sourceDirectory + Path.DirectorySeparatorChar;
+        if (!resolved.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new CompilerException(kind + " path must remain inside the XPScript source directory: " + declaredPath);
+        return resolved;
+    }
+
     private static string NormalizeRuntimeIdentifier(string value)
     {
         var rid = (value ?? "").Trim().ToLowerInvariant();
@@ -187,7 +295,26 @@ public sealed class CompilerDriver
         return rid;
     }
 
-    private static string BuildGeneratedProject(string runtimeIdentifier, bool selfContained) => $"""
+    private static string BuildGeneratedProject(
+        string runtimeIdentifier,
+        bool selfContained,
+        IReadOnlyList<StagedManagedReference> references)
+    {
+        var itemGroup = new StringBuilder();
+        if (references.Count > 0)
+        {
+            itemGroup.AppendLine("  <ItemGroup>");
+            foreach (var reference in references)
+            {
+                itemGroup.Append("    <Reference Include=\"").Append(EscapeXml(reference.Name)).AppendLine("\">");
+                itemGroup.Append("      <HintPath>").Append(EscapeXml(reference.Path)).AppendLine("</HintPath>");
+                itemGroup.AppendLine("      <Private>true</Private>");
+                itemGroup.AppendLine("    </Reference>");
+            }
+            itemGroup.AppendLine("  </ItemGroup>");
+        }
+
+        return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -200,8 +327,16 @@ public sealed class CompilerDriver
     <PublishSingleFile>true</PublishSingleFile>
     <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
   </PropertyGroup>
-</Project>
+{itemGroup}</Project>
 """;
+    }
+
+    private static string EscapeXml(string value) => value
+        .Replace("&", "&amp;", StringComparison.Ordinal)
+        .Replace("<", "&lt;", StringComparison.Ordinal)
+        .Replace(">", "&gt;", StringComparison.Ordinal)
+        .Replace("\"", "&quot;", StringComparison.Ordinal)
+        .Replace("'", "&apos;", StringComparison.Ordinal);
 
     private static string? FindPublishedExecutable(string publishDirectory, string rid)
     {
