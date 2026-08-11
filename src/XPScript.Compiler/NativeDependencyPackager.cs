@@ -56,6 +56,8 @@ internal sealed class NativeDependencyPackager
 
         var selected = SelectTargetLibrary(code, baseLib.Groups[1].Value);
         if (string.IsNullOrWhiteSpace(selected) || !IsApplicationLocalPath(selected)) return null;
+        if (IsAbsolutePortablePath(selected))
+            throw new CompilerException("Application-local native dependency paths must be relative to the XPScript source directory: " + selected);
 
         var loadName = PortableFileName(selected);
         if (string.IsNullOrWhiteSpace(loadName))
@@ -63,6 +65,14 @@ internal sealed class NativeDependencyPackager
 
         ValidateTargetFileName(loadName, selected);
         return new Dependency(selected, loadName);
+    }
+
+    private static bool IsAbsolutePortablePath(string value)
+    {
+        var normalized = value.Replace('\\', '/');
+        return normalized.StartsWith('/', StringComparison.Ordinal) ||
+               normalized.StartsWith("//", StringComparison.Ordinal) ||
+               Regex.IsMatch(normalized, @"^[A-Za-z]:/");
     }
 
     private void ValidateTargetFileName(string loadName, string declaredPath)
