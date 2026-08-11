@@ -1,0 +1,41 @@
+' Regression source for module-level nested Type value-copy semantics.
+' The destination must receive detached nested values and array storage.
+
+Type AddressInfo
+    City As String
+    PostalCode As String
+End Type
+
+Type CustomerInfo
+    Name As String
+    Address As AddressInfo
+    Scores(0 To 1) As Integer
+End Type
+
+Public SourceCustomer As CustomerInfo
+Public CopiedCustomer As CustomerInfo
+
+Sub Main()
+    SourceCustomer.Name = "Original"
+    SourceCustomer.Address.City = "Stockholm"
+    SourceCustomer.Address.PostalCode = "11122"
+    SourceCustomer.Scores(0) = 10
+    SourceCustomer.Scores(1) = 20
+
+    CopiedCustomer = SourceCustomer
+
+    ' Mutating the source after assignment must not change the module-level copy.
+    SourceCustomer.Name = "Changed"
+    SourceCustomer.Address.City = "Gothenburg"
+    SourceCustomer.Scores(0) = 99
+
+    Print CopiedCustomer.Name
+    Print CopiedCustomer.Address.City
+    Print CopiedCustomer.Address.PostalCode
+    Print CopiedCustomer.Scores(0)
+    Print CopiedCustomer.Scores(1)
+
+    ' Self-assignment must not destroy the value before it is copied.
+    CopiedCustomer = CopiedCustomer
+    Print CopiedCustomer.Address.City
+End Sub
