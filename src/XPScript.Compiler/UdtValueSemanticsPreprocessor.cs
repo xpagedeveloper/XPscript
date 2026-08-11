@@ -103,9 +103,58 @@ internal sealed class UdtValueSemanticsPreprocessor
 
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var expanded = new List<string>();
-            if (!destinationInfo.IsModuleGlobal) expanded.Add(indent + $"Set {destination} = New {destinationInfo.Type}");
-            ExpandCopy(typeInfo, destination, source, indent, expanded, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+            // Always snapshot the source before touching the destination. This preserves
+            // value semantics for self-assignment and prevents module globals from being
+            // partially overwritten while nested fields are still being read.
+            var snapshotId = ++_copyTempId;
+            var snapshot = $"__xp_udtcopy_snapshot_{snapshotId}";
+            expanded.Add(indent + $"Dim {snapshot} As New {destinationInfo.Type}");
+            ExpandCopy(typeInfo, snapshot, source, indent, expanded, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+            if (destinationInfo.IsModuleGlobal)
+            {
+                // Module-level Type values are injected as direct static values rather than
+                // LSRef variables. Commit the detached snapshot field-by-field so nested
+                // values and arrays remain independent of both source and temporary storage.
+                CommitSnapshot(typeInfo, destination, snapshot, indent, expanded);
+            }
+            else
+            {
+                // Local Type variables use the class-backed lowering internally. Assigning
+                // the detached snapshot is safe because the temporary has no external alias.
+                expanded.Add(indent + $"Set {destination} = {snapshot}");
+            }
+
             lines[i] = string.Join(Environment.NewLine, expanded);
+        }
+    }
+
+    private void CommitSnapshot(TypeInfo typeInfo, string destination, string snapshot, string indent, List<string> output)
+    {
+        foreach (var field in typeInfo.Fields)
+        {
+            if (field.IsArray)
+            {
+                // Clone once more on commit so the module value never shares mutable array
+                // storage with compiler-generated temporary state.
+                output.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({snapshot}.{field.Name})");
+                continue;
+            }
+
+            if (_types.ContainsKey(field.Type))
+            {
+                // Nested Type values are reference-backed internally, so install a fresh
+                // detached nested value rather than aliasing the snapshot's child object.
+                var nestedId = ++_copyTempId;
+                var nestedCommit = $"__xp_udtcopy_commit_{nestedId}";
+                output.Add(indent + $"Dim {nestedCommit} As New {field.Type}");
+                ExpandCopy(_types[field.Type], nestedCommit, snapshot + "." + field.Name, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                output.Add(indent + $"Set {destination}.{field.Name} = {nestedCommit}");
+                continue;
+            }
+
+            output.Add(indent + $"{destination}.{field.Name} = {snapshot}.{field.Name}");
         }
     }
 
