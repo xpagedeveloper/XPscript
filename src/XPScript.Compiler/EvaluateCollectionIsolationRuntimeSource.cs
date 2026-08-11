@@ -25,7 +25,13 @@ internal static class XPScriptEvaluateCollectionRuntime
     public static object? Snapshot(object? value)
     {
         var visited = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
-        return SnapshotCore(value, visited, 0);
+        return SnapshotCore(value, visited, 0, forReturn: false);
+    }
+
+    public static object? SnapshotReturn(object? value)
+    {
+        var visited = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
+        return SnapshotCore(value, visited, 0, forReturn: true);
     }
 
     public static object? ReadIndexed(object? value, IReadOnlyList<object?> args)
@@ -51,9 +57,9 @@ internal static class XPScriptEvaluateCollectionRuntime
         throw new XPScriptRuntimeException(5, "callvar is not an indexed value.");
     }
 
-    public static bool IsListSnapshot(object? value) => value is ListSnapshot;
+    public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;
 
-    private static object? SnapshotCore(object? value, Dictionary<object, object> visited, int depth)
+    private static object? SnapshotCore(object? value, Dictionary<object, object> visited, int depth, bool forReturn)
     {
         if (value is null || value is string || value.GetType().IsValueType)
             return value;
@@ -89,7 +95,7 @@ internal static class XPScriptEvaluateCollectionRuntime
                     else
                     {
                         var indexes = current.Cast<object?>().ToArray();
-                        copy.Set(SnapshotCore(sourceArray.Get(indexes), visited, depth + 1), indexes);
+                        copy.Set(SnapshotCore(sourceArray.Get(indexes), visited, depth + 1, forReturn), indexes);
                     }
                 }
             }
@@ -97,20 +103,38 @@ internal static class XPScriptEvaluateCollectionRuntime
 
         if (value is ILSList sourceList)
         {
-            var copy = new ListSnapshot();
-            visited[value] = copy;
+            if (forReturn)
+            {
+                var copy = new LSList<object?>();
+                visited[value] = copy;
+                foreach (var entry in sourceList.SnapshotEntries())
+                    copy[entry.Key] = SnapshotCore(entry.Value, visited, depth + 1, true);
+                return copy;
+            }
+
+            var snapshot = new ListSnapshot();
+            visited[value] = snapshot;
             foreach (var entry in sourceList.SnapshotEntries())
-                copy.Set(entry.Key, SnapshotCore(entry.Value, visited, depth + 1));
-            return copy;
+                snapshot.Set(entry.Key, SnapshotCore(entry.Value, visited, depth + 1, false));
+            return snapshot;
         }
 
         if (value is ListSnapshot sourceSnapshot)
         {
-            var copy = new ListSnapshot();
-            visited[value] = copy;
+            if (forReturn)
+            {
+                var copy = new LSList<object?>();
+                visited[value] = copy;
+                foreach (var entry in sourceSnapshot.Entries)
+                    copy[entry.Key] = SnapshotCore(entry.Value, visited, depth + 1, true);
+                return copy;
+            }
+
+            var snapshot = new ListSnapshot();
+            visited[value] = snapshot;
             foreach (var entry in sourceSnapshot.Entries)
-                copy.Set(entry.Key, SnapshotCore(entry.Value, visited, depth + 1));
-            return copy;
+                snapshot.Set(entry.Key, SnapshotCore(entry.Value, visited, depth + 1, false));
+            return snapshot;
         }
 
         if (value is Array sourceClrArray)
@@ -133,12 +157,11 @@ internal static class XPScriptEvaluateCollectionRuntime
                     if (dimension + 1 < indexes.Length)
                         CopyClrDimension(dimension + 1);
                     else
-                        copy.SetValue(SnapshotCore(sourceClrArray.GetValue(indexes), visited, depth + 1), indexes);
+                        copy.SetValue(SnapshotCore(sourceClrArray.GetValue(indexes), visited, depth + 1, forReturn), indexes);
                 }
             }
         }
 
-        // Arbitrary mutable objects are deliberately not bridged into Evaluate.
         throw new XPScriptRuntimeException(5,
             "Evaluate callvar contains an unsupported mutable object type: " + value.GetType().Name);
     }
