@@ -23,45 +23,38 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-          $textExtensions = @('.cs','.csproj','.slnx','.md','.yml','.yaml','.xps','.ls','.json','.txt','.ps1','.py','.gitignore')
-          $files = Get-ChildItem -Recurse -File | Where-Object {
-            $_.FullName -notmatch '\\.git\\' -and ($textExtensions -contains $_.Extension -or $_.Name -eq '.gitignore')
+          $replacements = @(
+            @('AdvancedLotusTranspiler','AdvancedXPScriptTranspiler'),
+            @('LotusTranspiler','XPScriptTranspiler'),
+            @('LotusRuntimeSource','XPScriptRuntimeSource'),
+            @('LotusListRuntimeSource','XPScriptListRuntimeSource'),
+            @('LotusObjectRuntimeSource','XPScriptObjectRuntimeSource'),
+            @('LotusRuntime','XPScriptRuntime'),
+            @('LotusScript','XPScript'),
+            @('LSLite.Compiler','XPScript.Compiler'),
+            @('LSLiteCompiler','XPScriptCompiler'),
+            @('LS Lite','XPScript'),
+            @('LSLite','XPScript'),
+            @('lslitec','xpscriptc'),
+            @('lslite','xpscript'),
+            @('HCL Domino','XPScript'),
+            @('HCL','XPScript'),
+            @('Domino','XPScript')
+          )
+
+          function Replace-Branding([string]$path) {
+            try {
+              $content = Get-Content -LiteralPath $path -Raw
+              $original = $content
+              foreach ($pair in $replacements) { $content = $content.Replace($pair[0], $pair[1]) }
+              $content = $content.Replace('.ls', '.xps')
+              if ($content -ne $original) { [IO.File]::WriteAllText($path, $content, [Text.UTF8Encoding]::new($false)) }
+            } catch { }
           }
 
-          $replacements = [ordered]@{
-            'AdvancedLotusTranspiler' = 'AdvancedXPScriptTranspiler'
-            'LotusTranspiler' = 'XPScriptTranspiler'
-            'LotusRuntimeSource' = 'XPScriptRuntimeSource'
-            'LotusListRuntimeSource' = 'XPScriptListRuntimeSource'
-            'LotusObjectRuntimeSource' = 'XPScriptObjectRuntimeSource'
-            'LotusRuntime' = 'XPScriptRuntime'
-            'LotusScript' = 'XPScript'
-            'LSLite.Compiler' = 'XPScript.Compiler'
-            'LSLiteCompiler' = 'XPScriptCompiler'
-            'LSLite' = 'XPScript'
-            'LS Lite' = 'XPScript'
-            'lslitec' = 'xpscriptc'
-            'lslite' = 'xpscript'
-            'HCL Domino' = 'XPScript'
-            'HCL' = 'XPScript'
-            'Domino' = 'XPScript'
-          }
+          Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\.git\\' } | ForEach-Object { Replace-Branding $_.FullName }
 
-          foreach ($file in $files) {
-            $content = Get-Content -LiteralPath $file.FullName -Raw
-            $original = $content
-            foreach ($item in $replacements.GetEnumerator()) {
-              $content = $content.Replace($item.Key, $item.Value)
-            }
-            $content = $content.Replace('.ls', '.xps')
-            if ($content -ne $original) {
-              [IO.File]::WriteAllText($file.FullName, $content, [Text.UTF8Encoding]::new($false))
-            }
-          }
-
-          Get-ChildItem samples -Filter '*.ls' -File | ForEach-Object {
-            git mv $_.FullName ($_.FullName -replace '\.ls$', '.xps')
-          }
+          Get-ChildItem samples -Filter '*.ls' -File | ForEach-Object { git mv $_.FullName ($_.FullName -replace '\.ls$', '.xps') }
 
           $renames = @(
             @('src/LSLite.Compiler/AdvancedLotusTranspiler.cs','src/LSLite.Compiler/AdvancedXPScriptTranspiler.cs'),
@@ -72,30 +65,25 @@ jobs:
             @('src/LSLite.Compiler/LSLite.Compiler.csproj','src/LSLite.Compiler/XPScript.Compiler.csproj'),
             @('LSLiteCompiler.slnx','XPScriptCompiler.slnx')
           )
-          foreach ($pair in $renames) {
-            if (Test-Path $pair[0]) { git mv $pair[0] $pair[1] }
-          }
+          foreach ($pair in $renames) { if (Test-Path $pair[0]) { git mv $pair[0] $pair[1] } }
           if (Test-Path 'src/LSLite.Compiler') { git mv 'src/LSLite.Compiler' 'src/XPScript.Compiler' }
 
-          # Re-run replacements after path/name changes so project references are also clean.
-          Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\.git\\' } | ForEach-Object {
-            try {
-              $content = Get-Content -LiteralPath $_.FullName -Raw
-              $original = $content
-              foreach ($item in $replacements.GetEnumerator()) { $content = $content.Replace($item.Key, $item.Value) }
-              $content = $content.Replace('.ls', '.xps')
-              if ($content -ne $original) { [IO.File]::WriteAllText($_.FullName, $content, [Text.UTF8Encoding]::new($false)) }
-            } catch { }
-          }
+          Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\.git\\' } | ForEach-Object { Replace-Branding $_.FullName }
 
           $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
           [xml]$xml = Get-Content $project -Raw
           $pg = $xml.Project.PropertyGroup | Select-Object -First 1
-          if (-not $pg.AssemblyName) { $node = $xml.CreateElement('AssemblyName'); $node.InnerText = 'xpscriptc'; $pg.AppendChild($node) | Out-Null } else { $pg.AssemblyName = 'xpscriptc' }
-          if (-not $pg.RootNamespace) { $node = $xml.CreateElement('RootNamespace'); $node.InnerText = 'XPScript.Compiler'; $pg.AppendChild($node) | Out-Null } else { $pg.RootNamespace = 'XPScript.Compiler' }
-          if (-not $pg.AssemblyTitle) { $node = $xml.CreateElement('AssemblyTitle'); $node.InnerText = 'XPScript Compiler'; $pg.AppendChild($node) | Out-Null }
-          if (-not $pg.Product) { $node = $xml.CreateElement('Product'); $node.InnerText = 'XPScript'; $pg.AppendChild($node) | Out-Null }
-          if (-not $pg.Copyright) { $node = $xml.CreateElement('Copyright'); $node.InnerText = '(c) xpagedeveloper.com 2026'; $pg.AppendChild($node) | Out-Null }
+          foreach ($entry in @(
+            @('AssemblyName','xpscriptc'),
+            @('RootNamespace','XPScript.Compiler'),
+            @('AssemblyTitle','XPScript Compiler'),
+            @('Product','XPScript'),
+            @('Copyright','(c) xpagedeveloper.com 2026')
+          )) {
+            $name = $entry[0]; $value = $entry[1]
+            $existing = $pg.$name
+            if (-not $existing) { $node = $xml.CreateElement($name); $node.InnerText = $value; $pg.AppendChild($node) | Out-Null } else { $pg.$name = $value }
+          }
           $xml.Save((Resolve-Path $project))
 
           if (Test-Path README.md) {
