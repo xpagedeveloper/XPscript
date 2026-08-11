@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace LSLite.Compiler;
 
@@ -83,9 +85,11 @@ public sealed class CompilerDriver
 
             if (process.ExitCode != 0)
             {
+                var diagnosticText = stdout + Environment.NewLine + stderr;
                 throw new CompilerException(
                     "Generated C# failed to compile." + Environment.NewLine +
-                    stdout + Environment.NewLine + stderr);
+                    diagnosticText + Environment.NewLine +
+                    BuildGeneratedSourceContext(generatedSource, diagnosticText));
             }
 
             var generatedExe = Directory
@@ -112,5 +116,35 @@ public sealed class CompilerDriver
                 // Best-effort cleanup only.
             }
         }
+    }
+
+    private static string BuildGeneratedSourceContext(string generatedSource, string diagnostics)
+    {
+        var lineNumbers = Regex.Matches(diagnostics, @"Program\.cs\((\d+),\d+\)")
+            .Select(match => int.Parse(match.Groups[1].Value))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
+
+        if (lineNumbers.Length == 0) return "";
+
+        var lines = generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var builder = new StringBuilder("Generated C# context:" + Environment.NewLine);
+        var emitted = new HashSet<int>();
+
+        foreach (var lineNumber in lineNumbers)
+        {
+            var start = Math.Max(1, lineNumber - 2);
+            var end = Math.Min(lines.Length, lineNumber + 2);
+            for (var current = start; current <= end; current++)
+            {
+                if (!emitted.Add(current)) continue;
+                builder.Append(current == lineNumber ? "> " : "  ")
+                    .Append(current.ToString().PadLeft(5))
+                    .Append(": ")
+                    .AppendLine(lines[current - 1]);
+            }
+        }
+        return builder.ToString();
     }
 }
