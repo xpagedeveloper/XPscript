@@ -100,6 +100,26 @@ internal static class XPScriptEvaluateCollectionRuntime
 
     public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;
 
+    private static long CountElements(LSArray array)
+    {
+        long total = 1;
+        try
+        {
+            for (var i = 0; i < array.Rank; i++)
+            {
+                var length = checked((long)array.UpperBounds[i] - array.LowerBounds[i] + 1L);
+                total = checked(total * length);
+                if (total > MaxCollectionElements) return total;
+            }
+            return total;
+        }
+        catch (OverflowException)
+        {
+            throw new XPScriptRuntimeException(5,
+                $"Evaluate collection snapshot exceeds the maximum element budget of {MaxCollectionElements}.");
+        }
+    }
+
     private static object? SnapshotCore(
         object? value,
         Dictionary<object, object> visited,
@@ -134,7 +154,7 @@ internal static class XPScriptEvaluateCollectionRuntime
             if (!sourceArray.IsAllocated)
                 return new LSArray(sourceArray.ElementType, true);
 
-            budget.AddElements(sourceArray.Length);
+            budget.AddElements(CountElements(sourceArray));
             var lower = sourceArray.LowerBounds.ToArray();
             var upper = sourceArray.UpperBounds.ToArray();
             var copy = new LSArray(sourceArray.ElementType, true, lower, upper);
