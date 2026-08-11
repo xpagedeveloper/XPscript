@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Dim text As String
+    Dim count As Integer
+    Dim numericText As String
+
+    text = "Count: "
+    count = 10
+    numericText = "20"
+
+    text = text + count
+    Print text
+
+    count = count + numericText
+    Print "SUM=" & CStr(count)
+End Sub
