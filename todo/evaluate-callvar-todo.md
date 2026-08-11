@@ -79,8 +79,10 @@ Status:
 - [>] permission/access failures map to XPScript error 70
 - [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context
 - [>] source: `samples/evaluate-coercion-diagnostics.xps`
-- [ ] verify coercion/error parity against equivalent normal XPScript expressions when execution is re-enabled
-- [ ] improve wrong-function-arity diagnostics so known functions distinguish invalid argument count from unavailable function names
+- [>] known Evaluate functions now distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
+- [>] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
+- [>] unknown function names continue to report `Function is not available inside Evaluate` rather than an arity error
+- [ ] verify coercion/error/arity parity against equivalent normal XPScript expressions when execution is re-enabled
 
 ## Isolation and security
 
