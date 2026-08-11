@@ -7,6 +7,7 @@ internal static class XPScriptFileIO
 {
     private const System.Reflection.BindingFlags StaticPrivate = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+    private const long WholeFileLockLength = long.MaxValue / 2;
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -44,13 +45,13 @@ internal static class XPScriptFileIO
     public static void LockFile(object? fileNumberValue)
     {
         var stream = RequireLockableStream(fileNumberValue);
-        LockRegion(stream, 0, long.MaxValue);
+        LockRegion(stream, 0, WholeFileLockLength);
     }
 
     public static void UnlockFile(object? fileNumberValue)
     {
         var stream = RequireLockableStream(fileNumberValue);
-        UnlockRegion(stream, 0, long.MaxValue);
+        UnlockRegion(stream, 0, WholeFileLockLength);
     }
 
     public static void LockBytes(object? fileNumberValue, object? startValue, object? endValue)
@@ -94,7 +95,7 @@ internal static class XPScriptFileIO
         if (drive.Length == 0) throw new XPScriptRuntimeException(5, "ChDrive requires a drive letter.");
         var letter = char.ToUpperInvariant(drive[0]);
         if (letter < 'A' || letter > 'Z') throw new XPScriptRuntimeException(5, "Invalid drive specification: " + drive);
-        var root = letter + @":\";
+        var root = letter + ":\\";
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException("Drive does not exist: " + root);
         Environment.CurrentDirectory = root;
     }
