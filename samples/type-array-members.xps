@@ -1,0 +1,28 @@
+Option Base 1
+
+Type Metrics
+    Values(1 To 3) As Integer
+    Labels() As String
+End Type
+
+Sub Main()
+    Dim first As Metrics
+    Dim second As Metrics
+
+    first.Values(1) = 10
+    first.Values(2) = 20
+    first.Values(3) = 30
+
+    ReDim first.Labels(1 To 2)
+    first.Labels(1) = "one"
+    first.Labels(2) = "two"
+
+    second = first
+
+    first.Values(1) = 99
+    first.Labels(1) = "changed"
+
+    Print "FIRST=" & CStr(first.Values(1)) & ":" & first.Labels(1)
+    Print "SECOND=" & CStr(second.Values(1)) & ":" & second.Labels(1)
+    Print "BOUNDS=" & CStr(LBound(second.Values)) & ":" & CStr(UBound(second.Values))
+End Sub
