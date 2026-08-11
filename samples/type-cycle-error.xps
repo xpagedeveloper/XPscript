@@ -1,0 +1,9 @@
+Type NodeInfo
+    NextNode As NodeInfo
+End Type
+
+Sub Main()
+    Dim first As NodeInfo
+    Dim second As NodeInfo
+    second = first
+End Sub
