@@ -90,6 +90,38 @@ internal sealed class FileSystemPortabilityPostProcessor
             "DirEnumerator = XPScriptFileSystemRuntime.Enumerate(raw).GetEnumerator();",
             StringComparison.Ordinal);
 
+        // Evaluate collection isolation is finalized after all runtime source blocks have
+        // been appended. This keeps List/array snapshots detached without exposing mutable
+        // caller objects to the evaluator.
+        generated = generated.Replace(
+            "return new Evaluator(source, Snapshot(callvar)).Run();",
+            "return new Evaluator(source, XPScriptEvaluateCollectionRuntime.Snapshot(callvar)).Run();",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "return Snapshot(ParseExpression());",
+            "return XPScriptEvaluateCollectionRuntime.Snapshot(ParseExpression());",
+            StringComparison.Ordinal);
+
+        const string oldReadCallvar = """
+        private object? ReadCallvar(IReadOnlyList<object?> args)
+        {
+            if (_callvar is LSArray array) return array.Get(args.ToArray());
+            if (_callvar is Array clrArray)
+            {
+                if (args.Count != 1) throw Error("CLR array callvar requires one index.");
+                return clrArray.GetValue(XPScriptRuntime.CInt(args[0]));
+            }
+            throw Error("callvar is not an indexed value.");
+        }
+""";
+
+        const string newReadCallvar = """
+        private object? ReadCallvar(IReadOnlyList<object?> args) =>
+            XPScriptEvaluateCollectionRuntime.ReadIndexed(_callvar, args);
+""";
+        generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
+
+        generated += "\n\n" + EvaluateCollectionIsolationRuntimeSource.Code + "\n";
         return generated;
     }
 }
