@@ -1,0 +1,36 @@
+' Regression source for nested Resume target frames.
+' Expected when verification is re-enabled:
+' Middle catches the error raised by Inner, Resume Next continues after
+' the failing Call Inner(), and Outer then continues normally.
+
+Sub Inner()
+    Error 7001, "inner failure"
+End Sub
+
+Sub Middle()
+    On Error GoTo Handler
+
+    Print "middle-before"
+    Call Inner()
+    Print "middle-after"
+    Exit Sub
+
+Handler:
+    Print "middle-handler:" & CStr(Err)
+    Resume Next
+End Sub
+
+Sub Outer()
+    On Error GoTo Handler
+
+    Print "outer-before"
+    Call Middle()
+    Print "outer-after"
+    Exit Sub
+
+Handler:
+    Print "outer-handler:" & CStr(Err)
+    Resume Next
+End Sub
+
+Call Outer()
