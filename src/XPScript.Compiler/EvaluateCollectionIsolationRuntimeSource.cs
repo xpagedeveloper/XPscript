@@ -183,15 +183,13 @@ internal static class XPScriptEvaluateCollectionRuntime
 
         if (value is ILSList sourceList)
         {
-            var entries = sourceList.SnapshotEntries().ToArray();
-            budget.AddElements(entries.LongLength);
-
             if (forReturn)
             {
                 var copy = new LSList<object?>();
                 visited[value] = copy;
-                foreach (var entry in entries)
+                foreach (var entry in sourceList.SnapshotEntries())
                 {
+                    budget.AddElements(1);
                     budget.AddString(entry.Key);
                     copy[entry.Key] = SnapshotCore(entry.Value, visited, budget, depth + 1, true);
                 }
@@ -200,8 +198,9 @@ internal static class XPScriptEvaluateCollectionRuntime
 
             var snapshot = new ListSnapshot();
             visited[value] = snapshot;
-            foreach (var entry in entries)
+            foreach (var entry in sourceList.SnapshotEntries())
             {
+                budget.AddElements(1);
                 budget.AddString(entry.Key);
                 snapshot.Set(entry.Key, SnapshotCore(entry.Value, visited, budget, depth + 1, false));
             }
@@ -210,15 +209,13 @@ internal static class XPScriptEvaluateCollectionRuntime
 
         if (value is ListSnapshot sourceSnapshot)
         {
-            var entries = sourceSnapshot.Entries.ToArray();
-            budget.AddElements(entries.LongLength);
-
             if (forReturn)
             {
                 var copy = new LSList<object?>();
                 visited[value] = copy;
-                foreach (var entry in entries)
+                foreach (var entry in sourceSnapshot.Entries)
                 {
+                    budget.AddElements(1);
                     budget.AddString(entry.Key);
                     copy[entry.Key] = SnapshotCore(entry.Value, visited, budget, depth + 1, true);
                 }
@@ -227,8 +224,9 @@ internal static class XPScriptEvaluateCollectionRuntime
 
             var snapshot = new ListSnapshot();
             visited[value] = snapshot;
-            foreach (var entry in entries)
+            foreach (var entry in sourceSnapshot.Entries)
             {
+                budget.AddElements(1);
                 budget.AddString(entry.Key);
                 snapshot.Set(entry.Key, SnapshotCore(entry.Value, visited, budget, depth + 1, false));
             }
