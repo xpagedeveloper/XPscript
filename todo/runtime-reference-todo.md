@@ -56,21 +56,21 @@ Status legend:
 
 - [x] `Asc`, `Chr`, `Instr`, `LCase`, `UCase`, `Left`, `Right`, `Mid`, `Len`, `LenB`
 - [x] `LTrim`, `RTrim`, `Trim`, `Replace`, `Space`, `String`, `Str`, `StrCompare`
-- [>] `InstrB`, `LeftB`, `RightB`, `MidB`
+- [x] `InstrB`, `LeftB`, `RightB`, `MidB`
 - [ ] `StrConv`
-- [>] `StrLeft`, `StrLeftBack`, `StrRight`, `StrRightBack`, `StrToken`
-- [>] `LSet`, `RSet`
-- [>] `UChr`, `Uni`
+- [x] `StrLeft`, `StrLeftBack`, `StrRight`, `StrRightBack`, `StrToken`
+- [x] `LSet`, `RSet`
+- [x] `UChr`, `Uni`
 
 ## 6. Conversion and inspection
 
 - [x] `CBool`, `CByte`, `CCur`, `CDate`, `CDat`, `CDbl`, `CInt`, `CLng`, `CSng`, `CStr`, `Val`
-- [>] `CType`
-- [>] `CVDate`
+- [ ] `CType`
+- [x] `CVDate`
 - [x] `DataType`, `TypeName`, `IsArray`, `IsDate`, `IsNull`, `IsNumeric`, `IsObject`, `IsScalar`
 - [x] list element presence support
-- [>] `IsList`
-- [>] `IsUnknown`
+- [x] `IsList`
+- [x] `IsUnknown`
 
 ## 7. Math and date/time
 
@@ -107,7 +107,7 @@ Status legend:
 ## 11. Base64 and URL helpers
 
 - [x] `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
-- [>] aliases `Base64Encode`, `Base64Decode`
+- [x] aliases `Base64Encode`, `Base64Decode`
 - [ ] binary-return form for Base64 decode
 
 ## 12. Standalone HTTP API
