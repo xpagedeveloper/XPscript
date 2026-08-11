@@ -21,9 +21,12 @@ Status:
 - [>] module-level `Public` scalar variables
 - [>] module-level `Private` scalar variables
 - [>] module-level fixed/dynamic arrays, including shared state across procedures, `ReDim`, `ReDim Preserve`, indexed reads/writes, `LBound`, `UBound`, and `Erase`; source: `samples/module-arrays.xps`
-- [ ] module-level custom `Type` values
+- [>] module-level custom `Type` values are generated as direct value containers and shared across procedures; source: `samples/module-type-values.xps`
 - [ ] module-level class/object references
-- [-] `Type ... End Type`: scalar fields + auto initialization implemented; value-copy and array fields remain
+- [>] `Type ... End Type`: scalar fields, automatic initialization and scalar-field value-copy are implemented; source: `samples/type-value-copy.xps`
+- [>] `Type` array fields: fixed and dynamic fields, indexing, `ReDim`, `Erase`, bounds and deep array-copy are implemented; source: `samples/type-array-members.xps`
+- [ ] recursive deep-copy for nested `Type` fields
+- [ ] make implicit lower bounds in `ReDim typeValue.arrayField(n)` honor the active `Option Base` when no explicit `lower To upper` range is supplied
 - [x] `Enum ... End Enum`: explicit values, auto increment, qualified/unqualified members
 
 ## 2. Classes and properties
@@ -89,7 +92,7 @@ Status:
 - [x] `Array`, `ReDim`, `ReDim Preserve`, `Erase`, `LBound`, `UBound`
 - [x] `Join`, `Explode`, `ArrayGetIndex`, `ArrayAppend`, `ArrayUnique`, `ArraySplice`, `ArraySlice`
 - [x] keyed lists, iteration, tag lookup, erase
-- [ ] arrays as `Type` members
+- [>] arrays as `Type` members, including deep-copy of array storage; source: `samples/type-array-members.xps`
 
 ## 9. File I/O and filesystem
 
