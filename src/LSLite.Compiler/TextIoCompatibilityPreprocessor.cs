@@ -146,8 +146,8 @@ internal sealed class TextIoCompatibilityPreprocessor
         var tail = match.Groups[4].Value.Trim();
         if (tail.Length == 0) return false;
 
-        var charsetMatch = Regex.Match(tail, @"(?:^|\s)Charset\s+(\"[^\"]*\"|[^\s]+)", RegexOptions.IgnoreCase);
-        var encodingMatch = Regex.Match(tail, @"(?:^|\s)Encoding\s+(\"[^\"]*\"|[^\s]+)", RegexOptions.IgnoreCase);
+        var charsetMatch = Regex.Match(tail, @"(?:^|\s)Charset\s+(""[^""]*""|[^\s]+)", RegexOptions.IgnoreCase);
+        var encodingMatch = Regex.Match(tail, @"(?:^|\s)Encoding\s+(""[^""]*""|[^\s]+)", RegexOptions.IgnoreCase);
         if (!charsetMatch.Success && !encodingMatch.Success) return false;
 
         var remainder = tail;
