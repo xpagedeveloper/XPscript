@@ -51,6 +51,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + SourceLineRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeInteropRuntimeSource.Code + "\n";
+        generated += "\n\n" + FileSystemPortabilityRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
@@ -67,6 +68,8 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
+
+        generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 
         generated = generated.Replace(
             "XPScriptRuntime.SetArgs(args);",
