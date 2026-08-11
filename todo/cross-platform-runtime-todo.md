@@ -134,7 +134,10 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; real Linux/macOS validation remains required
 - [>] `Name` remains a real filesystem move/rename and does not silently fall back to copy+delete after a cross-filesystem failure, preserving atomicity/ownership/link semantics
 - [>] `Kill` uses native target filesystem delete behavior and adds an explanatory diagnostic when Windows/open-handle delete semantics prevent removal
-- [>] file `Lock` / `Unlock` use the OS-backed `FileStream` locking implementation and report unsupported platforms
+- [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency
+- [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
+- [>] `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics instead of raw `IOException`
+- [>] delete-while-open semantics intentionally remain OS/filesystem-defined; XPScript handles do not request `FileShare.Delete` on Windows; source: `samples/file-delete-open-semantics.xps`
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
 - [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
@@ -145,7 +148,6 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [ ] runtime-verify hidden-file behavior on Windows/Linux/macOS
 - [ ] runtime-verify same-filesystem and cross-filesystem `Name` behavior on supported OSes
 - [ ] runtime-verify delete-while-open behavior, which differs between Windows and Unix-like systems
-- [ ] review file sharing modes and whether current `FileShare` choices behave consistently
 - [ ] verify charset/BOM handling on all platforms
 - [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
 - [ ] verify Latin-1 explicitly on Windows/Linux/macOS
