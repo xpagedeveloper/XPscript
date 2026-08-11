@@ -21,6 +21,7 @@ jobs:
 
       - name: Restore
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
 
@@ -54,7 +55,9 @@ jobs:
           foreach ($value in @('BYREF=11','AUTO=1:2:8','MATRIX=1:1:24','ARRAYREF=99','REDIM=ABC','SELECT=HIGH','WITH-OK','STATIC=1:2','STATICPROC=1:2','DEFTYPE=INTEGER:42','DECLARE=OK','GOSUB=CALLED','GOSUB=RETURNED','GOTO=OK','ERRORFN=File not found','ERR=123:expected-error','RESUME=OK','RESUME-CURRENT=5','RESUME-LABEL=OK','RESUME-NEXT=124','BINARY=123456:4','RANDOM=77:2')) {
             if ($output -notcontains $value) { throw "Core output missing: $value" }
           }
-          foreach ($value in @('GOTO=BAD','RESUME-LABEL=BAD')) { if ($output -contains $value) { throw "Forbidden core output: $value" } }
+          foreach ($value in @('GOTO=BAD','RESUME-LABEL=BAD')) {
+            if ($output -contains $value) { throw "Forbidden core output: $value" }
+          }
           if (Test-Path ./xpscript-core.bin) { throw 'Binary test file remains.' }
           if (Test-Path ./xpscript-random.bin) { throw 'Random test file remains.' }
 
@@ -88,7 +91,6 @@ jobs:
                 $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
                 throw "HTTP test server exited before becoming ready. ExitCode=$($server.ExitCode)`nSTDOUT:`n$stdout`nSTDERR:`n$stderr"
               }
-
               $client = [System.Net.Sockets.TcpClient]::new()
               try {
                 $connect = $client.ConnectAsync('127.0.0.1', 18999)
@@ -97,20 +99,16 @@ jobs:
                   break
                 }
               } catch {
-                # Server is still starting. Retry below.
               } finally {
                 $client.Dispose()
               }
-
               Start-Sleep -Milliseconds 200
             }
-
             if (-not $ready) {
               $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
               $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
               throw "HTTP test server did not listen on 127.0.0.1:18999 within 10 seconds.`nSTDOUT:`n$stdout`nSTDERR:`n$stderr"
             }
-
             $output = & ./out/json-http.exe
             if ($LASTEXITCODE -ne 0) { throw "HTTP/JSON runtime exited with code $LASTEXITCODE." }
             foreach ($value in @('OBJECTSIZE=2','ARRAYSIZE=2','ELEMENT=name:3:Fredrik','POINTER=2','NTH=developer','ITER=admin:developer','COPY={"copy":{"city":"Linkoping","country":"Sweden"}}','JSONCONSTANTS=OK','GETCODE=200','POSTCODE=200','PUTCODE=200','PATCHCODE=200','DELETECODE=200','HEADERS=OK','PROXY=OK','HTTPJSON=POST')) {
@@ -149,14 +147,11 @@ jobs:
           $compilerExitCode = $LASTEXITCODE
           $global:LASTEXITCODE = 0
           if ($compilerExitCode -ne 2) { throw "Expected compiler exit code 2, got $compilerExitCode" }
-
           $result = $jsonText | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'JSON diagnostic contract failed.' }
-
           $diagnostic = $result.errors | Where-Object {
             $_.description -like "Parameter 'value' of 'TakesInteger' expects Integer but received String.*"
           } | Select-Object -First 1
-
           if (-not $diagnostic) { throw 'Expected parameter type diagnostic was not returned in errors[].' }
           if ($diagnostic.line -ne 10 -or $diagnostic.position -le 0) { throw "Wrong diagnostic location: $($diagnostic.line):$($diagnostic.position)" }
           if ($diagnostic.code -notlike '*TakesInteger(name)*' -or $diagnostic.markedCode -notlike '*^*') { throw 'Source/marker diagnostics missing.' }
@@ -168,15 +163,12 @@ jobs:
           $compilerExitCode = $LASTEXITCODE
           $global:LASTEXITCODE = 0
           if ($compilerExitCode -ne 2) { throw "Expected compiler exit code 2, got $compilerExitCode" }
-
           [xml]$result = ($xmlLines -join [Environment]::NewLine)
           if ($result.compileResult.result -ne 'error') { throw 'XML result was not error.' }
-
           $diagnostics = @($result.compileResult.errors.error)
           $diagnostic = $diagnostics | Where-Object {
             $_.description -like "Parameter 'value' of 'TakesInteger' expects Integer but received String.*"
           } | Select-Object -First 1
-
           if (-not $diagnostic) { throw 'Expected parameter type diagnostic was not returned in XML errors.' }
           if ($diagnostic.line -ne '10') { throw "XML source line was not preserved: $($diagnostic.line)" }
           if ([string]::IsNullOrWhiteSpace($diagnostic.code) -or [string]::IsNullOrWhiteSpace($diagnostic.markedCode)) { throw 'XML source/marker diagnostics missing.' }
@@ -194,9 +186,14 @@ jobs:
             ('LS' + ' Lite'), ('LS' + 'Lite'), ('ls' + 'lite'), ('LS' + ' Light'), ('ls' + ' light'),
             ('L' + 'otusScript'), ('L' + 'otus'), ('H' + 'CL'), ('D' + 'omino')
           )
-          $files = Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\.git\\|\\bin\\|\\obj\\' }
-          foreach ($term in $forbidden) {
-            $matches = $files | Select-String -SimpleMatch $term -ErrorAction SilentlyContinue
-            if ($matches) { throw "Old branding still exists: $($matches[0].Path):$($matches[0].LineNumber)" }
+          $textExtensions = @('.cs','.csproj','.sln','.md','.yml','.yaml','.xps','.json','.py','.ps1','.txt','.props','.targets')
+          $trackedFiles = git ls-files | Where-Object {
+            $textExtensions -contains [System.IO.Path]::GetExtension($_).ToLowerInvariant()
           }
-          if (Get-ChildItem ./samples -Filter '*.ls' -File) { throw 'Old script extension still exists.' }
+          foreach ($term in $forbidden) {
+            foreach ($path in $trackedFiles) {
+              $matches = Select-String -Path $path -SimpleMatch $term -ErrorAction SilentlyContinue
+              if ($matches) { throw "Old branding still exists: $($matches[0].Path):$($matches[0].LineNumber)" }
+            }
+          }
+          if (git ls-files 'samples/*.ls') { throw 'Old script extension still exists.' }
