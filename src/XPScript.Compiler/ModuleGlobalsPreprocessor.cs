@@ -8,7 +8,15 @@ internal sealed class ModuleGlobalsPreprocessor
 
     private readonly List<string> _declarations = [];
     private readonly Dictionary<string, ModuleArray> _arrays = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _udtTypes;
     private int _optionBase;
+
+    public ModuleGlobalsPreprocessor(IEnumerable<string>? udtTypes = null)
+    {
+        _udtTypes = udtTypes is null
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(udtTypes, StringComparer.OrdinalIgnoreCase);
+    }
 
     public IReadOnlyList<string> Declarations => _declarations;
 
@@ -64,8 +72,18 @@ internal sealed class ModuleGlobalsPreprocessor
                 {
                     var visibility = match.Groups[1].Value.Equals("Public", StringComparison.OrdinalIgnoreCase) ? "public" : "private";
                     var name = match.Groups[2].Value;
-                    var type = MapType(match.Groups[3].Value);
-                    _declarations.Add($"    {visibility} static {type} {name} = {DefaultValue(type)};");
+                    var sourceType = match.Groups[3].Value;
+
+                    if (_udtTypes.Contains(sourceType))
+                    {
+                        // Type values are stored directly. Unlike Class variables, they are not LSRef aliases.
+                        _declarations.Add($"    {visibility} static {sourceType} {name} = new {sourceType}();");
+                    }
+                    else
+                    {
+                        var type = MapType(sourceType);
+                        _declarations.Add($"    {visibility} static {type} {name} = {DefaultValue(type)};");
+                    }
                     output.Add("");
                     continue;
                 }
