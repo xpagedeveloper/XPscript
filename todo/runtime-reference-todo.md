@@ -20,7 +20,7 @@ Status:
 - [x] `Optional` parameters, defaults, omitted trailing arguments and omitted slots
 - [>] module-level `Public` scalar variables
 - [>] module-level `Private` scalar variables
-- [ ] module-level fixed/dynamic arrays
+- [>] module-level fixed/dynamic arrays, including shared state across procedures, `ReDim`, `ReDim Preserve`, indexed reads/writes, `LBound`, `UBound`, and `Erase`; source: `samples/module-arrays.xps`
 - [ ] module-level custom `Type` values
 - [ ] module-level class/object references
 - [-] `Type ... End Type`: scalar fields + auto initialization implemented; value-copy and array fields remain
