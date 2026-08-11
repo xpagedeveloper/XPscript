@@ -79,6 +79,45 @@ Status:
 - [x] reference math functions
 - [x] reference date/time functions
 
+### Date object enhancements
+
+- [ ] add `Date.Adjust(years, months, days, hours, minutes, seconds)` for increasing or decreasing an existing Date value
+- [ ] all `Adjust` components accept positive, zero or negative integer values
+- [ ] `Adjust` must support changing years, months, days, hours, minutes and seconds in one call
+- [ ] define calendar-safe month/year adjustment semantics for month-end dates, e.g. adjusting January 31 by one month
+- [ ] define and test leap-year behavior, including February 29 when adding/subtracting years
+- [ ] preserve the Date value's time component when only year/month/day fields are adjusted
+- [ ] return a Date value from `Adjust`; the original Date value must not be mutated unless XPScript Date semantics explicitly define value assignment back to the variable
+- [ ] add `Date.Difference(otherDate)` returning the signed difference in seconds between the current Date value and `otherDate`
+- [ ] define `Difference` sign as `otherDate - currentDate`: a later supplied date returns positive seconds and an earlier supplied date returns negative seconds
+- [ ] `Difference` must include days, hours, minutes and seconds in the total returned seconds rather than returning only the Seconds component
+- [ ] define the `Difference` return type large enough for long date ranges, preferably `Double` or `Long` after reviewing precision/range requirements
+- [ ] Date comparison operators must work directly between Date values: `=`, `<>`, `<`, `<=`, `>`, `>=`
+- [ ] Date comparison must compare the complete date/time value, not formatted strings or only the calendar date
+- [ ] examples to support: `date1 > date2`, `date1 >= date2`, `date1 = date2`, `date1 <> date2`, `date1 < date2`, `date1 <= date2`
+- [ ] compiler/type-coercion rules must reject nonsensical Date comparisons rather than silently comparing incompatible strings unless an existing documented Date conversion rule explicitly applies
+- [ ] add positive and negative regression sources for `Date.Adjust`, `Date.Difference` and all Date comparison operators when test execution is re-enabled
+- [ ] add English documentation and examples for Date object operations under `docs/` and `examples/`
+
+Suggested surface examples:
+
+```xpscript
+Dim startDate As Date
+Dim adjustedDate As Date
+Dim endDate As Date
+Dim seconds As Double
+
+startDate = DateNumber(2026, 1, 31)
+adjustedDate = startDate.Adjust(0, 1, 0, 0, 0, 0)
+
+endDate = adjustedDate.Adjust(0, 0, 1, 2, 30, 15)
+seconds = adjustedDate.Difference(endDate)
+
+If endDate > adjustedDate Then
+    Print "endDate is later"
+End If
+```
+
 ## 8. Arrays and lists
 
 - [x] typed dynamic arrays
@@ -109,7 +148,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 - [x] `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
 - [x] `Base64Encode`, `Base64Decode`
-- [ ] binary-return Base64 decode
+- [>] binary-return Base64 decode via `Base64DecodeBinary()`; source: `samples/base64-binary.xps`
 
 ## 12. Native HTTP API
 
@@ -129,17 +168,27 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 ## 14. Cross-platform compiler and runtime
 
-- [ ] publish generated executables for Windows, Linux and macOS
-- [ ] compiler runtime targets: `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64` and relevant additional RIDs
-- [ ] define default target behavior
-- [ ] add `Platform` function returning stable values such as `Windows`, `Linux`, `MacOS`
-- [ ] allow platform-specific branching using `Platform`
-- [ ] make `Shell` platform-aware
-- [ ] Windows: `.exe`, `.cmd`, `.bat`, `.ps1` and commands
-- [ ] Linux: binaries, executable/shebang scripts and shell scripts
-- [ ] macOS: binaries, executable/shebang scripts and shell scripts
-- [ ] preserve argument quoting and avoid unintended shell re-parsing
-- [ ] clear runtime errors for unsupported/unexecutable targets
+- [>] publish-target support for Windows, Linux and macOS has been added but is not yet runtime-verified
+- [>] compiler runtime targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
+- [>] default target follows the compiler host OS and x64/arm64 process architecture
+- [>] `Platform()` returns stable runtime names including `Windows`, `Linux`, `MacOS`
+- [>] platform-specific branching using `Platform()`
+- [>] cross-platform `Shell()` implementation
+- [>] Windows: `.exe`, `.cmd`, `.bat`, `.ps1` and commands
+- [>] Linux/macOS: binaries, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` through `pwsh`
+- [>] argument handling uses `ProcessStartInfo.ArgumentList` where possible to avoid unintended shell re-parsing
+- [>] clear runtime errors for unsupported/unexecutable targets
+- [>] target-selected native library declarations with `WindowsLib`, `LinuxLib`, `MacOSLib`
+- [>] target-selected native entry points with `WindowsAlias`, `LinuxAlias`, `MacOSAlias`
+- [>] multiline platform-specific `Declare` statements with `_`; source: `samples/platform-native-library.xps`
+- [ ] package/copy application-local `.dll`, `.so`, `.dylib` dependencies alongside generated output when required
+- [ ] support architecture-specific native assets for x64 vs arm64
+- [ ] define managed .NET assembly references separately from native-library declarations, including assemblies with RID-specific native dependencies
+- [ ] validate native-library search paths and loading behavior on Windows, Linux and macOS
+- [ ] validate file-I/O portability across Windows, Linux and macOS: path separators, roots/drives, case sensitivity, permissions, symlinks, file sharing, delete-open-file semantics, rename/move behavior, newline handling, charset/BOM and binary identity
+- [ ] validate OS file locks and region locks separately on Windows, Linux and macOS
+- [ ] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
+- [ ] detailed portability checklist: `todo/cross-platform-runtime-todo.md`
 
 ## 15. Evaluate
 
