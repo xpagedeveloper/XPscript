@@ -19,17 +19,17 @@ internal static class LSLiteTextIO
 
     public static string ToBase64(object? value, object? charset)
     {
-        var encoding = ResolveEncoding(charset);
-        return Convert.ToBase64String(encoding.GetBytes(LotusRuntime.CStr(value)));
+        var textEncoding = ResolveCharset(charset);
+        return Convert.ToBase64String(textEncoding.GetBytes(LotusRuntime.CStr(value)));
     }
 
     public static string FromBase64(object? value) => FromBase64(value, "utf-8");
 
     public static string FromBase64(object? value, object? charset)
     {
-        var encoding = ResolveEncoding(charset);
+        var textEncoding = ResolveCharset(charset);
         var bytes = Convert.FromBase64String(LotusRuntime.CStr(value).Trim());
-        return encoding.GetString(bytes);
+        return textEncoding.GetString(bytes);
     }
 
     public static string UrlEncode(object? value) => Uri.EscapeDataString(LotusRuntime.CStr(value));
@@ -58,42 +58,46 @@ internal static class LSLiteTextIO
         Console.ReadKey(intercept: true);
     }
 
-    public static void OpenText(object? pathValue, object? modeValue, object? fileNumberValue, object? charsetValue)
+    public static void OpenText(object? pathValue, object? modeValue, object? fileNumberValue, object? charsetValue, object? transferEncodingValue)
     {
         var path = Path.GetFullPath(LotusRuntime.CStr(pathValue));
         var mode = LotusRuntime.CStr(modeValue).Trim().ToLowerInvariant();
         var fileNumber = LotusRuntime.CInt(fileNumberValue);
-        var charset = LotusRuntime.CStr(charsetValue).Trim();
+        var charset = ResolveCharset(charsetValue);
+        var transferEncoding = NormalizeTransferEncoding(transferEncodingValue);
 
         lock (FileLock)
         {
             if (Files.ContainsKey(fileNumber))
                 throw new IOException("File number already open: " + fileNumber);
 
-            Files[fileNumber] = IsBase64(charset)
-                ? CreateBase64State(path, mode)
-                : CreateEncodedState(path, mode, ResolveEncoding(charset));
+            Files[fileNumber] = transferEncoding switch
+            {
+                "none" => CreateEncodedState(path, mode, charset),
+                "base64" => CreateBase64State(path, mode, charset),
+                _ => throw new IOException("Unsupported file Encoding option: " + transferEncoding)
+            };
         }
     }
 
-    private static TextState CreateEncodedState(string path, string mode, Encoding encoding)
+    private static TextState CreateEncodedState(string path, string mode, Encoding charset)
     {
         return mode switch
         {
             "input" => new TextState
             {
-                Reader = new StreamReader(path, encoding, detectEncodingFromByteOrderMarks: true)
+                Reader = new StreamReader(path, charset, detectEncodingFromByteOrderMarks: true)
             },
-            "output" => CreateWriterState(path, append: false, encoding),
-            "append" => CreateWriterState(path, append: true, encoding),
+            "output" => CreateWriterState(path, append: false, charset),
+            "append" => CreateWriterState(path, append: true, charset),
             _ => throw new IOException("Charset is supported for Input, Output and Append modes only.")
         };
     }
 
-    private static TextState CreateWriterState(string path, bool append, Encoding encoding)
+    private static TextState CreateWriterState(string path, bool append, Encoding charset)
     {
         var stream = new FileStream(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read);
-        var writer = new StreamWriter(stream, encoding) { AutoFlush = true };
+        var writer = new StreamWriter(stream, charset) { AutoFlush = true };
         return new TextState
         {
             Writer = writer,
@@ -105,24 +109,24 @@ internal static class LSLiteTextIO
         };
     }
 
-    private static TextState CreateBase64State(string path, string mode)
+    private static TextState CreateBase64State(string path, string mode, Encoding charset)
     {
         if (mode == "input")
         {
             var encoded = File.ReadAllText(path, new UTF8Encoding(false)).Trim();
-            var decoded = encoded.Length == 0 ? "" : Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            var decoded = encoded.Length == 0 ? "" : charset.GetString(Convert.FromBase64String(encoded));
             return new TextState { Reader = new StringReader(decoded) };
         }
 
         if (mode is not ("output" or "append"))
-            throw new IOException("Base64 text mode supports Input, Output and Append only.");
+            throw new IOException("Encoding \"base64\" supports Input, Output and Append only.");
 
         var initial = "";
         if (mode == "append" && File.Exists(path))
         {
             var encoded = File.ReadAllText(path, new UTF8Encoding(false)).Trim();
             if (encoded.Length > 0)
-                initial = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+                initial = charset.GetString(Convert.FromBase64String(encoded));
         }
 
         var buffer = new StringBuilder(initial);
@@ -133,7 +137,7 @@ internal static class LSLiteTextIO
             CloseAction = () =>
             {
                 writer.Flush();
-                var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(buffer.ToString()));
+                var base64 = Convert.ToBase64String(charset.GetBytes(buffer.ToString()));
                 File.WriteAllText(path, base64, new UTF8Encoding(false));
                 writer.Dispose();
             }
@@ -143,7 +147,7 @@ internal static class LSLiteTextIO
     private static TextState GetFile(int number) =>
         Files.TryGetValue(number, out var state)
             ? state
-            : throw new IOException("Charset-aware file number is not open: " + number);
+            : throw new IOException("Charset/Encoding-aware file number is not open: " + number);
 
     public static void CloseFile(object? fileNumberValue)
     {
@@ -213,12 +217,18 @@ internal static class LSLiteTextIO
         return reader.Peek() < 0;
     }
 
-    private static bool IsBase64(string charset) =>
-        charset.Equals("base64", StringComparison.OrdinalIgnoreCase) ||
-        charset.Equals("base64-utf8", StringComparison.OrdinalIgnoreCase) ||
-        charset.Equals("base64-utf-8", StringComparison.OrdinalIgnoreCase);
+    private static string NormalizeTransferEncoding(object? value)
+    {
+        var text = LotusRuntime.CStr(value).Trim().ToLowerInvariant().Replace("_", "-");
+        return text switch
+        {
+            "" or "none" or "plain" or "text" => "none",
+            "base64" or "base-64" => "base64",
+            _ => text
+        };
+    }
 
-    private static Encoding ResolveEncoding(object? charsetValue)
+    private static Encoding ResolveCharset(object? charsetValue)
     {
         var charset = LotusRuntime.CStr(charsetValue).Trim().ToLowerInvariant().Replace("_", "-");
         return charset switch
@@ -228,7 +238,6 @@ internal static class LSLiteTextIO
             "unicode" or "utf16" or "utf-16" or "utf-16le" => new UnicodeEncoding(false, true, true),
             "utf-16be" => new UnicodeEncoding(true, true, true),
             "ascii" => Encoding.ASCII,
-            "base64" or "base64-utf8" or "base64-utf-8" => new UTF8Encoding(false, true),
             _ => Encoding.GetEncoding(charset)
         };
     }
