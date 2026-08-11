@@ -41,6 +41,9 @@ jobs:
             'TYPE=Fredrik:40',
             'OPTIONAL=Hello Fredrik',
             'OPTIONAL2=Hi Fredrik',
+            'PROPERTYLET=PropertyLet',
+            'STRCONV=HELLO WORLD',
+            'CTYPE=42',
             'VALUE=7',
             'COUNT=8'
           )) {
