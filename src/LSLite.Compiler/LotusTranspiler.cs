@@ -16,6 +16,17 @@ public sealed class LotusTranspiler
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
 
+        // Normalize a couple of generated runtime snippets to valid C# without
+        // exposing those implementation details at the LS Lite language surface.
+        generated = generated.Replace(
+            "text.StartsWith('/', StringComparison.Ordinal)",
+            "text.StartsWith(\"/\", StringComparison.Ordinal)",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),",
+            "byte[] requestBytes => System.Text.Encoding.UTF8.GetString(requestBytes),",
+            StringComparison.Ordinal);
+
         // Extended standalone compatibility includes optional Windows COM binding.
         // Keep the generated source self-contained even when GetObject is not called.
         generated = generated.Replace(
