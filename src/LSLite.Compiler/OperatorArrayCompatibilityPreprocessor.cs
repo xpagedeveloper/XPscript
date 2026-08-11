@@ -36,12 +36,22 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])Join\$?\s*\(", "LSOperatorArrayRuntime.Join(", RegexOptions.IgnoreCase);
 
-            line = RewriteBinaryWordOperator(line, "Like", "Like");
-            line = RewriteBinaryWordOperator(line, "Eqv", "Eqv");
-            line = RewriteBinaryWordOperator(line, "Imp", "Imp");
-            line = RewriteBinaryWordOperator(line, "Xor", "Xor");
+            // Arithmetic precedence first. Repeated rewriting gives LotusScript's
+            // left-to-right behavior for repeated exponentiation.
             line = RewriteSymbolOperator(line, '^', "Pow");
             line = RewriteSymbolOperator(line, '\\', "IntDiv");
+
+            // Relational/object comparison.
+            line = RewriteBinaryWordOperator(line, "Like", "Like");
+            line = RewriteIsOperator(line);
+
+            // Logical precedence: Not, And, Or, Xor, Eqv, Imp.
+            line = RewriteUnaryNot(line);
+            line = RewriteBinaryWordOperator(line, "And", "And");
+            line = RewriteBinaryWordOperator(line, "Or", "Or");
+            line = RewriteBinaryWordOperator(line, "Xor", "Xor");
+            line = RewriteBinaryWordOperator(line, "Eqv", "Eqv");
+            line = RewriteBinaryWordOperator(line, "Imp", "Imp");
 
             line = Regex.Replace(line, @"(?<![<>])><(?![<>])", "<>");
             line = Regex.Replace(line, @"(?<![<>])=<(?![=>])", "<=");
@@ -51,20 +61,40 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
+    private const string Operand = @"(?:\([^()]+\)|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:\([^()]*\))?|-?\d+(?:\.\d+)?|\"[^\"]*\")";
+
     private static string RewriteBinaryWordOperator(string line, string op, string method)
     {
-        var pattern = $@"(?<left>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?|\"[^\"]*\"))\s+{op}\s+(?<right>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?|\"[^\"]*\"))";
-        var regex = new Regex(pattern, RegexOptions.IgnoreCase);
-        while (regex.IsMatch(line))
+        var regex = new Regex($@"(?<left>{Operand})\s+{op}\s+(?<right>{Operand})", RegexOptions.IgnoreCase);
+        var guard = 0;
+        while (regex.IsMatch(line) && guard++ < 32)
             line = regex.Replace(line, m => $"LSOperatorArrayRuntime.{method}({m.Groups["left"].Value}, {m.Groups["right"].Value})", 1);
         return line;
+    }
+
+    private static string RewriteIsOperator(string line)
+    {
+        var regex = new Regex($@"(?<left>{Operand})\s+Is\s+(?<right>{Operand})", RegexOptions.IgnoreCase);
+        return regex.Replace(line, m =>
+        {
+            var right = m.Groups["right"].Value;
+            if (right.Equals("Nothing", StringComparison.OrdinalIgnoreCase) || right.StartsWith("Not ", StringComparison.OrdinalIgnoreCase)) return m.Value;
+            return $"LSOperatorArrayRuntime.IsSame({m.Groups["left"].Value}, {right})";
+        });
+    }
+
+    private static string RewriteUnaryNot(string line)
+    {
+        // Leave the special object-reference phrase "Is Not Nothing" for the class layer.
+        return Regex.Replace(line, $@"(?<!\bIs\s)\bNot\s+(?<value>{Operand})", m => $"LSOperatorArrayRuntime.Not({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
     }
 
     private static string RewriteSymbolOperator(string line, char op, string method)
     {
         var escaped = Regex.Escape(op.ToString());
-        var regex = new Regex($@"(?<left>(?:\([^()]+\)|-?\d+(?:\.\d+)?|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*))\s*{escaped}\s*(?<right>(?:\([^()]+\)|-?\d+(?:\.\d+)?|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*))");
-        while (regex.IsMatch(line))
+        var regex = new Regex($@"(?<left>{Operand})\s*{escaped}\s*(?<right>{Operand})");
+        var guard = 0;
+        while (regex.IsMatch(line) && guard++ < 32)
             line = regex.Replace(line, m => $"LSOperatorArrayRuntime.{method}({m.Groups["left"].Value}, {m.Groups["right"].Value})", 1);
         return line;
     }
