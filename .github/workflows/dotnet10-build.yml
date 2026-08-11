@@ -214,7 +214,7 @@ jobs:
               "POINTER=2",
               "NTH=developer",
               "ITER=admin:developer",
-              "COPY={\"copy\":{\"city\":\"Linkoping\",\"country\":\"Sweden\"}}",
+              'COPY={"copy":{"city":"Linkoping","country":"Sweden"}}',
               "JSONCONSTANTS=OK",
               "GETCODE=200",
               "POSTCODE=200",
@@ -232,10 +232,10 @@ jobs:
               }
             }
 
-            if (-not ($output | Where-Object { $_ -like 'GET=*\"method\": \"GET\"*' })) {
+            if (-not ($output | Where-Object { $_ -like 'GET=*"method": "GET"*' })) {
               throw "GET response did not come from the local HTTP test server."
             }
-            if (-not ($output | Where-Object { $_ -like 'POST=*\"method\": \"POST\"*' })) {
+            if (-not ($output | Where-Object { $_ -like 'POST=*"method": "POST"*' })) {
               throw "POST response did not come from the local HTTP test server."
             }
           }
