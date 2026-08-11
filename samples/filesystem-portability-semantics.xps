@@ -1,0 +1,40 @@
+' Cross-platform filesystem operation regression source.
+' Runtime verification is intentionally deferred while workflow/test execution is disabled.
+
+Sub Initialize
+    Dim sourceFile As String
+    Dim copiedFile As String
+    Dim renamedFile As String
+    Dim testDirectory As String
+    Dim fileNumber As Integer
+    Dim attrs As Integer
+
+    testDirectory = "xps-fs-portability"
+    sourceFile = testDirectory & "/source.txt"
+    copiedFile = testDirectory & "/copy.txt"
+    renamedFile = testDirectory & "/renamed.txt"
+
+    MkDir testDirectory
+
+    fileNumber = FreeFile
+    Open sourceFile For Output As #fileNumber
+    Print #fileNumber, "portable"
+    Close #fileNumber
+
+    FileCopy sourceFile, copiedFile
+    If FileLen(copiedFile) <= 0 Then
+        Error 9101, "FileCopy/FileLen portability regression"
+    End If
+
+    attrs = GetFileAttr(copiedFile)
+    Print "Attributes=" & CStr(attrs)
+
+    Name copiedFile As renamedFile
+    If FileLen(renamedFile) <= 0 Then
+        Error 9102, "Name portability regression"
+    End If
+
+    Kill sourceFile
+    Kill renamedFile
+    RmDir testDirectory
+End Sub
