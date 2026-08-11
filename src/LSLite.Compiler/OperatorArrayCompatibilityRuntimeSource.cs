@@ -9,6 +9,27 @@ internal static class LSOperatorArrayRuntime
 
     public static void SetCompareNoCase(bool value) => _compareNoCase = value;
 
+    public static dynamic? Not(object? value)
+    {
+        if (value is null) return null;
+        if (value is bool b) return !b;
+        return ~ToLong(value);
+    }
+
+    public static dynamic? And(object? left, object? right)
+    {
+        if (left is null || right is null) return null;
+        if (left is bool lb && right is bool rb) return lb && rb;
+        return ToLong(left) & ToLong(right);
+    }
+
+    public static dynamic? Or(object? left, object? right)
+    {
+        if (left is null || right is null) return null;
+        if (left is bool lb && right is bool rb) return lb || rb;
+        return ToLong(left) | ToLong(right);
+    }
+
     public static dynamic? Xor(object? left, object? right)
     {
         if (left is null || right is null) return null;
@@ -30,6 +51,12 @@ internal static class LSOperatorArrayRuntime
         return ~ToLong(left) | ToLong(right);
     }
 
+    public static bool IsSame(object? left, object? right)
+    {
+        if (left is null || right is null) return ReferenceEquals(left, right);
+        return ReferenceEquals(left, right);
+    }
+
     public static double Pow(object? left, object? right)
     {
         if (left is null || right is null) throw new InvalidOperationException("NULL exponentiation result cannot be assigned to a scalar.");
@@ -43,7 +70,6 @@ internal static class LSOperatorArrayRuntime
     public static long IntDiv(object? left, object? right)
     {
         if (left is null || right is null) throw new InvalidOperationException("NULL integer division result cannot be assigned to a scalar.");
-        // LotusScript rounds each operand first, then performs integer division.
         var a = Convert.ToInt64(Math.Round(LotusRuntime.CDbl(left), MidpointRounding.ToEven));
         var b = Convert.ToInt64(Math.Round(LotusRuntime.CDbl(right), MidpointRounding.ToEven));
         if (b == 0) throw new DivideByZeroException();
@@ -72,9 +98,7 @@ internal static class LSOperatorArrayRuntime
                     AppendCharacterClass(regex, wildcard[(i + 1)..end]);
                     i = end;
                     break;
-                default:
-                    regex.Append(Regex.Escape(c.ToString()));
-                    break;
+                default: regex.Append(Regex.Escape(c.ToString())); break;
             }
         }
         regex.Append('$');
@@ -98,8 +122,6 @@ internal static class LSOperatorArrayRuntime
         for (; index < content.Length; index++)
         {
             var c = content[index];
-            // Hyphen is intentionally preserved as a range separator except when it is
-            // first in the LS character list, where LotusScript treats it literally.
             if (c == '-' && index > (content[0] == '!' ? 1 : 0)) regex.Append('-');
             else if (c is '\\' or ']' or '^') regex.Append('\\').Append(c);
             else regex.Append(c);
@@ -113,7 +135,6 @@ internal static class LSOperatorArrayRuntime
         return string.Join(sep, Values(source).Select(LotusRuntime.CStr));
     }
 
-    // PHP-style Explode(delimiter, string) returning an LS Lite String array.
     public static LSArray Explode(object? delimiter, object? value)
     {
         var sep = LotusRuntime.CStr(delimiter);
@@ -141,10 +162,7 @@ internal static class LSOperatorArrayRuntime
         for (var i = array.LBound(); i <= array.UBound(); i++)
         {
             var item = array.Get(i);
-            try
-            {
-                if (string.Equals(LotusRuntime.CStr(item), target, comparison)) return (long)i;
-            }
+            try { if (string.Equals(LotusRuntime.CStr(item), target, comparison)) return (long)i; }
             catch { }
         }
         return null;
@@ -158,15 +176,10 @@ internal static class LSOperatorArrayRuntime
         var ignoreCase = (LotusRuntime.CInt(compMethod) & 1) != 0;
         var result = new List<object?>();
         foreach (var value in Values(array))
-        {
-            var duplicate = result.Any(existing => Equivalent(existing, value, ignoreCase));
-            if (!duplicate) result.Add(value);
-        }
+            if (!result.Any(existing => Equivalent(existing, value, ignoreCase))) result.Add(value);
         return FromValues(result, array.ElementType, array.LBound());
     }
 
-    // JavaScript-compatible splice: zero-based positional start relative to the array's
-    // sequence, negative start from the end, mutates source and returns removed items.
     public static LSArray ArraySplice(object? sourceArray, object? start) => ArraySplice(sourceArray, start, int.MaxValue, Array.Empty<object?>());
     public static LSArray ArraySplice(object? sourceArray, object? start, object? deleteCount) => ArraySplice(sourceArray, start, deleteCount, Array.Empty<object?>());
     public static LSArray ArraySplice(object? sourceArray, object? start, object? deleteCount, params object?[] items)
@@ -174,7 +187,8 @@ internal static class LSOperatorArrayRuntime
         var array = RequireOneDimensional(sourceArray);
         var values = Values(array).ToList();
         var position = NormalizeStart(LotusRuntime.CInt(start), values.Count);
-        var remove = Math.Clamp(LotusRuntime.CInt(deleteCount), 0, values.Count - position);
+        var requested = LotusRuntime.CInt(deleteCount);
+        var remove = requested == int.MaxValue ? values.Count - position : Math.Clamp(requested, 0, values.Count - position);
         var removed = values.GetRange(position, remove);
         values.RemoveRange(position, remove);
         if (items.Length > 0) values.InsertRange(position, items);
@@ -182,7 +196,6 @@ internal static class LSOperatorArrayRuntime
         return FromValues(removed, array.ElementType, 0);
     }
 
-    // JavaScript-compatible slice: start inclusive, end exclusive, negative indexes from end.
     public static LSArray ArraySlice(object? sourceArray) => ArraySlice(sourceArray, 0, int.MaxValue);
     public static LSArray ArraySlice(object? sourceArray, object? start) => ArraySlice(sourceArray, start, int.MaxValue);
     public static LSArray ArraySlice(object? sourceArray, object? start, object? end)
@@ -204,8 +217,7 @@ internal static class LSOperatorArrayRuntime
         var lower = array.LBound();
         if (values.Count == 0)
         {
-            // LSArray requires a legal bound pair; use an allocated zero-length analogue
-            // as a dynamic erased array where possible.
+            if (!array.IsDynamic) throw new InvalidOperationException("ArraySplice cannot reduce a fixed array to zero elements.");
             array.Erase();
             return;
         }
@@ -227,9 +239,9 @@ internal static class LSOperatorArrayRuntime
     {
         if (source is LSArray array)
         {
-            var one = RequireOneDimensional(array);
-            if (!one.IsAllocated) yield break;
-            for (var i = one.LBound(); i <= one.UBound(); i++) yield return one.Get(i);
+            if (!array.IsAllocated) yield break;
+            if (array.Rank != 1) throw new InvalidOperationException("Array function requires a one-dimensional array.");
+            for (var i = array.LBound(); i <= array.UBound(); i++) yield return array.Get(i);
             yield break;
         }
         if (source is System.Collections.IEnumerable enumerable && source is not string)
