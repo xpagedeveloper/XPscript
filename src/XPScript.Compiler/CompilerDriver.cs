@@ -6,7 +6,34 @@ namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
-    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained)
+    private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "win-x64", "win-arm64",
+        "linux-x64", "linux-arm64",
+        "osx-x64", "osx-arm64"
+    };
+
+    public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
+
+    public static string CurrentRuntimeIdentifier()
+    {
+        var architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+            System.Runtime.InteropServices.Architecture.X64 => "x64",
+            _ => throw new PlatformNotSupportedException("XPScript compiler currently supports x64 and arm64 publish targets.")
+        };
+
+        if (OperatingSystem.IsWindows()) return "win-" + architecture;
+        if (OperatingSystem.IsLinux()) return "linux-" + architecture;
+        if (OperatingSystem.IsMacOS()) return "osx-" + architecture;
+        throw new PlatformNotSupportedException("Unable to determine a default XPScript publish target for this operating system.");
+    }
+
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained) =>
+        await CompileWithResultAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
+
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
         string source = "";
         try
@@ -18,7 +45,7 @@ public sealed class CompilerDriver
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", sourcePath, sourcePath)]);
 
             source = await File.ReadAllTextAsync(sourcePath);
-            await CompileAsync(sourcePath, outputPath, selfContained);
+            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
             return CompileResult.Ok(outputPath);
         }
         catch (CompilerException ex)
@@ -31,8 +58,12 @@ public sealed class CompilerDriver
         }
     }
 
-    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained)
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained) =>
+        await CompileAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
+
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
+        var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         var source = await File.ReadAllTextAsync(sourcePath);
         var transpiler = new XPScriptTranspiler();
         var generatedSource = transpiler.Transpile(source, sourcePath);
@@ -46,26 +77,7 @@ public sealed class CompilerDriver
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var publishDir = Path.Combine(tempRoot, "publish");
 
-            var csproj = selfContained
-                ? """
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType><StartupObject>Program</StartupObject><TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained><PublishSingleFile>true</PublishSingleFile><EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-  </PropertyGroup>
-</Project>
-"""
-                : """
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType><StartupObject>Program</StartupObject><TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>false</SelfContained><PublishSingleFile>true</PublishSingleFile>
-  </PropertyGroup>
-</Project>
-""";
-
+            var csproj = BuildGeneratedProject(rid, selfContained);
             await File.WriteAllTextAsync(projectPath, csproj);
             await File.WriteAllTextAsync(programPath, generatedSource);
 
@@ -76,6 +88,8 @@ public sealed class CompilerDriver
             };
             psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
+            psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
+            psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add(selfContained ? "true" : "false");
 
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
@@ -89,17 +103,64 @@ public sealed class CompilerDriver
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText + Environment.NewLine + BuildGeneratedSourceContext(generatedSource, diagnosticText));
             }
 
-            var generatedExe = Directory.EnumerateFiles(publishDir, "*.exe", SearchOption.TopDirectoryOnly).SingleOrDefault();
-            if (generatedExe is null) throw new CompilerException("Compilation succeeded, but no .exe was produced.");
+            var generatedExecutable = FindPublishedExecutable(publishDir, rid);
+            if (generatedExecutable is null)
+                throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
             var outputDirectory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrWhiteSpace(outputDirectory)) Directory.CreateDirectory(outputDirectory);
-            File.Copy(generatedExe, outputPath, overwrite: true);
+            File.Copy(generatedExecutable, outputPath, overwrite: true);
+
+            if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    var mode = File.GetUnixFileMode(outputPath);
+                    File.SetUnixFileMode(outputPath, mode | UnixFileMode.UserExecute);
+                }
+                catch (PlatformNotSupportedException) { }
+            }
         }
         finally
         {
             try { Directory.Delete(tempRoot, recursive: true); } catch { }
         }
+    }
+
+    private static string NormalizeRuntimeIdentifier(string value)
+    {
+        var rid = (value ?? "").Trim().ToLowerInvariant();
+        if (!SupportedRuntimeIdentifiers.Contains(rid))
+            throw new ArgumentException("Unsupported runtime identifier '" + value + "'. Supported values: " + string.Join(", ", SupportedRuntimeIdentifiers.OrderBy(x => x)) + ".");
+        return rid;
+    }
+
+    private static string BuildGeneratedProject(string runtimeIdentifier, bool selfContained) => $"""
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <StartupObject>Program</StartupObject>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
+    <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
+  </PropertyGroup>
+</Project>
+""";
+
+    private static string? FindPublishedExecutable(string publishDirectory, string rid)
+    {
+        if (rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase))
+            return Directory.EnumerateFiles(publishDirectory, "*.exe", SearchOption.TopDirectoryOnly).SingleOrDefault();
+
+        var candidates = Directory.EnumerateFiles(publishDirectory, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => !Path.HasExtension(path))
+            .Where(path => !Path.GetFileName(path).EndsWith(".dbg", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        return candidates.Length == 1 ? candidates[0] : candidates.FirstOrDefault(path => Path.GetFileName(path).Equals("Generated", StringComparison.OrdinalIgnoreCase));
     }
 
     private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source)
@@ -133,7 +194,7 @@ public sealed class CompilerDriver
         if (convert.Success) return $"Unable to use {FriendlyType(convert.Groups[1].Value)} where {FriendlyType(convert.Groups[2].Value)} is required.";
         var assign = Regex.Match(description, @"Cannot implicitly convert type '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
         if (assign.Success) return $"Unable to assign {FriendlyType(assign.Groups[1].Value)} to {FriendlyType(assign.Groups[2].Value)}.";
-        return description.Replace("XPScript", "XPScript", StringComparison.OrdinalIgnoreCase).Replace("XPScript", "XPScript", StringComparison.OrdinalIgnoreCase);
+        return description;
     }
 
     private static string FriendlyType(string type) => type.Trim() switch
