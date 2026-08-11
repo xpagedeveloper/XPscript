@@ -1,0 +1,32 @@
+Option Declare
+
+Class IndexedStore
+    Private firstValue As String
+    Private secondValue As String
+
+    Public Property Get Item(index As Integer) As String
+        If index = 1 Then
+            Item = firstValue
+        Else
+            Item = secondValue
+        End If
+    End Property
+
+    Public Property Let Item(index As Integer, value As String)
+        If index = 1 Then
+            firstValue = value
+        Else
+            secondValue = value
+        End If
+    End Property
+End Class
+
+Sub Main()
+    Dim store As New IndexedStore
+
+    store.Item(1) = "first"
+    store.Item(2) = "second"
+
+    Print "INDEX1=" & store.Item(1)
+    Print "INDEX2=" & store.Item(2)
+End Sub
