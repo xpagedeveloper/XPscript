@@ -33,7 +33,6 @@ internal sealed class UdtValueSemanticsPreprocessor
     {
         string? currentName = null;
         var fields = new List<Field>();
-
         foreach (var raw in lines)
         {
             var line = StripComment(raw).Trim();
@@ -45,18 +44,15 @@ internal sealed class UdtValueSemanticsPreprocessor
                 fields = [];
                 continue;
             }
-
             if (Regex.IsMatch(line, @"^End\s+Type$", RegexOptions.IgnoreCase))
             {
                 _types[currentName] = new TypeInfo(currentName, fields.ToArray());
                 currentName = null;
                 continue;
             }
-
             if (line.Length == 0) continue;
             var field = Regex.Match(line, @"^([A-Za-z_]\w*)\s*(\([^)]*\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
-            if (!field.Success) continue;
-            fields.Add(new Field(field.Groups[1].Value, field.Groups[3].Value, field.Groups[2].Success));
+            if (field.Success) fields.Add(new Field(field.Groups[1].Value, field.Groups[3].Value, field.Groups[2].Success));
         }
     }
 
@@ -65,7 +61,6 @@ internal sealed class UdtValueSemanticsPreprocessor
         var variables = new Dictionary<string, VariableInfo>(StringComparer.OrdinalIgnoreCase);
         var inClass = false;
         var inProcedure = false;
-
         foreach (var raw in lines)
         {
             var line = StripComment(raw).Trim();
@@ -74,28 +69,20 @@ internal sealed class UdtValueSemanticsPreprocessor
             if (Regex.IsMatch(line, @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property)\b", RegexOptions.IgnoreCase)) inProcedure = true;
             if (Regex.IsMatch(line, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase)) { inProcedure = false; continue; }
 
-            var declaration = Regex.Match(line,
-                @"^(Dim|Static|Public|Private)\s+([A-Za-z_]\w*)\s+As\s+(?:New\s+)?([A-Za-z_]\w*)\s*$",
-                RegexOptions.IgnoreCase);
+            var declaration = Regex.Match(line, @"^(Dim|Static|Public|Private)\s+([A-Za-z_]\w*)\s+As\s+(?:New\s+)?([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (declaration.Success && _types.ContainsKey(declaration.Groups[3].Value))
             {
                 var kind = declaration.Groups[1].Value;
-                var isModuleGlobal = !inClass && !inProcedure &&
-                    (kind.Equals("Public", StringComparison.OrdinalIgnoreCase) || kind.Equals("Private", StringComparison.OrdinalIgnoreCase));
+                var isModuleGlobal = !inClass && !inProcedure && (kind.Equals("Public", StringComparison.OrdinalIgnoreCase) || kind.Equals("Private", StringComparison.OrdinalIgnoreCase));
                 variables[declaration.Groups[2].Value] = new VariableInfo(declaration.Groups[3].Value, isModuleGlobal);
             }
 
-            var proc = Regex.Match(line,
-                @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function)\s+[A-Za-z_]\w*\s*\((.*)\)",
-                RegexOptions.IgnoreCase);
+            var proc = Regex.Match(line, @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function)\s+[A-Za-z_]\w*\s*\((.*)\)", RegexOptions.IgnoreCase);
             if (!proc.Success) continue;
             foreach (var part in SplitArguments(proc.Groups[1].Value))
             {
-                var parameter = Regex.Match(part.Trim(),
-                    @"^(?:(?:Optional|ByVal|ByRef)\s+)*([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$",
-                    RegexOptions.IgnoreCase);
-                if (parameter.Success && _types.ContainsKey(parameter.Groups[2].Value))
-                    variables[parameter.Groups[1].Value] = new VariableInfo(parameter.Groups[2].Value, false);
+                var parameter = Regex.Match(part.Trim(), @"^(?:(?:Optional|ByVal|ByRef)\s+)*([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
+                if (parameter.Success && _types.ContainsKey(parameter.Groups[2].Value)) variables[parameter.Groups[1].Value] = new VariableInfo(parameter.Groups[2].Value, false);
             }
         }
         return variables;
@@ -108,54 +95,49 @@ internal sealed class UdtValueSemanticsPreprocessor
             var raw = lines[i];
             var code = StripComment(raw).Trim();
             if (code.StartsWith("Set ", StringComparison.OrdinalIgnoreCase)) continue;
-
             var assignment = Regex.Match(code, @"^([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (!assignment.Success) continue;
             var destination = assignment.Groups[1].Value;
             var source = assignment.Groups[2].Value;
-            if (!variables.TryGetValue(destination, out var destinationInfo) ||
-                !variables.TryGetValue(source, out var sourceInfo) ||
-                !destinationInfo.Type.Equals(sourceInfo.Type, StringComparison.OrdinalIgnoreCase) ||
-                !_types.TryGetValue(destinationInfo.Type, out var typeInfo))
-                continue;
+            if (!variables.TryGetValue(destination, out var destinationInfo) || !variables.TryGetValue(source, out var sourceInfo) || !destinationInfo.Type.Equals(sourceInfo.Type, StringComparison.OrdinalIgnoreCase) || !_types.TryGetValue(destinationInfo.Type, out var typeInfo)) continue;
 
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var expanded = new List<string>();
-            if (!destinationInfo.IsModuleGlobal)
-                expanded.Add(indent + $"Set {destination} = New {destinationInfo.Type}");
-
-            ExpandCopy(typeInfo, destination, source, indent, expanded, destinationInfo.IsModuleGlobal);
+            if (!destinationInfo.IsModuleGlobal) expanded.Add(indent + $"Set {destination} = New {destinationInfo.Type}");
+            ExpandCopy(typeInfo, destination, source, indent, expanded, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             lines[i] = string.Join(Environment.NewLine, expanded);
         }
     }
 
-    private void ExpandCopy(TypeInfo typeInfo, string destination, string source, string indent, List<string> output, bool destinationIsModuleGlobal)
+    private void ExpandCopy(TypeInfo typeInfo, string destination, string source, string indent, List<string> output, HashSet<string> path)
     {
-        foreach (var field in typeInfo.Fields)
+        if (!path.Add(typeInfo.Name)) throw new CompilerException($"Cyclic Type value-copy graph detected at '{typeInfo.Name}'. Recursive Type references require explicit object/class semantics.");
+        try
         {
-            if (field.IsArray)
+            foreach (var field in typeInfo.Fields)
             {
-                output.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({source}.{field.Name})");
-                continue;
-            }
+                if (field.IsArray)
+                {
+                    output.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({source}.{field.Name})");
+                    continue;
+                }
+                if (!_types.TryGetValue(field.Type, out var nestedType))
+                {
+                    output.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
+                    continue;
+                }
 
-            if (!_types.TryGetValue(field.Type, out var nestedType))
-            {
-                output.Add(indent + $"{destination}.{field.Name} = {source}.{field.Name}");
-                continue;
+                var id = ++_copyTempId;
+                var srcTemp = $"__xp_udtcopy_src_{id}";
+                var dstTemp = $"__xp_udtcopy_dst_{id}";
+                output.Add(indent + $"Dim {srcTemp} As {field.Type}");
+                output.Add(indent + $"Set {srcTemp} = {source}.{field.Name}");
+                output.Add(indent + $"Dim {dstTemp} As New {field.Type}");
+                ExpandCopy(nestedType, dstTemp, srcTemp, indent, output, path);
+                output.Add(indent + $"Set {destination}.{field.Name} = {dstTemp}");
             }
-
-            // Type fields are represented internally by object references, so an ordinary assignment
-            // would alias the nested value. Materialize temporary typed references and recursively copy.
-            var id = ++_copyTempId;
-            var srcTemp = $"__xp_udtcopy_src_{id}";
-            var dstTemp = $"__xp_udtcopy_dst_{id}";
-            output.Add(indent + $"Dim {srcTemp} As {field.Type}");
-            output.Add(indent + $"Set {srcTemp} = {source}.{field.Name}");
-            output.Add(indent + $"Dim {dstTemp} As New {field.Type}");
-            ExpandCopy(nestedType, dstTemp, srcTemp, indent, output, false);
-            output.Add(indent + $"Set {destination}.{field.Name} = {dstTemp}");
         }
+        finally { path.Remove(typeInfo.Name); }
     }
 
     private void RewriteArrayMemberUses(IList<string> lines, IReadOnlyDictionary<string, VariableInfo> variables)
@@ -163,12 +145,8 @@ internal sealed class UdtValueSemanticsPreprocessor
         for (var i = 0; i < lines.Count; i++)
         {
             var raw = lines[i];
-            var code = StripComment(raw);
-            var trimmed = code.Trim();
-            if (Regex.IsMatch(trimmed, @"^(?:(?:Public|Private)\s+)?Type\b", RegexOptions.IgnoreCase) ||
-                Regex.IsMatch(trimmed, @"^End\s+Type$", RegexOptions.IgnoreCase))
-                continue;
-
+            var trimmed = StripComment(raw).Trim();
+            if (Regex.IsMatch(trimmed, @"^(?:(?:Public|Private)\s+)?Type\b", RegexOptions.IgnoreCase) || Regex.IsMatch(trimmed, @"^End\s+Type$", RegexOptions.IgnoreCase)) continue;
             var rewritten = raw;
             foreach (var variable in variables.OrderByDescending(x => x.Key.Length))
             {
@@ -178,47 +156,31 @@ internal sealed class UdtValueSemanticsPreprocessor
                     var variableName = Regex.Escape(variable.Key);
                     var fieldName = Regex.Escape(field.Name);
                     var target = variable.Key + "." + field.Name;
-
-                    var setter = Regex.Match(StripComment(rewritten).Trim(),
-                        $@"^{variableName}\.{fieldName}\s*\((.*)\)\s*=\s*(.+)$",
-                        RegexOptions.IgnoreCase);
+                    var setter = Regex.Match(StripComment(rewritten).Trim(), $@"^{variableName}\.{fieldName}\s*\((.*)\)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
                     if (setter.Success)
                     {
                         var indexes = SplitArguments(setter.Groups[1].Value);
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
-                        rewritten = indent + "Call LSArrayRuntime.Set(" + target + ", " + setter.Groups[2].Value.Trim() +
-                                    (indexes.Count > 0 ? ", " + string.Join(", ", indexes) : "") + ")";
+                        rewritten = indent + "Call LSArrayRuntime.Set(" + target + ", " + setter.Groups[2].Value.Trim() + (indexes.Count > 0 ? ", " + string.Join(", ", indexes) : "") + ")";
                         continue;
                     }
-
-                    var redim = Regex.Match(StripComment(rewritten).Trim(),
-                        $@"^ReDim\s+(Preserve\s+)?{variableName}\.{fieldName}\s*\((.*)\)\s*$",
-                        RegexOptions.IgnoreCase);
+                    var redim = Regex.Match(StripComment(rewritten).Trim(), $@"^ReDim\s+(Preserve\s+)?{variableName}\.{fieldName}\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
                     if (redim.Success)
                     {
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
                         var args = BuildRuntimeBoundArguments(redim.Groups[2].Value, _optionBase);
-                        rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + field.Type + "\", " +
-                                    (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
+                        rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + field.Type + "\", " + (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
                         continue;
                     }
-
                     if (Regex.IsMatch(StripComment(rewritten).Trim(), $@"^Erase\s+{variableName}\.{fieldName}$", RegexOptions.IgnoreCase))
                     {
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
                         rewritten = indent + "Call LSArrayRuntime.Erase(" + target + ")";
                         continue;
                     }
-
-                    rewritten = ReplaceOutsideStrings(rewritten,
-                        $@"\bLBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)",
-                        m => "LSArrayRuntime.LBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
-                    rewritten = ReplaceOutsideStrings(rewritten,
-                        $@"\bUBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)",
-                        m => "LSArrayRuntime.UBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
-                    rewritten = ReplaceOutsideStrings(rewritten,
-                        $@"(?<![\w.]){variableName}\.{fieldName}\s*\(([^()]*)\)",
-                        m => "LSArrayRuntime.Get(" + target + (string.IsNullOrWhiteSpace(m.Groups[1].Value) ? "" : ", " + m.Groups[1].Value) + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bLBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.LBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bUBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.UBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"(?<![\w.]){variableName}\.{fieldName}\s*\(([^()]*)\)", m => "LSArrayRuntime.Get(" + target + (string.IsNullOrWhiteSpace(m.Groups[1].Value) ? "" : ", " + m.Groups[1].Value) + ")");
                 }
             }
             lines[i] = rewritten;
@@ -230,8 +192,7 @@ internal sealed class UdtValueSemanticsPreprocessor
         foreach (var raw in lines)
         {
             var match = Regex.Match(StripComment(raw).Trim(), @"^Option\s+Base\s+([01])$", RegexOptions.IgnoreCase);
-            if (match.Success)
-                return int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            if (match.Success) return int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }
         return 0;
     }
@@ -243,16 +204,8 @@ internal sealed class UdtValueSemanticsPreprocessor
         foreach (var dimension in dimensions)
         {
             var range = Regex.Match(dimension, @"^(.+?)\s+To\s+(.+)$", RegexOptions.IgnoreCase);
-            if (range.Success)
-            {
-                result.Add(range.Groups[1].Value.Trim());
-                result.Add(range.Groups[2].Value.Trim());
-            }
-            else
-            {
-                result.Add(optionBase.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                result.Add(dimension.Trim());
-            }
+            if (range.Success) { result.Add(range.Groups[1].Value.Trim()); result.Add(range.Groups[2].Value.Trim()); }
+            else { result.Add(optionBase.ToString(System.Globalization.CultureInfo.InvariantCulture)); result.Add(dimension.Trim()); }
         }
         return result;
     }
@@ -265,19 +218,9 @@ internal sealed class UdtValueSemanticsPreprocessor
         for (var i = 0; i < value.Length; i++)
         {
             var c = value[i];
-            if (c == '"')
-            {
-                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
-                inString = !inString; continue;
-            }
+            if (c == '"') { if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; } inString = !inString; continue; }
             if (inString) continue;
-            if (c == '(') depth++;
-            else if (c == ')') depth--;
-            else if (c == ',' && depth == 0)
-            {
-                result.Add(value[start..i].Trim());
-                start = i + 1;
-            }
+            if (c == '(') depth++; else if (c == ')') depth--; else if (c == ',' && depth == 0) { result.Add(value[start..i].Trim()); start = i + 1; }
         }
         result.Add(value[start..].Trim());
         return result;
@@ -286,8 +229,7 @@ internal sealed class UdtValueSemanticsPreprocessor
     private static string ReplaceOutsideStrings(string input, string pattern, MatchEvaluator evaluator)
     {
         var parts = Regex.Split(input, "(\"(?:\"\"|[^\"])*\")");
-        for (var i = 0; i < parts.Length; i += 2)
-            parts[i] = Regex.Replace(parts[i], pattern, evaluator, RegexOptions.IgnoreCase);
+        for (var i = 0; i < parts.Length; i += 2) parts[i] = Regex.Replace(parts[i], pattern, evaluator, RegexOptions.IgnoreCase);
         return string.Concat(parts);
     }
 
@@ -296,11 +238,7 @@ internal sealed class UdtValueSemanticsPreprocessor
         var inString = false;
         for (var i = 0; i < line.Length; i++)
         {
-            if (line[i] == '"')
-            {
-                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
-                inString = !inString;
-            }
+            if (line[i] == '"') { if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; } inString = !inString; }
             else if (!inString && line[i] == '\'') return line[..i];
         }
         return line;
