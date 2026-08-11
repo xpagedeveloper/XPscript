@@ -1,0 +1,41 @@
+Private Primary As Person
+Private AliasPerson As Person
+
+Class Person
+    Public Name As String
+
+    Sub New(value As String)
+        Me.Name = value
+    End Sub
+End Class
+
+Sub CreatePrimary()
+    Set Primary = New Person("Fredrik")
+End Sub
+
+Sub ShareAlias()
+    Set AliasPerson = Primary
+End Sub
+
+Sub ClearPrimaryOnly()
+    Set Primary = Nothing
+End Sub
+
+Sub Main()
+    Call CreatePrimary()
+    Print "NAME=" & Primary.Name
+    Print "NOTHING1=" & CStr(Primary Is Nothing)
+
+    Call ShareAlias()
+    Print "SAME=" & CStr(Primary Is AliasPerson)
+    Print "ALIAS=" & AliasPerson.Name
+
+    Call ClearPrimaryOnly()
+    Print "NOTHING2=" & CStr(Primary Is Nothing)
+    Print "ALIASSTILL=" & AliasPerson.Name
+
+    Set Primary = AliasPerson
+    Delete Primary
+    Print "DELETEDPRIMARY=" & CStr(Primary Is Nothing)
+    Print "DELETEDALIAS=" & CStr(AliasPerson Is Nothing)
+End Sub
