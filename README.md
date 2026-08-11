@@ -57,21 +57,228 @@ End Sub
 Current compiler support includes:
 
 - `Option Declare`
+- `Option Base 0` and `Option Base 1`
+- `DefBool`, `DefByte`, `DefCur`, `DefDbl`, `DefInt`, `DefLng`, `DefSng`, `DefStr`, and `DefVar`
 - `Sub` and `Function`
+- `Static Sub` and `Static Function`
 - LotusScript-style function return assignment
 - `Return`
-- `Dim`
+- `Dim` and `Static`
+- scalar `ByRef`
+- array parameters
 - scalar assignment and `Let`
 - `If`, `ElseIf`, `Else`, `End If`
+- `Select Case`, value cases, ranges, relational cases, and `Case Else`
 - `For`, `To`, `Step`, `Next`
 - `While`, `Wend`
 - `Do`, `Do While`, `Do Until`, `Loop`, `Loop While`, `Loop Until`
 - `Exit For`, `Exit Do`, `Exit While`, `Exit Sub`, `Exit Function`
 - `Call`
 - `Print`
+- `With` and `End With`
+- labels
+- `GoTo`
+- `GoSub` and `Return`
+- `On Error GoTo label`
+- error-number-specific `On Error n GoTo label`
+- `On Error Resume Next`
+- `On Error GoTo 0`
+- `Resume`, `Resume Next`, and `Resume label`
+- `Err`, `Erl`, `Error`, and the `Error` statement
+- external Windows DLL declarations with `Declare Function` and `Declare Sub`
 - comments using `'`
 - operators including `+ - * / Mod`, comparisons, `And`, `Or`, `Not`, and `&`
 - scalar types including `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Currency`, `Date`, `Variant`, and `Object`
+
+## Array support
+
+LS Lite implements fixed and dynamic LotusScript-style arrays independently of .NET native array syntax.
+
+Supported array features include:
+
+- fixed arrays such as `Dim values(10) As Long`
+- explicit lower and upper bounds such as `Dim values(1 To 10) As Long`
+- multidimensional arrays such as `Dim matrix(1 To 5, 0 To 9) As Double`
+- up to eight dimensions
+- `Option Base 0` and `Option Base 1`
+- dynamic arrays such as `Dim values() As String`
+- `ReDim`
+- `ReDim Preserve`
+- `LBound`
+- `UBound`
+- array element reads and writes
+- arrays passed to procedures
+- `Erase` for fixed and dynamic arrays
+
+Example:
+
+```lotusscript
+Option Base 1
+
+Sub SetFirst(values() As Long)
+    values(1) = 99
+End Sub
+
+Sub Main()
+    Dim values() As Long
+
+    ReDim values(1 To 2)
+    values(1) = 10
+    values(2) = 20
+
+    ReDim Preserve values(1 To 3)
+    values(3) = 30
+
+    Call SetFirst(values)
+
+    Print CStr(LBound(values))
+    Print CStr(UBound(values))
+    Print CStr(values(1))
+End Sub
+```
+
+`ReDim Preserve` keeps existing values. For multidimensional arrays, preservation follows the LotusScript-compatible restriction that only the upper bound of the last dimension can change while preserving data.
+
+## ByRef support
+
+Scalar parameters can be explicitly declared `ByRef`.
+
+```lotusscript
+Sub Increment(ByRef value As Long)
+    value = value + 1
+End Sub
+
+Sub Main()
+    Dim value As Long
+    value = 10
+    Call Increment(value)
+    Print CStr(value)
+End Sub
+```
+
+The generated runtime uses reference cells so assignment inside the called procedure updates the original caller variable.
+
+Arrays are passed as shared array objects and array element changes are visible to the caller.
+
+## Select Case
+
+Supported forms include:
+
+```lotusscript
+Select Case value
+Case 1
+    Print "one"
+Case 2 To 10
+    Print "range"
+Case Is > 10
+    Print "high"
+Case Else
+    Print "other"
+End Select
+```
+
+## Error handling
+
+Supported error handling includes:
+
+```lotusscript
+On Error GoTo Handler
+
+Error 123, "Example error"
+Print "continues after Resume Next"
+GoTo Done
+
+Handler:
+    Print CStr(Err) & ": " & Error()
+    Resume Next
+
+Done:
+On Error GoTo 0
+```
+
+Also supported:
+
+- retrying the failing statement with `Resume`
+- continuing after the failing statement with `Resume Next`
+- resuming at a label with `Resume label`
+- `On Error Resume Next`
+- error-specific handlers
+- `Err`
+- `Erl`
+- `Error()` and `Error(number)`
+- raising errors with `Error number` or `Error number, description`
+
+## GoTo and GoSub
+
+Text labels can be used as branch targets.
+
+```lotusscript
+GoSub Worker
+Print "returned"
+GoTo Done
+
+Worker:
+    Print "worker"
+    Return
+
+Done:
+```
+
+`GoSub` return positions are tracked per procedure and nested calls use a runtime stack.
+
+## With
+
+`With` supports member access using leading dots.
+
+```lotusscript
+With person
+    .Name = "Fredrik"
+    Print .Name
+End With
+```
+
+Nested `With` blocks are supported by the compatibility preprocessor.
+
+## Static variables and procedures
+
+Local `Static` variables retain their value between calls.
+
+```lotusscript
+Function Counter() As Long
+    Static count As Long
+    count = count + 1
+    Counter = count
+End Function
+```
+
+`Static Sub` and `Static Function` are also supported. Local variables in a static procedure retain their values between calls.
+
+## Deftype
+
+Default variable types can be selected by the first letter of a name.
+
+```lotusscript
+DefInt A-C
+
+Sub Main()
+    Dim apple
+    apple = 42
+    Print TypeName(apple)
+End Sub
+```
+
+Letter ranges and comma-separated ranges are supported.
+
+## External DLL declarations
+
+Windows native functions and procedures can be declared using LotusScript-style declarations.
+
+```lotusscript
+Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
+Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
+```
+
+LS Lite generates .NET P/Invoke declarations. `Lib`, `Alias`, Function/Sub, scalar parameters, `ByVal`, and scalar return types are supported.
 
 ## LotusScript List support
 
@@ -137,50 +344,6 @@ Implemented features:
 
 `Set object2 = object1` shares the LS Lite object reference. `Delete object1` invokes `Sub Delete` and invalidates the shared reference, so aliases such as `object2` also evaluate as `Nothing`.
 
-Example:
-
-```lotusscript
-Class Person
-    Private mName As String
-
-    Sub New(name As String)
-        Me.mName = name
-    End Sub
-
-    Public Property Get Name As String
-        Name = Me.mName
-    End Property
-
-    Public Property Set Name As String
-        Me.mName = Name
-    End Property
-
-    Public Function Describe() As String
-        Describe = Me.mName
-    End Function
-
-    Sub Delete()
-        Me.mName = ""
-    End Sub
-End Class
-
-Sub Main()
-    Dim person As Person
-    Dim alias As Person
-
-    Set person = New Person("Fredrik")
-    Set alias = person
-
-    Print alias.Name
-
-    Delete person
-
-    If alias Is Nothing Then
-        Print "Deleted"
-    End If
-End Sub
-```
-
 See `samples/lists-classes.ls` for a CI-tested example combining lists, classes, properties, constructors, object references, `Set`, `New`, `Delete`, and `Me`.
 
 ## Built-in functions
@@ -203,12 +366,15 @@ The runtime implements a broad standalone subset of LotusScript standard functio
 
 `Now`, `Today`, `Date`, `Time`, `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateNumber`, `TimeNumber`, `DateValue`, `TimeValue`, `Weekday`, `MonthName`, `WeekdayName`, `DateAdd`, `DateDiff`, `DatePart`, `Timer`
 
-### File and environment
+## File I/O
+
+Sequential, Binary, and Random modes are supported.
 
 Supported file operations include:
 
 - `FreeFile`
 - `Open ... For Input/Output/Append/Binary/Random As #n`
+- Random record length using `Len = n`
 - `Close`
 - `Print #`
 - `Write #`
@@ -217,6 +383,9 @@ Supported file operations include:
 - `EOF`
 - `LOF`
 - `Seek`
+- `Loc`
+- `Get`
+- `Put`
 - `FileLen`
 - `FileDateTime`
 - `GetFileAttr`
@@ -232,7 +401,11 @@ Supported file operations include:
 - `Environ`
 - `Command`
 
-### Console replacements
+Binary positioning is byte based and one based at the language surface. Random positioning uses the configured record length and one-based record numbers. `Loc` reports mode-specific position information.
+
+`Get` and `Put` currently support the standalone scalar types and strings used by the runtime, including Byte, Boolean, Integer, Long, Single, Double, Currency, Date, and String.
+
+## Console replacements
 
 - `InputBox` reads from standard input
 - `MsgBox` writes to standard output and returns `1`
@@ -242,39 +415,38 @@ Supported file operations include:
 
 The GitHub Actions workflow uses .NET 10 on Windows and performs:
 
-1. restore
-2. compiler build
-3. compilation of `samples/compatibility.ls`
-4. execution and verification of the standard runtime compatibility sample
-5. compilation of `samples/lists-classes.ls`
-6. execution and verification of the List and class compatibility sample
+1. compiler restore and build
+2. compilation and execution of `samples/compatibility.ls`
+3. verification of string, number, date, and file functionality
+4. compilation and execution of `samples/lists-classes.ls`
+5. verification of List and class behavior
+6. compilation and execution of `samples/core-language.ls`
+7. verification of arrays, ReDim Preserve, LBound/UBound, ByRef, Select Case, error handling, Resume variants, GoTo, GoSub, labels, native declarations, Binary/Random Get/Put/Loc, With, Static, and Deftype
 
 This checks both the compiler itself and generated Windows executables.
 
-## Not implemented yet
+## Remaining compatibility work
 
-LS Lite is not yet a complete LotusScript clone. Remaining areas include:
+LS Lite is not intended to provide Notes/Domino APIs. Areas that still require additional compatibility work include:
 
 - Notes/Domino classes
-- LotusScript array declaration and full array semantics
-- scalar `ByRef` semantics
-- `Select Case`
-- `On Error`, `Resume`, and `Err`
-- `With`
-- labels and `GoTo`
-- external native functions using `Declare`
+- user-defined Type/UDT support
 - parameterized or indexed properties
 - complete class inheritance edge cases
-- every locale-specific LotusScript coercion rule
+- native DLL declarations involving UDTs, pointers, callbacks, or complex marshaling
+- Binary/Random `Get` and `Put` for UDT records and other complex aggregate values
+- every locale-specific LotusScript coercion edge case
 - native GUI implementations of `MsgBox` and `InputBox`
 
 ## Architecture
 
-1. `LotusTranspiler` invokes the advanced language transpiler.
-2. `AdvancedLotusTranspiler` parses the supported LotusScript-compatible syntax and emits C#.
-3. `LotusRuntime` provides standard functions and file operations.
-4. `LSList<T>` provides tagged List semantics and `ForAll` aliases.
-5. `LSRef<T>` provides shared object-reference semantics for `Set`, `Nothing`, and `Delete`.
-6. `CompilerDriver` creates a temporary .NET 10 SDK project.
-7. `dotnet publish` creates the requested Windows executable.
-8. Temporary compiler files are removed after publishing.
+1. `LotusTranspiler` protects source literals and orchestrates the compiler passes.
+2. `CoreCompatibilityTranspiler` adds arrays, ByRef, Select Case, error handling, labels, native declarations, advanced file I/O, With, Static, and Deftype support.
+3. `AdvancedLotusTranspiler` handles the base language, classes, Lists, expressions, and procedure generation.
+4. `LotusRuntime` provides standard functions and basic runtime services.
+5. `LSArray` provides LotusScript-style bounds, dimensions, ReDim, and Preserve semantics.
+6. `LSList<T>` provides tagged List semantics and `ForAll` aliases.
+7. `LSRef<T>` provides shared object-reference semantics for `Set`, `Nothing`, and `Delete`.
+8. `LSControlRuntime` provides error-handler and GoSub state.
+9. `LSFileRuntime` provides unified sequential, Binary, and Random file access.
+10. `CompilerDriver` creates a temporary .NET 10 SDK project and publishes the Windows executable.
