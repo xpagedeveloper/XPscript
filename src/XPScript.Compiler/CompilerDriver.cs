@@ -66,7 +66,7 @@ public sealed class CompilerDriver
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         var source = await File.ReadAllTextAsync(sourcePath);
         var transpiler = new XPScriptTranspiler();
-        var generatedSource = transpiler.Transpile(source, sourcePath);
+        var generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
         var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
