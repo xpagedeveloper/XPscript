@@ -3,13 +3,14 @@
 (c) xpagedeveloper.com 2026
 
 
-XPScript is a standalone XPScript-inspired compiler written in C#/.NET 10. It does not depend on XPScript Notes/XPScript. A small set of explicitly documented compatibility facades, including `NotesSAXParser` and `NotesSAXAttributeList`, is implemented locally by XPScript without loading Notes/XPScript classes.
+XPScript is a standalone Lotusscript -inspired compiler written in C#/.NET 10.
 
 XPScript transpiles supported source code to C# and uses the .NET SDK to publish a Windows x64 executable.
 
 ## Requirements
 
 - .NET 10 SDK on the development or compile machine
+- HCL Notes / Domino is not required
 - Windows is not required to run the compiler, but the generated target is currently `win-x64`
 - Generated executables are self-contained by default
 
@@ -400,8 +401,6 @@ Sleep 0.25
 
 - `GetObject(pathname)` binds to a COM moniker for the supplied path.
 - `GetObject("", "Prog.Id")` creates an instance from a registered COM ProgID.
-
-This is not a Notes/XPScript object lookup mechanism.
 
 ### Stop
 
