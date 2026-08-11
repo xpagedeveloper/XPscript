@@ -26,6 +26,13 @@ Sub Main()
 
     Print "ERROR53=" & Error$(53)
 
+    If False Then
+        Print InputBox("prompt", "title", "default")
+        ole = GetObject("", "Scripting.Dictionary")
+        Beep
+        Stop
+    End If
+
     On Error GoTo MissingHandler
     Open "__lslite_missing_runtime_file__.txt" For Input As #1
     Print "FILEERR=RESUMED"
@@ -45,13 +52,6 @@ MissingDone:
 
     answer = MessageBox("CONSOLE-MSG", 0, "LS Lite")
     Print "MESSAGEBOX=" & CStr(answer)
-
-    If False Then
-        Print InputBox("prompt", "title", "default")
-        ole = GetObject("", "Scripting.Dictionary")
-        Beep
-        Stop
-    End If
 
     Set parser = New NotesSAXParser("<root id=""7""><child>text</child></root>")
     On Event SAX_StartDocument From parser Call SAXStartDocument
