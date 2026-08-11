@@ -9,12 +9,15 @@ internal sealed class UdtValueSemanticsPreprocessor
     private sealed record VariableInfo(string Type, bool IsModuleGlobal);
 
     private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.OrdinalIgnoreCase);
+    private int _optionBase;
     public IReadOnlySet<string> TypeNames => _types.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public string Transform(string source)
     {
         _types.Clear();
+        _optionBase = 0;
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+        _optionBase = DetectOptionBase(lines);
         CollectTypes(lines);
         if (_types.Count == 0) return source;
 
@@ -170,7 +173,7 @@ internal sealed class UdtValueSemanticsPreprocessor
                     if (redim.Success)
                     {
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
-                        var args = BuildRuntimeBoundArguments(redim.Groups[2].Value);
+                        var args = BuildRuntimeBoundArguments(redim.Groups[2].Value, _optionBase);
                         rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + field.Type + "\", " +
                                     (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
                         continue;
@@ -198,7 +201,18 @@ internal sealed class UdtValueSemanticsPreprocessor
         }
     }
 
-    private static List<string> BuildRuntimeBoundArguments(string raw)
+    private static int DetectOptionBase(IEnumerable<string> lines)
+    {
+        foreach (var raw in lines)
+        {
+            var match = Regex.Match(StripComment(raw).Trim(), @"^Option\s+Base\s+([01])$", RegexOptions.IgnoreCase);
+            if (match.Success)
+                return int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return 0;
+    }
+
+    private static List<string> BuildRuntimeBoundArguments(string raw, int optionBase)
     {
         var dimensions = SplitArguments(raw);
         var result = new List<string>(dimensions.Count * 2);
@@ -212,7 +226,7 @@ internal sealed class UdtValueSemanticsPreprocessor
             }
             else
             {
-                result.Add("0");
+                result.Add(optionBase.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 result.Add(dimension.Trim());
             }
         }
