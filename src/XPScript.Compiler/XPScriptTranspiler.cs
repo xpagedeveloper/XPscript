@@ -43,12 +43,14 @@ public sealed class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
         generated = moduleGlobals.Inject(generated);
 
         generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
 
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + SourceLineRuntimeSource.Code + "\n";
+        generated += "\n\n" + NativeInteropRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
