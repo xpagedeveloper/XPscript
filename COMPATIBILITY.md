@@ -1,6 +1,6 @@
-# LS Lite standard library compatibility
+# XPScript standard library compatibility
 
-LS Lite targets the standard LotusScript language and runtime without Notes/Domino classes.
+XPScript targets the standard XPScript language and runtime without Notes/XPScript classes.
 
 Implemented runtime areas:
 
@@ -11,6 +11,6 @@ Implemented runtime areas:
 - Environment: Environ, CurDir, Command.
 - File: FreeFile, Open For Input/Output/Append/Binary/Random, Close, Print #, Write #, Line Input #, Input #, EOF, LOF, Seek, FileLen, FileDateTime, FileCopy, Kill, Name, MkDir, RmDir, ChDir, Dir, GetFileAttr, SetFileAttr.
 
-Compatibility is implemented on top of .NET 10. Locale-sensitive behavior uses the current process culture where practical. Some legacy LotusScript edge cases, binary record serialization, platform-specific character set behavior, and Notes/Domino APIs are intentionally outside the current compatibility target.
+Compatibility is implemented on top of .NET 10. Locale-sensitive behavior uses the current process culture where practical. Some legacy XPScript edge cases, binary record serialization, platform-specific character set behavior, and Notes/XPScript APIs are intentionally outside the current compatibility target.
 
-The GitHub workflow compiles and executes samples/compatibility.ls on Windows to verify string, numeric, date/time and file behavior.
+The GitHub workflow compiles and executes samples/compatibility.xps on Windows to verify string, numeric, date/time and file behavior.

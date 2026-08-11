@@ -10,54 +10,54 @@ Sub Main()
     Dim answer2 As String
 
     f = FreeFile
-    Open "lslite-utf8.txt" For Output As #f Charset "utf-8"
+    Open "xpscript-utf8.txt" For Output As #f Charset "utf-8"
     Print #f, "UTF8-ÅÄÖ-é-漢字"
     Close #f
 
     f = FreeFile
-    Open "lslite-utf8.txt" For Input As #f Charset "utf-8"
+    Open "xpscript-utf8.txt" For Input As #f Charset "utf-8"
     Line Input #f, value
     Print "UTF8=" & value
     Close #f
-    Kill "lslite-utf8.txt"
+    Kill "xpscript-utf8.txt"
 
     f = FreeFile
-    Open "lslite-utf16.txt" For Output As #f Charset "unicode"
+    Open "xpscript-utf16.txt" For Output As #f Charset "unicode"
     Print #f, "UTF16-ÅÄÖ-é-漢字"
     Close #f
 
     f = FreeFile
-    Open "lslite-utf16.txt" For Input As #f Charset "utf-16"
+    Open "xpscript-utf16.txt" For Input As #f Charset "utf-16"
     Line Input #f, value
     Print "UTF16=" & value
     Close #f
-    Kill "lslite-utf16.txt"
+    Kill "xpscript-utf16.txt"
 
     ' Encoding is independent from Charset. Without Charset, Base64 uses the default charset.
     f = FreeFile
-    Open "lslite-base64.txt" For Output As #f Encoding "base64"
+    Open "xpscript-base64.txt" For Output As #f Encoding "base64"
     Print #f, "BASE64-FILE-åäö"
     Close #f
 
     f = FreeFile
-    Open "lslite-base64.txt" For Input As #f Encoding "base64"
+    Open "xpscript-base64.txt" For Input As #f Encoding "base64"
     Line Input #f, value
     Print "BASE64FILE=" & value
     Close #f
-    Kill "lslite-base64.txt"
+    Kill "xpscript-base64.txt"
 
     ' Charset and Encoding can be combined. This Base64 payload contains UTF-16LE bytes.
     f = FreeFile
-    Open "lslite-base64-utf16.txt" For Output As #f Charset "utf-16" Encoding "base64"
+    Open "xpscript-base64-utf16.txt" For Output As #f Charset "utf-16" Encoding "base64"
     Print #f, "BASE64-UTF16-漢字"
     Close #f
 
     f = FreeFile
-    Open "lslite-base64-utf16.txt" For Input As #f Encoding "base64" Charset "unicode"
+    Open "xpscript-base64-utf16.txt" For Input As #f Encoding "base64" Charset "unicode"
     Line Input #f, value
     Print "BASE64UTF16=" & value
     Close #f
-    Kill "lslite-base64-utf16.txt"
+    Kill "xpscript-base64-utf16.txt"
 
     encoded = ToBase64("Fredrik åäö")
     decoded = FromBase64(encoded)

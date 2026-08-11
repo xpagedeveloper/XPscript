@@ -1,6 +1,6 @@
-# LS Lite standalone HTTP and JSON compatibility
+# XPScript standalone HTTP and JSON compatibility
 
-LS Lite implements a standalone compatibility layer for the LotusScript HTTP and JSON APIs without loading or requiring HCL Notes or Domino.
+XPScript implements a standalone compatibility layer for the XPScript HTTP and JSON APIs without loading or requiring XPScript Notes or XPScript.
 
 The compatibility classes are implemented on .NET 10:
 
@@ -9,7 +9,7 @@ The compatibility classes are implemented on .NET 10:
 
 ## Direct construction instead of NotesSession
 
-In HCL Domino, these objects are normally created from `NotesSession`. In LS Lite, the preferred standalone syntax is direct construction with `New`.
+In XPScript, these objects are normally created from `NotesSession`. In XPScript, the preferred standalone syntax is direct construction with `New`.
 
 ```lotusscript
 Dim http As New NotesHTTPRequest
@@ -29,7 +29,7 @@ Set http = New NotesHTTPRequest
 Set json = New NotesJSONNavigator("{""name"":""Fredrik""}")
 ```
 
-For migration convenience, source that still contains `session.CreateHTTPRequest()` or `session.CreateJSONNavigator(...)` is normalized to the standalone factories by the compiler. No real Domino `NotesSession` is created or required.
+For migration convenience, source that still contains `session.CreateHTTPRequest()` or `session.CreateJSONNavigator(...)` is normalized to the standalone factories by the compiler. No real XPScript `NotesSession` is created or required.
 
 ## NotesHTTPRequest
 
@@ -72,7 +72,7 @@ Headers set with `SetHeaderField` persist across requests until changed or reset
 
 ### HTTP response type
 
-LS Lite uses these standalone return rules:
+XPScript uses these standalone return rules:
 
 - `PreferJSONNavigator = True` returns a `NotesJSONNavigator`
 - otherwise `PreferStrings = True` returns a Unicode/.NET string decoded from UTF-8
@@ -82,7 +82,7 @@ LS Lite uses these standalone return rules:
 
 ### POST, PUT, and PATCH bodies
 
-The data argument can be a string or one of the LS Lite JSON compatibility objects. JSON objects are serialized automatically when supplied directly.
+The data argument can be a string or one of the XPScript JSON compatibility objects. JSON objects are serialized automatically when supplied directly.
 
 ```lotusscript
 Dim http As New NotesHTTPRequest
@@ -106,7 +106,7 @@ Print response
 
 `SetProxy` configures a .NET `WebProxy` for subsequent requests. `SetProxyUser` supplies proxy credentials. `ResetProxy` removes both proxy address and proxy credentials.
 
-TLS certificate validation follows the .NET/operating-system HTTP stack. LS Lite does not use Domino `notes.ini`, Domino certificate stores, or Domino HTTP configuration.
+TLS certificate validation follows the .NET/operating-system HTTP stack. XPScript does not use XPScript `notes.ini`, XPScript certificate stores, or XPScript HTTP configuration.
 
 ## NotesJSONNavigator
 
@@ -155,7 +155,7 @@ Set element = json.GetElementByPointer("/items/1")
 Print CStr(element.Value)
 ```
 
-JSON Pointer array positions are zero-based as defined by JSON Pointer. `GetNthElement`, by contrast, is one-based for LotusScript compatibility.
+JSON Pointer array positions are zero-based as defined by JSON Pointer. `GetNthElement`, by contrast, is one-based for XPScript compatibility.
 
 ## NotesJSONObject
 
@@ -306,7 +306,7 @@ Print CStr(element.Value)
 
 ## Compatibility boundaries
 
-The class names and the supported language surface intentionally resemble the HCL LotusScript APIs so existing integration code needs minimal changes. Internally these are LS Lite classes, not Notes/Domino classes.
+The class names and the supported language surface intentionally resemble the XPScript XPScript APIs so existing integration code needs minimal changes. Internally these are XPScript classes, not Notes/XPScript classes.
 
 Notable standalone differences:
 
@@ -314,12 +314,12 @@ Notable standalone differences:
 - HTTP uses the .NET networking stack.
 - JSON uses `System.Text.Json`.
 - HTTP TLS trust follows the target operating system and .NET.
-- There is no dependency on a Domino server, Notes client, Notes ID, `notes.ini`, or Domino data directory.
-- JSON byte arrays are normal .NET byte arrays and are not subject to the classic LotusScript 64 KB array limitation.
+- There is no dependency on a XPScript server, Notes client, Notes ID, `notes.ini`, or XPScript data directory.
+- JSON byte arrays are normal .NET byte arrays and are not subject to the classic XPScript 64 KB array limitation.
 
 ## CI coverage
 
-`samples/json-http.ls` is compiled to a Windows executable by GitHub Actions. The workflow starts a local HTTP server and validates:
+`samples/json-http.xps` is compiled to a Windows executable by GitHub Actions. The workflow starts a local HTTP server and validates:
 
 - direct `New` construction of the compatibility classes
 - JSON creation and serialization

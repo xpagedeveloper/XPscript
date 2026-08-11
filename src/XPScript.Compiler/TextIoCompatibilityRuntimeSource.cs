@@ -1,9 +1,9 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal static class TextIoCompatibilityRuntimeSource
 {
     public const string Code = """
-internal static class LSLiteTextIO
+internal static class XPScriptTextIO
 {
     private sealed class TextState
     {
@@ -20,7 +20,7 @@ internal static class LSLiteTextIO
     public static string ToBase64(object? value, object? charset)
     {
         var textEncoding = ResolveCharset(charset);
-        return Convert.ToBase64String(textEncoding.GetBytes(LotusRuntime.CStr(value)));
+        return Convert.ToBase64String(textEncoding.GetBytes(XPScriptRuntime.CStr(value)));
     }
 
     public static string FromBase64(object? value) => FromBase64(value, "utf-8");
@@ -28,15 +28,15 @@ internal static class LSLiteTextIO
     public static string FromBase64(object? value, object? charset)
     {
         var textEncoding = ResolveCharset(charset);
-        var bytes = Convert.FromBase64String(LotusRuntime.CStr(value).Trim());
+        var bytes = Convert.FromBase64String(XPScriptRuntime.CStr(value).Trim());
         return textEncoding.GetString(bytes);
     }
 
-    public static string UrlEncode(object? value) => Uri.EscapeDataString(LotusRuntime.CStr(value));
+    public static string UrlEncode(object? value) => Uri.EscapeDataString(XPScriptRuntime.CStr(value));
 
     public static string UrlDecode(object? value)
     {
-        var text = LotusRuntime.CStr(value).Replace("+", " ", StringComparison.Ordinal);
+        var text = XPScriptRuntime.CStr(value).Replace("+", " ", StringComparison.Ordinal);
         return Uri.UnescapeDataString(text);
     }
 
@@ -44,7 +44,7 @@ internal static class LSLiteTextIO
 
     public static string ConsoleInput(object? prompt)
     {
-        Console.Write(LotusRuntime.CStr(prompt));
+        Console.Write(XPScriptRuntime.CStr(prompt));
         return Console.ReadLine() ?? "";
     }
 
@@ -60,9 +60,9 @@ internal static class LSLiteTextIO
 
     public static void OpenText(object? pathValue, object? modeValue, object? fileNumberValue, object? charsetValue, object? transferEncodingValue)
     {
-        var path = Path.GetFullPath(LotusRuntime.CStr(pathValue));
-        var mode = LotusRuntime.CStr(modeValue).Trim().ToLowerInvariant();
-        var fileNumber = LotusRuntime.CInt(fileNumberValue);
+        var path = Path.GetFullPath(XPScriptRuntime.CStr(pathValue));
+        var mode = XPScriptRuntime.CStr(modeValue).Trim().ToLowerInvariant();
+        var fileNumber = XPScriptRuntime.CInt(fileNumberValue);
         var charset = ResolveCharset(charsetValue);
         var transferEncoding = NormalizeTransferEncoding(transferEncodingValue);
 
@@ -151,7 +151,7 @@ internal static class LSLiteTextIO
 
     public static void CloseFile(object? fileNumberValue)
     {
-        var fileNumber = LotusRuntime.CInt(fileNumberValue);
+        var fileNumber = XPScriptRuntime.CInt(fileNumberValue);
         lock (FileLock)
         {
             if (!Files.Remove(fileNumber, out var state)) return;
@@ -164,15 +164,15 @@ internal static class LSLiteTextIO
 
     public static void PrintFile(object? fileNumberValue, params object?[] values)
     {
-        var writer = GetFile(LotusRuntime.CInt(fileNumberValue)).Writer
+        var writer = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Writer
             ?? throw new IOException("File is not open for output.");
-        writer.WriteLine(string.Concat(values.Select(LotusRuntime.CStr)));
+        writer.WriteLine(string.Concat(values.Select(XPScriptRuntime.CStr)));
         writer.Flush();
     }
 
     public static void WriteFile(object? fileNumberValue, params object?[] values)
     {
-        var writer = GetFile(LotusRuntime.CInt(fileNumberValue)).Writer
+        var writer = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Writer
             ?? throw new IOException("File is not open for output.");
         var encoded = values.Select(v =>
         {
@@ -187,14 +187,14 @@ internal static class LSLiteTextIO
 
     public static string LineInput(object? fileNumberValue)
     {
-        var reader = GetFile(LotusRuntime.CInt(fileNumberValue)).Reader
+        var reader = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Reader
             ?? throw new IOException("File is not open for input.");
         return reader.ReadLine() ?? "";
     }
 
     public static string InputFile(object? fileNumberValue)
     {
-        var reader = GetFile(LotusRuntime.CInt(fileNumberValue)).Reader
+        var reader = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Reader
             ?? throw new IOException("File is not open for input.");
         var sb = new StringBuilder();
         var quoted = false;
@@ -212,14 +212,14 @@ internal static class LSLiteTextIO
 
     public static bool EOF(object? fileNumberValue)
     {
-        var reader = GetFile(LotusRuntime.CInt(fileNumberValue)).Reader
+        var reader = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Reader
             ?? throw new IOException("File is not open for input.");
         return reader.Peek() < 0;
     }
 
     private static string NormalizeTransferEncoding(object? value)
     {
-        var text = LotusRuntime.CStr(value).Trim().ToLowerInvariant().Replace("_", "-");
+        var text = XPScriptRuntime.CStr(value).Trim().ToLowerInvariant().Replace("_", "-");
         return text switch
         {
             "" or "none" or "plain" or "text" => "none",
@@ -230,7 +230,7 @@ internal static class LSLiteTextIO
 
     private static Encoding ResolveCharset(object? charsetValue)
     {
-        var charset = LotusRuntime.CStr(charsetValue).Trim().ToLowerInvariant().Replace("_", "-");
+        var charset = XPScriptRuntime.CStr(charsetValue).Trim().ToLowerInvariant().Replace("_", "-");
         return charset switch
         {
             "" or "default" or "ansi" => Encoding.Default,

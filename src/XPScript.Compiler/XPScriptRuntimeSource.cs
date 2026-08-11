@@ -1,9 +1,9 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
-public static class LotusRuntimeSource
+public static class XPScriptRuntimeSource
 {
     public const string Code = """
-internal static class LotusRuntime
+internal static class XPScriptRuntime
 {
     private sealed class FileState
     {

@@ -147,22 +147,22 @@ LabelDone:
     On Error GoTo 0
 
     f = FreeFile()
-    Open "lslite-core.bin" For Binary As #f
+    Open "xpscript-core.bin" For Binary As #f
     binaryValue = 123456
     Put #f, 1, binaryValue
     binaryValue = 0
     Get #f, 1, binaryValue
     Print "BINARY=" & CStr(binaryValue) & ":" & CStr(Loc(f))
     Close #f
-    Kill "lslite-core.bin"
+    Kill "xpscript-core.bin"
 
     f = FreeFile()
-    Open "lslite-random.bin" For Random As #f Len = 16
+    Open "xpscript-random.bin" For Random As #f Len = 16
     randomValue = 77
     Put #f, 2, randomValue
     randomValue = 0
     Get #f, 2, randomValue
     Print "RANDOM=" & CStr(randomValue) & ":" & CStr(Loc(f))
     Close #f
-    Kill "lslite-random.bin"
+    Kill "xpscript-random.bin"
 End Sub

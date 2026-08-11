@@ -1,4 +1,4 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 public static class CoreCompatibilityRuntimeSource
 {
@@ -123,7 +123,7 @@ internal sealed class LSArray
         for (var i = 0; i < lower.Length; i++)
         {
             if (lower[i] < -32768 || upper[i] > 32767 || upper[i] < lower[i])
-                throw new IndexOutOfRangeException("Invalid LotusScript array bounds.");
+                throw new IndexOutOfRangeException("Invalid XPScript array bounds.");
             lengths[i] = checked(upper[i] - lower[i] + 1);
             total = checked(total * lengths[i]);
         }
@@ -141,7 +141,7 @@ internal sealed class LSArray
     private int Offset(object?[] values)
     {
         if (values.Length != Rank) throw new IndexOutOfRangeException("Wrong number of array subscripts.");
-        var indices = values.Select(LotusRuntime.CInt).ToArray();
+        var indices = values.Select(XPScriptRuntime.CInt).ToArray();
         return OffsetFor(indices, LowerBounds, UpperBounds, Lengths);
     }
 
@@ -177,15 +177,15 @@ internal sealed class LSArray
 
     private static object? Coerce(object? value, string type) => type.ToLowerInvariant() switch
     {
-        "string" => LotusRuntime.CStr(value),
-        "boolean" => LotusRuntime.CBool(value),
-        "byte" => LotusRuntime.CByte(value),
-        "integer" => LotusRuntime.CInt(value),
-        "long" => LotusRuntime.CLng(value),
-        "single" => LotusRuntime.CSng(value),
-        "double" => LotusRuntime.CDbl(value),
-        "currency" => LotusRuntime.CCur(value),
-        "date" => LotusRuntime.CDat(value),
+        "string" => XPScriptRuntime.CStr(value),
+        "boolean" => XPScriptRuntime.CBool(value),
+        "byte" => XPScriptRuntime.CByte(value),
+        "integer" => XPScriptRuntime.CInt(value),
+        "long" => XPScriptRuntime.CLng(value),
+        "single" => XPScriptRuntime.CSng(value),
+        "double" => XPScriptRuntime.CDbl(value),
+        "currency" => XPScriptRuntime.CCur(value),
+        "date" => XPScriptRuntime.CDat(value),
         _ => value
     };
 }
@@ -208,7 +208,7 @@ internal static class LSArrayRuntime
     public static int LBound(object? value, int dimension = 1) => Require(value).LBound(dimension);
     public static int UBound(object? value, int dimension = 1) => Require(value).UBound(dimension);
     public static void Erase(object? value) => Require(value).Erase();
-    private static LSArray Require(object? value) => value as LSArray ?? throw new InvalidOperationException("Value is not an LS Lite array.");
+    private static LSArray Require(object? value) => value as LSArray ?? throw new InvalidOperationException("Value is not an XPScript array.");
 }
 
 internal sealed class LSByRefValue
@@ -234,9 +234,9 @@ internal static class LSByRefRuntime
     public static LSByRefValue Create(Func<object?> get, Action<object?> set) => new(get, set);
 }
 
-internal sealed class LotusScriptRuntimeException : Exception
+internal sealed class XPScriptRuntimeException : Exception
 {
-    public LotusScriptRuntimeException(int number, string description) : base(description)
+    public XPScriptRuntimeException(int number, string description) : base(description)
     {
         Number = number;
     }
@@ -256,7 +256,7 @@ internal static class LotusErrorRuntime
 
     public static int Capture(Exception exception, int line)
     {
-        _number = exception is LotusScriptRuntimeException ls ? ls.Number : exception.HResult != 0 ? exception.HResult : 1;
+        _number = exception is XPScriptRuntimeException ls ? ls.Number : exception.HResult != 0 ? exception.HResult : 1;
         _description = exception.Message;
         _erl = line;
         return _number;
@@ -264,10 +264,10 @@ internal static class LotusErrorRuntime
 
     public static void Raise(int number, object? description = null)
     {
-        var text = description is null ? Error(number) : LotusRuntime.CStr(description);
+        var text = description is null ? Error(number) : XPScriptRuntime.CStr(description);
         _number = number;
         _description = text;
-        throw new LotusScriptRuntimeException(number, text);
+        throw new XPScriptRuntimeException(number, text);
     }
 
     public static string Error() => Description;
@@ -281,7 +281,7 @@ internal static class LotusErrorRuntime
         53 => "File not found",
         55 => "File already open",
         62 => "Input past end of file",
-        _ => "LotusScript error " + number.ToString(CultureInfo.InvariantCulture)
+        _ => "XPScript error " + number.ToString(CultureInfo.InvariantCulture)
     };
 
     public static void Clear()
@@ -307,9 +307,9 @@ internal static class LSCoreCompare
         if (left is null && right is null) return 0;
         if (left is null) return -1;
         if (right is null) return 1;
-        if (LotusRuntime.IsNumeric(left) && LotusRuntime.IsNumeric(right)) return LotusRuntime.CDbl(left).CompareTo(LotusRuntime.CDbl(right));
-        if (left is DateTime || right is DateTime) return LotusRuntime.CDat(left).CompareTo(LotusRuntime.CDat(right));
-        return string.Compare(LotusRuntime.CStr(left), LotusRuntime.CStr(right), StringComparison.CurrentCulture);
+        if (XPScriptRuntime.IsNumeric(left) && XPScriptRuntime.IsNumeric(right)) return XPScriptRuntime.CDbl(left).CompareTo(XPScriptRuntime.CDbl(right));
+        if (left is DateTime || right is DateTime) return XPScriptRuntime.CDat(left).CompareTo(XPScriptRuntime.CDat(right));
+        return string.Compare(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right), StringComparison.CurrentCulture);
     }
 }
 
@@ -338,11 +338,11 @@ internal static class LSFileRuntime
 
     public static void Open(object? pathValue, object? modeValue, int number, int recordLength = 0)
     {
-        var path = Path.GetFullPath(LotusRuntime.CStr(pathValue));
-        var mode = LotusRuntime.CStr(modeValue).ToLowerInvariant();
+        var path = Path.GetFullPath(XPScriptRuntime.CStr(pathValue));
+        var mode = XPScriptRuntime.CStr(modeValue).ToLowerInvariant();
         lock (Sync)
         {
-            if (Files.ContainsKey(number)) throw new LotusScriptRuntimeException(55, "File already open");
+            if (Files.ContainsKey(number)) throw new XPScriptRuntimeException(55, "File already open");
             State state = mode switch
             {
                 "input" => ReadState(path),
@@ -376,7 +376,7 @@ internal static class LSFileRuntime
     {
         var state = Get(number);
         var writer = state.Writer ?? throw new IOException("File is not open for output.");
-        var text = string.Concat(values.Select(LotusRuntime.CStr));
+        var text = string.Concat(values.Select(XPScriptRuntime.CStr));
         writer.WriteLine(text);
         state.SequentialBytes += Encoding.Default.GetByteCount(text + Environment.NewLine);
     }
@@ -484,7 +484,7 @@ internal static class LSFileRuntime
     private static void PositionForRecord(State state, object? recordNumber)
     {
         if (recordNumber is null) return;
-        var record = LotusRuntime.CLng(recordNumber);
+        var record = XPScriptRuntime.CLng(recordNumber);
         if (record < 1) throw new IOException("Record/byte position must be at least 1.");
         var offset = state.Mode == "random" ? checked((record - 1) * state.RecordLength) : record - 1;
         state.Stream.Seek(offset, SeekOrigin.Begin);
@@ -514,17 +514,17 @@ internal static class LSFileRuntime
     {
         switch (type.ToLowerInvariant())
         {
-            case "byte": writer.Write(LotusRuntime.CByte(value)); break;
-            case "boolean": writer.Write((short)(LotusRuntime.CBool(value) ? -1 : 0)); break;
-            case "integer": writer.Write((short)LotusRuntime.CInt(value)); break;
-            case "long": writer.Write((int)LotusRuntime.CLng(value)); break;
-            case "single": writer.Write(LotusRuntime.CSng(value)); break;
-            case "double": writer.Write(LotusRuntime.CDbl(value)); break;
-            case "currency": writer.Write((long)(LotusRuntime.CCur(value) * 10000m)); break;
-            case "date": writer.Write(LotusRuntime.CDat(value).ToOADate()); break;
+            case "byte": writer.Write(XPScriptRuntime.CByte(value)); break;
+            case "boolean": writer.Write((short)(XPScriptRuntime.CBool(value) ? -1 : 0)); break;
+            case "integer": writer.Write((short)XPScriptRuntime.CInt(value)); break;
+            case "long": writer.Write((int)XPScriptRuntime.CLng(value)); break;
+            case "single": writer.Write(XPScriptRuntime.CSng(value)); break;
+            case "double": writer.Write(XPScriptRuntime.CDbl(value)); break;
+            case "currency": writer.Write((long)(XPScriptRuntime.CCur(value) * 10000m)); break;
+            case "date": writer.Write(XPScriptRuntime.CDat(value).ToOADate()); break;
             case "string":
             {
-                var bytes = Encoding.Default.GetBytes(LotusRuntime.CStr(value));
+                var bytes = Encoding.Default.GetBytes(XPScriptRuntime.CStr(value));
                 if (state.Mode == "random") writer.Write((ushort)Math.Min(bytes.Length, ushort.MaxValue));
                 writer.Write(bytes, 0, Math.Min(bytes.Length, ushort.MaxValue));
                 break;
@@ -553,7 +553,7 @@ internal static class LSFileRuntime
 
     private static string ReadStringValue(BinaryReader reader, State state, object? current)
     {
-        var length = state.Mode == "random" ? reader.ReadUInt16() : Encoding.Default.GetByteCount(LotusRuntime.CStr(current));
+        var length = state.Mode == "random" ? reader.ReadUInt16() : Encoding.Default.GetByteCount(XPScriptRuntime.CStr(current));
         return Encoding.Default.GetString(reader.ReadBytes(length));
     }
 

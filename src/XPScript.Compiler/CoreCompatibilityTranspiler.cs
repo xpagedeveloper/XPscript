@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal sealed class CoreCompatibilityTranspiler
 {
@@ -39,7 +39,7 @@ internal sealed class CoreCompatibilityTranspiler
         var lines = Normalize(source);
         Analyze(lines);
         var transformed = TransformModule(lines);
-        var generated = new AdvancedLotusTranspiler().Transpile(transformed, sourceName);
+        var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
         generated = PostProcessMarkers(generated);
         generated += "\n\n" + CoreCompatibilityRuntimeSource.Code + "\n";
@@ -701,13 +701,13 @@ internal sealed class CoreCompatibilityTranspiler
             var bound = Regex.Match(item.Trim(), @"^(.+?)\s+To\s+(.+)$", RegexOptions.IgnoreCase);
             if (bound.Success)
             {
-                lower.Add("LotusRuntime.CInt(" + bound.Groups[1].Value + ")");
-                upper.Add("LotusRuntime.CInt(" + bound.Groups[2].Value + ")");
+                lower.Add("XPScriptRuntime.CInt(" + bound.Groups[1].Value + ")");
+                upper.Add("XPScriptRuntime.CInt(" + bound.Groups[2].Value + ")");
             }
             else
             {
                 lower.Add(_optionBase.ToString());
-                upper.Add("LotusRuntime.CInt(" + item.Trim() + ")");
+                upper.Add("XPScriptRuntime.CInt(" + item.Trim() + ")");
             }
         }
         return ("new int[] { " + string.Join(", ", lower) + " }", "new int[] { " + string.Join(", ", upper) + " }");
@@ -842,13 +842,13 @@ internal sealed class CoreCompatibilityTranspiler
             var onGoto = Regex.Match(trimmed, "^LSCoreMarker\\.OnErrorGoto\\(\"([^\"]+)\",\\s*(\\d+),\\s*(.+)\\);$");
             if (onGoto.Success)
             {
-                output.Add(indent + $"LSControlRuntime.SetGoto(__lsErrCtx, {onGoto.Groups[2].Value}, LotusRuntime.CInt({onGoto.Groups[3].Value}));");
+                output.Add(indent + $"LSControlRuntime.SetGoto(__lsErrCtx, {onGoto.Groups[2].Value}, XPScriptRuntime.CInt({onGoto.Groups[3].Value}));");
                 continue;
             }
             var onResume = Regex.Match(trimmed, @"^LSCoreMarker\.OnErrorResumeNext\(\);$");
             if (onResume.Success) { output.Add(indent + "LSControlRuntime.SetResumeNext(__lsErrCtx);"); continue; }
             var onOff = Regex.Match(trimmed, @"^LSCoreMarker\.OnErrorOff\((.+)\);$");
-            if (onOff.Success) { output.Add(indent + $"LSControlRuntime.Disable(__lsErrCtx, LotusRuntime.CInt({onOff.Groups[1].Value}));"); continue; }
+            if (onOff.Success) { output.Add(indent + $"LSControlRuntime.Disable(__lsErrCtx, XPScriptRuntime.CInt({onOff.Groups[1].Value}));"); continue; }
 
             var resumeCurrent = Regex.Match(trimmed, @"^LSCoreMarker\.ResumeCurrent\((\d+)\);$");
             if (resumeCurrent.Success)
@@ -935,15 +935,15 @@ internal sealed class CoreCompatibilityTranspiler
 
     private static string ConvertExpression(string lotusType, string expression) => lotusType.ToLowerInvariant() switch
     {
-        "string" => $"LotusRuntime.CStr({expression})",
-        "integer" => $"LotusRuntime.CInt({expression})",
-        "long" => $"LotusRuntime.CLng({expression})",
-        "double" => $"LotusRuntime.CDbl({expression})",
-        "single" => $"LotusRuntime.CSng({expression})",
-        "boolean" => $"LotusRuntime.CBool({expression})",
-        "byte" => $"LotusRuntime.CByte({expression})",
-        "currency" => $"LotusRuntime.CCur({expression})",
-        "date" => $"LotusRuntime.CDat({expression})",
+        "string" => $"XPScriptRuntime.CStr({expression})",
+        "integer" => $"XPScriptRuntime.CInt({expression})",
+        "long" => $"XPScriptRuntime.CLng({expression})",
+        "double" => $"XPScriptRuntime.CDbl({expression})",
+        "single" => $"XPScriptRuntime.CSng({expression})",
+        "boolean" => $"XPScriptRuntime.CBool({expression})",
+        "byte" => $"XPScriptRuntime.CByte({expression})",
+        "currency" => $"XPScriptRuntime.CCur({expression})",
+        "date" => $"XPScriptRuntime.CDat({expression})",
         _ => expression
     };
 

@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal sealed class TextIoCompatibilityPreprocessor
 {
@@ -33,42 +33,42 @@ internal sealed class TextIoCompatibilityPreprocessor
             if (TryParseSpecialOpen(line, out var open))
             {
                 output.Add(indent +
-                    $"Call LSLiteTextIO.OpenText({open.Path}, \"{open.Mode.ToLowerInvariant()}\", {open.FileNumber}, {open.Charset}, {open.Encoding})");
+                    $"Call XPScriptTextIO.OpenText({open.Path}, \"{open.Mode.ToLowerInvariant()}\", {open.FileNumber}, {open.Charset}, {open.Encoding})");
                 continue;
             }
 
             var close = Regex.Match(line, @"^Close\s+#?(.+?)\s*$", RegexOptions.IgnoreCase);
             if (close.Success && IsSpecialFile(close.Groups[1].Value))
             {
-                output.Add(indent + $"Call LSLiteTextIO.CloseFile({close.Groups[1].Value})");
+                output.Add(indent + $"Call XPScriptTextIO.CloseFile({close.Groups[1].Value})");
                 continue;
             }
 
             var filePrint = Regex.Match(line, @"^Print\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
             if (filePrint.Success && IsSpecialFile(filePrint.Groups[1].Value))
             {
-                output.Add(indent + $"Call LSLiteTextIO.PrintFile({filePrint.Groups[1].Value}, {filePrint.Groups[2].Value})");
+                output.Add(indent + $"Call XPScriptTextIO.PrintFile({filePrint.Groups[1].Value}, {filePrint.Groups[2].Value})");
                 continue;
             }
 
             var fileWrite = Regex.Match(line, @"^Write\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
             if (fileWrite.Success && IsSpecialFile(fileWrite.Groups[1].Value))
             {
-                output.Add(indent + $"Call LSLiteTextIO.WriteFile({fileWrite.Groups[1].Value}, {fileWrite.Groups[2].Value})");
+                output.Add(indent + $"Call XPScriptTextIO.WriteFile({fileWrite.Groups[1].Value}, {fileWrite.Groups[2].Value})");
                 continue;
             }
 
             var lineInput = Regex.Match(line, @"^Line\s+Input\s+#([^,]+)\s*,\s*([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
             if (lineInput.Success && IsSpecialFile(lineInput.Groups[1].Value))
             {
-                output.Add(indent + $"{lineInput.Groups[2].Value} = LSLiteTextIO.LineInput({lineInput.Groups[1].Value})");
+                output.Add(indent + $"{lineInput.Groups[2].Value} = XPScriptTextIO.LineInput({lineInput.Groups[1].Value})");
                 continue;
             }
 
             var fileInput = Regex.Match(line, @"^Input\s+#([^,]+)\s*,\s*([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
             if (fileInput.Success && IsSpecialFile(fileInput.Groups[1].Value))
             {
-                output.Add(indent + $"{fileInput.Groups[2].Value} = LSLiteTextIO.InputFile({fileInput.Groups[1].Value})");
+                output.Add(indent + $"{fileInput.Groups[2].Value} = XPScriptTextIO.InputFile({fileInput.Groups[1].Value})");
                 continue;
             }
 
@@ -96,27 +96,27 @@ internal sealed class TextIoCompatibilityPreprocessor
             var consoleInput = Regex.Match(line, @"^Input\$?\s+(.+?)\s*,\s*([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (consoleInput.Success && !consoleInput.Groups[1].Value.TrimStart().StartsWith("#", StringComparison.Ordinal))
             {
-                output.Add(indent + $"{consoleInput.Groups[2].Value} = LSLiteTextIO.ConsoleInput({consoleInput.Groups[1].Value})");
+                output.Add(indent + $"{consoleInput.Groups[2].Value} = XPScriptTextIO.ConsoleInput({consoleInput.Groups[1].Value})");
                 continue;
             }
             var consoleInputNoPrompt = Regex.Match(line, @"^Input\$?\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (consoleInputNoPrompt.Success)
             {
-                output.Add(indent + $"{consoleInputNoPrompt.Groups[1].Value} = LSLiteTextIO.ConsoleInput()");
+                output.Add(indent + $"{consoleInputNoPrompt.Groups[1].Value} = XPScriptTextIO.ConsoleInput()");
                 continue;
             }
 
             if (Regex.IsMatch(line, @"^Pause$", RegexOptions.IgnoreCase))
             {
-                output.Add(indent + "Call LSLiteTextIO.Pause()");
+                output.Add(indent + "Call XPScriptTextIO.Pause()");
                 continue;
             }
 
-            // New standalone string helpers are normal functions at the LS Lite surface.
-            var transformed = Regex.Replace(line, @"(?<![\w.])ToBase64\$?\s*\(", "LSLiteTextIO.ToBase64(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])FromBase64\$?\s*\(", "LSLiteTextIO.FromBase64(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlEncode\$?\s*\(", "LSLiteTextIO.UrlEncode(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlDecode\$?\s*\(", "LSLiteTextIO.UrlDecode(", RegexOptions.IgnoreCase);
+            // New standalone string helpers are normal functions at the XPScript surface.
+            var transformed = Regex.Replace(line, @"(?<![\w.])ToBase64\$?\s*\(", "XPScriptTextIO.ToBase64(", RegexOptions.IgnoreCase);
+            transformed = Regex.Replace(transformed, @"(?<![\w.])FromBase64\$?\s*\(", "XPScriptTextIO.FromBase64(", RegexOptions.IgnoreCase);
+            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlEncode\$?\s*\(", "XPScriptTextIO.UrlEncode(", RegexOptions.IgnoreCase);
+            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlDecode\$?\s*\(", "XPScriptTextIO.UrlDecode(", RegexOptions.IgnoreCase);
 
             foreach (var fileNo in _specialFileNumbers)
             {
@@ -124,7 +124,7 @@ internal sealed class TextIoCompatibilityPreprocessor
                 transformed = Regex.Replace(
                     transformed,
                     $@"(?<![\w.])EOF\s*\(\s*{escaped}\s*\)",
-                    $"LSLiteTextIO.EOF({fileNo})",
+                    $"XPScriptTextIO.EOF({fileNo})",
                     RegexOptions.IgnoreCase);
             }
 

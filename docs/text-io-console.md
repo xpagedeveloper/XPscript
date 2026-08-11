@@ -1,6 +1,6 @@
-# LS Lite text file I/O, Base64 and console I/O
+# XPScript text file I/O, Base64 and console I/O
 
-LS Lite extends the LotusScript-style `Open` statement with independent `Charset` and `Encoding` options for standalone text file I/O.
+XPScript extends the XPScript-style `Open` statement with independent `Charset` and `Encoding` options for standalone text file I/O.
 
 ## Charset
 
@@ -82,14 +82,14 @@ The processing model is:
 
 ### Writing
 
-1. LS Lite has a Unicode string.
+1. XPScript has a Unicode string.
 2. `Charset` converts the string to bytes.
 3. `Encoding "base64"` Base64-encodes those bytes.
 4. The Base64 text is stored in the file.
 
 ### Reading
 
-1. LS Lite reads the Base64 text.
+1. XPScript reads the Base64 text.
 2. `Encoding "base64"` decodes it to bytes.
 3. `Charset` converts those bytes back to a Unicode string.
 
@@ -105,7 +105,7 @@ Existing `Binary` and `Random` file modes continue to use the binary file runtim
 
 ## Base64 string functions
 
-LS Lite provides:
+XPScript provides:
 
 - `ToBase64(value)`
 - `ToBase64(value, charset)`
@@ -126,7 +126,7 @@ decoded = FromBase64(encoded)
 
 ## URL string functions
 
-LS Lite provides:
+XPScript provides:
 
 - `UrlEncode(value)`
 - `UrlDecode(value)`
@@ -201,11 +201,11 @@ Print "Press any key"
 Pause
 ```
 
-When standard input is redirected, LS Lite consumes one input character instead. This allows console programs using `Pause` to be regression-tested in CI.
+When standard input is redirected, XPScript consumes one input character instead. This allows console programs using `Pause` to be regression-tested in CI.
 
 ## CI coverage
 
-`samples/textio-console.ls` is compiled to a Windows executable by GitHub Actions and tests:
+`samples/textio-console.xps` is compiled to a Windows executable by GitHub Actions and tests:
 
 - UTF-8 file write/read
 - UTF-16/Unicode file write/read

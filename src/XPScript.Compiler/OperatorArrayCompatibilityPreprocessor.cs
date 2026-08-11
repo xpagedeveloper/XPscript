@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal sealed class OperatorArrayCompatibilityPreprocessor
 {

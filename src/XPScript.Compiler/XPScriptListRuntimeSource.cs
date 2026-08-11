@@ -1,6 +1,6 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
-public static class LotusListRuntimeSource
+public static class XPScriptListRuntimeSource
 {
     public const string Code = """
 internal interface ILSList

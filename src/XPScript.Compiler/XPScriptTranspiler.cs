@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
-public sealed class LotusTranspiler
+public sealed class XPScriptTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
@@ -27,8 +27,8 @@ public sealed class LotusTranspiler
 
         // Option Compare affects Like and the array comparison helpers.
         generated = generated.Replace(
-            "LotusRuntime.SetArgs(args);",
-            $"LotusRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            "XPScriptRuntime.SetArgs(args);",
+            $"XPScriptRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
             StringComparison.Ordinal);
 
         generated = generated.Replace(
@@ -59,7 +59,7 @@ public sealed class LotusTranspiler
     }
 
     public string Transpile(string source) =>
-        Transpile(source, "input.ls");
+        Transpile(source, "input.xps");
 
     private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements)
     {

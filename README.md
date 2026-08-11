@@ -1,8 +1,11 @@
-# LS Lite Compiler
+# XPScript
 
-LS Lite is a standalone LotusScript-inspired compiler written in C#/.NET 10. It does not depend on HCL Notes/Domino. A small set of explicitly documented compatibility facades, including `NotesSAXParser` and `NotesSAXAttributeList`, is implemented locally by LS Lite without loading Notes/Domino classes.
+(c) xpagedeveloper.com 2026
 
-LS Lite transpiles supported source code to C# and uses the .NET SDK to publish a Windows x64 executable.
+
+XPScript is a standalone XPScript-inspired compiler written in C#/.NET 10. It does not depend on XPScript Notes/XPScript. A small set of explicitly documented compatibility facades, including `NotesSAXParser` and `NotesSAXAttributeList`, is implemented locally by XPScript without loading Notes/XPScript classes.
+
+XPScript transpiles supported source code to C# and uses the .NET SDK to publish a Windows x64 executable.
 
 ## Requirements
 
@@ -13,25 +16,25 @@ LS Lite transpiles supported source code to C# and uses the .NET SDK to publish 
 ## Build the compiler
 
 ```powershell
-dotnet build .\src\LSLite.Compiler\LSLite.Compiler.csproj -c Release
+dotnet build .\src\XPScript.Compiler\XPScript.Compiler.csproj -c Release
 ```
 
 Run it directly:
 
 ```powershell
-dotnet run --project .\src\LSLite.Compiler -- .\samples\hello.ls -o .\out\Hello.exe
+dotnet run --project .\src\XPScript.Compiler -- .\samples\hello.xps -o .\out\Hello.exe
 ```
 
 Publish the compiler itself:
 
 ```powershell
-dotnet publish .\src\LSLite.Compiler\LSLite.Compiler.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\compiler-publish
+dotnet publish .\src\XPScript.Compiler\XPScript.Compiler.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\compiler-publish
 ```
 
-Then compile an LS Lite source file:
+Then compile an XPScript source file:
 
 ```powershell
-.\compiler-publish\lslitec.exe .\samples\hello.ls -o .\out\Hello.exe
+.\compiler-publish\xpscriptc.exe .\samples\hello.xps -o .\out\Hello.exe
 ```
 
 ## Entry point
@@ -61,7 +64,7 @@ Current compiler support includes:
 - `DefBool`, `DefByte`, `DefCur`, `DefDbl`, `DefInt`, `DefLng`, `DefSng`, `DefStr`, and `DefVar`
 - `Sub` and `Function`
 - `Static Sub` and `Static Function`
-- LotusScript-style function return assignment
+- XPScript-style function return assignment
 - `Return`
 - `Dim` and `Static`
 - scalar `ByRef`
@@ -94,7 +97,7 @@ Current compiler support includes:
 
 ## Array support
 
-LS Lite implements fixed and dynamic LotusScript-style arrays independently of .NET native array syntax.
+XPScript implements fixed and dynamic XPScript-style arrays independently of .NET native array syntax.
 
 Supported array features include:
 
@@ -139,7 +142,7 @@ Sub Main()
 End Sub
 ```
 
-`ReDim Preserve` keeps existing values. For multidimensional arrays, preservation follows the LotusScript-compatible restriction that only the upper bound of the last dimension can change while preserving data.
+`ReDim Preserve` keeps existing values. For multidimensional arrays, preservation follows the XPScript-compatible restriction that only the upper bound of the last dimension can change while preserving data.
 
 ## ByRef support
 
@@ -181,7 +184,7 @@ End Select
 
 ## Error handling
 
-LS Lite provides a standalone LotusScript-style error state and control-flow implementation.
+XPScript provides a standalone XPScript-style error state and control-flow implementation.
 
 Supported forms include:
 
@@ -213,9 +216,9 @@ Handler:
 End Sub
 ```
 
-`Error$` without an argument returns the current error description. `Error$(number)` returns the registered description for that error number. The `Error` statement raises a trappable LS Lite runtime error.
+`Error$` without an argument returns the current error description. `Error$(number)` returns the registered description for that error number. The `Error` statement raises a trappable XPScript runtime error.
 
-Common .NET/OS exceptions are normalized into LotusScript-compatible numbers before `On Error` dispatch. Current mappings include:
+Common .NET/OS exceptions are normalized into XPScript-compatible numbers before `On Error` dispatch. Current mappings include:
 
 - file or directory not found -> `53`
 - overflow -> `6`
@@ -225,7 +228,7 @@ Common .NET/OS exceptions are normalized into LotusScript-compatible numbers bef
 - input past end of file -> `62`
 - permission/access denied -> `70`
 
-`Erl` exposes the protected LS Lite statement position recorded when the error was trapped. It is stable for error handling and diagnostics inside the generated program, but it is not currently guaranteed to equal the physical source-file line number.
+`Erl` exposes the protected XPScript statement position recorded when the error was trapped. It is stable for error handling and diagnostics inside the generated program, but it is not currently guaranteed to equal the physical source-file line number.
 
 ## GoTo and GoSub
 
@@ -290,20 +293,20 @@ Letter ranges and comma-separated ranges are supported.
 
 ## External DLL declarations
 
-Windows native functions and procedures can be declared using LotusScript-style declarations.
+Windows native functions and procedures can be declared using XPScript-style declarations.
 
 ```lotusscript
 Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
 Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
 ```
 
-LS Lite generates .NET P/Invoke declarations. `Lib`, `Alias`, Function/Sub, scalar parameters, `ByVal`, and scalar return types are supported.
+XPScript generates .NET P/Invoke declarations. `Lib`, `Alias`, Function/Sub, scalar parameters, `ByVal`, and scalar return types are supported.
 
 A source-level native declaration named `Sleep` remains a normal P/Invoke call. The standalone built-in `Sleep seconds` statement described below is used when no such native declaration is invoked.
 
-## LotusScript List support
+## XPScript List support
 
-LS Lite implements tagged LotusScript-style lists separately from normal arrays.
+XPScript implements tagged XPScript-style lists separately from normal arrays.
 
 Supported syntax and operations:
 
@@ -338,7 +341,7 @@ End If
 
 ## Class and object support
 
-LS Lite supports user-defined classes without Notes/Domino dependencies.
+XPScript supports user-defined classes without Notes/XPScript dependencies.
 
 Implemented features:
 
@@ -363,25 +366,25 @@ Implemented features:
 - `Me`
 - method and property access through object references
 
-`Set object2 = object1` shares the LS Lite object reference. `Delete object1` invokes `Sub Delete` and invalidates the shared reference, so aliases such as `object2` also evaluate as `Nothing`.
+`Set object2 = object1` shares the XPScript object reference. `Delete object1` invokes `Sub Delete` and invalidates the shared reference, so aliases such as `object2` also evaluate as `Nothing`.
 
-See `samples/lists-classes.ls` for a CI-tested example combining lists, classes, properties, constructors, object references, `Set`, `New`, `Delete`, and `Me`.
+See `samples/lists-classes.xps` for a CI-tested example combining lists, classes, properties, constructors, object references, `Set`, `New`, `Delete`, and `Me`.
 
 ## Environment and OS compatibility
 
-Functions that normally depend on a host application or operating system use explicit LS Lite standalone behavior.
+Functions that normally depend on a host application or operating system use explicit XPScript standalone behavior.
 
 ### Environ / Environ$
 
 `Environ("NAME")` and `Environ$("NAME")` read the generated process environment. A missing variable returns an empty string.
 
-A numeric argument uses LS Lite's deterministic compatibility rule: environment entries are sorted case-insensitively as `NAME=VALUE` strings and returned using a one-based index.
+A numeric argument uses XPScript's deterministic compatibility rule: environment entries are sorted case-insensitively as `NAME=VALUE` strings and returned using a one-based index.
 
 ### Shell
 
-`Shell(command [, windowStyle])` starts an external process using the target operating system. LS Lite returns `33` after the process is successfully launched. It does not wait for the process to finish and the value is not the child process exit code.
+`Shell(command [, windowStyle])` starts an external process using the target operating system. XPScript returns `33` after the process is successfully launched. It does not wait for the process to finish and the value is not the child process exit code.
 
-On Windows, `.cmd` and `.bat` files are launched through `COMSPEC`/`cmd.exe`. A basic LotusScript-style window-state mapping is applied when `windowStyle` is supplied.
+On Windows, `.cmd` and `.bat` files are launched through `COMSPEC`/`cmd.exe`. A basic XPScript-style window-state mapping is applied when `windowStyle` is supplied.
 
 ### Sleep
 
@@ -393,20 +396,20 @@ Sleep 0.25
 
 ### GetObject
 
-`GetObject` is a Windows-only COM compatibility function in LS Lite.
+`GetObject` is a Windows-only COM compatibility function in XPScript.
 
 - `GetObject(pathname)` binds to a COM moniker for the supplied path.
 - `GetObject("", "Prog.Id")` creates an instance from a registered COM ProgID.
 
-This is not a Notes/Domino object lookup mechanism.
+This is not a Notes/XPScript object lookup mechanism.
 
 ### Stop
 
-`Stop` breaks into an attached debugger. If no debugger is attached, LS Lite raises runtime error `5`, allowing it to be handled by `On Error` rather than silently terminating the process.
+`Stop` breaks into an attached debugger. If no debugger is attached, XPScript raises runtime error `5`, allowing it to be handled by `On Error` rather than silently terminating the process.
 
 ## Formatting
 
-LS Lite supports:
+XPScript supports:
 
 - `Format`
 - `Format$`
@@ -425,13 +428,13 @@ LS Lite supports:
 - `True/False`
 - `On/Off`
 
-`FormatNumber` and `FormatPercent` are explicit LS Lite standalone extensions. They use the current process culture and support optional decimal-place and negative-number formatting arguments.
+`FormatNumber` and `FormatPercent` are explicit XPScript standalone extensions. They use the current process culture and support optional decimal-place and negative-number formatting arguments.
 
 ## Miscellaneous runtime functions
 
 ### Evaluate
 
-`Evaluate(expression [, host])` is deliberately standalone. It evaluates scalar expressions using the LS Lite runtime and does not provide the Domino `@Formula` engine.
+`Evaluate(expression [, host])` is deliberately standalone. It evaluates scalar expressions using the XPScript runtime and does not provide the XPScript `@Formula` engine.
 
 For example:
 
@@ -441,7 +444,7 @@ Print CStr(Evaluate("1+2*3"))
 
 prints `7`.
 
-Expressions containing `@` are rejected with LS Lite runtime error `5` instead of pretending that Domino formula functions are available.
+Expressions containing `@` are rejected with XPScript runtime error `5` instead of pretending that XPScript formula functions are available.
 
 ### InputBox
 
@@ -449,7 +452,7 @@ Expressions containing `@` are rejected with LS Lite runtime error `5` instead o
 
 ### MessageBox / MsgBox
 
-`MessageBox` and `MsgBox` use LS Lite's console compatibility implementation. The title and message are written to standard output and the function returns `1` for OK.
+`MessageBox` and `MsgBox` use XPScript's console compatibility implementation. The title and message are written to standard output and the function returns `1` for OK.
 
 ### Beep
 
@@ -461,9 +464,9 @@ Expressions containing `@` are rejected with LS Lite runtime error `5` instead o
 
 ## Standalone SAX compatibility
 
-LS Lite provides self-contained compatibility facades named `NotesSAXParser`, `NotesSAXAttributeList`, and `NotesSAXException`. They do not load or require HCL Notes/Domino.
+XPScript provides self-contained compatibility facades named `NotesSAXParser`, `NotesSAXAttributeList`, and `NotesSAXException`. They do not load or require XPScript Notes/XPScript.
 
-The parser is event driven. Event handlers can be connected using LotusScript-style syntax and are called synchronously while the XML stream is being parsed:
+The parser is event driven. Event handlers can be connected using XPScript-style syntax and are called synchronously while the XML stream is being parsed:
 
 ```lotusscript
 Sub Main()
@@ -523,13 +526,13 @@ Events currently emitted by the standalone parser are:
 
 Numeric attribute access is one based. XML attributes currently report type `CDATA`.
 
-The façade intentionally focuses on the event-driven parsing behavior needed by standalone LS Lite applications. Domino-specific parser integration and the full set of DTD/entity callback semantics are not currently emulated.
+The façade intentionally focuses on the event-driven parsing behavior needed by standalone XPScript applications. XPScript-specific parser integration and the full set of DTD/entity callback semantics are not currently emulated.
 
-See `samples/runtime-sax.ls` for the CI-tested event-callback example.
+See `samples/runtime-sax.xps` for the CI-tested event-callback example.
 
 ## Built-in functions
 
-The runtime implements a broad standalone subset of LotusScript standard functions.
+The runtime implements a broad standalone subset of XPScript standard functions.
 
 ### Strings
 
@@ -594,24 +597,24 @@ Binary positioning is byte based and one based at the language surface. Random p
 The GitHub Actions workflow uses .NET 10 on Windows and performs:
 
 1. compiler restore and build
-2. compilation and execution of `samples/compatibility.ls`
+2. compilation and execution of `samples/compatibility.xps`
 3. verification of string, number, date, and file functionality
-4. compilation and execution of `samples/lists-classes.ls`
+4. compilation and execution of `samples/lists-classes.xps`
 5. verification of List and class behavior
-6. compilation and execution of `samples/core-language.ls`
+6. compilation and execution of `samples/core-language.xps`
 7. verification of arrays, ReDim Preserve, LBound/UBound, ByRef, Select Case, error handling, Resume variants, GoTo, GoSub, labels, native declarations, Binary/Random Get/Put/Loc, With, Static, and Deftype
-8. compilation and execution of `samples/runtime-sax.ls`
+8. compilation and execution of `samples/runtime-sax.xps`
 9. verification of environment access, formatting, Error/Error$/Err/Erl handling, missing-file error 53, Resume Next, Sleep, Shell, Evaluate, MessageBox, SAX event callbacks, and SAX attribute access
 
 This checks both the compiler itself and generated Windows executables.
 
 ## Remaining compatibility work
 
-LS Lite is not intended to provide the general Notes/Domino object model. The SAX names documented above are standalone compatibility facades rather than Domino objects.
+XPScript is not intended to provide the general Notes/XPScript object model. The SAX names documented above are standalone compatibility facades rather than XPScript objects.
 
 Areas that still require additional compatibility work include:
 
-- general Notes/Domino classes outside the documented SAX compatibility facade
+- general Notes/XPScript classes outside the documented SAX compatibility facade
 - complete Notes SAX DTD/entity callback parity
 - user-defined Type/UDT support
 - parameterized or indexed properties
@@ -619,20 +622,20 @@ Areas that still require additional compatibility work include:
 - native DLL declarations involving UDTs, pointers, callbacks, or complex marshaling
 - Binary/Random `Get` and `Put` for UDT records and other complex aggregate values
 - physical source-line fidelity for `Erl`
-- every locale-specific LotusScript coercion and formatting edge case
+- every locale-specific XPScript coercion and formatting edge case
 - native GUI implementations of `MessageBox` and `InputBox`
 
 ## Architecture
 
-1. `LotusTranspiler` protects source literals and orchestrates the compiler passes.
+1. `XPScriptTranspiler` protects source literals and orchestrates the compiler passes.
 2. `ExtendedCompatibilityTranspiler` normalizes host-dependent functions, `Error$` shorthand, and SAX event syntax before the core language pass.
 3. `CoreCompatibilityTranspiler` adds arrays, ByRef, Select Case, error handling, labels, native declarations, advanced file I/O, With, Static, and Deftype support.
-4. `AdvancedLotusTranspiler` handles the base language, classes, Lists, expressions, and procedure generation.
-5. `LotusRuntime` provides standard functions and basic runtime services.
+4. `AdvancedXPScriptTranspiler` handles the base language, classes, Lists, expressions, and procedure generation.
+5. `XPScriptRuntime` provides standard functions and basic runtime services.
 6. `LSExtendedRuntime` provides environment, OS, formatting, interaction, Evaluate, GetObject, Shell, Sleep, and Stop compatibility behavior.
-7. `LSExtendedErrorRuntime` maps common .NET/OS exceptions to LotusScript-compatible error numbers.
+7. `LSExtendedErrorRuntime` maps common .NET/OS exceptions to XPScript-compatible error numbers.
 8. `NotesSAXParser`, `NotesSAXAttributeList`, and `LSSaxRuntime` provide the standalone event-driven SAX facade.
-9. `LSArray` provides LotusScript-style bounds, dimensions, ReDim, and Preserve semantics.
+9. `LSArray` provides XPScript-style bounds, dimensions, ReDim, and Preserve semantics.
 10. `LSList<T>` provides tagged List semantics and `ForAll` aliases.
 11. `LSRef<T>` provides shared object-reference semantics for `Set`, `Nothing`, and `Delete`.
 12. `LSControlRuntime` provides error-handler and GoSub state.

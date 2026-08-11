@@ -1,6 +1,6 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
-public static class LotusObjectRuntimeSource
+public static class XPScriptObjectRuntimeSource
 {
     public const string Code = """
 internal abstract class LSObjectBase

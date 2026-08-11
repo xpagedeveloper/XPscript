@@ -2,17 +2,17 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained)
     {
         var source = await File.ReadAllTextAsync(sourcePath);
-        var transpiler = new LotusTranspiler();
+        var transpiler = new XPScriptTranspiler();
         var generatedSource = transpiler.Transpile(source, sourcePath);
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "LSLite", Guid.NewGuid().ToString("N"));
+        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
 
         try

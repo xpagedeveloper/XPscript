@@ -1,4 +1,4 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 public static class JsonNodesSerializerShimSource
 {

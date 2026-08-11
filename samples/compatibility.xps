@@ -22,15 +22,15 @@ Sub Main()
     Print CStr(n)
 
     f = FreeFile()
-    Open "lslite-compat.txt" For Output As #f
+    Open "xpscript-compat.txt" For Output As #f
     Print #f, "FILE-OK"
     Close #f
 
     f = FreeFile()
-    Open "lslite-compat.txt" For Input As #f
+    Open "xpscript-compat.txt" For Input As #f
     Line Input #f, lineText
     Close #f
     Print lineText
-    Print CStr(FileLen("lslite-compat.txt"))
-    Kill "lslite-compat.txt"
+    Print CStr(FileLen("xpscript-compat.txt"))
+    Kill "xpscript-compat.txt"
 End Sub

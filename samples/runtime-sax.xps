@@ -34,7 +34,7 @@ Sub Main()
     End If
 
     On Error GoTo MissingHandler
-    Open "__lslite_missing_runtime_file__.txt" For Input As #1
+    Open "__xpscript_missing_runtime_file__.txt" For Input As #1
     Print "FILEERR=RESUMED"
     GoTo MissingDone
 MissingHandler:
@@ -50,7 +50,7 @@ MissingDone:
     calc = Evaluate("1+2*3")
     Print "EVALUATE=" & CStr(calc)
 
-    answer = MessageBox("CONSOLE-MSG", 0, "LS Lite")
+    answer = MessageBox("CONSOLE-MSG", 0, "XPScript")
     Print "MESSAGEBOX=" & CStr(answer)
 
     Set parser = New NotesSAXParser("<root id=""7""><child>text</child></root>")

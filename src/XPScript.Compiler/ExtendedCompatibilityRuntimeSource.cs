@@ -1,4 +1,4 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 public static class ExtendedCompatibilityRuntimeSource
 {
@@ -9,18 +9,18 @@ internal static class LSExtendedErrorRuntime
     {
         if (exception is System.Reflection.TargetInvocationException tie && tie.InnerException is not null)
             exception = tie.InnerException;
-        if (exception is LotusScriptRuntimeException)
+        if (exception is XPScriptRuntimeException)
             return exception;
 
         return exception switch
         {
-            FileNotFoundException or DirectoryNotFoundException => new LotusScriptRuntimeException(53, exception.Message),
-            OverflowException => new LotusScriptRuntimeException(6, exception.Message),
-            DivideByZeroException => new LotusScriptRuntimeException(11, exception.Message),
-            IndexOutOfRangeException => new LotusScriptRuntimeException(9, exception.Message),
-            InvalidCastException or FormatException => new LotusScriptRuntimeException(13, exception.Message),
-            EndOfStreamException => new LotusScriptRuntimeException(62, exception.Message),
-            UnauthorizedAccessException => new LotusScriptRuntimeException(70, exception.Message),
+            FileNotFoundException or DirectoryNotFoundException => new XPScriptRuntimeException(53, exception.Message),
+            OverflowException => new XPScriptRuntimeException(6, exception.Message),
+            DivideByZeroException => new XPScriptRuntimeException(11, exception.Message),
+            IndexOutOfRangeException => new XPScriptRuntimeException(9, exception.Message),
+            InvalidCastException or FormatException => new XPScriptRuntimeException(13, exception.Message),
+            EndOfStreamException => new XPScriptRuntimeException(62, exception.Message),
+            UnauthorizedAccessException => new XPScriptRuntimeException(70, exception.Message),
             _ => exception
         };
     }
@@ -32,7 +32,7 @@ internal static class LSExtendedRuntime
     {
         if (key is byte or short or int or long or float or double or decimal)
         {
-            var index = LotusRuntime.CInt(key);
+            var index = XPScriptRuntime.CInt(key);
             if (index < 1) return "";
             var entries = Environment.GetEnvironmentVariables()
                 .Cast<System.Collections.DictionaryEntry>()
@@ -41,19 +41,19 @@ internal static class LSExtendedRuntime
                 .ToArray();
             return index <= entries.Length ? entries[index - 1] : "";
         }
-        return Environment.GetEnvironmentVariable(LotusRuntime.CStr(key)) ?? "";
+        return Environment.GetEnvironmentVariable(XPScriptRuntime.CStr(key)) ?? "";
     }
 
     public static void Sleep(object? seconds)
     {
-        var value = Math.Max(0d, LotusRuntime.CDbl(seconds));
+        var value = Math.Max(0d, XPScriptRuntime.CDbl(seconds));
         System.Threading.Thread.Sleep(TimeSpan.FromSeconds(value));
     }
 
     public static int Shell(object? command, object? windowStyle = null)
     {
-        var raw = LotusRuntime.CStr(command).Trim();
-        if (raw.Length == 0) throw new LotusScriptRuntimeException(5, "Shell requires a program name.");
+        var raw = XPScriptRuntime.CStr(command).Trim();
+        if (raw.Length == 0) throw new XPScriptRuntimeException(5, "Shell requires a program name.");
         var (fileName, arguments) = SplitCommand(raw);
 
         try
@@ -73,7 +73,7 @@ internal static class LSExtendedRuntime
             };
             if (windowStyle is not null)
             {
-                info.WindowStyle = LotusRuntime.CInt(windowStyle) switch
+                info.WindowStyle = XPScriptRuntime.CInt(windowStyle) switch
                 {
                     0 => System.Diagnostics.ProcessWindowStyle.Hidden,
                     2 => System.Diagnostics.ProcessWindowStyle.Minimized,
@@ -92,12 +92,12 @@ internal static class LSExtendedRuntime
 
     public static string Format(object? value, object? format = null)
     {
-        var mask = LotusRuntime.CStr(format).Trim();
-        if (mask.Length == 0) return LotusRuntime.CStr(value);
+        var mask = XPScriptRuntime.CStr(format).Trim();
+        if (mask.Length == 0) return XPScriptRuntime.CStr(value);
         var lower = mask.ToLowerInvariant();
-        if (LotusRuntime.IsNumeric(value))
+        if (XPScriptRuntime.IsNumeric(value))
         {
-            var number = LotusRuntime.CDbl(value);
+            var number = XPScriptRuntime.CDbl(value);
             return lower switch
             {
                 "general number" => number.ToString("G", CultureInfo.CurrentCulture),
@@ -109,22 +109,22 @@ internal static class LSExtendedRuntime
                 "yes/no" => number == 0 ? "No" : "Yes",
                 "true/false" => number == 0 ? "False" : "True",
                 "on/off" => number == 0 ? "Off" : "On",
-                _ => value is IFormattable f ? f.ToString(mask, CultureInfo.CurrentCulture) ?? "" : LotusRuntime.CStr(value)
+                _ => value is IFormattable f ? f.ToString(mask, CultureInfo.CurrentCulture) ?? "" : XPScriptRuntime.CStr(value)
             };
         }
         if (value is DateTime dt) return dt.ToString(mask, CultureInfo.CurrentCulture);
-        return value is IFormattable formattable ? formattable.ToString(mask, CultureInfo.CurrentCulture) ?? "" : LotusRuntime.CStr(value);
+        return value is IFormattable formattable ? formattable.ToString(mask, CultureInfo.CurrentCulture) ?? "" : XPScriptRuntime.CStr(value);
     }
 
     public static string FormatNumber(object? value, object? decimalPlaces = null, object? includeLeadingDigit = null, object? useParensForNegativeNumbers = null, object? groupDigits = null)
     {
-        var digits = decimalPlaces is null ? CultureInfo.CurrentCulture.NumberFormat.NumberDecimalDigits : Math.Max(0, LotusRuntime.CInt(decimalPlaces));
-        var grouped = groupDigits is null || LotusRuntime.CInt(groupDigits) != 0;
+        var digits = decimalPlaces is null ? CultureInfo.CurrentCulture.NumberFormat.NumberDecimalDigits : Math.Max(0, XPScriptRuntime.CInt(decimalPlaces));
+        var grouped = groupDigits is null || XPScriptRuntime.CInt(groupDigits) != 0;
         var format = (grouped ? "N" : "F") + digits.ToString(CultureInfo.InvariantCulture);
-        var text = LotusRuntime.CDbl(value).ToString(format, CultureInfo.CurrentCulture);
-        if (useParensForNegativeNumbers is not null && LotusRuntime.CInt(useParensForNegativeNumbers) != 0 && LotusRuntime.CDbl(value) < 0)
+        var text = XPScriptRuntime.CDbl(value).ToString(format, CultureInfo.CurrentCulture);
+        if (useParensForNegativeNumbers is not null && XPScriptRuntime.CInt(useParensForNegativeNumbers) != 0 && XPScriptRuntime.CDbl(value) < 0)
             text = "(" + text.TrimStart('-') + ")";
-        if (includeLeadingDigit is not null && LotusRuntime.CInt(includeLeadingDigit) == 0)
+        if (includeLeadingDigit is not null && XPScriptRuntime.CInt(includeLeadingDigit) == 0)
         {
             var zero = "0" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
             if (text.StartsWith(zero, StringComparison.CurrentCulture)) text = text[1..];
@@ -135,19 +135,19 @@ internal static class LSExtendedRuntime
 
     public static string FormatPercent(object? value, object? decimalPlaces = null, object? includeLeadingDigit = null, object? useParensForNegativeNumbers = null, object? groupDigits = null)
     {
-        var digits = decimalPlaces is null ? CultureInfo.CurrentCulture.NumberFormat.PercentDecimalDigits : Math.Max(0, LotusRuntime.CInt(decimalPlaces));
-        var text = LotusRuntime.CDbl(value).ToString("P" + digits.ToString(CultureInfo.InvariantCulture), CultureInfo.CurrentCulture);
-        if (useParensForNegativeNumbers is not null && LotusRuntime.CInt(useParensForNegativeNumbers) != 0 && LotusRuntime.CDbl(value) < 0)
+        var digits = decimalPlaces is null ? CultureInfo.CurrentCulture.NumberFormat.PercentDecimalDigits : Math.Max(0, XPScriptRuntime.CInt(decimalPlaces));
+        var text = XPScriptRuntime.CDbl(value).ToString("P" + digits.ToString(CultureInfo.InvariantCulture), CultureInfo.CurrentCulture);
+        if (useParensForNegativeNumbers is not null && XPScriptRuntime.CInt(useParensForNegativeNumbers) != 0 && XPScriptRuntime.CDbl(value) < 0)
             text = "(" + text.TrimStart('-') + ")";
         return text;
     }
 
     public static object? Evaluate(object? expression, object? host = null)
     {
-        var text = LotusRuntime.CStr(expression).Trim();
+        var text = XPScriptRuntime.CStr(expression).Trim();
         if (text.Length == 0) return null;
         if (text.Contains('@'))
-            throw new LotusScriptRuntimeException(5, "LS Lite Evaluate does not provide the Domino @Formula engine.");
+            throw new XPScriptRuntimeException(5, "XPScript Evaluate does not provide the XPScript @Formula engine.");
         try
         {
             var table = new System.Data.DataTable { Locale = CultureInfo.CurrentCulture };
@@ -155,17 +155,17 @@ internal static class LSExtendedRuntime
         }
         catch (Exception ex)
         {
-            throw new LotusScriptRuntimeException(5, "Evaluate expression is not supported: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "Evaluate expression is not supported: " + ex.Message);
         }
     }
 
     public static object? GetObject(object? pathname = null, object? className = null)
     {
         if (!OperatingSystem.IsWindows())
-            throw new LotusScriptRuntimeException(5, "GetObject is available only on Windows in LS Lite.");
+            throw new XPScriptRuntimeException(5, "GetObject is available only on Windows in XPScript.");
 
-        var path = pathname is null ? "" : LotusRuntime.CStr(pathname).Trim();
-        var progId = className is null ? "" : LotusRuntime.CStr(className).Trim();
+        var path = pathname is null ? "" : XPScriptRuntime.CStr(pathname).Trim();
+        var progId = className is null ? "" : XPScriptRuntime.CStr(className).Trim();
         try
         {
             if (path.Length > 0)
@@ -176,27 +176,27 @@ internal static class LSExtendedRuntime
                     ?? throw new COMException("COM class not found: " + progId);
                 return Activator.CreateInstance(type);
             }
-            throw new LotusScriptRuntimeException(5, "GetObject requires a pathname or COM ProgID.");
+            throw new XPScriptRuntimeException(5, "GetObject requires a pathname or COM ProgID.");
         }
-        catch (Exception ex) when (ex is not LotusScriptRuntimeException)
+        catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
-            throw new LotusScriptRuntimeException(5, ex.Message);
+            throw new XPScriptRuntimeException(5, ex.Message);
         }
     }
 
     public static string InputBox(object? prompt, object? title = null, object? defaultValue = null)
     {
-        if (title is not null && LotusRuntime.CStr(title).Length > 0) Console.Write("[" + LotusRuntime.CStr(title) + "] ");
-        Console.Write(LotusRuntime.CStr(prompt));
+        if (title is not null && XPScriptRuntime.CStr(title).Length > 0) Console.Write("[" + XPScriptRuntime.CStr(title) + "] ");
+        Console.Write(XPScriptRuntime.CStr(prompt));
         var input = Console.ReadLine();
-        return input ?? LotusRuntime.CStr(defaultValue);
+        return input ?? XPScriptRuntime.CStr(defaultValue);
     }
 
     public static int MessageBox(object? message, object? buttons = null, object? boxTitle = null)
     {
-        var title = boxTitle is null ? "" : LotusRuntime.CStr(boxTitle);
-        if (title.Length > 0) Console.WriteLine("[" + title + "] " + LotusRuntime.CStr(message));
-        else Console.WriteLine(LotusRuntime.CStr(message));
+        var title = boxTitle is null ? "" : XPScriptRuntime.CStr(boxTitle);
+        if (title.Length > 0) Console.WriteLine("[" + title + "] " + XPScriptRuntime.CStr(message));
+        else Console.WriteLine(XPScriptRuntime.CStr(message));
         return 1;
     }
 
@@ -207,7 +207,7 @@ internal static class LSExtendedRuntime
             System.Diagnostics.Debugger.Break();
             return;
         }
-        throw new LotusScriptRuntimeException(5, "Stop statement reached.");
+        throw new XPScriptRuntimeException(5, "Stop statement reached.");
     }
 
     private static (string FileName, string Arguments) SplitCommand(string command)
@@ -215,7 +215,7 @@ internal static class LSExtendedRuntime
         if (command[0] == '"')
         {
             var close = command.IndexOf('"', 1);
-            if (close < 0) throw new LotusScriptRuntimeException(5, "Unterminated executable quote in Shell command.");
+            if (close < 0) throw new XPScriptRuntimeException(5, "Unterminated executable quote in Shell command.");
             return (command[1..close], command[(close + 1)..].TrimStart());
         }
         var space = command.IndexOf(' ');
@@ -254,7 +254,7 @@ internal sealed class NotesSAXAttributeList
         if (key is string text && !int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
             return _attributes.FirstOrDefault(x => x.Name.Equals(text, StringComparison.OrdinalIgnoreCase))
                 ?? throw new IndexOutOfRangeException("SAX attribute not found: " + text);
-        var index = LotusRuntime.CInt(key);
+        var index = XPScriptRuntime.CInt(key);
         if (index < 1 || index > _attributes.Count) throw new IndexOutOfRangeException("SAX attribute index out of range.");
         return _attributes[index - 1];
     }
@@ -279,7 +279,7 @@ internal sealed class NotesSAXParser
     public void SetInput(object? input) => _input = input;
     public void SetOutput(object? output) => _output = output;
     public string Output() => _capturedOutput.ToString();
-    public void Output(object? value) => WriteOutput(LotusRuntime.CStr(value));
+    public void Output(object? value) => WriteOutput(XPScriptRuntime.CStr(value));
 
     public void Process() => Parse();
     public void Parse() => ParseCore(ReadInput(_input));
@@ -394,7 +394,7 @@ internal sealed class NotesSAXParser
             using var reader = new StreamReader(stream, Encoding.UTF8, true, 1024, true);
             return reader.ReadToEnd();
         }
-        return LotusRuntime.CStr(input);
+        return XPScriptRuntime.CStr(input);
     }
 
     private void WriteOutput(string value)
@@ -416,12 +416,12 @@ internal static class LSSaxRuntime
 
     public static void Bind(object? parser, object? eventName, object? handler)
     {
-        Require(parser).Bind(LotusRuntime.CStr(eventName), LotusRuntime.CStr(handler));
+        Require(parser).Bind(XPScriptRuntime.CStr(eventName), XPScriptRuntime.CStr(handler));
     }
 
     public static void Remove(object? parser, object? eventName, object? handler = null)
     {
-        Require(parser).Remove(LotusRuntime.CStr(eventName), handler is null ? null : LotusRuntime.CStr(handler));
+        Require(parser).Remove(XPScriptRuntime.CStr(eventName), handler is null ? null : XPScriptRuntime.CStr(handler));
     }
 
     private static NotesSAXParser Require(object? parser) => parser as NotesSAXParser ?? throw new InvalidOperationException("Object is not a NotesSAXParser compatibility instance.");

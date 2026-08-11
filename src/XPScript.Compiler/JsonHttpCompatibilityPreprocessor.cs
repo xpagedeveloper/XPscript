@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal sealed class JsonHttpCompatibilityPreprocessor
 {

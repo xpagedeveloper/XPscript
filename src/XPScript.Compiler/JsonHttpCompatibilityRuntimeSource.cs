@@ -1,4 +1,4 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 public static class JsonHttpCompatibilityRuntimeSource
 {
@@ -12,7 +12,7 @@ internal static class LSJsonHttpRuntime
     public static NotesJSONElement CreateJSONElement(object? value = null, object? name = null)
     {
         var node = LSJsonNodeRuntime.ToNode(value);
-        return new NotesJSONElement(LotusRuntime.CStr(name), node, null);
+        return new NotesJSONElement(XPScriptRuntime.CStr(name), node, null);
     }
 }
 
@@ -27,7 +27,7 @@ internal static class LSJsonNodeRuntime
         if (input is NotesJSONElement element) return element.RawNode?.DeepClone();
         if (input is byte[] bytes) return ParseText(System.Text.Encoding.UTF8.GetString(bytes));
 
-        var text = LotusRuntime.CStr(input);
+        var text = XPScriptRuntime.CStr(input);
         if (string.IsNullOrWhiteSpace(text)) return new System.Text.Json.Nodes.JsonObject();
         return ParseText(text);
     }
@@ -37,15 +37,15 @@ internal static class LSJsonNodeRuntime
         try
         {
             return System.Text.Json.Nodes.JsonNode.Parse(text)
-                ?? throw new LotusScriptRuntimeException(5, "JSON input is empty.");
+                ?? throw new XPScriptRuntimeException(5, "JSON input is empty.");
         }
-        catch (LotusScriptRuntimeException)
+        catch (XPScriptRuntimeException)
         {
             throw;
         }
         catch (Exception ex)
         {
-            throw new LotusScriptRuntimeException(5, "Invalid JSON: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "Invalid JSON: " + ex.Message);
         }
     }
 
@@ -122,7 +122,7 @@ internal static class LSJsonNodeRuntime
     {
         if (index >= 1 && index <= size) return;
         if (suppressErrors) return;
-        throw new LotusScriptRuntimeException(9, "Index is out of range.");
+        throw new XPScriptRuntimeException(9, "Index is out of range.");
     }
 }
 
@@ -156,7 +156,7 @@ internal sealed class NotesJSONElement
     public void Copy(object? source)
     {
         if (source is not NotesJSONElement element)
-            throw new LotusScriptRuntimeException(13, "Copy requires NotesJSONElement.");
+            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONElement.");
         _node = element.RawNode?.DeepClone();
         _setter?.Invoke(_node);
     }
@@ -171,7 +171,7 @@ internal sealed class NotesJSONObject
 
     public NotesJSONElement? GetElementByName(object? name)
     {
-        var key = LotusRuntime.CStr(name);
+        var key = XPScriptRuntime.CStr(name);
         return Node.ContainsKey(key) ? LSJsonNodeRuntime.ElementFromObject(Node, key) : null;
     }
 
@@ -189,8 +189,8 @@ internal sealed class NotesJSONObject
 
     public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
-        var oneBased = LotusRuntime.CInt(index);
-        var suppress = suppressErrors is not null && LotusRuntime.CBool(suppressErrors);
+        var oneBased = XPScriptRuntime.CInt(index);
+        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
         LSJsonNodeRuntime.ValidateOneBasedIndex(oneBased, Size, suppress);
         if (oneBased < 1 || oneBased > Size) return null;
         _cursor = oneBased - 1;
@@ -199,16 +199,16 @@ internal sealed class NotesJSONObject
 
     public NotesJSONElement AppendElement(object? value, object? name)
     {
-        var key = LotusRuntime.CStr(name);
-        if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON object elements require a name.");
+        var key = XPScriptRuntime.CStr(name);
+        if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name.");
         Node[key] = LSJsonNodeRuntime.ToNode(value);
         return LSJsonNodeRuntime.ElementFromObject(Node, key);
     }
 
     public NotesJSONArray AppendArray(object? name)
     {
-        var key = LotusRuntime.CStr(name);
-        if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON object arrays require a name.");
+        var key = XPScriptRuntime.CStr(name);
+        if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object arrays require a name.");
         var arr = new System.Text.Json.Nodes.JsonArray();
         Node[key] = arr;
         return new NotesJSONArray(arr);
@@ -216,8 +216,8 @@ internal sealed class NotesJSONObject
 
     public NotesJSONObject AppendObject(object? name)
     {
-        var key = LotusRuntime.CStr(name);
-        if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON objects require a name.");
+        var key = XPScriptRuntime.CStr(name);
+        if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON objects require a name.");
         var obj = new System.Text.Json.Nodes.JsonObject();
         Node[key] = obj;
         return new NotesJSONObject(obj);
@@ -226,7 +226,7 @@ internal sealed class NotesJSONObject
     public void Copy(object? source)
     {
         if (source is not NotesJSONObject other)
-            throw new LotusScriptRuntimeException(13, "Copy requires NotesJSONObject.");
+            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONObject.");
         Node.Clear();
         foreach (var pair in other.Node)
             Node[pair.Key] = pair.Value?.DeepClone();
@@ -238,7 +238,7 @@ internal sealed class NotesJSONObject
         if (zeroBased < 0 || zeroBased >= Size)
         {
             if (suppress) return null;
-            throw new LotusScriptRuntimeException(9, "Index is out of range.");
+            throw new XPScriptRuntimeException(9, "Index is out of range.");
         }
         var key = Node.ElementAt(zeroBased).Key;
         return LSJsonNodeRuntime.ElementFromObject(Node, key);
@@ -266,8 +266,8 @@ internal sealed class NotesJSONArray
 
     public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
-        var oneBased = LotusRuntime.CInt(index);
-        var suppress = suppressErrors is not null && LotusRuntime.CBool(suppressErrors);
+        var oneBased = XPScriptRuntime.CInt(index);
+        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
         LSJsonNodeRuntime.ValidateOneBasedIndex(oneBased, Size, suppress);
         if (oneBased < 1 || oneBased > Size) return null;
         _cursor = oneBased - 1;
@@ -297,7 +297,7 @@ internal sealed class NotesJSONArray
     public void Copy(object? source)
     {
         if (source is not NotesJSONArray other)
-            throw new LotusScriptRuntimeException(13, "Copy requires NotesJSONArray.");
+            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONArray.");
         Node.Clear();
         foreach (var item in other.Node)
             Node.Add(item?.DeepClone());
@@ -309,7 +309,7 @@ internal sealed class NotesJSONArray
         if (zeroBased < 0 || zeroBased >= Size)
         {
             if (suppress) return null;
-            throw new LotusScriptRuntimeException(9, "Index is out of range.");
+            throw new XPScriptRuntimeException(9, "Index is out of range.");
         }
         return LSJsonNodeRuntime.ElementFromArray(Node, zeroBased);
     }
@@ -331,16 +331,16 @@ internal sealed class NotesJSONNavigator
     public NotesJSONElement? GetElementByName(object? name)
     {
         if (Root is not System.Text.Json.Nodes.JsonObject obj) return null;
-        var key = LotusRuntime.CStr(name);
+        var key = XPScriptRuntime.CStr(name);
         return obj.ContainsKey(key) ? LSJsonNodeRuntime.ElementFromObject(obj, key) : null;
     }
 
     public NotesJSONElement? GetElementByPointer(object? pointer)
     {
-        var text = LotusRuntime.CStr(pointer);
+        var text = XPScriptRuntime.CStr(pointer);
         if (text.Length == 0) return new NotesJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
         if (!text.StartsWith('/', StringComparison.Ordinal))
-            throw new LotusScriptRuntimeException(5, "JSON Pointer must start with '/'.");
+            throw new XPScriptRuntimeException(5, "JSON Pointer must start with '/'.");
 
         System.Text.Json.Nodes.JsonNode? current = Root;
         System.Text.Json.Nodes.JsonNode? parent = null;
@@ -393,8 +393,8 @@ internal sealed class NotesJSONNavigator
 
     public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
-        var oneBased = LotusRuntime.CInt(index);
-        var suppress = suppressErrors is not null && LotusRuntime.CBool(suppressErrors);
+        var oneBased = XPScriptRuntime.CInt(index);
+        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
         var size = Root switch
         {
             System.Text.Json.Nodes.JsonObject obj => obj.Count,
@@ -413,8 +413,8 @@ internal sealed class NotesJSONNavigator
     {
         if (Root is System.Text.Json.Nodes.JsonObject obj)
         {
-            var key = LotusRuntime.CStr(name);
-            if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON object elements require a name.");
+            var key = XPScriptRuntime.CStr(name);
+            if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name.");
             obj[key] = LSJsonNodeRuntime.ToNode(value);
             return LSJsonNodeRuntime.ElementFromObject(obj, key);
         }
@@ -423,7 +423,7 @@ internal sealed class NotesJSONNavigator
             arr.Add(LSJsonNodeRuntime.ToNode(value));
             return LSJsonNodeRuntime.ElementFromArray(arr, arr.Count - 1);
         }
-        throw new LotusScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+        throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
     }
 
     public NotesJSONArray AppendArray(object? name = null)
@@ -431,15 +431,15 @@ internal sealed class NotesJSONNavigator
         var child = new System.Text.Json.Nodes.JsonArray();
         if (Root is System.Text.Json.Nodes.JsonObject obj)
         {
-            var key = LotusRuntime.CStr(name);
-            if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON object arrays require a name.");
+            var key = XPScriptRuntime.CStr(name);
+            if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object arrays require a name.");
             obj[key] = child;
         }
         else if (Root is System.Text.Json.Nodes.JsonArray arr)
         {
             arr.Add(child);
         }
-        else throw new LotusScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+        else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
         return new NotesJSONArray(child);
     }
 
@@ -448,15 +448,15 @@ internal sealed class NotesJSONNavigator
         var child = new System.Text.Json.Nodes.JsonObject();
         if (Root is System.Text.Json.Nodes.JsonObject obj)
         {
-            var key = LotusRuntime.CStr(name);
-            if (key.Length == 0) throw new LotusScriptRuntimeException(5, "JSON objects require a name.");
+            var key = XPScriptRuntime.CStr(name);
+            if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON objects require a name.");
             obj[key] = child;
         }
         else if (Root is System.Text.Json.Nodes.JsonArray arr)
         {
             arr.Add(child);
         }
-        else throw new LotusScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+        else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
         return new NotesJSONObject(child);
     }
 
@@ -467,7 +467,7 @@ internal sealed class NotesJSONNavigator
             if (zeroBased < 0 || zeroBased >= obj.Count)
             {
                 if (suppress) return null;
-                throw new LotusScriptRuntimeException(9, "Index is out of range.");
+                throw new XPScriptRuntimeException(9, "Index is out of range.");
             }
             var key = obj.ElementAt(zeroBased).Key;
             return LSJsonNodeRuntime.ElementFromObject(obj, key);
@@ -477,7 +477,7 @@ internal sealed class NotesJSONNavigator
             if (zeroBased < 0 || zeroBased >= arr.Count)
             {
                 if (suppress) return null;
-                throw new LotusScriptRuntimeException(9, "Index is out of range.");
+                throw new XPScriptRuntimeException(9, "Index is out of range.");
             }
             return LSJsonNodeRuntime.ElementFromArray(arr, zeroBased);
         }
@@ -506,9 +506,9 @@ internal sealed class NotesHTTPRequest
 
     public void SetHeaderField(object? name, object? value)
     {
-        var key = LotusRuntime.CStr(name).Trim();
-        if (key.Length == 0) throw new LotusScriptRuntimeException(5, "HTTP header name cannot be empty.");
-        _headers[key] = LotusRuntime.CStr(value);
+        var key = XPScriptRuntime.CStr(name).Trim();
+        if (key.Length == 0) throw new XPScriptRuntimeException(5, "HTTP header name cannot be empty.");
+        _headers[key] = XPScriptRuntime.CStr(value);
     }
 
     public void ResetHeaders()
@@ -523,18 +523,18 @@ internal sealed class NotesHTTPRequest
 
     public void SetProxy(object? proxyUrl, object? proxyPort)
     {
-        var host = LotusRuntime.CStr(proxyUrl).Trim();
-        var port = LotusRuntime.CInt(proxyPort);
-        if (port < 0 || port > 65535) throw new LotusScriptRuntimeException(5, "Illegal Proxy Port Value.");
-        if (host.Length == 0) throw new LotusScriptRuntimeException(5, "Proxy URL cannot be empty.");
+        var host = XPScriptRuntime.CStr(proxyUrl).Trim();
+        var port = XPScriptRuntime.CInt(proxyPort);
+        if (port < 0 || port > 65535) throw new XPScriptRuntimeException(5, "Illegal Proxy Port Value.");
+        if (host.Length == 0) throw new XPScriptRuntimeException(5, "Proxy URL cannot be empty.");
         _proxyHost = host;
         _proxyPort = port;
     }
 
     public void SetProxyUser(object? userName, object? password)
     {
-        _proxyUser = LotusRuntime.CStr(userName);
-        _proxyPassword = LotusRuntime.CStr(password);
+        _proxyUser = XPScriptRuntime.CStr(userName);
+        _proxyPassword = XPScriptRuntime.CStr(password);
     }
 
     public void ResetProxy()
@@ -553,9 +553,9 @@ internal sealed class NotesHTTPRequest
 
     private object? Send(System.Net.Http.HttpMethod method, object? rawUrl, object? data)
     {
-        var url = LotusRuntime.CStr(rawUrl).Trim();
+        var url = XPScriptRuntime.CStr(rawUrl).Trim();
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            throw new LotusScriptRuntimeException(5, "Invalid HTTP URL: " + url);
+            throw new XPScriptRuntimeException(5, "Invalid HTTP URL: " + url);
 
         try
         {
@@ -575,7 +575,7 @@ internal sealed class NotesHTTPRequest
                     NotesJSONArray arr => arr.Node.ToJsonString(),
                     NotesJSONElement element => element.RawNode?.ToJsonString() ?? "null",
                     byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),
-                    _ => LotusRuntime.CStr(data)
+                    _ => XPScriptRuntime.CStr(data)
                 };
                 request.Content = new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8);
             }
@@ -610,17 +610,17 @@ internal sealed class NotesHTTPRequest
                 return System.Text.Encoding.UTF8.GetString(bytes);
             return bytes;
         }
-        catch (LotusScriptRuntimeException)
+        catch (XPScriptRuntimeException)
         {
             throw;
         }
         catch (TaskCanceledException ex)
         {
-            throw new LotusScriptRuntimeException(5, "HTTP request timed out: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "HTTP request timed out: " + ex.Message);
         }
         catch (Exception ex)
         {
-            throw new LotusScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
         }
     }
 

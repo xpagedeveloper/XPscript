@@ -1,4 +1,4 @@
-namespace LSLite.Compiler;
+namespace XPScript.Compiler;
 
 internal static class OperatorArrayCompatibilityRuntimeSource
 {
@@ -60,8 +60,8 @@ internal static class LSOperatorArrayRuntime
     public static double Pow(object? left, object? right)
     {
         if (left is null || right is null) throw new InvalidOperationException("NULL exponentiation result cannot be assigned to a scalar.");
-        var basis = LotusRuntime.CDbl(left);
-        var exponent = LotusRuntime.CDbl(right);
+        var basis = XPScriptRuntime.CDbl(left);
+        var exponent = XPScriptRuntime.CDbl(right);
         if (basis < 0 && exponent != Math.Truncate(exponent))
             throw new ArgumentException("A negative base requires an integer exponent.");
         return Math.Pow(basis, exponent);
@@ -70,8 +70,8 @@ internal static class LSOperatorArrayRuntime
     public static long IntDiv(object? left, object? right)
     {
         if (left is null || right is null) throw new InvalidOperationException("NULL integer division result cannot be assigned to a scalar.");
-        var a = Convert.ToInt64(Math.Round(LotusRuntime.CDbl(left), MidpointRounding.ToEven));
-        var b = Convert.ToInt64(Math.Round(LotusRuntime.CDbl(right), MidpointRounding.ToEven));
+        var a = Convert.ToInt64(Math.Round(XPScriptRuntime.CDbl(left), MidpointRounding.ToEven));
+        var b = Convert.ToInt64(Math.Round(XPScriptRuntime.CDbl(right), MidpointRounding.ToEven));
         if (b == 0) throw new DivideByZeroException();
         return a / b;
     }
@@ -81,8 +81,8 @@ internal static class LSOperatorArrayRuntime
     public static bool Like(object? value, object? pattern, bool caseSensitive)
     {
         if (value is null || pattern is null) return false;
-        var input = LotusRuntime.CStr(value);
-        var wildcard = LotusRuntime.CStr(pattern);
+        var input = XPScriptRuntime.CStr(value);
+        var wildcard = XPScriptRuntime.CStr(pattern);
         var regex = new StringBuilder("^");
         for (var i = 0; i < wildcard.Length; i++)
         {
@@ -131,14 +131,14 @@ internal static class LSOperatorArrayRuntime
 
     public static string Join(object? source, object? delimiter = null)
     {
-        var sep = delimiter is null ? " " : LotusRuntime.CStr(delimiter);
-        return string.Join(sep, Values(source).Select(LotusRuntime.CStr));
+        var sep = delimiter is null ? " " : XPScriptRuntime.CStr(delimiter);
+        return string.Join(sep, Values(source).Select(XPScriptRuntime.CStr));
     }
 
     public static LSArray Explode(object? delimiter, object? value)
     {
-        var sep = LotusRuntime.CStr(delimiter);
-        var text = LotusRuntime.CStr(value);
+        var sep = XPScriptRuntime.CStr(delimiter);
+        var text = XPScriptRuntime.CStr(value);
         if (sep.Length == 0) throw new ArgumentException("Explode delimiter cannot be empty.");
         return FromValues(text.Split([sep], StringSplitOptions.None).Cast<object?>(), "String", 0);
     }
@@ -157,12 +157,12 @@ internal static class LSOperatorArrayRuntime
     public static object? ArrayGetIndex(object? sourceArray, object? searchValue, object? compMethod)
     {
         var array = RequireOneDimensional(sourceArray);
-        var comparison = (LotusRuntime.CInt(compMethod) & 1) != 0 ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture;
-        var target = LotusRuntime.CStr(searchValue);
+        var comparison = (XPScriptRuntime.CInt(compMethod) & 1) != 0 ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture;
+        var target = XPScriptRuntime.CStr(searchValue);
         for (var i = array.LBound(); i <= array.UBound(); i++)
         {
             var item = array.Get(i);
-            try { if (string.Equals(LotusRuntime.CStr(item), target, comparison)) return (long)i; }
+            try { if (string.Equals(XPScriptRuntime.CStr(item), target, comparison)) return (long)i; }
             catch { }
         }
         return null;
@@ -173,7 +173,7 @@ internal static class LSOperatorArrayRuntime
     public static LSArray ArrayUnique(object? sourceArray, object? compMethod)
     {
         var array = RequireOneDimensional(sourceArray);
-        var ignoreCase = (LotusRuntime.CInt(compMethod) & 1) != 0;
+        var ignoreCase = (XPScriptRuntime.CInt(compMethod) & 1) != 0;
         var result = new List<object?>();
         foreach (var value in Values(array))
             if (!result.Any(existing => Equivalent(existing, value, ignoreCase))) result.Add(value);
@@ -186,8 +186,8 @@ internal static class LSOperatorArrayRuntime
     {
         var array = RequireOneDimensional(sourceArray);
         var values = Values(array).ToList();
-        var position = NormalizeStart(LotusRuntime.CInt(start), values.Count);
-        var requested = LotusRuntime.CInt(deleteCount);
+        var position = NormalizeStart(XPScriptRuntime.CInt(start), values.Count);
+        var requested = XPScriptRuntime.CInt(deleteCount);
         var remove = requested == int.MaxValue ? values.Count - position : Math.Clamp(requested, 0, values.Count - position);
         var removed = values.GetRange(position, remove);
         values.RemoveRange(position, remove);
@@ -202,8 +202,8 @@ internal static class LSOperatorArrayRuntime
     {
         var array = RequireOneDimensional(sourceArray);
         var values = Values(array).ToList();
-        var from = NormalizeStart(LotusRuntime.CInt(start), values.Count);
-        var rawEnd = LotusRuntime.CInt(end);
+        var from = NormalizeStart(XPScriptRuntime.CInt(start), values.Count);
+        var rawEnd = XPScriptRuntime.CInt(end);
         var to = rawEnd == int.MaxValue ? values.Count : NormalizeEnd(rawEnd, values.Count);
         if (to < from) to = from;
         return FromValues(values.Skip(from).Take(to - from), array.ElementType, 0);
@@ -254,7 +254,7 @@ internal static class LSOperatorArrayRuntime
 
     private static LSArray RequireOneDimensional(object? source)
     {
-        var array = source as LSArray ?? throw new InvalidOperationException("Value is not an LS Lite array.");
+        var array = source as LSArray ?? throw new InvalidOperationException("Value is not an XPScript array.");
         if (!array.IsAllocated) throw new InvalidOperationException("Array has not been initialized.");
         if (array.Rank != 1) throw new InvalidOperationException("Array function requires a one-dimensional array.");
         return array;

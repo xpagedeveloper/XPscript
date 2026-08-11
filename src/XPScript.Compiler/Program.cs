@@ -1,16 +1,16 @@
-using LSLite.Compiler;
+using XPScript.Compiler;
 
 if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
 {
     Console.WriteLine("""
-LS Lite Compiler
+XPScript Compiler
 
 Usage:
-  lslitec <source.ls> [-o output.exe] [--framework-dependent]
+  xpscriptc <source.xps> [-o output.exe] [--framework-dependent]
 
 Examples:
-  lslitec hello.ls
-  lslitec hello.ls -o Hello.exe
+  xpscriptc hello.xps
+  xpscriptc hello.xps -o Hello.exe
 
 The default output is a self-contained Windows x64 single-file executable.
 """);
