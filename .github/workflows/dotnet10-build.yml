@@ -146,22 +146,40 @@ jobs:
         shell: pwsh
         run: |
           $jsonText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/compiler-errors.xps -o ./out/should-not-exist.exe --framework-dependent --result-format json
-          if ($LASTEXITCODE -ne 2) { throw "Expected compiler exit code 2, got $LASTEXITCODE" }
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -ne 2) { throw "Expected compiler exit code 2, got $compilerExitCode" }
+
           $result = $jsonText | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'JSON diagnostic contract failed.' }
-          $diagnostic = $result.errors[0]
+
+          $diagnostic = $result.errors | Where-Object {
+            $_.description -like "Parameter 'value' of 'TakesInteger' expects Integer but received String.*"
+          } | Select-Object -First 1
+
+          if (-not $diagnostic) { throw 'Expected parameter type diagnostic was not returned in errors[].' }
           if ($diagnostic.line -ne 10 -or $diagnostic.position -le 0) { throw "Wrong diagnostic location: $($diagnostic.line):$($diagnostic.position)" }
-          if ($diagnostic.description -notlike "Parameter 'value' of 'TakesInteger' expects Integer but received String.*") { throw "Unexpected description: $($diagnostic.description)" }
           if ($diagnostic.code -notlike '*TakesInteger(name)*' -or $diagnostic.markedCode -notlike '*^*') { throw 'Source/marker diagnostics missing.' }
 
       - name: Verify XML compiler diagnostics
         shell: pwsh
         run: |
           $xmlLines = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/compiler-errors.xps -o ./out/should-not-exist.exe --framework-dependent --result-format xml
-          if ($LASTEXITCODE -ne 2) { throw "Expected compiler exit code 2, got $LASTEXITCODE" }
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -ne 2) { throw "Expected compiler exit code 2, got $compilerExitCode" }
+
           [xml]$result = ($xmlLines -join [Environment]::NewLine)
           if ($result.compileResult.result -ne 'error') { throw 'XML result was not error.' }
-          if ($result.compileResult.errors.error.line -ne '10') { throw 'XML source line was not preserved.' }
+
+          $diagnostics = @($result.compileResult.errors.error)
+          $diagnostic = $diagnostics | Where-Object {
+            $_.description -like "Parameter 'value' of 'TakesInteger' expects Integer but received String.*"
+          } | Select-Object -First 1
+
+          if (-not $diagnostic) { throw 'Expected parameter type diagnostic was not returned in XML errors.' }
+          if ($diagnostic.line -ne '10') { throw "XML source line was not preserved: $($diagnostic.line)" }
+          if ([string]::IsNullOrWhiteSpace($diagnostic.code) -or [string]::IsNullOrWhiteSpace($diagnostic.markedCode)) { throw 'XML source/marker diagnostics missing.' }
 
       - name: Verify text compiler result
         shell: pwsh
