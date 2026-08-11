@@ -4,6 +4,14 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeLibraryPlatformPreprocessor
 {
+    private static readonly string[] SelectableKeywords =
+    [
+        "WindowsLib", "LinuxLib", "MacOSLib",
+        "WindowsX64Lib", "WindowsArm64Lib", "LinuxX64Lib", "LinuxArm64Lib", "MacOSX64Lib", "MacOSArm64Lib",
+        "WindowsAlias", "LinuxAlias", "MacOSAlias",
+        "WindowsX64Alias", "WindowsArm64Alias", "LinuxX64Alias", "LinuxArm64Alias", "MacOSX64Alias", "MacOSArm64Alias"
+    ];
+
     private readonly string _runtimeIdentifier;
 
     public NativeLibraryPlatformPreprocessor(string runtimeIdentifier)
@@ -28,9 +36,7 @@ internal sealed class NativeLibraryPlatformPreprocessor
             var combined = current;
             var end = i;
             while (EndsWithContinuation(combined) && end + 1 < lines.Length)
-            {
                 combined = RemoveContinuation(combined) + " " + lines[++end].TrimStart();
-            }
 
             output[i] = RewriteDeclare(combined);
             for (var blank = i + 1; blank <= end; blank++) output[blank] = "";
@@ -48,15 +54,9 @@ internal sealed class NativeLibraryPlatformPreprocessor
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         if (!baseLib.Success) return raw;
 
-        var hasPlatformOptions = Regex.IsMatch(code, @"\b(?:WindowsLib|LinuxLib|MacOSLib|WindowsAlias|LinuxAlias|MacOSAlias)\s+\"", RegexOptions.IgnoreCase);
         var baseAlias = Regex.Match(code, "\\bAlias\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
-
-        var selectedLibrary = hasPlatformOptions
-            ? Select(baseLib.Groups[1].Value, Extract(code, "WindowsLib"), Extract(code, "LinuxLib"), Extract(code, "MacOSLib"))
-            : baseLib.Groups[1].Value;
-        var selectedAlias = hasPlatformOptions
-            ? Select(baseAlias.Success ? baseAlias.Groups[1].Value : null, Extract(code, "WindowsAlias"), Extract(code, "LinuxAlias"), Extract(code, "MacOSAlias"))
-            : baseAlias.Success ? baseAlias.Groups[1].Value : null;
+        var selectedLibrary = SelectTargetValue(code, "Lib", baseLib.Groups[1].Value);
+        var selectedAlias = SelectTargetValue(code, "Alias", baseAlias.Success ? baseAlias.Groups[1].Value : null);
 
         if (string.IsNullOrWhiteSpace(selectedLibrary))
             throw new CompilerException("Declare requires a native library for target runtime '" + _runtimeIdentifier + "'.");
@@ -66,7 +66,7 @@ internal sealed class NativeLibraryPlatformPreprocessor
             : selectedLibrary;
 
         var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(loadLibrary) + "\"", RegexOptions.IgnoreCase);
-        foreach (var keyword in new[] { "WindowsLib", "LinuxLib", "MacOSLib", "WindowsAlias", "LinuxAlias", "MacOSAlias" })
+        foreach (var keyword in SelectableKeywords)
             rewritten = Regex.Replace(rewritten, "\\s+" + keyword + "\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
 
         if (!string.IsNullOrWhiteSpace(selectedAlias))
@@ -85,12 +85,21 @@ internal sealed class NativeLibraryPlatformPreprocessor
         return commentIndex >= 0 ? rewritten + raw[commentIndex..] : rewritten;
     }
 
-    private string? Select(string? fallback, string? windows, string? linux, string? macos)
+    private string? SelectTargetValue(string code, string suffix, string? fallback)
     {
-        if (_runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase)) return windows ?? fallback;
-        if (_runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase)) return linux ?? fallback;
-        if (_runtimeIdentifier.StartsWith("osx-", StringComparison.OrdinalIgnoreCase)) return macos ?? fallback;
-        return fallback;
+        var (os, arch) = _runtimeIdentifier switch
+        {
+            "win-x64" => ("Windows", "X64"),
+            "win-arm64" => ("Windows", "Arm64"),
+            "linux-x64" => ("Linux", "X64"),
+            "linux-arm64" => ("Linux", "Arm64"),
+            "osx-x64" => ("MacOS", "X64"),
+            "osx-arm64" => ("MacOS", "Arm64"),
+            _ => ("", "")
+        };
+
+        if (os.Length == 0) return fallback;
+        return Extract(code, os + arch + suffix) ?? Extract(code, os + suffix) ?? fallback;
     }
 
     private static string? Extract(string code, string keyword)
