@@ -1,0 +1,11 @@
+Option Declare
+
+Sub TakesInteger(value As Integer)
+    Print CStr(value)
+End Sub
+
+Sub Main()
+    Dim name As String
+    name = "Fredrik"
+    Call TakesInteger(name)
+End Sub
