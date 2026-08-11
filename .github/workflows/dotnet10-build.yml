@@ -244,3 +244,40 @@ jobs:
               Stop-Process -Id $server.Id -Force
             }
           }
+
+      - name: Compile charset Base64 and console sample
+        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/textio-console.ls -o ./out/textio-console.exe --framework-dependent
+
+      - name: Run charset Base64 and console sample
+        shell: pwsh
+        run: |
+          $inputData = "Fredrik`nSecond`nX"
+          $output = $inputData | & ./out/textio-console.exe
+          $output | ForEach-Object { Write-Host $_ }
+
+          $expected = @(
+            "UTF8=UTF8-ÅÄÖ-é-漢字",
+            "UTF16=UTF16-ÅÄÖ-é-漢字",
+            "BASE64FILE=BASE64-FILE-åäö",
+            "TOBASE64=RnJlZHJpayDDpcOkw7Y=",
+            "FROMBASE64=Fredrik åäö",
+            "URLENCODE=hello%20world%2B%C3%A5",
+            "URLDECODE=hello world+å",
+            "PRINTDOLLAR=OK",
+            "INPUTDOLLAR=Second",
+            "PAUSE=OK"
+          )
+
+          foreach ($value in $expected) {
+            if ($output -notcontains $value) {
+              throw "Charset/console test missing expected output: $value"
+            }
+          }
+
+          if (-not ($output | Where-Object { $_ -like 'NAME>*INPUT=Fredrik' })) {
+            throw "Input prompt/value behavior did not match expected output."
+          }
+
+          foreach ($path in @('./lslite-utf8.txt','./lslite-utf16.txt','./lslite-base64.txt')) {
+            if (Test-Path $path) { throw "Charset test did not remove temporary file: $path" }
+          }
