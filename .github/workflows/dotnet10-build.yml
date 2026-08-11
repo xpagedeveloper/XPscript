@@ -94,3 +94,47 @@ jobs:
               throw "List/class test missing expected output: $value"
             }
           }
+
+      - name: Compile advanced core language sample
+        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/core-language.ls -o ./out/core-language.exe --framework-dependent
+
+      - name: Run advanced core language sample
+        shell: pwsh
+        run: |
+          $output = & ./out/core-language.exe
+          $output | ForEach-Object { Write-Host $_ }
+
+          $expected = @(
+            "BYREF=11",
+            "AUTO=1:2:8",
+            "MATRIX=1:1:24",
+            "REDIM=ABC",
+            "SELECT=HIGH",
+            "WITH-OK",
+            "STATIC=1:2",
+            "DEFTYPE=42",
+            "GOSUB=CALLED",
+            "GOSUB=RETURNED",
+            "GOTO=OK",
+            "ERR=123:expected-error",
+            "RESUME=OK",
+            "RESUME-NEXT=124",
+            "BINARY=123456:4",
+            "RANDOM=77:2"
+          )
+
+          foreach ($value in $expected) {
+            if ($output -notcontains $value) {
+              throw "Advanced core test missing expected output: $value"
+            }
+          }
+
+          if ($output -contains "GOTO=BAD") {
+            throw "GoTo failed to skip the target statement."
+          }
+
+      - name: Verify advanced core files are removed
+        shell: pwsh
+        run: |
+          if (Test-Path ./lslite-core.bin) { throw "Binary test file was not removed." }
+          if (Test-Path ./lslite-random.bin) { throw "Random test file was not removed." }
