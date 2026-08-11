@@ -1,0 +1,20 @@
+Type PersonInfo
+    Name As String
+    Age As Integer
+End Type
+
+Sub Main()
+    Dim first As PersonInfo
+    Dim second As PersonInfo
+
+    first.Name = "Alice"
+    first.Age = 40
+
+    second = first
+
+    first.Name = "Changed"
+    first.Age = 99
+
+    Print "FIRST=" & first.Name & ":" & CStr(first.Age)
+    Print "SECOND=" & second.Name & ":" & CStr(second.Age)
+End Sub
