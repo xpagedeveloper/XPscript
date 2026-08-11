@@ -7,6 +7,9 @@ public sealed class XPScriptTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
+        new SourceTypeValidator().Validate(source, sourceName);
+        source = new TypeCoercionPreprocessor().Transform(source);
+
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
@@ -24,6 +27,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
         // Option Compare affects Like and the array comparison helpers.
         generated = generated.Replace(
@@ -96,7 +100,7 @@ public sealed class XPScriptTranspiler
             if (i >= source.Length)
                 throw new CompilerException("Unterminated string literal.");
 
-            var marker = $"__LSLITE_STRING_{replacements.Count:D6}__";
+            var marker = $"__XPSCRIPT_STRING_{replacements.Count:D6}__";
             replacements[marker] = EscapeForGeneratedCSharpString(inner.ToString());
             output.Append(marker);
             output.Append('"');
@@ -105,9 +109,9 @@ public sealed class XPScriptTranspiler
         return output.ToString();
     }
 
-    private static string EscapeForGeneratedCSharpString(string lotusInner)
+    private static string EscapeForGeneratedCSharpString(string sourceInner)
     {
-        var decoded = lotusInner.Replace("\"\"", "\"", StringComparison.Ordinal);
+        var decoded = sourceInner.Replace("\"\"", "\"", StringComparison.Ordinal);
         return decoded
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("\"", "\\\"", StringComparison.Ordinal)
