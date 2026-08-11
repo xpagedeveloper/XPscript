@@ -1,0 +1,32 @@
+Option Declare
+
+Sub Main()
+    Dim users List As String
+    Dim unknownValue As Variant
+    Dim d As Date
+
+    users("admin") = "Alice"
+    d = CVDate("2026-08-11")
+
+    Print "INSTRB=" & CStr(InstrB(1, "abcdef", "cd"))
+    Print "LEFTB=" & LeftB("abcdef", 3)
+    Print "RIGHTB=" & RightB("abcdef", 3)
+    Print "MIDB=" & MidB("abcdef", 2, 3)
+
+    Print "STRLEFT=" & StrLeft("one/two/three", "/")
+    Print "STRLEFTBACK=" & StrLeftBack("one/two/three", "/")
+    Print "STRRIGHT=" & StrRight("one/two/three", "/")
+    Print "STRRIGHTBACK=" & StrRightBack("one/two/three", "/")
+    Print "STRTOKEN=" & StrToken("one/two/three", "/", 2)
+
+    Print "LSET=" & LSet("abc", 5) & "!"
+    Print "RSET=" & RSet("abc", 5) & "!"
+    Print "UCHR=" & UChr(9731)
+    Print "UNI=" & CStr(Uni("A"))
+    Print "CVDATE=" & CStr(Year(d))
+    Print "ISLIST=" & CStr(IsList(users))
+    Print "ISUNKNOWN=" & CStr(IsUnknown(unknownValue))
+
+    Print "B64ENC=" & Base64Encode("Fredrik", "utf-8")
+    Print "B64DEC=" & Base64Decode("RnJlZHJpaw==", "utf-8")
+End Sub
