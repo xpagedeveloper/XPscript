@@ -90,7 +90,7 @@ Status:
 - [>] `Adjust` returns a new Date value
 - [>] `Date.Difference(otherDate)` implemented as signed total seconds (`otherDate - currentDate`)
 - [>] Date comparison operators use full DateTime values where date typing is known
-- [ ] negative type diagnostics for nonsensical Date comparisons
+- [>] negative type diagnostics reject statically known nonsensical Date comparisons (Boolean, Object, arrays, Class/Type values) while preserving Date/String/numeric/Variant coercion paths; sources: `samples/date-comparisons-valid.xps`, `samples/date-comparisons-invalid.xps`
 - [ ] runtime regression verification when test execution is re-enabled
 - [ ] English documentation/examples under `docs/` and `examples/`
 
