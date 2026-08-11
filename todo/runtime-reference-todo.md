@@ -28,7 +28,7 @@ Status:
 - [>] nested `Type` deep-copy recursively clones nested values and nested array storage; source: `samples/type-nested-value-copy.xps`
 - [>] cyclic nested `Type` copy graphs produce an explicit compiler diagnostic instead of unbounded clone generation; source: `samples/type-cycle-error.xps`
 - [>] implicit lower bounds in `ReDim typeValue.arrayField(n)` honor active `Option Base`; source: `samples/type-array-option-base.xps`
-- [ ] verify nested `Type` copy when the destination itself is a module-level `Type` value
+- [>] nested `Type` copy into module-level `Type` values uses detached copy-then-commit semantics and handles self-assignment; source: `samples/module-nested-type-value-copy.xps`
 - [x] `Enum ... End Enum`: explicit values, auto increment, qualified/unqualified members
 
 ## 2. Classes and properties
