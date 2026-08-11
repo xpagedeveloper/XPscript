@@ -44,21 +44,28 @@ internal sealed class NativeLibraryPlatformPreprocessor
     {
         var code = StripComment(raw);
         if (!Regex.IsMatch(code, @"^\s*Declare\b", RegexOptions.IgnoreCase)) return raw;
-        if (!Regex.IsMatch(code, @"\b(?:WindowsLib|LinuxLib|MacOSLib|WindowsAlias|LinuxAlias|MacOSAlias)\s+\"", RegexOptions.IgnoreCase)) return raw;
 
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
-        if (!baseLib.Success)
-            throw new CompilerException("Platform-specific Declare requires a base Lib \"...\" value.");
+        if (!baseLib.Success) return raw;
 
+        var hasPlatformOptions = Regex.IsMatch(code, @"\b(?:WindowsLib|LinuxLib|MacOSLib|WindowsAlias|LinuxAlias|MacOSAlias)\s+\"", RegexOptions.IgnoreCase);
         var baseAlias = Regex.Match(code, "\\bAlias\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
-        var selectedLibrary = Select(
-            baseLib.Groups[1].Value,
-            Extract(code, "WindowsLib"), Extract(code, "LinuxLib"), Extract(code, "MacOSLib"));
-        var selectedAlias = Select(
-            baseAlias.Success ? baseAlias.Groups[1].Value : null,
-            Extract(code, "WindowsAlias"), Extract(code, "LinuxAlias"), Extract(code, "MacOSAlias"));
 
-        var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(selectedLibrary!) + "\"", RegexOptions.IgnoreCase);
+        var selectedLibrary = hasPlatformOptions
+            ? Select(baseLib.Groups[1].Value, Extract(code, "WindowsLib"), Extract(code, "LinuxLib"), Extract(code, "MacOSLib"))
+            : baseLib.Groups[1].Value;
+        var selectedAlias = hasPlatformOptions
+            ? Select(baseAlias.Success ? baseAlias.Groups[1].Value : null, Extract(code, "WindowsAlias"), Extract(code, "LinuxAlias"), Extract(code, "MacOSAlias"))
+            : baseAlias.Success ? baseAlias.Groups[1].Value : null;
+
+        if (string.IsNullOrWhiteSpace(selectedLibrary))
+            throw new CompilerException("Declare requires a native library for target runtime '" + _runtimeIdentifier + "'.");
+
+        var loadLibrary = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary)
+            ? NativeDependencyPackager.PortableFileName(selectedLibrary)
+            : selectedLibrary;
+
+        var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(loadLibrary) + "\"", RegexOptions.IgnoreCase);
         foreach (var keyword in new[] { "WindowsLib", "LinuxLib", "MacOSLib", "WindowsAlias", "LinuxAlias", "MacOSAlias" })
             rewritten = Regex.Replace(rewritten, "\\s+" + keyword + "\\s+\"[^\"]+\"", "", RegexOptions.IgnoreCase);
 
