@@ -91,7 +91,13 @@ Status:
 - [>] arrays/Lists are defensive-copied before execution
 - [>] arbitrary mutable objects are rejected rather than bridged by reference
 - [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work
-- [ ] add a total collection element/byte budget for untrusted Evaluate inputs
+- [>] collection snapshots enforce a total budget of 100000 collection elements per input/return snapshot operation
+- [>] collection snapshots enforce a 16 MiB estimated payload budget; strings and List tags are charged by UTF-8 byte count and scalar values by bounded type-size estimates
+- [>] XPScript and CLR array element counts are checked before allocating the snapshot array
+- [>] List entries are budgeted incrementally before copying and are not first materialized into an unbounded temporary array
+- [>] budget violations produce controlled XPScript error 5 diagnostics instead of continuing snapshot allocation
+- [>] negative sources: `samples/evaluate-collection-element-budget.xps`, `samples/evaluate-collection-payload-budget.xps`
+- [ ] runtime-verify exact budget boundary behavior when execution is re-enabled
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
 - [ ] add concurrent-thread isolation tests
 - [ ] sanitize future diagnostics so parameter values/secrets are not automatically echoed
@@ -101,6 +107,7 @@ Status:
 - [>] evaluator instance owns callvar snapshot; references become collectible after Evaluate returns/fails
 - [>] returned arrays and Lists are detached from evaluator-owned storage
 - [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation
+- [>] input and return snapshot budgets are invocation-local and are not stored in static/global state
 - [ ] deterministic disposal rules if disposable/native-resource objects are ever allowed through callvar
 - [ ] ensure no future evaluator cache stores arbitrary callvar data
 
