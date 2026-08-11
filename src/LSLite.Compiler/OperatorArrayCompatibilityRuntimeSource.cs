@@ -9,21 +9,21 @@ internal static class LSOperatorArrayRuntime
 
     public static void SetCompareNoCase(bool value) => _compareNoCase = value;
 
-    public static dynamic? Not(object? value)
+    public static dynamic? LogicalNot(object? value)
     {
         if (value is null) return null;
         if (value is bool b) return !b;
         return ~ToLong(value);
     }
 
-    public static dynamic? And(object? left, object? right)
+    public static dynamic? LogicalAnd(object? left, object? right)
     {
         if (left is null || right is null) return null;
         if (left is bool lb && right is bool rb) return lb && rb;
         return ToLong(left) & ToLong(right);
     }
 
-    public static dynamic? Or(object? left, object? right)
+    public static dynamic? LogicalOr(object? left, object? right)
     {
         if (left is null || right is null) return null;
         if (left is bool lb && right is bool rb) return lb || rb;
