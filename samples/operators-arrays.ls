@@ -1,0 +1,66 @@
+Option Declare
+Option Compare NoCase
+
+Sub Main()
+    Dim a() As String
+    Dim appended() As Variant
+    Dim exploded() As String
+    Dim uniqueValues() As String
+    Dim sliced() As String
+    Dim removed() As String
+    Dim longText As String
+    Dim idx As Variant
+
+    If "File123" Like "file###" Then Print "LIKE-DIGITS=OK"
+    If "abc" Like "a?c" Then Print "LIKE-QUESTION=OK"
+    If "abc5" Like "a*[0-9]" Then Print "LIKE-RANGE=OK"
+    If "abc" Like "a[!d]c" Then Print "LIKE-NEGATE=OK"
+
+    Print "BRACE=" & {Hello "Fredrik"}
+    Print "BAR=" & |Hello || Fredrik|
+
+    longText = "LINE" & _
+               "-CONTINUE"
+    Print longText
+
+    Print "POW=" & CStr(2 ^ 3 ^ 2)
+    Print "INTDIV=" & CStr(16.9 \ 5.6)
+    Print "MOD=" & CStr(17 Mod 5)
+    Print "XORBOOL=" & CStr(True Xor False)
+    Print "EQVBOOL=" & CStr(True Eqv True)
+    Print "IMPBOOL=" & CStr(True Imp False)
+    Print "ANDBITS=" & CStr(10 And 5)
+    Print "ORBITS=" & CStr(10 Or 5)
+    Print "XORBITS=" & CStr(15 Xor 240)
+    Print "NOTBITS=" & CStr(Not 3)
+
+    ReDim a(1 To 4)
+    a(1) = "One"
+    a(2) = "Two"
+    a(3) = "Three"
+    a(4) = "Four"
+    Print "TYPEDARRAY=" & CStr(LBound(a)) & ":" & CStr(UBound(a)) & ":" & Join(a, "|")
+
+    ReDim Preserve a(1 To 5)
+    a(5) = "Five"
+    Print "REDIM=" & Join(a, "|")
+
+    appended = ArrayAppend(a, "Six")
+    Print "APPEND=" & CStr(LBound(appended)) & ":" & CStr(UBound(appended)) & ":" & Join(appended, "|")
+
+    idx = ArrayGetIndex(appended, "five")
+    Print "GETINDEX=" & CStr(idx)
+
+    exploded = Explode(",", "A,a,B,b,B")
+    Print "EXPLODE=" & Join(exploded, "|")
+
+    uniqueValues = ArrayUnique(exploded)
+    Print "UNIQUE=" & Join(uniqueValues, "|")
+
+    sliced = ArraySlice(exploded, 1, 4)
+    Print "SLICE=" & Join(sliced, "|")
+
+    removed = ArraySplice(exploded, 1, 2, "X", "Y")
+    Print "SPLICE-REMOVED=" & Join(removed, "|")
+    Print "SPLICE-ARRAY=" & Join(exploded, "|")
+End Sub
