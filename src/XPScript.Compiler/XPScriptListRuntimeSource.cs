@@ -7,6 +7,7 @@ internal interface ILSList
 {
     bool ContainsTag(object? tag);
     void Clear();
+    IEnumerable<KeyValuePair<string, object?>> SnapshotEntries();
 }
 
 internal sealed class LSList<T> : ILSList
@@ -53,6 +54,15 @@ internal sealed class LSList<T> : ILSList
         {
             if (_values.ContainsKey(tag))
                 yield return new LSListAlias<T>(this, tag);
+        }
+    }
+
+    public IEnumerable<KeyValuePair<string, object?>> SnapshotEntries()
+    {
+        foreach (var tag in _order.ToArray())
+        {
+            if (_values.TryGetValue(tag, out var value))
+                yield return new KeyValuePair<string, object?>(tag, value);
         }
     }
 
