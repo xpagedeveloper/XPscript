@@ -16,6 +16,7 @@ public sealed class XPScriptTranspiler
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
+        protectedSource = new ReferenceRuntimeExtensionsPreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
@@ -27,6 +28,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
