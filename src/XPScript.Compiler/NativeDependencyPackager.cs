@@ -54,10 +54,9 @@ internal sealed class NativeDependencyPackager
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         if (!baseLib.Success) return null;
 
-        var selected = Select(baseLib.Groups[1].Value,
-            Extract(code, "WindowsLib"), Extract(code, "LinuxLib"), Extract(code, "MacOSLib"));
-
+        var selected = SelectTargetLibrary(code, baseLib.Groups[1].Value);
         if (string.IsNullOrWhiteSpace(selected) || !IsApplicationLocalPath(selected)) return null;
+
         var loadName = PortableFileName(selected);
         if (string.IsNullOrWhiteSpace(loadName))
             throw new CompilerException("Application-local native library path must end with a file name: " + selected);
@@ -65,12 +64,21 @@ internal sealed class NativeDependencyPackager
         return new Dependency(selected, loadName);
     }
 
-    private string? Select(string? fallback, string? windows, string? linux, string? macos)
+    private string? SelectTargetLibrary(string code, string? fallback)
     {
-        if (_runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase)) return windows ?? fallback;
-        if (_runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase)) return linux ?? fallback;
-        if (_runtimeIdentifier.StartsWith("osx-", StringComparison.OrdinalIgnoreCase)) return macos ?? fallback;
-        return fallback;
+        var (os, arch) = _runtimeIdentifier switch
+        {
+            "win-x64" => ("Windows", "X64"),
+            "win-arm64" => ("Windows", "Arm64"),
+            "linux-x64" => ("Linux", "X64"),
+            "linux-arm64" => ("Linux", "Arm64"),
+            "osx-x64" => ("MacOS", "X64"),
+            "osx-arm64" => ("MacOS", "Arm64"),
+            _ => ("", "")
+        };
+
+        if (os.Length == 0) return fallback;
+        return Extract(code, os + arch + "Lib") ?? Extract(code, os + "Lib") ?? fallback;
     }
 
     private static string? Extract(string code, string keyword)
