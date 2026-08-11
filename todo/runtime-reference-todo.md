@@ -8,7 +8,7 @@ Status legend:
 
 - `[x]` implemented and covered by CI or an existing regression sample
 - `[-]` partially implemented; more semantics/tests are required
-- `[>]` implementation currently in progress
+- `[>]` implementation currently in progress or implemented but awaiting a clean CI verification
 - `[ ]` not implemented yet
 
 ## 1. Core language and declarations
@@ -87,21 +87,29 @@ Status legend:
 
 ## 9. File I/O and filesystem
 
-- [x] `FreeFile`, `Open`, `Close`, `Input`, `Line Input`, `Print #`, `Write #`, `Get`, `Put`, `EOF`, `LOF`, `Loc`, `Seek`, `Reset`
+- [x] `FreeFile`, `Open`, `Close`, `Input #`, `Line Input`, `Print #`, `Write #`, `Get`, `Put`, `EOF`, `LOF`, `Loc`, `Seek`, `Reset`
 - [x] Charset-aware Input/Output/Append
 - [x] separate `Encoding "base64"` layer combinable with Charset
-- [ ] file form `Input$(count, #fileNumber)`
-- [ ] `Lock`
-- [ ] `Unlock`
+- [>] file form `Input$(count, #fileNumber)` implemented as file I/O, separate from console/user input; regression test added and awaiting a clean CI run
+- [>] `Lock` implemented using the underlying OS `FileStream.Lock`; Binary ranges are 1-based byte ranges, Random ranges use record length where statically known, sequential modes lock the whole file; cross-handle OS lock test added and awaiting a clean CI run
+- [>] `Unlock` implemented using the matching OS `FileStream.Unlock` semantics; awaiting clean CI verification
 - [x] `ChDir`, `CurDir`, `Dir`, `FileCopy`, `FileDateTime`, `FileLen`, `Kill`, `MkDir`, rename/move, `RmDir`
-- [ ] `ChDrive`
-- [ ] explicit `latin1` charset regression test
+- [>] `ChDrive` Windows implementation added; awaiting clean CI verification
+- [>] explicit `latin1` charset round-trip regression test added; awaiting clean CI verification
+
+### File input separation
+
+`Input$(count, #fileNumber)` is the file function and must never be rewritten as interactive input. Console/user input remains a separate XPScript extension (`Input variable`, `Input "prompt", variable`, and console `Input$ variable`).
+
+### File locking semantics
+
+`Lock`/`Unlock` are operating-system file locks, not XPScript-only state. Tests must verify that a second OS file handle cannot lock the same region while XPScript holds the lock. Binary ranges map to bytes. Random ranges map to records multiplied by the configured record length. Sequential Input/Output/Append lock the whole file.
 
 ## 10. Formatting, process and console
 
 - [x] `Format`, `Format$`, `FormatNumber`, `FormatPercent`
 - [x] `Environ`, `Shell`, `Sleep`
-- [x] console `Print`, `Print$`, `Input`, `Input$`, `Pause`
+- [x] console `Print`, `Print$`, interactive `Input`, interactive `Input$`, `Pause`
 - [x] `InputBox`, `MessageBox`, `MsgBox`, `Beep`
 
 ## 11. Base64 and URL helpers
@@ -154,3 +162,4 @@ Every completed item above should satisfy these gates:
 4. Negative/type-error cases produce XPScript diagnostics where applicable.
 5. Existing compatibility, class/list, core, HTTP/JSON, text I/O and operator/array tests remain green.
 6. New public API names use XPScript branding only.
+7. File `Lock`/`Unlock` tests must verify contention from a second operating-system file handle, not merely internal runtime state.
