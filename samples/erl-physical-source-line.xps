@@ -1,0 +1,12 @@
+Sub Main()
+    On Error GoTo Handler
+    Dim value As Integer
+    value = 1
+    value = CInt("not-a-number")
+    Exit Sub
+Handler:
+    If Erl <> 5 Then
+        Error 9001, "Expected Erl 5 but got " & CStr(Erl)
+    End If
+    Print "Erl=" & CStr(Erl)
+End Sub
