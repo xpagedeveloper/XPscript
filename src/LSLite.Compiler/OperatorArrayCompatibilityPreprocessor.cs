@@ -5,6 +5,8 @@ namespace LSLite.Compiler;
 
 internal sealed class OperatorArrayCompatibilityPreprocessor
 {
+    public bool CompareNoCase { get; private set; }
+
     public string NormalizeSource(string source)
     {
         source = NormalizeAlternateStrings(source);
@@ -13,15 +15,19 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     public string TransformProtectedSource(string source)
     {
+        CompareNoCase = Regex.IsMatch(source, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
         foreach (var raw in lines)
         {
             var line = raw;
+            if (Regex.IsMatch(line, @"^\s*Option\s+Compare\s+(?:Binary|Case|NoCase|Pitch|NoPitch)\s*$", RegexOptions.IgnoreCase))
+            {
+                output.Add("' " + line.Trim());
+                continue;
+            }
             if (line.TrimStart().StartsWith("'", StringComparison.Ordinal)) { output.Add(line); continue; }
 
-            // Array/string helper functions. Prefixing with a class name prevents the
-            // legacy function rewriter from treating Join as LotusRuntime.Join.
             line = Regex.Replace(line, @"(?<![\w.])ArrayAppend\s*\(", "LSOperatorArrayRuntime.ArrayAppend(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayGetIndex\s*\(", "LSOperatorArrayRuntime.ArrayGetIndex(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayUnique\s*\(", "LSOperatorArrayRuntime.ArrayUnique(", RegexOptions.IgnoreCase);
@@ -30,23 +36,16 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])Join\$?\s*\(", "LSOperatorArrayRuntime.Join(", RegexOptions.IgnoreCase);
 
-            // Like is relational precedence. This covers the ordinary LotusScript form
-            // operand Like operand, including parenthesized/function-call operands.
             line = RewriteBinaryWordOperator(line, "Like", "Like");
             line = RewriteBinaryWordOperator(line, "Eqv", "Eqv");
             line = RewriteBinaryWordOperator(line, "Imp", "Imp");
             line = RewriteBinaryWordOperator(line, "Xor", "Xor");
-
-            // Exponentiation and integer division need LotusScript semantics and cannot
-            // be emitted as C# ^ or \\ operators. Apply repeatedly for left associativity.
             line = RewriteSymbolOperator(line, '^', "Pow");
             line = RewriteSymbolOperator(line, '\\', "IntDiv");
 
-            // LotusScript accepts these comparison aliases.
             line = Regex.Replace(line, @"(?<![<>])><(?![<>])", "<>");
             line = Regex.Replace(line, @"(?<![<>])=<(?![=>])", "<=");
             line = Regex.Replace(line, @"(?<![<>])=>(?![=<])", ">=");
-
             output.Add(line);
         }
         return string.Join(Environment.NewLine, output);
@@ -54,8 +53,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteBinaryWordOperator(string line, string op, string method)
     {
-        // First handle explicitly parenthesized/simple operands. Repeating permits chains.
-        var pattern = $@"(?<left>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?))\s+{op}\s+(?<right>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?))";
+        var pattern = $@"(?<left>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?|\"[^\"]*\"))\s+{op}\s+(?<right>(?:\([^()]+\)|[A-Za-z_]\w*(?:\([^()]*\))?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|-?\d+(?:\.\d+)?|\"[^\"]*\"))";
         var regex = new Regex(pattern, RegexOptions.IgnoreCase);
         while (regex.IsMatch(line))
             line = regex.Replace(line, m => $"LSOperatorArrayRuntime.{method}({m.Groups["left"].Value}, {m.Groups["right"].Value})", 1);
@@ -109,21 +107,9 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         var sb = new StringBuilder(source.Length);
         for (var i = 0; i < source.Length; i++)
         {
-            if (source[i] == '"')
-            {
-                CopyQuoted(source, ref i, sb);
-                continue;
-            }
-            if (source[i] == '|')
-            {
-                CopyDelimited(source, ref i, sb, '|');
-                continue;
-            }
-            if (source[i] == '{')
-            {
-                CopyDelimited(source, ref i, sb, '}');
-                continue;
-            }
+            if (source[i] == '"') { CopyQuoted(source, ref i, sb); continue; }
+            if (source[i] == '|') { CopyDelimited(source, ref i, sb, '|'); continue; }
+            if (source[i] == '{') { CopyDelimited(source, ref i, sb, '}'); continue; }
             sb.Append(source[i]);
         }
         return sb.ToString();
@@ -152,7 +138,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             {
                 if (i + 1 < source.Length && source[i + 1] == close)
                 {
-                    sb.Append(close == '"' ? "\"\"" : close.ToString());
+                    sb.Append(close);
                     i++;
                     continue;
                 }
@@ -160,9 +146,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
                 return;
             }
             if (c == '"') sb.Append("\"\"");
-            else if (c == '\r') { }
-            else if (c == '\n') sb.Append("\n");
-            else sb.Append(c);
+            else if (c != '\r') sb.Append(c);
         }
         throw new CompilerException("Unterminated alternate string literal.");
     }
