@@ -194,3 +194,53 @@ jobs:
               throw "Runtime/SAX test missing expected output: $value"
             }
           }
+
+      - name: Compile HTTP and JSON sample
+        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/json-http.ls -o ./out/json-http.exe --framework-dependent
+
+      - name: Run HTTP and JSON sample
+        shell: pwsh
+        run: |
+          $server = Start-Process python -ArgumentList './samples/http-test-server.py' -PassThru
+          try {
+            Start-Sleep -Seconds 2
+            $output = & ./out/json-http.exe
+            $output | ForEach-Object { Write-Host $_ }
+
+            $expected = @(
+              "OBJECTSIZE=2",
+              "ARRAYSIZE=2",
+              "ELEMENT=name:3:Fredrik",
+              "POINTER=2",
+              "NTH=developer",
+              "ITER=admin:developer",
+              "COPY={\"copy\":{\"city\":\"Linkoping\",\"country\":\"Sweden\"}}",
+              "JSONCONSTANTS=OK",
+              "GETCODE=200",
+              "POSTCODE=200",
+              "PUTCODE=200",
+              "PATCHCODE=200",
+              "DELETECODE=200",
+              "HEADERS=OK",
+              "PROXY=OK",
+              "HTTPJSON=POST"
+            )
+
+            foreach ($value in $expected) {
+              if ($output -notcontains $value) {
+                throw "HTTP/JSON test missing expected output: $value"
+              }
+            }
+
+            if (-not ($output | Where-Object { $_ -like 'GET=*\"method\": \"GET\"*' })) {
+              throw "GET response did not come from the local HTTP test server."
+            }
+            if (-not ($output | Where-Object { $_ -like 'POST=*\"method\": \"POST\"*' })) {
+              throw "POST response did not come from the local HTTP test server."
+            }
+          }
+          finally {
+            if ($server -and -not $server.HasExited) {
+              Stop-Process -Id $server.Id -Force
+            }
+          }
