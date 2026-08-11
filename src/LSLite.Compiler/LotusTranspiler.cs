@@ -8,11 +8,13 @@ public sealed class LotusTranspiler
     public string Transpile(string source, string sourceName)
     {
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
 
         // Extended standalone compatibility includes optional Windows COM binding.
         // Keep the generated source self-contained even when GetObject is not called.
