@@ -61,7 +61,29 @@ internal sealed class NativeDependencyPackager
         if (string.IsNullOrWhiteSpace(loadName))
             throw new CompilerException("Application-local native library path must end with a file name: " + selected);
 
+        ValidateTargetFileName(loadName, selected);
         return new Dependency(selected, loadName);
+    }
+
+    private void ValidateTargetFileName(string loadName, string declaredPath)
+    {
+        var valid = _runtimeIdentifier switch
+        {
+            var rid when rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) =>
+                loadName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase),
+            var rid when rid.StartsWith("linux-", StringComparison.OrdinalIgnoreCase) =>
+                Regex.IsMatch(loadName, @"\.so(?:\.\d+(?:\.\d+)*)?$", RegexOptions.IgnoreCase),
+            var rid when rid.StartsWith("osx-", StringComparison.OrdinalIgnoreCase) =>
+                loadName.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase),
+            _ => true
+        };
+
+        if (valid) return;
+        var expected = _runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".dll" :
+            _runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase) ? ".so or versioned .so.N" :
+            _runtimeIdentifier.StartsWith("osx-", StringComparison.OrdinalIgnoreCase) ? ".dylib" : "a native-library file";
+        throw new CompilerException(
+            $"Application-local native dependency '{declaredPath}' does not match target runtime '{_runtimeIdentifier}'. Expected {expected}.");
     }
 
     private string? SelectTargetLibrary(string code, string? fallback)
