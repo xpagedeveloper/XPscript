@@ -12,8 +12,6 @@ internal sealed class SourceTypeValidator
 
     public void Validate(string source, string sourceName)
     {
-        new DateComparisonValidator().Validate(source, sourceName);
-
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var procedures = CollectProcedures(lines);
         var variables = new Dictionary<string, (string Type, bool IsArray)>(StringComparer.OrdinalIgnoreCase);
