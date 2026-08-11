@@ -1,0 +1,32 @@
+Option Declare
+
+Sub Main()
+    Dim value As Variant
+
+    value = Evaluate("Return Left(\"abcdef\", 3) & Right(\"abcdef\", 2)")
+    Print "STRING=" & CStr(value)
+
+    value = Evaluate("Return Mid(\"abcdef\", 2, 3)")
+    Print "MID=" & CStr(value)
+
+    value = Evaluate("Return Instr(1, \"AlphaBeta\", \"Beta\")")
+    Print "INSTR=" & CStr(value)
+
+    value = Evaluate("Return Replace(\"a-b-c\", \"-\", \"/\")")
+    Print "REPLACE=" & CStr(value)
+
+    value = Evaluate("Return Sqr(81) + Abs(-4)")
+    Print "MATH=" & CStr(value)
+
+    value = Evaluate("Return Hex(255) & \"/\" & Bin(10)")
+    Print "NUMBERFORMAT=" & CStr(value)
+
+    value = Evaluate("Return Year(#2026-08-12#)")
+    Print "YEAR=" & CStr(value)
+
+    value = Evaluate("Return DateAdd(\"d\", 5, #2026-08-12#)")
+    Print "DATEADD=" & CStr(value)
+
+    value = Evaluate("Return IsNumeric(\"123.5\")")
+    Print "ISNUMERIC=" & CStr(value)
+End Sub
