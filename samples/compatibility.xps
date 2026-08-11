@@ -6,7 +6,7 @@ Sub Main()
     Dim d As Date
     Dim n As Double
 
-    Print UCase("ls lite")
+    Print UCase("xpscript")
     Print FullTrim("  a   b  ")
     Print Hex(255)
     Print Bin(10)
