@@ -1,0 +1,38 @@
+Type DetailInfo
+    Code As String
+    Values() As Integer
+End Type
+
+Type AddressInfo
+    City As String
+    Detail As DetailInfo
+End Type
+
+Type PersonInfo
+    Name As String
+    Address As AddressInfo
+End Type
+
+Sub Main()
+    Dim first As PersonInfo
+    Dim second As PersonInfo
+
+    first.Name = "Fredrik"
+    first.Address.City = "Linkoping"
+    first.Address.Detail.Code = "A"
+    ReDim first.Address.Detail.Values(1 To 2)
+    first.Address.Detail.Values(1) = 10
+    first.Address.Detail.Values(2) = 20
+
+    second = first
+
+    first.Name = "Changed"
+    first.Address.City = "Stockholm"
+    first.Address.Detail.Code = "B"
+    first.Address.Detail.Values(1) = 99
+
+    Print "NAME=" & second.Name
+    Print "CITY=" & second.Address.City
+    Print "CODE=" & second.Address.Detail.Code
+    Print "VALUE=" & second.Address.Detail.Values(1)
+End Sub
