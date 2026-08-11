@@ -1,0 +1,14 @@
+Sub Main()
+    Dim result As Variant
+
+    On Error Resume Next
+    result = Evaluate("Return Left(""abc"")")
+    Print "LEFT_ERR=" & CStr(Err)
+    Print "LEFT_MSG=" & Error$()
+
+    On Error GoTo 0
+    On Error Resume Next
+    result = Evaluate("Return MadeUpFunction(1)")
+    Print "UNKNOWN_ERR=" & CStr(Err)
+    Print "UNKNOWN_MSG=" & Error$()
+End Sub
