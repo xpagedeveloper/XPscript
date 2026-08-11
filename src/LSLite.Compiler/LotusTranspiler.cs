@@ -8,6 +8,7 @@ public sealed class LotusTranspiler
     public string Transpile(string source, string sourceName)
     {
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
@@ -22,6 +23,7 @@ public sealed class LotusTranspiler
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
+        generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
 
         // Normalize a couple of generated runtime snippets to valid C# without
         // exposing those implementation details at the LS Lite language surface.
