@@ -120,13 +120,16 @@ File I/O must use the target operating system's real filesystem semantics rather
 
 - [>] `ChDrive` is explicitly Windows-only and returns a clear runtime error elsewhere
 - [>] general path operations use .NET `Path`, `File`, `Directory`, and `FileStream` APIs rather than hard-coded Windows separators
+- [>] core `Open` and Charset-aware `Open` now share `XPScriptFileSystemRuntime.ResolvePath`, which uses target-OS `Path.GetFullPath` semantics and rejects empty/invalid paths
+- [>] path resolution intentionally does not rewrite separators or resolve symlinks/reparse points; those remain target-filesystem semantics
+- [>] runtime contains symlink/reparse-point detection support for portability/security review without silently dereferencing paths itself
 - [>] file `Lock` / `Unlock` use the OS-backed `FileStream` locking implementation and report unsupported platforms
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
 - [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
 - [ ] document that path separators differ (`\\` vs `/`) and recommend portable path construction where possible
 - [ ] review Windows drive letters, UNC paths and long paths
-- [ ] review Linux/macOS absolute paths, home paths, mount points and symlinks
+- [>] Linux/macOS absolute-path and symlink behavior is left to the target OS through `Path.GetFullPath`/filesystem APIs; runtime verification remains required
 - [ ] review case sensitivity/case preservation differences by filesystem
 - [ ] review file permission and executable-bit semantics on Unix-like systems
 - [ ] review hidden-file conventions (`.` prefix vs Windows attributes)
@@ -134,11 +137,12 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [ ] review delete/open-file semantics, which differ between Windows and Unix-like systems
 - [ ] review file sharing modes and whether current `FileShare` choices behave consistently
 - [ ] verify charset/BOM handling on all platforms
-- [ ] verify `Encoding.Default` assumptions; avoid using OS-default encoding when XPScript semantics require a defined encoding
+- [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
 - [ ] verify Latin-1 explicitly on Windows/Linux/macOS
-- [ ] review newline behavior (`CRLF` vs `LF`) for `Print #`, `Line Input`, and text helpers
-- [ ] ensure binary I/O is byte-identical across platforms
-- [ ] ensure temporary files use isolated `Path.GetTempPath()` + unique directories per compiler invocation
+- [>] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`, preserving CRLF on Windows and LF on Unix-like systems; runtime verification remains required
+- [>] Binary/Random string byte conversion now uses the same defined Latin-1 legacy encoding; numeric `BinaryWriter`/`BinaryReader` representations remain deterministic .NET little-endian representations
+- [>] source: `samples/file-io-portability.xps`
+- [>] compiler temporary files already use isolated `Path.GetTempPath()` + GUID directories per compiler invocation
 
 ## Quality gates when execution is re-enabled
 
