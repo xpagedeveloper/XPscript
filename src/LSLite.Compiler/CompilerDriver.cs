@@ -8,7 +8,7 @@ public sealed class CompilerDriver
     {
         var source = await File.ReadAllTextAsync(sourcePath);
         var transpiler = new LotusTranspiler();
-        var generatedSource = transpiler.Transpile(source);
+        var generatedSource = transpiler.Transpile(source, sourcePath);
 
         var tempRoot = Path.Combine(Path.GetTempPath(), "LSLite", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
@@ -24,6 +24,7 @@ public sealed class CompilerDriver
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <StartupObject>Program</StartupObject>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -38,6 +39,7 @@ public sealed class CompilerDriver
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <StartupObject>Program</StartupObject>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
