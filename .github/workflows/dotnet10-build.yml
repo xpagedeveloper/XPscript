@@ -31,5 +31,41 @@ jobs:
       - name: Restore
         run: dotnet restore ./src/LSLite.Compiler/LSLite.Compiler.csproj
 
-      - name: Build
+      - name: Build compiler
         run: dotnet build ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-restore
+
+      - name: Compile compatibility sample
+        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/compatibility.ls -o ./out/compatibility.exe --framework-dependent
+
+      - name: Run compatibility sample
+        shell: pwsh
+        run: |
+          $output = & ./out/compatibility.exe
+          $output | ForEach-Object { Write-Host $_ }
+
+          $expected = @(
+            "LS LITE",
+            "a b",
+            "FF",
+            "1010",
+            "-1",
+            "2026",
+            "8",
+            "11",
+            "5",
+            "123.5",
+            "FILE-OK"
+          )
+
+          foreach ($value in $expected) {
+            if ($output -notcontains $value) {
+              throw "Compatibility test missing expected output: $value"
+            }
+          }
+
+      - name: Verify no temporary compatibility file remains
+        shell: pwsh
+        run: |
+          if (Test-Path ./lslite-compat.txt) {
+            throw "Compatibility test did not remove its temporary file."
+          }
