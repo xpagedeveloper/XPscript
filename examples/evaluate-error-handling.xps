@@ -1,0 +1,13 @@
+Sub Main()
+    Dim result As Variant
+
+    On Error GoTo Handler
+
+    result = Evaluate("Return CInt(""not-a-number"")")
+    Print CStr(result)
+    Exit Sub
+
+Handler:
+    Print "Evaluate failed. Err=" & CStr(Err)
+    Print Error$
+End Sub
