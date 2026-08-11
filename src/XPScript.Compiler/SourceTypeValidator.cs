@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -16,6 +15,7 @@ internal sealed class SourceTypeValidator
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var procedures = CollectProcedures(lines);
         var variables = new Dictionary<string, (string Type, bool IsArray)>(StringComparer.OrdinalIgnoreCase);
+        var diagnostics = new List<string>();
         var inProcedure = false;
 
         for (var i = 0; i < lines.Length; i++)
@@ -47,6 +47,8 @@ internal sealed class SourceTypeValidator
                 continue;
             }
 
+            ValidateAssignment(sourceName, i + 1, original, line, variables, diagnostics);
+
             foreach (var procedure in procedures.Values)
             {
                 var pattern = $@"(?<![\w.]){Regex.Escape(procedure.Name)}\s*\((?<args>[^()]*)\)";
@@ -55,7 +57,7 @@ internal sealed class SourceTypeValidator
                     var args = SplitArguments(call.Groups["args"].Value);
                     if (args.Count != procedure.Parameters.Count)
                     {
-                        Throw(sourceName, i + 1, Math.Max(1, call.Index + 1), original,
+                        AddDiagnostic(diagnostics, sourceName, i + 1, Math.Max(1, call.Index + 1), original,
                             $"Function/Sub '{procedure.Name}' expects {procedure.Parameters.Count} parameter(s) but received {args.Count}.");
                     }
 
@@ -64,15 +66,42 @@ internal sealed class SourceTypeValidator
                         var expected = procedure.Parameters[p];
                         var actual = InferType(args[p], variables);
                         if (actual is null || expected.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase)) continue;
-                        if (IsCompatible(expected, actual.Value)) continue;
+                        if (IsCompatible(expected.Type, expected.IsArray, actual.Value.Type, actual.Value.IsArray)) continue;
 
                         var pos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
-                        Throw(sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original,
+                        AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original,
                             $"Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)} but received {FormatType(actual.Value.Type, actual.Value.IsArray)}.");
                     }
                 }
             }
         }
+
+        if (diagnostics.Count > 0)
+            throw new CompilerException(string.Join(Environment.NewLine, diagnostics));
+    }
+
+    private static void ValidateAssignment(
+        string sourceName,
+        int lineNumber,
+        string original,
+        string line,
+        Dictionary<string, (string Type, bool IsArray)> variables,
+        List<string> diagnostics)
+    {
+        var match = Regex.Match(line, @"^(?:Let\s+)?([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+        if (!match.Success || !variables.TryGetValue(match.Groups[1].Value, out var target)) return;
+
+        var rhsText = match.Groups[2].Value.Trim();
+        // Mixed '+' expressions are deliberately handled by XPScript's forgiving coercion runtime.
+        if (ContainsTopLevelPlus(rhsText)) return;
+
+        var actual = InferType(rhsText, variables);
+        if (actual is null || target.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase)) return;
+        if (IsCompatible(target.Type, target.IsArray, actual.Value.Type, actual.Value.IsArray)) return;
+
+        var pos = original.IndexOf(rhsText, StringComparison.Ordinal);
+        AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original,
+            $"Unable to assign {FormatType(actual.Value.Type, actual.Value.IsArray)} to {FormatType(target.Type, target.IsArray)}.");
     }
 
     private static Dictionary<string, Procedure> CollectProcedures(string[] lines)
@@ -114,12 +143,12 @@ internal sealed class SourceTypeValidator
         return null;
     }
 
-    private static bool IsCompatible(Parameter expected, (string Type, bool IsArray) actual)
+    private static bool IsCompatible(string expectedType, bool expectedArray, string actualType, bool actualArray)
     {
-        if (expected.IsArray != actual.IsArray) return false;
-        if (expected.Type.Equals(actual.Type, StringComparison.OrdinalIgnoreCase)) return true;
-        if (!expected.IsArray && NumericTypes.Contains(expected.Type) && NumericTypes.Contains(actual.Type)) return true;
-        if (expected.Type.Equals("Object", StringComparison.OrdinalIgnoreCase) && actual.Type.Equals("Object", StringComparison.OrdinalIgnoreCase)) return true;
+        if (expectedArray != actualArray) return false;
+        if (expectedType.Equals(actualType, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!expectedArray && NumericTypes.Contains(expectedType) && NumericTypes.Contains(actualType)) return true;
+        if (expectedType.Equals("Object", StringComparison.OrdinalIgnoreCase) && actualType.Equals("Object", StringComparison.OrdinalIgnoreCase)) return true;
         return false;
     }
 
@@ -131,6 +160,25 @@ internal sealed class SourceTypeValidator
     };
 
     private static string FormatType(string type, bool array) => array ? type + "()" : type;
+
+    private static bool ContainsTopLevelPlus(string value)
+    {
+        var depth = 0; var inString = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString; continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == '+' && depth == 0) return true;
+        }
+        return false;
+    }
 
     private static List<string> SplitArguments(string value)
     {
@@ -168,8 +216,8 @@ internal sealed class SourceTypeValidator
         return line;
     }
 
-    private static void Throw(string sourceName, int line, int position, string code, string description)
+    private static void AddDiagnostic(List<string> diagnostics, string sourceName, int line, int position, string code, string description)
     {
-        throw new CompilerException($"{sourceName}({line},{position}): {description}{Environment.NewLine}  {code.TrimEnd()}");
+        diagnostics.Add($"{sourceName}({line},{position}): {description}{Environment.NewLine}  {code.TrimEnd()}");
     }
 }
