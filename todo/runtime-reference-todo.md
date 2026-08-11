@@ -181,7 +181,31 @@ Implemented but intentionally unverified while workflows are disabled:
 - [ ] add negative security regression sources/tests once workflow execution is re-enabled
 - [ ] document security boundaries and intentionally unsafe/powerful language features
 
-## 17. Documentation and examples
+## 17. Memory management and object/resource lifetime
+
+- [ ] review whether XPScript needs explicit memory-management semantics beyond the .NET garbage collector
+- [ ] define the exact runtime meaning of assigning `Nothing` to object/reference variables
+- [ ] define the exact runtime meaning of assigning `Null` to Variant/dynamic values and how it differs from `Nothing`
+- [ ] verify that `Set object = Nothing` releases the XPScript reference so an otherwise unreachable managed object becomes eligible for garbage collection
+- [ ] verify aliases/shared references remain alive until the last reference is cleared; clearing one alias must not invalidate unrelated aliases unless `Delete` semantics explicitly require it
+- [ ] review current `Delete object` behavior separately from `Set object = Nothing`; document whether `Delete` invokes `Sub Delete`, invalidates shared aliases, or only releases one reference
+- [ ] verify local variables become unreachable when a procedure exits and are not retained accidentally by generated closures, delegates, error contexts, ByRef wrappers or static caches
+- [ ] verify module globals and `Static` variables intentionally retain referenced objects for their defined lifetime and can release them when assigned `Nothing`/`Null` where legal
+- [ ] review arrays/lists so `Erase`, `ReDim` and element replacement release references to removed objects/strings/arrays rather than retaining stale references
+- [ ] review `Type` value-copy implementation so copies do not accidentally retain hidden compiler-owned references beyond their semantic lifetime
+- [ ] review HTTP/JSON/runtime objects for unnecessary long-lived references and reusable static caches
+- [ ] distinguish managed memory from unmanaged resources: files, streams, sockets, HTTP responses, OS locks, process handles, COM objects and P/Invoke/native allocations must be disposed/released deterministically where required
+- [ ] ensure `Close`, `Reset`, `Unlock`, object disposal and process cleanup release underlying OS handles even if managed objects remain reachable
+- [ ] define whether XPScript classes may implement an explicit disposal/finalization pattern in addition to `Sub Delete`
+- [ ] inspect generated runtime classes for `IDisposable` / `IAsyncDisposable` ownership and ensure owned resources are disposed exactly once
+- [ ] avoid calling `GC.Collect()` as normal language behavior; only consider explicit GC APIs if a justified use case is documented
+- [ ] add memory/lifetime regression tests when execution is re-enabled: weak-reference collection, alias behavior, repeated allocate/release loops, array/list clearing, file-handle release and HTTP resource cleanup
+- [ ] run leak/stress testing for long-running XPScript processes once cross-platform execution tests are enabled
+- [ ] document memory-management semantics, especially `Nothing`, `Null`, `Delete`, `Erase`, local scope and unmanaged-resource cleanup
+
+Design direction: normal managed memory should be reclaimed by .NET GC after the last strong reference disappears. Assigning `Nothing`/`Null` can therefore make managed objects eligible for collection, but it must not be described as immediate deallocation. OS/unmanaged resources require deterministic cleanup and must not rely only on GC/finalizers.
+
+## 18. Documentation and examples
 
 - [ ] create complete English documentation for every supported XPScript statement, function, class, property and operator
 - [ ] store all end-user documentation under `docs/`
@@ -199,7 +223,7 @@ Implemented but intentionally unverified while workflows are disabled:
 - [ ] document `Evaluate` as XPScript-only dynamic code execution
 - [ ] ensure public documentation contains XPScript branding only and no legacy product names or `@Formula` references
 
-## 18. Quality gates
+## 19. Quality gates
 
 A feature is promoted from `[>]` to `[x]` only when requested verification is enabled and it passes:
 
@@ -212,4 +236,5 @@ A feature is promoted from `[>]` to `[x]` only when requested verification is en
 7. OS cross-handle verification for `Lock/Unlock`.
 8. Cross-platform features must be validated on their target operating system when workflow/test execution is re-enabled.
 9. Security-sensitive features require negative/adversarial regression coverage before being marked `[x]`.
-10. Documentation work is complete only when the documented item links to a valid `examples/` source or contains an equivalent inline example.
+10. Memory/lifetime-sensitive changes require tests proving references are released when expected and OS/unmanaged resources are disposed deterministically.
+11. Documentation work is complete only when the documented item links to a valid `examples/` source or contains an equivalent inline example.
