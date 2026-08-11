@@ -37,13 +37,28 @@ internal static class XPScriptFileSystemRuntime
     // single writer. Binary/Random permits multiple read/write handles so explicit
     // XPScript Lock/Unlock can coordinate byte/record regions across processes.
     public static FileStream OpenInputStream(string path) =>
-        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        new(path, new FileStreamOptions
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.ReadWrite
+        });
 
     public static FileStream OpenOutputStream(string path, bool append) =>
-        new(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read);
+        new(path, new FileStreamOptions
+        {
+            Mode = append ? FileMode.Append : FileMode.Create,
+            Access = FileAccess.Write,
+            Share = FileShare.Read
+        });
 
     public static FileStream OpenBinaryStream(string path) =>
-        new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        new(path, new FileStreamOptions
+        {
+            Mode = FileMode.OpenOrCreate,
+            Access = FileAccess.ReadWrite,
+            Share = FileShare.ReadWrite
+        });
 
     public static string FileSharePolicy =>
         "Input=ReadWrite sharing; Output/Append=read sharing with one writer; Binary/Random=ReadWrite sharing with explicit Lock/Unlock coordination";
