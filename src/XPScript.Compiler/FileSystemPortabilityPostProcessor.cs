@@ -22,6 +22,25 @@ internal sealed class FileSystemPortabilityPostProcessor
             "XPScriptFileSystemRuntime.ResolvePath(pathValue)",
             StringComparison.Ordinal);
 
+        // Centralize FileShare semantics. Binary/Random intentionally allow multiple
+        // read/write handles so Lock/Unlock, rather than Open itself, coordinates regions.
+        generated = generated.Replace(
+            "new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)",
+            "XPScriptFileSystemRuntime.OpenInputStream(path)",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "new FileStream(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)",
+            "XPScriptFileSystemRuntime.OpenOutputStream(path, append)",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read)",
+            "XPScriptFileSystemRuntime.OpenBinaryStream(path)",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "new StreamReader(path, charset, detectEncodingFromByteOrderMarks: true)",
+            "new StreamReader(XPScriptFileSystemRuntime.OpenInputStream(path), charset, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: false)",
+            StringComparison.Ordinal);
+
         // Route the standard filesystem surface through the same portability layer.
         generated = generated.Replace(
             "public static long FileLen(object? fileName) => new FileInfo(CStr(fileName)).Length;",
