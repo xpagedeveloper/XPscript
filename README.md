@@ -2,7 +2,7 @@
 
 (c) xpagedeveloper.com 2026
 
-XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and compile to Windows executables without requiring an external scripting runtime.
+XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 
 ## Compiler
 
@@ -12,10 +12,20 @@ Build the compiler:
 dotnet build .\src\XPScript.Compiler\XPScript.Compiler.csproj -c Release
 ```
 
-Compile a script:
+Compile for the current platform:
 
 ```powershell
-xpscriptc program.xps -o program.exe
+xpscriptc program.xps -o program
+```
+
+Compile for a specific runtime:
+
+```powershell
+xpscriptc program.xps --runtime win-x64 -o program.exe
+xpscriptc program.xps --runtime linux-x64 -o program
+xpscriptc program.xps --runtime linux-arm64 -o program
+xpscriptc program.xps --runtime osx-x64 -o program
+xpscriptc program.xps --runtime osx-arm64 -o program
 ```
 
 Compiler result formats:
@@ -47,7 +57,7 @@ Implemented language areas include:
 - scalar types: `String`, `Integer`, `Long`, `Single`, `Double`, `Currency`, `Boolean`, `Byte`, `Date`, `Variant`, `Object`
 - `ByVal`, `ByRef`, `Optional`
 - `Enum`
-- user-defined `Type` with scalar fields
+- user-defined `Type` with scalar fields and array members
 - classes, constructors, destructors and properties
 - `If`, `ElseIf`, `Else`
 - `Select Case`
@@ -56,7 +66,48 @@ Implemented language areas include:
 - `On Error`, `Resume`, `Err`, `Error`, `Erl`
 - fixed and dynamic arrays, multidimensional arrays, `ReDim Preserve`
 - tagged lists
-- external Windows DLL declarations
+- external native-library declarations with platform-specific `.dll`, `.so` and `.dylib` selection
+
+## Platform targeting
+
+`Platform()` returns a stable runtime platform name that can be used in XPScript code:
+
+```xpscript
+If Platform() = "Windows" Then
+    Print "Running on Windows"
+ElseIf Platform() = "Linux" Then
+    Print "Running on Linux"
+ElseIf Platform() = "MacOS" Then
+    Print "Running on macOS"
+End If
+```
+
+The compiler currently supports these target RIDs:
+
+- `win-x64`
+- `win-arm64`
+- `linux-x64`
+- `linux-arm64`
+- `osx-x64`
+- `osx-arm64`
+
+If `--runtime` is omitted, the compiler targets the current OS and process architecture.
+
+## External native libraries
+
+A native declaration can select a different library and exported entry point for each target platform:
+
+```xpscript
+Declare Function NativeProcessId Lib "native-process" _
+    WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
+    LinuxLib "libc.so.6" LinuxAlias "getpid" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
+    () As Integer
+```
+
+Selection is based on the target RID passed to the compiler, not the operating system on which the compiler itself is running.
+
+Application-local native-library packaging and architecture-specific native asset staging remain tracked implementation items. See `todo/cross-platform-runtime-todo.md`.
 
 ## Operators and coercion
 
@@ -98,7 +149,18 @@ Close #f
 
 Binary lock ranges are byte based and 1-based at the XPScript surface. Random ranges map to records. Sequential modes lock the file as a whole.
 
+General file/path operations use .NET filesystem APIs so Windows, Linux and macOS retain their native path and filesystem behavior. `ChDrive` is intentionally Windows-only. Cross-platform differences such as file locking, case sensitivity, permissions, open-file deletion, symlinks, newline handling and file sharing are tracked in `todo/cross-platform-runtime-todo.md` and must be verified independently on each OS.
+
 Text I/O supports `Charset` and the independent `Encoding "base64"` storage layer. See `docs/text-io-console.md`.
+
+## Process execution
+
+`Shell()` is platform-aware:
+
+- Windows: executables, `.cmd`, `.bat`, `.ps1`
+- Linux/macOS: executables, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` when PowerShell is installed
+
+Arguments are passed using structured process arguments where possible to avoid unnecessary shell re-parsing. Explicit shell syntax such as pipes/redirection remains a separate compatibility/security design item.
 
 ## HTTP
 
@@ -149,17 +211,18 @@ The standard runtime includes string, conversion, inspection, math, date/time, f
 - math: `Abs`, `Round`, `Sqr`, `Sin`, `Cos`, `Tan`, `Rnd`
 - date/time: `Now`, `Today`, `DateAdd`, `DateDiff`, `DatePart`
 - filesystem: `ChDir`, `ChDrive`, `CurDir`, `Dir`, `FileCopy`, `Kill`, `MkDir`, `RmDir`
-- Base64/URL: `Base64Encode`, `Base64Decode`, `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
+- Base64/URL: `Base64Encode`, `Base64Decode`, `Base64DecodeBinary`, `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
 
 ## Samples
 
-The `samples` directory contains standalone `.xps` examples for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O and compiler compatibility behavior.
+The `samples` directory contains standalone `.xps` examples for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries and compiler compatibility behavior.
 
 ## Implementation status
 
 The tracked implementation plan is maintained in:
 
-`todo/runtime-reference-todo.md`
+- `todo/runtime-reference-todo.md`
+- `todo/cross-platform-runtime-todo.md`
 
 Items marked `[>]` are implemented or in progress but are waiting for explicit verification while automated workflows are disabled.
 
@@ -170,7 +233,8 @@ Current development that must not trigger CI is kept on branch:
 ## Project structure
 
 - `src/XPScript.Compiler` — compiler, preprocessors, transpilers and generated runtime sources
-- `samples` — XPScript example programs
+- `samples` — XPScript test and regression programs
+- `examples` — reusable end-user example programs as documentation is expanded
 - `docs` — language/runtime documentation
 - `todo` — implementation tracking
 
