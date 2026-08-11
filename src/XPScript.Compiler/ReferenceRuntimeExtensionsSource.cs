@@ -63,6 +63,29 @@ internal static class XPScriptReferenceRuntime
         return ByteEncoding.GetString(bytes);
     }
 
+    public static string StrConv(object? value, object? conversion)
+    {
+        var text = XPScriptRuntime.CStr(value);
+        if (conversion is string name)
+        {
+            return name.Trim().ToLowerInvariant() switch
+            {
+                "upper" or "uppercase" => text.ToUpper(CultureInfo.CurrentCulture),
+                "lower" or "lowercase" => text.ToLower(CultureInfo.CurrentCulture),
+                "proper" or "propercase" => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text.ToLower(CultureInfo.CurrentCulture)),
+                _ => throw new XPScriptRuntimeException(5, "Unsupported StrConv conversion: " + name)
+            };
+        }
+
+        return XPScriptRuntime.CInt(conversion) switch
+        {
+            1 => text.ToUpper(CultureInfo.CurrentCulture),
+            2 => text.ToLower(CultureInfo.CurrentCulture),
+            3 => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text.ToLower(CultureInfo.CurrentCulture)),
+            _ => throw new XPScriptRuntimeException(5, "Unsupported StrConv conversion value: " + XPScriptRuntime.CStr(conversion))
+        };
+    }
+
     public static string StrLeft(object? value, object? delimiter)
     {
         var text = XPScriptRuntime.CStr(value);
@@ -138,6 +161,26 @@ internal static class XPScriptReferenceRuntime
         var text = XPScriptRuntime.CStr(value);
         if (text.Length == 0) return 0;
         return Rune.GetRuneAt(text, 0).Value;
+    }
+
+    public static object? CType(object? value, object? targetType)
+    {
+        var type = XPScriptRuntime.CStr(targetType).Trim().ToLowerInvariant();
+        return type switch
+        {
+            "variant" => value,
+            "string" => XPScriptRuntime.CStr(value),
+            "boolean" or "bool" => XPScriptRuntime.CBool(value),
+            "byte" => XPScriptRuntime.CByte(value),
+            "integer" or "int" => XPScriptRuntime.CInt(value),
+            "long" => XPScriptRuntime.CLng(value),
+            "single" => XPScriptRuntime.CSng(value),
+            "double" => XPScriptRuntime.CDbl(value),
+            "currency" => XPScriptRuntime.CCur(value),
+            "date" => XPScriptRuntime.CDate(value),
+            "object" => value,
+            _ => throw new XPScriptRuntimeException(13, "Unsupported CType target type: " + XPScriptRuntime.CStr(targetType))
+        };
     }
 
     public static DateTime CVDate(object? value) => XPScriptRuntime.CDate(value);
