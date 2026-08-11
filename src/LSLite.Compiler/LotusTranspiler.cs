@@ -5,41 +5,26 @@ namespace LSLite.Compiler;
 
 public sealed class LotusTranspiler
 {
-    private static readonly Dictionary<string, string> TypeMap =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["String"] = "string",
-            ["Integer"] = "int",
-            ["Long"] = "long",
-            ["Double"] = "double",
-            ["Single"] = "float",
-            ["Boolean"] = "bool",
-            ["Byte"] = "byte",
-            ["Currency"] = "decimal",
-            ["Date"] = "DateTime",
-            ["Variant"] = "dynamic",
-            ["Object"] = "object"
-        };
+    private static readonly Dictionary<string, string> TypeMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
+        ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object"
+    };
 
     private static readonly string[] RuntimeFunctions =
     [
-        "Len", "LenB", "Left", "Right", "Mid", "UCase", "LCase", "Trim", "LTrim", "RTrim",
-        "FullTrim", "StrReverse", "CStr", "CByte", "CInt", "CLng", "CDbl", "CSng", "CCur",
-        "CBool", "CVar", "CDat", "CDate", "DataType", "TypeName", "IsArray", "IsDate", "IsEmpty",
-        "IsNull", "IsObject", "IsScalar", "IsNumeric", "Abs", "Int", "Fix", "Round", "Sqr", "Sgn",
-        "Sin", "Cos", "Tan", "ATn", "ATn2", "ASin", "ACos", "Exp", "Log", "Fraction", "Rnd",
-        "Val", "Str", "Bin", "Hex", "Oct", "Chr", "Asc", "Instr", "StrComp", "Replace", "Space",
-        "String", "Split", "Join", "Format", "Now", "Today", "Date", "Time", "Year", "Month", "Day",
-        "Hour", "Minute", "Second", "DateNumber", "TimeNumber", "DateValue", "TimeValue", "Weekday",
-        "MonthName", "WeekdayName", "DateAdd", "DateDiff", "DatePart", "Environ", "CurDir", "FreeFile",
-        "EOF", "LOF", "Seek", "FileLen", "FileDateTime", "GetFileAttr", "Dir", "Timer", "Command",
-        "InputBox", "MsgBox"
+        "Len", "LenB", "Left", "Right", "Mid", "UCase", "LCase", "Trim", "LTrim", "RTrim", "FullTrim", "StrReverse",
+        "CStr", "CByte", "CInt", "CLng", "CDbl", "CSng", "CCur", "CBool", "CVar", "CDat", "CDate", "DataType", "TypeName",
+        "IsArray", "IsDate", "IsEmpty", "IsNull", "IsObject", "IsScalar", "IsNumeric", "Abs", "Int", "Fix", "Round", "Sqr", "Sgn",
+        "Sin", "Cos", "Tan", "ATn", "ATn2", "ASin", "ACos", "Exp", "Log", "Fraction", "Rnd", "Val", "Str", "Bin", "Hex", "Oct",
+        "Chr", "Asc", "Instr", "StrComp", "Replace", "Space", "String", "Split", "Join", "Format", "Now", "Today", "Date", "Time",
+        "Year", "Month", "Day", "Hour", "Minute", "Second", "DateNumber", "TimeNumber", "DateValue", "TimeValue", "Weekday", "MonthName",
+        "WeekdayName", "DateAdd", "DateDiff", "DatePart", "Environ", "CurDir", "FreeFile", "EOF", "LOF", "Seek", "FileLen", "FileDateTime",
+        "GetFileAttr", "Dir", "Timer", "Command", "InputBox", "MsgBox"
     ];
 
-    private static readonly string[] ZeroArgRuntimeFunctions =
-    [
-        "Now", "Today", "Date", "Time", "FreeFile", "Timer", "Command", "CurDir"
-    ];
+    private static readonly string[] ZeroArgRuntimeFunctions = ["Now", "Today", "Date", "Time", "FreeFile", "Timer", "Command", "CurDir"];
 
     private string? _currentFunction;
     private string? _currentFunctionReturnType;
@@ -48,11 +33,9 @@ public sealed class LotusTranspiler
 
     public string Transpile(string source, string sourceName)
     {
-        var normalized = source.Replace("\r\n", "\n").Replace('\r', '\n');
-        var lines = normalized.Split('\n');
+        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var entryPoint = FindEntryPoint(lines);
         var body = new StringBuilder();
-
         _currentFunction = null;
         _currentFunctionReturnType = null;
         _variableTypes.Clear();
@@ -63,21 +46,14 @@ public sealed class LotusTranspiler
             var original = lines[i];
             var line = StripComment(original).Trim();
             if (string.IsNullOrWhiteSpace(line)) continue;
-
-            try
-            {
-                EmitLine(body, line);
-            }
+            try { EmitLine(body, line); }
             catch (CompilerException ex)
             {
-                throw new CompilerException(
-                    $"{sourceName}({i + 1}): {ex.Message}" + Environment.NewLine +
-                    $"  {original.Trim()}");
+                throw new CompilerException($"{sourceName}({i + 1}): {ex.Message}" + Environment.NewLine + $"  {original.Trim()}");
             }
         }
 
-        if (_currentFunction is not null)
-            throw new CompilerException($"Missing End Function/End Sub for '{_currentFunction}'.");
+        if (_currentFunction is not null) throw new CompilerException($"Missing End Function/End Sub for '{_currentFunction}'.");
 
         return $$"""
 // Generated by LS Lite Compiler.
@@ -109,8 +85,7 @@ internal static class Program
 
     private void EmitLine(StringBuilder sb, string line)
     {
-        if (Regex.IsMatch(line, @"^Option\s+(Declare|Public|Private)\b", RegexOptions.IgnoreCase))
-            return;
+        if (Regex.IsMatch(line, @"^Option\s+(Declare|Public|Private)\b", RegexOptions.IgnoreCase)) return;
 
         var subMatch = Regex.Match(line, @"^(?:Public\s+|Private\s+)?Sub\s+([A-Za-z_]\w*)\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
         if (subMatch.Success)
@@ -121,9 +96,7 @@ internal static class Program
             _variableTypes.Clear();
             var args = ParseArguments(subMatch.Groups[2].Value);
             RegisterArguments(subMatch.Groups[2].Value);
-            Write(sb, $"public static void {_currentFunction}({args})");
-            Write(sb, "{");
-            _indent++;
+            Write(sb, $"public static void {_currentFunction}({args})"); Write(sb, "{"); _indent++;
             return;
         }
 
@@ -137,35 +110,21 @@ internal static class Program
             _variableTypes.Clear();
             var args = ParseArguments(functionMatch.Groups[2].Value);
             RegisterArguments(functionMatch.Groups[2].Value);
-            Write(sb, $"public static {_currentFunctionReturnType} {_currentFunction}({args})");
-            Write(sb, "{");
-            _indent++;
+            Write(sb, $"public static {_currentFunctionReturnType} {_currentFunction}({args})"); Write(sb, "{"); _indent++;
             Write(sb, $"{_currentFunctionReturnType} __result = {DefaultValue(_currentFunctionReturnType)};");
             return;
         }
 
         if (Regex.IsMatch(line, @"^End\s+Sub$", RegexOptions.IgnoreCase))
         {
-            if (_currentFunction is null || _currentFunctionReturnType is not null)
-                throw new CompilerException("Unexpected End Sub.");
-            _indent--;
-            Write(sb, "}");
-            _currentFunction = null;
-            _variableTypes.Clear();
-            return;
+            if (_currentFunction is null || _currentFunctionReturnType is not null) throw new CompilerException("Unexpected End Sub.");
+            _indent--; Write(sb, "}"); _currentFunction = null; _variableTypes.Clear(); return;
         }
 
         if (Regex.IsMatch(line, @"^End\s+Function$", RegexOptions.IgnoreCase))
         {
-            if (_currentFunction is null || _currentFunctionReturnType is null)
-                throw new CompilerException("Unexpected End Function.");
-            Write(sb, "return __result;");
-            _indent--;
-            Write(sb, "}");
-            _currentFunction = null;
-            _currentFunctionReturnType = null;
-            _variableTypes.Clear();
-            return;
+            if (_currentFunction is null || _currentFunctionReturnType is null) throw new CompilerException("Unexpected End Function.");
+            Write(sb, "return __result;"); _indent--; Write(sb, "}"); _currentFunction = null; _currentFunctionReturnType = null; _variableTypes.Clear(); return;
         }
 
         EnsureInsideProcedure();
@@ -175,47 +134,15 @@ internal static class Program
         {
             var name = dimMatch.Groups[1].Value;
             var type = MapType(string.IsNullOrWhiteSpace(dimMatch.Groups[2].Value) ? "Variant" : dimMatch.Groups[2].Value);
-            _variableTypes[name] = type;
-            Write(sb, $"{type} {name} = {DefaultValue(type)};");
-            return;
+            _variableTypes[name] = type; Write(sb, $"{type} {name} = {DefaultValue(type)};"); return;
         }
 
         var ifMatch = Regex.Match(line, @"^If\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
-        if (ifMatch.Success)
-        {
-            Write(sb, $"if ({TransformCondition(ifMatch.Groups[1].Value)})");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
+        if (ifMatch.Success) { Write(sb, $"if ({TransformCondition(ifMatch.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
         var elseifMatch = Regex.Match(line, @"^ElseIf\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
-        if (elseifMatch.Success)
-        {
-            _indent--;
-            Write(sb, "}");
-            Write(sb, $"else if ({TransformCondition(elseifMatch.Groups[1].Value)})");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Else$", RegexOptions.IgnoreCase))
-        {
-            _indent--;
-            Write(sb, "}");
-            Write(sb, "else");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^End\s+If$", RegexOptions.IgnoreCase))
-        {
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
+        if (elseifMatch.Success) { _indent--; Write(sb, "}"); Write(sb, $"else if ({TransformCondition(elseifMatch.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
+        if (Regex.IsMatch(line, @"^Else$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); Write(sb, "else"); Write(sb, "{"); _indent++; return; }
+        if (Regex.IsMatch(line, @"^End\s+If$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); return; }
 
         var forMatch = Regex.Match(line, @"^For\s+([A-Za-z_]\w*)\s*=\s*(.+?)\s+To\s+(.+?)(?:\s+Step\s+(.+))?$", RegexOptions.IgnoreCase);
         if (forMatch.Success)
@@ -224,152 +151,53 @@ internal static class Program
             var start = TransformExpression(forMatch.Groups[2].Value);
             var end = TransformExpression(forMatch.Groups[3].Value);
             var step = string.IsNullOrWhiteSpace(forMatch.Groups[4].Value) ? "1" : TransformExpression(forMatch.Groups[4].Value);
-            Write(sb, $"foreach (var __forValue in LotusRuntime.Range({start}, {end}, {step}))");
-            Write(sb, "{");
-            _indent++;
-            Write(sb, $"{variable} = Convert.ToInt64(__forValue);");
-            return;
+            Write(sb, $"foreach (var __forValue in LotusRuntime.Range({start}, {end}, {step}))"); Write(sb, "{"); _indent++;
+            Write(sb, $"{variable} = {ConvertForValue(variable, "__forValue")};"); return;
         }
-
-        if (Regex.IsMatch(line, @"^Next(?:\s+[A-Za-z_]\w*)?$", RegexOptions.IgnoreCase))
-        {
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
+        if (Regex.IsMatch(line, @"^Next(?:\s+[A-Za-z_]\w*)?$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); return; }
 
         var whileMatch = Regex.Match(line, @"^While\s+(.+)$", RegexOptions.IgnoreCase);
-        if (whileMatch.Success)
-        {
-            Write(sb, $"while ({TransformCondition(whileMatch.Groups[1].Value)})");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Wend$", RegexOptions.IgnoreCase))
-        {
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Do$", RegexOptions.IgnoreCase))
-        {
-            Write(sb, "while (true)");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
+        if (whileMatch.Success) { Write(sb, $"while ({TransformCondition(whileMatch.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
+        if (Regex.IsMatch(line, @"^Wend$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); return; }
+        if (Regex.IsMatch(line, @"^Do$", RegexOptions.IgnoreCase)) { Write(sb, "while (true)"); Write(sb, "{"); _indent++; return; }
         var doWhile = Regex.Match(line, @"^Do\s+While\s+(.+)$", RegexOptions.IgnoreCase);
-        if (doWhile.Success)
-        {
-            Write(sb, $"while ({TransformCondition(doWhile.Groups[1].Value)})");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
+        if (doWhile.Success) { Write(sb, $"while ({TransformCondition(doWhile.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
         var doUntil = Regex.Match(line, @"^Do\s+Until\s+(.+)$", RegexOptions.IgnoreCase);
-        if (doUntil.Success)
-        {
-            Write(sb, $"while (!({TransformCondition(doUntil.Groups[1].Value)}))");
-            Write(sb, "{");
-            _indent++;
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Loop$", RegexOptions.IgnoreCase))
-        {
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
-
+        if (doUntil.Success) { Write(sb, $"while (!({TransformCondition(doUntil.Groups[1].Value)}))"); Write(sb, "{"); _indent++; return; }
+        if (Regex.IsMatch(line, @"^Loop$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); return; }
         var loopWhile = Regex.Match(line, @"^Loop\s+While\s+(.+)$", RegexOptions.IgnoreCase);
-        if (loopWhile.Success)
-        {
-            Write(sb, $"if (!({TransformCondition(loopWhile.Groups[1].Value)})) break;");
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
-
+        if (loopWhile.Success) { Write(sb, $"if (!({TransformCondition(loopWhile.Groups[1].Value)})) break;"); _indent--; Write(sb, "}"); return; }
         var loopUntil = Regex.Match(line, @"^Loop\s+Until\s+(.+)$", RegexOptions.IgnoreCase);
-        if (loopUntil.Success)
-        {
-            Write(sb, $"if ({TransformCondition(loopUntil.Groups[1].Value)}) break;");
-            _indent--;
-            Write(sb, "}");
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Exit\s+(For|Do|While)$", RegexOptions.IgnoreCase))
-        {
-            Write(sb, "break;");
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Exit\s+Sub$", RegexOptions.IgnoreCase))
-        {
-            Write(sb, "return;");
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Exit\s+Function$", RegexOptions.IgnoreCase))
-        {
-            Write(sb, "return __result;");
-            return;
-        }
+        if (loopUntil.Success) { Write(sb, $"if ({TransformCondition(loopUntil.Groups[1].Value)}) break;"); _indent--; Write(sb, "}"); return; }
+        if (Regex.IsMatch(line, @"^Exit\s+(For|Do|While)$", RegexOptions.IgnoreCase)) { Write(sb, "break;"); return; }
+        if (Regex.IsMatch(line, @"^Exit\s+Sub$", RegexOptions.IgnoreCase)) { Write(sb, "return;"); return; }
+        if (Regex.IsMatch(line, @"^Exit\s+Function$", RegexOptions.IgnoreCase)) { Write(sb, "return __result;"); return; }
 
         var openMatch = Regex.Match(line, @"^Open\s+(.+?)\s+For\s+(Input|Output|Append|Binary|Random)\s+As\s+#?(.+?)(?:\s+Len\s*=\s*(.+))?$", RegexOptions.IgnoreCase);
         if (openMatch.Success)
         {
-            Write(sb, $"LotusRuntime.OpenFile({TransformExpression(openMatch.Groups[1].Value)}, \"{openMatch.Groups[2].Value.ToLowerInvariant()}\", LotusRuntime.CInt({TransformExpression(openMatch.Groups[3].Value)}));");
-            return;
+            Write(sb, $"LotusRuntime.OpenFile({TransformExpression(openMatch.Groups[1].Value)}, \"{openMatch.Groups[2].Value.ToLowerInvariant()}\", LotusRuntime.CInt({TransformExpression(openMatch.Groups[3].Value)}));"); return;
         }
 
         var closeMatch = Regex.Match(line, @"^Close(?:\s+(.+))?$", RegexOptions.IgnoreCase);
         if (closeMatch.Success)
         {
-            if (string.IsNullOrWhiteSpace(closeMatch.Groups[1].Value))
-                Write(sb, "LotusRuntime.CloseFile();");
+            if (string.IsNullOrWhiteSpace(closeMatch.Groups[1].Value)) Write(sb, "LotusRuntime.CloseFile();");
             else
             {
-                var nums = SplitOutsideStrings(closeMatch.Groups[1].Value, ',')
-                    .Select(x => x.Trim().TrimStart('#'))
-                    .Select(TransformExpression)
-                    .Select(x => $"LotusRuntime.CInt({x})");
-                Write(sb, $"LotusRuntime.CloseFile({string.Join(\", \", nums)});");
+                var nums = SplitOutsideStrings(closeMatch.Groups[1].Value, ',').Select(x => x.Trim().TrimStart('#')).Select(TransformExpression).Select(x => $"LotusRuntime.CInt({x})");
+                var joined = string.Join(", ", nums);
+                Write(sb, $"LotusRuntime.CloseFile({joined});");
             }
             return;
         }
 
         var filePrintMatch = Regex.Match(line, @"^Print\s+#?([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
-        if (filePrintMatch.Success)
-        {
-            var values = TransformArgumentList(filePrintMatch.Groups[2].Value);
-            Write(sb, $"LotusRuntime.PrintFile(LotusRuntime.CInt({TransformExpression(filePrintMatch.Groups[1].Value)}), {values});");
-            return;
-        }
-
+        if (filePrintMatch.Success) { Write(sb, $"LotusRuntime.PrintFile(LotusRuntime.CInt({TransformExpression(filePrintMatch.Groups[1].Value)}), {TransformArgumentList(filePrintMatch.Groups[2].Value)});"); return; }
         var writeMatch = Regex.Match(line, @"^Write\s+#?([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
-        if (writeMatch.Success)
-        {
-            var values = TransformArgumentList(writeMatch.Groups[2].Value);
-            Write(sb, $"LotusRuntime.WriteFile(LotusRuntime.CInt({TransformExpression(writeMatch.Groups[1].Value)}), {values});");
-            return;
-        }
-
+        if (writeMatch.Success) { Write(sb, $"LotusRuntime.WriteFile(LotusRuntime.CInt({TransformExpression(writeMatch.Groups[1].Value)}), {TransformArgumentList(writeMatch.Groups[2].Value)});"); return; }
         var lineInputMatch = Regex.Match(line, @"^Line\s+Input\s+#?([^,]+)\s*,\s*([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
-        if (lineInputMatch.Success)
-        {
-            var name = lineInputMatch.Groups[2].Value;
-            Write(sb, $"{name} = LotusRuntime.LineInput(LotusRuntime.CInt({TransformExpression(lineInputMatch.Groups[1].Value)}));");
-            return;
-        }
-
+        if (lineInputMatch.Success) { var name = lineInputMatch.Groups[2].Value; Write(sb, $"{name} = LotusRuntime.LineInput(LotusRuntime.CInt({TransformExpression(lineInputMatch.Groups[1].Value)}));"); return; }
         var inputMatch = Regex.Match(line, @"^Input\s+#?([^,]+)\s*,\s*(.+)$", RegexOptions.IgnoreCase);
         if (inputMatch.Success)
         {
@@ -377,108 +205,48 @@ internal static class Program
             foreach (var rawName in SplitOutsideStrings(inputMatch.Groups[2].Value, ','))
             {
                 var name = rawName.Trim();
-                if (!Regex.IsMatch(name, @"^[A-Za-z_]\w*$"))
-                    throw new CompilerException("Input supports variable targets only.");
+                if (!Regex.IsMatch(name, @"^[A-Za-z_]\w*$")) throw new CompilerException("Input supports variable targets only.");
                 Write(sb, $"{name} = {ConvertInputValue(name, fileNo)};");
             }
             return;
         }
-
         var seekSetMatch = Regex.Match(line, @"^Seek\s+#?([^,]+)\s*,\s*(.+)$", RegexOptions.IgnoreCase);
-        if (seekSetMatch.Success)
-        {
-            Write(sb, $"LotusRuntime.SeekSet(LotusRuntime.CInt({TransformExpression(seekSetMatch.Groups[1].Value)}), LotusRuntime.CLng({TransformExpression(seekSetMatch.Groups[2].Value)}));");
-            return;
-        }
-
+        if (seekSetMatch.Success) { Write(sb, $"LotusRuntime.SeekSet(LotusRuntime.CInt({TransformExpression(seekSetMatch.Groups[1].Value)}), LotusRuntime.CLng({TransformExpression(seekSetMatch.Groups[2].Value)}));"); return; }
         var fileCopyMatch = Regex.Match(line, @"^FileCopy\s+(.+?)\s*,\s*(.+)$", RegexOptions.IgnoreCase);
-        if (fileCopyMatch.Success)
-        {
-            Write(sb, $"LotusRuntime.FileCopy({TransformExpression(fileCopyMatch.Groups[1].Value)}, {TransformExpression(fileCopyMatch.Groups[2].Value)});");
-            return;
-        }
-
+        if (fileCopyMatch.Success) { Write(sb, $"LotusRuntime.FileCopy({TransformExpression(fileCopyMatch.Groups[1].Value)}, {TransformExpression(fileCopyMatch.Groups[2].Value)});"); return; }
         var nameMatch = Regex.Match(line, @"^Name\s+(.+?)\s+As\s+(.+)$", RegexOptions.IgnoreCase);
-        if (nameMatch.Success)
-        {
-            Write(sb, $"LotusRuntime.NameFile({TransformExpression(nameMatch.Groups[1].Value)}, {TransformExpression(nameMatch.Groups[2].Value)});");
-            return;
-        }
-
+        if (nameMatch.Success) { Write(sb, $"LotusRuntime.NameFile({TransformExpression(nameMatch.Groups[1].Value)}, {TransformExpression(nameMatch.Groups[2].Value)});"); return; }
         if (EmitUnaryRuntimeStatement(sb, line, "Kill", "Kill")) return;
         if (EmitUnaryRuntimeStatement(sb, line, "MkDir", "MkDir")) return;
         if (EmitUnaryRuntimeStatement(sb, line, "RmDir", "RmDir")) return;
         if (EmitUnaryRuntimeStatement(sb, line, "ChDir", "ChDir")) return;
-
         var setAttrMatch = Regex.Match(line, @"^SetFileAttr\s+(.+?)\s*,\s*(.+)$", RegexOptions.IgnoreCase);
-        if (setAttrMatch.Success)
-        {
-            Write(sb, $"LotusRuntime.SetFileAttr({TransformExpression(setAttrMatch.Groups[1].Value)}, LotusRuntime.CInt({TransformExpression(setAttrMatch.Groups[2].Value)}));");
-            return;
-        }
+        if (setAttrMatch.Success) { Write(sb, $"LotusRuntime.SetFileAttr({TransformExpression(setAttrMatch.Groups[1].Value)}, LotusRuntime.CInt({TransformExpression(setAttrMatch.Groups[2].Value)}));"); return; }
 
         var randomizeMatch = Regex.Match(line, @"^Randomize(?:\s+(.+))?$", RegexOptions.IgnoreCase);
-        if (randomizeMatch.Success)
-        {
-            Write(sb, string.IsNullOrWhiteSpace(randomizeMatch.Groups[1].Value)
-                ? "LotusRuntime.Randomize();"
-                : $"LotusRuntime.Randomize({TransformExpression(randomizeMatch.Groups[1].Value)});");
-            return;
-        }
-
-        if (Regex.IsMatch(line, @"^Beep$", RegexOptions.IgnoreCase))
-        {
-            Write(sb, "LotusRuntime.Beep();");
-            return;
-        }
+        if (randomizeMatch.Success) { Write(sb, string.IsNullOrWhiteSpace(randomizeMatch.Groups[1].Value) ? "LotusRuntime.Randomize();" : $"LotusRuntime.Randomize({TransformExpression(randomizeMatch.Groups[1].Value)});"); return; }
+        if (Regex.IsMatch(line, @"^Beep$", RegexOptions.IgnoreCase)) { Write(sb, "LotusRuntime.Beep();"); return; }
 
         var returnMatch = Regex.Match(line, @"^Return(?:\s+(.+))?$", RegexOptions.IgnoreCase);
-        if (returnMatch.Success)
-        {
-            Write(sb, string.IsNullOrWhiteSpace(returnMatch.Groups[1].Value)
-                ? "return;"
-                : $"return {TransformExpression(returnMatch.Groups[1].Value)};");
-            return;
-        }
-
+        if (returnMatch.Success) { Write(sb, string.IsNullOrWhiteSpace(returnMatch.Groups[1].Value) ? "return;" : $"return {TransformExpression(returnMatch.Groups[1].Value)};"); return; }
         var printMatch = Regex.Match(line, @"^Print\s+(.+)$", RegexOptions.IgnoreCase);
-        if (printMatch.Success)
-        {
-            Write(sb, $"Console.WriteLine({TransformExpression(printMatch.Groups[1].Value)});");
-            return;
-        }
-
+        if (printMatch.Success) { Write(sb, $"Console.WriteLine({TransformExpression(printMatch.Groups[1].Value)});"); return; }
         var callMatch = Regex.Match(line, @"^Call\s+([A-Za-z_]\w*)\s*\((.*)\)$", RegexOptions.IgnoreCase);
-        if (callMatch.Success)
-        {
-            Write(sb, $"{callMatch.Groups[1].Value}({TransformArgumentList(callMatch.Groups[2].Value)});");
-            return;
-        }
-
+        if (callMatch.Success) { Write(sb, $"{callMatch.Groups[1].Value}({TransformArgumentList(callMatch.Groups[2].Value)});"); return; }
         var assignmentMatch = Regex.Match(line, @"^(?:Let\s+)?([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
         if (assignmentMatch.Success)
         {
-            var name = assignmentMatch.Groups[1].Value;
-            var expr = TransformExpression(assignmentMatch.Groups[2].Value);
-            if (_currentFunctionReturnType is not null && name.Equals(_currentFunction, StringComparison.OrdinalIgnoreCase))
-                Write(sb, $"__result = {expr};");
-            else
-                Write(sb, $"{name} = {expr};");
+            var name = assignmentMatch.Groups[1].Value; var expr = TransformExpression(assignmentMatch.Groups[2].Value);
+            if (_currentFunctionReturnType is not null && name.Equals(_currentFunction, StringComparison.OrdinalIgnoreCase)) Write(sb, $"__result = {expr};"); else Write(sb, $"{name} = {expr};");
             return;
         }
-
         var bareCall = Regex.Match(line, @"^([A-Za-z_]\w*)\s*\((.*)\)$", RegexOptions.IgnoreCase);
         if (bareCall.Success)
         {
-            var callName = bareCall.Groups[1].Value;
-            var callArgs = TransformArgumentList(bareCall.Groups[2].Value);
-            if (RuntimeFunctions.Any(fn => fn.Equals(callName, StringComparison.OrdinalIgnoreCase)))
-                Write(sb, $"LotusRuntime.{callName}({callArgs});");
-            else
-                Write(sb, $"{callName}({callArgs});");
+            var callName = bareCall.Groups[1].Value; var callArgs = TransformArgumentList(bareCall.Groups[2].Value);
+            Write(sb, RuntimeFunctions.Any(fn => fn.Equals(callName, StringComparison.OrdinalIgnoreCase)) ? $"LotusRuntime.{callName}({callArgs});" : $"{callName}({callArgs});");
             return;
         }
-
         throw new CompilerException($"Unsupported statement: {line}");
     }
 
@@ -486,45 +254,26 @@ internal static class Program
     {
         var match = Regex.Match(line, $@"^{keyword}\s+(.+)$", RegexOptions.IgnoreCase);
         if (!match.Success) return false;
-        Write(sb, $"LotusRuntime.{method}({TransformExpression(match.Groups[1].Value)});");
-        return true;
+        Write(sb, $"LotusRuntime.{method}({TransformExpression(match.Groups[1].Value)});"); return true;
     }
 
     private string ConvertInputValue(string name, string fileNo)
     {
         var raw = $"LotusRuntime.Input({fileNo})";
         if (!_variableTypes.TryGetValue(name, out var type)) return raw;
-        return type switch
-        {
-            "string" => raw,
-            "byte" => $"LotusRuntime.CByte({raw})",
-            "int" => $"LotusRuntime.CInt({raw})",
-            "long" => $"LotusRuntime.CLng({raw})",
-            "double" => $"LotusRuntime.CDbl({raw})",
-            "float" => $"LotusRuntime.CSng({raw})",
-            "decimal" => $"LotusRuntime.CCur({raw})",
-            "bool" => $"LotusRuntime.CBool({raw})",
-            "DateTime" => $"LotusRuntime.CDat({raw})",
-            _ => raw
-        };
+        return type switch { "string" => raw, "byte" => $"LotusRuntime.CByte({raw})", "int" => $"LotusRuntime.CInt({raw})", "long" => $"LotusRuntime.CLng({raw})", "double" => $"LotusRuntime.CDbl({raw})", "float" => $"LotusRuntime.CSng({raw})", "decimal" => $"LotusRuntime.CCur({raw})", "bool" => $"LotusRuntime.CBool({raw})", "DateTime" => $"LotusRuntime.CDat({raw})", _ => raw };
+    }
+
+    private string ConvertForValue(string name, string raw)
+    {
+        if (!_variableTypes.TryGetValue(name, out var type)) return raw;
+        return type switch { "byte" => $"Convert.ToByte({raw})", "int" => $"Convert.ToInt32({raw})", "long" => $"Convert.ToInt64({raw})", "double" => $"Convert.ToDouble({raw})", "float" => $"Convert.ToSingle({raw})", "decimal" => $"Convert.ToDecimal({raw})", _ => raw };
     }
 
     private static string FindEntryPoint(string[] lines)
     {
-        foreach (var raw in lines)
-        {
-            var line = StripComment(raw).Trim();
-            if (Regex.IsMatch(line, @"^(?:Public\s+|Private\s+)?Sub\s+Main\b", RegexOptions.IgnoreCase))
-                return "Main";
-        }
-
-        foreach (var raw in lines)
-        {
-            var line = StripComment(raw).Trim();
-            if (Regex.IsMatch(line, @"^(?:Public\s+|Private\s+)?Sub\s+Initialize\b", RegexOptions.IgnoreCase))
-                return "Initialize";
-        }
-
+        foreach (var raw in lines) if (Regex.IsMatch(StripComment(raw).Trim(), @"^(?:Public\s+|Private\s+)?Sub\s+Main\b", RegexOptions.IgnoreCase)) return "Main";
+        foreach (var raw in lines) if (Regex.IsMatch(StripComment(raw).Trim(), @"^(?:Public\s+|Private\s+)?Sub\s+Initialize\b", RegexOptions.IgnoreCase)) return "Initialize";
         throw new CompilerException("No entry point found. Add Sub Main() or Sub Initialize().");
     }
 
@@ -535,9 +284,7 @@ internal static class Program
         {
             var match = Regex.Match(part.Trim(), @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
             if (!match.Success) continue;
-            var name = match.Groups[2].Value;
-            var type = MapType(string.IsNullOrWhiteSpace(match.Groups[3].Value) ? "Variant" : match.Groups[3].Value);
-            _variableTypes[name] = type;
+            _variableTypes[match.Groups[2].Value] = MapType(string.IsNullOrWhiteSpace(match.Groups[3].Value) ? "Variant" : match.Groups[3].Value);
         }
     }
 
@@ -549,11 +296,8 @@ internal static class Program
         {
             var match = Regex.Match(part.Trim(), @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
             if (!match.Success) throw new CompilerException($"Unsupported argument declaration: {part.Trim()}");
-            if (match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase))
-                throw new CompilerException("ByRef is not supported yet.");
-            var name = match.Groups[2].Value;
-            var type = MapType(string.IsNullOrWhiteSpace(match.Groups[3].Value) ? "Variant" : match.Groups[3].Value);
-            converted.Add($"{type} {name}");
+            if (match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("ByRef is not supported yet.");
+            converted.Add($"{MapType(string.IsNullOrWhiteSpace(match.Groups[3].Value) ? "Variant" : match.Groups[3].Value)} {match.Groups[2].Value}");
         }
         return string.Join(", ", converted);
     }
@@ -561,25 +305,16 @@ internal static class Program
     private string TransformCondition(string expression)
     {
         var transformed = TransformExpression(expression);
-        transformed = Regex.Replace(transformed, @"(?<![<>=!])=(?!=)", "==");
-        return transformed;
+        return Regex.Replace(transformed, @"(?<![<>=!])=(?!=)", "==");
     }
 
     private string TransformExpression(string expression)
     {
-        var pieces = SplitStringLiterals(expression);
         var result = new StringBuilder();
-
-        foreach (var piece in pieces)
+        foreach (var piece in SplitStringLiterals(expression))
         {
-            if (piece.IsString)
-            {
-                result.Append(ConvertLotusStringLiteral(piece.Text));
-                continue;
-            }
-
-            var text = piece.Text;
-            text = text.Replace("<>", "!=", StringComparison.Ordinal);
+            if (piece.IsString) { result.Append(ConvertLotusStringLiteral(piece.Text)); continue; }
+            var text = piece.Text.Replace("<>", "!=", StringComparison.Ordinal);
             text = Regex.Replace(text, @"\bAnd\b", "&&", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"\bOr\b", "||", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"\bNot\b", "!", RegexOptions.IgnoreCase);
@@ -588,76 +323,31 @@ internal static class Program
             text = Regex.Replace(text, @"\bFalse\b", "false", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"\bNothing\b", "null", RegexOptions.IgnoreCase);
             text = text.Replace("&", "+", StringComparison.Ordinal);
-
             foreach (var fn in RuntimeFunctions)
             {
                 text = Regex.Replace(text, $@"(?<![\w.]){Regex.Escape(fn)}\$\s*\(", $"LotusRuntime.{fn}(", RegexOptions.IgnoreCase);
                 text = Regex.Replace(text, $@"(?<![\w.]){Regex.Escape(fn)}\s*\(", $"LotusRuntime.{fn}(", RegexOptions.IgnoreCase);
             }
-
             foreach (var fn in ZeroArgRuntimeFunctions)
-            {
-                text = Regex.Replace(
-                    text,
-                    $@"(?<![\w.]){Regex.Escape(fn)}\$?(?!\s*\(|[\w])",
-                    $"LotusRuntime.{fn}()",
-                    RegexOptions.IgnoreCase);
-            }
-
+                text = Regex.Replace(text, $@"(?<![\w.]){Regex.Escape(fn)}\$?(?!\s*\(|[\w])", $"LotusRuntime.{fn}()", RegexOptions.IgnoreCase);
             result.Append(text);
         }
-
         return result.ToString().Trim();
     }
 
-    private string TransformArgumentList(string raw) =>
-        string.Join(", ", SplitOutsideStrings(raw, ',').Select(TransformExpression));
-
-    private static string MapType(string lotusType) =>
-        TypeMap.TryGetValue(lotusType.Trim(), out var csharpType)
-            ? csharpType
-            : throw new CompilerException($"Unsupported type: {lotusType}");
-
-    private static string DefaultValue(string type) => type switch
-    {
-        "string" => "\"\"",
-        "bool" => "false",
-        "DateTime" => "default",
-        "dynamic" => "null!",
-        "object" => "null!",
-        _ => "0"
-    };
-
-    private void EnsureOutsideProcedure(string keyword)
-    {
-        if (_currentFunction is not null)
-            throw new CompilerException($"{keyword} cannot be nested inside another procedure.");
-    }
-
-    private void EnsureInsideProcedure()
-    {
-        if (_currentFunction is null)
-            throw new CompilerException("Executable statements must be inside Sub Main/Initialize or another procedure.");
-    }
-
-    private void Write(StringBuilder sb, string text)
-    {
-        if (_indent < 1) throw new CompilerException("Unexpected block terminator.");
-        sb.Append(' ', _indent * 4);
-        sb.AppendLine(text);
-    }
+    private string TransformArgumentList(string raw) => string.Join(", ", SplitOutsideStrings(raw, ',').Select(TransformExpression));
+    private static string MapType(string lotusType) => TypeMap.TryGetValue(lotusType.Trim(), out var type) ? type : throw new CompilerException($"Unsupported type: {lotusType}");
+    private static string DefaultValue(string type) => type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", _ => "0" };
+    private void EnsureOutsideProcedure(string keyword) { if (_currentFunction is not null) throw new CompilerException($"{keyword} cannot be nested inside another procedure."); }
+    private void EnsureInsideProcedure() { if (_currentFunction is null) throw new CompilerException("Executable statements must be inside Sub Main/Initialize or another procedure."); }
+    private void Write(StringBuilder sb, string text) { if (_indent < 1) throw new CompilerException("Unexpected block terminator."); sb.Append(' ', _indent * 4); sb.AppendLine(text); }
 
     private static string StripComment(string line)
     {
         var inString = false;
         for (var i = 0; i < line.Length; i++)
         {
-            if (line[i] == '"')
-            {
-                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
-                inString = !inString;
-                continue;
-            }
+            if (line[i] == '"') { if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; } inString = !inString; continue; }
             if (!inString && line[i] == '\'') return line[..i];
         }
         return line;
@@ -665,44 +355,19 @@ internal static class Program
 
     private static List<(string Text, bool IsString)> SplitStringLiterals(string expression)
     {
-        var result = new List<(string, bool)>();
-        var current = new StringBuilder();
-        var inString = false;
-
+        var result = new List<(string, bool)>(); var current = new StringBuilder(); var inString = false;
         for (var i = 0; i < expression.Length; i++)
         {
             var c = expression[i];
             if (c == '"')
             {
-                if (inString && i + 1 < expression.Length && expression[i + 1] == '"')
-                {
-                    current.Append("\"\"");
-                    i++;
-                    continue;
-                }
-
-                if (inString)
-                {
-                    current.Append(c);
-                    result.Add((current.ToString(), true));
-                    current.Clear();
-                    inString = false;
-                }
-                else
-                {
-                    if (current.Length > 0)
-                    {
-                        result.Add((current.ToString(), false));
-                        current.Clear();
-                    }
-                    current.Append(c);
-                    inString = true;
-                }
+                if (inString && i + 1 < expression.Length && expression[i + 1] == '"') { current.Append("\"\""); i++; continue; }
+                if (inString) { current.Append(c); result.Add((current.ToString(), true)); current.Clear(); inString = false; }
+                else { if (current.Length > 0) { result.Add((current.ToString(), false)); current.Clear(); } current.Append(c); inString = true; }
                 continue;
             }
             current.Append(c);
         }
-
         if (current.Length > 0) result.Add((current.ToString(), inString));
         if (inString) throw new CompilerException("Unterminated string literal.");
         return result;
@@ -710,9 +375,7 @@ internal static class Program
 
     private static string ConvertLotusStringLiteral(string literal)
     {
-        if (literal.Length < 2 || literal[0] != '"' || literal[^1] != '"')
-            throw new CompilerException("Invalid string literal.");
-
+        if (literal.Length < 2 || literal[0] != '"' || literal[^1] != '"') throw new CompilerException("Invalid string literal.");
         var inner = literal[1..^1].Replace("\"\"", "\\\"");
         inner = inner.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
         inner = inner.Replace("\\\\\"", "\\\"");
@@ -721,43 +384,19 @@ internal static class Program
 
     private static List<string> SplitOutsideStrings(string value, char separator)
     {
-        var result = new List<string>();
-        var current = new StringBuilder();
-        var inString = false;
-        var parenDepth = 0;
-
+        var result = new List<string>(); var current = new StringBuilder(); var inString = false; var parenDepth = 0;
         for (var i = 0; i < value.Length; i++)
         {
             var c = value[i];
-            if (c == '"')
-            {
-                current.Append(c);
-                if (inString && i + 1 < value.Length && value[i + 1] == '"')
-                {
-                    current.Append(value[++i]);
-                    continue;
-                }
-                inString = !inString;
-                continue;
-            }
-
+            if (c == '"') { current.Append(c); if (inString && i + 1 < value.Length && value[i + 1] == '"') { current.Append(value[++i]); continue; } inString = !inString; continue; }
             if (!inString)
             {
-                if (c == '(') parenDepth++;
-                if (c == ')') parenDepth--;
-                if (c == separator && parenDepth == 0)
-                {
-                    result.Add(current.ToString());
-                    current.Clear();
-                    continue;
-                }
+                if (c == '(') parenDepth++; if (c == ')') parenDepth--;
+                if (c == separator && parenDepth == 0) { result.Add(current.ToString()); current.Clear(); continue; }
             }
-
             current.Append(c);
         }
-
-        result.Add(current.ToString());
-        return result;
+        result.Add(current.ToString()); return result;
     }
 
     private static string EscapeComment(string value) => value.Replace("\r", " ").Replace("\n", " ");
