@@ -9,6 +9,7 @@ public sealed class XPScriptTranspiler
     {
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
+        source = new NativeHttpJsonPreprocessor().Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
@@ -33,6 +34,8 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
+        generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
+        generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
