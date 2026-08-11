@@ -23,6 +23,7 @@ public sealed class XPScriptTranspiler
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleGlobals.Transform(source);
+        source = new DateObjectPreprocessor().Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
@@ -47,6 +48,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
+        generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
