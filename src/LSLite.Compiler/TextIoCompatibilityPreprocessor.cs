@@ -5,24 +5,19 @@ namespace LSLite.Compiler;
 
 internal sealed class TextIoCompatibilityPreprocessor
 {
-    private readonly HashSet<string> _encodedFileNumbers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _specialFileNumbers = new(StringComparer.OrdinalIgnoreCase);
 
     public string Transform(string source)
     {
-        _encodedFileNumbers.Clear();
+        _specialFileNumbers.Clear();
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
 
-        // First pass records file-number expressions used by charset-aware text files.
+        // First pass records file numbers opened with Charset and/or Encoding options.
         foreach (var raw in lines)
         {
-            var line = raw.Trim();
-            var open = Regex.Match(
-                line,
-                @"^Open\s+(.+?)\s+For\s+(Input|Output|Append)\s+As\s+#?(.+?)\s+Charset\s+(.+?)\s*$",
-                RegexOptions.IgnoreCase);
-            if (open.Success)
-                _encodedFileNumbers.Add(NormalizeFileNumber(open.Groups[3].Value));
+            if (TryParseSpecialOpen(raw.Trim(), out var open))
+                _specialFileNumbers.Add(NormalizeFileNumber(open.FileNumber));
         }
 
         foreach (var raw in lines)
@@ -35,46 +30,43 @@ internal sealed class TextIoCompatibilityPreprocessor
                 continue;
             }
 
-            var open = Regex.Match(
-                line,
-                @"^Open\s+(.+?)\s+For\s+(Input|Output|Append)\s+As\s+#?(.+?)\s+Charset\s+(.+?)\s*$",
-                RegexOptions.IgnoreCase);
-            if (open.Success)
+            if (TryParseSpecialOpen(line, out var open))
             {
-                output.Add(indent + $"Call LSLiteTextIO.OpenText({open.Groups[1].Value}, \"{open.Groups[2].Value.ToLowerInvariant()}\", {open.Groups[3].Value}, {open.Groups[4].Value})");
+                output.Add(indent +
+                    $"Call LSLiteTextIO.OpenText({open.Path}, \"{open.Mode.ToLowerInvariant()}\", {open.FileNumber}, {open.Charset}, {open.Encoding})");
                 continue;
             }
 
             var close = Regex.Match(line, @"^Close\s+#?(.+?)\s*$", RegexOptions.IgnoreCase);
-            if (close.Success && IsEncodedFile(close.Groups[1].Value))
+            if (close.Success && IsSpecialFile(close.Groups[1].Value))
             {
                 output.Add(indent + $"Call LSLiteTextIO.CloseFile({close.Groups[1].Value})");
                 continue;
             }
 
             var filePrint = Regex.Match(line, @"^Print\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
-            if (filePrint.Success && IsEncodedFile(filePrint.Groups[1].Value))
+            if (filePrint.Success && IsSpecialFile(filePrint.Groups[1].Value))
             {
                 output.Add(indent + $"Call LSLiteTextIO.PrintFile({filePrint.Groups[1].Value}, {filePrint.Groups[2].Value})");
                 continue;
             }
 
             var fileWrite = Regex.Match(line, @"^Write\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
-            if (fileWrite.Success && IsEncodedFile(fileWrite.Groups[1].Value))
+            if (fileWrite.Success && IsSpecialFile(fileWrite.Groups[1].Value))
             {
                 output.Add(indent + $"Call LSLiteTextIO.WriteFile({fileWrite.Groups[1].Value}, {fileWrite.Groups[2].Value})");
                 continue;
             }
 
             var lineInput = Regex.Match(line, @"^Line\s+Input\s+#([^,]+)\s*,\s*([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
-            if (lineInput.Success && IsEncodedFile(lineInput.Groups[1].Value))
+            if (lineInput.Success && IsSpecialFile(lineInput.Groups[1].Value))
             {
                 output.Add(indent + $"{lineInput.Groups[2].Value} = LSLiteTextIO.LineInput({lineInput.Groups[1].Value})");
                 continue;
             }
 
             var fileInput = Regex.Match(line, @"^Input\s+#([^,]+)\s*,\s*([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
-            if (fileInput.Success && IsEncodedFile(fileInput.Groups[1].Value))
+            if (fileInput.Success && IsSpecialFile(fileInput.Groups[1].Value))
             {
                 output.Add(indent + $"{fileInput.Groups[2].Value} = LSLiteTextIO.InputFile({fileInput.Groups[1].Value})");
                 continue;
@@ -126,7 +118,7 @@ internal sealed class TextIoCompatibilityPreprocessor
             transformed = Regex.Replace(transformed, @"(?<![\w.])UrlEncode\$?\s*\(", "LSLiteTextIO.UrlEncode(", RegexOptions.IgnoreCase);
             transformed = Regex.Replace(transformed, @"(?<![\w.])UrlDecode\$?\s*\(", "LSLiteTextIO.UrlDecode(", RegexOptions.IgnoreCase);
 
-            foreach (var fileNo in _encodedFileNumbers)
+            foreach (var fileNo in _specialFileNumbers)
             {
                 var escaped = Regex.Escape(fileNo);
                 transformed = Regex.Replace(
@@ -142,8 +134,41 @@ internal sealed class TextIoCompatibilityPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private bool IsEncodedFile(string value) => _encodedFileNumbers.Contains(NormalizeFileNumber(value));
+    private static bool TryParseSpecialOpen(string line, out SpecialOpen open)
+    {
+        open = default!;
+        var match = Regex.Match(
+            line,
+            @"^Open\s+(.+?)\s+For\s+(Input|Output|Append)\s+As\s+#?([^\s]+)(.*)$",
+            RegexOptions.IgnoreCase);
+        if (!match.Success) return false;
+
+        var tail = match.Groups[4].Value.Trim();
+        if (tail.Length == 0) return false;
+
+        var charsetMatch = Regex.Match(tail, @"(?:^|\s)Charset\s+(\"[^\"]*\"|[^\s]+)", RegexOptions.IgnoreCase);
+        var encodingMatch = Regex.Match(tail, @"(?:^|\s)Encoding\s+(\"[^\"]*\"|[^\s]+)", RegexOptions.IgnoreCase);
+        if (!charsetMatch.Success && !encodingMatch.Success) return false;
+
+        var remainder = tail;
+        if (charsetMatch.Success) remainder = remainder.Replace(charsetMatch.Value.Trim(), "", StringComparison.OrdinalIgnoreCase).Trim();
+        if (encodingMatch.Success) remainder = remainder.Replace(encodingMatch.Value.Trim(), "", StringComparison.OrdinalIgnoreCase).Trim();
+        if (remainder.Length != 0)
+            throw new CompilerException("Unsupported Open text option(s): " + remainder);
+
+        open = new SpecialOpen(
+            match.Groups[1].Value,
+            match.Groups[2].Value,
+            match.Groups[3].Value,
+            charsetMatch.Success ? charsetMatch.Groups[1].Value : "\"default\"",
+            encodingMatch.Success ? encodingMatch.Groups[1].Value : "\"none\"");
+        return true;
+    }
+
+    private bool IsSpecialFile(string value) => _specialFileNumbers.Contains(NormalizeFileNumber(value));
 
     private static string NormalizeFileNumber(string value) =>
         Regex.Replace(value.Trim().TrimStart('#'), @"\s+", "");
+
+    private sealed record SpecialOpen(string Path, string Mode, string FileNumber, string Charset, string Encoding);
 }
