@@ -192,18 +192,19 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 ## 15. Evaluate
 
-- [ ] remove all `@Formula` references from code/docs/samples/public terminology
-- [ ] `Evaluate(sourceText)` executes only XPScript supplied as text
-- [ ] no external formula-language compatibility
-- [ ] define expression/statements/snippet grammar for `Evaluate`
-- [ ] isolate evaluated code from compiler/runtime internals
-- [ ] normal XPScript values, coercion and diagnostics
+- [ ] remove all legacy formula-engine references from code/docs/samples/public terminology
+- [>] `Evaluate(sourceText)` executes XPScript supplied as text through an isolated evaluator
+- [>] initial grammar supports expressions, local `Dim`, assignments and `Return`; source: `samples/evaluate-xpscript.xps`
+- [>] evaluator scope is isolated from caller locals; negative source: `samples/evaluate-scope-error.xps`
+- [ ] remove the old unused DataTable-based evaluator implementation
+- [ ] broaden XPScript function coverage inside `Evaluate`
+- [ ] align evaluator coercion and diagnostics with the main compiler/runtime
 - [ ] safe-use documentation/examples
 
 ## 16. Security review and isolation
 
 - [ ] dedicated compiler/preprocessor/runtime/temp-build security review
-- [ ] prevent user/generated identifier collisions; reserve or namespace internal identifiers including `__xp_*`
+- [>] reserve compiler-generated identifiers beginning with `__` and protect runtime type names from user type declarations
 - [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
 - [ ] verify modules cannot overwrite unrelated module state
 - [ ] verify concurrent compiler builds use isolated temp paths
@@ -237,14 +238,211 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 Design direction: managed memory is reclaimed by .NET GC after the last strong reference disappears. `Nothing`/`Null` can make objects eligible for collection but do not mean immediate deallocation. OS/unmanaged resources require deterministic cleanup.
 
-## 18. Documentation and examples
+## 18. Cross-platform UI extension inventory
+
+Design goal: add a small, platform-native UI extension for simple forms and dialogs on Windows, Linux and macOS. Keep the XPScript API stable across platforms while allowing the backend implementation to use the most appropriate UI toolkit for each operating system.
+
+### 18.1 Core classes and data model
+
+- [ ] define a top-level `UIForm` class for creating and showing simple forms
+- [ ] define a document-style form data class, proposed name `UIData`, used as the backing store for all form field values
+- [ ] reuse familiar document-style method names for value access, especially `GetItemValue`, `GetFirstItem`, `HasItem`, `ReplaceItemValue`, `RemoveItem`, `RemoveAllItems` and equivalent safe subset
+- [ ] `GetItemValue(name)` returns all values for the named field as an XPScript array
+- [ ] provide `GetItemValueString(name)` convenience method for a single text representation
+- [ ] `ReplaceItemValue(name, value)` creates or replaces a field value and returns a field/item object where useful
+- [ ] field names are case-insensitive unless a later compatibility decision explicitly requires otherwise
+- [ ] values may be scalar or multivalue and preserve XPScript types where possible: String, Integer, Long, Double, Currency, Boolean, Date and arrays
+- [ ] form field state must be independent per `UIForm`/`UIData` instance; no cross-form state leakage
+- [ ] define `UIItem`/`UIFieldValue` object only if needed for metadata such as name, type, value, validation state and dirty state
+
+### 18.2 Form lifecycle and layout
+
+- [ ] create form with title, optional width/height and optional resizable flag
+- [ ] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
+- [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
+- [ ] close/cancel behavior must be consistent across Windows, Linux and macOS
+- [ ] support rows/columns or simple vertical/group layout without requiring pixel-perfect platform-specific positioning
+- [ ] support sections/groups and optional labels/headings
+- [ ] support tab order and keyboard focus
+- [ ] default button and cancel button semantics
+- [ ] Enter activates default button where appropriate; Escape activates cancel where appropriate
+- [ ] optional minimum window size and automatic sizing from controls
+
+### 18.3 UI field/control inventory
+
+MVP controls:
+
+- [ ] `UILabel` / static text
+- [ ] `UITextField` / single-line text input
+- [ ] `UIPasswordField` / masked single-line input
+- [ ] `UITextArea` / multiline text input
+- [ ] `UINumberField` supporting Integer/Long/Double/Currency constraints
+- [ ] `UIDateField`
+- [ ] `UITimeField`
+- [ ] `UIDateTimeField`
+- [ ] `UICheckBox` for Boolean values
+- [ ] `UIRadioButton` / radio group for one-of-many choices
+- [ ] `UIComboBox` for a single selection from a list
+- [ ] `UIListBox` for a single selection from a list
+- [ ] `UIMultiListBox` for multiple selections
+- [ ] `UIButton`
+- [ ] spacer/separator control
+- [ ] optional progress bar for later extension
+- [ ] optional image/icon control for later extension
+
+Every input control should define where applicable:
+
+- [ ] field/data name
+- [ ] label
+- [ ] default value
+- [ ] enabled/disabled
+- [ ] visible/hidden
+- [ ] required flag
+- [ ] read-only flag
+- [ ] tooltip/help text
+- [ ] placeholder text where supported
+- [ ] width/height hints rather than hard platform-specific dimensions
+
+### 18.4 Choice/list data
+
+- [ ] define a choice model with display text and stored value separated, e.g. `UIChoice(label, value)`
+- [ ] allow simple string arrays as shorthand choices
+- [ ] single-select control returns one value
+- [ ] multi-select control returns an XPScript array
+- [ ] support a default selected value or default selected values
+- [ ] define behavior when the current/default value is not present in the available choices
+- [ ] optional sorted choices flag
+
+### 18.5 Validation
+
+- [ ] required-field validation
+- [ ] String minimum/maximum length
+- [ ] numeric minimum/maximum
+- [ ] Date minimum/maximum
+- [ ] regular-expression validation
+- [ ] allowed-values validation
+- [ ] custom validation callback to an XPScript Function returning Boolean or an error message
+- [ ] field-level validation messages
+- [ ] form-level validation before OK/submit closes the dialog
+- [ ] invalid form must remain open and focus/highlight the first invalid field where supported
+- [ ] validation must never execute arbitrary code outside explicitly registered XPScript callbacks
+
+### 18.6 Buttons and events
+
+- [ ] standard OK button
+- [ ] standard Cancel button
+- [ ] standard Yes/No buttons where appropriate
+- [ ] custom button captions
+- [ ] button click callback into a named XPScript Sub/Function
+- [ ] define whether button callbacks may modify `UIData`, form controls and validation state
+- [ ] prevent duplicate/reentrant callback execution from repeated rapid input
+- [ ] define exception propagation from UI callbacks to XPScript error handling
+
+### 18.7 Standard dialogs
+
+- [ ] `MessageBox` compatible surface with the language's established parameters and return codes
+- [ ] support common button combinations: OK, OK/Cancel, Yes/No, Yes/No/Cancel, Retry/Cancel where platform supports it
+- [ ] support information, warning, error and question icons/types
+- [ ] preserve stable XPScript return constants independent of OS-native numeric return values
+- [ ] question/confirm helper returning Boolean where convenient, while retaining full `MessageBox` API
+- [ ] simple text input dialog with prompt, title and default value
+- [ ] password input dialog
+- [ ] single-value list selection dialog
+- [ ] multi-value list selection dialog
+- [ ] file-open dialog
+- [ ] multi-file-open dialog
+- [ ] file-save dialog
+- [ ] folder/directory selection dialog
+
+### 18.8 File dialog requirements
+
+- [ ] initial/default directory
+- [ ] default file name for save dialog
+- [ ] extension filters such as `Text files (*.txt)` and `All files (*.*)`
+- [ ] multiple filter groups
+- [ ] default selected filter
+- [ ] multi-select for open dialog
+- [ ] overwrite confirmation for save dialog where appropriate
+- [ ] return `Null`/empty result consistently on Cancel
+- [ ] preserve native path format returned by the running platform
+- [ ] no implicit path normalization that changes a user-selected file unexpectedly
+- [ ] security review for symlinks, path traversal assumptions and permission failures
+
+### 18.9 Proposed form construction surface
+
+Inventory/example only; final naming may change during implementation:
+
+```xpscript
+Dim form As New UIForm("Customer")
+Dim data As UIData
+
+Call form.AddTextField("Name", "Name", "Fredrik")
+Call form.AddNumberField("Age", "Age", 40)
+Call form.AddCheckBox("Active", "Active", True)
+Call form.AddComboBox("Country", "Country", Array("Sweden", "Norway", "Denmark"), "Sweden")
+Call form.AddMultiListBox("Roles", "Roles", Array("Admin", "Editor", "Reader"))
+
+Call form.Required("Name")
+Call form.NumberRange("Age", 0, 150)
+
+If form.ShowDialog() = UIResultOK Then
+    Set data = form.Data
+    Print data.GetItemValueString("Name")
+    Print CStr(data.GetItemValue("Roles"))
+End If
+```
+
+### 18.10 Backend/platform architecture inventory
+
+- [ ] define a platform-neutral UI abstraction used by XPScript-generated code
+- [ ] choose Windows backend technology after evaluation; candidates should support native dialogs and simple desktop controls
+- [ ] choose Linux backend technology after evaluation; assess availability/deployment cost of GTK or another maintained native toolkit
+- [ ] choose macOS backend technology after evaluation; native Cocoa/AppKit bridge or a maintained cross-platform backend
+- [ ] evaluate whether one maintained .NET cross-platform UI toolkit can provide all three backends without excessive output size or runtime dependencies
+- [ ] prefer native file/message dialogs even if general form rendering uses a cross-platform toolkit
+- [ ] UI backend selection must happen from runtime platform, not from assumptions about the compiler host
+- [ ] headless/server environments must fail clearly instead of hanging when a UI call is attempted
+- [ ] define main/UI thread requirements separately for Windows, Linux and macOS
+- [ ] define event-loop ownership when XPScript is a normal console application that opens one modal UI dialog
+- [ ] prevent UI toolkit initialization from interfering with console-only programs that never use UI
+- [ ] package required platform UI native libraries alongside output only when the UI extension is actually used
+- [ ] account for x64/arm64 native UI dependencies in publish output
+
+### 18.11 Data binding rules
+
+- [ ] controls bind by field name into the form's `UIData`
+- [ ] defaults populate `UIData` before the dialog is shown
+- [ ] user edits update an isolated working copy while the dialog is open
+- [ ] OK commits the working values to returned `UIData`
+- [ ] Cancel does not commit user edits unless explicitly configured otherwise
+- [ ] programmatic `ReplaceItemValue` before `ShowDialog()` updates the corresponding control default/current value
+- [ ] programmatic updates from button callbacks refresh bound controls
+- [ ] define conversion behavior when field control type and supplied value type differ
+- [ ] multivalue fields remain arrays and must never be silently collapsed to one scalar
+- [ ] no shared static dictionary for form values; each form/data object owns its own state
+
+### 18.12 UI security, resource lifetime and testing
+
+- [ ] UI values must not be able to overwrite compiler/runtime internal variables
+- [ ] validate callback names against XPScript procedures rather than invoking arbitrary reflection targets
+- [ ] safely dispose windows, native handles, dialogs, file pickers, icons and backend resources after close
+- [ ] closing a form must release references to callbacks/data unless retained by XPScript code
+- [ ] ensure password field values are not written to logs/diagnostics by default
+- [ ] document that String password contents cannot be guaranteed to be zeroed from managed memory immediately
+- [ ] platform-specific smoke tests for each control and standard dialog when workflows/tests are re-enabled
+- [ ] keyboard/accessibility checks: labels, focus, default/cancel buttons and basic screen-reader metadata where backend supports it
+- [ ] verify equivalent returned `UIData` values across Windows, Linux and macOS
+- [ ] English UI extension documentation under `docs/ui/`
+- [ ] reusable UI examples under `examples/ui/`
+
+## 19. Documentation and examples
 
 - [ ] complete English docs for every statement, function, class, property and operator
 - [ ] all end-user docs under `docs/`
 - [ ] reusable `.xps` programs under `examples/`; keep test fixtures under `samples/`
 - [ ] every documented API links to an example or contains an equivalent inline example
 - [ ] `docs/index.md`
-- [ ] language-reference index by declarations/control/operators/strings/math/date/arrays/files/HTTP/JSON/process/platform/diagnostics
+- [ ] language-reference index by declarations/control/operators/strings/math/date/arrays/files/HTTP/JSON/process/platform/UI/diagnostics
 - [ ] grouped or per-feature pages with syntax, parameters, return value, errors and examples
 - [ ] type coercion documentation
 - [ ] compiler CLI including output format, target RID/platform and exit codes
@@ -252,9 +450,10 @@ Design direction: managed memory is reclaimed by .NET GC after the last strong r
 - [ ] OS `Lock/Unlock` semantics
 - [ ] `Platform`, cross-platform `Shell` and publishing
 - [ ] XPScript-only `Evaluate`
-- [ ] XPScript branding only; no legacy product names or `@Formula`
+- [ ] UI extension forms, controls, data binding, validation, standard dialogs and platform differences
+- [ ] XPScript branding only; no legacy product names or legacy formula-engine terminology
 
-## 19. Quality gates
+## 20. Quality gates
 
 A feature becomes `[x]` only after requested verification is re-enabled and passes:
 
@@ -269,3 +468,4 @@ A feature becomes `[x]` only after requested verification is re-enabled and pass
 9. adversarial coverage for security-sensitive features.
 10. reference-release and deterministic OS-resource cleanup tests for memory/lifetime changes.
 11. valid linked `examples/` source or equivalent inline example for documentation work.
+12. UI extension smoke tests on Windows, Linux and macOS including dialogs, validation, data binding and resource cleanup.
