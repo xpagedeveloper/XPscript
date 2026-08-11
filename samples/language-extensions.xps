@@ -1,0 +1,38 @@
+Option Declare
+
+Enum BuildState
+    BuildUnknown = 0
+    BuildReady = 10
+    BuildRunning
+    BuildDone = 20
+End Enum
+
+Type PersonInfo
+    Name As String
+    Age As Integer
+End Type
+
+Function MakeGreeting(name As String, Optional prefix As String = "Hello") As String
+    MakeGreeting = prefix & " " & name
+End Function
+
+Sub ShowValue(value As Integer, Optional label As String = "VALUE")
+    Print label & "=" & CStr(value)
+End Sub
+
+Sub Main()
+    Dim state As BuildState
+    Dim person As PersonInfo
+
+    state = BuildRunning
+    person.Name = "Fredrik"
+    person.Age = 40
+
+    Print "ENUM=" & CStr(state)
+    Print "ENUMQUAL=" & CStr(BuildState.BuildDone)
+    Print "TYPE=" & person.Name & ":" & CStr(person.Age)
+    Print "OPTIONAL=" & MakeGreeting("Fredrik")
+    Print "OPTIONAL2=" & MakeGreeting("Fredrik", "Hi")
+    Call ShowValue(7)
+    Call ShowValue(8, "COUNT")
+End Sub
