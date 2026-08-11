@@ -10,6 +10,8 @@ public sealed class XPScriptTranspiler
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        var moduleGlobals = new ModuleGlobalsPreprocessor();
+        source = moduleGlobals.Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
@@ -24,6 +26,7 @@ public sealed class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = moduleGlobals.Inject(generated);
 
         generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
 
