@@ -41,8 +41,8 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = RewriteBinaryWordOperator(line, "Like", "Like");
             line = RewriteIsOperator(line);
             line = RewriteUnaryNot(line);
-            line = RewriteBinaryWordOperator(line, "And", "And");
-            line = RewriteBinaryWordOperator(line, "Or", "Or");
+            line = RewriteBinaryWordOperator(line, "And", "LogicalAnd");
+            line = RewriteBinaryWordOperator(line, "Or", "LogicalOr");
             line = RewriteBinaryWordOperator(line, "Xor", "Xor");
             line = RewriteBinaryWordOperator(line, "Eqv", "Eqv");
             line = RewriteBinaryWordOperator(line, "Imp", "Imp");
@@ -79,7 +79,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteUnaryNot(string line)
     {
-        return Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.Not({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
+        return Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.LogicalNot({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
     }
 
     private static string RewriteSymbolOperator(string line, char op, string method)
