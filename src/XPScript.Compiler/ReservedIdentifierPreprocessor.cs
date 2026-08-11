@@ -7,7 +7,7 @@ internal sealed class ReservedIdentifierPreprocessor
     private static readonly HashSet<string> ReservedTypeNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "Program", "Script",
-        "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO",
+        "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO", "XPScriptFileSystemRuntime",
         "XPScriptEvaluateRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
         "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
