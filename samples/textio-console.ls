@@ -1,0 +1,67 @@
+Option Declare
+
+Sub Main()
+    Dim f As Integer
+    Dim value As String
+    Dim encoded As String
+    Dim decoded As String
+    Dim url As String
+    Dim answer As String
+    Dim answer2 As String
+
+    f = FreeFile
+    Open "lslite-utf8.txt" For Output As #f Charset "utf-8"
+    Print #f, "UTF8-ÅÄÖ-é-漢字"
+    Close #f
+
+    f = FreeFile
+    Open "lslite-utf8.txt" For Input As #f Charset "utf-8"
+    Line Input #f, value
+    Print "UTF8=" & value
+    Close #f
+    Kill "lslite-utf8.txt"
+
+    f = FreeFile
+    Open "lslite-utf16.txt" For Output As #f Charset "unicode"
+    Print #f, "UTF16-ÅÄÖ-é-漢字"
+    Close #f
+
+    f = FreeFile
+    Open "lslite-utf16.txt" For Input As #f Charset "utf-16"
+    Line Input #f, value
+    Print "UTF16=" & value
+    Close #f
+    Kill "lslite-utf16.txt"
+
+    f = FreeFile
+    Open "lslite-base64.txt" For Output As #f Charset "base64"
+    Print #f, "BASE64-FILE-åäö"
+    Close #f
+
+    f = FreeFile
+    Open "lslite-base64.txt" For Input As #f Charset "base64"
+    Line Input #f, value
+    Print "BASE64FILE=" & value
+    Close #f
+    Kill "lslite-base64.txt"
+
+    encoded = ToBase64("Fredrik åäö")
+    decoded = FromBase64(encoded)
+    Print "TOBASE64=" & encoded
+    Print "FROMBASE64=" & decoded
+
+    url = UrlEncode("hello world+å")
+    Print "URLENCODE=" & url
+    Print "URLDECODE=" & UrlDecode(url)
+
+    Print$ "PRINTDOLLAR=OK"
+    Print
+
+    Input "NAME>", answer
+    Print "INPUT=" & answer
+    Input$ answer2
+    Print "INPUTDOLLAR=" & answer2
+
+    Pause
+    Print "PAUSE=OK"
+End Sub
