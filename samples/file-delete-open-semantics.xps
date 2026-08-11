@@ -1,0 +1,21 @@
+' Manual cross-platform fixture for delete-while-open semantics.
+' Windows is expected to reject deletion because XPScript open handles do not grant FileShare.Delete.
+' Unix-like filesystems commonly allow unlink while the open handle remains valid.
+Sub Main()
+    Dim f As Integer
+    f = FreeFile
+
+    Open "xps-delete-open.bin" For Binary As #f
+    On Error GoTo DeleteBlocked
+
+    Kill "xps-delete-open.bin"
+    Print "DELETE_WHILE_OPEN_SUCCEEDED Platform=" & Platform()
+    Close #f
+    Exit Sub
+
+DeleteBlocked:
+    Print "DELETE_WHILE_OPEN_BLOCKED Platform=" & Platform() & " Err=" & CStr(Err) & " Error=" & Error$
+    On Error GoTo 0
+    Close #f
+    Kill "xps-delete-open.bin"
+End Sub
