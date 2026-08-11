@@ -157,9 +157,20 @@ internal sealed class FileSystemPortabilityPostProcessor
 """;
         generated = generated.Replace(oldCompare, newCompare, StringComparison.Ordinal);
 
+        // Every Evaluate exception, including XPScriptRuntimeException, is sanitized before
+        // crossing the Evaluate boundary. This prevents conversion messages from reflecting
+        // callvar values/secrets into logs or structured compiler/runtime responses.
+        generated = generated.Replace(
+            "catch (XPScriptRuntimeException) { throw; }",
+            "catch (XPScriptRuntimeException ex) { throw XPScriptEvaluateSemanticsRuntime.Sanitize(ex); }",
+            StringComparison.Ordinal);
         generated = generated.Replace(
             "throw new XPScriptRuntimeException(5, \"Evaluate failed: \" + ex.Message);",
-            "throw XPScriptEvaluateSemanticsRuntime.Normalize(ex);",
+            "throw XPScriptEvaluateSemanticsRuntime.Sanitize(ex);",
+            StringComparison.Ordinal);
+        generated = generated.Replace(
+            "throw new XPScriptRuntimeException(5, \"Invalid numeric literal in Evaluate: \" + text);",
+            "throw new XPScriptRuntimeException(5, \"Invalid numeric literal in Evaluate.\");",
             StringComparison.Ordinal);
 
         // If the function name is known but no switch arm matched, the problem is the
