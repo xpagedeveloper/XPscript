@@ -8,8 +8,10 @@ public sealed class LotusTranspiler
     public string Transpile(string source, string sourceName)
     {
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
+        generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
 
         // The active error statement is recorded by LSControlRuntime.Capture when an
         // exception actually occurs. Statements executed by an error handler must not
