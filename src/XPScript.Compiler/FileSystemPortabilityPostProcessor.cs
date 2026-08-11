@@ -91,15 +91,15 @@ internal sealed class FileSystemPortabilityPostProcessor
             StringComparison.Ordinal);
 
         // Evaluate collection isolation is finalized after all runtime source blocks have
-        // been appended. This keeps List/array snapshots detached without exposing mutable
-        // caller objects to the evaluator.
+        // been appended. Input snapshots are internal/read-only; returned Lists are converted
+        // back to detached normal XPScript List values.
         generated = generated.Replace(
             "return new Evaluator(source, Snapshot(callvar)).Run();",
             "return new Evaluator(source, XPScriptEvaluateCollectionRuntime.Snapshot(callvar)).Run();",
             StringComparison.Ordinal);
         generated = generated.Replace(
             "return Snapshot(ParseExpression());",
-            "return XPScriptEvaluateCollectionRuntime.Snapshot(ParseExpression());",
+            "return XPScriptEvaluateCollectionRuntime.SnapshotReturn(ParseExpression());",
             StringComparison.Ordinal);
 
         const string oldReadCallvar = """
