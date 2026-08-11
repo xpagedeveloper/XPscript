@@ -158,8 +158,8 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 - [>] target-selected native entry points with `WindowsAlias`, `LinuxAlias`, `MacOSAlias`
 - [>] multiline platform-specific `Declare` statements with `_`; source: `samples/platform-native-library.xps`
 - [>] application-local native `.dll`, `.so`, `.dylib` paths are validated and copied beside generated output; system-library names remain OS-resolved; path escape, missing-file, output-name collision and executable-overwrite checks are implemented; source: `samples/native-dependency-packaging.xps`
-- [ ] support architecture-specific native assets for x64 vs arm64
-- [ ] define managed .NET assembly references separately from native-library declarations, including assemblies with RID-specific native dependencies
+- [>] architecture-specific native assets and aliases are selected by exact target RID for x64/arm64, with OS/base fallback; source: `samples/native-architecture-assets.xps`
+- [>] managed .NET assembly references are separate from native `Declare`: `Reference "path.dll"` stages a project-local managed assembly and repeatable `ReferenceNative "path" Runtime "rid"` packages RID-specific native dependencies; detailed syntax/security rules: `todo/cross-platform-runtime-todo.md`
 - [ ] validate native-library search paths and loading behavior on Windows, Linux and macOS
 - [ ] validate file-I/O portability across Windows, Linux and macOS: path separators, roots/drives, case sensitivity, permissions, symlinks, file sharing, delete-open-file semantics, rename/move behavior, newline handling, charset/BOM and binary identity
 - [ ] validate OS file locks and region locks separately on Windows, Linux and macOS
