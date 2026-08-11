@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace LSLite.Compiler;
@@ -6,7 +7,8 @@ public sealed class LotusTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
-        var generated = new CoreCompatibilityTranspiler().Transpile(source, sourceName);
+        var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
 
         // The active error statement is recorded by LSControlRuntime.Capture when an
@@ -24,6 +26,12 @@ public sealed class LotusTranspiler
         // nested scopes that can never be valid error-resume targets at that time.
         generated = ScopeErrorProtection(generated);
 
+        // Restore LotusScript string contents only after all keyword rewriting is done.
+        // This prevents identifiers such as Err, Error, Loc, Seek and FreeFile from being
+        // interpreted when they occur as plain text inside a string literal.
+        foreach (var item in protectedStrings)
+            generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
+
         // Object-reference checks such as "q Is Nothing" are emitted through the
         // shared LSRef<T> wrapper. Prevent a later member-access rewrite from
         // turning q.IsNothing into q.Value!.IsNothing.
@@ -32,6 +40,61 @@ public sealed class LotusTranspiler
 
     public string Transpile(string source) =>
         Transpile(source, "input.ls");
+
+    private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements)
+    {
+        replacements = new Dictionary<string, string>(StringComparer.Ordinal);
+        var output = new StringBuilder(source.Length);
+
+        for (var i = 0; i < source.Length; i++)
+        {
+            if (source[i] != '"')
+            {
+                output.Append(source[i]);
+                continue;
+            }
+
+            output.Append('"');
+            var inner = new StringBuilder();
+            i++;
+
+            for (; i < source.Length; i++)
+            {
+                if (source[i] == '"')
+                {
+                    if (i + 1 < source.Length && source[i + 1] == '"')
+                    {
+                        inner.Append("\"\"");
+                        i++;
+                        continue;
+                    }
+                    break;
+                }
+                inner.Append(source[i]);
+            }
+
+            if (i >= source.Length)
+                throw new CompilerException("Unterminated string literal.");
+
+            var marker = $"__LSLITE_STRING_{replacements.Count:D6}__";
+            replacements[marker] = EscapeForGeneratedCSharpString(inner.ToString());
+            output.Append(marker);
+            output.Append('"');
+        }
+
+        return output.ToString();
+    }
+
+    private static string EscapeForGeneratedCSharpString(string lotusInner)
+    {
+        var decoded = lotusInner.Replace("\"\"", "\"", StringComparison.Ordinal);
+        return decoded
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal)
+            .Replace("\t", "\\t", StringComparison.Ordinal);
+    }
 
     private static string ScopeErrorProtection(string generated)
     {
