@@ -31,6 +31,23 @@ internal static class XPScriptFileSystemRuntime
 
     public static string NewLine => Environment.NewLine;
 
+    // FileShare policy is language-defined rather than inherited accidentally from
+    // whichever .NET overload happened to be used by a runtime implementation.
+    // Input permits other readers/writers. Output/Append permits readers but keeps a
+    // single writer. Binary/Random permits multiple read/write handles so explicit
+    // XPScript Lock/Unlock can coordinate byte/record regions across processes.
+    public static FileStream OpenInputStream(string path) =>
+        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+    public static FileStream OpenOutputStream(string path, bool append) =>
+        new(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read);
+
+    public static FileStream OpenBinaryStream(string path) =>
+        new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+
+    public static string FileSharePolicy =>
+        "Input=ReadWrite sharing; Output/Append=read sharing with one writer; Binary/Random=ReadWrite sharing with explicit Lock/Unlock coordination";
+
     public static long FileLen(object? value) => new FileInfo(RequireExistingFile(value)).Length;
 
     public static DateTime FileDateTime(object? value) => File.GetLastWriteTime(RequireExistingFile(value));
@@ -102,8 +119,8 @@ internal static class XPScriptFileSystemRuntime
         catch (IOException ex)
         {
             var suffix = OperatingSystem.IsWindows()
-                ? " Windows normally prevents deleting a file that is still open without delete sharing."
-                : " Open-file delete semantics are filesystem/OS dependent.";
+                ? " Windows normally prevents deleting a file while an open handle does not grant FileShare.Delete."
+                : " Unix-like systems commonly allow unlinking an open file while existing handles keep the inode alive; exact behavior remains filesystem dependent.";
             throw new IOException("Unable to delete file '" + path + "'." + suffix + " " + ex.Message, ex);
         }
     }
