@@ -23,8 +23,8 @@ Status:
 - [>] `callvar` is the only explicit caller-provided variable bridge into the isolated Evaluate scope
 - [>] `callvar` is restricted/read-only inside Evaluate so evaluated code cannot overwrite the caller's variable
 - [>] evaluated code has no implicit access to caller locals, module globals, statics, compiler internals or unrelated variables
-- [>] mutable XPScript arrays are defensive-copied before evaluation
-- [ ] broaden defensive-copy support to all future mutable object/value types accepted by Evaluate
+- [>] mutable XPScript arrays and Lists are defensive-copied before evaluation
+- [>] nested mutable arrays/Lists reachable from callvar are recursively snapshotted; arbitrary mutable object types are rejected instead of being shared into Evaluate
 
 ## Scalar callvar
 
@@ -40,17 +40,22 @@ Status:
 ## List callvar
 
 - [>] List input is defined as a named-parameter transport using `callvar("tag")`
-- [>] source/runtime implementation must use an isolated snapshot/read-only representation
-- [ ] add nested list/array regression coverage when execution is re-enabled
+- [>] List input is copied into an evaluator-private read-only snapshot rather than sharing the caller's `LSList<T>` instance
+- [>] List snapshotting uses the type-neutral `ILSList.SnapshotEntries()` contract rather than reflection
+- [>] List values are recursively snapshotted, including nested XPScript arrays and nested Lists
+- [>] cyclic/shared collection graphs use reference-identity tracking so snapshots do not recurse indefinitely and shared references remain internally consistent
+- [>] source: `samples/evaluate-nested-collections.xps`
+- [ ] runtime verification of nested list/array combinations when execution is re-enabled
 
 ## Return semantics
 
 - [>] `Return expression` immediately ends evaluation and becomes the return value from `Evaluate`
 - [>] returned arrays are detached/snapshotted before leaving evaluator scope
+- [>] returned List snapshots are converted back into detached normal `LSList<object?>` XPScript List values; the internal read-only snapshot type never escapes Evaluate
+- [>] nested arrays/Lists in returned collections are recursively detached
 - [>] `data = Evaluate(...)` receives the value from `Return`
 - [>] reaching the end without `Return` now yields `Nothing`/Empty (`null` internally) rather than the last expression value
 - [ ] distinguish `Return Nothing`, `Return Null`, and no `Return` after final XPScript Null/Nothing semantics are implemented
-- [ ] detach/copy future mutable List/object return values where required
 
 ## Function coverage inside Evaluate
 
@@ -69,16 +74,19 @@ Status:
 - [>] `Dim callvar` is rejected
 - [>] assignment to `callvar` is rejected
 - [>] caller variables remain inaccessible unless explicitly passed
-- [>] arrays are defensive-copied before execution
+- [>] arrays/Lists are defensive-copied before execution
+- [>] arbitrary mutable objects are rejected rather than bridged by reference
+- [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work
+- [ ] add a total collection element/byte budget for untrusted Evaluate inputs
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
 - [ ] add concurrent-thread isolation tests
-- [ ] collection-size/depth limits for untrusted input
 - [ ] sanitize future diagnostics so parameter values/secrets are not automatically echoed
 
 ## Memory and lifetime
 
 - [>] evaluator instance owns callvar snapshot; references become collectible after Evaluate returns/fails
-- [>] returned arrays are detached from evaluator-owned storage
+- [>] returned arrays and Lists are detached from evaluator-owned storage
+- [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation
 - [ ] deterministic disposal rules if disposable/native-resource objects are ever allowed through callvar
 - [ ] ensure no future evaluator cache stores arbitrary callvar data
 
