@@ -20,13 +20,15 @@ Status:
 - [x] `Optional` parameters, defaults, omitted trailing arguments and omitted slots
 - [>] module-level `Public` scalar variables
 - [>] module-level `Private` scalar variables
-- [>] module-level fixed/dynamic arrays, including shared state across procedures, `ReDim`, `ReDim Preserve`, indexed reads/writes, `LBound`, `UBound`, and `Erase`; source: `samples/module-arrays.xps`
-- [>] module-level custom `Type` values are generated as direct value containers and shared across procedures; source: `samples/module-type-values.xps`
-- [ ] module-level class/object references
-- [>] `Type ... End Type`: scalar fields, automatic initialization and scalar-field value-copy are implemented; source: `samples/type-value-copy.xps`
-- [>] `Type` array fields: fixed and dynamic fields, indexing, `ReDim`, `Erase`, bounds and deep array-copy are implemented; source: `samples/type-array-members.xps`
-- [ ] recursive deep-copy for nested `Type` fields
-- [ ] make implicit lower bounds in `ReDim typeValue.arrayField(n)` honor the active `Option Base` when no explicit `lower To upper` range is supplied
+- [>] module-level fixed/dynamic arrays with `ReDim`, `ReDim Preserve`, indexed reads/writes, bounds and `Erase`; source: `samples/module-arrays.xps`
+- [>] module-level custom `Type` values; source: `samples/module-type-values.xps`
+- [>] module-level class/object references with `Set`, `New`, aliases, `Nothing`, identity, member access and `Delete`; source: `samples/module-object-references.xps`
+- [>] `Type ... End Type`: scalar fields, auto initialization and scalar value-copy; source: `samples/type-value-copy.xps`
+- [>] `Type` array fields: fixed/dynamic fields, indexing, `ReDim`, `Erase`, bounds and deep array-copy; source: `samples/type-array-members.xps`
+- [>] nested `Type` deep-copy recursively clones nested values and nested array storage; source: `samples/type-nested-value-copy.xps`
+- [>] cyclic nested `Type` copy graphs produce an explicit compiler diagnostic instead of unbounded clone generation; source: `samples/type-cycle-error.xps`
+- [>] implicit lower bounds in `ReDim typeValue.arrayField(n)` honor active `Option Base`; source: `samples/type-array-option-base.xps`
+- [ ] verify nested `Type` copy when the destination itself is a module-level `Type` value
 - [x] `Enum ... End Enum`: explicit values, auto increment, qualified/unqualified members
 
 ## 2. Classes and properties
@@ -37,17 +39,14 @@ Status:
 - [x] scalar `Property Let`
 - [>] parameterized/indexed `Property Get`
 - [>] parameterized/indexed `Property Let/Set`
-- [>] indexed property calls are lowered to normal typed methods so existing parameter type diagnostics apply
+- [>] indexed properties lower to typed methods so normal parameter diagnostics apply
 - [>] positive source: `samples/indexed-properties.xps`
 - [>] negative type source: `samples/indexed-properties-error.xps`
 
 ## 3. Control flow and error handling
 
-- [x] `If`, `ElseIf`, `Else`
-- [x] `Select Case`
-- [x] `For/Next/Step`
-- [x] `Do/Loop`, `Do While`, `Do Until`, `While/Wend`
-- [x] `ForAll`
+- [x] `If`, `ElseIf`, `Else`, `Select Case`
+- [x] `For/Next/Step`, `Do/Loop`, `Do While`, `Do Until`, `While/Wend`, `ForAll`
 - [x] `GoTo`, `GoSub`, labels, `Return`
 - [x] `On Error`, `Resume`, `Resume Next`, `Err`, `Error`, `Error$`, `Erl`
 - [-] physical source-line accuracy for `Erl`
@@ -55,11 +54,9 @@ Status:
 
 ## 4. Operators
 
-- [x] comparisons `=`, `<>`, `<`, `>`, `<=`, `>=`
-- [x] `Like`: `*`, `?`, `#`, sets, negated sets, ranges
-- [x] object identity `Is`
+- [x] comparisons, `Like`, object identity `Is`
 - [x] `And`, `Or`, `Not`, `Xor`, `Eqv`, `Imp`
-- [x] `+`, `-`, `*`, `/`, `\`, `Mod`, `^`
+- [x] arithmetic operators and `Mod`, `^`
 - [x] `&` and forgiving `+`
 - [x] line continuation `_`
 
@@ -74,11 +71,8 @@ Status:
 
 ## 6. Conversion and inspection
 
-- [x] `CBool`, `CByte`, `CCur`, `CDate`, `CDat`, `CDbl`, `CInt`, `CLng`, `CSng`, `CStr`, `Val`
-- [x] `CType`
-- [x] `CVDate`
-- [x] `DataType`, `TypeName`, `IsArray`, `IsDate`, `IsNull`, `IsNumeric`, `IsObject`, `IsScalar`
-- [x] `IsList`, `IsUnknown`
+- [x] scalar conversion functions including `CType`, `CVDate`
+- [x] `DataType`, `TypeName`, `IsArray`, `IsDate`, `IsNull`, `IsNumeric`, `IsObject`, `IsScalar`, `IsList`, `IsUnknown`
 
 ## 7. Math and date/time
 
@@ -90,19 +84,16 @@ Status:
 - [x] typed dynamic arrays
 - [x] fixed/multidimensional arrays and explicit bounds
 - [x] `Array`, `ReDim`, `ReDim Preserve`, `Erase`, `LBound`, `UBound`
-- [x] `Join`, `Explode`, `ArrayGetIndex`, `ArrayAppend`, `ArrayUnique`, `ArraySplice`, `ArraySlice`
-- [x] keyed lists, iteration, tag lookup, erase
-- [>] arrays as `Type` members, including deep-copy of array storage; source: `samples/type-array-members.xps`
+- [x] array helper functions and keyed lists
+- [>] arrays as `Type` members including deep-copy of array storage
 
 ## 9. File I/O and filesystem
 
-- [x] `FreeFile`, `Open`, `Close`, `Input #`, `Line Input`, `Print #`, `Write #`, `Get`, `Put`, `EOF`, `LOF`, `Loc`, `Seek`, `Reset`
-- [x] Charset-aware Input/Output/Append
-- [x] independent `Encoding "base64"` layer
-- [>] file `Input$(count, #fileNumber)` implemented separately from interactive input
-- [>] OS `Lock` with Binary byte ranges, Random record ranges, sequential whole-file semantics
-- [>] matching OS `Unlock`
-- [x] `ChDir`, `CurDir`, `Dir`, `FileCopy`, `FileDateTime`, `FileLen`, `Kill`, `MkDir`, rename/move, `RmDir`
+- [x] standard file open/read/write/seek/reset operations
+- [x] Charset-aware Input/Output/Append and independent Base64 encoding layer
+- [>] file `Input$(count, #fileNumber)` distinct from interactive input
+- [>] OS `Lock` / `Unlock` with Binary byte ranges, Random record ranges and sequential whole-file semantics
+- [x] standard filesystem operations
 - [>] `ChDrive`
 - [>] explicit Latin-1 regression source
 
@@ -110,10 +101,9 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 ## 10. Formatting, process and console
 
-- [x] `Format`, `Format$`, `FormatNumber`, `FormatPercent`
-- [x] `Environ`, `Shell`, `Sleep`
-- [x] console `Print`, `Print$`, interactive `Input`, interactive `Input$`, `Pause`
-- [x] `InputBox`, `MessageBox`, `MsgBox`, `Beep`
+- [x] formatting functions
+- [x] `Environ`, current `Shell`, `Sleep`
+- [x] console Print/Input/Pause and message-box helpers
 
 ## 11. Base64 and URL
 
@@ -123,8 +113,6 @@ File input and interactive input are distinct APIs. `Lock/Unlock` must be verifi
 
 ## 12. Native HTTP API
 
-Implemented but intentionally unverified while workflows are disabled:
-
 - [>] `HttpClient`
 - [>] `Get`, `Post`, `Put`, `Patch`, `Delete`
 - [>] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
@@ -132,8 +120,6 @@ Implemented but intentionally unverified while workflows are disabled:
 - [>] source: `samples/native-http-json.xps`
 
 ## 13. Native JSON API
-
-Implemented but intentionally unverified while workflows are disabled:
 
 - [>] `JsonDocument.Parse`, `JsonDocument.Stringify`
 - [>] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
@@ -143,101 +129,94 @@ Implemented but intentionally unverified while workflows are disabled:
 
 ## 14. Cross-platform compiler and runtime
 
-- [ ] support publishing generated executables for Windows, Linux and macOS
-- [ ] add compiler target/runtime selection for at least `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`
-- [ ] decide/default target behavior when no target platform is supplied
-- [ ] add `Platform` command/function that returns the current runtime platform name
-- [ ] define stable `Platform` return values suitable for branching in XPScript code, e.g. `Windows`, `Linux`, `MacOS`
-- [ ] document conditional platform-specific code patterns using `Platform`
+- [ ] publish generated executables for Windows, Linux and macOS
+- [ ] compiler runtime targets: `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64` and relevant additional RIDs
+- [ ] define default target behavior
+- [ ] add `Platform` function returning stable values such as `Windows`, `Linux`, `MacOS`
+- [ ] allow platform-specific branching using `Platform`
 - [ ] make `Shell` platform-aware
-- [ ] Windows `Shell`: execute `.exe`, `.cmd`, `.bat`, `.ps1` and normal commands using appropriate Windows process handling
-- [ ] Linux `Shell`: execute binaries, shell scripts and commands using executable bit/shebang or an appropriate shell when needed
-- [ ] macOS `Shell`: execute binaries, shell scripts and commands using executable bit/shebang or an appropriate shell when needed
-- [ ] preserve argument quoting and avoid accidental shell re-parsing unless explicitly required
-- [ ] return clear runtime errors when a program/script cannot be executed on the current platform
+- [ ] Windows: `.exe`, `.cmd`, `.bat`, `.ps1` and commands
+- [ ] Linux: binaries, executable/shebang scripts and shell scripts
+- [ ] macOS: binaries, executable/shebang scripts and shell scripts
+- [ ] preserve argument quoting and avoid unintended shell re-parsing
+- [ ] clear runtime errors for unsupported/unexecutable targets
 
 ## 15. Evaluate
 
-- [ ] remove all references to `@Formula` from source code, documentation, samples and public terminology
-- [ ] redefine `Evaluate(sourceText)` to execute only XPScript code supplied as a string
-- [ ] `Evaluate` must not expose or emulate any external formula language
-- [ ] define whether `Evaluate` accepts an expression, statements, or a complete XPScript snippet; preferred target is XPScript expressions/statements only
-- [ ] isolate evaluated code from compiler/runtime internals unless explicitly exposed
-- [ ] return XPScript values using normal XPScript type/coercion rules
-- [ ] propagate syntax/type/runtime errors using normal XPScript diagnostics/error handling
-- [ ] document examples of safe `Evaluate` use
+- [ ] remove all `@Formula` references from code/docs/samples/public terminology
+- [ ] `Evaluate(sourceText)` executes only XPScript supplied as text
+- [ ] no external formula-language compatibility
+- [ ] define expression/statements/snippet grammar for `Evaluate`
+- [ ] isolate evaluated code from compiler/runtime internals
+- [ ] normal XPScript values, coercion and diagnostics
+- [ ] safe-use documentation/examples
 
 ## 16. Security review and isolation
 
-- [ ] perform a dedicated security review of compiler, preprocessors, generated runtime and temp-build handling
-- [ ] verify that values/variables from one scope cannot overwrite unrelated variables through generated-name collisions
-- [ ] verify generated internal identifiers cannot collide with user-defined identifiers
-- [ ] reserve or safely namespace all compiler-generated identifiers
-- [ ] verify procedure locals, module globals, class fields, `Static` variables, arrays, lists and ByRef cells are isolated correctly
-- [ ] verify one compiled source/module cannot overwrite another module's state unexpectedly
-- [ ] verify concurrent compiler invocations use separate temporary directories/files and cannot overwrite each other
-- [ ] verify generated output paths cannot overwrite unrelated files through path traversal or malformed source/output names
-- [ ] review temporary file permissions and cleanup
-- [ ] review `Shell`, file I/O, HTTP, dynamic `Evaluate`, P/Invoke and COM-related functionality for command/path/code injection risks
-- [ ] review JSON/HTTP header/body handling for injection and unsafe implicit conversions
-- [ ] review file `Lock/Unlock` behavior for race conditions and incorrect cross-process assumptions
-- [ ] add negative security regression sources/tests once workflow execution is re-enabled
-- [ ] document security boundaries and intentionally unsafe/powerful language features
+- [ ] dedicated compiler/preprocessor/runtime/temp-build security review
+- [ ] prevent user/generated identifier collisions; reserve or namespace internal identifiers including `__xp_*`
+- [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
+- [ ] verify modules cannot overwrite unrelated module state
+- [ ] verify concurrent compiler builds use isolated temp paths
+- [ ] prevent output path traversal/unrelated-file overwrite
+- [ ] review temp permissions and cleanup
+- [ ] review `Shell`, file I/O, HTTP, `Evaluate`, P/Invoke and COM for injection risks
+- [ ] review JSON/HTTP conversions and header/body handling
+- [ ] review `Lock/Unlock` races and cross-process assumptions
+- [ ] negative/adversarial regression tests when execution is re-enabled
+- [ ] document security boundaries and powerful/unsafe features
 
 ## 17. Memory management and object/resource lifetime
 
-- [ ] review whether XPScript needs explicit memory-management semantics beyond the .NET garbage collector
-- [ ] define the exact runtime meaning of assigning `Nothing` to object/reference variables
-- [ ] define the exact runtime meaning of assigning `Null` to Variant/dynamic values and how it differs from `Nothing`
-- [ ] verify that `Set object = Nothing` releases the XPScript reference so an otherwise unreachable managed object becomes eligible for garbage collection
-- [ ] verify aliases/shared references remain alive until the last reference is cleared; clearing one alias must not invalidate unrelated aliases unless `Delete` semantics explicitly require it
-- [ ] review current `Delete object` behavior separately from `Set object = Nothing`; document whether `Delete` invokes `Sub Delete`, invalidates shared aliases, or only releases one reference
-- [ ] verify local variables become unreachable when a procedure exits and are not retained accidentally by generated closures, delegates, error contexts, ByRef wrappers or static caches
-- [ ] verify module globals and `Static` variables intentionally retain referenced objects for their defined lifetime and can release them when assigned `Nothing`/`Null` where legal
-- [ ] review arrays/lists so `Erase`, `ReDim` and element replacement release references to removed objects/strings/arrays rather than retaining stale references
-- [ ] review `Type` value-copy implementation so copies do not accidentally retain hidden compiler-owned references beyond their semantic lifetime
-- [ ] review HTTP/JSON/runtime objects for unnecessary long-lived references and reusable static caches
-- [ ] distinguish managed memory from unmanaged resources: files, streams, sockets, HTTP responses, OS locks, process handles, COM objects and P/Invoke/native allocations must be disposed/released deterministically where required
-- [ ] ensure `Close`, `Reset`, `Unlock`, object disposal and process cleanup release underlying OS handles even if managed objects remain reachable
-- [ ] define whether XPScript classes may implement an explicit disposal/finalization pattern in addition to `Sub Delete`
-- [ ] inspect generated runtime classes for `IDisposable` / `IAsyncDisposable` ownership and ensure owned resources are disposed exactly once
-- [ ] avoid calling `GC.Collect()` as normal language behavior; only consider explicit GC APIs if a justified use case is documented
-- [ ] add memory/lifetime regression tests when execution is re-enabled: weak-reference collection, alias behavior, repeated allocate/release loops, array/list clearing, file-handle release and HTTP resource cleanup
-- [ ] run leak/stress testing for long-running XPScript processes once cross-platform execution tests are enabled
-- [ ] document memory-management semantics, especially `Nothing`, `Null`, `Delete`, `Erase`, local scope and unmanaged-resource cleanup
+- [ ] determine any explicit memory semantics needed beyond .NET GC
+- [ ] define `Nothing` versus `Null`
+- [ ] verify `Set object = Nothing` releases that reference and allows unreachable objects to become GC-eligible
+- [ ] verify aliases remain alive until the last reference is cleared
+- [ ] define/review `Delete` versus clearing one reference
+- [ ] ensure locals are not retained by generated closures/error contexts/ByRef/static caches
+- [ ] ensure globals/statics retain and release references intentionally
+- [ ] ensure `Erase`, `ReDim` and replacement release removed array/list references
+- [ ] verify `Type` copies retain no hidden compiler-owned aliases
+- [ ] review HTTP/JSON objects and static caches for unnecessary lifetime extension
+- [ ] deterministic cleanup for files, streams, sockets, HTTP responses, locks, process handles, COM and native allocations
+- [ ] ensure `Close`, `Reset`, `Unlock`, disposal and process cleanup release OS resources
+- [ ] define optional class disposal/finalization behavior in addition to `Sub Delete`
+- [ ] inspect `IDisposable` / `IAsyncDisposable` ownership and exactly-once disposal
+- [ ] do not use `GC.Collect()` as normal language behavior
+- [ ] memory/lifetime regression and leak/stress tests when execution is enabled
+- [ ] document `Nothing`, `Null`, `Delete`, `Erase`, scope and unmanaged-resource cleanup
 
-Design direction: normal managed memory should be reclaimed by .NET GC after the last strong reference disappears. Assigning `Nothing`/`Null` can therefore make managed objects eligible for collection, but it must not be described as immediate deallocation. OS/unmanaged resources require deterministic cleanup and must not rely only on GC/finalizers.
+Design direction: managed memory is reclaimed by .NET GC after the last strong reference disappears. `Nothing`/`Null` can make objects eligible for collection but do not mean immediate deallocation. OS/unmanaged resources require deterministic cleanup.
 
 ## 18. Documentation and examples
 
-- [ ] create complete English documentation for every supported XPScript statement, function, class, property and operator
-- [ ] store all end-user documentation under `docs/`
-- [ ] create/use an `examples/` directory for reusable `.xps` example programs
-- [ ] migrate reusable examples from `samples/` to `examples/` where appropriate; keep test-only fixtures separate
-- [ ] every documented function/statement/class should include at least one practical example or link to an example under `examples/`
-- [ ] create `docs/index.md` as the documentation entry point
-- [ ] create a language-reference index grouped by declarations, control flow, operators, strings, math, date/time, arrays/lists, file I/O, HTTP, JSON, process/platform and diagnostics
-- [ ] create per-function/per-feature documentation pages or logically grouped pages with syntax, parameters, return value, errors and examples
-- [ ] document type coercion rules and forgiving conversion behavior
-- [ ] document compiler CLI including output format, target platform/runtime and exit codes
-- [ ] document file `Input$` separately from interactive console input
-- [ ] document OS file locking semantics for `Lock/Unlock`
-- [ ] document `Platform`, cross-platform `Shell`, and target-platform publishing
-- [ ] document `Evaluate` as XPScript-only dynamic code execution
-- [ ] ensure public documentation contains XPScript branding only and no legacy product names or `@Formula` references
+- [ ] complete English docs for every statement, function, class, property and operator
+- [ ] all end-user docs under `docs/`
+- [ ] reusable `.xps` programs under `examples/`; keep test fixtures under `samples/`
+- [ ] every documented API links to an example or contains an equivalent inline example
+- [ ] `docs/index.md`
+- [ ] language-reference index by declarations/control/operators/strings/math/date/arrays/files/HTTP/JSON/process/platform/diagnostics
+- [ ] grouped or per-feature pages with syntax, parameters, return value, errors and examples
+- [ ] type coercion documentation
+- [ ] compiler CLI including output format, target RID/platform and exit codes
+- [ ] separate file `Input$` versus console input docs
+- [ ] OS `Lock/Unlock` semantics
+- [ ] `Platform`, cross-platform `Shell` and publishing
+- [ ] XPScript-only `Evaluate`
+- [ ] XPScript branding only; no legacy product names or `@Formula`
 
 ## 19. Quality gates
 
-A feature is promoted from `[>]` to `[x]` only when requested verification is enabled and it passes:
+A feature becomes `[x]` only after requested verification is re-enabled and passes:
 
 1. XPScript parsing/transpilation.
 2. Generated .NET 10 build.
-3. `.xps` positive runtime regression.
-4. Negative/type diagnostic regression where applicable.
-5. Existing language/runtime regressions.
+3. positive `.xps` runtime regression.
+4. negative/type diagnostics where applicable.
+5. existing language/runtime regressions.
 6. XPScript-only public branding.
 7. OS cross-handle verification for `Lock/Unlock`.
-8. Cross-platform features must be validated on their target operating system when workflow/test execution is re-enabled.
-9. Security-sensitive features require negative/adversarial regression coverage before being marked `[x]`.
-10. Memory/lifetime-sensitive changes require tests proving references are released when expected and OS/unmanaged resources are disposed deterministically.
-11. Documentation work is complete only when the documented item links to a valid `examples/` source or contains an equivalent inline example.
+8. target-OS validation for cross-platform features.
+9. adversarial coverage for security-sensitive features.
+10. reference-release and deterministic OS-resource cleanup tests for memory/lifetime changes.
+11. valid linked `examples/` source or equivalent inline example for documentation work.
