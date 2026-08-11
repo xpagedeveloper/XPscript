@@ -112,10 +112,10 @@ jobs:
           if ($LASTEXITCODE -ne 2) { throw "Expected compiler exit code 2, got $LASTEXITCODE" }
           $result = $jsonText | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'JSON diagnostic contract failed.' }
-          $error = $result.errors[0]
-          if ($error.line -ne 10 -or $error.position -le 0) { throw "Wrong diagnostic location: $($error.line):$($error.position)" }
-          if ($error.description -notlike "Parameter 'value' of 'TakesInteger' expects Integer but received String.*") { throw "Unexpected description: $($error.description)" }
-          if ($error.code -notlike '*TakesInteger(name)*' -or $error.markedCode -notlike '*^*') { throw 'Source/marker diagnostics missing.' }
+          $diagnostic = $result.errors[0]
+          if ($diagnostic.line -ne 10 -or $diagnostic.position -le 0) { throw "Wrong diagnostic location: $($diagnostic.line):$($diagnostic.position)" }
+          if ($diagnostic.description -notlike "Parameter 'value' of 'TakesInteger' expects Integer but received String.*") { throw "Unexpected description: $($diagnostic.description)" }
+          if ($diagnostic.code -notlike '*TakesInteger(name)*' -or $diagnostic.markedCode -notlike '*^*') { throw 'Source/marker diagnostics missing.' }
 
       - name: Verify XML compiler diagnostics
         shell: pwsh
