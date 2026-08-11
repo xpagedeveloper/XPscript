@@ -9,7 +9,7 @@ internal sealed class ReservedIdentifierPreprocessor
         "Program", "Script",
         "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO",
         "XPScriptEvaluateRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
-        "XPModuleObjectRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker",
+        "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
         "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement",
         "UIForm", "UIData", "UIItem", "UIFieldValue"
