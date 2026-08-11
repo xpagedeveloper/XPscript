@@ -102,7 +102,13 @@ Status:
 - [ ] runtime-verify exact budget boundary behavior when execution is re-enabled
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
 - [ ] add concurrent-thread isolation tests
-- [ ] sanitize future diagnostics so parameter values/secrets are not automatically echoed
+- [>] all exceptions crossing the Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`, including existing `XPScriptRuntimeException` instances
+- [>] type/conversion, overflow, divide-by-zero, access and subscript/List errors use stable descriptions that do not echo input values
+- [>] only allowlisted structural parser/API diagnostics retain detail; other error-5 messages collapse to a generic safe Evaluate description
+- [>] invalid numeric-literal diagnostics no longer echo the literal text
+- [>] retained structural diagnostics are length-limited to prevent oversized error responses
+- [>] source: `samples/evaluate-diagnostic-sanitization.xps`
+- [ ] runtime-verify that secret callvar payloads never appear in Error$, logs or structured error output when execution is re-enabled
 
 ## Memory and lifetime
 
