@@ -9,6 +9,13 @@ Status:
 - `[>]` implemented/in progress, awaiting verification
 - `[ ]` not implemented
 
+## Evaluate ownership and cleanup
+
+- [>] `Evaluate` is implemented only by `XPScriptEvaluateRuntime`; the obsolete `System.Data.DataTable.Compute` evaluator has been physically removed from `ExtendedCompatibilityRuntimeSource.cs`
+- [>] generated calls are expected to be owned by `XPScriptEvaluatePreprocessor` before extended compatibility rewriting
+- [>] obsolete evaluator-specific terminology has been removed from the legacy runtime implementation
+- [ ] runtime/build verification after execution is re-enabled
+
 ## Evaluate signature and input bridge
 
 - [>] extend `Evaluate` with an optional second argument named `callvar`
