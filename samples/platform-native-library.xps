@@ -1,0 +1,10 @@
+Declare Function NativeProcessId Lib "native-process" _
+    WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
+    LinuxLib "libc.so.6" LinuxAlias "getpid" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
+    () As Integer
+
+Sub Main()
+    Print "PLATFORM=" & Platform()
+    Print "PID=" & CStr(NativeProcessId())
+End Sub
