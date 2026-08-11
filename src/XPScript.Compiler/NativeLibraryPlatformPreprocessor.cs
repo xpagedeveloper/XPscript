@@ -14,9 +14,30 @@ internal sealed class NativeLibraryPlatformPreprocessor
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var output = new string[lines.Length];
+
         for (var i = 0; i < lines.Length; i++)
-            lines[i] = RewriteDeclare(lines[i]);
-        return string.Join(Environment.NewLine, lines);
+        {
+            var current = lines[i];
+            if (!Regex.IsMatch(StripComment(current).Trim(), @"^Declare\b", RegexOptions.IgnoreCase))
+            {
+                output[i] = current;
+                continue;
+            }
+
+            var combined = current;
+            var end = i;
+            while (EndsWithContinuation(combined) && end + 1 < lines.Length)
+            {
+                combined = RemoveContinuation(combined) + " " + lines[++end].TrimStart();
+            }
+
+            output[i] = RewriteDeclare(combined);
+            for (var blank = i + 1; blank <= end; blank++) output[blank] = "";
+            i = end;
+        }
+
+        return string.Join(Environment.NewLine, output.Select(x => x ?? ""));
     }
 
     private string RewriteDeclare(string raw)
@@ -69,6 +90,27 @@ internal sealed class NativeLibraryPlatformPreprocessor
     {
         var match = Regex.Match(code, "\\b" + Regex.Escape(keyword) + "\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private static bool EndsWithContinuation(string line)
+    {
+        var code = StripComment(line).TrimEnd();
+        return code.EndsWith("_", StringComparison.Ordinal);
+    }
+
+    private static string RemoveContinuation(string line)
+    {
+        var comment = "";
+        var code = line;
+        var stripped = StripComment(line);
+        if (stripped.Length < line.Length)
+        {
+            code = stripped;
+            comment = line[stripped.Length..];
+        }
+        code = code.TrimEnd();
+        if (code.EndsWith("_", StringComparison.Ordinal)) code = code[..^1].TrimEnd();
+        return comment.Length == 0 ? code : code + " " + comment;
     }
 
     private static string Escape(string value) => value.Replace("\"", "\\\"", StringComparison.Ordinal);
