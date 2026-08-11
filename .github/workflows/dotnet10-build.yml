@@ -69,3 +69,28 @@ jobs:
           if (Test-Path ./lslite-compat.txt) {
             throw "Compatibility test did not remove its temporary file."
           }
+
+      - name: Compile List and class sample
+        run: dotnet run --project ./src/LSLite.Compiler/LSLite.Compiler.csproj --configuration Release --no-build -- ./samples/lists-classes.ls -o ./out/lists-classes.exe --framework-dependent
+
+      - name: Run List and class sample
+        shell: pwsh
+        run: |
+          $output = & ./out/lists-classes.exe
+          $output | ForEach-Object { Write-Host $_ }
+
+          $expected = @(
+            "ADMIN=Fredrik",
+            "admin:Fredrik",
+            "guest:Guest",
+            "GUEST-ERASED",
+            "Fredrik",
+            "Fno:Admin",
+            "OBJECT-DELETED"
+          )
+
+          foreach ($value in $expected) {
+            if ($output -notcontains $value) {
+              throw "List/class test missing expected output: $value"
+            }
+          }
