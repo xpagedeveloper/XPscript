@@ -7,6 +7,7 @@ public sealed class XPScriptTranspiler
 {
     public string Transpile(string source, string sourceName)
     {
+        source = new LanguageExtensionsPreprocessor().Transform(source);
         new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
 
