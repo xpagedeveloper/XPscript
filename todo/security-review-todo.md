@@ -48,7 +48,7 @@ Status:
 - [>] a dependency already located at its final output target is left in place instead of replacing its own source
 - [>] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
 - [>] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
-- [ ] route managed `Reference` staging through the same handle-based secure-copy path
+- [>] managed `Reference` staging uses the same handle-based validated regular-file copy path as native dependency staging
 - [ ] investigate OS-specific no-follow/open-reparse semantics to further reduce the small race between final metadata validation and opening a dependency handle
 
 ## Output publication
@@ -90,6 +90,8 @@ Status:
 - [>] lock conflicts are normalized into XPScript errors
 - [>] standard File I/O diagnostics no longer echo full resolved paths or raw underlying exception messages in the newly hardened paths
 - [>] `FileCopy` and `Name` refuse an existing destination that is a symbolic link/reparse-point target
+- [>] `Kill` refuses a symbolic-link/reparse-point file target instead of deleting through filesystem indirection
+- [>] `Name` refuses a symbolic-link/reparse-point source as well as a linked destination
 - [>] `RmDir` refuses a symbolic-link/reparse-point directory target
 - [>] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
 - [ ] review TOCTOU behavior between symlink/attribute/existence checks and the final filesystem operation
