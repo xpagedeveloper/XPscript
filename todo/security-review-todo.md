@@ -185,7 +185,7 @@ Status:
 - [>] generic unexpected compiler exceptions return `Compilation failed.` instead of raw exception text through `CompileWithResultAsync`
 - [>] dependency-not-found compiler diagnostics expose only the dependency file name rather than the declared path
 - [ ] review remaining compiler/preprocessor diagnostics that deliberately include source tokens or identifiers
-- [ ] review native interop diagnostics for unnecessary absolute-path/system-description detail
+- [>] native interop loader diagnostics no longer attach raw inner loader exceptions and no longer expose full OS-description text
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
