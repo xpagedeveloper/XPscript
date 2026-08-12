@@ -26,9 +26,12 @@ internal sealed class UdtValueSemanticsPreprocessor
         if (_types.Count == 0) return source;
 
         var variables = CollectVariables(lines);
-        RewriteValueAssignments(lines, variables);
+
+        // Lower user-written array/member paths before value-copy expansion. Compiler-generated
+        // copy statements then use explicit wrapper dereferences and are never rewritten twice.
         RewriteArrayMemberUses(lines, variables);
         RewriteNestedTypeMemberUses(lines, variables);
+        RewriteValueAssignments(lines, variables);
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -135,7 +138,7 @@ internal sealed class UdtValueSemanticsPreprocessor
                 var nestedId = ++_copyTempId;
                 var nestedCommit = $"__xp_udtcopy_commit_{nestedId}";
                 output.Add(indent + $"Dim {nestedCommit} As New {field.Type}");
-                ExpandCopy(nestedType, nestedCommit, snapshot + "." + field.Name, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                ExpandCopy(nestedType, nestedCommit, snapshot + "." + field.Name + ".Value", indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 output.Add(indent + $"{destination}.{field.Name} = {nestedCommit}");
                 continue;
             }
@@ -165,7 +168,7 @@ internal sealed class UdtValueSemanticsPreprocessor
                 var id = ++_copyTempId;
                 var dstTemp = $"__xp_udtcopy_dst_{id}";
                 output.Add(indent + $"Dim {dstTemp} As New {field.Type}");
-                ExpandCopy(nestedType, dstTemp, source + "." + field.Name, indent, output, path);
+                ExpandCopy(nestedType, dstTemp, source + "." + field.Name + ".Value", indent, output, path);
                 output.Add(indent + $"Set {destination}.{field.Name} = {dstTemp}");
             }
         }
