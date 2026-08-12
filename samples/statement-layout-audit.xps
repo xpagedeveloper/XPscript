@@ -1,0 +1,88 @@
+Class BaseBox
+    Public Value As Integer
+End Class
+
+Class ChildBox As _
+    BaseBox
+
+    Public Function Twice( _
+        value As Integer _
+    ) As Integer
+        Twice = value * 2
+    End Function
+
+    Public Property Get Current _
+        As Integer
+        Current = Me.Value
+    End Property
+End Class
+
+Function AddValues( _
+    leftValue As Integer, _
+    rightValue As Integer _
+) As Integer
+    AddValues = leftValue + rightValue
+End Function
+
+Sub Main()
+    Dim total As Integer
+    Dim i As Integer
+    Dim box As New ChildBox
+
+    total = AddValues( _
+        1, _
+        2 _
+    )
+
+    If total = 3 And _
+       total > 0 Then Print "CONTINUED_IF=OK"
+
+    If False Then
+        Print "NESTED_BAD"
+    ElseIf total = 3 Then
+        If True Then Print "NESTED_IF=OK"
+    Else
+        Print "NESTED_BAD"
+    End If
+
+    For i = 1 _
+        To 2 _
+        Step 1
+        Print "FOR=" & CStr(i)
+    Next i
+
+    i = 0
+    While i < 2 _
+        And total = 3
+        i = i + 1
+    Wend
+    Print "WHILE=" & CStr(i)
+
+    Do While i > 0 _
+        And total = 3
+        i = i - 1
+    Loop
+    Print "DO=" & CStr(i)
+
+    Select Case _
+        total
+    Case 1
+        Print "SELECT_BAD"
+    Case 2 To _
+        3
+        Print "SELECT=OK"
+    Case Else
+        Print "SELECT_BAD"
+    End Select
+
+    box.Value = 7
+    With box
+        .Value = .Value + 1
+        Print "WITH=" & CStr(.Value)
+    End With
+
+    Print "FUNCTION=" & CStr(box.Twice( _
+        4 _
+    ))
+    Print "PROPERTY=" & CStr(box.Current)
+End Sub
