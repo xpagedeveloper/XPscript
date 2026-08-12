@@ -35,6 +35,10 @@ Further verification remains tracked in `todo/security-review-todo.md` and `todo
 
 Application-local native libraries are copied beside the generated executable only when selected for the target RID. Duplicate output names and executable-overwrite collisions are rejected. If a dependency already resides exactly at its final target path, it is left in place instead of replacing its own source file.
 
+At runtime, application-local native declarations are bound through a generated `DllImportResolver` to exactly the executable directory. XPScript does not search the current directory, PATH or arbitrary library directories for those application-local declarations. A packaged application-local native file that is itself a symbolic link or reparse point is rejected before loading.
+
+Bare system-library names remain OS-loader-resolved. Transitive native dependencies required by an application-local library are still subject to the target operating system's native dependency-resolution rules and must be reviewed separately.
+
 Native libraries execute unmanaged code with the same operating-system privileges as the XPScript process. Only trusted native binaries should be referenced.
 
 See:
@@ -103,7 +107,11 @@ The native `HttpClient` API accepts only absolute `http://` and `https://` URLs.
 
 Header names are validated before storage. Header values reject CR, LF, NUL and other prohibited control characters, preventing direct CR/LF header injection through `SetHeader`.
 
-The HTTP runtime deliberately does not expose full invalid URLs or underlying request exception messages in the newly hardened error paths because URLs may contain credentials, tokens or sensitive query parameters.
+Automatic redirects are disabled. A 3xx response is returned to the XPScript caller rather than silently following `Location`, which prevents authorization/custom headers from being automatically forwarded to another origin.
+
+Request bodies are limited to 8 MiB UTF-8 and response bodies to 8 MiB. Response bodies are streamed and the limit is enforced both from declared `Content-Length` and while reading.
+
+The HTTP runtime deliberately does not expose full invalid URLs or underlying request exception messages in hardened error paths because URLs may contain credentials, tokens or sensitive query parameters.
 
 A syntactically valid HTTP URL can still target loopback, private networks or cloud metadata services. Applications accepting user-controlled URLs must enforce their own host/network allowlist when SSRF is a concern.
 
@@ -112,10 +120,13 @@ See:
 - `docs/native-http-json.md`
 - `samples/native-http-json.xps`
 - `samples/native-http-header-validation.xps`
+- `samples/native-http-resource-limits.xps`
 
 ## JSON
 
-JSON parsing and serialization process caller-provided data in memory. Depth, size and allocation hardening remains under security review.
+JSON parser input is limited to 8 MiB UTF-8. Parsed/constructed JSON is limited to 64 levels of nesting, 100000 nodes and an estimated 16 MiB payload. Serialized JSON output is also limited to 16 MiB UTF-8.
+
+Mutating operations validate the resulting graph and restore the previous value if a resource budget is exceeded. Non-finite floating-point values such as `NaN` and `Infinity` are not accepted as JSON numbers.
 
 Do not treat JSON parsing as authorization or schema validation. Validate required fields, types and application-specific limits separately.
 
@@ -125,11 +136,23 @@ Do not treat JSON parsing as authorization or schema validation. Validate requir
 
 Incorrect signatures, calling conventions or malicious native code can crash or compromise the process. Native libraries must be trusted and must match the selected target architecture.
 
-XPScript adds target-specific library selection and loader diagnostics, but those mechanisms do not sandbox native code.
+Native parameters must currently be explicit `ByVal`. `ByRef` and omitted parameter passing modes are rejected until target-correct ref/out marshalling is implemented, preventing the compiler from silently generating a known ABI mismatch.
+
+Application-local native declarations are resolved only from the executable directory as described above. System-library declarations continue to use the OS loader.
+
+These protections reduce accidental loader and declaration errors; they do not sandbox unmanaged code.
 
 ## COM/OLE compatibility
 
-Any compatibility APIs that activate COM/OLE objects should be treated as local-code execution/integration boundaries and are platform-specific. Their retained standalone surface remains under review.
+The currently inventoried standalone COM/OLE surface is `GetObject(pathname, className)` in the extended compatibility runtime. It is Windows-only.
+
+When `pathname` is supplied, `GetObject` uses COM moniker binding. When `className`/ProgID is supplied, it resolves and activates the registered COM class. Both operations can instantiate or connect to local COM servers under the privileges of the XPScript process.
+
+No separate general `CreateObject`/ActiveX factory is currently part of the preferred standalone API surface found in this review.
+
+Treat `GetObject` as a powerful local-code/integration boundary. Do not pass untrusted moniker strings or ProgIDs to it. For higher-risk deployments, restrict or remove COM registrations/permissions at the Windows account and system level.
+
+The legacy `samples/runtime-sax.xps` contains disabled compatibility coverage for `GetObject` and should not be interpreted as a recommendation to use COM in new cross-platform applications.
 
 ## Secrets and diagnostics
 
