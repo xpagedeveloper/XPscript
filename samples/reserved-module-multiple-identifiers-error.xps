@@ -1,0 +1,8 @@
+Option Declare
+
+Public VisibleValue As Integer, __hiddenCompilerState As Integer
+
+Sub Main()
+    VisibleValue = 1
+    Print CStr(VisibleValue)
+End Sub
