@@ -22,7 +22,7 @@ Status:
 - [x] reject calls where no overload matches with a clear compiler diagnostic listing the supplied signature
 - [x] reject ambiguous calls where more than one overload is equally valid with a clear compiler diagnostic
 - [x] reject duplicate declarations with an identical effective signature; `Variant` and `Object` are treated as the same CLR-effective object signature for duplicate detection
-- [>] preserve normal return-type checking for overloaded `Function` members through generated typed CLR methods; add an explicit negative return-type regression before marking complete
+- [x] preserve normal return-type checking for overloaded `Function` members through generated typed CLR methods; negative regression: `samples/class-method-overloads-return-type-error.xps`
 - [>] `ByRef` constraints are represented by the overload validator, but scalar `ByRef` remains a broader compiler limitation and is not considered complete in this feature
 - [x] support overload resolution for calls both with and without the explicit `Call` keyword
 - [x] support overload resolution when invoking a member on a typed class variable
@@ -41,6 +41,7 @@ Status:
 - [x] negative sample: duplicate identical/effective signatures; source: `samples/class-method-overloads-duplicate.xps`
 - [x] negative sample: no matching overload; source: `samples/class-method-overloads-no-match.xps`
 - [x] negative sample: ambiguous overload; source: `samples/class-method-overloads-ambiguous.xps`
+- [x] negative sample: invalid assignments to overloaded Function result types are rejected with structured compiler diagnostics; source: `samples/class-method-overloads-return-type-error.xps`
 - [x] generated C# uses valid CLR method overloads while the XPScript validator supplies language-specific overload diagnostics
 - [x] GitHub Actions regression gate: `Class Properties and Overloads Compatibility`
 
