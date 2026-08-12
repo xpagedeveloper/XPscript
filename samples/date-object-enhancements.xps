@@ -12,6 +12,10 @@ Sub Main()
     Print "START=" & CStr(startDate)
     Print "ADJUSTED=" & CStr(adjustedDate)
     Print "DIFFERENCE=" & CStr(seconds)
+    Print "OSDATEFORMAT=" & startDate.OSDateFormatting
+    Print "OSTIMEFORMAT=" & startDate.OSTimeFormatting
+    Print "OSDATE=" & Format$(startDate, startDate.OSDateFormatting)
+    Print "OSTIME=" & Format$(endDate, endDate.OSTimeFormatting)
 
     If endDate > adjustedDate Then Print "GT=TRUE"
     If endDate >= adjustedDate Then Print "GTE=TRUE"
