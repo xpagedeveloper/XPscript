@@ -9,23 +9,20 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
         @"(?<indent>^[ \t]*)\[System\.Runtime\.InteropServices\.DllImport\(\"(?<library>[^\"]+)\", EntryPoint = \"(?<entry>[^\"]+)\", CharSet = System\.Runtime\.InteropServices\.CharSet\.(?<charset>\w+)\)\]\r?\n[ \t]*private static extern (?<return>[^\r\n]+?) (?<name>[A-Za-z_]\w*)\((?<parameters>[^\r\n]*)\);",
         RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
-    private readonly HashSet<string> _applicationLocalLibraries;
-
-    public NativeInteropDiagnosticsPostProcessor(IEnumerable<string>? applicationLocalLibraries = null)
-    {
-        _applicationLocalLibraries = new HashSet<string>(applicationLocalLibraries ?? [], StringComparer.OrdinalIgnoreCase);
-    }
-
     public string Transform(string generated)
     {
         var ordinal = 0;
         return DeclarationPattern.Replace(generated, match => Rewrite(match, ++ordinal));
     }
 
-    private string Rewrite(Match match, int ordinal)
+    private static string Rewrite(Match match, int ordinal)
     {
         var indent = match.Groups["indent"].Value;
-        var library = match.Groups["library"].Value;
+        var markedLibrary = match.Groups["library"].Value;
+        var applicationLocal = markedLibrary.StartsWith(NativeLibraryPlatformPreprocessor.ApplicationLocalMarker, StringComparison.Ordinal);
+        var library = applicationLocal
+            ? markedLibrary[NativeLibraryPlatformPreprocessor.ApplicationLocalMarker.Length..]
+            : markedLibrary;
         var entry = match.Groups["entry"].Value;
         var charset = match.Groups["charset"].Value;
         var returnType = match.Groups["return"].Value.Trim();
@@ -34,7 +31,6 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
         var internalName = $"__ls_native_{ordinal}_{name}";
         var argumentNames = ExtractArgumentNames(parameters);
         var call = internalName + "(" + string.Join(", ", argumentNames) + ")";
-        var applicationLocal = _applicationLocalLibraries.Contains(library);
 
         var builder = new StringBuilder();
         builder.Append(indent).Append("[System.Runtime.InteropServices.DllImport(\"").Append(Escape(library))
