@@ -6,12 +6,13 @@ namespace XPScript.Compiler;
 internal sealed class TypeDeclarationPreprocessor
 {
     private sealed record ArrayField(string Name, string ElementType, string Bounds);
+    private sealed record NestedField(string Name, string Type);
 
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
         var optionBase = DetectOptionBase(lines);
-        var typeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var typeNames = CollectTypeNames(lines);
         var output = new List<string>(lines.Count + 16);
 
         for (var i = 0; i < lines.Count; i++)
@@ -27,10 +28,10 @@ internal sealed class TypeDeclarationPreprocessor
 
             var visibility = start.Groups[1].Success ? start.Groups[1].Value + " " : "";
             var typeName = start.Groups[2].Value;
-            typeNames.Add(typeName);
             output.Add(visibility + "Class " + typeName);
 
             var arrays = new List<ArrayField>();
+            var nestedFields = new List<NestedField>();
             var foundEnd = false;
             for (i = i + 1; i < lines.Count; i++)
             {
@@ -52,6 +53,7 @@ internal sealed class TypeDeclarationPreprocessor
                 if (!field.Groups[2].Success)
                 {
                     output.Add("Public " + name + " As " + elementType);
+                    if (typeNames.Contains(elementType)) nestedFields.Add(new NestedField(name, elementType));
                     continue;
                 }
 
@@ -62,9 +64,12 @@ internal sealed class TypeDeclarationPreprocessor
             if (!foundEnd)
                 throw new CompilerException("Missing End Type for '" + typeName + "'.");
 
-            if (arrays.Count > 0)
+            if (arrays.Count > 0 || nestedFields.Count > 0)
             {
                 output.Add("Sub New()");
+                foreach (var nested in nestedFields)
+                    output.Add("Set " + nested.Name + " = New " + nested.Type);
+
                 foreach (var array in arrays)
                 {
                     if (array.Bounds.Length == 0)
@@ -104,6 +109,17 @@ internal sealed class TypeDeclarationPreprocessor
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static HashSet<string> CollectTypeNames(IEnumerable<string> lines)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in lines)
+        {
+            var match = Regex.Match(StripComment(raw).Trim(), @"^(?:(?:Public|Private)\s+)?Type\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
+            if (match.Success) result.Add(match.Groups[1].Value);
+        }
+        return result;
     }
 
     private static int DetectOptionBase(IEnumerable<string> lines)
