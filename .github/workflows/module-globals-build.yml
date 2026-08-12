@@ -7,6 +7,8 @@ on:
       - 'src/XPScript.Compiler/**'
       - 'samples/module-scalars.xps'
       - 'samples/module-arrays.xps'
+      - 'samples/module-type-values.xps'
+      - 'samples/module-object-references.xps'
       - '.github/workflows/module-globals-build.yml'
   pull_request:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'src/XPScript.Compiler/**'
       - 'samples/module-scalars.xps'
       - 'samples/module-arrays.xps'
+      - 'samples/module-type-values.xps'
+      - 'samples/module-object-references.xps'
       - '.github/workflows/module-globals-build.yml'
   workflow_dispatch:
 
@@ -53,4 +57,31 @@ jobs:
           $output = & ./out/module-arrays.exe
           foreach ($value in @('MODULEARRAY=50','MODULEBOUNDS=1:4','MODULEFIXED=two')) {
             if ($output -notcontains $value) { throw "Module array output missing: $value" }
+          }
+
+      - name: Verify module Type values
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/module-type-values.xps -o ./out/module-type-values.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Module Type value compilation failed.' }
+          $output = & ./out/module-type-values.exe
+          if ($output -notcontains 'BUILD=XPScript:42') { throw 'Module Type value runtime behavior failed.' }
+
+      - name: Verify module object references
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/module-object-references.xps -o ./out/module-object-references.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Module object reference compilation failed.' }
+          $output = & ./out/module-object-references.exe
+          foreach ($value in @(
+            'NAME=Fredrik',
+            'NOTHING1=False',
+            'SAME=True',
+            'ALIAS=Fredrik',
+            'NOTHING2=True',
+            'ALIASSTILL=Fredrik',
+            'DELETEDPRIMARY=True',
+            'DELETEDALIAS=True'
+          )) {
+            if ($output -notcontains $value) { throw "Module object reference output missing: $value" }
           }
