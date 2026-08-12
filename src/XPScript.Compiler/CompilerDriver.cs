@@ -44,7 +44,7 @@ public sealed class CompilerDriver
                 return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "")]);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", sourcePath, sourcePath)]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "")]);
 
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
@@ -54,9 +54,9 @@ public sealed class CompilerDriver
         {
             return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, ex.Message, "", "")]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "")]);
         }
     }
 
@@ -114,8 +114,8 @@ public sealed class CompilerDriver
 
             if (process.ExitCode != 0)
             {
-                var diagnosticText = stdout + Environment.NewLine + stderr;
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText + Environment.NewLine + BuildGeneratedSourceContext(generatedSource, diagnosticText));
+                var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
             var generatedExecutable = FindPublishedExecutable(publishDir, rid);
@@ -146,7 +146,7 @@ public sealed class CompilerDriver
         {
             var resolved = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
             if (!File.Exists(resolved))
-                throw new CompilerException("Application-local native dependency was not found: " + dependency.DeclaredPath);
+                throw new CompilerException("Application-local native dependency was not found: " + SafeFileName(dependency.DeclaredPath));
 
             if (seenOutputNames.TryGetValue(dependency.LoadName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
                 throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + dependency.LoadName + "'. Use unique native library file names for one target.");
@@ -170,7 +170,7 @@ public sealed class CompilerDriver
         {
             var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "Managed Reference");
             if (!File.Exists(resolved))
-                throw new CompilerException("Managed .NET assembly was not found: " + reference.DeclaredPath);
+                throw new CompilerException("Managed .NET assembly was not found: " + SafeFileName(reference.DeclaredPath));
             var fileName = Path.GetFileName(resolved);
             if (managedNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
                 throw new CompilerException("Multiple managed references use the same file name '" + fileName + "'.");
@@ -181,10 +181,10 @@ public sealed class CompilerDriver
         {
             var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "ReferenceNative");
             if (!File.Exists(resolved))
-                throw new CompilerException("RID-specific native dependency was not found: " + reference.DeclaredPath);
+                throw new CompilerException("RID-specific native dependency was not found: " + SafeFileName(reference.DeclaredPath));
             var fileName = Path.GetFileName(resolved);
             if (string.IsNullOrWhiteSpace(fileName))
-                throw new CompilerException("ReferenceNative path must end with a file name: " + reference.DeclaredPath);
+                throw new CompilerException("ReferenceNative path must end with a file name.");
             if (nativeNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
                 throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + fileName + "'.");
             nativeNames[fileName] = resolved;
@@ -298,7 +298,7 @@ public sealed class CompilerDriver
         {
             var line = int.Parse(match.Groups["line"].Value);
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
-            var code = line > 0 && line <= sourceLines.Length ? sourceLines[line - 1] : "";
+            var code = line > 0 && line <= sourceLines.Length ? RedactSourceLine(sourceLines[line - 1]) : "";
             result.Add(CreateDiagnostic(line, pos, Humanize(match.Groups["desc"].Value.Trim()), code, Mark(code, pos)));
         }
         if (result.Count > 0) return result.GroupBy(x => (x.Line, x.Position, x.Description)).Select(x => x.First()).ToList();
@@ -310,6 +310,48 @@ public sealed class CompilerDriver
         }
         if (result.Count == 0) result.Add(CreateDiagnostic(0, 0, Humanize(message.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Compilation failed."), "", ""));
         return result;
+    }
+
+    private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
+    {
+        var sanitized = text.Replace(tempRoot, "<compiler-workspace>", StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            sanitized = sanitized.Replace(Path.GetFullPath(sourcePath), Path.GetFileName(sourcePath), StringComparison.OrdinalIgnoreCase);
+        }
+        catch { }
+        return sanitized;
+    }
+
+    private static string RedactSourceLine(string line)
+    {
+        if (string.IsNullOrEmpty(line)) return line;
+        var output = new StringBuilder(line.Length);
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+            if (c == '"')
+            {
+                output.Append(c);
+                if (inString && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    output.Append('"');
+                    i++;
+                    continue;
+                }
+                inString = !inString;
+                continue;
+            }
+            output.Append(inString ? '*' : c);
+        }
+        return output.ToString();
+    }
+
+    private static string SafeFileName(string value)
+    {
+        try { return Path.GetFileName(value); }
+        catch { return "dependency"; }
     }
 
     private static string Humanize(string description)
@@ -336,17 +378,5 @@ public sealed class CompilerDriver
         if (string.IsNullOrEmpty(code) || position <= 0) return code;
         var caret = Math.Clamp(position - 1, 0, code.Length);
         return code + Environment.NewLine + new string(' ', caret) + "^";
-    }
-
-    private static string BuildGeneratedSourceContext(string generatedSource, string diagnostics)
-    {
-        var lineNumbers = Regex.Matches(diagnostics, @"Program\.cs\((\d+),\d+\)").Select(m => int.Parse(m.Groups[1].Value)).Distinct().OrderBy(x => x).ToArray();
-        if (lineNumbers.Length == 0) return "";
-        var lines = generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var builder = new StringBuilder("Generated code context:" + Environment.NewLine); var emitted = new HashSet<int>();
-        foreach (var lineNumber in lineNumbers)
-            for (var current = Math.Max(1, lineNumber - 2); current <= Math.Min(lines.Length, lineNumber + 2); current++)
-                if (emitted.Add(current)) builder.Append(current == lineNumber ? "> " : "  ").Append(current.ToString().PadLeft(5)).Append(": ").AppendLine(lines[current - 1]);
-        return builder.ToString();
     }
 }
