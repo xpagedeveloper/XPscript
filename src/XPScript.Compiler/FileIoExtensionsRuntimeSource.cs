@@ -165,7 +165,13 @@ internal static class XPScriptFileIO
 
     private static object GetOpenState(int number)
     {
-        var state = TryInvokeCoreGetFile(number);
+        // CoreCompatibility lowers normal Input/Output/Append/Binary/Random Open
+        // statements to LSFileRuntime. Check that store first so Lock/Unlock share
+        // the exact FileStream used by Put/Get/Seek and normal file operations.
+        var state = TryGetDictionaryState(typeof(LSFileRuntime), number);
+        if (state is not null) return state;
+
+        state = TryInvokeCoreGetFile(number);
         if (state is not null) return state;
 
         state = TryGetDictionaryState(typeof(XPScriptRuntime), number);
