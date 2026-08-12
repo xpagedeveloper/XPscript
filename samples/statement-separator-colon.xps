@@ -1,0 +1,14 @@
+Sub Main()
+    Dim value As Integer
+
+    Print "COLON-A": Print "COLON-B"
+    value = 1: value = value + 1: Print "VALUE=" & CStr(value)
+    Print "STRING=A:B:C"
+    Print "COMMENT=OK" ' this colon: must stay inside the comment
+
+    GoTo AfterSkippedLabel
+SkippedLabel:
+    Print "LABEL-BAD"
+AfterSkippedLabel:
+    Print "LABEL=OK"
+End Sub
