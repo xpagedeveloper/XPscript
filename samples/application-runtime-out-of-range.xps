@@ -1,5 +1,10 @@
 Option Declare
 
 Sub Main()
-    Print Application.Args(0)
+    Dim value As String
+
+    On Error Resume Next
+    value = Application.Args(0)
+    Print "ERR=" & CStr(Err)
+    On Error GoTo 0
 End Sub
