@@ -11,7 +11,7 @@ Status:
 
 ## Runtime object
 
-- [>] global `Application` identifier is reserved by the runtime
+- [x] global `Application` identifier is reserved by the runtime
 - [x] Application state is initialized before `Main` / `Initialize`
 - [x] `Application.ArgCount`
 - [x] `Application.Args(index)` with zero-based indexes
@@ -33,7 +33,7 @@ Status:
 ## Samples and documentation
 
 - [x] sample: `samples/application-runtime.xps`
-- [>] documentation: `docs/application.md`
+- [x] documentation: `docs/application.md`
 
 ## Verification
 
@@ -48,6 +48,7 @@ Status:
 - [x] verify out-of-range indexes produce error 9
 - [x] verify attempts to assign `Application.Args(0)` fail at compile time
 - [x] verify attempts to assign another Application property fail at compile time
+- [x] verify redeclaring the reserved `Application` identifier fails at compile time
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on Windows
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on Linux
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on macOS
