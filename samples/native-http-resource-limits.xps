@@ -1,0 +1,23 @@
+' Native HTTP resource-limit and redirect-policy sample.
+' Runtime verification remains pending while workflow execution is disabled.
+'
+Sub Main()
+    Dim client As HttpClient
+    Dim hugeBody As String
+
+    Set client = New HttpClient()
+    client.Timeout = 30
+
+    ' Automatic redirects are disabled. A 3xx response is returned to the caller,
+    ' including its Location header, and must be followed explicitly if desired.
+    Print "HTTP redirect policy: caller-controlled"
+
+    ' Request bodies are limited to 8 MiB of UTF-8 payload.
+    hugeBody = String(8388609, "A")
+
+    On Error Resume Next
+    Call client.Post("https://example.invalid/oversized", hugeBody)
+    Print "Oversized request Err=" & CStr(Err)
+    Print "Oversized request Error$=" & Error$
+    On Error GoTo 0
+End Sub
