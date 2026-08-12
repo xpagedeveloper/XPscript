@@ -70,8 +70,8 @@ internal static class XPScriptNativeJson
                 short n => System.Text.Json.Nodes.JsonValue.Create(n),
                 int n => System.Text.Json.Nodes.JsonValue.Create(n),
                 long n => System.Text.Json.Nodes.JsonValue.Create(n),
-                float n => System.Text.Json.Nodes.JsonValue.Create(n),
-                double n => System.Text.Json.Nodes.JsonValue.Create(n),
+                float n => CreateFiniteNumber(n),
+                double n => CreateFiniteNumber(n),
                 decimal n => System.Text.Json.Nodes.JsonValue.Create(n),
                 DateTime dt => System.Text.Json.Nodes.JsonValue.Create(dt),
                 _ => System.Text.Json.JsonSerializer.SerializeToNode(value, value.GetType(), SerializerOptions)
@@ -99,7 +99,12 @@ internal static class XPScriptNativeJson
         {
             if (value.TryGetValue<bool>(out var b)) return b;
             if (value.TryGetValue<long>(out var l)) return l;
-            if (value.TryGetValue<double>(out var d)) return d;
+            if (value.TryGetValue<double>(out var d))
+            {
+                if (double.IsNaN(d) || double.IsInfinity(d))
+                    throw new XPScriptRuntimeException(5, "JSON numeric value is outside the supported finite range.");
+                return d;
+            }
             if (value.TryGetValue<string>(out var s)) return s;
         }
         return new XPScriptJsonElement(node);
@@ -117,6 +122,20 @@ internal static class XPScriptNativeJson
         {
             throw new XPScriptRuntimeException(5, "JSON value exceeds the supported resource budget.");
         }
+    }
+
+    private static System.Text.Json.Nodes.JsonNode CreateFiniteNumber(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            throw new XPScriptRuntimeException(5, "JSON numeric values must be finite.");
+        return System.Text.Json.Nodes.JsonValue.Create(value)!;
+    }
+
+    private static System.Text.Json.Nodes.JsonNode CreateFiniteNumber(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+            throw new XPScriptRuntimeException(5, "JSON numeric values must be finite.");
+        return System.Text.Json.Nodes.JsonValue.Create(value)!;
     }
 
     private static void Visit(System.Text.Json.Nodes.JsonNode? node, int depth, ref int nodes, ref long payload)
