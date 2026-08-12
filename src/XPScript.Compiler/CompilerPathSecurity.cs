@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace XPScript.Compiler;
 
 internal static class CompilerPathSecurity
@@ -36,7 +38,11 @@ internal static class CompilerPathSecurity
 
     public static void HardenTemporaryDirectory(string path)
     {
-        if (OperatingSystem.IsWindows()) return;
+        if (OperatingSystem.IsWindows())
+        {
+            HardenWindowsDirectoryAcl(path);
+            return;
+        }
 
         try
         {
@@ -54,6 +60,7 @@ internal static class CompilerPathSecurity
 
     public static void HardenTemporaryFile(string path)
     {
+        // Windows files inherit the restricted ACL from the compiler-owned directory.
         if (OperatingSystem.IsWindows()) return;
 
         try
@@ -82,30 +89,70 @@ internal static class CompilerPathSecurity
         DeleteDirectoryWithoutFollowingLinks(rootInfo);
     }
 
+    private static void HardenWindowsDirectoryAcl(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var account = string.IsNullOrWhiteSpace(Environment.UserDomainName)
+            ? Environment.UserName
+            : Environment.UserDomainName + "\\" + Environment.UserName;
+
+        if (string.IsNullOrWhiteSpace(account))
+            throw new CompilerException("Unable to determine the current Windows account for compiler temporary workspace ACLs.");
+
+        RunIcacls(fullPath, "/inheritance:r");
+        RunIcacls(fullPath, "/grant:r", account + ":(OI)(CI)F");
+    }
+
+    private static void RunIcacls(string path, params string[] arguments)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.SystemDirectory, "icacls.exe"),
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        start.ArgumentList.Add(path);
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+
+        try
+        {
+            using var process = Process.Start(start)
+                ?? throw new CompilerException("Unable to start icacls.exe while securing compiler temporary workspace ACLs.");
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode != 0)
+                throw new CompilerException("Unable to secure compiler temporary workspace ACLs with icacls.exe (exit code " + process.ExitCode + ").");
+        }
+        catch (CompilerException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
+        {
+            throw new CompilerException("Unable to secure compiler temporary workspace ACLs: " + ex.Message);
+        }
+    }
+
     private static void DeleteDirectoryWithoutFollowingLinks(DirectoryInfo directory)
     {
         foreach (var entry in directory.EnumerateFileSystemInfos())
         {
-            try
+            if (IsLinkOrReparsePoint(entry))
             {
-                if (IsLinkOrReparsePoint(entry))
-                {
-                    if (entry is DirectoryInfo linkedDirectory)
-                        linkedDirectory.Delete(recursive: false);
-                    else
-                        entry.Delete();
-                    continue;
-                }
-
-                if (entry is DirectoryInfo childDirectory)
-                    DeleteDirectoryWithoutFollowingLinks(childDirectory);
+                if (entry is DirectoryInfo linkedDirectory)
+                    linkedDirectory.Delete(recursive: false);
                 else
                     entry.Delete();
+                continue;
             }
-            catch
-            {
-                throw;
-            }
+
+            if (entry is DirectoryInfo childDirectory)
+                DeleteDirectoryWithoutFollowingLinks(childDirectory);
+            else
+                entry.Delete();
         }
 
         directory.Delete(recursive: false);
