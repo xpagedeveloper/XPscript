@@ -1,0 +1,35 @@
+name: Sync Control Flow TODO Once
+
+on:
+  push:
+    branches: [todo-control-flow-errors]
+    paths:
+      - '.github/workflows/sync-control-flow-todo-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-control-flow-errors
+      - name: Update control flow TODO status
+        shell: pwsh
+        run: |
+          $path = 'todo/runtime-reference-todo.md'
+          $text = Get-Content -Raw -Path $path
+          $text = $text.Replace('- [>] physical source-line accuracy for `Erl`; source: `samples/erl-physical-source-line.xps`', '- [x] physical source-line accuracy for `Erl`; source: `samples/erl-physical-source-line.xps`')
+          $text = $text.Replace('- [>] deeply nested `Resume` targets use stacked per-error-context resume frames so nested procedure calls preserve the innermost failing statement; source: `samples/nested-resume-targets.xps`', '- [x] deeply nested `Resume` targets use stacked per-error-context resume frames so nested procedure calls preserve the innermost failing statement; source: `samples/nested-resume-targets.xps`')
+          Set-Content -Path $path -Value $text -NoNewline -Encoding utf8
+      - name: Commit TODO update
+        shell: bash
+        run: |
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add todo/runtime-reference-todo.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Mark control flow error regressions verified"
+          git push origin HEAD:todo-control-flow-errors
