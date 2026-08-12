@@ -16,6 +16,7 @@ internal static class CompilerOutputPublisher
         var outputFullPath = Path.GetFullPath(outputPath);
         if (PathsEqual(sourceFullPath, outputFullPath))
             throw new CompilerException("Compiler output path may not overwrite the XPScript source file.");
+        RejectProtectedCompilerTarget(outputFullPath);
 
         var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(sourceFullPath) ?? Environment.CurrentDirectory);
         var dependencies = new List<Dependency>();
@@ -43,6 +44,7 @@ internal static class CompilerOutputPublisher
         bool makeExecutable)
     {
         var outputFullPath = Path.GetFullPath(outputPath);
+        RejectProtectedCompilerTarget(outputFullPath);
         if (Directory.Exists(outputFullPath))
             throw new CompilerException("Compiler output path identifies a directory; a file path is required.");
 
@@ -90,6 +92,7 @@ internal static class CompilerOutputPublisher
                     throw new CompilerException("Multiple compiler outputs would use the same file name: " + fileName);
 
                 var target = Path.Combine(outputDirectory, fileName);
+                RejectProtectedCompilerTarget(target);
                 RejectLinkedTarget(target);
 
                 // A project may keep a native dependency beside both the .xps source and the
@@ -131,6 +134,7 @@ internal static class CompilerOutputPublisher
             for (var i = 0; i < operations.Count; i++)
             {
                 var operation = operations[i];
+                RejectProtectedCompilerTarget(operation.Target);
                 RejectLinkedTarget(operation.Target);
 
                 if (Directory.Exists(operation.Target))
@@ -165,6 +169,22 @@ internal static class CompilerOutputPublisher
             }
             throw;
         }
+    }
+
+    private static void RejectProtectedCompilerTarget(string target)
+    {
+        var fullTarget = Path.GetFullPath(target);
+        var protectedPaths = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+            protectedPaths.Add(Path.GetFullPath(Environment.ProcessPath));
+
+        var compilerAssembly = typeof(CompilerOutputPublisher).Assembly.Location;
+        if (!string.IsNullOrWhiteSpace(compilerAssembly))
+            protectedPaths.Add(Path.GetFullPath(compilerAssembly));
+
+        if (protectedPaths.Any(path => PathsEqual(path, fullTarget)))
+            throw new CompilerException("Compiler output may not replace a running XPScript compiler/runtime binary.");
     }
 
     private static void RejectLinkedDestinationPath(string directory)
