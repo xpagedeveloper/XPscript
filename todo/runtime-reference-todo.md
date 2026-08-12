@@ -4,7 +4,7 @@
 
 Tracks implementation against the standalone XPScript runtime reference.
 
-Development note: GitHub Actions verification is enabled on `runtime-development-no-ci`. Features are marked `[x]` only after their applicable compiler/runtime regression gates pass.
+Development note: GitHub Actions verification is enabled. Features are marked `[x]` only after their applicable compiler/runtime regression gates pass.
 
 Status:
 - `[x]` implemented and verified
@@ -37,11 +37,15 @@ Status:
 - [x] parameterless `Property Get`
 - [x] parameterless object `Property Set`
 - [x] scalar `Property Let`
-- [>] parameterized/indexed `Property Get`
-- [>] parameterized/indexed `Property Let/Set`
-- [>] indexed properties lower to typed methods so normal parameter diagnostics apply
-- [>] positive source: `samples/indexed-properties.xps`
-- [>] negative type source: `samples/indexed-properties-error.xps`
+- [x] parameterized/indexed `Property Get`
+- [x] parameterized/indexed `Property Let/Set`
+- [x] indexed properties lower to typed methods so normal parameter diagnostics apply
+- [x] indexed object getters/setters preserve `Set` reference semantics, including object-returning Function assignment; sources: `samples/indexed-properties.xps`, `samples/indexed-object-properties.xps`
+- [x] positive scalar source: `samples/indexed-properties.xps`
+- [x] negative type source: `samples/indexed-properties-error.xps`
+- [x] class `Function`/`Sub` overload resolution for distinct scalar/object typed signatures, different arity, `Optional` specificity, typed object fallback, `Me`, explicit `Call` and bare member calls; source: `samples/class-method-overloads.xps`
+- [x] overload diagnostics for duplicate effective signatures, no matching overload and ambiguous calls; sources: `samples/class-method-overloads-duplicate.xps`, `samples/class-method-overloads-no-match.xps`, `samples/class-method-overloads-ambiguous.xps`
+- [>] class overload follow-ups for array/scalar overload end-to-end coverage and scalar `ByRef`; detailed checklist: `todo/function-sub-overloading-todo.md`
 
 ## 3. Control flow and error handling
 

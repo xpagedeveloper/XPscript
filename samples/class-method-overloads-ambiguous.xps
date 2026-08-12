@@ -1,0 +1,18 @@
+Option Declare
+
+Class AmbiguousOverload
+    Public Function Resolve(value As Integer) As String
+        Resolve = "integer"
+    End Function
+
+    Public Function Resolve(value As String) As String
+        Resolve = "string"
+    End Function
+End Class
+
+Sub Main()
+    Dim target As New AmbiguousOverload
+    Dim unknownValue As Variant
+    unknownValue = 10
+    Print target.Resolve(unknownValue)
+End Sub

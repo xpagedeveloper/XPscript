@@ -45,5 +45,13 @@ internal sealed class LSRef<T> where T : LSObjectBase
     public bool IsSameReference(LSRef<T>? other) =>
         other is not null && ReferenceEquals(this, other);
 }
+
+internal static class LSObjectRuntime
+{
+    public static void AssignRef<T>(ref LSRef<T> target, LSRef<T> source) where T : LSObjectBase
+    {
+        target = source;
+    }
+}
 """;
 }

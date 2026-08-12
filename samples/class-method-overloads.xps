@@ -1,0 +1,77 @@
+Option Declare
+
+Class NamedItem
+    Public Name As String
+End Class
+
+Class Formatter
+    Public Function FormatValue(value As Integer) As String
+        FormatValue = "INTEGER=" & CStr(value)
+    End Function
+
+    Public Function FormatValue(value As String) As String
+        FormatValue = "STRING=" & value
+    End Function
+
+    Public Function FormatValue(value As Date) As String
+        FormatValue = "DATE=" & CStr(Year(value))
+    End Function
+
+    Public Function NumericValue(value As Integer) As String
+        NumericValue = "NUMERIC=INTEGER"
+    End Function
+
+    Public Function NumericValue(value As Double) As String
+        NumericValue = "NUMERIC=DOUBLE"
+    End Function
+
+    Public Function Describe(value As Integer) As String
+        Describe = "DESCRIBE=ONE"
+    End Function
+
+    Public Function Describe(value As Integer, Optional suffix As String = "!") As String
+        Describe = "DESCRIBE=TWO" & suffix
+    End Function
+
+    Public Function Pick(value As NamedItem) As String
+        Pick = "PICK=TYPED"
+    End Function
+
+    Public Function Pick(value As Object) As String
+        Pick = "PICK=OBJECT"
+    End Function
+
+    Public Sub SetValue(value As Integer)
+        Print "SUB=ONE:" & CStr(value)
+    End Sub
+
+    Public Sub SetValue(value As Integer, label As String)
+        Print "SUB=TWO:" & label & ":" & CStr(value)
+    End Sub
+
+    Public Sub RunSelf()
+        Print "ME=" & Me.FormatValue("self")
+    End Sub
+End Class
+
+Sub Main()
+    Dim formatter As New Formatter
+    Dim item As New NamedItem
+    Dim d As Date
+    Dim number As Integer
+
+    d = DateNumber(2026, 8, 12)
+    number = 42
+    item.Name = "item"
+
+    Print formatter.FormatValue(number)
+    Print formatter.FormatValue("hello")
+    Print formatter.FormatValue(d)
+    Print formatter.NumericValue(number)
+    Print formatter.Describe(1)
+    Print formatter.Describe(1, "?")
+    Print formatter.Pick(item)
+    Call formatter.SetValue(7)
+    formatter.SetValue(8, "eight")
+    Call formatter.RunSelf()
+End Sub

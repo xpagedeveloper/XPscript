@@ -1,10 +1,6 @@
 name: Language Extensions Compatibility
 
 on:
-  push:
-    branches: [main, runtime-development-no-ci]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

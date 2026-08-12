@@ -75,7 +75,13 @@ internal sealed class IndexedPropertyPreprocessor
 
             if (getter)
             {
+                // The generated helper is a normal Function. Return assignment must therefore
+                // target the function result symbol directly, even when the XPScript property
+                // body uses object-style `Set PropertyName = value` syntax.
                 lines[i] = ReplaceOutsideStrings(raw,
+                    $@"(?<![\w.])Set\s+{Regex.Escape(current.Name)}\s*=",
+                    current.GetterName + " =");
+                lines[i] = ReplaceOutsideStrings(lines[i],
                     $@"(?<![\w.]){Regex.Escape(current.Name)}\s*=",
                     current.GetterName + " =");
             }
@@ -94,9 +100,8 @@ internal sealed class IndexedPropertyPreprocessor
             var rewritten = raw;
             foreach (var property in properties.Values.OrderByDescending(x => x.Name.Length))
             {
-                // Indexed assignment: object.Property(index) = value or Property(index) = value.
                 var setter = new Regex(
-                    $@"^(?<indent>\s*)(?<target>(?:[A-Za-z_]\w*\.)?){Regex.Escape(property.Name)}\s*\((?<args>.*)\)\s*=\s*(?<value>.+?)\s*$",
+                    $@"^(?<indent>\s*)(?:Set\s+)?(?<target>(?:[A-Za-z_]\w*\.)?){Regex.Escape(property.Name)}\s*\((?<args>.*)\)\s*=\s*(?<value>.+?)\s*$",
                     RegexOptions.IgnoreCase);
                 var setterMatch = setter.Match(StripComment(rewritten));
                 if (setterMatch.Success)

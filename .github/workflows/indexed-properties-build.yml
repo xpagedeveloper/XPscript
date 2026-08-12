@@ -1,0 +1,106 @@
+name: Class Properties and Overloads Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify indexed scalar Property Get and Let
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/indexed-properties.xps -o ./out/indexed-properties.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Indexed scalar property compilation failed.' }
+          $output = & ./out/indexed-properties.exe
+          if ($LASTEXITCODE -ne 0) { throw "Indexed scalar property sample exited with code $LASTEXITCODE." }
+          foreach ($value in @('INDEX1=first','INDEX2=second')) {
+            if ($output -notcontains $value) { throw "Indexed scalar property output missing: $value" }
+          }
+
+      - name: Verify indexed object Property Get and Set
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/indexed-object-properties.xps -o ./out/indexed-object-properties.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Indexed object property compilation failed.' }
+          $output = & ./out/indexed-object-properties.exe
+          if ($LASTEXITCODE -ne 0) { throw "Indexed object property sample exited with code $LASTEXITCODE." }
+          foreach ($value in @('OBJECT1=first-object','OBJECT2=second-object')) {
+            if ($output -notcontains $value) { throw "Indexed object property output missing: $value" }
+          }
+
+      - name: Verify indexed property parameter type diagnostics
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/indexed-properties-error.xps -o ./out/indexed-properties-error.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Invalid indexed property sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler diagnostics for invalid indexed property call.' }
+
+      - name: Verify class Function and Sub overloads
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads.xps -o ./out/class-method-overloads.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Class overload sample compilation failed.' }
+          $output = & ./out/class-method-overloads.exe
+          if ($LASTEXITCODE -ne 0) { throw "Class overload sample exited with code $LASTEXITCODE." }
+          foreach ($value in @(
+            'INTEGER=42',
+            'STRING=hello',
+            'DATE=2026',
+            'NUMERIC=INTEGER',
+            'DESCRIBE=ONE',
+            'DESCRIBE=TWO?',
+            'PICK=TYPED',
+            'SUB=ONE:7',
+            'SUB=TWO:eight:8',
+            'ME=STRING=self'
+          )) {
+            if ($output -notcontains $value) { throw "Class overload output missing: $value" }
+          }
+
+      - name: Verify duplicate overload diagnostic
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-duplicate.xps -o ./out/class-method-overloads-duplicate.exe --framework-dependent --result-format json
+          $code = $LASTEXITCODE; $global:LASTEXITCODE = 0
+          if ($code -eq 0) { throw 'Duplicate overload sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          $text = ($result.errors | ForEach-Object { $_.description }) -join "`n"
+          if ($text -notmatch 'Duplicate overload') { throw "Missing duplicate overload diagnostic: $text" }
+
+      - name: Verify no matching overload diagnostic
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-no-match.xps -o ./out/class-method-overloads-no-match.exe --framework-dependent --result-format json
+          $code = $LASTEXITCODE; $global:LASTEXITCODE = 0
+          if ($code -eq 0) { throw 'No-match overload sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          $text = ($result.errors | ForEach-Object { $_.description }) -join "`n"
+          if ($text -notmatch 'No overload') { throw "Missing no-match overload diagnostic: $text" }
+
+      - name: Verify ambiguous overload diagnostic
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-ambiguous.xps -o ./out/class-method-overloads-ambiguous.exe --framework-dependent --result-format json
+          $code = $LASTEXITCODE; $global:LASTEXITCODE = 0
+          if ($code -eq 0) { throw 'Ambiguous overload sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          $text = ($result.errors | ForEach-Object { $_.description }) -join "`n"
+          if ($text -notmatch 'Ambiguous overload') { throw "Missing ambiguous overload diagnostic: $text" }

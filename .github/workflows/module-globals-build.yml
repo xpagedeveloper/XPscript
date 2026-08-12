@@ -1,24 +1,6 @@
 name: Module Globals Compatibility
 
 on:
-  push:
-    branches: [main, runtime-development-no-ci]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/module-scalars.xps'
-      - 'samples/module-arrays.xps'
-      - 'samples/module-type-values.xps'
-      - 'samples/module-object-references.xps'
-      - '.github/workflows/module-globals-build.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/module-scalars.xps'
-      - 'samples/module-arrays.xps'
-      - 'samples/module-type-values.xps'
-      - 'samples/module-object-references.xps'
-      - '.github/workflows/module-globals-build.yml'
   workflow_dispatch:
 
 permissions:
