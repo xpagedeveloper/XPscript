@@ -14,6 +14,7 @@ public sealed class XPScriptTranspiler
         new DateComparisonValidator().Validate(source, sourceName);
         source = new SourceLineMarkerPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
+        source = new NativeInteropSafetyPreprocessor().Transform(source);
 
         var udtValues = new UdtValueSemanticsPreprocessor();
         source = udtValues.Transform(source);
