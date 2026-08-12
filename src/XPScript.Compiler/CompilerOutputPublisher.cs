@@ -99,7 +99,10 @@ internal static class CompilerOutputPublisher
                     continue;
 
                 var staged = Path.Combine(stageDirectory, fileName);
-                File.Copy(dependency.SourcePath, staged, overwrite: false);
+                CompilerSecureFileCopy.CopyValidatedRegularFile(
+                    dependency.SourcePath,
+                    staged,
+                    "Native dependency");
                 CompilerPathSecurity.HardenTemporaryFile(staged);
                 operations.Add((staged, target));
             }
