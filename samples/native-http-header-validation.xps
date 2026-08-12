@@ -1,0 +1,39 @@
+Option Declare
+
+Sub Main()
+    Dim http As New HttpClient
+    Dim response As HttpResponse
+
+    On Error GoTo BadName
+    Call http.SetHeader("Bad Header", "value")
+    Print "BAD-NAME-NOT-REJECTED"
+    GoTo AfterBadName
+BadName:
+    Print "BAD-NAME-ERR=" & CStr(Err)
+    Resume AfterBadName
+AfterBadName:
+    On Error GoTo 0
+
+    On Error GoTo BadValue
+    Call http.SetHeader("X-Test", "safe" & Chr(13) & Chr(10) & "Injected: yes")
+    Print "BAD-VALUE-NOT-REJECTED"
+    GoTo AfterBadValue
+BadValue:
+    Print "BAD-VALUE-ERR=" & CStr(Err)
+    Resume AfterBadValue
+AfterBadValue:
+    On Error GoTo 0
+
+    On Error GoTo BadScheme
+    Set response = http.Get("file:///etc/passwd")
+    Print "BAD-SCHEME-NOT-REJECTED"
+    GoTo AfterBadScheme
+BadScheme:
+    Print "BAD-SCHEME-ERR=" & CStr(Err)
+    Resume AfterBadScheme
+AfterBadScheme:
+    On Error GoTo 0
+
+    Call http.SetHeader("X-Valid-Header", "valid-value")
+    Print "VALID-HEADER=OK"
+End Sub
