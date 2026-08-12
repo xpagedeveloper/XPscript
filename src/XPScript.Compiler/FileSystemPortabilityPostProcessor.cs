@@ -6,6 +6,15 @@ internal sealed class FileSystemPortabilityPostProcessor
     {
         if (string.IsNullOrEmpty(generated)) return generated;
 
+        // Generated runtime source occasionally uses a char literal with StringComparison
+        // overloads that require String. Normalize these centrally instead of maintaining
+        // one-off fixes for individual runtime modules.
+        generated = System.Text.RegularExpressions.Regex.Replace(
+            generated,
+            @"\.(StartsWith|EndsWith)\('([^']{1})',\s*(StringComparison\.[A-Za-z]+)\)",
+            m => $".{m.Groups[1].Value}(\"{m.Groups[2].Value}\", {m.Groups[3].Value})",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
         // Never let implicit file encoding vary with the target operating system.
         generated = generated.Replace(
             "Encoding.Default",
