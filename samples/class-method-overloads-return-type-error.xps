@@ -1,0 +1,16 @@
+Option Declare
+
+Class Formatter
+    Public Function FormatValue(value As Integer) As String
+        FormatValue = 42
+    End Function
+
+    Public Function FormatValue(value As String) As Integer
+        FormatValue = "wrong"
+    End Function
+End Class
+
+Sub Main()
+    Dim formatter As New Formatter
+    Print formatter.FormatValue(1)
+End Sub
