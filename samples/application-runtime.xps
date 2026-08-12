@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim i As Integer
+
+    Print "EXEPATH=" & Application.ExecutablePath
+    Print "EXEFILE=" & Application.ExecutableFileName
+    Print "EXEDIR=" & Application.ExecutableDirectory
+    Print "TEMPPATH=" & Application.TempPath
+    Print "ARGCOUNT=" & CStr(Application.ArgCount)
+    Print "COMMANDLINE=" & Application.CommandLine
+
+    For i = 0 To Application.ArgCount - 1
+        Print "ARG" & CStr(i) & "=" & Application.Args(i)
+    Next
+End Sub
