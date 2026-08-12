@@ -1,0 +1,16 @@
+Option Declare
+
+Class NoMatchOverload
+    Public Function Resolve(value As Integer) As String
+        Resolve = "integer"
+    End Function
+
+    Public Function Resolve(value As Date) As String
+        Resolve = "date"
+    End Function
+End Class
+
+Sub Main()
+    Dim target As New NoMatchOverload
+    Print target.Resolve(True)
+End Sub
