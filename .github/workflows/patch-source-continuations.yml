@@ -1,0 +1,29 @@
+name: Patch Source Continuations
+
+on:
+  push:
+    branches: [todo-statement-layout-audit]
+    paths:
+      - 'tools/patch-source-continuations.py'
+      - '.github/workflows/patch-source-continuations.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-statement-layout-audit
+      - name: Apply continuation patch
+        run: python ./tools/patch-source-continuations.py
+      - name: Commit patch
+        shell: pwsh
+        run: |
+          git config user.name 'xpagedeveloper'
+          git config user.email 'fredrik@xpagedeveloper.com'
+          git add src/XPScript.Compiler/SourceLineContinuationPreprocessor.cs src/XPScript.Compiler/XPScriptTranspiler.cs
+          git commit -m 'Normalize source continuations before line markers'
+          git push origin HEAD:todo-statement-layout-audit
