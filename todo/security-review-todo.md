@@ -23,29 +23,38 @@ Status:
 - [>] every compile invocation uses a GUID-named workspace under the XPScript temp root
 - [>] generated project/source/publish directories are invocation-local
 - [>] cleanup is attempted in `finally`
-- [ ] reject/review symlink and reparse-point escapes inside compiler-controlled temp paths
-- [ ] define restrictive Unix permissions for compiler temp directories/files where supported
+- [>] compiler-owned cleanup refuses a symlink/reparse-point workspace root and does not recursively follow linked descendants
+- [>] Unix compiler temp directories are hardened to user-only directory mode where supported
+- [>] Unix generated/staged temp files are hardened to user-only read/write mode where supported
 - [ ] define Windows ACL expectations for compiler temp directories
-- [ ] make final executable/dependency publication atomic where practical
+- [>] final executable/dependency publication is staged beside the destination and committed with executable last
+- [>] staged publication keeps backups and rolls back the whole output set on a publication failure on a best-effort basis
 - [ ] verify 10+ concurrent compiles cannot share or overwrite temporary files
 - [ ] verify crash/kill leaves no reusable trusted workspace state
+- [>] detailed checklist: `todo/compiler-temp-isolation-todo.md`
 
 ## Project-local managed/native dependencies
 
 - [>] `Reference` and `ReferenceNative` reject rooted paths
 - [>] lexical `..` escape outside the source directory is rejected
-- [>] application-local native declarations reject absolute portable paths before packaging
+- [>] application-local native declarations reject absolute/rooted paths before packaging
 - [>] missing dependencies, duplicate output names and executable overwrite collisions are rejected
-- [ ] reject source-tree paths that lexically remain inside the project but resolve through symlinks/reparse points outside it
+- [>] existing path components are checked for symlink/reparse-point resolution outside the source directory
+- [>] unresolved symbolic links/reparse points are rejected instead of trusted
 - [ ] review dependency output overwrite of unrelated pre-existing files in the destination directory
-- [ ] review TOCTOU window between validation and copying
+- [ ] review TOCTOU window between validation and staging copy
 
 ## Output publication
 
-- [ ] define whether the compiler API may intentionally overwrite an explicitly supplied output executable path
-- [ ] prevent source-controlled metadata from selecting arbitrary unrelated output paths
-- [ ] stage executable plus native dependencies before committing final output
-- [ ] review partial-output behavior when dependency copy fails after executable publication
+- [ ] define whether the compiler API may intentionally overwrite an explicitly supplied existing executable path
+- [>] source-controlled managed/native dependency metadata cannot choose arbitrary final output paths; dependency output is reduced to validated file names beside the requested executable
+- [>] executable plus native dependencies are staged before final publication
+- [>] output path is normalized and an existing directory target is rejected
+- [>] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
+- [>] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
+- [ ] review destination-directory symlink/reparse behavior
+- [ ] review output path targeting compiler/runtime source files
+- [ ] runtime verification of forced rollback/failure cases
 
 ## Shell / process execution
 
