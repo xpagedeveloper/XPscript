@@ -76,7 +76,6 @@ internal sealed class ModuleGlobalsPreprocessor
 
                     if (_udtTypes.Contains(sourceType))
                     {
-                        // Type values are stored directly. Unlike Class variables, they are not LSRef aliases.
                         _declarations.Add($"    {visibility} static {sourceType} {name} = new {sourceType}();");
                     }
                     else
@@ -104,11 +103,16 @@ internal sealed class ModuleGlobalsPreprocessor
     public string Inject(string generated)
     {
         if (_declarations.Count == 0) return generated;
-        var marker = "internal static class Script\n{";
-        var index = generated.IndexOf(marker, StringComparison.Ordinal);
-        if (index < 0) throw new CompilerException("Unable to inject module-level variables into generated Script class.");
-        var insertion = marker + Environment.NewLine + string.Join(Environment.NewLine, _declarations) + Environment.NewLine;
-        return generated[..index] + insertion + generated[(index + marker.Length)..];
+
+        var marker = Regex.Match(
+            generated,
+            @"internal\s+static\s+class\s+Script\s*\r?\n\s*\{",
+            RegexOptions.CultureInvariant);
+        if (!marker.Success)
+            throw new CompilerException("Unable to inject module-level variables into generated Script class.");
+
+        var insertion = marker.Value + Environment.NewLine + string.Join(Environment.NewLine, _declarations) + Environment.NewLine;
+        return generated[..marker.Index] + insertion + generated[(marker.Index + marker.Length)..];
     }
 
     private string RewriteArrayUses(string raw)
