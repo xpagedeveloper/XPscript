@@ -5,6 +5,16 @@ internal static class NativeJsonRuntimeSource
     public const string Code = """
 internal static class XPScriptNativeJson
 {
+    private const int MaxParseBytes = 8 * 1024 * 1024;
+    private const int MaxDepth = 64;
+    private const int MaxNodes = 100_000;
+    private const long MaxEstimatedPayloadBytes = 16L * 1024 * 1024;
+
+    private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new()
+    {
+        MaxDepth = MaxDepth
+    };
+
     public static XPScriptJsonDocument CreateDocument() => new(new System.Text.Json.Nodes.JsonObject());
     public static XPScriptJsonObject CreateObject() => new(new System.Text.Json.Nodes.JsonObject());
     public static XPScriptJsonArray CreateArray() => new(new System.Text.Json.Nodes.JsonArray());
@@ -12,32 +22,77 @@ internal static class XPScriptNativeJson
 
     public static XPScriptJsonDocument Parse(object? value)
     {
-        try { return new XPScriptJsonDocument(System.Text.Json.Nodes.JsonNode.Parse(XPScriptRuntime.CStr(value))); }
-        catch (System.Text.Json.JsonException ex) { throw new XPScriptRuntimeException(5, "Invalid JSON: " + ex.Message); }
+        var text = XPScriptRuntime.CStr(value);
+        if (Encoding.UTF8.GetByteCount(text) > MaxParseBytes)
+            throw new XPScriptRuntimeException(5, "JSON input exceeds the 8 MiB parse limit.");
+
+        try
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(
+                text,
+                nodeOptions: null,
+                documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = MaxDepth });
+            ValidateBudget(node);
+            return new XPScriptJsonDocument(node);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new XPScriptRuntimeException(5, "Invalid JSON input.");
+        }
+        catch (OverflowException)
+        {
+            throw new XPScriptRuntimeException(5, "JSON input exceeds the supported resource budget.");
+        }
     }
 
-    public static string Stringify(object? value) => ToNode(value)?.ToJsonString() ?? "null";
-
-    internal static System.Text.Json.Nodes.JsonNode? ToNode(object? value) => value switch
+    public static string Stringify(object? value)
     {
-        null => null,
-        XPScriptJsonDocument document => document.Node?.DeepClone(),
-        XPScriptJsonObject obj => obj.Node.DeepClone(),
-        XPScriptJsonArray array => array.Node.DeepClone(),
-        XPScriptJsonElement element => element.Node?.DeepClone(),
-        System.Text.Json.Nodes.JsonNode node => node.DeepClone(),
-        string s => System.Text.Json.Nodes.JsonValue.Create(s),
-        bool b => System.Text.Json.Nodes.JsonValue.Create(b),
-        byte n => System.Text.Json.Nodes.JsonValue.Create(n),
-        short n => System.Text.Json.Nodes.JsonValue.Create(n),
-        int n => System.Text.Json.Nodes.JsonValue.Create(n),
-        long n => System.Text.Json.Nodes.JsonValue.Create(n),
-        float n => System.Text.Json.Nodes.JsonValue.Create(n),
-        double n => System.Text.Json.Nodes.JsonValue.Create(n),
-        decimal n => System.Text.Json.Nodes.JsonValue.Create(n),
-        DateTime dt => System.Text.Json.Nodes.JsonValue.Create(dt),
-        _ => System.Text.Json.JsonSerializer.SerializeToNode(value)
-    };
+        var node = ToNode(value);
+        ValidateBudget(node);
+        var text = node?.ToJsonString() ?? "null";
+        if (Encoding.UTF8.GetByteCount(text) > MaxEstimatedPayloadBytes)
+            throw new XPScriptRuntimeException(5, "JSON output exceeds the 16 MiB limit.");
+        return text;
+    }
+
+    internal static System.Text.Json.Nodes.JsonNode? ToNode(object? value)
+    {
+        System.Text.Json.Nodes.JsonNode? node;
+        try
+        {
+            node = value switch
+            {
+                null => null,
+                XPScriptJsonDocument document => document.Node?.DeepClone(),
+                XPScriptJsonObject obj => obj.Node.DeepClone(),
+                XPScriptJsonArray array => array.Node.DeepClone(),
+                XPScriptJsonElement element => element.Node?.DeepClone(),
+                System.Text.Json.Nodes.JsonNode jsonNode => jsonNode.DeepClone(),
+                string s => System.Text.Json.Nodes.JsonValue.Create(s),
+                bool b => System.Text.Json.Nodes.JsonValue.Create(b),
+                byte n => System.Text.Json.Nodes.JsonValue.Create(n),
+                short n => System.Text.Json.Nodes.JsonValue.Create(n),
+                int n => System.Text.Json.Nodes.JsonValue.Create(n),
+                long n => System.Text.Json.Nodes.JsonValue.Create(n),
+                float n => System.Text.Json.Nodes.JsonValue.Create(n),
+                double n => System.Text.Json.Nodes.JsonValue.Create(n),
+                decimal n => System.Text.Json.Nodes.JsonValue.Create(n),
+                DateTime dt => System.Text.Json.Nodes.JsonValue.Create(dt),
+                _ => System.Text.Json.JsonSerializer.SerializeToNode(value, value.GetType(), SerializerOptions)
+            };
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new XPScriptRuntimeException(5, "Value cannot be converted to JSON within the supported depth limit.");
+        }
+        catch (NotSupportedException)
+        {
+            throw new XPScriptRuntimeException(5, "Value type is not supported for JSON conversion.");
+        }
+
+        ValidateBudget(node);
+        return node;
+    }
 
     internal static object? FromNode(System.Text.Json.Nodes.JsonNode? node)
     {
@@ -53,11 +108,66 @@ internal static class XPScriptNativeJson
         }
         return new XPScriptJsonElement(node);
     }
+
+    internal static void ValidateBudget(System.Text.Json.Nodes.JsonNode? node)
+    {
+        var nodes = 0;
+        long payload = 0;
+        Visit(node, 0, ref nodes, ref payload);
+    }
+
+    private static void Visit(System.Text.Json.Nodes.JsonNode? node, int depth, ref int nodes, ref long payload)
+    {
+        if (node is null) return;
+        if (depth > MaxDepth)
+            throw new XPScriptRuntimeException(5, "JSON nesting exceeds the maximum depth of 64.");
+
+        nodes = checked(nodes + 1);
+        if (nodes > MaxNodes)
+            throw new XPScriptRuntimeException(5, "JSON value exceeds the maximum node count of 100000.");
+
+        switch (node)
+        {
+            case System.Text.Json.Nodes.JsonObject obj:
+                foreach (var item in obj)
+                {
+                    payload = checked(payload + Encoding.UTF8.GetByteCount(item.Key));
+                    EnsurePayload(payload);
+                    Visit(item.Value, depth + 1, ref nodes, ref payload);
+                }
+                break;
+
+            case System.Text.Json.Nodes.JsonArray array:
+                foreach (var item in array)
+                    Visit(item, depth + 1, ref nodes, ref payload);
+                break;
+
+            case System.Text.Json.Nodes.JsonValue value:
+                if (value.TryGetValue<string>(out var text))
+                    payload = checked(payload + Encoding.UTF8.GetByteCount(text));
+                else if (value.TryGetValue<bool>(out _))
+                    payload = checked(payload + 5);
+                else
+                    payload = checked(payload + 32);
+                EnsurePayload(payload);
+                break;
+        }
+    }
+
+    private static void EnsurePayload(long payload)
+    {
+        if (payload > MaxEstimatedPayloadBytes)
+            throw new XPScriptRuntimeException(5, "JSON value exceeds the 16 MiB estimated payload limit.");
+    }
 }
 
 internal sealed class XPScriptJsonDocument
 {
-    internal XPScriptJsonDocument(System.Text.Json.Nodes.JsonNode? node) => Node = node;
+    internal XPScriptJsonDocument(System.Text.Json.Nodes.JsonNode? node)
+    {
+        XPScriptNativeJson.ValidateBudget(node);
+        Node = node;
+    }
     internal System.Text.Json.Nodes.JsonNode? Node { get; }
     public XPScriptJsonElement Root => new(Node);
     public string Stringify() => XPScriptNativeJson.Stringify(this);
@@ -65,46 +175,102 @@ internal sealed class XPScriptJsonDocument
 
 internal sealed class XPScriptJsonObject
 {
-    internal XPScriptJsonObject(System.Text.Json.Nodes.JsonObject node) => Node = node;
+    internal XPScriptJsonObject(System.Text.Json.Nodes.JsonObject node)
+    {
+        XPScriptNativeJson.ValidateBudget(node);
+        Node = node;
+    }
     internal System.Text.Json.Nodes.JsonObject Node { get; }
     public int Count => Node.Count;
     public object? Get(object? name) => XPScriptNativeJson.FromNode(Node[XPScriptRuntime.CStr(name)]);
-    public void Set(object? name, object? value) => Node[XPScriptRuntime.CStr(name)] = XPScriptNativeJson.ToNode(value);
+
+    public void Set(object? name, object? value)
+    {
+        var key = XPScriptRuntime.CStr(name);
+        var hadPrevious = Node.TryGetPropertyValue(key, out var previous);
+        var previousCopy = previous?.DeepClone();
+        Node[key] = XPScriptNativeJson.ToNode(value);
+        try
+        {
+            XPScriptNativeJson.ValidateBudget(Node);
+        }
+        catch
+        {
+            if (hadPrevious) Node[key] = previousCopy;
+            else Node.Remove(key);
+            throw;
+        }
+    }
+
     public void Remove(object? name) => Node.Remove(XPScriptRuntime.CStr(name));
     public bool Contains(object? name) => Node.ContainsKey(XPScriptRuntime.CStr(name));
-    public string Stringify() => Node.ToJsonString();
+    public string Stringify() => XPScriptNativeJson.Stringify(this);
 }
 
 internal sealed class XPScriptJsonArray
 {
-    internal XPScriptJsonArray(System.Text.Json.Nodes.JsonArray node) => Node = node;
+    internal XPScriptJsonArray(System.Text.Json.Nodes.JsonArray node)
+    {
+        XPScriptNativeJson.ValidateBudget(node);
+        Node = node;
+    }
     internal System.Text.Json.Nodes.JsonArray Node { get; }
     public int Count => Node.Count;
-    public void Add(object? value) => Node.Add(XPScriptNativeJson.ToNode(value));
+
+    public void Add(object? value)
+    {
+        Node.Add(XPScriptNativeJson.ToNode(value));
+        try
+        {
+            XPScriptNativeJson.ValidateBudget(Node);
+        }
+        catch
+        {
+            Node.RemoveAt(Node.Count - 1);
+            throw;
+        }
+    }
+
     public object? Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
-        if (index < 0 || index >= Node.Count) throw new IndexOutOfRangeException("JSON array index out of range.");
+        if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range.");
         return XPScriptNativeJson.FromNode(Node[index]);
     }
+
     public void Set(object? indexValue, object? value)
     {
         var index = XPScriptRuntime.CInt(indexValue);
-        if (index < 0 || index >= Node.Count) throw new IndexOutOfRangeException("JSON array index out of range.");
+        if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range.");
+        var previous = Node[index]?.DeepClone();
         Node[index] = XPScriptNativeJson.ToNode(value);
+        try
+        {
+            XPScriptNativeJson.ValidateBudget(Node);
+        }
+        catch
+        {
+            Node[index] = previous;
+            throw;
+        }
     }
+
     public void RemoveAt(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
-        if (index < 0 || index >= Node.Count) throw new IndexOutOfRangeException("JSON array index out of range.");
+        if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range.");
         Node.RemoveAt(index);
     }
-    public string Stringify() => Node.ToJsonString();
+    public string Stringify() => XPScriptNativeJson.Stringify(this);
 }
 
 internal sealed class XPScriptJsonElement
 {
-    internal XPScriptJsonElement(System.Text.Json.Nodes.JsonNode? node) => Node = node;
+    internal XPScriptJsonElement(System.Text.Json.Nodes.JsonNode? node)
+    {
+        XPScriptNativeJson.ValidateBudget(node);
+        Node = node;
+    }
     internal System.Text.Json.Nodes.JsonNode? Node { get; }
     public string Type => Node switch
     {
