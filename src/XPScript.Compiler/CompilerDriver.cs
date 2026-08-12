@@ -97,7 +97,8 @@ public sealed class CompilerDriver
             var psi = new ProcessStartInfo
             {
                 FileName = "dotnet", UseShellExecute = false, RedirectStandardOutput = true,
-                RedirectStandardError = true, CreateNoWindow = true
+                RedirectStandardError = true, CreateNoWindow = true,
+                WorkingDirectory = tempRoot
             };
             psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
@@ -120,22 +121,13 @@ public sealed class CompilerDriver
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
-            var outputFullPath = Path.GetFullPath(outputPath);
-            var outputDirectory = Path.GetDirectoryName(outputFullPath);
-            if (!string.IsNullOrWhiteSpace(outputDirectory)) Directory.CreateDirectory(outputDirectory);
-            File.Copy(generatedExecutable, outputFullPath, overwrite: true);
-            CopyNativeDependencies(sourcePath, outputFullPath, nativeDependencies);
-            CopyManagedNativeDependencies(sourcePath, outputFullPath, managedReferences.Native);
-
-            if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
-            {
-                try
-                {
-                    var mode = File.GetUnixFileMode(outputFullPath);
-                    File.SetUnixFileMode(outputFullPath, mode | UnixFileMode.UserExecute);
-                }
-                catch (PlatformNotSupportedException) { }
-            }
+            CompilerOutputPublisher.Publish(
+                generatedExecutable,
+                outputPath,
+                sourcePath,
+                nativeDependencies,
+                managedReferences.Native,
+                makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
         }
         finally
         {
@@ -220,49 +212,6 @@ public sealed class CompilerDriver
             result.Add(new StagedManagedReference(Path.GetFileNameWithoutExtension(fileName), staged));
         }
         return result;
-    }
-
-    private static void CopyNativeDependencies(string sourcePath, string outputPath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
-    {
-        if (dependencies.Count == 0) return;
-        var sourceDirectory = SourceDirectory(sourcePath);
-        var outputFullPath = Path.GetFullPath(outputPath);
-        var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
-        Directory.CreateDirectory(outputDirectory);
-
-        foreach (var dependency in dependencies)
-        {
-            var sourceFile = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
-            var destination = Path.Combine(outputDirectory, dependency.LoadName);
-            EnsureDoesNotOverwriteExecutable(outputFullPath, destination, dependency.DeclaredPath);
-            File.Copy(sourceFile, destination, overwrite: true);
-        }
-    }
-
-    private static void CopyManagedNativeDependencies(
-        string sourcePath,
-        string outputPath,
-        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> dependencies)
-    {
-        if (dependencies.Count == 0) return;
-        var sourceDirectory = SourceDirectory(sourcePath);
-        var outputFullPath = Path.GetFullPath(outputPath);
-        var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
-        Directory.CreateDirectory(outputDirectory);
-
-        foreach (var dependency in dependencies)
-        {
-            var sourceFile = ResolveProjectLocalPath(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
-            var destination = Path.Combine(outputDirectory, Path.GetFileName(sourceFile));
-            EnsureDoesNotOverwriteExecutable(outputFullPath, destination, dependency.DeclaredPath);
-            File.Copy(sourceFile, destination, overwrite: true);
-        }
-    }
-
-    private static void EnsureDoesNotOverwriteExecutable(string outputFullPath, string destination, string declaredPath)
-    {
-        if (Path.GetFullPath(destination).Equals(outputFullPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            throw new CompilerException("Dependency '" + declaredPath + "' would overwrite the generated executable.");
     }
 
     private static string SourceDirectory(string sourcePath) =>
