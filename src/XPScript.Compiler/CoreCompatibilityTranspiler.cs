@@ -383,7 +383,7 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var raw in body)
         {
             var line = StripComment(raw).Trim();
-            var dim = Regex.Match(line, @"^(?:Dim|Static)\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            var dim = Regex.Match(line, @"^(?:Dim|Static)\s+([A-Za-z_]\w*)\s*(?:As\s+(?:New\s+)?([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
             if (dim.Success) result[dim.Groups[1].Value] = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? ResolveDefaultType(dim.Groups[1].Value) : dim.Groups[2].Value;
         }
         return result;
