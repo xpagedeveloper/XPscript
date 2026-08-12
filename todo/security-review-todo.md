@@ -129,8 +129,8 @@ Status:
 
 - [>] `docs/evaluate.md` documents Evaluate isolation and non-sandbox boundary
 - [>] `docs/platform-native.md` documents native/process platform behavior
-- [ ] add `docs/security.md` covering powerful APIs and trust boundaries
-- [ ] link security documentation from `docs/index.md` and README
+- [>] `docs/security.md` covers powerful APIs and trust boundaries
+- [>] security documentation is linked from `docs/index.md` and README
 
 ## Verification gate
 
