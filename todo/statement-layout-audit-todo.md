@@ -11,38 +11,34 @@ Rules:
 
 ## Discovered regressions
 
-- [>] continued procedure/property headers must not receive `XPSourceLineRuntime.Set(...)` markers inside their logical declaration/parameter list.
+- [x] continued procedure/property headers must not receive `XPSourceLineRuntime.Set(...)` markers inside their logical declaration/parameter list.
   - Discovered by `samples/statement-layout-audit.xps`.
   - Previous diagnostic: `Unsupported parameter declaration: Call XPSourceLineRuntime.Set(...)`.
-  - Implementation changed `SourceLineMarkerPreprocessor` to carry continuation state from the procedure/property start line.
-  - Mark `[x]` only after the full statement-layout regression passes.
+  - `SourceLineMarkerPreprocessor` now carries continuation state from the procedure/property start line.
+  - Verified by the full statement-layout regression.
 
-- [>] single-line `If` / inline `ElseIf` with compound comparison conditions using `And` / `Or` must use the same logical-comparison lowering as block `If ... Then` headers.
-  - Discovered after the continued-header fix allowed the audit sample to execute.
+- [x] single-line `If` / inline `ElseIf` with compound comparison conditions using `And` / `Or` use the same logical-comparison lowering as block `If ... Then` headers.
   - Reproducer: `If total = 3 And total > 0 Then Print "..."`.
-  - Previous failure: generated/runtime expression compared incompatible values such as `int == bool` because `RewriteLogicalComparisonCondition` recognized only lines ending exactly at `Then`.
-  - Implementation now preserves and lowers trailing `Then statement` / `Else statement` syntax.
-  - Mark `[x]` only after the full statement-layout regression passes.
+  - Previous failure compared incompatible runtime values such as `int == bool`.
+  - Trailing `Then statement` / `Else statement` syntax is preserved and verified.
 
-- [ ] `While`, `Do While` and `Do Until` compound comparison conditions using `And` / `Or` must use the same precedence-safe logical-comparison lowering as `If`.
-  - Discovered by the same broad layout regression after the single-line `If` fix.
-  - Reproducer includes `While i < 2 And total = 3` after `_` continuation normalization.
-  - Current runtime diagnostic: `Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Operator '==' cannot be applied to operands of type 'bool' and 'int'`.
-  - Audit trailing `Loop While` / `Loop Until` too if those forms are supported by the compiler.
-  - Regression must cover `And` and `Or` and all supported pre-test/post-test loop condition layouts.
+- [x] `While`, `Do While`, `Do Until`, `Loop While` and `Loop Until` compound comparison conditions using `And` / `Or` use precedence-safe logical-comparison lowering.
+  - Previous runtime diagnostic: `Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Operator '==' cannot be applied to operands of type 'bool' and 'int'`.
+  - Verified with both `And` and `Or` across supported pre-test and post-test loop forms.
 
 ## Layout coverage
 
-- [ ] `_` continuation in `Sub` / `Function` parameter lists.
-- [ ] `_` continuation in `Property Get/Let/Set` headers.
-- [ ] `_` continuation in class inheritance headers.
-- [ ] `_` continuation in function/sub calls and argument lists.
-- [ ] `_` continuation in `If` expressions including compound comparisons.
-- [ ] `_` continuation in `For ... To ... Step` expressions.
-- [ ] `_` continuation in `While` and `Do While/Until` conditions.
-- [ ] `_` continuation in `Select Case` selector and `Case ... To ...` expressions.
-- [ ] `_` continuation in `With` expressions.
-- [ ] verify existing multiline native `Declare` regression remains green.
+- [x] `_` continuation in `Sub` / `Function` parameter lists.
+- [x] `_` continuation in `Property Get/Let/Set` headers.
+- [x] `_` continuation in class inheritance headers.
+- [x] `_` continuation in function/sub calls and argument lists.
+- [x] `_` continuation in `If` expressions including compound comparisons.
+- [x] `_` continuation in `For ... To ... Step` expressions.
+- [x] `_` continuation in `ForAll ... In` expressions.
+- [x] `_` continuation in `While`, `Do While/Until` and `Loop While/Until` conditions.
+- [x] `_` continuation in `Select Case` selector and `Case ... To ...` expressions.
+- [x] `_` continuation in `With` expressions.
+- [x] existing multiline native `Declare` regression remains green.
 - [ ] audit compact multiple-statements-on-one-line syntax separately; do not silently treat `:` as supported until its grammar and source-line semantics are deliberately defined.
 
 Primary regression source: `samples/statement-layout-audit.xps`.
