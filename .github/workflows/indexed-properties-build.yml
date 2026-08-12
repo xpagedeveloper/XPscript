@@ -1,6 +1,12 @@
 name: Class Properties and Overloads Compatibility
 
 on:
+  push:
+    branches: [todo-overload-return-type]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/class-method-overloads*.xps'
+      - '.github/workflows/indexed-properties-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -76,6 +82,15 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "Class overload output missing: $value" }
           }
+
+      - name: Verify overloaded Function return type diagnostics
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-return-type-error.xps -o ./out/class-method-overloads-return-type-error.exe --framework-dependent --result-format json
+          $code = $LASTEXITCODE; $global:LASTEXITCODE = 0
+          if ($code -eq 0) { throw 'Invalid overloaded Function return types unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured return-type diagnostics.' }
 
       - name: Verify duplicate overload diagnostic
         shell: pwsh
