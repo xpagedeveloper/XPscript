@@ -17,8 +17,8 @@ public sealed class XPScriptTranspiler
         // or other source-expanding rewrites are inserted. This keeps diagnostics mapped to
         // the original .xps line/column rather than the transformed intermediate source.
         new SourceTypeValidator().Validate(source, sourceName);
-        source = new SourceLineMarkerPreprocessor().Transform(source);
         source = new IfLayoutPreprocessor().Transform(source);
+        source = new SourceLineMarkerPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
 
