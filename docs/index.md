@@ -17,6 +17,8 @@ Covered samples:
 - `samples/nested-resume-targets.xps`
 - `samples/reserved-identifier-error.xps`
 - `samples/reserved-runtime-type-error.xps`
+- `samples/reserved-multiple-identifiers-error.xps`
+- `samples/reserved-module-multiple-identifiers-error.xps`
 
 Main subjects:
 
@@ -233,14 +235,17 @@ Main subjects:
 
 See `docs/native-http-json.md`.
 
-Covered sample:
+Covered samples:
 
 - `samples/native-http-json.xps`
+- `samples/native-http-header-validation.xps`
 
 Main subjects:
 
 - HttpClient / HttpResponse
 - Timeout / headers
+- HTTP header validation and CR/LF injection rejection
+- absolute http/https URL validation
 - GET / POST / PUT / PATCH / DELETE
 - JsonDocument
 - JsonObject
@@ -248,7 +253,7 @@ Main subjects:
 - JsonElement
 - JsonParse / JsonStringify / JsonEncode / JsonDecode
 
-` samples/json-http.xps ` is an older compatibility fixture and is not the preferred API for new standalone XPScript programs. See `docs/http-json-compatibility.md` only when maintaining compatibility code.
+`samples/json-http.xps` is an older compatibility fixture and is not the preferred API for new standalone XPScript programs. See `docs/http-json-compatibility.md` only when maintaining compatibility code.
 
 ## Evaluate
 
@@ -281,6 +286,34 @@ Main subjects:
 - resource budgets
 - coercion/error parity
 - sanitized diagnostics
+
+## Security
+
+See `docs/security.md` and the implementation checklist in `todo/security-review-todo.md`.
+
+Relevant samples include:
+
+- `samples/reserved-identifier-error.xps`
+- `samples/reserved-runtime-type-error.xps`
+- `samples/reserved-multiple-identifiers-error.xps`
+- `samples/reserved-module-multiple-identifiers-error.xps`
+- `samples/native-http-header-validation.xps`
+- `samples/evaluate-diagnostic-sanitization.xps`
+- `samples/file-lock-holder.xps`
+- `samples/file-lock-contender.xps`
+- `samples/native-loader-diagnostics.xps`
+
+Main subjects:
+
+- compiler-owned identifiers and runtime type names
+- compiler temp isolation
+- project-local dependency boundaries
+- Shell/process trust boundaries
+- filesystem authority
+- Evaluate isolation and non-sandbox semantics
+- HTTP header/URL validation and SSRF boundary
+- native-code trust boundary
+- diagnostic secret exposure
 
 ## Compatibility and older fixtures
 
