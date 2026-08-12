@@ -143,6 +143,14 @@ The compiler validates the path and copies the selected target library beside th
 
 Security checks include project-directory containment, symlink/reparse-point escape rejection, missing-file detection, output filename collisions and executable-overwrite prevention.
 
+### Runtime search policy
+
+Application-local native libraries use a generated `DllImportResolver`. The resolver loads the selected library from exactly `Application.ExecutableDirectory`/`AppContext.BaseDirectory`; it does not search the current working directory, PATH or arbitrary library-search directories for that application-local declaration.
+
+The runtime also refuses to load an application-local library when the packaged library file itself is a symbolic link or reparse point. Bare system-library declarations are not intercepted by this resolver and continue to use the operating-system loader.
+
+Dependent libraries required by an application-local native binary may still be resolved according to the target operating system's native loader rules. Those transitive native dependencies must therefore be reviewed and packaged securely as well.
+
 ## Native loader diagnostics
 
 Generated wrappers translate common loader failures into clearer XPScript runtime diagnostics:
