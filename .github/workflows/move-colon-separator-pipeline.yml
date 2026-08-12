@@ -1,0 +1,30 @@
+name: Move Colon Separator Pipeline
+
+on:
+  push:
+    branches: [todo-statement-separator-colon]
+    paths:
+      - '.github/workflows/move-colon-separator-pipeline.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Move separator to source pipeline
+        run: python tools/move-colon-separator-to-source-pipeline.py
+      - name: Commit and clean helper files
+        shell: bash
+        run: |
+          rm .github/workflows/move-colon-separator-pipeline.yml
+          rm tools/move-colon-separator-to-source-pipeline.py
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add -A
+          git commit -m "Move colon separators before core compatibility lowering"
+          git push
