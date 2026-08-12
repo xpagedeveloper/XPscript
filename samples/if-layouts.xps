@@ -1,8 +1,13 @@
 Sub Main()
     Dim leftDate As Date
     Dim rightDate As Date
+    Dim textValue As String
 
     If True Then Print "SINGLE=OK"
+    If False Then Print "SINGLE_TRUE_BAD" Else Print "SINGLE_ELSE=OK"
+
+    textValue = "Else"
+    If textValue = "Else" Then Print "STRING_ELSE=OK"
 
     If True Then
         Print "BLOCK=OK"
@@ -11,6 +16,15 @@ Sub Main()
     If True
     Then
         Print "SPLIT_THEN=OK"
+    End If
+
+    If False Then
+        Print "ELSEIF_BAD"
+    ElseIf True
+    Then
+        Print "SPLIT_ELSEIF=OK"
+    Else
+        Print "ELSEIF_BAD"
     End If
 
     leftDate = DateNumber(2026, 8, 12)
