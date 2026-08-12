@@ -41,6 +41,14 @@ Class Formatter
         Pick = "PICK=OBJECT"
     End Function
 
+    Public Function Shape(value As Integer) As String
+        Shape = "SHAPE=SCALAR:" & CStr(value)
+    End Function
+
+    Public Function Shape(value() As Integer) As String
+        Shape = "SHAPE=ARRAY:" & CStr(LBound(value)) & ":" & CStr(UBound(value))
+    End Function
+
     Public Sub SetValue(value As Integer)
         Print "SUB=ONE:" & CStr(value)
     End Sub
@@ -59,10 +67,14 @@ Sub Main()
     Dim item As New NamedItem
     Dim d As Date
     Dim number As Integer
+    Dim values(1 To 3) As Integer
 
     d = DateNumber(2026, 8, 12)
     number = 42
     item.Name = "item"
+    values(1) = 10
+    values(2) = 20
+    values(3) = 30
 
     Print formatter.FormatValue(number)
     Print formatter.FormatValue("hello")
@@ -71,6 +83,8 @@ Sub Main()
     Print formatter.Describe(1)
     Print formatter.Describe(1, "?")
     Print formatter.Pick(item)
+    Print formatter.Shape(number)
+    Print formatter.Shape(values)
     Call formatter.SetValue(7)
     formatter.SetValue(8, "eight")
     Call formatter.RunSelf()

@@ -68,6 +68,8 @@ jobs:
             'DESCRIBE=ONE',
             'DESCRIBE=TWO?',
             'PICK=TYPED',
+            'SHAPE=SCALAR:42',
+            'SHAPE=ARRAY:1:3',
             'SUB=ONE:7',
             'SUB=TWO:eight:8',
             'ME=STRING=self'

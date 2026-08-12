@@ -13,7 +13,7 @@ Status:
 
 - [x] allow multiple class `Function` declarations with the same name when their parameter signatures are distinct
 - [x] allow multiple class `Sub` declarations with the same name when their parameter signatures are distinct
-- [>] parameter count and parameter types participate in overload matching; array/scalar shape is represented by the validator but still needs an end-to-end class-array overload regression
+- [x] parameter count, parameter types and array/scalar shape participate in overload matching; end-to-end scalar-versus-array class overload selection is regression-verified in `samples/class-method-overloads.xps`
 - [x] support overloads with different numbers of parameters
 - [x] support overloads with the same number of parameters but different parameter types
 - [x] support overloads that combine required and `Optional` parameters; omitted optional parameters carry a specificity penalty so an exact-arity overload wins
@@ -32,6 +32,7 @@ Status:
 ## Regression coverage
 
 - [x] positive sample: same `Function` name with `Integer`, `String` and `Date` parameter variants; source: `samples/class-method-overloads.xps`
+- [x] positive sample: scalar and typed-array overloads with the same member name select the correct CLR overload; source: `samples/class-method-overloads.xps`
 - [x] positive sample: same `Sub` name with one-parameter and two-parameter variants
 - [x] positive sample: typed object overload versus `Object` fallback
 - [x] positive sample: numeric specificity selects the exact/smallest valid overload
