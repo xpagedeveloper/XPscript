@@ -25,7 +25,7 @@ internal static class XPCrossPlatformRuntime
         {
             var start = BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);
             _ = System.Diagnostics.Process.Start(start)
-                ?? throw new FileNotFoundException("Could not start program or script: " + parsed.FileName);
+                ?? throw new FileNotFoundException("Could not start the requested program or script.");
             return 33;
         }
         catch (Exception ex)
@@ -47,11 +47,11 @@ internal static class XPCrossPlatformRuntime
         {
             if (extension is ".cmd" or ".bat")
             {
-                info.FileName = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
+                info.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
                 info.ArgumentList.Add("/d");
                 info.ArgumentList.Add("/s");
                 info.ArgumentList.Add("/c");
-                info.ArgumentList.Add(QuoteWindowsCommand(fileName, arguments));
+                info.ArgumentList.Add(BuildWindowsBatchCommand(fileName, ParseArguments(arguments)));
             }
             else if (extension == ".ps1")
             {
@@ -85,7 +85,7 @@ internal static class XPCrossPlatformRuntime
         {
             if (extension == ".ps1")
             {
-                info.FileName = "pwsh";
+                info.FileName = ResolveUnixPowerShell();
                 info.ArgumentList.Add("-NoLogo");
                 info.ArgumentList.Add("-NoProfile");
                 info.ArgumentList.Add("-File");
@@ -113,18 +113,45 @@ internal static class XPCrossPlatformRuntime
 
     private static string ResolveWindowsPowerShell()
     {
-        // Prefer cross-platform PowerShell when installed, otherwise use Windows PowerShell.
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        if (!string.IsNullOrWhiteSpace(programFiles))
+        {
+            var pwsh = Path.Combine(programFiles, "PowerShell", "7", "pwsh.exe");
+            if (File.Exists(pwsh)) return pwsh;
+        }
+
+        var fromPath = ResolveFromAbsolutePath("pwsh.exe");
+        if (fromPath is not null) return fromPath;
+
+        var windowsPowerShell = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
+        if (File.Exists(windowsPowerShell)) return windowsPowerShell;
+        throw new XPScriptRuntimeException(53, "PowerShell executable was not found.");
+    }
+
+    private static string ResolveUnixPowerShell()
+    {
+        foreach (var candidate in new[] { "/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/homebrew/bin/pwsh" })
+            if (File.Exists(candidate)) return candidate;
+
+        return ResolveFromAbsolutePath("pwsh")
+            ?? throw new XPScriptRuntimeException(53, "PowerShell executable was not found.");
+    }
+
+    private static string? ResolveFromAbsolutePath(string executableName)
+    {
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
-        foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var rawDirectory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
             try
             {
-                var candidate = Path.Combine(directory.Trim(), "pwsh.exe");
+                var directory = rawDirectory.Trim().Trim('"');
+                if (!Path.IsPathRooted(directory)) continue;
+                var candidate = Path.Combine(Path.GetFullPath(directory), executableName);
                 if (File.Exists(candidate)) return candidate;
             }
             catch { }
         }
-        return "powershell.exe";
+        return null;
     }
 
     private static void AddArguments(System.Diagnostics.ProcessStartInfo info, string rawArguments)
@@ -180,11 +207,30 @@ internal static class XPCrossPlatformRuntime
         return space < 0 ? (command, "") : (command[..space], command[(space + 1)..].TrimStart());
     }
 
-    private static string QuoteWindowsCommand(string fileName, string arguments)
+    private static string BuildWindowsBatchCommand(string fileName, IReadOnlyList<string> arguments)
     {
-        var command = "\"" + fileName.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
-        if (!string.IsNullOrWhiteSpace(arguments)) command += " " + arguments;
-        return command;
+        ValidateBatchFileName(fileName);
+        var command = new System.Text.StringBuilder();
+        command.Append('"').Append(fileName).Append('"');
+
+        foreach (var argument in arguments)
+        {
+            ValidateBatchArgument(argument);
+            command.Append(' ').Append('"').Append(argument).Append('"');
+        }
+        return command.ToString();
+    }
+
+    private static void ValidateBatchFileName(string value)
+    {
+        if (value.IndexOfAny(['\r', '\n', '\0', '"']) >= 0)
+            throw new XPScriptRuntimeException(5, "Batch script path contains unsupported command-shell characters.");
+    }
+
+    private static void ValidateBatchArgument(string value)
+    {
+        if (value.IndexOfAny(['\r', '\n', '\0', '"', '&', '|', '<', '>', '^', '%', '!']) >= 0)
+            throw new XPScriptRuntimeException(5, "Batch script arguments may not contain command-shell metacharacters. Use a directly executable program or PowerShell script for structured arguments.");
     }
 }
 """;
