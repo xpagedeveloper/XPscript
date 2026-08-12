@@ -12,6 +12,10 @@ public sealed class XPScriptTranspiler
     {
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
+        // Validate user-visible source types before compiler-generated physical-line markers
+        // or other source-expanding rewrites are inserted. This keeps diagnostics mapped to
+        // the original .xps line/column rather than the transformed intermediate source.
+        new SourceTypeValidator().Validate(source, sourceName);
         source = new SourceLineMarkerPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
@@ -28,7 +32,6 @@ public sealed class XPScriptTranspiler
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleGlobals.Transform(source);
         source = new DateObjectPreprocessor().Transform(source);
-        new SourceTypeValidator().Validate(source, sourceName);
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
 
@@ -103,7 +106,7 @@ public sealed class XPScriptTranspiler
         {
             source = Regex.Replace(
                 source,
-                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)",
+                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)\",
                 m => $"{listName}.ContainsTag({m.Groups["key"].Value})",
                 RegexOptions.IgnoreCase);
         }
