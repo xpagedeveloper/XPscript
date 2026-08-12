@@ -11,7 +11,6 @@ internal sealed class NativeLibraryPlatformPreprocessor
         "WindowsLib", "LinuxLib", "MacOSLib",
         "WindowsX64Lib", "WindowsArm64Lib", "LinuxX64Lib", "LinuxArm64Lib", "MacOSX64Lib", "MacOSArm64Lib",
         "WindowsAlias", "LinuxAlias", "MacOSAlias",
-        "WindowsX64Alias", "LinuxAlias", "MacOSAlias",
         "WindowsX64Alias", "WindowsArm64Alias", "LinuxX64Alias", "LinuxArm64Alias", "MacOSX64Alias", "MacOSArm64Alias"
     ];
 
@@ -142,7 +141,7 @@ internal sealed class NativeLibraryPlatformPreprocessor
         {
             if (line[i] == '"')
             {
-                if (inString && i + 1 < line.Length && source[i + 1] == '"') { i++; continue; }
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
                 inString = !inString;
             }
             else if (!inString && line[i] == '\'') return line[..i];
