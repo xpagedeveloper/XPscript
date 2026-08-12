@@ -2,41 +2,48 @@
 
 (c) xpagedeveloper.com 2026
 
-Goal: allow a class to declare multiple `Function` or `Sub` members with the same name when their parameter signatures differ. The compiler must resolve the correct overload from the arguments used at each call site.
+Goal: allow a class to declare multiple `Function` or `Sub` members with the same name when their parameter signatures differ. The compiler resolves the correct overload from the arguments used at each call site.
+
+Status:
+- `[x]` implemented and regression-verified
+- `[>]` implemented or defined but still needs broader compatibility coverage
+- `[ ]` not implemented
 
 ## Language behavior
 
-- [ ] allow multiple class `Function` declarations with the same name when their parameter signatures are distinct
-- [ ] allow multiple class `Sub` declarations with the same name when their parameter signatures are distinct
-- [ ] treat parameter count, parameter types, array/scalar shape and relevant `ByVal`/`ByRef` constraints as part of overload matching
-- [ ] support overloads with different numbers of parameters
-- [ ] support overloads with the same number of parameters but different parameter types
-- [ ] support overloads that combine required and `Optional` parameters without ambiguous resolution
-- [ ] define how `Variant`, `Object`, numeric widening and String/Date coercions participate in overload selection
-- [ ] choose the most specific valid overload when more than one overload can accept the supplied arguments
-- [ ] reject calls where no overload matches with a clear compiler diagnostic listing the supplied signature
-- [ ] reject ambiguous calls where more than one overload is equally valid with a clear compiler diagnostic
-- [ ] reject duplicate declarations with an identical effective signature
-- [ ] preserve normal return-type checking for overloaded `Function` members
-- [ ] preserve normal `ByRef` compatibility and write-back semantics for the selected overload
-- [ ] support overload resolution for calls both with and without the explicit `Call` keyword
-- [ ] support overload resolution when invoking a member on a typed class variable
-- [ ] support overload resolution through `Me` inside the declaring class
-- [ ] define behavior for overload lookup across class inheritance if/when inherited member lookup is enabled
+- [x] allow multiple class `Function` declarations with the same name when their parameter signatures are distinct
+- [x] allow multiple class `Sub` declarations with the same name when their parameter signatures are distinct
+- [>] parameter count and parameter types participate in overload matching; array/scalar shape is represented by the validator but still needs an end-to-end class-array overload regression
+- [x] support overloads with different numbers of parameters
+- [x] support overloads with the same number of parameters but different parameter types
+- [x] support overloads that combine required and `Optional` parameters; omitted optional parameters carry a specificity penalty so an exact-arity overload wins
+- [x] overload selection rules are defined: exact type wins; numeric candidates are ranked by widening distance; a typed class overload is preferred over `Object`; `Variant` is a fallback; String and Date do not cross-coerce solely for overload selection
+- [x] choose the most specific valid overload when more than one overload can accept the supplied arguments
+- [x] reject calls where no overload matches with a clear compiler diagnostic listing the supplied signature
+- [x] reject ambiguous calls where more than one overload is equally valid with a clear compiler diagnostic
+- [x] reject duplicate declarations with an identical effective signature; `Variant` and `Object` are treated as the same CLR-effective object signature for duplicate detection
+- [>] preserve normal return-type checking for overloaded `Function` members through generated typed CLR methods; add an explicit negative return-type regression before marking complete
+- [>] `ByRef` constraints are represented by the overload validator, but scalar `ByRef` remains a broader compiler limitation and is not considered complete in this feature
+- [x] support overload resolution for calls both with and without the explicit `Call` keyword
+- [x] support overload resolution when invoking a member on a typed class variable
+- [x] support overload resolution through `Me` inside the declaring class
+- [x] inherited overload lookup is explicitly not enabled yet; resolution is limited to methods declared on the statically known class until inherited-member lookup is implemented
 
 ## Regression coverage
 
-- [ ] positive sample: same `Function` name with `Integer`, `String` and `Date` parameter variants
-- [ ] positive sample: same `Sub` name with one-parameter and two-parameter variants
-- [ ] positive sample: typed object overload versus `Object`/`Variant` fallback
-- [ ] positive sample: numeric widening selects the most specific valid overload
-- [ ] negative sample: duplicate identical signatures
-- [ ] negative sample: no matching overload
-- [ ] negative sample: ambiguous overload
-- [ ] verify generated C# uses valid CLR method overloads or stable compiler-generated unique method names while preserving XPScript call semantics
-- [ ] add GitHub Actions regression gate before marking this feature complete
+- [x] positive sample: same `Function` name with `Integer`, `String` and `Date` parameter variants; source: `samples/class-method-overloads.xps`
+- [x] positive sample: same `Sub` name with one-parameter and two-parameter variants
+- [x] positive sample: typed object overload versus `Object` fallback
+- [x] positive sample: numeric specificity selects the exact/smallest valid overload
+- [x] positive sample: exact arity is preferred over an overload that consumes omitted `Optional` parameters
+- [x] positive sample: typed member invocation, explicit `Call`, bare member invocation and `Me` invocation
+- [x] negative sample: duplicate identical/effective signatures; source: `samples/class-method-overloads-duplicate.xps`
+- [x] negative sample: no matching overload; source: `samples/class-method-overloads-no-match.xps`
+- [x] negative sample: ambiguous overload; source: `samples/class-method-overloads-ambiguous.xps`
+- [x] generated C# uses valid CLR method overloads while the XPScript validator supplies language-specific overload diagnostics
+- [x] GitHub Actions regression gate: `Class Properties and Overloads Compatibility`
 
-## Example target syntax
+## Example syntax
 
 ```xpscript
 Class Formatter
@@ -49,21 +56,21 @@ Class Formatter
     End Function
 
     Public Sub SetValue(value As Integer)
-        ' integer implementation
+        Print "integer"
     End Sub
 
-    Public Sub SetValue(value As String)
-        ' string implementation
+    Public Sub SetValue(value As Integer, label As String)
+        Print label
     End Sub
 End Class
 ```
 
-The call determines the selected implementation:
+The arguments determine the selected implementation:
 
 ```xpscript
 Dim formatter As New Formatter
 Print formatter.FormatValue(42)
 Print formatter.FormatValue("hello")
 Call formatter.SetValue(10)
-Call formatter.SetValue("text")
+formatter.SetValue(10, "ten")
 ```
