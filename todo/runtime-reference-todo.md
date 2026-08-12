@@ -141,11 +141,11 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 ## 12. Native HTTP API
 
-- [>] `HttpClient`
-- [>] `Get`, `Post`, `Put`, `Patch`, `Delete`
-- [>] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
-- [>] `HttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
-- [>] source: `samples/native-http-json.xps`
+- [x] `HttpClient`
+- [x] `Get`, `Post`, `Put`, `Patch`, `Delete`
+- [x] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
+- [x] `HttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
+- [x] end-to-end loopback regression: `samples/native-http-regression.xps`, `tests/native_http_server.py`; manual gate: `Native HTTP Compatibility`
 
 ## 13. Native JSON API
 
