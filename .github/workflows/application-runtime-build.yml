@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/application-runtime*.xps'
+      - 'samples/application-reserved-identifier-error.xps'
       - '.github/workflows/application-runtime-build.yml'
       - 'todo/application-runtime-todo.md'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/application-runtime*.xps'
+      - 'samples/application-reserved-identifier-error.xps'
       - '.github/workflows/application-runtime-build.yml'
       - 'todo/application-runtime-todo.md'
   workflow_dispatch:
@@ -112,3 +114,14 @@ jobs:
           if ($compilerExitCode -eq 0) { throw 'Expected assignment to Application.TempPath to fail compilation.' }
           $result = $resultText | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler error for read-only Application property assignment.' }
+
+      - name: Verify Application identifier is reserved
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-reserved-identifier-error.xps -o ./out/application-reserved-identifier-error.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Expected redeclaration of Application to fail compilation.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler error for reserved Application identifier.' }
+          if (($result.errors | ConvertTo-Json -Depth 8) -notmatch 'reserved') { throw 'Expected reserved identifier diagnostic.' }
