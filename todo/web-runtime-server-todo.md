@@ -4,6 +4,8 @@
 
 > **Priority / sequencing:** This is a future major feature and must be implemented only after the existing compiler/language/runtime TODOs are complete and stable. Do not start implementation directly from this document. Perform a dedicated architecture/security review first, refine this specification, then create an implementation plan and regression matrix before writing production code.
 
+> **Dependency policy:** Follow `todo/development-guidelines.md`. Prefer existing .NET/ASP.NET Core functionality and vetted, maintained NuGet packages where they safely satisfy requirements. In particular, investigate suitable maintained FastCGI packages before writing a custom protocol parser.
+
 ## Goal
 
 Allow `.xps` files to run as server-side web applications in two hosting modes while sharing one XPScript web runtime:
