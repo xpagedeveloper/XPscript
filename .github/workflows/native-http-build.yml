@@ -1,0 +1,73 @@
+name: Native HTTP Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-http:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Start local HTTP regression server
+        shell: pwsh
+        run: |
+          $server = Start-Process python -ArgumentList './tests/native_http_server.py' -PassThru
+          $server.Id | Set-Content ./native-http-server.pid
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $client = [System.Net.Sockets.TcpClient]::new('127.0.0.1', 18080)
+              $client.Dispose()
+              exit 0
+            } catch {
+              Start-Sleep -Milliseconds 200
+            }
+          }
+          throw 'Local HTTP regression server did not start.'
+      - name: Compile and verify Native HTTP API
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-regression.xps -o ./out/native-http-regression.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native HTTP sample compilation failed.' }
+          $output = & ./out/native-http-regression.exe
+          $required = @(
+            'TIMEOUT=5',
+            'GET=GET|alpha',
+            'STATUS=200',
+            'STATUS_TEXT=OK',
+            'SUCCESS=True',
+            'REMOVED=GET|',
+            'CLEARED=GET|',
+            'POST=POST|gamma|post-body',
+            'PUT=PUT|gamma|put-body',
+            'PATCH=PATCH|gamma|patch-body',
+            'DELETE=DELETE|gamma',
+            'FAIL_STATUS=418',
+            'FAIL_SUCCESS=False'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Native HTTP output missing: $value`n$output" }
+          }
+          $contentType = $output | Where-Object { $_ -like 'CONTENT_TYPE=text/plain*' }
+          if (-not $contentType) { throw "Native HTTP content type missing.`n$output" }
+          $headerLine = $output | Where-Object { $_ -like 'HEADERS=*' }
+          if (-not $headerLine) { throw "Native HTTP headers property missing.`n$output" }
+          $count = [int](($headerLine -split '=',2)[1])
+          if ($count -lt 2) { throw "Native HTTP response headers unexpectedly empty: $headerLine" }
+      - name: Stop local HTTP regression server
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path ./native-http-server.pid) {
+            $pidValue = [int](Get-Content ./native-http-server.pid)
+            Stop-Process -Id $pidValue -Force -ErrorAction SilentlyContinue
+          }
