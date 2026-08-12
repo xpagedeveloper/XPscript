@@ -28,10 +28,32 @@ internal sealed class DateObjectPreprocessor
                 line = ReplaceOutsideStrings(line,
                     $@"(?<![\w.]){escaped}\.OSTimeFormatting\b",
                     _ => "XPDateRuntime.OSTimeFormatting");
+
+                line = ReplaceOutsideStrings(line,
+                    $@"(?<![\w.]){escaped}\s*(<=|>=|<>|=|<|>)\s*([A-Za-z_]\w*)\b",
+                    m => BuildComparison(variable, m.Groups[1].Value, m.Groups[2].Value));
+                line = ReplaceOutsideStrings(line,
+                    $@"\b([A-Za-z_]\w*)\s*(<=|>=|<>|=|<|>)\s*{escaped}(?![\w.])",
+                    m => BuildComparison(m.Groups[1].Value, m.Groups[2].Value, variable));
             }
             lines[i] = line;
         }
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildComparison(string left, string op, string right)
+    {
+        var comparison = $"XPDateRuntime.Compare({left}, {right})";
+        return op switch
+        {
+            "=" => comparison + " = 0",
+            "<>" => comparison + " <> 0",
+            "<" => comparison + " < 0",
+            "<=" => comparison + " <= 0",
+            ">" => comparison + " > 0",
+            ">=" => comparison + " >= 0",
+            _ => throw new CompilerException("Unsupported Date comparison operator: " + op)
+        };
     }
 
     private static HashSet<string> CollectDateVariables(string source)
