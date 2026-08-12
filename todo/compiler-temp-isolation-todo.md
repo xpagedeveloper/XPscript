@@ -24,18 +24,20 @@ Status:
 - [>] `Path.GetTempPath()` is only the root; generated files are not written directly into a fixed shared build directory
 - [>] generated project/source/publish paths are invocation-local
 - [>] compiler invokes `dotnet publish` with `WorkingDirectory` set to the invocation workspace
+- [>] process-temp, dotnet-home and NuGet package directories are invocation-local children
 - [ ] consider separate explicit `src`, `obj`, `bin`, `publish` and `logs` children if later tooling requires them
 - [ ] runtime verification that an existing invocation directory can never be accidentally reused
 
 ## Permissions and symlinks
 
-- [ ] review Windows ACL expectations for generated temporary directories
+- [>] Windows invocation/staging directories remove inherited ACLs and grant the current Windows account full control through `icacls.exe`; child files inherit this restricted ACL
 - [>] Unix invocation and staging directories are hardened to user-only `0700` semantics where `UnixFileMode` is supported
 - [>] generated/staged temporary files are hardened to user-only read/write `0600` semantics where supported
 - [>] project-local managed/native dependency paths reject symlink/reparse-point resolution outside the source tree
 - [>] compiler cleanup refuses to recursively clean a workspace root that is itself a symlink/reparse point
 - [>] cleanup enumerates descendants and deletes symlink/reparse entries without recursively following their targets
-- [>] generated source/project files are not intentionally world-readable on Unix after mode hardening
+- [>] generated source/project files are not intentionally world-readable after platform-specific hardening
+- [ ] Windows ACL behavior must be verified with local, domain and service accounts
 - [ ] Windows junction/symlink behavior must be verified on a real Windows filesystem
 - [ ] Linux/macOS symlink behavior must be verified on real target filesystems
 
@@ -70,9 +72,13 @@ Status:
 - [>] `dotnet` is invoked with an explicit working directory set to the current invocation workspace
 - [>] publish arguments are passed through `ProcessStartInfo.ArgumentList`, not shell-concatenated command strings
 - [>] `UseShellExecute` is disabled
-- [ ] do not inherit user-controlled environment variables that can redirect MSBuild/NuGet output unless deliberately supported
-- [ ] review `TMP`, `TEMP`, `TMPDIR`, NuGet cache and MSBuild environment interactions
-- [ ] decide which caches may safely be shared per-user and which generated outputs must always be isolated
+- [>] `dotnet` is resolved to an absolute host path; relative/current-directory PATH entries are ignored
+- [>] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are redirected into the invocation workspace
+- [>] dotnet first-run/telemetry side effects are disabled for generated builds
+- [>] common inherited MSBuild path-redirection environment variables are removed before publish
+- [>] generated output/cache state is intentionally invocation-local rather than shared writable state
+- [ ] verify SDK resolution still works for supported Windows/Linux/macOS .NET 10 installations
+- [ ] decide whether any read-only/per-user NuGet caches should be optionally shared for performance after security verification
 
 ## Cleanup/lifetime
 
