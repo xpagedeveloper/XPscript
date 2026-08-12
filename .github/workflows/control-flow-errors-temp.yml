@@ -1,0 +1,47 @@
+name: Control Flow Error Regression Temp
+
+on:
+  push:
+    branches: [todo-control-flow-errors]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/erl-physical-source-line.xps'
+      - 'samples/nested-resume-targets.xps'
+      - '.github/workflows/control-flow-errors-temp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify physical Erl source line
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/erl-physical-source-line.xps -o ./out/erl-physical.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Erl sample compilation failed.' }
+          $output = & ./out/erl-physical.exe
+          if ($LASTEXITCODE -ne 0) { throw "Erl sample exited with code $LASTEXITCODE.`n$output" }
+          if ($output -notcontains 'Erl=5') { throw "Expected physical Erl=5.`n$output" }
+      - name: Verify nested Resume targets
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/nested-resume-targets.xps -o ./out/nested-resume.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Nested Resume sample compilation failed.' }
+          $output = & ./out/nested-resume.exe
+          if ($LASTEXITCODE -ne 0) { throw "Nested Resume sample exited with code $LASTEXITCODE.`n$output" }
+          $expected = @('outer-before','middle-before','middle-handler:7001','middle-after','outer-after')
+          foreach ($value in $expected) {
+            if ($output -notcontains $value) { throw "Nested Resume output missing: $value`n$output" }
+          }
+          if ($output | Where-Object { $_ -like 'outer-handler:*' }) { throw "Outer handler must not catch the inner error.`n$output" }
