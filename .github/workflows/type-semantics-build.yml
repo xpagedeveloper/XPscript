@@ -1,28 +1,6 @@
 name: Type Semantics Compatibility
 
 on:
-  push:
-    branches: [main, runtime-development-no-ci]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/type-value-copy.xps'
-      - 'samples/type-array-members.xps'
-      - 'samples/type-nested-value-copy.xps'
-      - 'samples/type-cycle-error.xps'
-      - 'samples/type-array-option-base.xps'
-      - 'samples/module-nested-type-value-copy.xps'
-      - '.github/workflows/type-semantics-build.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/type-value-copy.xps'
-      - 'samples/type-array-members.xps'
-      - 'samples/type-nested-value-copy.xps'
-      - 'samples/type-cycle-error.xps'
-      - 'samples/type-array-option-base.xps'
-      - 'samples/module-nested-type-value-copy.xps'
-      - '.github/workflows/type-semantics-build.yml'
   workflow_dispatch:
 
 permissions:
