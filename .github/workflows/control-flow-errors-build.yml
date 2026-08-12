@@ -2,6 +2,15 @@ name: Control Flow and Error Handling Compatibility
 
 on:
   workflow_dispatch:
+  push:
+    branches: [todo-statement-layout-audit]
+    paths:
+      - '.github/workflows/control-flow-errors-build.yml'
+      - 'samples/statement-layout-audit.xps'
+      - 'samples/if-layouts.xps'
+      - 'samples/erl-physical-source-line.xps'
+      - 'samples/nested-resume-targets.xps'
+      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
