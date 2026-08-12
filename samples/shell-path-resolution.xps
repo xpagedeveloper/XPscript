@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Print "PLATFORM=" & Platform()
+
+    ' Bare executable/script names are resolved by XPScript using absolute PATH entries.
+    ' The current directory and relative PATH entries are not used implicitly.
+    If Platform() = "Windows" Then
+        Call Shell("cmd.exe /d /c exit 0")
+        Print "SHELL-PATH=WINDOWS-OK"
+    ElseIf Platform() = "Linux" Or Platform() = "MacOS" Or Platform() = "FreeBSD" Then
+        Call Shell("sh -c \"exit 0\"")
+        Print "SHELL-PATH=UNIX-OK"
+    Else
+        Print "SHELL-PATH=SKIPPED"
+    End If
+End Sub
