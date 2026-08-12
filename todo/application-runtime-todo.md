@@ -13,8 +13,8 @@ Status:
 
 - [>] global `Application` identifier is reserved by the runtime
 - [>] Application state is initialized before `Main` / `Initialize`
-- [>] `Application.ArgCount`
-- [>] `Application.Args(index)` with zero-based indexes
+- [x] `Application.ArgCount`
+- [x] `Application.Args(index)` with zero-based indexes
 - [>] `Application.Args` returns a defensive-copy XPScript String array
 - [>] invalid argument index raises XPScript error 9
 - [>] `Application.CommandLine` convenience representation
@@ -31,26 +31,26 @@ Status:
 
 ## Samples and documentation
 
-- [>] sample: `samples/application-runtime.xps`
+- [x] sample: `samples/application-runtime.xps`
 - [>] documentation: `docs/application.md`
 
 ## Verification
 
-- [ ] compile sample when execution is re-enabled
-- [ ] run with zero command-line arguments
-- [ ] run with one command-line argument
-- [ ] run with multiple command-line arguments
-- [ ] verify quoted argument containing spaces remains one `Application.Args` entry
-- [ ] verify empty-string argument where supported by launching shell
-- [ ] verify Unicode command-line arguments
-- [ ] verify `ArgCount` equals the number of values available through `Application.Args(index)`
+- [x] compile Application runtime sample in GitHub Actions on Windows
+- [x] run with zero command-line arguments
+- [x] run with one command-line argument
+- [x] run with multiple command-line arguments
+- [x] verify quoted argument containing spaces remains one `Application.Args` entry
+- [x] verify empty-string argument in PowerShell on the Windows GitHub runner
+- [x] verify Unicode command-line arguments
+- [x] verify `ArgCount` equals the number of values available through `Application.Args(index)`
 - [ ] verify out-of-range indexes produce error 9
 - [ ] verify attempts to assign `Application.Args(0)` or another Application property fail at compile time
-- [ ] verify `Application.ExecutablePath` points to the actual generated executable on Windows
+- [x] verify `Application.ExecutablePath` points to the actual generated executable on Windows
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on Linux
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on macOS
-- [ ] verify executable filename/directory values on all supported target RIDs
-- [ ] verify temp path follows target OS/user temp directory semantics
+- [>] verify executable filename/directory values on all supported target RIDs, Windows verified
+- [>] verify temp path follows target OS/user temp directory semantics, Windows verified
 - [ ] verify concurrent reads do not alter runtime state
 
-No GitHub workflow or runtime verification is performed while execution remains disabled by user request.
+Windows Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml`. Linux and macOS runtime verification remains pending.
