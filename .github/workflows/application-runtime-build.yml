@@ -85,11 +85,9 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime-out-of-range.xps -o ./out/application-runtime-out-of-range.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Out-of-range sample compilation failed unexpectedly.' }
-          $output = & ./out/application-runtime-out-of-range.exe 2>&1
-          $runtimeExitCode = $LASTEXITCODE
-          $global:LASTEXITCODE = 0
-          if ($runtimeExitCode -eq 0) { throw 'Expected out-of-range Application.Args access to fail.' }
-          if (($output -join "`n") -notmatch '(^|\D)9(\D|$)') { throw 'Expected XPScript error 9 for out-of-range Application.Args access.' }
+          $output = & ./out/application-runtime-out-of-range.exe
+          if ($LASTEXITCODE -ne 0) { throw "Out-of-range sample exited with code $LASTEXITCODE." }
+          if ($output -notcontains 'ERR=9') { throw 'Expected Err=9 for out-of-range Application.Args access.' }
 
       - name: Verify Application arguments are read-only
         shell: pwsh
