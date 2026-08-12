@@ -1,12 +1,6 @@
 name: Class Properties and Overloads Compatibility
 
 on:
-  push:
-    branches: [todo-overload-return-type]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/class-method-overloads*.xps'
-      - '.github/workflows/indexed-properties-build.yml'
   workflow_dispatch:
 
 permissions:
