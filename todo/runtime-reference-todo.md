@@ -149,11 +149,12 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 ## 13. Native JSON API
 
-- [>] `JsonDocument.Parse`, `JsonDocument.Stringify`
-- [>] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
-- [>] `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
-- [>] `JsonElement.Type`, `JsonElement.Value`
-- [>] `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
+- [x] `JsonDocument.Parse`, `JsonDocument.Stringify`
+- [x] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
+- [x] `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
+- [x] `JsonElement.Type`, `JsonElement.Value`
+- [x] `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
+- [x] end-to-end regression: `samples/native-json-regression.xps`; manual gate: `Native JSON Compatibility`; implementation uses .NET `System.Text.Json`
 
 ## 14. Cross-platform compiler and runtime
 

@@ -1,0 +1,43 @@
+Option Declare
+
+Sub Main()
+    Dim document As JsonDocument
+    Dim parsed As JsonDocument
+    Dim decoded As JsonDocument
+    Dim obj As JsonObject
+    Dim arr As JsonArray
+    Dim element As JsonElement
+
+    Set document = JsonDocument.Parse("{""name"":""Alice"",""active"":true}")
+    Print "DOCUMENT=" & document.Stringify()
+
+    Set obj = New JsonObject
+    Call obj.Set("name", "Fredrik")
+    Call obj.Set("enabled", True)
+    Print "OBJCOUNT=" & CStr(obj.Count)
+    Print "OBJNAME=" & CStr(obj.Get("name"))
+    Print "OBJHAS=" & CStr(obj.Contains("enabled"))
+    Call obj.Remove("enabled")
+    Print "OBJCOUNT2=" & CStr(obj.Count)
+
+    Set arr = New JsonArray
+    Call arr.Add("one")
+    Call arr.Add("two")
+    Call arr.Set(1, "TWO")
+    Print "ARRAYCOUNT=" & CStr(arr.Count)
+    Print "ARRAYVALUE=" & CStr(arr.Get(1))
+    Call arr.RemoveAt(0)
+    Print "ARRAYCOUNT2=" & CStr(arr.Count)
+    Print "ARRAYFIRST=" & CStr(arr.Get(0))
+
+    Set parsed = JsonParse("123")
+    Set element = parsed.Root
+    Print "ELEMENTTYPE=" & element.Type
+    Print "ELEMENTVALUE=" & CStr(element.Value)
+
+    Print "STRINGIFY=" & JsonStringify(obj)
+    Print "ENCODE=" & JsonEncode(arr)
+
+    Set decoded = JsonDecode("{""ok"":true}")
+    Print "DECODE=" & decoded.Stringify()
+End Sub
