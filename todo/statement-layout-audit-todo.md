@@ -39,14 +39,14 @@ Rules:
 - [x] `_` continuation in `Select Case` selector and `Case ... To ...` expressions.
 - [x] `_` continuation in `With` expressions.
 - [x] existing multiline native `Declare` regression remains green.
-- [>] support compact multiple-statements-on-one-line with `:` as a deliberate statement separator; source: `samples/statement-separator-colon.xps`.
+- [x] compact multiple-statements-on-one-line with `:` as a deliberate statement separator; source: `samples/statement-separator-colon.xps`; permanent manual gate: `Control Flow and Error Handling Compatibility`.
   - Baseline before implementation passed colon-separated source through to generated C# and produced repeated diagnostics such as `Syntax error, ',' expected`.
-  - `:` inside string literals and comments must not split a statement.
-  - standalone labels such as `Handler:` / `Done:` must retain label semantics and must not be treated as empty separator tails.
+  - `:` inside normal, alternate `|...|`, brace `{...}` string literals and comments does not split a statement.
+  - standalone labels such as `Handler:` / `Done:` retain label semantics and labels may have an inline statement tail.
   - multiple separators on one physical line execute left-to-right.
-  - separators inside single-line `If ... Then ... Else ...` and inline block `ElseIf ... Then ...` must keep all separated statements inside the correct true/false branch.
-  - all statements originating from one physical source line must preserve that physical line for `Erl`; regression includes an error in the middle of a colon-separated chain.
-  - empty separator segments must produce an explicit compiler diagnostic rather than silently disappearing.
-  - mark `[x]` only after permanent `Control Flow and Error Handling Compatibility` regression coverage passes.
+  - separators inside single-line `If ... Then ... Else ...` and inline block `ElseIf ... Then ...` keep all separated statements inside the correct true/false branch.
+  - all statements originating from one physical source line preserve that physical line for `Erl`; regression includes an error in the middle of a colon-separated chain.
+  - empty separator segments produce an explicit compiler diagnostic rather than silently disappearing.
+  - verified by the permanent `Control Flow and Error Handling Compatibility` regression on branch head before the workflow trigger was restored to manual-only.
 
 Primary regression sources: `samples/statement-layout-audit.xps`, `samples/statement-separator-colon.xps`.
