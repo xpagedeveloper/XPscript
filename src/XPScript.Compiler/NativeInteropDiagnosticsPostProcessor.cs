@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class NativeInteropDiagnosticsPostProcessor
 {
     private static readonly Regex DeclarationPattern = new(
-        @"(?<indent>^[ \t]*)\[System\.Runtime\.InteropServices\.DllImport\(\"(?<library>[^\"]+)\", EntryPoint = \"(?<entry>[^\"]+)\", CharSet = System\.Runtime\.InteropServices\.CharSet\.(?<charset>\w+)\)\]\r?\n[ \t]*private static extern (?<return>[^\r\n]+?) (?<name>[A-Za-z_]\w*)\((?<parameters>[^\r\n]*)\);",
+        """(?<indent>^[ \t]*)\[System\.Runtime\.InteropServices\.DllImport\("(?<library>[^"]+)", EntryPoint = "(?<entry>[^"]+)", CharSet = System\.Runtime\.InteropServices\.CharSet\.(?<charset>\w+)\)\]\r?\n[ \t]*private static extern (?<return>[^\r\n]+?) (?<name>[A-Za-z_]\w*)\((?<parameters>[^\r\n]*)\);""",
         RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
     public string Transform(string generated)
