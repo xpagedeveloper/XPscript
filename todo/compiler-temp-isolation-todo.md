@@ -4,54 +4,82 @@
 
 Security and concurrency checklist for compiler-generated temporary files, build directories and final output paths.
 
+Status:
+- `[x]` implemented and verified
+- `[>]` implemented/reviewed, awaiting verification
+- `[ ]` not implemented/reviewed
+
 ## Goals
 
-- [ ] every compiler invocation gets a unique build workspace
-- [ ] concurrent compiler processes cannot read or overwrite another invocation's temporary source, project, obj, bin or publish files
-- [ ] generated source and project files are never written to predictable shared filenames without a unique parent directory
-- [ ] cleanup removes only the workspace created by the current invocation
-- [ ] failed builds leave no writable shared state that a later build can accidentally reuse
+- [>] every compiler invocation gets a unique GUID build workspace
+- [>] concurrent compiler invocations do not intentionally share generated source, project or publish paths
+- [>] generated source and project files use predictable names only inside a unique invocation directory
+- [>] cleanup targets only the workspace created by the current invocation
+- [>] failed builds do not intentionally reuse writable workspace state in later builds
 
 ## Workspace creation
 
-- [ ] use a cryptographically unpredictable or GUID-based invocation identifier
-- [ ] create workspaces beneath a dedicated XPScript compiler temp root
-- [ ] use `Path.GetTempPath()` only as the root; never use a fixed direct child such as `xpscript-build`
-- [ ] canonical layout proposal: `<temp>/xpscript/<invocation-id>/`
-- [ ] create separate `src`, `obj`, `bin`, `publish` and `logs` directories inside the invocation workspace where useful
-- [ ] ensure directory creation is atomic enough that an existing directory is never silently reused
+- [>] GUID-based invocation identifier
+- [>] workspaces are created beneath `<Path.GetTempPath()>/XPScript/<guid>/`
+- [>] `Path.GetTempPath()` is only the root; generated files are not written directly into a fixed shared build directory
+- [>] generated project/source/publish paths are invocation-local
+- [>] compiler invokes `dotnet publish` with `WorkingDirectory` set to the invocation workspace
+- [ ] consider separate explicit `src`, `obj`, `bin`, `publish` and `logs` children if later tooling requires them
+- [ ] runtime verification that an existing invocation directory can never be accidentally reused
 
 ## Permissions and symlinks
 
-- [ ] review Windows ACLs for generated temporary directories
-- [ ] review Unix directory/file modes on Linux/macOS
-- [ ] reject or safely handle symlinks/reparse points in compiler-owned workspace paths
-- [ ] compiler cleanup must not follow a symlink/reparse point outside the owned workspace
-- [ ] generated source containing secrets must not be world-readable on multi-user systems
+- [ ] review Windows ACL expectations for generated temporary directories
+- [>] Unix invocation and staging directories are hardened to user-only `0700` semantics where `UnixFileMode` is supported
+- [>] generated/staged temporary files are hardened to user-only read/write `0600` semantics where supported
+- [>] project-local managed/native dependency paths reject symlink/reparse-point resolution outside the source tree
+- [>] compiler cleanup refuses to recursively clean a workspace root that is itself a symlink/reparse point
+- [>] cleanup enumerates descendants and deletes symlink/reparse entries without recursively following their targets
+- [>] generated source/project files are not intentionally world-readable on Unix after mode hardening
+- [ ] Windows junction/symlink behavior must be verified on a real Windows filesystem
+- [ ] Linux/macOS symlink behavior must be verified on real target filesystems
 
 ## Output safety
 
-- [ ] normalize requested output path with `Path.GetFullPath`
-- [ ] reject output paths that resolve to directories when a file target is required
-- [ ] never overwrite compiler/runtime source files merely because the requested output name resolves into the repository tree
-- [ ] define explicit overwrite behavior for an existing requested output file
-- [ ] write final output to a temporary sibling and atomically move/replace where the platform supports it
-- [ ] prevent partial executable replacement if publish/copy fails halfway through
-- [ ] validate application-local `.dll`, `.so`, `.dylib` copy targets using the same containment rules
+- [>] requested output path is normalized with `Path.GetFullPath`
+- [>] output paths resolving to an existing directory are rejected
+- [>] native/managed-native dependency output names are reduced to file names and collision checked
+- [>] executable plus dependencies are first copied into a unique staging directory beside the final output
+- [>] existing output files are backed up within the same output filesystem before replacement
+- [>] dependencies are committed before the executable; the executable is made visible last
+- [>] publication failure rolls back newly installed files and restores backed-up prior files on a best-effort basis
+- [>] sibling staging keeps final `File.Move` operations on the same filesystem where normal platform semantics permit atomic rename
+- [ ] define/document whether explicitly supplied output paths are always allowed to overwrite an existing file
+- [ ] decide whether the compiler should reject output paths pointing into its own compiler/runtime source tree
+- [ ] review destination-directory symlink/reparse behavior separately from source dependency containment
+- [ ] verify rollback behavior under forced copy/move/delete failures
+
+## Project-local dependency containment
+
+- [>] `Reference` and `ReferenceNative` reject rooted paths
+- [>] application-local native dependency paths reject rooted paths
+- [>] lexical `..` escape outside the source directory is rejected
+- [>] each existing dependency path component is checked for symlink/reparse-point resolution
+- [>] links resolving outside the XPScript source directory are rejected
+- [>] unresolved reparse points/links are rejected rather than trusted
+- [ ] review TOCTOU race between dependency validation and staging copy
+- [ ] add filesystem-level regression setup for project-local symlink escape when execution is re-enabled
 
 ## Process execution
 
-- [ ] invoke `dotnet` with an explicit working directory set to the current invocation workspace
-- [ ] pass paths as structured process arguments rather than shell-concatenated strings
+- [>] `dotnet` is invoked with an explicit working directory set to the current invocation workspace
+- [>] publish arguments are passed through `ProcessStartInfo.ArgumentList`, not shell-concatenated command strings
+- [>] `UseShellExecute` is disabled
 - [ ] do not inherit user-controlled environment variables that can redirect MSBuild/NuGet output unless deliberately supported
 - [ ] review `TMP`, `TEMP`, `TMPDIR`, NuGet cache and MSBuild environment interactions
-- [ ] decide which caches may safely be shared read-only/per-user and which generated outputs must always be isolated
+- [ ] decide which caches may safely be shared per-user and which generated outputs must always be isolated
 
 ## Cleanup/lifetime
 
-- [ ] cleanup happens in `finally` after success or failure
-- [ ] cleanup only deletes paths proven to be descendants of the owned invocation root
-- [ ] cleanup failure must not mask the original compiler error
+- [>] cleanup happens in `finally` after success or failure
+- [>] cleanup only accepts a descendant of the compiler XPScript temp root
+- [>] cleanup does not recursively follow symlink/reparse-point descendants
+- [>] cleanup failure is swallowed so it does not mask the original compiler error
 - [ ] optionally support `--keep-temp` for debugging while clearly printing the exact isolated workspace path
 - [ ] define age-based cleanup of abandoned compiler workspaces from crashed processes without touching active ones
 
@@ -62,4 +90,5 @@ Security and concurrency checklist for compiler-generated temporary files, build
 - [ ] verify generated files and diagnostics never cross between invocations
 - [ ] deliberately crash/kill one compiler process and verify another process is unaffected
 - [ ] test parallel Windows/Linux/macOS compiler invocations
-- [ ] test malicious output paths containing `..`, absolute paths, symlinks and platform-specific path tricks
+- [ ] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path tricks
+- [ ] force staged-publication failures and verify old executable/dependencies are restored
