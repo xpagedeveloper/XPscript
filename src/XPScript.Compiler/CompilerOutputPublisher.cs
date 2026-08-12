@@ -72,7 +72,7 @@ internal static class CompilerOutputPublisher
             {
                 executableName
             };
-            var stagedDependencies = new List<(string Stage, string Target)>();
+            var operations = new List<(string Stage, string Target)>();
 
             foreach (var dependency in dependencies)
             {
@@ -85,15 +85,12 @@ internal static class CompilerOutputPublisher
                 var staged = Path.Combine(stageDirectory, fileName);
                 File.Copy(dependency.SourcePath, staged, overwrite: false);
                 CompilerPathSecurity.HardenTemporaryFile(staged);
-                stagedDependencies.Add((staged, Path.Combine(outputDirectory, fileName)));
+                operations.Add((staged, Path.Combine(outputDirectory, fileName)));
             }
 
-            // Dependencies are committed first. The new executable is committed last so a
-            // dependency failure cannot expose a new executable with incomplete dependencies.
-            foreach (var dependency in stagedDependencies)
-                ReplaceFile(dependency.Stage, dependency.Target);
-
-            ReplaceFile(stagedExecutable, outputFullPath);
+            // Dependencies are committed first. The executable is committed last.
+            operations.Add((stagedExecutable, outputFullPath));
+            CommitBatch(stageDirectory, operations);
         }
         finally
         {
@@ -101,34 +98,51 @@ internal static class CompilerOutputPublisher
         }
     }
 
-    private static void ReplaceFile(string stagedPath, string targetPath)
+    private static void CommitBatch(string stageDirectory, IReadOnlyList<(string Stage, string Target)> operations)
     {
-        var backupPath = targetPath + ".xpscript-backup-" + Guid.NewGuid().ToString("N");
-        var hadExisting = File.Exists(targetPath);
+        var backupDirectory = Path.Combine(stageDirectory, "backup");
+        Directory.CreateDirectory(backupDirectory);
+        CompilerPathSecurity.HardenTemporaryDirectory(backupDirectory);
+
+        var backups = new List<(string Backup, string Target)>();
+        var installed = new List<string>();
 
         try
         {
-            if (hadExisting)
-                File.Move(targetPath, backupPath);
+            for (var i = 0; i < operations.Count; i++)
+            {
+                var operation = operations[i];
+                if (Directory.Exists(operation.Target))
+                    throw new CompilerException("Compiler output target identifies an existing directory: " + operation.Target);
 
-            File.Move(stagedPath, targetPath);
+                if (File.Exists(operation.Target))
+                {
+                    var backup = Path.Combine(backupDirectory, i.ToString("D4") + "-" + Path.GetFileName(operation.Target));
+                    File.Move(operation.Target, backup);
+                    backups.Add((backup, operation.Target));
+                }
 
-            if (hadExisting && File.Exists(backupPath))
-                File.Delete(backupPath);
+                File.Move(operation.Stage, operation.Target);
+                installed.Add(operation.Target);
+            }
         }
         catch
         {
-            try
+            for (var i = installed.Count - 1; i >= 0; i--)
             {
-                if (File.Exists(targetPath)) File.Delete(targetPath);
-                if (hadExisting && File.Exists(backupPath)) File.Move(backupPath, targetPath);
+                try { if (File.Exists(installed[i])) File.Delete(installed[i]); } catch { }
             }
-            catch { }
+
+            for (var i = backups.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    if (File.Exists(backups[i].Backup))
+                        File.Move(backups[i].Backup, backups[i].Target);
+                }
+                catch { }
+            }
             throw;
-        }
-        finally
-        {
-            try { if (File.Exists(backupPath)) File.Delete(backupPath); } catch { }
         }
     }
 }
