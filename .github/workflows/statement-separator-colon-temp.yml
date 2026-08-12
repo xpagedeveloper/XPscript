@@ -29,7 +29,9 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/statement-separator-colon.xps -o ./out/statement-separator-colon.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Colon statement separator sample compilation failed.' }
           $output = & ./out/statement-separator-colon.exe
-          foreach ($value in @('COLON-A','COLON-B','VALUE=2','STRING=A:B:C','COMMENT=OK','LABEL=OK')) {
+          foreach ($value in @('COLON-A','COLON-B','VALUE=2','STRING=A:B:C','COMMENT=OK','IF-A','IF-B','ELSE-A','ELSE-B','ELSEIF-A','ELSEIF-B','LABEL=OK','ERL-BEFORE','COLON-ERL=28')) {
             if ($output -notcontains $value) { throw "Colon separator output missing: $value`n$output" }
           }
-          if ($output -contains 'LABEL-BAD') { throw "GoTo/label semantics were broken by colon splitting.`n$output" }
+          foreach ($bad in @('LABEL-BAD','IF-BAD','IF-BAD-2','ELSEIF-BAD','ERL-AFTER-BAD')) {
+            if ($output -contains $bad) { throw "Unexpected colon separator output: $bad`n$output" }
+          }
