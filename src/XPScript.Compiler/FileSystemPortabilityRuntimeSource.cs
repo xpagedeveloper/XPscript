@@ -89,7 +89,7 @@ internal static class XPScriptFileSystemRuntime
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
         EnsureDifferentPaths(source, destination, "FileCopy");
-        RejectLinkedTarget(destination, "FileCopy");
+        RejectLinkedPath(destination, "FileCopy", "destination");
 
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrWhiteSpace(parent) && !Directory.Exists(parent))
@@ -109,6 +109,7 @@ internal static class XPScriptFileSystemRuntime
     {
         var path = ResolvePath(value);
         if (!File.Exists(path)) return;
+        RejectLinkedPath(path, "Kill", "target");
 
         try
         {
@@ -128,7 +129,8 @@ internal static class XPScriptFileSystemRuntime
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
         EnsureDifferentPaths(source, destination, "Name");
-        RejectLinkedTarget(destination, "Name");
+        RejectLinkedPath(source, "Name", "source");
+        RejectLinkedPath(destination, "Name", "destination");
 
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrWhiteSpace(parent) && !Directory.Exists(parent))
@@ -154,7 +156,7 @@ internal static class XPScriptFileSystemRuntime
     public static void RemoveDirectory(object? value)
     {
         var path = ResolvePath(value);
-        RejectLinkedTarget(path, "RmDir");
+        RejectLinkedPath(path, "RmDir", "target");
         Directory.Delete(path, recursive: false);
     }
 
@@ -229,22 +231,22 @@ internal static class XPScriptFileSystemRuntime
         return path;
     }
 
-    private static void RejectLinkedTarget(string path, string operation)
+    private static void RejectLinkedPath(string path, string operation, string role)
     {
         try
         {
             var file = new FileInfo(path);
             if (file.LinkTarget is not null || (file.Exists && (file.Attributes & FileAttributes.ReparsePoint) != 0))
-                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point destination.");
+                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point " + role + ".");
 
             var directory = new DirectoryInfo(path);
             if (directory.LinkTarget is not null || (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0))
-                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point destination.");
+                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point " + role + ".");
         }
         catch (XPScriptRuntimeException) { throw; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            throw new XPScriptRuntimeException(5, operation + " could not safely inspect the destination path.");
+            throw new XPScriptRuntimeException(5, operation + " could not safely inspect the " + role + " path.");
         }
     }
 
