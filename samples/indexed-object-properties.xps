@@ -1,0 +1,45 @@
+Option Declare
+
+Class Box
+    Public Value As String
+End Class
+
+Class IndexedObjectStore
+    Private firstValue As Box
+    Private secondValue As Box
+
+    Public Property Get Item(index As Integer) As Box
+        If index = 1 Then
+            Set Item = firstValue
+        Else
+            Set Item = secondValue
+        End If
+    End Property
+
+    Public Property Set Item(index As Integer, value As Box)
+        If index = 1 Then
+            Set firstValue = value
+        Else
+            Set secondValue = value
+        End If
+    End Property
+End Class
+
+Sub Main()
+    Dim store As New IndexedObjectStore
+    Dim first As New Box
+    Dim second As New Box
+    Dim result As Box
+
+    first.Value = "first-object"
+    second.Value = "second-object"
+
+    Set store.Item(1) = first
+    Set store.Item(2) = second
+
+    Set result = store.Item(1)
+    Print "OBJECT1=" & result.Value
+
+    Set result = store.Item(2)
+    Print "OBJECT2=" & result.Value
+End Sub
