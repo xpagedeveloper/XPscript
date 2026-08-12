@@ -19,7 +19,11 @@ internal sealed class SourceLineMarkerPreprocessor
             if (!inProcedure && IsProcedureStart(code))
             {
                 inProcedure = true;
-                continuation = false;
+                // A procedure/property header may itself span several physical lines
+                // using XPScript's normal '_' continuation syntax. Track that state
+                // immediately so source markers are never injected into the logical
+                // declaration/parameter list before continuation normalization runs.
+                continuation = EndsWithContinuation(code);
                 output.Add(raw);
                 continue;
             }

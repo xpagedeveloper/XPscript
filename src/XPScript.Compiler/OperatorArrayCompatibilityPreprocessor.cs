@@ -60,10 +60,31 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteLogicalComparisonCondition(string line)
     {
-        var match = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then\s*)$", RegexOptions.IgnoreCase);
-        if (!match.Success) return line;
+        // If/ElseIf may keep their first statement (and optional Else) after Then.
+        // Loop constructs carry only a condition. All of them need the same
+        // comparison-aware And/Or lowering so operator precedence does not depend on
+        // statement layout or on which control-flow keyword introduced the condition.
+        var ifMatch = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then(?:\s+.*)?)$", RegexOptions.IgnoreCase);
+        if (ifMatch.Success)
+            return RewriteConditionMatch(ifMatch, line);
+
+        var loopMatch = Regex.Match(
+            line,
+            @"^(?<prefix>\s*(?:While|Do\s+(?:While|Until)|Loop\s+(?:While|Until))\s+)(?<condition>.+?)(?<suffix>\s*)$",
+            RegexOptions.IgnoreCase);
+        if (loopMatch.Success)
+            return RewriteConditionMatch(loopMatch, line);
+
+        return line;
+    }
+
+    private static string RewriteConditionMatch(Match match, string original)
+    {
         var condition = match.Groups["condition"].Value;
-        if (!Regex.IsMatch(condition, @"(?:=|<>|<=|>=|<|>)") || !Regex.IsMatch(condition, @"\s+(?:And|Or)\s+", RegexOptions.IgnoreCase)) return line;
+        if (!Regex.IsMatch(condition, @"(?:=|<>|<=|>=|<|>)") ||
+            !Regex.IsMatch(condition, @"\s+(?:And|Or)\s+", RegexOptions.IgnoreCase))
+            return original;
+
         var rewritten = RewriteLogicalExpression(condition);
         return match.Groups["prefix"].Value + rewritten + match.Groups["suffix"].Value;
     }
