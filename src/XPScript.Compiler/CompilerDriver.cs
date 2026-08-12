@@ -131,7 +131,7 @@ public sealed class CompilerDriver
         }
         finally
         {
-            try { Directory.Delete(tempRoot, recursive: true); } catch { }
+            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
     }
 
