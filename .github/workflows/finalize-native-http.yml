@@ -1,0 +1,31 @@
+name: Finalize Native HTTP Branch
+
+on:
+  push:
+    branches: [todo-native-http]
+    paths:
+      - '.github/workflows/finalize-native-http.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-native-http
+      - name: Update TODO
+        run: python ./tools/finalize-native-http.py
+      - name: Remove temporary files and commit
+        shell: bash
+        run: |
+          git rm .github/workflows/native-http-temp.yml
+          git rm .github/workflows/finalize-native-http.yml
+          git rm tools/finalize-native-http.py
+          git config user.name 'xpagedeveloper'
+          git config user.email 'fredrik@xpagedeveloper.com'
+          git add todo/runtime-reference-todo.md .github/workflows/native-http-build.yml samples/native-http-regression.xps tests/native_http_server.py todo/web-runtime-server-todo.md
+          git commit -m 'Verify Native HTTP API'
+          git push origin HEAD:todo-native-http
