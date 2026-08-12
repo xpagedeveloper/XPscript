@@ -18,6 +18,7 @@ public sealed class XPScriptTranspiler
         // the original .xps line/column rather than the transformed intermediate source.
         new SourceTypeValidator().Validate(source, sourceName);
         source = new SourceLineMarkerPreprocessor().Transform(source);
+        source = new IfLayoutPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
 
