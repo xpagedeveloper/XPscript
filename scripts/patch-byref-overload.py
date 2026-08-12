@@ -96,7 +96,7 @@ replacement = '''    private string RewriteByRefCalls(string line, string? class
 
     private string RewriteErrorExpressions'''
 
-updated, count = pattern.subn(replacement, text)
+updated, count = pattern.subn(lambda _: replacement, text)
 if count != 1:
     raise SystemExit(f"Expected one RewriteByRefCalls block, replaced {count}")
 path.write_text(updated, encoding="utf-8")
