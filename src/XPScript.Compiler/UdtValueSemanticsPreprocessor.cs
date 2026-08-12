@@ -8,6 +8,7 @@ internal sealed class UdtValueSemanticsPreprocessor
     internal sealed record TypeInfo(string Name, IReadOnlyList<Field> Fields);
     private sealed record VariableInfo(string Type, bool IsModuleGlobal);
     private sealed record ArrayPath(string Path, string ElementType);
+    private sealed record NestedPath(string SourcePath, string LoweredPath);
 
     private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.OrdinalIgnoreCase);
     private int _optionBase;
@@ -27,6 +28,7 @@ internal sealed class UdtValueSemanticsPreprocessor
         var variables = CollectVariables(lines);
         RewriteValueAssignments(lines, variables);
         RewriteArrayMemberUses(lines, variables);
+        RewriteNestedTypeMemberUses(lines, variables);
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -105,27 +107,15 @@ internal sealed class UdtValueSemanticsPreprocessor
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var expanded = new List<string>();
 
-            // Always snapshot the source before touching the destination. This preserves
-            // value semantics for self-assignment and prevents module globals from being
-            // partially overwritten while nested fields are still being read.
             var snapshotId = ++_copyTempId;
             var snapshot = $"__xp_udtcopy_snapshot_{snapshotId}";
             expanded.Add(indent + $"Dim {snapshot} As New {destinationInfo.Type}");
             ExpandCopy(typeInfo, snapshot, source, indent, expanded, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
             if (destinationInfo.IsModuleGlobal)
-            {
-                // Module-level Type values are injected as direct static values rather than
-                // LSRef variables. Commit the detached snapshot field-by-field so nested
-                // values and arrays remain independent of both source and temporary storage.
                 CommitSnapshot(typeInfo, destination, snapshot, indent, expanded);
-            }
             else
-            {
-                // Local Type variables use the class-backed lowering internally. Assigning
-                // the detached snapshot is safe because the temporary has no external alias.
                 expanded.Add(indent + $"Set {destination} = {snapshot}");
-            }
 
             lines[i] = string.Join(Environment.NewLine, expanded);
         }
@@ -137,21 +127,20 @@ internal sealed class UdtValueSemanticsPreprocessor
         {
             if (field.IsArray)
             {
-                // Clone once more on commit so the module value never shares mutable array
-                // storage with compiler-generated temporary state.
                 output.Add(indent + $"{destination}.{field.Name} = XPTypeArrayRuntime.Clone({snapshot}.{field.Name})");
                 continue;
             }
 
             if (_types.ContainsKey(field.Type))
             {
-                // Nested Type values are reference-backed internally, so install a fresh
-                // detached nested value rather than aliasing the snapshot's child object.
                 var nestedId = ++_copyTempId;
+                var nestedSource = $"__xp_udtcopy_commit_src_{nestedId}";
                 var nestedCommit = $"__xp_udtcopy_commit_{nestedId}";
+                output.Add(indent + $"Dim {nestedSource} As {field.Type}");
+                output.Add(indent + $"Set {nestedSource} = {snapshot}.{field.Name}");
                 output.Add(indent + $"Dim {nestedCommit} As New {field.Type}");
-                ExpandCopy(_types[field.Type], nestedCommit, snapshot + "." + field.Name, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-                output.Add(indent + $"Set {destination}.{field.Name} = {nestedCommit}");
+                ExpandCopy(_types[field.Type], nestedCommit, nestedSource, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                output.Add(indent + $"{destination}.{field.Name} = {nestedCommit}");
                 continue;
             }
 
@@ -236,6 +225,30 @@ internal sealed class UdtValueSemanticsPreprocessor
         }
     }
 
+    private void RewriteNestedTypeMemberUses(IList<string> lines, IReadOnlyDictionary<string, VariableInfo> variables)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var rewritten = lines[i];
+            var trimmed = StripComment(rewritten).Trim();
+            if (Regex.IsMatch(trimmed, @"^(?:(?:Public|Private)\s+)?Type\b", RegexOptions.IgnoreCase) || Regex.IsMatch(trimmed, @"^End\s+Type$", RegexOptions.IgnoreCase)) continue;
+
+            foreach (var variable in variables.OrderByDescending(x => x.Key.Length))
+            {
+                foreach (var nestedPath in CollectNestedPaths(variable.Value.Type).OrderByDescending(x => x.SourcePath.Length))
+                {
+                    var sourcePrefix = variable.Key + "." + nestedPath.SourcePath;
+                    var loweredPrefix = variable.Key + "." + nestedPath.LoweredPath;
+                    rewritten = ReplaceOutsideStrings(
+                        rewritten,
+                        $@"(?<![\w.]){Regex.Escape(sourcePrefix)}\.",
+                        _ => loweredPrefix + ".");
+                }
+            }
+            lines[i] = rewritten;
+        }
+    }
+
     private List<ArrayPath> CollectArrayPaths(string typeName)
     {
         var result = new List<ArrayPath>();
@@ -258,6 +271,30 @@ internal sealed class UdtValueSemanticsPreprocessor
                 }
                 if (_types.ContainsKey(field.Type))
                     CollectArrayPaths(field.Type, fieldPath, output, path);
+            }
+        }
+        finally { path.Remove(typeName); }
+    }
+
+    private List<NestedPath> CollectNestedPaths(string typeName)
+    {
+        var result = new List<NestedPath>();
+        CollectNestedPaths(typeName, "", "", result, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        return result;
+    }
+
+    private void CollectNestedPaths(string typeName, string sourcePrefix, string loweredPrefix, List<NestedPath> output, HashSet<string> path)
+    {
+        if (!_types.TryGetValue(typeName, out var typeInfo) || !path.Add(typeName)) return;
+        try
+        {
+            foreach (var field in typeInfo.Fields)
+            {
+                if (field.IsArray || !_types.ContainsKey(field.Type)) continue;
+                var sourcePath = sourcePrefix.Length == 0 ? field.Name : sourcePrefix + "." + field.Name;
+                var loweredPath = loweredPrefix.Length == 0 ? field.Name + ".Value" : loweredPrefix + "." + field.Name + ".Value";
+                output.Add(new NestedPath(sourcePath, loweredPath));
+                CollectNestedPaths(field.Type, sourcePath, loweredPath, output, path);
             }
         }
         finally { path.Remove(typeName); }
