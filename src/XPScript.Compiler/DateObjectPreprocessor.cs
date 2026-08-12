@@ -22,6 +22,12 @@ internal sealed class DateObjectPreprocessor
                 line = ReplaceOutsideStrings(line,
                     $@"(?<![\w.]){escaped}\.Difference\s*\(([^()]*)\)",
                     m => $"XPDateRuntime.Difference({variable}, {m.Groups[1].Value})");
+                line = ReplaceOutsideStrings(line,
+                    $@"(?<![\w.]){escaped}\.OSDateFormatting\b",
+                    _ => "XPDateRuntime.OSDateFormatting");
+                line = ReplaceOutsideStrings(line,
+                    $@"(?<![\w.]){escaped}\.OSTimeFormatting\b",
+                    _ => "XPDateRuntime.OSTimeFormatting");
             }
             lines[i] = line;
         }
