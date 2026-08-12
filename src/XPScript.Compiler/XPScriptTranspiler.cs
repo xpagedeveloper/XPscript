@@ -34,6 +34,7 @@ public sealed class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
@@ -52,6 +53,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + SourceLineRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeInteropRuntimeSource.Code + "\n";
         generated += "\n\n" + FileSystemPortabilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + ApplicationRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
@@ -73,7 +75,7 @@ public sealed class XPScriptTranspiler
 
         generated = generated.Replace(
             "XPScriptRuntime.SetArgs(args);",
-            $"XPScriptRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            $"XPScriptRuntime.SetArgs(args);\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
             StringComparison.Ordinal);
 
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);
