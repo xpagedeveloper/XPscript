@@ -23,7 +23,7 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Verify scalar ByRef class overload after overload-aware lowering
+      - name: Verify scalar ByRef class overload with typed member lowering
         shell: pwsh
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-byref.xps -o ./out/class-method-overloads-byref.exe --framework-dependent
