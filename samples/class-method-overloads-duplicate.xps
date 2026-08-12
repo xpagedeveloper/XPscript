@@ -1,0 +1,14 @@
+Option Declare
+
+Class DuplicateOverload
+    Public Function Resolve(value As Variant) As String
+        Resolve = "variant"
+    End Function
+
+    Public Function Resolve(value As Object) As String
+        Resolve = "object"
+    End Function
+End Class
+
+Sub Main()
+End Sub
