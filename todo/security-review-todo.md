@@ -46,7 +46,10 @@ Status:
 - [>] existing path components are checked for symlink/reparse-point resolution outside the source directory
 - [>] unresolved symbolic links/reparse points are rejected instead of trusted
 - [>] a dependency already located at its final output target is left in place instead of replacing its own source
-- [ ] review TOCTOU window between validation and staging copy
+- [>] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
+- [>] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
+- [ ] route managed `Reference` staging through the same handle-based secure-copy path
+- [ ] investigate OS-specific no-follow/open-reparse semantics to further reduce the small race between final metadata validation and opening a dependency handle
 
 ## Output publication
 
@@ -56,10 +59,11 @@ Status:
 - [>] output path is normalized and an existing directory target is rejected
 - [>] output path may not overwrite the `.xps` source file
 - [>] output directory components and existing output targets may not be symbolic links/junctions/reparse points
+- [>] output/dependency targets may not replace the currently running process image or the loaded XPScript compiler assembly
+- [>] protected compiler/runtime target checks are repeated again at final commit time
 - [>] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
 - [>] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
-- [ ] review output path targeting other installed compiler/runtime files
-- [ ] runtime verification of forced rollback/failure cases
+- [ ] runtime verification of forced rollback/failure and protected-target cases
 
 ## Shell / process execution
 
