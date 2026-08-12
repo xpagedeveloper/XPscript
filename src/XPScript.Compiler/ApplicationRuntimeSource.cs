@@ -60,9 +60,9 @@ internal static class XPScriptApplicationRuntime
     }
 
     public static string ExecutablePath => Environment.ProcessPath ?? Environment.GetCommandLineArgs().FirstOrDefault() ?? "";
-    public static string ExecutableFileName => Path.GetFileName(ExecutablePath);
-    public static string ExecutableDirectory => Path.GetDirectoryName(ExecutablePath) ?? "";
-    public static string TempPath => Path.GetTempPath();
+    public static string ExecutableFileName => System.IO.Path.GetFileName(ExecutablePath);
+    public static string ExecutableDirectory => System.IO.Path.GetDirectoryName(ExecutablePath) ?? "";
+    public static string TempPath => System.IO.Path.GetTempPath();
 
     // Convenience aliases.
     public static string Path => ExecutablePath;
