@@ -77,6 +77,17 @@ jobs:
             if ($output -notcontains $value) { throw "Class overload output missing: $value" }
           }
 
+      - name: Verify scalar ByRef class overloads
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-byref.xps -o ./out/class-method-overloads-byref.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Scalar ByRef overload sample compilation failed.' }
+          $output = & ./out/class-method-overloads-byref.exe
+          if ($LASTEXITCODE -ne 0) { throw "Scalar ByRef overload sample exited with code $LASTEXITCODE.`n$output" }
+          foreach ($value in @('BYREF-INNER=11','BYREF-AFTER=11','BYVAL-STRING=hello')) {
+            if ($output -notcontains $value) { throw "Scalar ByRef overload output missing: $value`n$output" }
+          }
+
       - name: Verify overloaded Function return type diagnostics
         shell: pwsh
         run: |
