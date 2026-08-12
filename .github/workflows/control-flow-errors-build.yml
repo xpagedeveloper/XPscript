@@ -2,8 +2,6 @@ name: Control Flow and Error Handling Compatibility
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-statement-separator-colon]
 
 permissions:
   contents: read
