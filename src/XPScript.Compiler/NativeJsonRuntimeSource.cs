@@ -39,10 +39,6 @@ internal static class XPScriptNativeJson
         {
             throw new XPScriptRuntimeException(5, "Invalid JSON input.");
         }
-        catch (OverflowException)
-        {
-            throw new XPScriptRuntimeException(5, "JSON input exceeds the supported resource budget.");
-        }
     }
 
     public static string Stringify(object? value)
@@ -111,9 +107,16 @@ internal static class XPScriptNativeJson
 
     internal static void ValidateBudget(System.Text.Json.Nodes.JsonNode? node)
     {
-        var nodes = 0;
-        long payload = 0;
-        Visit(node, 0, ref nodes, ref payload);
+        try
+        {
+            var nodes = 0;
+            long payload = 0;
+            Visit(node, 0, ref nodes, ref payload);
+        }
+        catch (OverflowException)
+        {
+            throw new XPScriptRuntimeException(5, "JSON value exceeds the supported resource budget.");
+        }
     }
 
     private static void Visit(System.Text.Json.Nodes.JsonNode? node, int depth, ref int nodes, ref long payload)
