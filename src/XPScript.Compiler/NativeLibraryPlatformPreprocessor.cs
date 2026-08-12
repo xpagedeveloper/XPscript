@@ -4,27 +4,26 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeLibraryPlatformPreprocessor
 {
+    internal const string ApplicationLocalMarker = "__XPSCRIPT_APPLOCAL__";
+
     private static readonly string[] SelectableKeywords =
     [
         "WindowsLib", "LinuxLib", "MacOSLib",
         "WindowsX64Lib", "WindowsArm64Lib", "LinuxX64Lib", "LinuxArm64Lib", "MacOSX64Lib", "MacOSArm64Lib",
         "WindowsAlias", "LinuxAlias", "MacOSAlias",
+        "WindowsX64Alias", "LinuxAlias", "MacOSAlias",
         "WindowsX64Alias", "WindowsArm64Alias", "LinuxX64Alias", "LinuxArm64Alias", "MacOSX64Alias", "MacOSArm64Alias"
     ];
 
     private readonly string _runtimeIdentifier;
-    private readonly HashSet<string> _applicationLocalLoadNames = new(StringComparer.OrdinalIgnoreCase);
 
     public NativeLibraryPlatformPreprocessor(string runtimeIdentifier)
     {
         _runtimeIdentifier = (runtimeIdentifier ?? "").Trim().ToLowerInvariant();
     }
 
-    public IReadOnlySet<string> ApplicationLocalLoadNames => _applicationLocalLoadNames;
-
     public string Transform(string source)
     {
-        _applicationLocalLoadNames.Clear();
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new string[lines.Length];
 
@@ -67,11 +66,8 @@ internal sealed class NativeLibraryPlatformPreprocessor
 
         var isApplicationLocal = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary);
         var loadLibrary = isApplicationLocal
-            ? NativeDependencyPackager.PortableFileName(selectedLibrary)
+            ? ApplicationLocalMarker + NativeDependencyPackager.PortableFileName(selectedLibrary)
             : selectedLibrary;
-
-        if (isApplicationLocal)
-            _applicationLocalLoadNames.Add(loadLibrary);
 
         var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(loadLibrary) + "\"", RegexOptions.IgnoreCase);
         foreach (var keyword in SelectableKeywords)
@@ -146,7 +142,7 @@ internal sealed class NativeLibraryPlatformPreprocessor
         {
             if (line[i] == '"')
             {
-                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                if (inString && i + 1 < line.Length && source[i + 1] == '"') { i++; continue; }
                 inString = !inString;
             }
             else if (!inString && line[i] == '\'') return line[..i];
