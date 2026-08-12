@@ -22,6 +22,7 @@ Start with:
 - `docs/platform-native.md`
 - `docs/native-http-json.md`
 - `docs/evaluate.md`
+- `docs/security.md` — security boundaries and powerful APIs
 
 Negative samples intentionally demonstrate errors and are identified as such in the documentation. Older compatibility fixtures are not automatically presented as the preferred standalone XPScript API.
 
@@ -181,9 +182,9 @@ Text I/O supports `Charset` and the independent `Encoding "base64"` storage laye
 - Windows: executables, `.cmd`, `.bat`, `.ps1`
 - Linux/macOS: executables, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` when PowerShell is installed
 
-Arguments are passed using structured process arguments where possible to avoid unnecessary shell re-parsing. Explicit shell syntax such as pipes/redirection remains a separate compatibility/security design item.
+Arguments are passed using structured process arguments where possible to avoid unnecessary shell re-parsing. `.cmd`/`.bat` execution still crosses a `cmd.exe` command-shell boundary and must not receive untrusted concatenated command text.
 
-See `docs/platform-native.md` and `docs/console-process-formatting.md`.
+See `docs/platform-native.md`, `docs/console-process-formatting.md` and `docs/security.md`.
 
 ## HTTP
 
@@ -201,6 +202,8 @@ Print response.Body
 ```
 
 Supported request methods are `Get`, `Post`, `Put`, `Patch` and `Delete`. Headers and timeout can be configured per client.
+
+Header names/values are validated before request construction; CR/LF header injection is rejected. Native HTTP URLs must be absolute `http://` or `https://` URLs. Application-level host/network allowlisting is still required when user-controlled URLs could create SSRF risk.
 
 ## JSON
 
@@ -244,6 +247,12 @@ The `samples` directory contains XPScript source fixtures for core language feat
 
 Documentation should reuse these samples instead of creating duplicate example programs unless a new example is explicitly needed.
 
+## Security
+
+XPScript source execution is code execution. APIs such as `Shell`, general file I/O, HTTP, native interop and compatibility COM/OLE surfaces use the privileges of the current process and are not automatically sandboxed.
+
+See `docs/security.md` for trust boundaries and deployment guidance. Static hardening work is tracked in `todo/security-review-todo.md`.
+
 ## Implementation status
 
 The tracked implementation plan is maintained in:
@@ -251,6 +260,7 @@ The tracked implementation plan is maintained in:
 - `todo/runtime-reference-todo.md`
 - `todo/cross-platform-runtime-todo.md`
 - `todo/evaluate-callvar-todo.md`
+- `todo/security-review-todo.md`
 
 Items marked `[>]` are implemented or in progress but are waiting for explicit verification while automated workflows are disabled.
 
