@@ -106,7 +106,6 @@ internal sealed class UdtValueSemanticsPreprocessor
 
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var expanded = new List<string>();
-
             var snapshotId = ++_copyTempId;
             var snapshot = $"__xp_udtcopy_snapshot_{snapshotId}";
             expanded.Add(indent + $"Dim {snapshot} As New {destinationInfo.Type}");
@@ -131,15 +130,12 @@ internal sealed class UdtValueSemanticsPreprocessor
                 continue;
             }
 
-            if (_types.ContainsKey(field.Type))
+            if (_types.TryGetValue(field.Type, out var nestedType))
             {
                 var nestedId = ++_copyTempId;
-                var nestedSource = $"__xp_udtcopy_commit_src_{nestedId}";
                 var nestedCommit = $"__xp_udtcopy_commit_{nestedId}";
-                output.Add(indent + $"Dim {nestedSource} As {field.Type}");
-                output.Add(indent + $"Set {nestedSource} = {snapshot}.{field.Name}");
                 output.Add(indent + $"Dim {nestedCommit} As New {field.Type}");
-                ExpandCopy(_types[field.Type], nestedCommit, nestedSource, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                ExpandCopy(nestedType, nestedCommit, snapshot + "." + field.Name, indent, output, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 output.Add(indent + $"{destination}.{field.Name} = {nestedCommit}");
                 continue;
             }
@@ -167,12 +163,9 @@ internal sealed class UdtValueSemanticsPreprocessor
                 }
 
                 var id = ++_copyTempId;
-                var srcTemp = $"__xp_udtcopy_src_{id}";
                 var dstTemp = $"__xp_udtcopy_dst_{id}";
-                output.Add(indent + $"Dim {srcTemp} As {field.Type}");
-                output.Add(indent + $"Set {srcTemp} = {source}.{field.Name}");
                 output.Add(indent + $"Dim {dstTemp} As New {field.Type}");
-                ExpandCopy(nestedType, dstTemp, srcTemp, indent, output, path);
+                ExpandCopy(nestedType, dstTemp, source + "." + field.Name, indent, output, path);
                 output.Add(indent + $"Set {destination}.{field.Name} = {dstTemp}");
             }
         }
@@ -237,7 +230,6 @@ internal sealed class UdtValueSemanticsPreprocessor
             {
                 var paths = CollectNestedPaths(variable.Value.Type).OrderByDescending(x => x.SourcePath.Length).ToArray();
                 if (paths.Length == 0) continue;
-
                 var bySource = paths.ToDictionary(x => x.SourcePath, StringComparer.OrdinalIgnoreCase);
                 var alternatives = string.Join("|", paths.Select(x => Regex.Escape(x.SourcePath)));
                 var pattern = $@"(?<![\w.]){Regex.Escape(variable.Key)}\.(?<path>{alternatives})\.";
@@ -271,8 +263,7 @@ internal sealed class UdtValueSemanticsPreprocessor
                     output.Add(new ArrayPath(fieldPath, field.Type));
                     continue;
                 }
-                if (_types.ContainsKey(field.Type))
-                    CollectArrayPaths(field.Type, fieldPath, output, path);
+                if (_types.ContainsKey(field.Type)) CollectArrayPaths(field.Type, fieldPath, output, path);
             }
         }
         finally { path.Remove(typeName); }
