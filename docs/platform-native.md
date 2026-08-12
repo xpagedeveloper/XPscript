@@ -48,6 +48,8 @@ Supported implementation paths include Windows executables, `.cmd`, `.bat`, `.ps
 
 Prefer direct executable invocation over unnecessary shell parsing when possible.
 
+Windows `.cmd`/`.bat` arguments reject command-shell metacharacters in the structured batch-script path. A direct call to `cmd.exe /c ...` remains an explicit application-controlled command-shell boundary.
+
 ## Declare Function / Declare Sub
 
 Native functions use `Declare`.
@@ -55,6 +57,21 @@ Native functions use `Declare`.
 ```xpscript
 Declare Function NativeProcessId Lib "libc.so.6" Alias "getpid" () As Integer
 ```
+
+### Native parameter ABI rule
+
+Native parameters must currently be declared **explicitly `ByVal`**.
+
+```xpscript
+Declare Function NativeLength Lib "mylib" Alias "native_length" _
+    (ByVal value As Integer) As Integer
+```
+
+`ByRef` native parameters and parameters with an omitted passing mode are intentionally rejected at compile time. The current native emitter does not yet implement target-correct `ref`/`out` marshalling, and silently emitting those declarations as by-value would create an ABI mismatch that could corrupt memory or crash the process.
+
+Parameterless native functions are unaffected.
+
+See the negative regression source `samples/native-byref-error.xps`.
 
 ## OS-specific libraries
 
@@ -124,7 +141,7 @@ MacOSLib "native/macos/libmylib.dylib"
 
 The compiler validates the path and copies the selected target library beside the published executable. Bare system-library names such as `kernel32.dll` or `libc.so.6` remain OS-resolved and are not copied.
 
-Security checks include project-directory containment, missing-file detection, output filename collisions and executable-overwrite prevention.
+Security checks include project-directory containment, symlink/reparse-point escape rejection, missing-file detection, output filename collisions and executable-overwrite prevention.
 
 ## Native loader diagnostics
 
@@ -135,6 +152,8 @@ Generated wrappers translate common loader failures into clearer XPScript runtim
 - bad image / wrong architecture
 
 The diagnostics include the library and entry-point identity without requiring callers to understand raw P/Invoke exception types.
+
+Native libraries execute unmanaged code with the same OS privileges as the XPScript process. Incorrect signatures can still crash the process; only trusted libraries with verified declarations should be used.
 
 ## Managed .NET references
 
@@ -168,3 +187,4 @@ ReferenceNative "managed/runtimes/win-x64/native/helper.dll" Runtime "win-x64"
 - `samples/native-architecture-assets.xps`
 - `samples/native-dependency-packaging.xps`
 - `samples/native-loader-diagnostics.xps`
+- `samples/native-byref-error.xps`
