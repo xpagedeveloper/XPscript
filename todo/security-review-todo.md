@@ -45,30 +45,35 @@ Status:
 - [>] missing dependencies, duplicate output names and executable overwrite collisions are rejected
 - [>] existing path components are checked for symlink/reparse-point resolution outside the source directory
 - [>] unresolved symbolic links/reparse points are rejected instead of trusted
-- [ ] review dependency output overwrite of unrelated pre-existing files in the destination directory
+- [>] a dependency already located at its final output target is left in place instead of replacing its own source
 - [ ] review TOCTOU window between validation and staging copy
 
 ## Output publication
 
-- [ ] define whether the compiler API may intentionally overwrite an explicitly supplied existing executable path
+- [>] explicitly supplied existing regular output files may be replaced; this is the compiler overwrite/upgrade policy
 - [>] source-controlled managed/native dependency metadata cannot choose arbitrary final output paths; dependency output is reduced to validated file names beside the requested executable
 - [>] executable plus native dependencies are staged before final publication
 - [>] output path is normalized and an existing directory target is rejected
+- [>] output path may not overwrite the `.xps` source file
+- [>] output directory components and existing output targets may not be symbolic links/junctions/reparse points
 - [>] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
 - [>] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
-- [ ] review destination-directory symlink/reparse behavior
-- [ ] review output path targeting compiler/runtime source files
+- [ ] review output path targeting other installed compiler/runtime files
 - [ ] runtime verification of forced rollback/failure cases
 
 ## Shell / process execution
 
 - [>] normal executables and PowerShell script arguments are passed with `ProcessStartInfo.ArgumentList` where possible
 - [>] `UseShellExecute` is disabled
-- [>] `.cmd`/`.bat` necessarily execute through `cmd.exe`; this is an explicit command-shell security boundary
+- [>] Windows `.cmd`/`.bat` execution uses the system-directory `cmd.exe`, not `COMSPEC`
+- [>] `.cmd`/`.bat` arguments reject embedded quotes/control characters and command-shell metacharacters including `&`, `|`, `<`, `>`, `^`, `%`, `!`
+- [>] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
+- [>] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
 - [>] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
-- [ ] harden or formally define `.cmd`/`.bat` argument escaping for `&`, `|`, `<`, `>`, `^`, `%`, quotes and command substitution behavior
-- [ ] review executable search-path/PATH hijacking behavior for unqualified executable names
+- [>] negative source: `samples/shell-batch-metachar-error.xps`
+- [ ] review executable search-path/PATH hijacking behavior for other unqualified executable names
 - [ ] consider an additional structured process API accepting executable and argument array separately
+- [ ] build/runtime verification of quoting and path behavior when execution is re-enabled
 
 ## File I/O
 
@@ -134,15 +139,16 @@ Status:
 
 - [>] Evaluate diagnostics have explicit secret sanitization
 - [>] native HTTP validation/network diagnostics no longer echo URL/header payload values in the newly hardened paths
+- [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
 - [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
-- [ ] review runtime errors from file I/O, Shell and native interop for unnecessary sensitive values
+- [ ] review runtime errors from file I/O and native interop for unnecessary sensitive values
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
 
 - [>] `docs/evaluate.md` documents Evaluate isolation and non-sandbox boundary
 - [>] `docs/platform-native.md` documents native/process platform behavior
-- [>] `docs/security.md` covers powerful APIs and trust boundaries
+- [>] `docs/security.md` covers powerful APIs, compiler hardening and trust boundaries
 - [>] security documentation is linked from `docs/index.md` and README
 
 ## Verification gate
