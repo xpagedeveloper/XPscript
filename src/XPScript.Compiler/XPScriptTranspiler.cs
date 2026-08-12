@@ -27,6 +27,7 @@ public sealed class XPScriptTranspiler
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
+        source = new ObjectFunctionSetPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
