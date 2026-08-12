@@ -18,7 +18,7 @@ internal sealed class CoreCompatibilityTranspiler
         public Dictionary<int, string> GoSubs { get; } = new();
     }
 
-    private readonly Dictionary<string, ProcedureInfo> _procedures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<ProcedureInfo> _procedures = [];
     private readonly Dictionary<char, string> _defTypes = new();
     private readonly HashSet<string> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<NativeDecl> _nativeDecls = [];
@@ -100,7 +100,7 @@ internal sealed class CoreCompatibilityTranspiler
 
             var proc = ParseProcedureHeader(line, currentClass);
             if (proc is not null)
-                _procedures[ProcedureKey(proc.Name, currentClass)] = proc;
+                _procedures.Add(proc);
         }
     }
 
@@ -267,7 +267,7 @@ internal sealed class CoreCompatibilityTranspiler
 
         var match = Regex.Match(line, @"^(?:Static\s+)?(?:(?:Public|Private)\s+)?(?:Sub|Function)\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
         if (!match.Success) return null;
-        return _procedures.TryGetValue(ProcedureKey(match.Groups[1].Value, className), out var info) ? info : null;
+        return ParseProcedureHeader(line, className);
     }
 
     private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className)
@@ -734,7 +734,7 @@ internal sealed class CoreCompatibilityTranspiler
 
     private string RewriteByRefCalls(string line, string? className)
     {
-        foreach (var proc in _procedures.Values.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))
+        foreach (var proc in _procedures.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))
         {
             line = ReplaceCall(line, proc.Name, argsRaw =>
             {
@@ -745,7 +745,7 @@ internal sealed class CoreCompatibilityTranspiler
                     if (!p.ByRef || p.IsArray || p.IsList) continue;
                     var target = args[i].Trim();
                     if (!Regex.IsMatch(target, @"^[A-Za-z_]\w*(?:\.Value)?(?:\.[A-Za-z_]\w*)*$"))
-                        throw new CompilerException($"ByRef argument {i + 1} for {proc.Name} must be assignable.");
+                        return proc.Name + "(" + argsRaw + ")";
                     args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(p.Type, "__lsv")})";
                 }
                 return proc.Name + "(" + string.Join(", ", args) + ")";
