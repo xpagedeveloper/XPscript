@@ -94,9 +94,14 @@ internal sealed class IndexedPropertyPreprocessor
             var rewritten = raw;
             foreach (var property in properties.Values.OrderByDescending(x => x.Name.Length))
             {
-                // Indexed assignment: object.Property(index) = value or Property(index) = value.
+                // Indexed assignment:
+                //   object.Property(index) = value
+                //   Property(index) = value
+                //   Set object.Property(index) = objectValue
+                // Property Let has already been normalized to Property Set before this pass,
+                // so both scalar and object setters lower to the same typed helper method.
                 var setter = new Regex(
-                    $@"^(?<indent>\s*)(?<target>(?:[A-Za-z_]\w*\.)?){Regex.Escape(property.Name)}\s*\((?<args>.*)\)\s*=\s*(?<value>.+?)\s*$",
+                    $@"^(?<indent>\s*)(?:Set\s+)?(?<target>(?:[A-Za-z_]\w*\.)?){Regex.Escape(property.Name)}\s*\((?<args>.*)\)\s*=\s*(?<value>.+?)\s*$",
                     RegexOptions.IgnoreCase);
                 var setterMatch = setter.Match(StripComment(rewritten));
                 if (setterMatch.Success)
