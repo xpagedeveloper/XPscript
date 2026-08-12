@@ -23,10 +23,77 @@ internal sealed class ReservedIdentifierPreprocessor
             var code = StripComment(lines[index]).Trim();
             if (code.Length == 0) continue;
 
+            CheckVariableDeclarations(code, index + 1);
             CheckNamedDeclaration(code, index + 1);
             CheckParameters(code, index + 1);
         }
         return source;
+    }
+
+    private static void CheckVariableDeclarations(string code, int line)
+    {
+        string? declarationList = null;
+
+        var explicitDeclaration = Regex.Match(code,
+            @"^(?:(?:Public|Private)\s+)?(?:Dim|Static)\s+(.+)$",
+            RegexOptions.IgnoreCase);
+        if (explicitDeclaration.Success)
+        {
+            declarationList = explicitDeclaration.Groups[1].Value;
+        }
+        else
+        {
+            // Module variables may use Public/Private without Dim. Do not treat procedure,
+            // type or property declarations as variable lists.
+            var moduleDeclaration = Regex.Match(code,
+                @"^(?:Public|Private)\s+(?!(?:Sub|Function|Class|Type|Enum|Property)\b)(.+)$",
+                RegexOptions.IgnoreCase);
+            if (moduleDeclaration.Success)
+                declarationList = moduleDeclaration.Groups[1].Value;
+        }
+
+        if (declarationList is null) return;
+
+        foreach (var declaration in SplitTopLevelCommaSeparated(declarationList))
+        {
+            var match = Regex.Match(declaration.Trim(), @"^([A-Za-z_]\w*)\b");
+            if (match.Success)
+                EnsureAllowed(match.Groups[1].Value, line, false);
+        }
+    }
+
+    private static IEnumerable<string> SplitTopLevelCommaSeparated(string text)
+    {
+        var start = 0;
+        var depth = 0;
+        var inString = false;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    i++;
+                    continue;
+                }
+                inString = !inString;
+                continue;
+            }
+
+            if (inString) continue;
+
+            if (c == '(') depth++;
+            else if (c == ')' && depth > 0) depth--;
+            else if (c == ',' && depth == 0)
+            {
+                yield return text[start..i];
+                start = i + 1;
+            }
+        }
+
+        yield return text[start..];
     }
 
     private static void CheckNamedDeclaration(string code, int line)
