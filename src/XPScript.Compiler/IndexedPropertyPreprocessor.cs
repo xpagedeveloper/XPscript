@@ -75,7 +75,12 @@ internal sealed class IndexedPropertyPreprocessor
 
             if (getter)
             {
+                // Scalar return: PropertyName = value
+                // Object return: Set PropertyName = objectValue
                 lines[i] = ReplaceOutsideStrings(raw,
+                    $@"(?<![\w.])Set\s+{Regex.Escape(current.Name)}\s*=",
+                    "Set " + current.GetterName + " =");
+                lines[i] = ReplaceOutsideStrings(lines[i],
                     $@"(?<![\w.]){Regex.Escape(current.Name)}\s*=",
                     current.GetterName + " =");
             }
