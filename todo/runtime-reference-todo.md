@@ -50,6 +50,11 @@ Status:
 ## 3. Control flow and error handling
 
 - [x] `If`, `ElseIf`, `Else`, `Select Case`
+- [ ] support all valid `If` statement layouts consistently:
+  - [ ] single-line `If condition Then statement`
+  - [ ] `If condition Then` followed by statement(s) and `End If` on a later line
+  - [ ] fully multiline block form with `If`, `Then`, body and `End If` on separate lines
+  - [ ] ensure Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; regression discovered by `examples/date-comparisons.xps` testing
 - [x] `For/Next/Step`, `Do/Loop`, `Do While`, `Do Until`, `While/Wend`, `ForAll`
 - [x] `GoTo`, `GoSub`, labels, `Return`
 - [x] `On Error`, `Resume`, `Resume Next`, `Err`, `Error`, `Error$`, `Erl`
