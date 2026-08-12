@@ -19,4 +19,14 @@ SkippedLabel:
     Print "LABEL-BAD"
 AfterSkippedLabel:
     Print "LABEL=OK"
+
+    Call VerifyColonErl()
+End Sub
+
+Sub VerifyColonErl()
+    On Error GoTo Handler
+    Print "ERL-BEFORE": Error 7101, "colon-error": Print "ERL-AFTER-BAD"
+    Exit Sub
+Handler:
+    Print "COLON-ERL=" & CStr(Erl)
 End Sub
