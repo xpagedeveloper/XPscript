@@ -43,6 +43,8 @@ internal static class CompilerOutputPublisher
 
         var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(outputDirectory);
+        RejectLinkedDestinationPath(outputDirectory);
+        RejectLinkedTarget(outputFullPath);
 
         var stageDirectory = Path.Combine(outputDirectory, ".xpscript-publish-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stageDirectory);
@@ -82,10 +84,13 @@ internal static class CompilerOutputPublisher
                 if (!seenNames.Add(fileName))
                     throw new CompilerException("Multiple compiler outputs would use the same file name: " + fileName);
 
+                var target = Path.Combine(outputDirectory, fileName);
+                RejectLinkedTarget(target);
+
                 var staged = Path.Combine(stageDirectory, fileName);
                 File.Copy(dependency.SourcePath, staged, overwrite: false);
                 CompilerPathSecurity.HardenTemporaryFile(staged);
-                operations.Add((staged, Path.Combine(outputDirectory, fileName)));
+                operations.Add((staged, target));
             }
 
             // Dependencies are committed first. The executable is committed last.
@@ -94,7 +99,7 @@ internal static class CompilerOutputPublisher
         }
         finally
         {
-            try { Directory.Delete(stageDirectory, recursive: true); } catch { }
+            try { DeleteStageDirectory(stageDirectory); } catch { }
         }
     }
 
@@ -112,6 +117,8 @@ internal static class CompilerOutputPublisher
             for (var i = 0; i < operations.Count; i++)
             {
                 var operation = operations[i];
+                RejectLinkedTarget(operation.Target);
+
                 if (Directory.Exists(operation.Target))
                     throw new CompilerException("Compiler output target identifies an existing directory: " + operation.Target);
 
@@ -144,5 +151,70 @@ internal static class CompilerOutputPublisher
             }
             throw;
         }
+    }
+
+    private static void RejectLinkedDestinationPath(string directory)
+    {
+        var full = Path.GetFullPath(directory);
+        var root = Path.GetPathRoot(full);
+        if (string.IsNullOrWhiteSpace(root))
+            throw new CompilerException("Unable to determine the output path root.");
+
+        var relative = Path.GetRelativePath(root, full);
+        var current = root;
+        foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (IsLinkOrReparsePoint(current))
+                throw new CompilerException("Compiler output directory path may not traverse a symbolic link or reparse point: " + directory);
+        }
+    }
+
+    private static void RejectLinkedTarget(string target)
+    {
+        if (IsLinkOrReparsePoint(target))
+            throw new CompilerException("Compiler output may not replace a symbolic link or reparse-point target: " + target);
+    }
+
+    private static bool IsLinkOrReparsePoint(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            if (file.LinkTarget is not null) return true;
+            if (file.Exists && (file.Attributes & FileAttributes.ReparsePoint) != 0) return true;
+
+            var directory = new DirectoryInfo(path);
+            if (directory.LinkTarget is not null) return true;
+            return directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new CompilerException("Unable to safely inspect compiler output path metadata: " + path);
+        }
+    }
+
+    private static void DeleteStageDirectory(string stageDirectory)
+    {
+        if (!Directory.Exists(stageDirectory)) return;
+        var root = new DirectoryInfo(stageDirectory);
+        if (root.LinkTarget is not null || (root.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new CompilerException("Refusing to recursively delete a linked compiler publication staging directory.");
+
+        foreach (var entry in root.EnumerateFileSystemInfos())
+        {
+            if (entry.LinkTarget is not null || (entry.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                if (entry is DirectoryInfo linkedDirectory) linkedDirectory.Delete(false);
+                else entry.Delete();
+                continue;
+            }
+
+            if (entry is DirectoryInfo childDirectory)
+                DeleteStageDirectory(childDirectory.FullName);
+            else
+                entry.Delete();
+        }
+        root.Delete(false);
     }
 }
