@@ -5,6 +5,10 @@ internal static class DateObjectRuntimeSource
     public const string Code = """
 internal static class XPDateRuntime
 {
+    public static string OSDateFormatting => CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+
+    public static string OSTimeFormatting => CultureInfo.CurrentCulture.DateTimeFormat.LongTimePattern;
+
     public static DateTime Adjust(object? dateValue, object? years, object? months, object? days, object? hours, object? minutes, object? seconds)
     {
         var value = XPScriptRuntime.CDate(dateValue);
