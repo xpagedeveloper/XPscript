@@ -1,0 +1,19 @@
+Public Counter As Integer
+Private Label As String
+
+Sub InitializeState()
+    Counter = 10
+    Label = "module-private"
+End Sub
+
+Sub IncrementState()
+    Counter = Counter + 5
+End Sub
+
+Sub Main()
+    Print "MODULEDEFAULT=" & CStr(Counter) & ":" & Label
+    Call InitializeState()
+    Call IncrementState()
+    Print "MODULEPUBLIC=" & CStr(Counter)
+    Print "MODULEPRIVATE=" & Label
+End Sub
