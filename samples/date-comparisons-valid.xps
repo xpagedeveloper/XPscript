@@ -3,12 +3,14 @@ Sub Main()
     Dim endDate As Date
     Dim serial As Double
     Dim textDate As String
+    Dim equalTextDate As String
     Dim flexible As Variant
 
     startDate = DateNumber(2026, 1, 1)
     endDate = DateNumber(2026, 1, 2)
     serial = CDbl(endDate)
     textDate = "2026-01-03"
+    equalTextDate = "2026-01-02"
     flexible = endDate
 
     If endDate > startDate Then
@@ -22,5 +24,11 @@ Sub Main()
     End If
     If startDate <= flexible Then
         Print "date-variant ok"
+    End If
+    If endDate = serial Then
+        Print "date-numeric-equality ok"
+    End If
+    If endDate = equalTextDate Then
+        Print "date-string-equality ok"
     End If
 End Sub
