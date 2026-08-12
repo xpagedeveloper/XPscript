@@ -12,6 +12,7 @@ public sealed class XPScriptTranspiler
     {
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
+        new ClassOverloadValidator().Validate(source, sourceName);
         // Validate user-visible source types before compiler-generated physical-line markers
         // or other source-expanding rewrites are inserted. This keeps diagnostics mapped to
         // the original .xps line/column rather than the transformed intermediate source.
