@@ -1,0 +1,12 @@
+Sub Main()
+    Dim startDate As Date
+    Dim endDate As Date
+    Dim seconds As Double
+
+    startDate = DateNumber(2026, 1, 1)
+    endDate = startDate.Adjust(0, 0, 1, 1, 1, 1)
+    seconds = startDate.Difference(endDate)
+
+    Print "SECONDS=" & CStr(seconds)
+    Print "REVERSE=" & CStr(endDate.Difference(startDate))
+End Sub
