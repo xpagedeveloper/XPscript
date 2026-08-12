@@ -21,13 +21,19 @@ Relevant negative samples:
 
 Each compile invocation uses a GUID-named temporary workspace under the XPScript compiler temp root. Generated source, project files and publish output are kept inside that invocation-local workspace and cleanup is attempted in a `finally` block.
 
-Further hardening for permissions, reparse/symlink behavior, crash cleanup and atomic final publication remains tracked in `todo/security-review-todo.md` and `todo/compiler-temp-isolation-todo.md`.
+On Unix-like systems compiler directories are hardened to user-only directory permissions and generated/staged files to user-only read/write permissions where supported. On Windows the compiler removes inherited ACLs from its invocation/staging directories and grants the current Windows account full control; child files inherit that restricted ACL.
+
+Generated `dotnet publish` processes receive invocation-local `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES`. Common inherited MSBuild path-redirection variables are removed and the `dotnet` host is resolved to an absolute path rather than allowing a relative/current-directory PATH hit.
+
+Final executable/dependency publication is staged beside the requested destination. Existing regular output files may be replaced deliberately, but the compiler refuses to overwrite the `.xps` source itself, refuses destination paths traversing symlinks/junctions/reparse points, and refuses to replace an output target that is itself a link. Dependencies are committed before the executable and staged publication performs best-effort rollback if the batch fails.
+
+Further verification remains tracked in `todo/security-review-todo.md` and `todo/compiler-temp-isolation-todo.md`.
 
 ## Managed and native dependencies
 
-`Reference` and `ReferenceNative` are project-local dependency declarations. Rooted paths and lexical path traversal outside the XPScript source directory are rejected.
+`Reference` and `ReferenceNative` are project-local dependency declarations. Rooted paths and lexical path traversal outside the XPScript source directory are rejected. Existing dependency path components are also checked so a symlink/reparse point cannot redirect a project-local dependency outside the source tree.
 
-Application-local native libraries are copied beside the generated executable only when selected for the target RID. Duplicate output names and executable-overwrite collisions are rejected.
+Application-local native libraries are copied beside the generated executable only when selected for the target RID. Duplicate output names and executable-overwrite collisions are rejected. If a dependency already resides exactly at its final target path, it is left in place instead of replacing its own source file.
 
 Native libraries execute unmanaged code with the same operating-system privileges as the XPScript process. Only trusted native binaries should be referenced.
 
@@ -42,13 +48,18 @@ See:
 
 `Shell()` is a powerful API. Do not pass untrusted command strings directly to it.
 
-For ordinary executable and PowerShell-script execution, XPScript uses `ProcessStartInfo.ArgumentList` where practical and disables `UseShellExecute`.
+For ordinary executable and PowerShell-script execution, XPScript uses `ProcessStartInfo.ArgumentList` where practical and disables `UseShellExecute`. PowerShell discovery ignores relative PATH entries; Windows also prefers the standard PowerShell installation locations.
 
-Windows `.cmd` and `.bat` files are different: they must execute through `cmd.exe`. Command-interpreter metacharacters such as `&`, `|`, `<`, `>`, `^`, `%` and quoting rules can therefore have command-shell meaning.
+Windows `.cmd` and `.bat` files are different because they execute through `cmd.exe`. XPScript therefore rejects batch arguments containing command-interpreter metacharacters or embedded quotes/control characters, including `&`, `|`, `<`, `>`, `^`, `%` and `!`. `cmd.exe` itself is selected from the Windows system directory rather than from `COMSPEC`.
+
+This hardening applies when the requested program is a `.cmd` or `.bat` file. If an application deliberately invokes `cmd.exe` itself, for example `Shell("cmd.exe /c ...")`, it is explicitly opting into command-shell semantics and is responsible for validating the complete command.
 
 If command text is influenced by an untrusted user, validate against an allowlist or use an application-specific structured process wrapper rather than concatenating user input into a Shell string.
 
-See `samples/platform-shell.xps`.
+See:
+
+- `samples/platform-shell.xps`
+- `samples/shell-batch-metachar-error.xps`
 
 ## File I/O
 
