@@ -4,6 +4,8 @@ Sub Main()
     Print "COLON-A": Print "COLON-B"
     value = 1: value = value + 1: Print "VALUE=" & CStr(value)
     Print "STRING=A:B:C"
+    Print |ALT=A:B:C|
+    Print {BRACE=A:B:C}
     Print "COMMENT=OK" ' this colon: must stay inside the comment
 
     If True Then Print "IF-A": Print "IF-B" Else Print "IF-BAD"
@@ -19,6 +21,7 @@ SkippedLabel:
     Print "LABEL-BAD"
 AfterSkippedLabel:
     Print "LABEL=OK"
+InlineLabel: Print "INLINE-LABEL=OK"
 
     Call VerifyColonErl()
 End Sub
