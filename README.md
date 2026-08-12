@@ -2,6 +2,8 @@
 
 (c) xpagedeveloper.com 2026
 
+Source available for testing and internal use only. No commercial rights are granted. Commercial use requires a separate written license from the copyright holder.
+
 XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 
 ## Documentation
@@ -258,21 +260,3 @@ See `docs/security.md` for trust boundaries and deployment guidance. Static hard
 The tracked implementation plan is maintained in:
 
 - `todo/runtime-reference-todo.md`
-- `todo/cross-platform-runtime-todo.md`
-- `todo/evaluate-callvar-todo.md`
-- `todo/security-review-todo.md`
-
-Items marked `[>]` are implemented or in progress but are waiting for explicit verification while automated workflows are disabled.
-
-Current development that must not trigger CI is kept on branch:
-
-`runtime-development-no-ci`
-
-## Project structure
-
-- `src/XPScript.Compiler` — compiler, preprocessors, transpilers and generated runtime sources
-- `samples` — XPScript source fixtures, including positive and negative regression programs
-- `docs` — sample-based language/runtime documentation
-- `todo` — implementation tracking
-
-XPScript source code and public documentation use XPScript naming and `.xps` source files consistently.
