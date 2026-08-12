@@ -68,10 +68,13 @@ Status:
 - [>] Windows `.cmd`/`.bat` execution uses the system-directory `cmd.exe`, not `COMSPEC`
 - [>] `.cmd`/`.bat` arguments reject embedded quotes/control characters and command-shell metacharacters including `&`, `|`, `<`, `>`, `^`, `%`, `!`
 - [>] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
+- [>] bare executable/script names are resolved by XPScript through absolute PATH entries before `ProcessStartInfo` is created
+- [>] current-directory lookup and relative PATH entries are not used implicitly for bare executable names
+- [>] Windows extension probing is limited to validated `PATHEXT` suffixes (with safe defaults)
 - [>] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
+- [>] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
 - [>] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
-- [>] negative source: `samples/shell-batch-metachar-error.xps`
-- [ ] review executable search-path/PATH hijacking behavior for other unqualified executable names
+- [>] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
 - [ ] consider an additional structured process API accepting executable and argument array separately
 - [ ] build/runtime verification of quoting and path behavior when execution is re-enabled
 
@@ -81,8 +84,11 @@ Status:
 - [>] FileShare behavior is centralized
 - [>] Binary/Random region coordination uses explicit `Lock`/`Unlock`
 - [>] lock conflicts are normalized into XPScript errors
-- [ ] review symlink-sensitive file operations where an application assumes confinement to a directory
-- [ ] review TOCTOU behavior for existence/attribute/delete/move operations
+- [>] standard File I/O diagnostics no longer echo full resolved paths or raw underlying exception messages in the newly hardened paths
+- [>] `FileCopy` and `Name` refuse an existing destination that is a symbolic link/reparse-point target
+- [>] `RmDir` refuses a symbolic-link/reparse-point directory target
+- [>] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
+- [ ] review TOCTOU behavior between symlink/attribute/existence checks and the final filesystem operation
 - [ ] verify Windows versus Unix delete-while-open behavior
 - [ ] verify cross-process region locks on every target OS
 
@@ -165,8 +171,15 @@ Status:
 - [>] JSON parser/budget diagnostics do not echo JSON payloads
 - [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
 - [>] COM `GetObject` activation failures no longer echo underlying COM exception details
-- [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
-- [ ] review runtime errors from file I/O and native interop for unnecessary sensitive values
+- [>] File I/O portability diagnostics no longer include full resolved paths/raw filesystem exception messages in hardened paths
+- [>] failed generated builds no longer append generated C# source context to public compiler diagnostics
+- [>] invocation temp-root paths are replaced with `<compiler-workspace>` in generated-build diagnostics
+- [>] source absolute paths in generated-build diagnostics are reduced to source file names where recognized
+- [>] source-code lines attached to structured diagnostics preserve layout but mask characters inside string literals
+- [>] generic unexpected compiler exceptions return `Compilation failed.` instead of raw exception text through `CompileWithResultAsync`
+- [>] dependency-not-found compiler diagnostics expose only the dependency file name rather than the declared path
+- [ ] review remaining compiler/preprocessor diagnostics that deliberately include source tokens or identifiers
+- [ ] review native interop diagnostics for unnecessary absolute-path/system-description detail
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
