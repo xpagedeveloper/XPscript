@@ -10,7 +10,7 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = Regex.Replace(
             source,
-            @"\bApplication\.Args\s*\(([^()]*)\)",
+            @"\bApplication\.Args\s*\(((?:[^()]|\([^()]*\))*)\)",
             m => "XPScriptApplicationRuntime.Arg(" + m.Groups[1].Value + ")",
             RegexOptions.IgnoreCase);
 
@@ -32,10 +32,26 @@ internal sealed class ApplicationObjectPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i];
+            var line = StripComment(lines[i]);
             if (Regex.IsMatch(line, @"\bApplication\.Args\s*\([^)]*\)\s*=", RegexOptions.IgnoreCase) ||
                 Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName)\s*=", RegexOptions.IgnoreCase))
                 throw new CompilerException($"input.xps({i + 1},1): Application is read-only runtime state.");
         }
+    }
+
+    private static string StripComment(string line)
+    {
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (!inString && line[i] == '\'') return line[..i];
+        }
+        return line;
     }
 }
