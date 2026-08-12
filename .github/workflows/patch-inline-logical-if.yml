@@ -1,0 +1,29 @@
+name: Patch Inline Compound If
+
+on:
+  push:
+    branches: [todo-statement-layout-audit]
+    paths:
+      - 'tools/patch-inline-logical-if.py'
+      - '.github/workflows/patch-inline-logical-if.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-statement-layout-audit
+      - name: Apply patch
+        run: python ./tools/patch-inline-logical-if.py
+      - name: Commit changes
+        shell: pwsh
+        run: |
+          git config user.name 'xpagedeveloper'
+          git config user.email 'fredrik@xpagedeveloper.com'
+          git add src/XPScript.Compiler/OperatorArrayCompatibilityPreprocessor.cs
+          git commit -m 'Support compound comparisons in inline If'
+          git push origin HEAD:todo-statement-layout-audit
