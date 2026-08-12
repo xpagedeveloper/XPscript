@@ -25,12 +25,13 @@ internal sealed class XPScriptHttpClient
 
     public void SetHeader(object? nameValue, object? value)
     {
-        var name = XPScriptRuntime.CStr(nameValue).Trim();
-        if (name.Length == 0) throw new XPScriptRuntimeException(5, "HTTP header name cannot be empty.");
-        _headers[name] = XPScriptRuntime.CStr(value);
+        var name = ValidateHeaderName(nameValue);
+        var text = XPScriptRuntime.CStr(value);
+        ValidateHeaderValue(text);
+        _headers[name] = text;
     }
 
-    public void RemoveHeader(object? nameValue) => _headers.Remove(XPScriptRuntime.CStr(nameValue).Trim());
+    public void RemoveHeader(object? nameValue) => _headers.Remove(ValidateHeaderName(nameValue));
     public void ClearHeaders() => _headers.Clear();
     public XPScriptHttpResponse Get(object? url) => Send(System.Net.Http.HttpMethod.Get, url, null);
     public XPScriptHttpResponse Delete(object? url) => Send(System.Net.Http.HttpMethod.Delete, url, null);
@@ -41,15 +42,25 @@ internal sealed class XPScriptHttpClient
     private XPScriptHttpResponse Send(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue)
     {
         var url = XPScriptRuntime.CStr(urlValue).Trim();
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            throw new XPScriptRuntimeException(5, "Invalid HTTP URL: " + url);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new XPScriptRuntimeException(5, "HTTP URL must be an absolute http:// or https:// URL.");
 
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
         if (bodyValue is not null && method != System.Net.Http.HttpMethod.Get && method != System.Net.Http.HttpMethod.Delete)
         {
             request.Content = new System.Net.Http.StringContent(XPScriptRuntime.CStr(bodyValue), Encoding.UTF8);
             if (_headers.TryGetValue("Content-Type", out var ct) && !string.IsNullOrWhiteSpace(ct))
-                request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(ct);
+            {
+                try
+                {
+                    request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(ct);
+                }
+                catch (FormatException)
+                {
+                    throw new XPScriptRuntimeException(5, "Invalid Content-Type header value.");
+                }
+            }
         }
 
         foreach (var header in _headers)
@@ -58,7 +69,8 @@ internal sealed class XPScriptHttpClient
             if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
             {
                 request.Content ??= new System.Net.Http.StringContent("");
-                request.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                if (!request.Content.Headers.TryAddWithoutValidation(header.Key, header.Value))
+                    throw new XPScriptRuntimeException(5, "HTTP header is not valid for this request.");
             }
         }
 
@@ -79,15 +91,44 @@ internal sealed class XPScriptHttpClient
                 IsSuccess = response.IsSuccessStatusCode
             };
         }
-        catch (TaskCanceledException ex)
+        catch (TaskCanceledException)
         {
-            throw new XPScriptRuntimeException(5, "HTTP request timed out: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "HTTP request timed out.");
         }
-        catch (System.Net.Http.HttpRequestException ex)
+        catch (System.Net.Http.HttpRequestException)
         {
-            throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "HTTP request failed.");
         }
     }
+
+    private static string ValidateHeaderName(object? nameValue)
+    {
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        if (name.Length == 0)
+            throw new XPScriptRuntimeException(5, "HTTP header name cannot be empty.");
+
+        foreach (var c in name)
+        {
+            if (!IsHeaderTokenCharacter(c))
+                throw new XPScriptRuntimeException(5, "HTTP header name contains an invalid character.");
+        }
+        return name;
+    }
+
+    private static void ValidateHeaderValue(string value)
+    {
+        if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
+
+        foreach (var c in value)
+        {
+            if ((c < 0x20 && c != '\t') || c == 0x7f)
+                throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
+        }
+    }
+
+    private static bool IsHeaderTokenCharacter(char c) =>
+        char.IsAsciiLetterOrDigit(c) || c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~';
 }
 
 internal sealed class XPScriptHttpResponse
