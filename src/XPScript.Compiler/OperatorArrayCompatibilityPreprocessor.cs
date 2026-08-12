@@ -60,7 +60,11 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteLogicalComparisonCondition(string line)
     {
-        var match = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then\s*)$", RegexOptions.IgnoreCase);
+        // Match both block headers ending at Then and compact forms that keep the first
+        // branch statement (and optional Else) on the same physical/logical line.
+        // String contents are protected before this stage, so a literal containing
+        // "Then" cannot steal the suffix match.
+        var match = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then(?:\s+.*)?)$", RegexOptions.IgnoreCase);
         if (!match.Success) return line;
         var condition = match.Groups["condition"].Value;
         if (!Regex.IsMatch(condition, @"(?:=|<>|<=|>=|<|>)") || !Regex.IsMatch(condition, @"\s+(?:And|Or)\s+", RegexOptions.IgnoreCase)) return line;
