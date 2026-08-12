@@ -26,7 +26,7 @@ Status:
 - [>] `Application.Path` alias
 - [>] `Application.FileName` alias
 - [x] Application argument values are read-only at the XPScript source surface
-- [>] other Application properties are read-only at the XPScript source surface
+- [x] other Application properties are read-only at the XPScript source surface
 - [>] internal argument storage is copied from .NET `Main(string[] args)`
 - [>] full `Application.Args` array is detached from runtime-owned argument storage
 
@@ -47,7 +47,7 @@ Status:
 - [x] verify `ArgCount` equals the number of values available through `Application.Args(index)`
 - [x] verify out-of-range indexes produce error 9
 - [x] verify attempts to assign `Application.Args(0)` fail at compile time
-- [ ] verify attempts to assign another Application property fail at compile time
+- [x] verify attempts to assign another Application property fail at compile time
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on Windows
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on Linux
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on macOS
