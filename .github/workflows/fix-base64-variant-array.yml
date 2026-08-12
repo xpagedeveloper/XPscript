@@ -20,35 +20,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Patch Variant array lowering
-        shell: pwsh
-        run: |
-          $path = 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
-          $text = Get-Content $path -Raw
-
-          $old = 'finalLine = RewriteArrayReads(finalLine, arrays);'
-          $new = 'finalLine = RewriteArrayReads(finalLine, arrays, scalarTypes);'
-          if (-not $text.Contains($old)) { throw 'RewriteArrayReads call site not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = 'if (arrayAssignment.Success && arrays.ContainsKey(arrayAssignment.Groups[1].Value))'
-          $new = 'if (arrayAssignment.Success && (arrays.ContainsKey(arrayAssignment.Groups[1].Value) || (scalarTypes.TryGetValue(arrayAssignment.Groups[1].Value, out var indexedScalarType) && indexedScalarType.Equals("Variant", StringComparison.OrdinalIgnoreCase))))'
-          if (-not $text.Contains($old)) { throw 'Array assignment lowering condition not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = 'private string RewriteArrayReads(string line, Dictionary<string, ArrayInfo> arrays)'
-          $new = 'private string RewriteArrayReads(string line, Dictionary<string, ArrayInfo> arrays, Dictionary<string, string> scalarTypes)'
-          if (-not $text.Contains($old)) { throw 'RewriteArrayReads signature not found.' }
-          $text = $text.Replace($old, $new)
-
-          $needle = '        foreach (var name in arrays.Keys.OrderByDescending(x => x.Length))`r`n            line = ReplaceCall(line, name, args => $"LSArrayRuntime.Get({name}{(args.Length > 0 ? ", " + args : "")})");'
-          if (-not $text.Contains($needle)) {
-            $needle = '        foreach (var name in arrays.Keys.OrderByDescending(x => x.Length))`n            line = ReplaceCall(line, name, args => $"LSArrayRuntime.Get({name}{(args.Length > 0 ? ", " + args : "")})");'
-          }
-          if (-not $text.Contains($needle)) { throw 'Array read lowering block not found.' }
-          $replacement = $needle + "`n        foreach (var name in scalarTypes.Where(x => x.Value.Equals(\"Variant\", StringComparison.OrdinalIgnoreCase)).Select(x => x.Key).OrderByDescending(x => x.Length))`n            line = ReplaceCall(line, name, args => $\"LSArrayRuntime.Get({name}{(args.Length > 0 ? \", \\" + args : \\"\\")})\");"
-          $text = $text.Replace($needle, $replacement)
-
-          Set-Content $path $text -NoNewline
+        run: python ./tools/patch-variant-array-indexing.py
       - name: Restore and build compiler
         shell: pwsh
         run: |
@@ -72,7 +44,7 @@ jobs:
           foreach ($value in @('READ0=10','READ1=20','READ2=30','WRITE1=99','LOW=0','HIGH=2')) {
             if ($output -notcontains $value) { throw "Variant runtime array output missing: $value`n$output" }
           }
-      - name: Update TODO and clean temporary workflows
+      - name: Update TODO and clean temporary files
         shell: pwsh
         run: |
           $path = 'todo/runtime-reference-todo.md'
@@ -82,13 +54,14 @@ jobs:
           if (-not $text.Contains($base64Old)) { throw 'Base64 TODO line not found.' }
           $text = $text.Replace($base64Old, $base64New)
           $arrayAnchor = '- [x] arrays as `Type` members including deep-copy of array storage'
-          if (-not $text.Contains($arrayAnchor)) { throw 'Array TODO anchor not found.' }
           $arrayLine = '- [x] `Variant` values containing runtime XPScript arrays support indexed reads and writes; discovered by the `Base64DecodeBinary()` regression and covered by `samples/variant-runtime-array-indexing.xps`'
+          if (-not $text.Contains($arrayAnchor)) { throw 'Array TODO anchor not found.' }
           if (-not $text.Contains($arrayLine)) { $text = $text.Replace($arrayAnchor, $arrayAnchor + "`n" + $arrayLine) }
           Set-Content $path $text -NoNewline
 
           git rm .github/workflows/base64-binary-temp.yml
           git rm .github/workflows/fix-base64-variant-array.yml
+          git rm tools/patch-variant-array-indexing.py
           git config user.name 'xpagedeveloper'
           git config user.email 'fredrik@xpagedeveloper.com'
           git add src/XPScript.Compiler/CoreCompatibilityTranspiler.cs samples/variant-runtime-array-indexing.xps todo/runtime-reference-todo.md
