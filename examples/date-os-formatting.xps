@@ -1,0 +1,11 @@
+Sub Main()
+    Dim value As Date
+
+    value = DateNumber(2026, 8, 12)
+    value = value.Adjust(0, 0, 0, 14, 30, 45)
+
+    Print "DATE-MASK=" & value.OSDateFormatting
+    Print "TIME-MASK=" & value.OSTimeFormatting
+    Print "DATE=" & Format$(value, value.OSDateFormatting)
+    Print "TIME=" & Format$(value, value.OSTimeFormatting)
+End Sub

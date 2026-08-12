@@ -99,7 +99,7 @@ Status:
 - [x] `Date.OSDateFormatting` exposes the current OS/culture short-date mask in `Format`/`Format$` syntax
 - [x] `Date.OSTimeFormatting` exposes the current OS/culture long-time mask in `Format`/`Format$` syntax
 - [x] runtime regression verification via Language Extensions Compatibility
-- [>] English documentation in `docs/date-time.md`; reusable `examples/` coverage remains pending
+- [x] English documentation in `docs/date-time.md` with reusable `examples/` coverage for Adjust, Difference, comparisons and OS date/time formatting
 
 ## 8. Arrays and lists
 

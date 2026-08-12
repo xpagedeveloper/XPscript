@@ -1,0 +1,26 @@
+Sub Main()
+    Dim firstDate As Date
+    Dim secondDate As Date
+
+    firstDate = DateNumber(2026, 5, 10)
+    secondDate = firstDate.Adjust(0, 0, 1, 0, 0, 0)
+
+    If firstDate < secondDate Then
+        Print "LT=TRUE"
+    End If
+    If firstDate <= secondDate Then
+        Print "LTE=TRUE"
+    End If
+    If secondDate > firstDate Then
+        Print "GT=TRUE"
+    End If
+    If secondDate >= firstDate Then
+        Print "GTE=TRUE"
+    End If
+    If firstDate <> secondDate Then
+        Print "NE=TRUE"
+    End If
+    If firstDate = firstDate Then
+        Print "EQ=TRUE"
+    End If
+End Sub

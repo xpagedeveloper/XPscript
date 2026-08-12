@@ -1,0 +1,10 @@
+Sub Main()
+    Dim original As Date
+    Dim adjusted As Date
+
+    original = DateNumber(2024, 2, 29)
+    adjusted = original.Adjust(1, 1, 2, 3, 4, 5)
+
+    Print "ORIGINAL=" & Format$(original, "yyyy-MM-dd HH:mm:ss")
+    Print "ADJUSTED=" & Format$(adjusted, "yyyy-MM-dd HH:mm:ss")
+End Sub
