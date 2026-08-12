@@ -1,0 +1,19 @@
+Sub Main()
+    Dim leftDate As Date
+    Dim rightDate As Date
+
+    If True Then Print "SINGLE=OK"
+
+    If True Then
+        Print "BLOCK=OK"
+    End If
+
+    If True
+    Then
+        Print "SPLIT_THEN=OK"
+    End If
+
+    leftDate = DateNumber(2026, 8, 12)
+    rightDate = DateNumber(2026, 8, 13)
+    If leftDate < rightDate Then Print "DATE_SINGLE=OK"
+End Sub
