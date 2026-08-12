@@ -64,3 +64,25 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "Language extension output missing: $value" }
           }
+
+      - name: Compile Date object enhancement sample
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/date-object-enhancements.xps -o ./out/date-object-enhancements.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Date object enhancement compilation failed.' }
+
+      - name: Verify Date OS formatting properties
+        shell: pwsh
+        run: |
+          $output = & ./out/date-object-enhancements.exe
+          if ($LASTEXITCODE -ne 0) { throw "Date object enhancement sample exited with code $LASTEXITCODE." }
+
+          $dateMask = ($output | Where-Object { $_ -like 'OSDATEFORMAT=*' } | Select-Object -First 1)
+          $timeMask = ($output | Where-Object { $_ -like 'OSTIMEFORMAT=*' } | Select-Object -First 1)
+          $dateValue = ($output | Where-Object { $_ -like 'OSDATE=*' } | Select-Object -First 1)
+          $timeValue = ($output | Where-Object { $_ -like 'OSTIME=*' } | Select-Object -First 1)
+
+          if ([string]::IsNullOrWhiteSpace($dateMask) -or $dateMask -eq 'OSDATEFORMAT=') { throw 'OSDateFormatting returned an empty format mask.' }
+          if ([string]::IsNullOrWhiteSpace($timeMask) -or $timeMask -eq 'OSTIMEFORMAT=') { throw 'OSTimeFormatting returned an empty format mask.' }
+          if ([string]::IsNullOrWhiteSpace($dateValue) -or $dateValue -eq 'OSDATE=') { throw 'Format$ with OSDateFormatting returned an empty value.' }
+          if ([string]::IsNullOrWhiteSpace($timeValue) -or $timeValue -eq 'OSTIME=') { throw 'Format$ with OSTimeFormatting returned an empty value.' }
