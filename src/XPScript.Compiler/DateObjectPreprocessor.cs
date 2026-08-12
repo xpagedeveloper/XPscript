@@ -30,10 +30,10 @@ internal sealed class DateObjectPreprocessor
                     _ => "XPDateRuntime.OSTimeFormatting");
 
                 line = ReplaceOutsideStrings(line,
-                    $@"(?<![\w.]){escaped}\s*(<=|>=|<>|=|<|>)\s*([A-Za-z_]\w*)\b",
+                    $@"(?<![\w.]){escaped}\s*(<=|>=|<>|<|>)\s*([A-Za-z_]\w*)\b",
                     m => BuildComparison(variable, m.Groups[1].Value, m.Groups[2].Value));
                 line = ReplaceOutsideStrings(line,
-                    $@"\b([A-Za-z_]\w*)\s*(<=|>=|<>|=|<|>)\s*{escaped}(?![\w.])",
+                    $@"\b([A-Za-z_]\w*)\s*(<=|>=|<>|<|>)\s*{escaped}(?![\w.])",
                     m => BuildComparison(m.Groups[1].Value, m.Groups[2].Value, variable));
             }
             lines[i] = line;
@@ -46,7 +46,6 @@ internal sealed class DateObjectPreprocessor
         var comparison = $"XPDateRuntime.Compare({left}, {right})";
         return op switch
         {
-            "=" => comparison + " = 0",
             "<>" => comparison + " <> 0",
             "<" => comparison + " < 0",
             "<=" => comparison + " <= 0",
