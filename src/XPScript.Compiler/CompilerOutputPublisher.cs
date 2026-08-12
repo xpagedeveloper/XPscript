@@ -12,7 +12,12 @@ internal static class CompilerOutputPublisher
         IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> managedNativeDependencies,
         bool makeExecutable)
     {
-        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var sourceFullPath = Path.GetFullPath(sourcePath);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        if (PathsEqual(sourceFullPath, outputFullPath))
+            throw new CompilerException("Compiler output path may not overwrite the XPScript source file.");
+
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(sourceFullPath) ?? Environment.CurrentDirectory);
         var dependencies = new List<Dependency>();
 
         foreach (var dependency in nativeDependencies)
@@ -28,7 +33,7 @@ internal static class CompilerOutputPublisher
             dependencies.Add(new Dependency(sourceFile, Path.GetFileName(sourceFile)));
         }
 
-        PublishStaged(generatedExecutable, outputPath, dependencies, makeExecutable);
+        PublishStaged(generatedExecutable, outputFullPath, dependencies, makeExecutable);
     }
 
     private static void PublishStaged(
@@ -86,6 +91,12 @@ internal static class CompilerOutputPublisher
 
                 var target = Path.Combine(outputDirectory, fileName);
                 RejectLinkedTarget(target);
+
+                // A project may keep a native dependency beside both the .xps source and the
+                // requested executable. If source and target are already the same regular file,
+                // leave it in place instead of moving/backing-up its own source.
+                if (PathsEqual(dependency.SourcePath, target))
+                    continue;
 
                 var staged = Path.Combine(stageDirectory, fileName);
                 File.Copy(dependency.SourcePath, staged, overwrite: false);
@@ -193,6 +204,11 @@ internal static class CompilerOutputPublisher
             throw new CompilerException("Unable to safely inspect compiler output path metadata: " + path);
         }
     }
+
+    private static bool PathsEqual(string left, string right) =>
+        Path.GetFullPath(left).Equals(
+            Path.GetFullPath(right),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     private static void DeleteStageDirectory(string stageDirectory)
     {
