@@ -5,7 +5,7 @@ internal static class FileIoExtensionsRuntimeSource
     public const string Code = """
 internal static class XPScriptFileIO
 {
-    private const System.Reflection.BindingFlags StaticPrivate = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+    private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
 
@@ -174,9 +174,25 @@ internal static class XPScriptFileIO
 
     private static object? TryGetDictionaryState(Type runtimeType, int number)
     {
-        var field = runtimeType.GetField("Files", StaticPrivate);
-        if (field?.GetValue(null) is not System.Collections.IDictionary files) return null;
-        return files.Contains(number) ? files[number] : null;
+        var field = runtimeType.GetField("Files", StaticAny);
+        var value = field?.GetValue(null);
+        if (value is null) return null;
+
+        if (value is System.Collections.IDictionary dictionary)
+            return dictionary.Contains(number) ? dictionary[number] : null;
+
+        if (value is System.Collections.IEnumerable entries)
+        {
+            foreach (var entry in entries)
+            {
+                if (entry is null) continue;
+                var entryType = entry.GetType();
+                var key = entryType.GetProperty("Key", InstanceAny)?.GetValue(entry);
+                if (key is null || Convert.ToInt32(key, CultureInfo.InvariantCulture) != number) continue;
+                return entryType.GetProperty("Value", InstanceAny)?.GetValue(entry);
+            }
+        }
+        return null;
     }
 
     private static TextReader? GetReader(object state) =>
