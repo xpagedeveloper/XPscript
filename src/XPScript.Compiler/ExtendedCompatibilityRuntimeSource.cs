@@ -156,14 +156,14 @@ internal static class LSExtendedRuntime
             if (progId.Length > 0)
             {
                 var type = Type.GetTypeFromProgID(progId, throwOnError: true)
-                    ?? throw new COMException("COM class not found: " + progId);
+                    ?? throw new COMException("COM class was not found.");
                 return Activator.CreateInstance(type);
             }
             throw new XPScriptRuntimeException(5, "GetObject requires a pathname or COM ProgID.");
         }
         catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
-            throw new XPScriptRuntimeException(5, ex.Message);
+            throw new XPScriptRuntimeException(5, "COM GetObject activation failed.");
         }
     }
 
