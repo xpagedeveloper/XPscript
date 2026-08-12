@@ -2,6 +2,10 @@ name: Class Properties and Overloads Compatibility
 
 on:
   workflow_dispatch:
+  push:
+    branches: [todo-overload-byref]
+    paths:
+      - '.github/workflows/indexed-properties-build.yml'
 
 permissions:
   contents: read
