@@ -1,0 +1,31 @@
+name: Finalize Native JSON Branch
+
+on:
+  push:
+    branches: [todo-native-json]
+    paths:
+      - '.github/workflows/finalize-native-json.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-native-json
+      - name: Update TODO
+        run: python ./tools/finalize-native-json.py
+      - name: Remove temporary files and commit
+        shell: bash
+        run: |
+          git rm .github/workflows/native-json-temp.yml
+          git rm .github/workflows/finalize-native-json.yml
+          git rm tools/finalize-native-json.py
+          git config user.name 'xpagedeveloper'
+          git config user.email 'fredrik@xpagedeveloper.com'
+          git add todo/runtime-reference-todo.md .github/workflows/native-json-build.yml samples/native-json-regression.xps
+          git commit -m 'Verify Native JSON API'
+          git push origin HEAD:todo-native-json
