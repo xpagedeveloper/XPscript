@@ -75,11 +75,40 @@ Sub Main()
     Wend
     Print "WHILE=" & CStr(i)
 
+    i = 0
+    While i < 1 _
+        Or total = 0
+        i = i + 1
+    Wend
+    Print "WHILE_OR=" & CStr(i)
+
+    i = 2
     Do While i > 0 _
         And total = 3
         i = i - 1
     Loop
-    Print "DO=" & CStr(i)
+    Print "DO_WHILE=" & CStr(i)
+
+    i = 0
+    Do Until i >= 1 _
+        Or total = 0
+        i = i + 1
+    Loop
+    Print "DO_UNTIL=" & CStr(i)
+
+    i = 0
+    Do
+        i = i + 1
+    Loop While i < 2 _
+        And total = 3
+    Print "LOOP_WHILE=" & CStr(i)
+
+    i = 0
+    Do
+        i = i + 1
+    Loop Until i >= 2 _
+        Or total = 0
+    Print "LOOP_UNTIL=" & CStr(i)
 
     Select Case _
         total
