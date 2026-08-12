@@ -85,7 +85,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($dateMask) -or $dateMask -eq 'OSDATEFORMAT=') { throw 'OSDateFormatting returned an empty format mask.' }
           if ([string]::IsNullOrWhiteSpace($timeMask) -or $timeMask -eq 'OSTIMEFORMAT=') { throw 'OSTimeFormatting returned an empty format mask.' }
           if ([string]::IsNullOrWhiteSpace($dateValue) -or $dateValue -eq 'OSDATE=') { throw 'Format$ with OSDateFormatting returned an empty value.' }
-          if ([string]::IsNullOrWhiteSpace($timeValue) -or $timeValue -eq 'OSTIME=') { throw 'Format$ with OSDateFormatting returned an empty value.' }
+          if ([string]::IsNullOrWhiteSpace($timeValue) -or $timeValue -eq 'OSTIME=') { throw 'Format$ with OSTimeFormatting returned an empty value.' }
 
       - name: Verify valid Date comparisons
         shell: pwsh
