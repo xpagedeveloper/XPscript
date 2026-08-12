@@ -141,11 +141,11 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 ## 12. Native HTTP API
 
-- [>] `HttpClient`
-- [>] `Get`, `Post`, `Put`, `Patch`, `Delete`
-- [>] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
-- [>] `HttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
-- [>] source: `samples/native-http-json.xps`
+- [x] `HttpClient`
+- [x] `Get`, `Post`, `Put`, `Patch`, `Delete`
+- [x] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
+- [x] `HttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
+- [x] end-to-end loopback regression: `samples/native-http-regression.xps`, `tests/native_http_server.py`; manual gate: `Native HTTP Compatibility`
 
 ## 13. Native JSON API
 
@@ -234,11 +234,20 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 Design direction: managed memory is reclaimed by .NET GC after the last strong reference disappears. `Nothing`/`Null` can make objects eligible for collection but do not mean immediate deallocation. OS/unmanaged resources require deterministic cleanup.
 
-## 18. Cross-platform UI extension inventory
+## 18. Web runtime and server
+
+- [ ] Implement only after the existing compiler/language/runtime backlog is complete and stable.
+- [ ] Complete the architecture/security review before production implementation.
+- [ ] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
+- [ ] Detailed architecture, object model, runtime compilation/cache, routing, FastCGI and security checklist: `todo/web-runtime-server-todo.md`.
+- [ ] Follow dependency-reuse rules in `todo/development-guidelines.md`; prefer ASP.NET Core/.NET and vetted maintained NuGet packages over custom low-level protocol/parser implementations where suitable.
+- [ ] This section must be completed before the cross-platform UI extension work begins.
+
+## 19. Cross-platform UI extension inventory
 
 Design goal: add a small, platform-native UI extension for simple forms and dialogs on Windows, Linux and macOS. Keep the XPScript API stable across platforms while allowing the backend implementation to use the most appropriate UI toolkit for each operating system.
 
-### 18.1 Core classes and data model
+### 19.1 Core classes and data model
 
 - [ ] define a top-level `UIForm` class for creating and showing simple forms
 - [ ] define a document-style form data class, proposed name `UIData`, used as the backing store for all form field values
@@ -251,7 +260,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] form field state must be independent per `UIForm`/`UIData` instance; no cross-form state leakage
 - [ ] define `UIItem`/`UIFieldValue` object only if needed for metadata such as name, type, value, validation state and dirty state
 
-### 18.2 Form lifecycle and layout
+### 19.2 Form lifecycle and layout
 
 - [ ] create form with title, optional width/height and optional resizable flag
 - [ ] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
@@ -259,7 +268,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] close/cancel behavior consistent across Windows, Linux and macOS
 - [ ] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
 
-### 18.3 UI element inventory
+### 19.3 UI element inventory
 
 - [ ] Label
 - [ ] TextField
@@ -278,7 +287,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] Separator/spacer
 - [ ] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
 
-### 18.4 Validation
+### 19.4 Validation
 
 - [ ] required
 - [ ] min/max text length
@@ -289,7 +298,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] custom XPScript validation callback
 - [ ] field-level validation errors and form-level validation before OK/submit
 
-### 18.5 Dialog inventory
+### 19.5 Dialog inventory
 
 - [ ] MessageBox with stable XPScript parameters/return codes across platforms
 - [ ] OK
@@ -308,7 +317,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] folder selection dialog
 - [ ] file filters, initial directory, default filename, overwrite confirmation and correct Cancel semantics
 
-### 18.6 Data binding semantics
+### 19.6 Data binding semantics
 
 - [ ] form starts with an isolated working copy of `UIData`
 - [ ] user edits update only the working copy while the dialog is open
@@ -316,7 +325,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] Cancel discards working-copy changes unless explicitly configured otherwise
 - [ ] values preserve scalar/multivalue XPScript types where possible
 
-### 18.7 Cross-platform backend inventory
+### 19.7 Cross-platform backend inventory
 
 - [ ] investigate Windows backend
 - [ ] investigate Linux backend such as GTK or equivalent
@@ -328,7 +337,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] architecture-specific dependencies for x64/arm64
 - [ ] package UI dependencies only when generated program actually uses the UI extension where feasible
 
-### 18.8 UI security/lifetime
+### 19.8 UI security/lifetime
 
 - [ ] isolate all form/data instances
 - [ ] ensure password values are not logged in diagnostics or default debug output

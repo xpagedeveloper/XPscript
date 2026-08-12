@@ -1,0 +1,44 @@
+Option Declare
+
+Sub Main()
+    Dim http As New HttpClient
+    Dim response As HttpResponse
+
+    http.Timeout = 5
+    Print "TIMEOUT=" & CStr(http.Timeout)
+
+    Call http.SetHeader("X-XPScript-Test", "alpha")
+    Set response = http.Get("http://127.0.0.1:18080/get")
+    Print "GET=" & response.Body
+    Print "STATUS=" & CStr(response.StatusCode)
+    Print "STATUS_TEXT=" & response.StatusText
+    Print "CONTENT_TYPE=" & response.ContentType
+    Print "SUCCESS=" & CStr(response.IsSuccess)
+    Print "HEADERS=" & CStr(response.Headers.Count)
+
+    Call http.RemoveHeader("X-XPScript-Test")
+    Set response = http.Get("http://127.0.0.1:18080/removed")
+    Print "REMOVED=" & response.Body
+
+    Call http.SetHeader("X-XPScript-Test", "beta")
+    Call http.ClearHeaders()
+    Set response = http.Get("http://127.0.0.1:18080/cleared")
+    Print "CLEARED=" & response.Body
+
+    Call http.SetHeader("X-XPScript-Test", "gamma")
+    Set response = http.Post("http://127.0.0.1:18080/post", "post-body")
+    Print "POST=" & response.Body
+
+    Set response = http.Put("http://127.0.0.1:18080/put", "put-body")
+    Print "PUT=" & response.Body
+
+    Set response = http.Patch("http://127.0.0.1:18080/patch", "patch-body")
+    Print "PATCH=" & response.Body
+
+    Set response = http.Delete("http://127.0.0.1:18080/delete")
+    Print "DELETE=" & response.Body
+
+    Set response = http.Get("http://127.0.0.1:18080/fail")
+    Print "FAIL_STATUS=" & CStr(response.StatusCode)
+    Print "FAIL_SUCCESS=" & CStr(response.IsSuccess)
+End Sub
