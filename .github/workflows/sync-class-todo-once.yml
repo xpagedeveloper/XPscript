@@ -1,0 +1,78 @@
+name: Sync Class TODO Once
+
+on:
+  push:
+    branches: [todo-indexed-properties]
+    paths:
+      - '.github/workflows/sync-class-todo-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-indexed-properties
+      - name: Update runtime TODO class section
+        shell: pwsh
+        run: |
+          $path = 'todo/runtime-reference-todo.md'
+          $text = Get-Content -Raw -Path $path
+
+          $oldNote = 'Development note: GitHub Actions verification is enabled on `runtime-development-no-ci`. Features are marked `[x]` only after their applicable compiler/runtime regression gates pass.'
+          $newNote = 'Development note: GitHub Actions verification is enabled. Features are marked `[x]` only after their applicable compiler/runtime regression gates pass.'
+          if (-not $text.Contains($oldNote)) { throw 'Expected development note was not found.' }
+          $text = $text.Replace($oldNote, $newNote)
+
+          $old = @'
+          ## 2. Classes and properties
+
+          - [x] classes, methods, constructors, destructors, `Me`
+          - [x] parameterless `Property Get`
+          - [x] parameterless object `Property Set`
+          - [x] scalar `Property Let`
+          - [>] parameterized/indexed `Property Get`
+          - [>] parameterized/indexed `Property Let/Set`
+          - [>] indexed properties lower to typed methods so normal parameter diagnostics apply
+          - [>] positive source: `samples/indexed-properties.xps`
+          - [>] negative type source: `samples/indexed-properties-error.xps`
+          '@
+
+          $new = @'
+          ## 2. Classes and properties
+
+          - [x] classes, methods, constructors, destructors, `Me`
+          - [x] parameterless `Property Get`
+          - [x] parameterless object `Property Set`
+          - [x] scalar `Property Let`
+          - [x] parameterized/indexed `Property Get`
+          - [x] parameterized/indexed `Property Let/Set`
+          - [x] indexed properties lower to typed methods so normal parameter diagnostics apply
+          - [x] indexed object getters/setters preserve `Set` reference semantics, including object-returning Function assignment; sources: `samples/indexed-properties.xps`, `samples/indexed-object-properties.xps`
+          - [x] positive scalar source: `samples/indexed-properties.xps`
+          - [x] negative type source: `samples/indexed-properties-error.xps`
+          - [x] class `Function`/`Sub` overload resolution for distinct scalar/object typed signatures, different arity, `Optional` specificity, typed object fallback, `Me`, explicit `Call` and bare member calls; source: `samples/class-method-overloads.xps`
+          - [x] overload diagnostics for duplicate effective signatures, no matching overload and ambiguous calls; sources: `samples/class-method-overloads-duplicate.xps`, `samples/class-method-overloads-no-match.xps`, `samples/class-method-overloads-ambiguous.xps`
+          - [>] class overload follow-ups for array/scalar overload end-to-end coverage and scalar `ByRef`; detailed checklist: `todo/function-sub-overloading-todo.md`
+          '@
+
+          $old = $old -replace '(?m)^          ', ''
+          $new = $new -replace '(?m)^          ', ''
+          if (-not $text.Contains($old)) { throw 'Expected class/property TODO block was not found.' }
+          $text = $text.Replace($old, $new)
+          Set-Content -Path $path -Value $text -NoNewline -Encoding utf8
+
+      - name: Commit runtime TODO update
+        shell: bash
+        run: |
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add todo/runtime-reference-todo.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Mark class property regressions verified"
+          git push origin HEAD:todo-indexed-properties
