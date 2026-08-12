@@ -1,0 +1,6 @@
+Class XPScriptRuntime
+    Public Value As Integer
+End Class
+
+Sub Main()
+End Sub

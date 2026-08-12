@@ -1,0 +1,29 @@
+' (c) xpagedeveloper.com 2026
+' Regression: Evaluate diagnostics must never reflect callvar values/secrets.
+
+Sub Main()
+    Dim secret As String
+    Dim result As Variant
+
+    secret = "TOP-SECRET-API-KEY-123456789"
+
+    On Error GoTo Handler
+    result = Evaluate("Return CInt(callvar)", secret)
+    Error 9001, "Expected Evaluate to reject the secret String as Integer"
+    Exit Sub
+
+Handler:
+    If Err <> 13 Then
+        Error 9002, "Expected XPScript error 13 but got " & CStr(Err)
+    End If
+
+    If Instr(Error$, "TOP-SECRET-API-KEY-123456789") > 0 Then
+        Error 9003, "Evaluate diagnostic leaked callvar secret"
+    End If
+
+    If Instr(Error$, "Evaluate type mismatch") = 0 Then
+        Error 9004, "Expected sanitized Evaluate type mismatch diagnostic"
+    End If
+
+    Print "SANITIZED=" & Error$
+End Sub

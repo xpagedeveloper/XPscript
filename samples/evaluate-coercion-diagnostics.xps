@@ -1,0 +1,33 @@
+Sub Main()
+    Dim result As Variant
+
+    result = Evaluate("Return ""value="" + 42")
+    If CStr(result) <> "value=42" Then
+        Error 9101, "Evaluate String + Integer coercion mismatch"
+    End If
+
+    result = Evaluate("Return 10 + ""20""")
+    If CDbl(result) <> 30 Then
+        Error 9102, "Evaluate numeric + numeric String coercion mismatch"
+    End If
+
+    result = Evaluate("Return #2026-08-12# < #2026-08-13#")
+    If CBool(result) <> True Then
+        Error 9103, "Evaluate Date comparison mismatch"
+    End If
+
+    On Error Resume Next
+    result = Evaluate("Return CInt(""not-a-number"")")
+    If Err <> 13 Then
+        Error 9104, "Evaluate type mismatch should use error 13, got " & CStr(Err)
+    End If
+    Err = 0
+
+    result = Evaluate("Return 10 \ 0")
+    If Err <> 11 Then
+        Error 9105, "Evaluate division by zero should use error 11, got " & CStr(Err)
+    End If
+    Err = 0
+
+    Print "Evaluate coercion/diagnostics semantics OK"
+End Sub

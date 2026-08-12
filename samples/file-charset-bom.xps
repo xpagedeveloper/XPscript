@@ -1,0 +1,48 @@
+' Charset/BOM regression source.
+' BOM size differences are independent of CRLF/LF because each pair writes identical text.
+Sub Main()
+    Dim f As Integer
+    Dim utf8NoBom As Long
+    Dim utf8Bom As Long
+    Dim utf16NoBom As Long
+    Dim utf16Bom As Long
+
+    f = FreeFile
+    Open "xps-utf8-nobom.txt" For Output As #f Charset "utf-8"
+    Print #f, "ABC"
+    Close #f
+    utf8NoBom = FileLen("xps-utf8-nobom.txt")
+
+    f = FreeFile
+    Open "xps-utf8-bom.txt" For Output As #f Charset "utf-8-bom"
+    Print #f, "ABC"
+    Close #f
+    utf8Bom = FileLen("xps-utf8-bom.txt")
+
+    If utf8Bom <> utf8NoBom + 3 Then
+        Error 9001, "UTF-8 BOM must add exactly 3 bytes"
+    End If
+
+    f = FreeFile
+    Open "xps-utf16-nobom.txt" For Output As #f Charset "utf-16le-nobom"
+    Print #f, "ABC"
+    Close #f
+    utf16NoBom = FileLen("xps-utf16-nobom.txt")
+
+    f = FreeFile
+    Open "xps-utf16-bom.txt" For Output As #f Charset "utf-16le"
+    Print #f, "ABC"
+    Close #f
+    utf16Bom = FileLen("xps-utf16-bom.txt")
+
+    If utf16Bom <> utf16NoBom + 2 Then
+        Error 9002, "UTF-16LE BOM must add exactly 2 bytes"
+    End If
+
+    Kill "xps-utf8-nobom.txt"
+    Kill "xps-utf8-bom.txt"
+    Kill "xps-utf16-nobom.txt"
+    Kill "xps-utf16-bom.txt"
+
+    Print "CHARSET_BOM_OK"
+End Sub

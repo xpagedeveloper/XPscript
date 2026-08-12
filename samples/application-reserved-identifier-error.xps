@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Dim Application As String
+    Application = "invalid"
+End Sub

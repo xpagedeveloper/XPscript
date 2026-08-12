@@ -4,11 +4,6 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private static readonly HashSet<string> NativeTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement"
-    };
-
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
@@ -45,9 +40,14 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bJsonStringify\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonEncode\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonDecode\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+HttpClient\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateClient()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonDocument\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateDocument()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNativeJson.", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);

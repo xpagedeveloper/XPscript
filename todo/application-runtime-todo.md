@@ -1,0 +1,59 @@
+# XPScript Application runtime TODO
+
+(c) xpagedeveloper.com 2026
+
+Tracks the global read-only `Application` runtime object.
+
+Status:
+- `[x]` implemented and verified
+- `[>]` implemented, awaiting explicit verification
+- `[ ]` not implemented or not verified
+
+## Runtime object
+
+- [x] global `Application` identifier is reserved by the runtime
+- [x] Application state is initialized before `Main` / `Initialize`
+- [x] `Application.ArgCount`
+- [x] `Application.Args(index)` with zero-based indexes
+- [>] `Application.Args` returns a defensive-copy XPScript String array
+- [x] invalid argument index raises XPScript error 9
+- [>] `Application.CommandLine` convenience representation
+- [x] `Application.ExecutablePath`
+- [x] `Application.ExecutableFileName`
+- [x] `Application.ExecutableDirectory`
+- [x] `Application.TempPath`
+- [>] `Application.TempFolder` alias
+- [>] `Application.Path` alias
+- [>] `Application.FileName` alias
+- [x] Application argument values are read-only at the XPScript source surface
+- [x] other Application properties are read-only at the XPScript source surface
+- [>] internal argument storage is copied from .NET `Main(string[] args)`
+- [>] full `Application.Args` array is detached from runtime-owned argument storage
+
+## Samples and documentation
+
+- [x] sample: `samples/application-runtime.xps`
+- [x] documentation: `docs/application.md`
+
+## Verification
+
+- [x] compile Application runtime sample in GitHub Actions on Windows, Linux and macOS
+- [x] run with zero command-line arguments
+- [x] run with one command-line argument
+- [x] run with multiple command-line arguments
+- [x] verify quoted argument containing spaces remains one `Application.Args` entry
+- [x] verify empty-string argument in PowerShell on GitHub runners
+- [x] verify Unicode command-line arguments
+- [x] verify `ArgCount` equals the number of values available through `Application.Args(index)`
+- [x] verify out-of-range indexes produce error 9
+- [x] verify attempts to assign `Application.Args(0)` fail at compile time
+- [x] verify attempts to assign another Application property fail at compile time
+- [x] verify redeclaring the reserved `Application` identifier fails at compile time
+- [x] verify `Application.ExecutablePath` points to the actual generated executable on Windows
+- [x] verify `Application.ExecutablePath` points to the actual generated executable on Linux
+- [x] verify `Application.ExecutablePath` points to the actual generated executable on macOS
+- [x] verify executable filename/directory values on Windows, Linux and macOS
+- [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
+- [ ] verify concurrent reads do not alter runtime state
+
+Cross-platform Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml` for Windows, Ubuntu and macOS.

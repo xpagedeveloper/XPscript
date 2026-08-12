@@ -1,0 +1,21 @@
+' Regression source for native loader diagnostics.
+' The selected library intentionally does not exist. When runtime tests are enabled,
+' this should raise a clear XPScript runtime error naming the library and entry point.
+
+Declare Function MissingNative Lib "missing-native-library" _
+    WindowsLib "missing-native-library.dll" WindowsAlias "missing_entry" _
+    LinuxLib "libmissing-native-library.so" LinuxAlias "missing_entry" _
+    MacOSLib "libmissing-native-library.dylib" MacOSAlias "missing_entry" _
+    () As Integer
+
+Sub Main
+    Dim value As Integer
+    On Error GoTo LoaderError
+
+    value = MissingNative()
+    Error 9100, "Expected native loader failure"
+    Exit Sub
+
+LoaderError:
+    Print Error$
+End Sub

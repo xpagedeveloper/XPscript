@@ -12,6 +12,25 @@ internal static class XPScriptCoercion
     public static double AddDouble(object? left, object? right) => AddDoubleCore(left, right);
     public static decimal AddCurrency(object? left, object? right) => AddDecimal(left, right);
 
+    // Shared forgiving Variant-style addition used when the target type is not statically known.
+    // String on the left always means concatenation. A String on the right is treated as a
+    // number when it can be parsed using XPScript's normal current/invariant numeric rules,
+    // otherwise it is concatenated. Null propagates for dynamic expressions.
+    public static object? AddVariant(object? left, object? right)
+    {
+        if (left is null || right is null) return null;
+        if (left is string leftText) return leftText + XPScriptRuntime.CStr(right);
+
+        if (right is string rightText)
+        {
+            if (TryDouble(rightText, out var parsed))
+                return ToDouble(left) + parsed;
+            return XPScriptRuntime.CStr(left) + rightText;
+        }
+
+        return ToDouble(left) + ToDouble(right);
+    }
+
     private static decimal AddDecimal(object? left, object? right)
     {
         return ToDecimal(left) + ToDecimal(right);
@@ -40,12 +59,17 @@ internal static class XPScriptCoercion
         if (value is null) return 0d;
         if (value is string text)
         {
-            if (double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.CurrentCulture, out var current)) return current;
-            if (double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var invariant)) return invariant;
+            if (TryDouble(text, out var number)) return number;
             throw new InvalidCastException($"Unable to convert String value '{text}' to a numeric value for addition.");
         }
         try { return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture); }
         catch (Exception ex) { throw new InvalidCastException($"Unable to convert {value.GetType().Name} to a numeric value for addition.", ex); }
+    }
+
+    private static bool TryDouble(string text, out double value)
+    {
+        if (double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.CurrentCulture, out value)) return true;
+        return double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 }
 """;

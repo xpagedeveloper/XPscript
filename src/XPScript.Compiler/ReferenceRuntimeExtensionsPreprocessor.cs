@@ -8,7 +8,7 @@ internal sealed class ReferenceRuntimeExtensionsPreprocessor
     [
         "InstrB", "LeftB", "RightB", "MidB", "StrConv", "StrLeft", "StrLeftBack", "StrRight", "StrRightBack",
         "StrToken", "LSet", "RSet", "UChr", "Uni", "CType", "CVDate", "IsList", "IsUnknown",
-        "Base64Encode", "Base64Decode"
+        "Base64Encode", "Base64Decode", "Base64DecodeBinary"
     ];
 
     public string Transform(string source)

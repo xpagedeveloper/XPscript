@@ -1,24 +1,23 @@
 # XPScript text file I/O, Base64 and console I/O
 
-XPScript extends the XPScript-style `Open` statement with independent `Charset` and `Encoding` options for standalone text file I/O.
+XPScript provides standalone text, binary and console I/O. File input and interactive console input are intentionally separate APIs.
 
 ## Charset
 
-`Charset` controls how Unicode strings are converted to and from bytes.
+`Charset` controls conversion between XPScript Unicode strings and file bytes.
 
-Supported built-in aliases include:
+Supported aliases include:
 
 - `utf-8` / `utf8`
 - `unicode` / `utf-16` / `utf16` / `utf-16le`
 - `utf-16be`
 - `ascii`
+- `latin1`
 - `default` / `ansi`
 
-`unicode` maps to UTF-16 little endian.
+Example:
 
-Examples:
-
-```xpscriptscript
+```xpscript
 Dim f As Integer
 Dim value As String
 
@@ -33,191 +32,131 @@ Line Input #f, value
 Close #f
 ```
 
-UTF-16:
-
-```xpscriptscript
-f = FreeFile
-Open "unicode.txt" For Output As #f Charset "unicode"
-Print #f, "ÅÄÖ 漢字"
-Close #f
-```
-
 ## Encoding
 
-`Encoding` is independent from `Charset` and controls an additional transfer/storage encoding layer.
+`Encoding` is independent from `Charset` and represents an additional storage/transfer encoding layer.
 
-Currently supported values are:
+Supported values:
 
-- `none` (default)
+- `none`
 - `base64`
 
-If `Encoding` is omitted, normal charset-encoded text is read or written.
+Example:
 
-Base64 using the default charset:
-
-```xpscriptscript
+```xpscript
 f = FreeFile
-Open "data.b64" For Output As #f Encoding "base64"
+Open "data.b64" For Output As #f Charset "utf-8" Encoding "base64"
 Print #f, "Fredrik åäö"
 Close #f
 ```
 
-## Combining Charset and Encoding
+On write, Charset converts text to bytes and Base64 then encodes those bytes. Reading performs the reverse operation.
 
-`Charset` and `Encoding` can be combined. Their order in the `Open` statement is not significant.
+## File Input$
 
-```xpscriptscript
-Open "data.b64" For Output As #f Charset "utf-16" Encoding "base64"
+The file function:
+
+```xpscript
+value = Input$(count, #fileNumber)
 ```
 
-and:
+reads `count` characters from the current position of the already-open file. This is file I/O and is not interactive user input.
 
-```xpscriptscript
-Open "data.b64" For Input As #f Encoding "base64" Charset "unicode"
+Example:
+
+```xpscript
+Dim f As Integer
+Dim value As String
+
+f = FreeFile
+Open "data.txt" For Input As #f Charset "utf-8"
+value = Input$(5, #f)
+Close #f
 ```
 
-are compatible with each other.
+The file position advances by the amount read. A count of zero returns an empty string. Invalid counts or attempts to read beyond available data produce a runtime error.
 
-The processing model is:
+## File locking
 
-### Writing
+`Lock` and `Unlock` operate on the operating-system file handle.
 
-1. XPScript has a Unicode string.
-2. `Charset` converts the string to bytes.
-3. `Encoding "base64"` Base64-encodes those bytes.
-4. The Base64 text is stored in the file.
+```xpscript
+Open "data.bin" For Binary As #f
+Lock #f, 1 To 100
+' protected region
+Unlock #f, 1 To 100
+Close #f
+```
 
-### Reading
+Binary ranges are 1-based byte ranges. Random file ranges map to records using the configured record length. Sequential modes use whole-file locking.
 
-1. XPScript reads the Base64 text.
-2. `Encoding "base64"` decodes it to bytes.
-3. `Charset` converts those bytes back to a Unicode string.
+The lock is not an XPScript-only flag; another process or file handle must observe the OS lock.
 
-This means UTF-8 + Base64 and UTF-16 + Base64 produce different Base64 payloads while resulting in the same Unicode text after decoding with the matching charset.
+## Base64 functions
 
-Charset/Encoding options apply to text modes:
-
-- `For Input`
-- `For Output`
-- `For Append`
-
-Existing `Binary` and `Random` file modes continue to use the binary file runtime and are not changed by these text options.
-
-## Base64 string functions
-
-XPScript provides:
+Available helpers:
 
 - `ToBase64(value)`
 - `ToBase64(value, charset)`
 - `FromBase64(value)`
 - `FromBase64(value, charset)`
+- `Base64Encode(value)`
+- `Base64Encode(value, charset)`
+- `Base64Decode(value)`
+- `Base64Decode(value, charset)`
 
-UTF-8 is used by default.
+UTF-8 is used by default when no charset is supplied.
 
-```xpscriptscript
+```xpscript
 Dim encoded As String
 Dim decoded As String
 
-encoded = ToBase64("Fredrik åäö")
-decoded = FromBase64(encoded)
+encoded = Base64Encode("Fredrik åäö")
+decoded = Base64Decode(encoded)
 ```
 
-`$` aliases are accepted as well, for example `ToBase64$()` and `FromBase64$()`.
-
-## URL string functions
-
-XPScript provides:
+## URL functions
 
 - `UrlEncode(value)`
 - `UrlDecode(value)`
 
-Example:
-
-```xpscriptscript
+```xpscript
 Dim encoded As String
-
 encoded = UrlEncode("hello world+å")
-Print encoded
 Print UrlDecode(encoded)
 ```
 
-`UrlEncode` uses UTF-8-compatible URI percent encoding. `UrlDecode` also treats `+` as a space when decoding form-style values.
+## Console Print
 
-## Console Print and Print$
-
-Both forms write to standard output:
-
-```xpscriptscript
+```xpscript
 Print "Hello"
 Print$ "Hello"
 ```
 
-A bare `Print` or `Print$` writes an empty line.
+A bare `Print` writes an empty line. File output remains `Print #fileNumber, value`.
 
-File output retains its existing syntax:
+## Interactive console Input
 
-```xpscriptscript
-Print #f, "Hello"
-```
+Interactive console input is separate from file `Input$`.
 
-## Console Input and Input$
-
-The standalone console input statements read a complete line and wait until the user presses Enter.
-
-Without a prompt:
-
-```xpscriptscript
+```xpscript
 Dim value As String
 Input value
-```
-
-or:
-
-```xpscriptscript
+Input "Name: ", value
 Input$ value
 ```
 
-With a prompt:
-
-```xpscriptscript
-Input "Name: ", value
-```
-
-The prompt is written without an automatic newline. The line entered by the user is assigned to the target string variable.
-
-File input remains distinct and keeps the `#` syntax:
-
-```xpscriptscript
-Input #f, value
-Line Input #f, value
-```
+These console forms read from standard input. They must never be used to implement or rewrite `Input$(count, #fileNumber)`.
 
 ## Pause
 
-`Pause` waits for one key press without requiring Enter when the executable is connected to an interactive console.
-
-```xpscriptscript
+```xpscript
 Print "Press any key"
 Pause
 ```
 
-When standard input is redirected, XPScript consumes one input character instead. This allows console programs using `Pause` to be regression-tested in CI.
+`Pause` waits for console input. When standard input is redirected it consumes an input character instead.
 
-## CI coverage
+## Verification status
 
-`samples/textio-console.xps` is compiled to a Windows executable by GitHub Actions and tests:
-
-- UTF-8 file write/read
-- UTF-16/Unicode file write/read
-- Base64 file encoding without an explicit charset
-- Base64 combined with UTF-16 charset
-- both `Charset ... Encoding ...` and `Encoding ... Charset ...` orderings
-- `ToBase64`
-- `FromBase64`
-- `UrlEncode`
-- `UrlDecode`
-- `Print$`
-- bare `Print`
-- `Input` with a prompt
-- `Input$` without a prompt
-- `Pause` with redirected stdin
+Regression samples exist for UTF-8, UTF-16, Latin-1, Base64, console I/O, file `Input$` and OS file locking. Automated workflow execution is intentionally deferred while the development branch `runtime-development-no-ci` is active.

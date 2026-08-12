@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceTypeValidator
 {
-    private sealed record Parameter(string Name, string Type, bool IsArray);
+    private sealed record Parameter(string Name, string Type, bool IsArray, bool IsOptional);
     private sealed record Procedure(string Name, IReadOnlyList<Parameter> Parameters);
 
     private static readonly HashSet<string> NumericTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -55,10 +55,15 @@ internal sealed class SourceTypeValidator
                 foreach (Match call in Regex.Matches(line, pattern, RegexOptions.IgnoreCase))
                 {
                     var args = SplitArguments(call.Groups["args"].Value);
-                    if (args.Count != procedure.Parameters.Count)
+                    var requiredCount = procedure.Parameters.Count(p => !p.IsOptional);
+                    var maximumCount = procedure.Parameters.Count;
+                    if (args.Count < requiredCount || args.Count > maximumCount)
                     {
+                        var expectedText = requiredCount == maximumCount
+                            ? $"{maximumCount} parameter(s)"
+                            : $"between {requiredCount} and {maximumCount} parameter(s)";
                         AddDiagnostic(diagnostics, sourceName, i + 1, Math.Max(1, call.Index + 1), original,
-                            $"Function/Sub '{procedure.Name}' expects {procedure.Parameters.Count} parameter(s) but received {args.Count}.");
+                            $"Function/Sub '{procedure.Name}' expects {expectedText} but received {args.Count}.");
                     }
 
                     for (var p = 0; p < Math.Min(args.Count, procedure.Parameters.Count); p++)
@@ -124,9 +129,20 @@ internal sealed class SourceTypeValidator
         foreach (var raw in SplitArguments(m.Groups[3].Value))
         {
             if (string.IsNullOrWhiteSpace(raw)) continue;
-            var p = Regex.Match(raw.Trim(), @"^(?:(?:ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
+            var p = Regex.Match(
+                raw.Trim(),
+                @"^(?<mods>(?:(?:Optional|ByVal|ByRef)\s+)*)?(?<name>[A-Za-z_]\w*)\s*(?<array>\(\))?\s*(?:As\s+(?<type>[A-Za-z_]\w*))?(?:\s*=\s*.+)?$",
+                RegexOptions.IgnoreCase);
             if (!p.Success) continue;
-            parameters.Add(new Parameter(p.Groups[1].Value, NormalizeType(p.Groups[3].Success ? p.Groups[3].Value : "Variant"), p.Groups[2].Success));
+
+            var modifiers = p.Groups["mods"].Value;
+            var optional = Regex.IsMatch(modifiers, @"\bOptional\b", RegexOptions.IgnoreCase);
+            var type = p.Groups["type"].Success ? p.Groups["type"].Value : "Variant";
+            parameters.Add(new Parameter(
+                p.Groups["name"].Value,
+                NormalizeType(type),
+                p.Groups["array"].Success,
+                optional));
         }
         return new Procedure(m.Groups[2].Value, parameters);
     }

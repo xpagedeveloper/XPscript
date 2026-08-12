@@ -13,13 +13,6 @@ internal sealed class TextIoCompatibilityPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
 
-        // First pass records file numbers opened with Charset and/or Encoding options.
-        foreach (var raw in lines)
-        {
-            if (TryParseSpecialOpen(raw.Trim(), out var open))
-                _specialFileNumbers.Add(NormalizeFileNumber(open.FileNumber));
-        }
-
         foreach (var raw in lines)
         {
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
@@ -30,10 +23,25 @@ internal sealed class TextIoCompatibilityPreprocessor
                 continue;
             }
 
+            // Charset/Encoding opens are handled by the text-I/O runtime only for the
+            // lifetime of this specific open file number. A variable may later be reused
+            // for a normal Binary/Random/core file without inheriting text-I/O routing.
             if (TryParseSpecialOpen(line, out var open))
             {
+                _specialFileNumbers.Add(NormalizeFileNumber(open.FileNumber));
                 output.Add(indent +
                     $"Call XPScriptTextIO.OpenText({open.Path}, \"{open.Mode.ToLowerInvariant()}\", {open.FileNumber}, {open.Charset}, {open.Encoding})");
+                continue;
+            }
+
+            var ordinaryOpen = Regex.Match(
+                line,
+                @"^Open\s+.+?\s+For\s+(Input|Output|Append|Binary|Random)\s+As\s+#?([^\s]+)(?:\s+Len\s*=\s*.+)?$",
+                RegexOptions.IgnoreCase);
+            if (ordinaryOpen.Success)
+            {
+                _specialFileNumbers.Remove(NormalizeFileNumber(ordinaryOpen.Groups[2].Value));
+                output.Add(raw);
                 continue;
             }
 
@@ -41,6 +49,7 @@ internal sealed class TextIoCompatibilityPreprocessor
             if (close.Success && IsSpecialFile(close.Groups[1].Value))
             {
                 output.Add(indent + $"Call XPScriptTextIO.CloseFile({close.Groups[1].Value})");
+                _specialFileNumbers.Remove(NormalizeFileNumber(close.Groups[1].Value));
                 continue;
             }
 

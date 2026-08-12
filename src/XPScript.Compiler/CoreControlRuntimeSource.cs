@@ -7,11 +7,35 @@ internal static class LSControlRuntime
 {
     internal sealed class ErrorContext
     {
+        private readonly Stack<int> _resumeStatements = new();
+
         public int GeneralHandler { get; set; }
         public bool ResumeNext { get; set; }
         public bool InHandler { get; set; }
-        public int Statement { get; set; }
         public Dictionary<int, int> SpecificHandlers { get; } = new();
+
+        // Reading Statement consumes the innermost resume frame. This keeps
+        // Resume/Resume Next paired with the error frame that actually
+        // transferred control to the handler, even through nested calls.
+        public int Statement
+        {
+            get => _resumeStatements.Count == 0 ? 0 : _resumeStatements.Pop();
+            set
+            {
+                if (value <= 0) return;
+                if (_resumeStatements.Count == 0 || _resumeStatements.Peek() != value)
+                    _resumeStatements.Push(value);
+            }
+        }
+
+        public int ResumeDepth => _resumeStatements.Count;
+
+        public void DiscardResumeFrame()
+        {
+            if (_resumeStatements.Count > 0) _resumeStatements.Pop();
+        }
+
+        public void ClearResumeFrames() => _resumeStatements.Clear();
     }
 
     [ThreadStatic] private static Dictionary<int, Stack<int>>? _gosubStacks;
@@ -32,6 +56,7 @@ internal static class LSControlRuntime
         context.GeneralHandler = 0;
         context.SpecificHandlers.Clear();
         context.ResumeNext = true;
+        context.ClearResumeFrames();
     }
 
     public static void Disable(dynamic contextValue, int errorNumber)
@@ -42,6 +67,7 @@ internal static class LSControlRuntime
             context.GeneralHandler = 0;
             context.SpecificHandlers.Clear();
             context.ResumeNext = false;
+            context.ClearResumeFrames();
         }
         else
         {
@@ -53,11 +79,20 @@ internal static class LSControlRuntime
     {
         var context = (ErrorContext)contextValue;
         if (context.InHandler) return int.MinValue;
-        context.Statement = statement;
-        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), statement);
+
+        var sourceLine = XPSourceLineRuntime.Current > 0 ? XPSourceLineRuntime.Current : statement;
+        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), sourceLine);
+
+        // On Error Resume Next continues immediately after the failing
+        // statement and therefore must not leave an explicit Resume frame.
         if (context.ResumeNext) return -1;
+
         var handler = context.SpecificHandlers.TryGetValue(number, out var specific) ? specific : context.GeneralHandler;
-        if (handler != 0) context.InHandler = true;
+        if (handler != 0)
+        {
+            context.Statement = statement;
+            context.InHandler = true;
+        }
         return handler;
     }
 
@@ -67,6 +102,8 @@ internal static class LSControlRuntime
         context.InHandler = false;
         XPScriptErrorRuntime.Clear();
     }
+
+    public static int ResumeDepth(dynamic contextValue) => ((ErrorContext)contextValue).ResumeDepth;
 
     public static void PushGosub(int procedureId, int returnId)
     {

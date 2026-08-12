@@ -1,0 +1,23 @@
+Sub Main()
+    Dim values As Variant
+    Dim inner List As Variant
+    Dim parameters List As Variant
+    Dim result As Variant
+
+    values = Array(10, 20, 30)
+    inner("name") = "nested"
+    inner("values") = values
+
+    parameters("price") = 125.5
+    parameters("numbers") = values
+    parameters("inner") = inner
+
+    ' The List and every mutable value reachable from it are copied before evaluation.
+    result = Evaluate("Return LBound(callvar(""numbers"")) + UBound(callvar(""numbers""))", parameters)
+    Print "BOUNDS=" & CStr(result)
+
+    ' Returning the entire input List produces a detached normal XPScript List value,
+    ' never the evaluator's internal read-only snapshot object.
+    result = Evaluate("Return callvar", parameters)
+    Print "RETURNED-LIST-TYPE=" & TypeName(result)
+End Sub

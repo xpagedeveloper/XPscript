@@ -1,0 +1,7 @@
+Sub Main()
+    Dim outsideValue As Integer
+    outsideValue = 42
+
+    ' Evaluate has its own local scope and must not be able to read caller locals.
+    Print CStr(Evaluate("Return outsideValue"))
+End Sub

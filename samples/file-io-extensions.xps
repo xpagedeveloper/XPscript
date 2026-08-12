@@ -4,11 +4,13 @@ Sub Main()
     Dim f As Integer
     Dim part As String
     Dim line As String
+    Dim lockPayload As String
 
     If Command = "hold-lock" Then
         f = FreeFile
+        lockPayload = "ABCDEF"
         Open "xpscript-lock-test.bin" For Binary As #f
-        Put #f, 1, "ABCDEF"
+        Put #f, 1, lockPayload
         Lock #f, 1 To 3
         Print "LOCKHELD"
         Sleep 4

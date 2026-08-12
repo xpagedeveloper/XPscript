@@ -5,40 +5,81 @@ namespace XPScript.Compiler;
 
 public sealed class XPScriptTranspiler
 {
-    public string Transpile(string source, string sourceName)
+    public string Transpile(string source, string sourceName) =>
+        Transpile(source, sourceName, CompilerDriver.CurrentRuntimeIdentifier());
+
+    public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
+        source = new ReservedIdentifierPreprocessor().Transform(source);
+        new DateComparisonValidator().Validate(source, sourceName);
+        // Validate user-visible source types before compiler-generated physical-line markers
+        // or other source-expanding rewrites are inserted. This keeps diagnostics mapped to
+        // the original .xps line/column rather than the transformed intermediate source.
+        new SourceTypeValidator().Validate(source, sourceName);
+        source = new SourceLineMarkerPreprocessor().Transform(source);
+        source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
+        source = new NativeInteropSafetyPreprocessor().Transform(source);
+
+        var udtValues = new UdtValueSemanticsPreprocessor();
+        source = udtValues.Transform(source);
+        source = new TypeDeclarationPreprocessor().Transform(source);
         source = new LanguageExtensionsPreprocessor().Transform(source);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
-        new SourceTypeValidator().Validate(source, sourceName);
+        source = new IndexedPropertyPreprocessor().Transform(source);
+        source = new NativeHttpJsonPreprocessor().Transform(source);
+        var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
+        source = moduleObjects.Transform(source);
+        var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
+        source = moduleGlobals.Transform(source);
+        source = new DateObjectPreprocessor().Transform(source);
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ReferenceRuntimeExtensionsPreprocessor().Transform(protectedSource);
+        protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
+        protectedSource = new XPScriptEvaluatePreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
+        generated = moduleGlobals.Inject(generated);
 
         generated = Regex.Replace(generated, @"(?<=\S)\s+\+\+\s+(?=\S)", " && ");
 
         generated += "\n\n" + CoreControlRuntimeSource.Code + "\n";
+        generated += "\n\n" + SourceLineRuntimeSource.Code + "\n";
+        generated += "\n\n" + NativeInteropRuntimeSource.Code + "\n";
+        generated += "\n\n" + FileSystemPortabilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + ApplicationRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
+        generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
+        generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
+        generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
+        generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
+        generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
+        generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
+        generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
 
+        generated = new FileSystemPortabilityPostProcessor().Transform(generated);
+
         generated = generated.Replace(
             "XPScriptRuntime.SetArgs(args);",
-            $"XPScriptRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            $"XPScriptRuntime.SetArgs(args);\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
             StringComparison.Ordinal);
 
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);

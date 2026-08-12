@@ -1,0 +1,15 @@
+' Application-local native libraries are copied beside the generated executable.
+' Paths are resolved relative to this .xps source file.
+
+Declare Function SampleNative Lib "native/default/xps-native-sample" _
+    WindowsLib "native/windows/xps-native-sample.dll" _
+    LinuxLib "native/linux/libxps-native-sample.so" _
+    MacOSLib "native/macos/libxps-native-sample.dylib" _
+    WindowsAlias "GetSampleValue" _
+    LinuxAlias "get_sample_value" _
+    MacOSAlias "get_sample_value" _
+    () As Integer
+
+Sub Main()
+    Print SampleNative()
+End Sub

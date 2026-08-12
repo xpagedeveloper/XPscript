@@ -1,0 +1,19 @@
+Option Declare
+
+Public RequestCount As Long
+Private InternalName As String
+Public Enabled As Boolean
+
+Sub Increment()
+    RequestCount = RequestCount + 1
+End Sub
+
+Sub Main()
+    InternalName = "XPScript"
+    Enabled = True
+    Call Increment()
+    Call Increment()
+    Print "GLOBALCOUNT=" & CStr(RequestCount)
+    Print "GLOBALNAME=" & InternalName
+    Print "GLOBALENABLED=" & CStr(Enabled)
+End Sub

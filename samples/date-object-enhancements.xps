@@ -1,0 +1,38 @@
+Sub Main()
+    Dim startDate As Date
+    Dim adjustedDate As Date
+    Dim endDate As Date
+    Dim seconds As Double
+
+    startDate = DateNumber(2026, 1, 31)
+    adjustedDate = startDate.Adjust(0, 1, 0, 0, 0, 0)
+    endDate = adjustedDate.Adjust(0, 0, 1, 2, 30, 15)
+    seconds = adjustedDate.Difference(endDate)
+
+    Print "START=" & CStr(startDate)
+    Print "ADJUSTED=" & CStr(adjustedDate)
+    Print "DIFFERENCE=" & CStr(seconds)
+    Print "OSDATEFORMAT=" & startDate.OSDateFormatting
+    Print "OSTIMEFORMAT=" & startDate.OSTimeFormatting
+    Print "OSDATE=" & Format$(startDate, startDate.OSDateFormatting)
+    Print "OSTIME=" & Format$(endDate, endDate.OSTimeFormatting)
+
+    If endDate > adjustedDate Then
+        Print "GT=TRUE"
+    End If
+    If endDate >= adjustedDate Then
+        Print "GTE=TRUE"
+    End If
+    If adjustedDate < endDate Then
+        Print "LT=TRUE"
+    End If
+    If adjustedDate <= endDate Then
+        Print "LTE=TRUE"
+    End If
+    If adjustedDate <> endDate Then
+        Print "NE=TRUE"
+    End If
+    If adjustedDate = adjustedDate Then
+        Print "EQ=TRUE"
+    End If
+End Sub

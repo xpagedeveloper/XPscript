@@ -1,0 +1,17 @@
+Sub Main()
+    Dim parameters List As Variant
+    Dim result As Variant
+
+    ' One byte above the 16 MiB UTF-8 payload budget.
+    parameters("blob") = String(16777217, "x")
+
+    On Error GoTo ExpectedError
+    result = Evaluate("Return Len(callvar(""blob""))", parameters)
+    Error 9111, "Expected Evaluate collection payload budget error"
+
+ExpectedError:
+    If Err <> 5 Then
+        Error 9112, "Expected XPScript error 5 but got " & CStr(Err)
+    End If
+    Print "PAYLOAD-BUDGET=OK"
+End Sub

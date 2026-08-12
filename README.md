@@ -1,643 +1,262 @@
 # XPScript
 
 (c) xpagedeveloper.com 2026
+
 Source available for testing and internal use only. No commercial rights are granted. Commercial use requires a separate written license from the copyright holder.
 
+XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 
-XPScript is a standalone Lotusscript -inspired compiler written in C#/.NET 10.
+## Documentation
 
-XPScript transpiles supported source code to C# and uses the .NET SDK to publish a Windows x64 executable.
+The language/runtime reference is maintained under `docs/` and intentionally reuses source fixtures already present under `samples/`.
 
-## Requirements
+Start with:
 
-- .NET 10 SDK on the development or compile machine
-- HCL Notes / Domino is not required
-- Windows is not required to run the compiler, but the generated target is currently `win-x64`
-- Generated executables are self-contained by default
+- `docs/index.md` — documentation index mapped to sample files
+- `docs/core-language.md`
+- `docs/arrays-lists-operators.md`
+- `docs/types-classes-modules.md`
+- `docs/strings-conversion-base64.md`
+- `docs/math-functions.md`
+- `docs/date-time.md`
+- `docs/file-io-filesystem.md`
+- `docs/console-process-formatting.md`
+- `docs/platform-native.md`
+- `docs/native-http-json.md`
+- `docs/evaluate.md`
+- `docs/security.md` — security boundaries and powerful APIs
 
-## Build the compiler
+Negative samples intentionally demonstrate errors and are identified as such in the documentation. Older compatibility fixtures are not automatically presented as the preferred standalone XPScript API.
+
+## Compiler
+
+Build the compiler:
 
 ```powershell
 dotnet build .\src\XPScript.Compiler\XPScript.Compiler.csproj -c Release
 ```
 
-Run it directly:
+Compile for the current platform:
 
 ```powershell
-dotnet run --project .\src\XPScript.Compiler -- .\samples\hello.xps -o .\out\Hello.exe
+xpscriptc program.xps -o program
 ```
 
-Publish the compiler itself:
+Compile for a specific runtime:
 
 ```powershell
-dotnet publish .\src\XPScript.Compiler\XPScript.Compiler.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\compiler-publish
+xpscriptc program.xps --runtime win-x64 -o program.exe
+xpscriptc program.xps --runtime linux-x64 -o program
+xpscriptc program.xps --runtime linux-arm64 -o program
+xpscriptc program.xps --runtime osx-x64 -o program
+xpscriptc program.xps --runtime osx-arm64 -o program
 ```
 
-Then compile an XPScript source file:
+Compiler result formats:
 
 ```powershell
-.\compiler-publish\xpscriptc.exe .\samples\hello.xps -o .\out\Hello.exe
+xpscriptc program.xps --result-format text
+xpscriptc program.xps --result-format json
+xpscriptc program.xps --result-format xml
 ```
+
+A successful structured result reports `result = ok`. A compile failure reports `result = error` and includes diagnostics with source line, position, description, source code and marked code.
 
 ## Entry point
 
-A source file must contain either:
-
-```xpscriptscript
+```xpscript
 Sub Main()
+    Print "Hello from XPScript"
 End Sub
 ```
 
-or:
-
-```xpscriptscript
-Sub Initialize()
-End Sub
-```
-
-`Main` takes precedence when both exist.
-
-## Supported language features
-
-Current compiler support includes:
-
-- `Option Declare`
-- `Option Base 0` and `Option Base 1`
-- `DefBool`, `DefByte`, `DefCur`, `DefDbl`, `DefInt`, `DefLng`, `DefSng`, `DefStr`, and `DefVar`
-- `Sub` and `Function`
-- `Static Sub` and `Static Function`
-- XPScript-style function return assignment
-- `Return`
-- `Dim` and `Static`
-- scalar `ByRef`
-- array parameters
-- scalar assignment and `Let`
-- `If`, `ElseIf`, `Else`, `End If`
-- `Select Case`, value cases, ranges, relational cases, and `Case Else`
-- `For`, `To`, `Step`, `Next`
-- `While`, `Wend`
-- `Do`, `Do While`, `Do Until`, `Loop`, `Loop While`, `Loop Until`
-- `Exit For`, `Exit Do`, `Exit While`, `Exit Sub`, `Exit Function`
-- `Call`
-- `Print`
-- `With` and `End With`
-- labels
-- `GoTo`
-- `GoSub` and `Return`
-- `On Error GoTo label`
-- error-number-specific `On Error n GoTo label`
-- `On Error Resume Next`
-- `On Error GoTo 0`
-- `Resume`, `Resume Next`, and `Resume label`
-- `Err`, `Err()`, `Erl`, `Erl()`, `Error`, `Error()`, and `Error$`
-- the `Error number [, description]` statement
-- external Windows DLL declarations with `Declare Function` and `Declare Sub`
-- `On Event ... From ... Call ...` for the standalone SAX compatibility parser
-- comments using `'`
-- operators including `+ - * / Mod`, comparisons, `And`, `Or`, `Not`, and `&`
-- scalar types including `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Currency`, `Date`, `Variant`, and `Object`
-
-## Array support
-
-XPScript implements fixed and dynamic XPScript-style arrays independently of .NET native array syntax.
-
-Supported array features include:
-
-- fixed arrays such as `Dim values(10) As Long`
-- explicit lower and upper bounds such as `Dim values(1 To 10) As Long`
-- multidimensional arrays such as `Dim matrix(1 To 5, 0 To 9) As Double`
-- up to eight dimensions
-- `Option Base 0` and `Option Base 1`
-- dynamic arrays such as `Dim values() As String`
-- `ReDim`
-- `ReDim Preserve`
-- `LBound`
-- `UBound`
-- array element reads and writes
-- arrays passed to procedures
-- `Erase` for fixed and dynamic arrays
-
-Example:
-
-```xpscriptscript
-Option Base 1
-
-Sub SetFirst(values() As Long)
-    values(1) = 99
-End Sub
-
-Sub Main()
-    Dim values() As Long
-
-    ReDim values(1 To 2)
-    values(1) = 10
-    values(2) = 20
-
-    ReDim Preserve values(1 To 3)
-    values(3) = 30
-
-    Call SetFirst(values)
-
-    Print CStr(LBound(values))
-    Print CStr(UBound(values))
-    Print CStr(values(1))
-End Sub
-```
-
-`ReDim Preserve` keeps existing values. For multidimensional arrays, preservation follows the XPScript-compatible restriction that only the upper bound of the last dimension can change while preserving data.
-
-## ByRef support
-
-Scalar parameters can be explicitly declared `ByRef`.
-
-```xpscriptscript
-Sub Increment(ByRef value As Long)
-    value = value + 1
-End Sub
-
-Sub Main()
-    Dim value As Long
-    value = 10
-    Call Increment(value)
-    Print CStr(value)
-End Sub
-```
-
-The generated runtime uses reference cells so assignment inside the called procedure updates the original caller variable.
-
-Arrays are passed as shared array objects and array element changes are visible to the caller.
-
-## Select Case
-
-Supported forms include:
-
-```xpscriptscript
-Select Case value
-Case 1
-    Print "one"
-Case 2 To 10
-    Print "range"
-Case Is > 10
-    Print "high"
-Case Else
-    Print "other"
-End Select
-```
-
-## Error handling
-
-XPScript provides a standalone XPScript-style error state and control-flow implementation.
-
-Supported forms include:
-
-- `Err` and `Err()`
-- `Erl` and `Erl()`
-- `Error`, `Error()`, `Error$`, `Error(number)`, and `Error$(number)`
-- `Error number`
-- `Error number, description`
-- `On Error GoTo label`
-- error-number-specific `On Error n GoTo label`
-- `On Error Resume Next`
-- `On Error GoTo 0`
-- `Resume`
-- `Resume Next`
-- `Resume label`
-
-Example:
-
-```xpscriptscript
-Sub ReadFile()
-    On Error GoTo Handler
-
-    Open "test.txt" For Input As #1
-    Exit Sub
-
-Handler:
-    Print "Error " & CStr(Err) & ": " & Error$
-    Resume Next
-End Sub
-```
-
-`Error$` without an argument returns the current error description. `Error$(number)` returns the registered description for that error number. The `Error` statement raises a trappable XPScript runtime error.
-
-Common .NET/OS exceptions are normalized into XPScript-compatible numbers before `On Error` dispatch. Current mappings include:
-
-- file or directory not found -> `53`
-- overflow -> `6`
-- division by zero -> `11`
-- subscript/index out of range -> `9`
-- type mismatch/format conversion -> `13`
-- input past end of file -> `62`
-- permission/access denied -> `70`
-
-`Erl` exposes the protected XPScript statement position recorded when the error was trapped. It is stable for error handling and diagnostics inside the generated program, but it is not currently guaranteed to equal the physical source-file line number.
-
-## GoTo and GoSub
-
-Text labels can be used as branch targets.
-
-```xpscriptscript
-GoSub Worker
-Print "returned"
-GoTo Done
-
-Worker:
-    Print "worker"
-    Return
-
-Done:
-```
-
-`GoSub` return positions are tracked per procedure and nested calls use a runtime stack.
-
-## With
-
-`With` supports member access using leading dots.
-
-```xpscriptscript
-With person
-    .Name = "Fredrik"
-    Print .Name
-End With
-```
-
-Nested `With` blocks are supported by the compatibility preprocessor.
-
-## Static variables and procedures
-
-Local `Static` variables retain their value between calls.
-
-```xpscriptscript
-Function Counter() As Long
-    Static count As Long
-    count = count + 1
-    Counter = count
-End Function
-```
-
-`Static Sub` and `Static Function` are also supported. Local variables in a static procedure retain their values between calls.
-
-## Deftype
-
-Default variable types can be selected by the first letter of a name.
-
-```xpscriptscript
-DefInt A-C
-
-Sub Main()
-    Dim apple
-    apple = 42
-    Print TypeName(apple)
-End Sub
-```
-
-Letter ranges and comma-separated ranges are supported.
-
-## External DLL declarations
-
-Windows native functions and procedures can be declared using XPScript-style declarations.
-
-```xpscriptscript
-Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
-Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
-```
-
-XPScript generates .NET P/Invoke declarations. `Lib`, `Alias`, Function/Sub, scalar parameters, `ByVal`, and scalar return types are supported.
-
-A source-level native declaration named `Sleep` remains a normal P/Invoke call. The standalone built-in `Sleep seconds` statement described below is used when no such native declaration is invoked.
-
-## XPScript List support
-
-XPScript implements tagged XPScript-style lists separately from normal arrays.
-
-Supported syntax and operations:
-
-- `Dim name List As Type`
-- tagged reads and writes with `list("tag")`
-- automatic creation of a list element when assigning a new tag
-- `IsElement(list("tag"))`
-- `ForAll value In list`
-- `ListTag(value)` inside `ForAll`
-- assignment to the `ForAll` alias updates the list element
-- `Exit ForAll`
-- `Erase list("tag")`
-- `Erase list`
-- list fields inside classes
-
-Example:
-
-```xpscriptscript
-Dim users List As String
-
-users("admin") = "Fredrik"
-users("guest") = "Guest"
-
-ForAll value In users
-    Print ListTag(value) & ": " & value
-End ForAll
-
-If IsElement(users("guest")) Then
-    Erase users("guest")
+`Sub Initialize()` is also accepted when `Main` is not present.
+
+## Core language
+
+Implemented language areas include:
+
+- `Sub`, `Function`, `Call`, `Return`, `Exit Sub`, `Exit Function`
+- `Dim`, `Static`, module-level `Public` and `Private`
+- scalar types: `String`, `Integer`, `Long`, `Single`, `Double`, `Currency`, `Boolean`, `Byte`, `Date`, `Variant`, `Object`
+- `ByVal`, `ByRef`, `Optional`
+- `Enum`
+- user-defined `Type` with scalar fields and array members
+- classes, constructors, destructors and properties
+- `If`, `ElseIf`, `Else`
+- `Select Case`
+- `For`, `While`, `Do`, `ForAll`
+- `GoTo`, `GoSub`, labels
+- `On Error`, `Resume`, `Err`, `Error`, `Erl`
+- fixed and dynamic arrays, multidimensional arrays, `ReDim Preserve`
+- tagged lists
+- external native-library declarations with platform-specific `.dll`, `.so` and `.dylib` selection
+
+## Platform targeting
+
+`Platform()` returns a stable runtime platform name that can be used in XPScript code:
+
+```xpscript
+If Platform() = "Windows" Then
+    Print "Running on Windows"
+ElseIf Platform() = "Linux" Then
+    Print "Running on Linux"
+ElseIf Platform() = "MacOS" Then
+    Print "Running on macOS"
 End If
 ```
 
-## Class and object support
+The compiler currently supports these target RIDs:
 
-XPScript supports user-defined classes without Notes/XPScript dependencies.
+- `win-x64`
+- `win-arm64`
+- `linux-x64`
+- `linux-arm64`
+- `osx-x64`
+- `osx-arm64`
 
-Implemented features:
+If `--runtime` is omitted, the compiler targets the current OS and process architecture.
 
-- `Class` and `End Class`
-- class fields
-- methods using `Sub` and `Function`
-- constructors using `Sub New`
-- destructors using `Sub Delete`
-- parameterless `Property Get`
-- parameterless `Property Set`
-- public and private classes and members
-- object variables
-- shared object references
-- `Dim object As ClassName`
-- `Dim object As New ClassName(...)`
-- `Set object = New ClassName(...)`
-- `Set object2 = object1`
-- `Set object = Nothing`
-- `object Is Nothing`
-- `object Is Not Nothing`
-- `Delete object`
-- `Me`
-- method and property access through object references
+## External native libraries
 
-`Set object2 = object1` shares the XPScript object reference. `Delete object1` invokes `Sub Delete` and invalidates the shared reference, so aliases such as `object2` also evaluate as `Nothing`.
+A native declaration can select a different library and exported entry point for each target platform:
 
-See `samples/lists-classes.xps` for a CI-tested example combining lists, classes, properties, constructors, object references, `Set`, `New`, `Delete`, and `Me`.
-
-## Environment and OS compatibility
-
-Functions that normally depend on a host application or operating system use explicit XPScript standalone behavior.
-
-### Environ / Environ$
-
-`Environ("NAME")` and `Environ$("NAME")` read the generated process environment. A missing variable returns an empty string.
-
-A numeric argument uses XPScript's deterministic compatibility rule: environment entries are sorted case-insensitively as `NAME=VALUE` strings and returned using a one-based index.
-
-### Shell
-
-`Shell(command [, windowStyle])` starts an external process using the target operating system. XPScript returns `33` after the process is successfully launched. It does not wait for the process to finish and the value is not the child process exit code.
-
-On Windows, `.cmd` and `.bat` files are launched through `COMSPEC`/`cmd.exe`. A basic XPScript-style window-state mapping is applied when `windowStyle` is supplied.
-
-### Sleep
-
-`Sleep seconds` suspends the current thread for the requested number of seconds. Fractional seconds are accepted.
-
-```xpscriptscript
-Sleep 0.25
+```xpscript
+Declare Function NativeProcessId Lib "native-process" _
+    WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
+    LinuxLib "libc.so.6" LinuxAlias "getpid" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
+    () As Integer
 ```
 
-### GetObject
+Selection is based on the target RID passed to the compiler, not the operating system on which the compiler itself is running.
 
-`GetObject` is a Windows-only COM compatibility function in XPScript.
+Application-local native-library packaging and exact x64/arm64 asset selection are implemented on the no-CI development branch and documented in `docs/platform-native.md`. Runtime verification on each target OS remains pending while execution is disabled.
 
-- `GetObject(pathname)` binds to a COM moniker for the supplied path.
-- `GetObject("", "Prog.Id")` creates an instance from a registered COM ProgID.
+## Operators and coercion
 
-### Stop
+XPScript supports arithmetic, comparison, logical and string operators including:
 
-`Stop` breaks into an attached debugger. If no debugger is attached, XPScript raises runtime error `5`, allowing it to be handled by `On Error` rather than silently terminating the process.
+- `+ - * / \\ Mod ^`
+- `= <> < > <= >=`
+- `And Or Not Xor Eqv Imp`
+- `Like`
+- `&`
 
-## Formatting
-
-XPScript supports:
-
-- `Format`
-- `Format$`
-- `FormatNumber`
-- `FormatPercent`
-
-`Format` and `Format$` support normal .NET-compatible format masks plus these named compatibility formats:
-
-- `General Number`
-- `Currency`
-- `Fixed`
-- `Standard`
-- `Percent`
-- `Scientific`
-- `Yes/No`
-- `True/False`
-- `On/Off`
-
-`FormatNumber` and `FormatPercent` are explicit XPScript standalone extensions. They use the current process culture and support optional decimal-place and negative-number formatting arguments.
-
-## Miscellaneous runtime functions
-
-### Evaluate
-
-`Evaluate(expression [, host])` is deliberately standalone. It evaluates scalar expressions using the XPScript runtime and does not provide the XPScript `@Formula` engine.
-
-For example:
-
-```xpscriptscript
-Print CStr(Evaluate("1+2*3"))
-```
-
-prints `7`.
-
-Expressions containing `@` are rejected with XPScript runtime error `5` instead of pretending that XPScript formula functions are available.
-
-### InputBox
-
-`InputBox(prompt [, title [, default]])` is console based. It writes the prompt to standard output and reads from standard input. If input reaches EOF, the default value is returned.
-
-### MessageBox / MsgBox
-
-`MessageBox` and `MsgBox` use XPScript's console compatibility implementation. The title and message are written to standard output and the function returns `1` for OK.
-
-### Beep
-
-`Beep` uses the console beep implementation where the target runtime supports it.
-
-### Print
-
-`Print` writes to standard output. `Print #fileNumber` remains the file-output form.
-
-## Standalone SAX compatibility
-
-XPScript provides self-contained compatibility facades named `NotesSAXParser`, `NotesSAXAttributeList`, and `NotesSAXException`. They do not load or require XPScript Notes/XPScript.
-
-The parser is event driven. Event handlers can be connected using XPScript-style syntax and are called synchronously while the XML stream is being parsed:
-
-```xpscriptscript
-Sub Main()
-    Dim parser As NotesSAXParser
-
-    Set parser = New NotesSAXParser("<root id=""7""><child>text</child></root>")
-
-    On Event SAX_StartDocument From parser Call SAXStartDocument
-    On Event SAX_StartElement From parser Call SAXStartElement
-    On Event SAX_Characters From parser Call SAXCharacters
-    On Event SAX_EndElement From parser Call SAXEndElement
-    On Event SAX_EndDocument From parser Call SAXEndDocument
-
-    parser.Process
-End Sub
-
-Sub SAXStartElement(Source As NotesSAXParser, ByVal ElementName As String, Attributes As NotesSAXAttributeList)
-    Print ElementName
-    If Attributes.Length > 0 Then
-        Print Attributes.GetName(1) & "=" & Attributes.GetValue(1)
-    End If
-End Sub
-```
-
-Supported parser operations include:
-
-- `New NotesSAXParser()`
-- `New NotesSAXParser(input)`
-- `New NotesSAXParser(input, output)`
-- `SetInput`
-- `SetOutput`
-- `Process`
-- `Parse`
-- `Output`
-- `On Event eventName From parser Call handler`
-- `On Event eventName From parser Remove [handler]`
-
-Input can be XML text, a file path, a byte array, a text reader, or a stream at runtime. External XML entity resolution is disabled by the compatibility runtime.
-
-Events currently emitted by the standalone parser are:
-
-- `SAX_StartDocument`
-- `SAX_EndDocument`
-- `SAX_StartElement`
-- `SAX_EndElement`
-- `SAX_Characters`
-- `SAX_IgnorableWhiteSpace`
-- `SAX_ProcessingInstruction`
-- `SAX_FatalError`
-
-`NotesSAXAttributeList` provides:
-
-- `Length`
-- `GetName(indexOrName)`
-- `GetValue(indexOrName)`
-- `GetType(indexOrName)`
-
-Numeric attribute access is one based. XML attributes currently report type `CDATA`.
-
-The façade intentionally focuses on the event-driven parsing behavior needed by standalone XPScript applications. XPScript-specific parser integration and the full set of DTD/entity callback semantics are not currently emulated.
-
-See `samples/runtime-sax.xps` for the CI-tested event-callback example.
-
-## Built-in functions
-
-The runtime implements a broad standalone subset of XPScript standard functions.
-
-### Strings
-
-`Len`, `LenB`, `Left`, `Right`, `Mid`, `UCase`, `LCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Chr`, `Asc`, `Instr`, `StrComp`, `Replace`, `Space`, `String`, `Split`, `Join`
-
-### Conversion and type inspection
-
-`CStr`, `CByte`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CBool`, `CVar`, `CDat`, `CDate`, `DataType`, `TypeName`, `Val`, `IsNumeric`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `Bin`, `Hex`, `Oct`, `Str`
-
-### Math
-
-`Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Rnd`, `Randomize`
-
-### Date and time
-
-`Now`, `Today`, `Date`, `Time`, `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateNumber`, `TimeNumber`, `DateValue`, `TimeValue`, `Weekday`, `MonthName`, `WeekdayName`, `DateAdd`, `DateDiff`, `DatePart`, `Timer`
-
-### Host, formatting, and interaction
-
-`Environ`, `Format`, `Format$`, `FormatNumber`, `FormatPercent`, `Shell`, `Sleep`, `Evaluate`, `GetObject`, `InputBox`, `MessageBox`, `MsgBox`, `Beep`, `Print`, `Stop`, `Error`, `Error$`, `Err`, `Erl`
+The `+` operator is deliberately forgiving. For example, String + Integer appends the integer as text, while Integer + a numeric String performs numeric addition.
 
 ## File I/O
 
-Sequential, Binary, and Random modes are supported.
+XPScript supports sequential, Binary and Random file access.
 
-Supported file operations include:
+```xpscript
+Dim f As Integer
+Dim value As String
 
-- `FreeFile`
-- `Open ... For Input/Output/Append/Binary/Random As #n`
-- Random record length using `Len = n`
-- `Close`
-- `Print #`
-- `Write #`
-- `Input #`
-- `Line Input #`
-- `EOF`
-- `LOF`
-- `Seek`
-- `Loc`
-- `Get`
-- `Put`
-- `FileLen`
-- `FileDateTime`
-- `GetFileAttr`
-- `SetFileAttr`
-- `FileCopy`
-- `Kill`
-- `Name ... As ...`
-- `MkDir`
-- `RmDir`
-- `ChDir`
-- `CurDir`
-- `Dir`
-- `Command`
+f = FreeFile
+Open "data.txt" For Input As #f Charset "utf-8"
+value = Input$(5, #f)
+Close #f
+```
 
-Binary positioning is byte based and one based at the language surface. Random positioning uses the configured record length and one-based record numbers. `Loc` reports mode-specific position information.
+File `Input$(count, #fileNumber)` is separate from interactive console input.
 
-`Get` and `Put` currently support the standalone scalar types and strings used by the runtime, including Byte, Boolean, Integer, Long, Single, Double, Currency, Date, and String.
+File locking uses operating-system file locks:
 
-## Continuous integration
+```xpscript
+Open "data.bin" For Binary As #f
+Lock #f, 1 To 100
+' protected file region
+Unlock #f, 1 To 100
+Close #f
+```
 
-The GitHub Actions workflow uses .NET 10 on Windows and performs:
+Binary lock ranges are byte based and 1-based at the XPScript surface. Random ranges map to records. Sequential modes lock the file as a whole.
 
-1. compiler restore and build
-2. compilation and execution of `samples/compatibility.xps`
-3. verification of string, number, date, and file functionality
-4. compilation and execution of `samples/lists-classes.xps`
-5. verification of List and class behavior
-6. compilation and execution of `samples/core-language.xps`
-7. verification of arrays, ReDim Preserve, LBound/UBound, ByRef, Select Case, error handling, Resume variants, GoTo, GoSub, labels, native declarations, Binary/Random Get/Put/Loc, With, Static, and Deftype
-8. compilation and execution of `samples/runtime-sax.xps`
-9. verification of environment access, formatting, Error/Error$/Err/Erl handling, missing-file error 53, Resume Next, Sleep, Shell, Evaluate, MessageBox, SAX event callbacks, and SAX attribute access
+General file/path operations use .NET filesystem APIs so Windows, Linux and macOS retain their native path and filesystem behavior. `ChDrive` is intentionally Windows-only. Cross-platform differences such as file locking, case sensitivity, permissions, open-file deletion, symlinks, newline handling and file sharing are tracked in `todo/cross-platform-runtime-todo.md` and must be verified independently on each OS.
 
-This checks both the compiler itself and generated Windows executables.
+Text I/O supports `Charset` and the independent `Encoding "base64"` storage layer. See `docs/file-io-filesystem.md` and `docs/text-io-console.md`.
 
-## Remaining compatibility work
+## Process execution
 
-XPScript is not intended to provide the general Notes/XPScript object model. The SAX names documented above are standalone compatibility facades rather than XPScript objects.
+`Shell()` is platform-aware:
 
-Areas that still require additional compatibility work include:
+- Windows: executables, `.cmd`, `.bat`, `.ps1`
+- Linux/macOS: executables, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` when PowerShell is installed
 
-- general Notes/XPScript classes outside the documented SAX compatibility facade
-- complete Notes SAX DTD/entity callback parity
-- user-defined Type/UDT support
-- parameterized or indexed properties
-- complete class inheritance edge cases
-- native DLL declarations involving UDTs, pointers, callbacks, or complex marshaling
-- Binary/Random `Get` and `Put` for UDT records and other complex aggregate values
-- physical source-line fidelity for `Erl`
-- every locale-specific XPScript coercion and formatting edge case
-- native GUI implementations of `MessageBox` and `InputBox`
+Arguments are passed using structured process arguments where possible to avoid unnecessary shell re-parsing. `.cmd`/`.bat` execution still crosses a `cmd.exe` command-shell boundary and must not receive untrusted concatenated command text.
 
-## Architecture
+See `docs/platform-native.md`, `docs/console-process-formatting.md` and `docs/security.md`.
 
-1. `XPScriptTranspiler` protects source literals and orchestrates the compiler passes.
-2. `ExtendedCompatibilityTranspiler` normalizes host-dependent functions, `Error$` shorthand, and SAX event syntax before the core language pass.
-3. `CoreCompatibilityTranspiler` adds arrays, ByRef, Select Case, error handling, labels, native declarations, advanced file I/O, With, Static, and Deftype support.
-4. `AdvancedXPScriptTranspiler` handles the base language, classes, Lists, expressions, and procedure generation.
-5. `XPScriptRuntime` provides standard functions and basic runtime services.
-6. `LSExtendedRuntime` provides environment, OS, formatting, interaction, Evaluate, GetObject, Shell, Sleep, and Stop compatibility behavior.
-7. `LSExtendedErrorRuntime` maps common .NET/OS exceptions to XPScript-compatible error numbers.
-8. `NotesSAXParser`, `NotesSAXAttributeList`, and `LSSaxRuntime` provide the standalone event-driven SAX facade.
-9. `LSArray` provides XPScript-style bounds, dimensions, ReDim, and Preserve semantics.
-10. `LSList<T>` provides tagged List semantics and `ForAll` aliases.
-11. `LSRef<T>` provides shared object-reference semantics for `Set`, `Nothing`, and `Delete`.
-12. `LSControlRuntime` provides error-handler and GoSub state.
-13. `LSFileRuntime` provides unified sequential, Binary, and Random file access.
-14. `CompilerDriver` creates a temporary .NET 10 SDK project and publishes the Windows executable.
+## HTTP
+
+The XPScript-native HTTP API uses `HttpClient` and `HttpResponse`:
+
+```xpscript
+Dim http As New HttpClient
+Dim response As HttpResponse
+
+Call http.SetHeader("Accept", "application/json")
+Set response = http.Get("https://api.example.com/users")
+
+Print CStr(response.StatusCode)
+Print response.Body
+```
+
+Supported request methods are `Get`, `Post`, `Put`, `Patch` and `Delete`. Headers and timeout can be configured per client.
+
+Header names/values are validated before request construction; CR/LF header injection is rejected. Native HTTP URLs must be absolute `http://` or `https://` URLs. Application-level host/network allowlisting is still required when user-controlled URLs could create SSRF risk.
+
+## JSON
+
+XPScript provides native JSON classes and helper functions:
+
+```xpscript
+Dim obj As New JsonObject
+Call obj.Set("name", "Alice")
+Call obj.Set("active", True)
+
+Print JsonStringify(obj)
+```
+
+Available APIs include:
+
+- `JsonDocument.Parse` / `Stringify`
+- `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
+- `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
+- `JsonElement.Type`, `Value`
+- `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
+
+See `docs/native-http-json.md` for the preferred standalone API.
+
+## Runtime helpers
+
+The standard runtime includes string, conversion, inspection, math, date/time, formatting, filesystem, process, Base64 and URL helpers. Examples include:
+
+- strings: `Len`, `Left`, `Right`, `Mid`, `Instr`, `Replace`, `StrConv`, `StrLeft`, `StrRight`
+- conversions: `CStr`, `CInt`, `CLng`, `CDbl`, `CDate`, `CType`, `CVDate`
+- inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsNumeric`, `IsObject`, `IsList`
+- math: `Abs`, `Round`, `Sqr`, `Sin`, `Cos`, `Tan`, `Rnd`
+- date/time: `Now`, `Today`, `DateAdd`, `DateDiff`, `DatePart`
+- filesystem: `ChDir`, `ChDrive`, `CurDir`, `Dir`, `FileCopy`, `Kill`, `MkDir`, `RmDir`
+- Base64/URL: `Base64Encode`, `Base64Decode`, `Base64DecodeBinary`, `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
+
+The complete sample-based grouping is in `docs/index.md`.
+
+## Samples
+
+The `samples` directory contains XPScript source fixtures for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries, Evaluate, security diagnostics and compiler compatibility behavior.
+
+Documentation should reuse these samples instead of creating duplicate example programs unless a new example is explicitly needed.
+
+## Security
+
+XPScript source execution is code execution. APIs such as `Shell`, general file I/O, HTTP, native interop and compatibility COM/OLE surfaces use the privileges of the current process and are not automatically sandboxed.
+
+See `docs/security.md` for trust boundaries and deployment guidance. Static hardening work is tracked in `todo/security-review-todo.md`.
+
+## Implementation status
+
+The tracked implementation plan is maintained in:
+
+- `todo/runtime-reference-todo.md`

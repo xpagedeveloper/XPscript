@@ -1,0 +1,27 @@
+Type Payload
+    Value As Integer
+End Type
+
+Sub Main()
+    Dim whenValue As Date
+    Dim flag As Boolean
+    Dim obj As Object
+    Dim values(0 To 1) As Integer
+    Dim payload As Payload
+
+    whenValue = DateNumber(2026, 8, 12)
+    flag = True
+
+    If whenValue > flag Then
+        Print "invalid"
+    End If
+    If whenValue < obj Then
+        Print "invalid"
+    End If
+    If whenValue >= values Then
+        Print "invalid"
+    End If
+    If whenValue <> payload Then
+        Print "invalid"
+    End If
+End Sub

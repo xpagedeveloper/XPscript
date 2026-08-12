@@ -1,0 +1,11 @@
+Sub Main()
+    Dim bytes As Variant
+    bytes = Base64DecodeBinary("AQID/w==")
+
+    Print "LOW=" & CStr(LBound(bytes))
+    Print "HIGH=" & CStr(UBound(bytes))
+    Print "B0=" & CStr(bytes(0))
+    Print "B1=" & CStr(bytes(1))
+    Print "B2=" & CStr(bytes(2))
+    Print "B3=" & CStr(bytes(3))
+End Sub

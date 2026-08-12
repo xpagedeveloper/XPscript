@@ -1,0 +1,20 @@
+' Cross-process locking fixture: process B.
+' Start while file-lock-holder.xps prints LOCKED.
+Sub Main()
+    Dim f As Integer
+    f = FreeFile
+
+    Open "xps-lock-test.bin" For Binary As #f
+    On Error GoTo LockFailed
+
+    Lock #f, 1 To 64
+    Print "UNEXPECTED_LOCK_SUCCESS"
+    Unlock #f, 1 To 64
+    Close #f
+    Exit Sub
+
+LockFailed:
+    Print "LOCK_FAILED Err=" & CStr(Err) & " Error=" & Error$
+    On Error GoTo 0
+    Close #f
+End Sub

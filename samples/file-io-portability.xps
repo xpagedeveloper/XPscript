@@ -1,0 +1,26 @@
+Sub Main()
+    Dim f As Integer
+    Dim line As String
+
+    f = FreeFile
+    Open "xps-portable-default.txt" For Output As #f
+    Print #f, "Latin-1: åäö"
+    Close #f
+
+    f = FreeFile
+    Open "xps-portable-utf8.txt" For Output As #f Charset "utf-8"
+    Print #f, "UTF-8: åäö 日本語"
+    Close #f
+
+    f = FreeFile
+    Open "xps-portable-utf8.txt" For Input As #f Charset "utf-8"
+    Line Input #f, line
+    Close #f
+
+    If line <> "UTF-8: åäö 日本語" Then
+        Error 9101, "Portable UTF-8 round-trip failed"
+    End If
+
+    Kill "xps-portable-default.txt"
+    Kill "xps-portable-utf8.txt"
+End Sub

@@ -198,6 +198,20 @@ internal static class XPScriptReferenceRuntime
     public static string Base64Encode(object? value, object? charset) => XPScriptTextIO.ToBase64(value, charset);
     public static string Base64Decode(object? value) => XPScriptTextIO.FromBase64(value);
     public static string Base64Decode(object? value, object? charset) => XPScriptTextIO.FromBase64(value, charset);
+
+    // Raw binary form. The return value is an XPScript Byte array using the normal LSArray runtime,
+    // so LBound/UBound, IsArray and indexed access can use the same semantics as other arrays.
+    public static LSArray Base64DecodeBinary(object? value)
+    {
+        var bytes = Convert.FromBase64String(XPScriptRuntime.CStr(value).Trim());
+        if (bytes.Length == 0)
+            return new LSArray("Byte", true);
+
+        var result = new LSArray("Byte", false, [0], [bytes.Length - 1]);
+        for (var index = 0; index < bytes.Length; index++)
+            result.Set(bytes[index], index);
+        return result;
+    }
 }
 """;
 }

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim __xp_state As Integer
+    __xp_state = 1
+End Sub

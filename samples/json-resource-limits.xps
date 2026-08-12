@@ -1,0 +1,27 @@
+' JSON resource-limit regression sample.
+' Runtime verification remains pending while workflow execution is disabled.
+
+Sub Main()
+    Dim huge As String
+    Dim obj As JsonObject
+    Dim document As JsonDocument
+
+    ' Parser input is limited to 8 MiB of UTF-8 text.
+    huge = "{""data"":""" & String(8388609, "A") & """}"
+
+    On Error Resume Next
+    Set document = JsonDocument.Parse(huge)
+    Print "Oversized parse Err=" & CStr(Err)
+    Print "Oversized parse Error$=" & Error$
+    On Error GoTo 0
+
+    ' In-memory JSON values are also guarded by node/depth/payload budgets.
+    Set obj = New JsonObject
+    huge = String(16777217, "B")
+
+    On Error Resume Next
+    Call obj.Set("payload", huge)
+    Print "Oversized mutation Err=" & CStr(Err)
+    Print "Oversized mutation Error$=" & Error$
+    On Error GoTo 0
+End Sub

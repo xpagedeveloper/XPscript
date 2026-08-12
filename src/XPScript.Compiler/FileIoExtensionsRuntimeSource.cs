@@ -5,7 +5,7 @@ internal static class FileIoExtensionsRuntimeSource
     public const string Code = """
 internal static class XPScriptFileIO
 {
-    private const System.Reflection.BindingFlags StaticPrivate = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+    private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
 
@@ -119,30 +119,103 @@ internal static class XPScriptFileIO
 
     private static void LockRegion(FileStream stream, long offset, long length)
     {
-        try { stream.Lock(offset, length); }
-        catch (PlatformNotSupportedException ex) { throw new XPScriptRuntimeException(5, "Operating-system file locking is not supported on this platform: " + ex.Message); }
+        try
+        {
+            stream.Lock(offset, length);
+        }
+        catch (PlatformNotSupportedException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Operating-system file locking is not supported on this platform: " + ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new XPScriptRuntimeException(70, "Permission denied while locking file region: " + ex.Message);
+        }
+        catch (IOException ex)
+        {
+            throw new XPScriptRuntimeException(70,
+                "Unable to lock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                " length " + length.ToString(CultureInfo.InvariantCulture) +
+                ". Another process or handle may hold an overlapping lock. " + ex.Message);
+        }
     }
 
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
-        try { stream.Unlock(offset, length); }
-        catch (PlatformNotSupportedException ex) { throw new XPScriptRuntimeException(5, "Operating-system file unlocking is not supported on this platform: " + ex.Message); }
+        try
+        {
+            stream.Unlock(offset, length);
+        }
+        catch (PlatformNotSupportedException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Operating-system file unlocking is not supported on this platform: " + ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new XPScriptRuntimeException(70, "Permission denied while unlocking file region: " + ex.Message);
+        }
+        catch (IOException ex)
+        {
+            throw new XPScriptRuntimeException(70,
+                "Unable to unlock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                " length " + length.ToString(CultureInfo.InvariantCulture) +
+                ". The current handle may not own the requested lock. " + ex.Message);
+        }
     }
 
     private static object GetOpenState(int number)
     {
-        var state = TryGetDictionaryState(typeof(XPScriptRuntime), number);
+        // CoreCompatibility lowers normal Input/Output/Append/Binary/Random Open
+        // statements to LSFileRuntime. Check that store first so Lock/Unlock share
+        // the exact FileStream used by Put/Get/Seek and normal file operations.
+        var state = TryGetDictionaryState(typeof(LSFileRuntime), number);
+        if (state is not null) return state;
+
+        state = TryInvokeCoreGetFile(number);
+        if (state is not null) return state;
+
+        state = TryGetDictionaryState(typeof(XPScriptRuntime), number);
         if (state is not null) return state;
         state = TryGetDictionaryState(typeof(XPScriptTextIO), number);
         if (state is not null) return state;
         throw new IOException("File number is not open: " + number);
     }
 
+    private static object? TryInvokeCoreGetFile(int number)
+    {
+        var method = typeof(XPScriptRuntime).GetMethod("GetFile", StaticAny);
+        if (method is null) return null;
+        try
+        {
+            return method.Invoke(null, new object?[] { number });
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is IOException)
+        {
+            return null;
+        }
+    }
+
     private static object? TryGetDictionaryState(Type runtimeType, int number)
     {
-        var field = runtimeType.GetField("Files", StaticPrivate);
-        if (field?.GetValue(null) is not System.Collections.IDictionary files) return null;
-        return files.Contains(number) ? files[number] : null;
+        var field = runtimeType.GetField("Files", StaticAny);
+        var value = field?.GetValue(null);
+        if (value is null) return null;
+
+        if (value is System.Collections.IDictionary dictionary)
+            return dictionary.Contains(number) ? dictionary[number] : null;
+
+        if (value is System.Collections.IEnumerable entries)
+        {
+            foreach (var entry in entries)
+            {
+                if (entry is null) continue;
+                var entryType = entry.GetType();
+                var key = entryType.GetProperty("Key", InstanceAny)?.GetValue(entry);
+                if (key is null || Convert.ToInt32(key, CultureInfo.InvariantCulture) != number) continue;
+                return entryType.GetProperty("Value", InstanceAny)?.GetValue(entry);
+            }
+        }
+        return null;
     }
 
     private static TextReader? GetReader(object state) =>
@@ -150,9 +223,16 @@ internal static class XPScriptFileIO
 
     private static FileStream? GetStream(object state)
     {
-        if (state.GetType().GetProperty("Stream", InstanceAny)?.GetValue(state) is FileStream direct) return direct;
-        if (GetReader(state) is StreamReader reader) return reader.BaseStream;
-        if (state.GetType().GetProperty("Writer", InstanceAny)?.GetValue(state) is StreamWriter writer) return writer.BaseStream;
+        if (state.GetType().GetProperty("Stream", InstanceAny)?.GetValue(state) is FileStream direct)
+            return direct;
+
+        if (GetReader(state) is StreamReader reader && reader.BaseStream is FileStream readerFile)
+            return readerFile;
+
+        if (state.GetType().GetProperty("Writer", InstanceAny)?.GetValue(state) is StreamWriter writer &&
+            writer.BaseStream is FileStream writerFile)
+            return writerFile;
+
         return null;
     }
 }

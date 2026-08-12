@@ -1,0 +1,19 @@
+' XPScript sample: target-specific native library and alias selection.
+' The compiler resolves in this order: exact RID -> OS fallback -> generic Lib/Alias.
+
+Declare Function NativeVersion Lib "native/default/nativecore.dll" Alias "native_version" _
+    WindowsLib "native/windows/nativecore.dll" _
+    WindowsX64Lib "native/windows/x64/nativecore.dll" WindowsArm64Lib "native/windows/arm64/nativecore.dll" _
+    LinuxLib "native/linux/libnativecore.so" _
+    LinuxX64Lib "native/linux/x64/libnativecore.so" LinuxArm64Lib "native/linux/arm64/libnativecore.so" _
+    MacOSLib "native/macos/libnativecore.dylib" _
+    MacOSX64Lib "native/macos/x64/libnativecore.dylib" MacOSArm64Lib "native/macos/arm64/libnativecore.dylib" _
+    WindowsX64Alias "native_version_x64" WindowsArm64Alias "native_version_arm64" _
+    LinuxX64Alias "native_version_x64" LinuxArm64Alias "native_version_arm64" _
+    MacOSX64Alias "native_version_x64" MacOSArm64Alias "native_version_arm64" _
+    () As Integer
+
+Sub Main()
+    Print "Platform: " & Platform()
+    Print "Native version: " & CStr(NativeVersion())
+End Sub

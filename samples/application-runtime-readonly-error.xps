@@ -1,0 +1,5 @@
+Option Declare
+
+Sub Main()
+    Application.Args(0) = "changed"
+End Sub

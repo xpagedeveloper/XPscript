@@ -1,0 +1,19 @@
+Sub Main()
+    Dim scalar As Integer
+    Dim result As Variant
+    Dim args As Variant
+    Dim parameters List As Variant
+
+    scalar = 21
+    result = Evaluate("Return callvar * 2", scalar)
+    Print "SCALAR=" & CStr(result)
+
+    args = Array(10, 20, 30)
+    result = Evaluate("Return callvar(0) + callvar(1) + callvar(2)", args)
+    Print "ARRAY=" & CStr(result)
+
+    parameters("price") = 125.5
+    parameters("quantity") = 4
+    result = Evaluate("Return callvar(""price"") * callvar(""quantity"")", parameters)
+    Print "LIST=" & CStr(result)
+End Sub

@@ -2,7 +2,7 @@ name: .NET 10 Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, runtime-development-no-ci]
   pull_request:
     branches: [main]
   workflow_dispatch:

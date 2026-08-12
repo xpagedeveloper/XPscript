@@ -1,0 +1,16 @@
+Sub Main()
+    Dim result As Variant
+    Dim expressionResult As Variant
+
+    expressionResult = Evaluate("1 + 2 * 3")
+    Print "EXPRESSION=" & CStr(expressionResult)
+
+    result = Evaluate("Dim a As Integer: a = 10: Dim b As Integer: b = 5: Return (a * b) + 2")
+    Print "STATEMENTS=" & CStr(result)
+
+    result = Evaluate("Dim text As String: text = ""hello"": Return UCase(text) & "" WORLD""")
+    Print "STRING=" & CStr(result)
+
+    result = Evaluate("Return True And Not False")
+    Print "LOGICAL=" & CStr(result)
+End Sub

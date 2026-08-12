@@ -1,0 +1,93 @@
+using System.Text.RegularExpressions;
+
+namespace XPScript.Compiler;
+
+internal sealed class SourceLineMarkerPreprocessor
+{
+    public string Transform(string source)
+    {
+        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var output = new List<string>(lines.Length * 2);
+        var inProcedure = false;
+        var continuation = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var raw = lines[i];
+            var code = StripComment(raw).Trim();
+
+            if (!inProcedure && IsProcedureStart(code))
+            {
+                inProcedure = true;
+                continuation = false;
+                output.Add(raw);
+                continue;
+            }
+
+            if (inProcedure && IsProcedureEnd(code))
+            {
+                output.Add(raw);
+                inProcedure = false;
+                continuation = false;
+                continue;
+            }
+
+            if (inProcedure)
+            {
+                if (!continuation && code.Length > 0)
+                {
+                    var indent = Regex.Match(raw, @"^\s*").Value;
+                    output.Add(indent + $"Call XPSourceLineRuntime.Set({i + 1})");
+                }
+
+                output.Add(raw);
+                continuation = EndsWithContinuation(code);
+                continue;
+            }
+
+            output.Add(raw);
+        }
+
+        return string.Join(Environment.NewLine, output);
+    }
+
+    private static bool IsProcedureStart(string code) =>
+        Regex.IsMatch(code,
+            @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\b",
+            RegexOptions.IgnoreCase);
+
+    private static bool IsProcedureEnd(string code) =>
+        Regex.IsMatch(code, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase);
+
+    private static bool EndsWithContinuation(string code)
+    {
+        if (code.Length == 0) return false;
+        var inString = false;
+        var lastNonWhitespace = -1;
+        for (var i = 0; i < code.Length; i++)
+        {
+            if (code[i] == '"')
+            {
+                if (inString && i + 1 < code.Length && code[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+            }
+            if (!char.IsWhiteSpace(code[i])) lastNonWhitespace = i;
+        }
+        return !inString && lastNonWhitespace >= 0 && code[lastNonWhitespace] == '_';
+    }
+
+    private static string StripComment(string line)
+    {
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+            }
+            else if (!inString && line[i] == '\'') return line[..i];
+        }
+        return line;
+    }
+}

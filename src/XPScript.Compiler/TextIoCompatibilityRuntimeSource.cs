@@ -233,13 +233,39 @@ internal static class XPScriptTextIO
         var charset = XPScriptRuntime.CStr(charsetValue).Trim().ToLowerInvariant().Replace("_", "-");
         return charset switch
         {
-            "" or "default" or "ansi" => Encoding.Default,
+            // Deterministic legacy/default behavior. FileSystemPortabilityPostProcessor
+            // rewrites Encoding.Default to XPScriptFileSystemRuntime.LegacyEncoding (Latin-1).
+            "" or "default" or "ansi" or "latin1" or "latin-1" or "iso-8859-1" => Encoding.Default,
+
+            // UTF-8 is BOM-less by default. Users who explicitly need a BOM can request it.
             "utf8" or "utf-8" => new UTF8Encoding(false, true),
+            "utf8-bom" or "utf-8-bom" => new UTF8Encoding(true, true),
+
+            // UTF-16 aliases use BOM by default so StreamReader can auto-detect reliably.
             "unicode" or "utf16" or "utf-16" or "utf-16le" => new UnicodeEncoding(false, true, true),
+            "utf16le-nobom" or "utf-16le-nobom" => new UnicodeEncoding(false, false, true),
             "utf-16be" => new UnicodeEncoding(true, true, true),
-            "ascii" => Encoding.ASCII,
-            _ => Encoding.GetEncoding(charset)
+            "utf16be-nobom" or "utf-16be-nobom" => new UnicodeEncoding(true, false, true),
+
+            "ascii" or "us-ascii" => Encoding.ASCII,
+            _ => ResolveNamedCharset(charset)
         };
+    }
+
+    private static Encoding ResolveNamedCharset(string charset)
+    {
+        try
+        {
+            return Encoding.GetEncoding(charset,
+                EncoderFallback.ExceptionFallback,
+                DecoderFallback.ExceptionFallback);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
+        {
+            throw new XPScriptRuntimeException(5,
+                "Unsupported charset '" + charset +
+                "'. Portable built-ins include latin-1, utf-8, utf-8-bom, utf-16/utf-16le, utf-16be and ascii. " + ex.Message);
+        }
     }
 }
 """;

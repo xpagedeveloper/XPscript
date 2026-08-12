@@ -1,0 +1,31 @@
+Option Base 1
+
+Public Values() As Integer
+Private Names(1 To 3) As String
+
+Sub FillValues()
+    ReDim Values(1 To 3)
+    Values(1) = 10
+    Values(2) = 20
+    Values(3) = 30
+
+    Names(1) = "one"
+    Names(2) = "two"
+    Names(3) = "three"
+End Sub
+
+Sub ExtendValues()
+    ReDim Preserve Values(1 To 4)
+    Values(4) = 40
+End Sub
+
+Sub Main()
+    Call FillValues()
+    Call ExtendValues()
+
+    Print "MODULEARRAY=" & CStr(Values(1) + Values(4))
+    Print "MODULEBOUNDS=" & CStr(LBound(Values)) & ":" & CStr(UBound(Values))
+    Print "MODULEFIXED=" & Names(2)
+
+    Erase Values
+End Sub

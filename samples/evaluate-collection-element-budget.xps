@@ -1,0 +1,17 @@
+Sub Main()
+    Dim huge() As Variant
+    Dim result As Variant
+
+    ' 317 x 317 = 100489 elements, above the Evaluate snapshot limit of 100000.
+    ReDim huge(0 To 316, 0 To 316)
+
+    On Error GoTo ExpectedError
+    result = Evaluate("Return LBound(callvar)", huge)
+    Error 9101, "Expected Evaluate collection element budget error"
+
+ExpectedError:
+    If Err <> 5 Then
+        Error 9102, "Expected XPScript error 5 but got " & CStr(Err)
+    End If
+    Print "ELEMENT-BUDGET=OK"
+End Sub

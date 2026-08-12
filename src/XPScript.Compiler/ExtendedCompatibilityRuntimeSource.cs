@@ -142,23 +142,6 @@ internal static class LSExtendedRuntime
         return text;
     }
 
-    public static object? Evaluate(object? expression, object? host = null)
-    {
-        var text = XPScriptRuntime.CStr(expression).Trim();
-        if (text.Length == 0) return null;
-        if (text.Contains('@'))
-            throw new XPScriptRuntimeException(5, "XPScript Evaluate does not provide the XPScript @Formula engine.");
-        try
-        {
-            var table = new System.Data.DataTable { Locale = CultureInfo.CurrentCulture };
-            return table.Compute(text, "");
-        }
-        catch (Exception ex)
-        {
-            throw new XPScriptRuntimeException(5, "Evaluate expression is not supported: " + ex.Message);
-        }
-    }
-
     public static object? GetObject(object? pathname = null, object? className = null)
     {
         if (!OperatingSystem.IsWindows())
@@ -173,14 +156,14 @@ internal static class LSExtendedRuntime
             if (progId.Length > 0)
             {
                 var type = Type.GetTypeFromProgID(progId, throwOnError: true)
-                    ?? throw new COMException("COM class not found: " + progId);
+                    ?? throw new COMException("COM class was not found.");
                 return Activator.CreateInstance(type);
             }
             throw new XPScriptRuntimeException(5, "GetObject requires a pathname or COM ProgID.");
         }
         catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
-            throw new XPScriptRuntimeException(5, ex.Message);
+            throw new XPScriptRuntimeException(5, "COM GetObject activation failed.");
         }
     }
 

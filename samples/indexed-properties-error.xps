@@ -1,0 +1,15 @@
+Option Declare
+
+Class IndexedStore
+    Public Property Get Item(index As Integer) As String
+        Item = "value"
+    End Property
+End Class
+
+Sub Main()
+    Dim store As New IndexedStore
+    Dim wrongIndex As String
+    wrongIndex = "one"
+
+    Print store.Item(wrongIndex)
+End Sub
