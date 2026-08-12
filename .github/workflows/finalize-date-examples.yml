@@ -1,0 +1,40 @@
+name: Finalize Date Examples
+
+on:
+  push:
+    branches: [todo-date-examples]
+    paths:
+      - '.github/workflows/finalize-date-examples.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-date-examples
+      - name: Mark Date documentation and examples verified
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('todo/runtime-reference-todo.md')
+          s = p.read_text(encoding='utf-8')
+          old = '- [>] English documentation in `docs/date-time.md`; reusable `examples/` coverage remains pending'
+          new = '- [x] English documentation in `docs/date-time.md` with reusable `examples/` coverage for Adjust, Difference, comparisons and OS date/time formatting'
+          if old not in s:
+              raise SystemExit('Date documentation TODO line not found')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+      - name: Remove temporary workflows and commit
+        shell: bash
+        run: |
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git rm .github/workflows/date-examples-temp.yml .github/workflows/finalize-date-examples.yml
+          git add todo/runtime-reference-todo.md
+          git commit -m "Complete Date documentation and reusable examples"
+          git push origin HEAD:todo-date-examples
