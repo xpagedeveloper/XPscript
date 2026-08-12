@@ -79,6 +79,7 @@ public sealed class CompilerDriver
 
         var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
         try
         {
@@ -89,7 +90,9 @@ public sealed class CompilerDriver
 
             var csproj = BuildGeneratedProject(rid, selfContained, stagedManagedReferences);
             await File.WriteAllTextAsync(projectPath, csproj);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
+            CompilerPathSecurity.HardenTemporaryFile(programPath);
 
             var psi = new ProcessStartInfo
             {
@@ -117,18 +120,19 @@ public sealed class CompilerDriver
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
-            var outputDirectory = Path.GetDirectoryName(outputPath);
+            var outputFullPath = Path.GetFullPath(outputPath);
+            var outputDirectory = Path.GetDirectoryName(outputFullPath);
             if (!string.IsNullOrWhiteSpace(outputDirectory)) Directory.CreateDirectory(outputDirectory);
-            File.Copy(generatedExecutable, outputPath, overwrite: true);
-            CopyNativeDependencies(sourcePath, outputPath, nativeDependencies);
-            CopyManagedNativeDependencies(sourcePath, outputPath, managedReferences.Native);
+            File.Copy(generatedExecutable, outputFullPath, overwrite: true);
+            CopyNativeDependencies(sourcePath, outputFullPath, nativeDependencies);
+            CopyManagedNativeDependencies(sourcePath, outputFullPath, managedReferences.Native);
 
             if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
             {
                 try
                 {
-                    var mode = File.GetUnixFileMode(outputPath);
-                    File.SetUnixFileMode(outputPath, mode | UnixFileMode.UserExecute);
+                    var mode = File.GetUnixFileMode(outputFullPath);
+                    File.SetUnixFileMode(outputFullPath, mode | UnixFileMode.UserExecute);
                 }
                 catch (PlatformNotSupportedException) { }
             }
@@ -203,6 +207,7 @@ public sealed class CompilerDriver
         var sourceDirectory = SourceDirectory(sourcePath);
         var referenceDirectory = Path.Combine(tempRoot, "references");
         Directory.CreateDirectory(referenceDirectory);
+        CompilerPathSecurity.HardenTemporaryDirectory(referenceDirectory);
         var result = new List<StagedManagedReference>();
 
         foreach (var reference in references)
@@ -211,6 +216,7 @@ public sealed class CompilerDriver
             var fileName = Path.GetFileName(resolved);
             var staged = Path.Combine(referenceDirectory, fileName);
             File.Copy(resolved, staged, overwrite: true);
+            CompilerPathSecurity.HardenTemporaryFile(staged);
             result.Add(new StagedManagedReference(Path.GetFileNameWithoutExtension(fileName), staged));
         }
         return result;
@@ -262,30 +268,11 @@ public sealed class CompilerDriver
     private static string SourceDirectory(string sourcePath) =>
         Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
 
-    private static string ResolveNativeDependencyPath(string sourceDirectory, string declaredPath)
-    {
-        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(portable)) return Path.GetFullPath(portable);
+    private static string ResolveNativeDependencyPath(string sourceDirectory, string declaredPath) =>
+        CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, declaredPath);
 
-        var resolved = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
-        var prefix = sourceDirectory.EndsWith(Path.DirectorySeparatorChar) ? sourceDirectory : sourceDirectory + Path.DirectorySeparatorChar;
-        if (!resolved.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            throw new CompilerException("Application-local native dependency path must stay inside the XPScript source directory: " + declaredPath);
-        return resolved;
-    }
-
-    private static string ResolveProjectLocalPath(string sourceDirectory, string declaredPath, string kind)
-    {
-        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(portable))
-            throw new CompilerException(kind + " path must be relative to and remain inside the XPScript source directory: " + declaredPath);
-
-        var resolved = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
-        var prefix = sourceDirectory.EndsWith(Path.DirectorySeparatorChar) ? sourceDirectory : sourceDirectory + Path.DirectorySeparatorChar;
-        if (!resolved.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            throw new CompilerException(kind + " path must remain inside the XPScript source directory: " + declaredPath);
-        return resolved;
-    }
+    private static string ResolveProjectLocalPath(string sourceDirectory, string declaredPath, string kind) =>
+        CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, declaredPath, kind);
 
     private static string NormalizeRuntimeIdentifier(string value)
     {
