@@ -2,10 +2,6 @@ name: File IO Extensions Compatibility
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-file-io-verification]
-    paths:
-      - '.github/workflows/file-io-extensions-build.yml'
 
 permissions:
   contents: read

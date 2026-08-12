@@ -118,13 +118,13 @@ Status:
 
 - [x] standard file open/read/write/seek/reset operations
 - [x] Charset-aware Input/Output/Append and independent Base64 encoding layer
-- [>] file `Input$(count, #fileNumber)` distinct from interactive input
-- [>] OS `Lock` / `Unlock` with Binary byte ranges, Random record ranges and sequential whole-file semantics
+- [x] file `Input$(count, #fileNumber)` distinct from interactive input; verified by `File IO Extensions Compatibility`
+- [x] OS `Lock` / `Unlock` with Binary byte ranges, Random record ranges and sequential whole-file semantics; verified from a second operating-system file handle
 - [x] standard filesystem operations
-- [>] `ChDrive`
-- [>] explicit Latin-1 regression source
+- [x] `ChDrive` on Windows; cross-platform non-Windows semantics remain tracked under section 14
+- [x] explicit Latin-1 regression source; verified by `samples/file-io-extensions.xps`
 
-File input and interactive input are distinct APIs. `Lock/Unlock` must be verified from a second operating-system file handle when tests are re-enabled.
+File input and interactive input are distinct APIs. `Lock/Unlock` is regression-tested from a second operating-system file handle on Windows; cross-platform lock portability remains tracked under section 14.
 
 ## 10. Formatting, process and console
 
