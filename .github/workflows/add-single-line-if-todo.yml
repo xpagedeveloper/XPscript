@@ -1,0 +1,42 @@
+name: Add Single-Line If TODO
+
+on:
+  push:
+    branches: [todo-file-io-verification]
+    paths:
+      - '.github/workflows/add-single-line-if-todo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-todo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-file-io-verification
+      - name: Add control-flow syntax TODO
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('todo/runtime-reference-todo.md')
+          s = p.read_text(encoding='utf-8')
+          anchor = '- [x] `If`, `ElseIf`, `Else`, `Select Case`\n'
+          addition = '''- [ ] support all valid `If` statement layouts consistently:\n  - [ ] single-line `If condition Then statement`\n  - [ ] `If condition Then` followed by statement(s) and `End If` on a later line\n  - [ ] fully multiline block form with `If`, `Then`, body and `End If` on separate lines\n  - [ ] ensure Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; regression discovered by `examples/date-comparisons.xps` testing\n'''
+          if addition in s:
+              raise SystemExit('TODO already present')
+          if anchor not in s:
+              raise SystemExit('Control-flow anchor not found')
+          p.write_text(s.replace(anchor, anchor + addition), encoding='utf-8')
+          PY
+      - name: Commit TODO and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git rm .github/workflows/add-single-line-if-todo.yml
+          git add todo/runtime-reference-todo.md
+          git commit -m "Track single-line If syntax support"
+          git push origin HEAD:todo-file-io-verification
