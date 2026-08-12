@@ -1,0 +1,3 @@
+Sub Main()
+    Print "COLON-A": Print "COLON-B"
+End Sub
