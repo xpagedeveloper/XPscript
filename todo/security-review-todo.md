@@ -82,12 +82,18 @@ Status:
 
 ## HTTP
 
-- [ ] review CR/LF/header injection handling in `SetHeader`
-- [ ] review restricted/invalid header names and values
+- [>] `SetHeader` validates header names as HTTP token characters before storing them
+- [>] `SetHeader` rejects CR, LF, NUL and other prohibited control characters in header values before request construction
+- [>] `RemoveHeader` applies the same header-name validation
+- [>] URLs are restricted to absolute `http://` and `https://` schemes
+- [>] invalid URL/network/timeout diagnostics no longer echo the complete request URL or underlying exception message
+- [>] invalid `Content-Type` is converted to a bounded XPScript error instead of leaking parser exception text
+- [>] offline regression source: `samples/native-http-header-validation.xps`
 - [ ] review redirect behavior and credential/header forwarding across origins
 - [ ] review request body size and response body size/resource limits
-- [ ] review URL schemes and local-network/loopback access as application-level SSRF boundaries
+- [ ] review local-network/loopback access as an application-level SSRF boundary
 - [ ] review timeout/cancellation/disposal behavior
+- [ ] build/runtime verification when execution is re-enabled
 
 ## JSON
 
@@ -114,8 +120,9 @@ Status:
 ## Diagnostics
 
 - [>] Evaluate diagnostics have explicit secret sanitization
+- [>] native HTTP validation/network diagnostics no longer echo URL/header payload values in the newly hardened paths
 - [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
-- [ ] review runtime errors from HTTP, file I/O, Shell and native interop for unnecessary sensitive values
+- [ ] review runtime errors from file I/O, Shell and native interop for unnecessary sensitive values
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
