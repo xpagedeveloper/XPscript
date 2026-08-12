@@ -5,9 +5,6 @@ internal static class FileSystemPortabilityRuntimeSource
     public const string Code = """
 internal static class XPScriptFileSystemRuntime
 {
-    // XPScript's implicit legacy byte/text encoding is defined explicitly so
-    // file behavior is reproducible across Windows, Linux and macOS.
-    // Use Charset "utf-8" (or another explicit charset) when Unicode text is intended.
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
 
     public static string ResolvePath(object? value)
@@ -18,24 +15,16 @@ internal static class XPScriptFileSystemRuntime
 
         try
         {
-            // Do not rewrite directory separators, alter case or resolve symbolic links here.
-            // Path.GetFullPath applies the target OS filesystem syntax and leaves
-            // case sensitivity and symlink/reparse-point resolution to the filesystem.
             return Path.GetFullPath(path);
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            throw new XPScriptRuntimeException(5, "Invalid file path '" + path + "': " + ex.Message);
+            throw new XPScriptRuntimeException(5, "Invalid file path.");
         }
     }
 
     public static string NewLine => Environment.NewLine;
 
-    // FileShare policy is language-defined rather than inherited accidentally from
-    // whichever .NET overload happened to be used by a runtime implementation.
-    // Input permits other readers/writers. Output/Append permits readers but keeps a
-    // single writer. Binary/Random permits multiple read/write handles so explicit
-    // XPScript Lock/Unlock can coordinate byte/record regions across processes.
     public static FileStream OpenInputStream(string path) =>
         new(path, new FileStreamOptions
         {
@@ -71,13 +60,8 @@ internal static class XPScriptFileSystemRuntime
     {
         var path = RequireExistingPath(value);
         var attributes = File.GetAttributes(path);
-
-        // Unix-like filesystems conventionally represent hidden files by a leading dot,
-        // whereas Windows exposes an explicit Hidden attribute. Synthesize Hidden when
-        // reading attributes so portable XPScript code can identify both forms.
         if (!OperatingSystem.IsWindows() && IsDotHidden(path))
             attributes |= FileAttributes.Hidden;
-
         return (int)attributes;
     }
 
@@ -96,7 +80,7 @@ internal static class XPScriptFileSystemRuntime
         }
         catch (Exception ex) when (ex is PlatformNotSupportedException or ArgumentException)
         {
-            throw new XPScriptRuntimeException(5, "File attributes are not supported for this path/platform: " + ex.Message);
+            throw new XPScriptRuntimeException(5, "File attributes are not supported for this path or platform.");
         }
     }
 
@@ -105,15 +89,14 @@ internal static class XPScriptFileSystemRuntime
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
         EnsureDifferentPaths(source, destination, "FileCopy");
+        RejectLinkedTarget(destination, "FileCopy");
 
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrWhiteSpace(parent) && !Directory.Exists(parent))
-            throw new DirectoryNotFoundException("Destination directory does not exist: " + parent);
+            throw new DirectoryNotFoundException("Destination directory does not exist.");
 
         File.Copy(source, destination, overwrite: true);
 
-        // File.Copy preserves normal platform metadata where the OS supports it. On Unix,
-        // make executable permission preservation explicit when both files are local files.
         if (!OperatingSystem.IsWindows())
         {
             try { File.SetUnixFileMode(destination, File.GetUnixFileMode(source)); }
@@ -136,7 +119,7 @@ internal static class XPScriptFileSystemRuntime
             var suffix = OperatingSystem.IsWindows()
                 ? " Windows normally prevents deleting a file while an open handle does not grant FileShare.Delete."
                 : " Unix-like systems commonly allow unlinking an open file while existing handles keep the inode alive; exact behavior remains filesystem dependent.";
-            throw new IOException("Unable to delete file '" + path + "'." + suffix + " " + ex.Message, ex);
+            throw new IOException("Unable to delete file." + suffix, ex);
         }
     }
 
@@ -145,23 +128,20 @@ internal static class XPScriptFileSystemRuntime
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
         EnsureDifferentPaths(source, destination, "Name");
+        RejectLinkedTarget(destination, "Name");
 
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrWhiteSpace(parent) && !Directory.Exists(parent))
-            throw new DirectoryNotFoundException("Destination directory does not exist: " + parent);
+            throw new DirectoryNotFoundException("Destination directory does not exist.");
 
         try
         {
-            // Keep this as a real filesystem move/rename. Do not silently convert a failed
-            // cross-filesystem rename into copy+delete because that would lose atomicity and
-            // may change permissions/ownership/link semantics.
             File.Move(source, destination, overwrite: true);
         }
         catch (IOException ex)
         {
             throw new IOException(
-                "Unable to move/rename '" + source + "' to '" + destination +
-                "'. Cross-filesystem moves may not be atomic or supported by the underlying filesystem. " + ex.Message, ex);
+                "Unable to move or rename file. Cross-filesystem moves may not be atomic or supported by the underlying filesystem.", ex);
         }
     }
 
@@ -174,13 +154,14 @@ internal static class XPScriptFileSystemRuntime
     public static void RemoveDirectory(object? value)
     {
         var path = ResolvePath(value);
+        RejectLinkedTarget(path, "RmDir");
         Directory.Delete(path, recursive: false);
     }
 
     public static void ChangeDirectory(object? value)
     {
         var path = ResolvePath(value);
-        if (!Directory.Exists(path)) throw new DirectoryNotFoundException("Directory does not exist: " + path);
+        if (!Directory.Exists(path)) throw new DirectoryNotFoundException("Directory does not exist.");
         Environment.CurrentDirectory = path;
     }
 
@@ -194,10 +175,8 @@ internal static class XPScriptFileSystemRuntime
         var mask = Path.GetFileName(raw);
         if (string.IsNullOrEmpty(mask)) mask = "*";
 
-        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("Directory does not exist: " + directory);
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("Directory does not exist.");
 
-        // Intentionally do not normalize case. Matching follows the target filesystem/runtime
-        // semantics rather than imposing Windows-style case-insensitivity on Unix systems.
         return Directory.EnumerateFileSystemEntries(directory, mask)
             .Select(Path.GetFileName)
             .Where(x => x is not null)
@@ -239,15 +218,34 @@ internal static class XPScriptFileSystemRuntime
     private static string RequireExistingFile(object? value)
     {
         var path = ResolvePath(value);
-        if (!File.Exists(path)) throw new FileNotFoundException("File not found: " + path, path);
+        if (!File.Exists(path)) throw new FileNotFoundException("File not found.");
         return path;
     }
 
     private static string RequireExistingPath(object? value)
     {
         var path = ResolvePath(value);
-        if (!File.Exists(path) && !Directory.Exists(path)) throw new FileNotFoundException("Path not found: " + path, path);
+        if (!File.Exists(path) && !Directory.Exists(path)) throw new FileNotFoundException("Path not found.");
         return path;
+    }
+
+    private static void RejectLinkedTarget(string path, string operation)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            if (file.LinkTarget is not null || (file.Exists && (file.Attributes & FileAttributes.ReparsePoint) != 0))
+                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point destination.");
+
+            var directory = new DirectoryInfo(path);
+            if (directory.LinkTarget is not null || (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0))
+                throw new XPScriptRuntimeException(5, operation + " refuses a symbolic-link or reparse-point destination.");
+        }
+        catch (XPScriptRuntimeException) { throw; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            throw new XPScriptRuntimeException(5, operation + " could not safely inspect the destination path.");
+        }
     }
 
     private static bool IsDotHidden(string path)
