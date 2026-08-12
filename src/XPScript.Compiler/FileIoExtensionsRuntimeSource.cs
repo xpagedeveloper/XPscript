@@ -184,9 +184,16 @@ internal static class XPScriptFileIO
 
     private static FileStream? GetStream(object state)
     {
-        if (state.GetType().GetProperty("Stream", InstanceAny)?.GetValue(state) is FileStream direct) return direct;
-        if (GetReader(state) is StreamReader reader) return reader.BaseStream;
-        if (state.GetType().GetProperty("Writer", InstanceAny)?.GetValue(state) is StreamWriter writer) return writer.BaseStream;
+        if (state.GetType().GetProperty("Stream", InstanceAny)?.GetValue(state) is FileStream direct)
+            return direct;
+
+        if (GetReader(state) is StreamReader reader && reader.BaseStream is FileStream readerFile)
+            return readerFile;
+
+        if (state.GetType().GetProperty("Writer", InstanceAny)?.GetValue(state) is StreamWriter writer &&
+            writer.BaseStream is FileStream writerFile)
+            return writerFile;
+
         return null;
     }
 }
