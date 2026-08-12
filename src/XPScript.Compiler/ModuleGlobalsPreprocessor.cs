@@ -76,7 +76,10 @@ internal sealed class ModuleGlobalsPreprocessor
 
                     if (_udtTypes.Contains(sourceType))
                     {
-                        _declarations.Add($"    {visibility} static {sourceType} {name} = new {sourceType}();");
+                        // XPScript Public/Private controls source-level module visibility. The generated
+                        // Script container is an internal implementation detail, so UDT storage stays
+                        // private to avoid exposing a CLR field whose generated type is less accessible.
+                        _declarations.Add($"    private static {sourceType} {name} = new {sourceType}();");
                     }
                     else
                     {
