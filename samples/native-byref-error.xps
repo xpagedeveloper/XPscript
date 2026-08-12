@@ -1,0 +1,9 @@
+' Native ByRef is intentionally rejected until correct ref/out marshalling is implemented.
+
+Declare Function UnsafeNative Lib "unsafe-native" (ByRef value As Integer) As Integer
+
+Sub Main()
+    Dim value As Integer
+    value = 1
+    Print CStr(UnsafeNative(value))
+End Sub
