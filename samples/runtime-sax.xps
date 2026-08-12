@@ -47,7 +47,7 @@ MissingDone:
     shellResult = Shell("cmd.exe /c exit 0")
     Print "SHELL=" & CStr(shellResult)
 
-    calc = Evaluate("1+2*3")
+    calc = Evaluate("Return 1+2*3")
     Print "EVALUATE=" & CStr(calc)
 
     answer = MessageBox("CONSOLE-MSG", 0, "XPScript")
