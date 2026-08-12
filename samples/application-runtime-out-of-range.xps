@@ -1,0 +1,5 @@
+Option Declare
+
+Sub Main()
+    Print Application.Args(0)
+End Sub
