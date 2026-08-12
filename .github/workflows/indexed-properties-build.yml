@@ -1,10 +1,6 @@
 name: Class Properties and Overloads Compatibility
 
 on:
-  push:
-    branches: [todo-indexed-properties]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
