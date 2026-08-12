@@ -98,7 +98,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Valid Date comparison sample compilation failed.' }
           $output = & ./out/date-comparisons-valid.exe
           if ($LASTEXITCODE -ne 0) { throw "Valid Date comparison sample exited with code $LASTEXITCODE." }
-          foreach ($value in @('date-date ok','date-numeric ok','date-string ok','date-variant ok')) {
+          foreach ($value in @('date-date ok','date-numeric ok','date-string ok','date-variant ok','date-numeric-equality ok','date-string-equality ok')) {
             if ($output -notcontains $value) { throw "Valid Date comparison output missing: $value" }
           }
 
