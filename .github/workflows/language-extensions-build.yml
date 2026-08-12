@@ -28,8 +28,23 @@ jobs:
       - name: Compile language extension sample
         shell: pwsh
         run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/language-extensions.xps -o ./out/language-extensions.exe --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'Language extensions compilation failed.' }
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/language-extensions.xps -o ./out/language-extensions.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $resultText | ForEach-Object { Write-Host $_ }
+          if ($compilerExitCode -ne 0) {
+            try {
+              $result = $resultText | ConvertFrom-Json
+              foreach ($errorItem in @($result.errors)) {
+                Write-Host "DIAGNOSTIC line=$($errorItem.line) position=$($errorItem.position)"
+                Write-Host "DESCRIPTION: $($errorItem.description)"
+                Write-Host "CODE: $($errorItem.code)"
+                Write-Host "MARKED: $($errorItem.markedCode)"
+              }
+            } catch {
+              Write-Host 'Unable to parse structured compiler diagnostics.'
+            }
+            throw 'Language extensions compilation failed.'
+          }
 
       - name: Run language extension sample
         shell: pwsh
