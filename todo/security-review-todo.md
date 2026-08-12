@@ -26,9 +26,13 @@ Status:
 - [>] compiler-owned cleanup refuses a symlink/reparse-point workspace root and does not recursively follow linked descendants
 - [>] Unix compiler temp directories are hardened to user-only directory mode where supported
 - [>] Unix generated/staged temp files are hardened to user-only read/write mode where supported
-- [ ] define Windows ACL expectations for compiler temp directories
+- [>] Windows invocation/staging directories remove inherited ACLs and grant the current Windows account full control; child files inherit that ACL
 - [>] final executable/dependency publication is staged beside the destination and committed with executable last
 - [>] staged publication keeps backups and rolls back the whole output set on a publication failure on a best-effort basis
+- [>] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are invocation-local for generated builds
+- [>] inherited MSBuild path redirection variables are removed from generated build processes
+- [>] `dotnet` is resolved to an absolute host path rather than relying on a relative/current-directory PATH hit
+- [ ] verify Windows ACL behavior for local/domain/service accounts
 - [ ] verify 10+ concurrent compiles cannot share or overwrite temporary files
 - [ ] verify crash/kill leaves no reusable trusted workspace state
 - [>] detailed checklist: `todo/compiler-temp-isolation-todo.md`
