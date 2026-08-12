@@ -13,6 +13,10 @@ internal static class CompilerBuildEnvironment
         var cliHome = CreatePrivateDirectory(root, "dotnet-home");
         var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
 
+        // Resolve the SDK host to an absolute path so the generated build cannot be hijacked
+        // by a relative/current-directory PATH entry such as a project-local dotnet.exe.
+        startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
+
         // Redirect writable build/process state into this invocation's GUID workspace.
         startInfo.Environment["TEMP"] = processTemp;
         startInfo.Environment["TMP"] = processTemp;
@@ -29,6 +33,9 @@ internal static class CompilerBuildEnvironment
         // MSBuild extensions inject targets into them through these common environment hooks.
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
+        startInfo.Environment.Remove("MSBuildSDKsPath");
+        startInfo.Environment.Remove("MSBUILDSDKSPATH");
+        startInfo.Environment.Remove("MSBUILD_EXE_PATH");
     }
 
     private static string CreatePrivateDirectory(string root, string name)
