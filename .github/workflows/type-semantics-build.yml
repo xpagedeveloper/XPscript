@@ -1,0 +1,106 @@
+name: Type Semantics Compatibility
+
+on:
+  push:
+    branches: [main, runtime-development-no-ci]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/type-value-copy.xps'
+      - 'samples/type-array-members.xps'
+      - 'samples/type-nested-value-copy.xps'
+      - 'samples/type-cycle-error.xps'
+      - 'samples/type-array-option-base.xps'
+      - 'samples/module-nested-type-value-copy.xps'
+      - '.github/workflows/type-semantics-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/type-value-copy.xps'
+      - 'samples/type-array-members.xps'
+      - 'samples/type-nested-value-copy.xps'
+      - 'samples/type-cycle-error.xps'
+      - 'samples/type-array-option-base.xps'
+      - 'samples/module-nested-type-value-copy.xps'
+      - '.github/workflows/type-semantics-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify scalar Type value copy
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/type-value-copy.xps -o ./out/type-value-copy.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Type scalar value-copy compilation failed.' }
+          $output = & ./out/type-value-copy.exe
+          foreach ($value in @('FIRST=Changed:99','SECOND=Alice:40')) {
+            if ($output -notcontains $value) { throw "Type scalar copy output missing: $value" }
+          }
+
+      - name: Verify Type array fields and detached copy
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/type-array-members.xps -o ./out/type-array-members.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Type array-member compilation failed.' }
+          $output = & ./out/type-array-members.exe
+          foreach ($value in @('FIRST=99:changed','SECOND=10:one','BOUNDS=1:3')) {
+            if ($output -notcontains $value) { throw "Type array-member output missing: $value" }
+          }
+
+      - name: Verify nested Type deep copy
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/type-nested-value-copy.xps -o ./out/type-nested-value-copy.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Nested Type compilation failed.' }
+          $output = & ./out/type-nested-value-copy.exe
+          foreach ($value in @('NAME=Fredrik','CITY=Linkoping','CODE=A','VALUE=10')) {
+            if ($output -notcontains $value) { throw "Nested Type output missing: $value" }
+          }
+
+      - name: Verify Option Base for Type arrays
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/type-array-option-base.xps -o ./out/type-array-option-base.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Type Option Base compilation failed.' }
+          $output = & ./out/type-array-option-base.exe
+          foreach ($value in @('LOW=1','HIGH=3','FIRST=10','LAST=30')) {
+            if ($output -notcontains $value) { throw "Type Option Base output missing: $value" }
+          }
+
+      - name: Verify module nested Type detached copy and self-assignment
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/module-nested-type-value-copy.xps -o ./out/module-nested-type-value-copy.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Module nested Type compilation failed.' }
+          $output = & ./out/module-nested-type-value-copy.exe
+          foreach ($value in @('Original','Stockholm','11122','10','20')) {
+            if ($output -notcontains $value) { throw "Module nested Type output missing: $value" }
+          }
+          $stockholmCount = @($output | Where-Object { $_ -eq 'Stockholm' }).Count
+          if ($stockholmCount -ne 2) { throw "Expected Stockholm twice including after self-assignment, got $stockholmCount." }
+
+      - name: Verify cyclic Type graph diagnostic
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/type-cycle-error.xps -o ./out/type-cycle-error.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Cyclic Type sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or @($result.errors).Count -lt 1) { throw 'Expected structured cyclic Type compiler diagnostic.' }
