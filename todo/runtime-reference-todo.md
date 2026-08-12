@@ -53,8 +53,8 @@ Status:
 - [x] `For/Next/Step`, `Do/Loop`, `Do While`, `Do Until`, `While/Wend`, `ForAll`
 - [x] `GoTo`, `GoSub`, labels, `Return`
 - [x] `On Error`, `Resume`, `Resume Next`, `Err`, `Error`, `Error$`, `Erl`
-- [>] physical source-line accuracy for `Erl`; source: `samples/erl-physical-source-line.xps`
-- [>] deeply nested `Resume` targets use stacked per-error-context resume frames so nested procedure calls preserve the innermost failing statement; source: `samples/nested-resume-targets.xps`
+- [x] physical source-line accuracy for `Erl`; source: `samples/erl-physical-source-line.xps`
+- [x] deeply nested `Resume` targets use stacked per-error-context resume frames so nested procedure calls preserve the innermost failing statement; source: `samples/nested-resume-targets.xps`
 
 ## 4. Operators
 

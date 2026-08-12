@@ -1,5 +1,4 @@
 ' Regression source for nested Resume target frames.
-' Expected when verification is re-enabled:
 ' Middle catches the error raised by Inner, Resume Next continues after
 ' the failing Call Inner(), and Outer then continues normally.
 
@@ -33,4 +32,6 @@ Handler:
     Resume Next
 End Sub
 
-Call Outer()
+Sub Main()
+    Call Outer()
+End Sub
