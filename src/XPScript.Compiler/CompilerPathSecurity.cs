@@ -67,6 +67,53 @@ internal static class CompilerPathSecurity
         }
     }
 
+    public static void DeleteOwnedTemporaryDirectory(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var tempRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "XPScript"));
+        EnsureLexicallyContained(tempRoot, full, "Compiler temporary workspace", full);
+
+        if (!Directory.Exists(full)) return;
+
+        var rootInfo = new DirectoryInfo(full);
+        if (IsLinkOrReparsePoint(rootInfo))
+            throw new CompilerException("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
+
+        DeleteDirectoryWithoutFollowingLinks(rootInfo);
+    }
+
+    private static void DeleteDirectoryWithoutFollowingLinks(DirectoryInfo directory)
+    {
+        foreach (var entry in directory.EnumerateFileSystemInfos())
+        {
+            try
+            {
+                if (IsLinkOrReparsePoint(entry))
+                {
+                    if (entry is DirectoryInfo linkedDirectory)
+                        linkedDirectory.Delete(recursive: false);
+                    else
+                        entry.Delete();
+                    continue;
+                }
+
+                if (entry is DirectoryInfo childDirectory)
+                    DeleteDirectoryWithoutFollowingLinks(childDirectory);
+                else
+                    entry.Delete();
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
+        directory.Delete(recursive: false);
+    }
+
+    private static bool IsLinkOrReparsePoint(FileSystemInfo info) =>
+        info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0;
+
     private static void EnsureLexicallyContained(string root, string candidate, string kind, string declaredPath)
     {
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -91,7 +138,7 @@ internal static class CompilerPathSecurity
                 continue;
 
             FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
-            if (info.LinkTarget is null && (info.Attributes & FileAttributes.ReparsePoint) == 0)
+            if (!IsLinkOrReparsePoint(info))
                 continue;
 
             string? resolvedTarget;
