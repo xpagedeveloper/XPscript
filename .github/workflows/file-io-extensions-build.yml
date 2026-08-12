@@ -37,8 +37,8 @@ jobs:
           var generated = new XPScriptTranspiler().Transpile(source, "file-io-extensions.xps", "win-x64");
           var relevant = generated.Split('\n')
               .Select((line, index) => new { Line = line.Trim(), Number = index + 1 })
-              .Where(x => x.Line.Contains("OpenFile", StringComparison.Ordinal) ||
-                          x.Line.Contains("CloseFile", StringComparison.Ordinal) ||
+              .Where(x => x.Line.Contains("LSFileRuntime.Open(", StringComparison.Ordinal) ||
+                          x.Line.Contains("LSFileRuntime.Close(", StringComparison.Ordinal) ||
                           x.Line.Contains("OpenText", StringComparison.Ordinal) ||
                           x.Line.Contains("LockBytes", StringComparison.Ordinal) ||
                           x.Line.Contains("UnlockBytes", StringComparison.Ordinal))
@@ -47,14 +47,14 @@ jobs:
           foreach (var item in relevant)
               Console.WriteLine($"{item.Number}: {item.Line}");
 
-          var binaryOpen = Array.FindIndex(relevant, x => x.Line.Contains("OpenFile", StringComparison.Ordinal) && x.Line.Contains("\"binary\"", StringComparison.Ordinal));
+          var binaryOpen = Array.FindIndex(relevant, x => x.Line.Contains("LSFileRuntime.Open(", StringComparison.Ordinal) && x.Line.Contains("\"binary\"", StringComparison.Ordinal));
           var lockCall = Array.FindIndex(relevant, x => x.Line.Contains("LockBytes", StringComparison.Ordinal) && x.Line.Contains("XPScriptFileIO", StringComparison.Ordinal));
-          if (binaryOpen < 0) throw new Exception("Generated code is missing the Binary OpenFile call.");
+          if (binaryOpen < 0) throw new Exception("Generated code is missing the Binary LSFileRuntime.Open call.");
           if (lockCall < 0) throw new Exception("Generated code is missing the LockBytes call.");
-          if (binaryOpen >= lockCall) throw new Exception("Generated Binary OpenFile must occur before LockBytes.");
+          if (binaryOpen >= lockCall) throw new Exception("Generated Binary LSFileRuntime.Open must occur before LockBytes.");
 
           for (var i = binaryOpen + 1; i < lockCall; i++)
-              if (relevant[i].Line.Contains("CloseFile", StringComparison.Ordinal))
+              if (relevant[i].Line.Contains("LSFileRuntime.Close(", StringComparison.Ordinal))
                   throw new Exception("Generated code closes the Binary file before LockBytes: " + relevant[i].Line);
           '@ | Set-Content ./out/inspect-generated/Program.cs
           dotnet run --project ./out/inspect-generated/InspectGenerated.csproj -c Release
