@@ -5,7 +5,7 @@ on:
     branches: [todo-overload-byref]
     paths:
       - '.github/workflows/patch-byref-overload-once.yml'
-      - 'scripts/patch-byref-overload.py'
+      - 'scripts/patch-byref-new-class-type.py'
 
 permissions:
   contents: write
@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: todo-overload-byref
-      - name: Patch typed member ByRef call lowering
-        run: python3 scripts/patch-byref-overload.py
+      - name: Patch As New class type discovery
+        run: python3 scripts/patch-byref-new-class-type.py
       - name: Commit implementation
         shell: bash
         run: |
@@ -26,5 +26,5 @@ jobs:
           git config user.email "fredrik@xpagedeveloper.com"
           git add src/XPScript.Compiler/CoreCompatibilityTranspiler.cs
           git diff --cached --quiet && exit 0
-          git commit -m "Lower typed member scalar ByRef overload calls"
+          git commit -m "Discover As New class types for ByRef overload calls"
           git push origin HEAD:todo-overload-byref
