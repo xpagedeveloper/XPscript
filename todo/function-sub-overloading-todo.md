@@ -23,7 +23,7 @@ Status:
 - [x] reject ambiguous calls where more than one overload is equally valid with a clear compiler diagnostic
 - [x] reject duplicate declarations with an identical effective signature; `Variant` and `Object` are treated as the same CLR-effective object signature for duplicate detection
 - [x] preserve normal return-type checking for overloaded `Function` members through generated typed CLR methods; negative regression: `samples/class-method-overloads-return-type-error.xps`
-- [>] `ByRef` constraints are represented by the overload validator, but scalar `ByRef` remains a broader compiler limitation and is not considered complete in this feature
+- [x] scalar `ByRef` participates in class overload sets when the statically selected overload is the typed ByRef member; typed class receivers, `As New` declarations, assignable scalar arguments and mutation back to the caller are regression-verified in `samples/class-method-overloads-byref.xps`
 - [x] support overload resolution for calls both with and without the explicit `Call` keyword
 - [x] support overload resolution when invoking a member on a typed class variable
 - [x] support overload resolution through `Me` inside the declaring class
@@ -33,6 +33,7 @@ Status:
 
 - [x] positive sample: same `Function` name with `Integer`, `String` and `Date` parameter variants; source: `samples/class-method-overloads.xps`
 - [x] positive sample: scalar and typed-array overloads with the same member name select the correct CLR overload; source: `samples/class-method-overloads.xps`
+- [x] positive sample: scalar `ByRef Integer` overload mutates caller state while a same-name `ByVal String` overload remains a normal value call; source: `samples/class-method-overloads-byref.xps`
 - [x] positive sample: same `Sub` name with one-parameter and two-parameter variants
 - [x] positive sample: typed object overload versus `Object` fallback
 - [x] positive sample: numeric specificity selects the exact/smallest valid overload
