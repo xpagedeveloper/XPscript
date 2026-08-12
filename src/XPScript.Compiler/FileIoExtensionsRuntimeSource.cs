@@ -165,11 +165,28 @@ internal static class XPScriptFileIO
 
     private static object GetOpenState(int number)
     {
-        var state = TryGetDictionaryState(typeof(XPScriptRuntime), number);
+        var state = TryInvokeCoreGetFile(number);
+        if (state is not null) return state;
+
+        state = TryGetDictionaryState(typeof(XPScriptRuntime), number);
         if (state is not null) return state;
         state = TryGetDictionaryState(typeof(XPScriptTextIO), number);
         if (state is not null) return state;
         throw new IOException("File number is not open: " + number);
+    }
+
+    private static object? TryInvokeCoreGetFile(int number)
+    {
+        var method = typeof(XPScriptRuntime).GetMethod("GetFile", StaticAny);
+        if (method is null) return null;
+        try
+        {
+            return method.Invoke(null, new object?[] { number });
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is IOException)
+        {
+            return null;
+        }
     }
 
     private static object? TryGetDictionaryState(Type runtimeType, int number)
