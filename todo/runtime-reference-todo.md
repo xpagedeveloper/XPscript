@@ -57,11 +57,11 @@ Status:
   - [x] split `If condition` / `Then` and `ElseIf condition` / `Then` forms while preserving physical source line count
   - [x] fully multiline block form with `If`, `Then`, body and `End If` on separate lines
   - [x] Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; original regression discovered by `examples/date-comparisons.xps` testing
-- [ ] audit all documented control-flow/declaration statement layouts for the same line-shape assumption:
-  - [ ] verify `_` line continuation remains accepted for long expressions, argument lists, procedure headers and control-flow expressions
-  - [ ] verify `ElseIf` / `Else` supported layouts and nested single-line/block combinations
-  - [ ] verify `Select Case`, `Case`, `With`, `For/Next`, `ForAll`, `Do/Loop`, `While/Wend`, procedure/property/class headers and native declarations do not produce false `Unsupported statement` errors for documented/valid multiline layouts
-  - [ ] add regression samples for every newly identified valid alternate layout; do not add arbitrary unsupported grammar forms merely because keywords can physically be split
+- [x] audit all documented control-flow/declaration statement layouts for the same line-shape assumption; source: `samples/statement-layout-audit.xps`; detailed checklist: `todo/statement-layout-audit-todo.md`; permanent manual gate: `Control Flow and Error Handling Compatibility`:
+  - [x] verify `_` line continuation remains accepted for long expressions, argument lists, procedure headers and control-flow expressions
+  - [x] verify `ElseIf` / `Else` supported layouts and nested single-line/block combinations
+  - [x] verify `Select Case`, `Case`, `With`, `For/Next`, `ForAll`, `Do/Loop`, `While/Wend`, procedure/property/class headers and native declarations do not produce false `Unsupported statement` errors for documented/valid multiline layouts
+  - [x] add regression samples for every newly identified valid alternate layout; arbitrary unsupported keyword splitting is not treated as valid grammar
 - [x] `For/Next/Step`, `Do/Loop`, `Do While`, `Do Until`, `While/Wend`, `ForAll`
 - [x] `GoTo`, `GoSub`, labels, `Return`
 - [x] `On Error`, `Resume`, `Resume Next`, `Err`, `Error`, `Error$`, `Erl`
