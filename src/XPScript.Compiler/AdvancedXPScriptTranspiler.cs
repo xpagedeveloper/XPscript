@@ -500,8 +500,21 @@ internal static class Script
     {
         if (TryEmitDim(sb, line)) return;
 
+        if (TryEmitSingleLineIf(sb, line)) return;
+
         var ifMatch = Regex.Match(line, @"^If\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
         if (ifMatch.Success) { Write(sb, $"if ({TransformCondition(ifMatch.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
+        var elseifInline = Regex.Match(line, @"^ElseIf\s+(.+?)\s+Then\s+(.+)$", RegexOptions.IgnoreCase);
+        if (elseifInline.Success)
+        {
+            _indent--;
+            Write(sb, "}");
+            Write(sb, $"else if ({TransformCondition(elseifInline.Groups[1].Value)})");
+            Write(sb, "{");
+            _indent++;
+            EmitStatement(sb, elseifInline.Groups[2].Value.Trim());
+            return;
+        }
         var elseif = Regex.Match(line, @"^ElseIf\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
         if (elseif.Success) { _indent--; Write(sb, "}"); Write(sb, $"else if ({TransformCondition(elseif.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
         if (Regex.IsMatch(line, @"^Else$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); Write(sb, "else"); Write(sb, "{"); _indent++; return; }
@@ -637,6 +650,66 @@ internal static class Script
         if (!dim.Success) return false;
         var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
         var mapped = MapType(xpscriptType); RegisterVariable(variable, xpscriptType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
+    }
+
+    private bool TryEmitSingleLineIf(StringBuilder sb, string line)
+    {
+        var match = Regex.Match(line, @"^If\s+(.+?)\s+Then\s+(.+)$", RegexOptions.IgnoreCase);
+        if (!match.Success) return false;
+
+        var condition = match.Groups[1].Value.Trim();
+        var tail = match.Groups[2].Value.Trim();
+        var elseIndex = FindTopLevelElse(tail);
+        var trueStatement = elseIndex >= 0 ? tail[..elseIndex].Trim() : tail;
+        var falseStatement = elseIndex >= 0 ? tail[(elseIndex + 4)..].Trim() : null;
+        if (trueStatement.Length == 0)
+            throw new CompilerException("Single-line If requires a statement after Then.");
+        if (falseStatement is not null && falseStatement.Length == 0)
+            throw new CompilerException("Single-line If Else requires a statement after Else.");
+
+        Write(sb, $"if ({TransformCondition(condition)})");
+        Write(sb, "{");
+        _indent++;
+        EmitStatement(sb, trueStatement);
+        _indent--;
+        Write(sb, "}");
+
+        if (falseStatement is not null)
+        {
+            Write(sb, "else");
+            Write(sb, "{");
+            _indent++;
+            EmitStatement(sb, falseStatement);
+            _indent--;
+            Write(sb, "}");
+        }
+        return true;
+    }
+
+    private static int FindTopLevelElse(string value)
+    {
+        var inString = false;
+        var depth = 0;
+        for (var i = 0; i <= value.Length - 4; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth = Math.Max(0, depth - 1); continue; }
+            if (depth != 0) continue;
+            if (!value.AsSpan(i, 4).Equals("Else", StringComparison.OrdinalIgnoreCase)) continue;
+            var beforeOk = i == 0 || char.IsWhiteSpace(value[i - 1]);
+            var after = i + 4;
+            var afterOk = after >= value.Length || char.IsWhiteSpace(value[after]);
+            if (beforeOk && afterOk) return i;
+        }
+        return -1;
     }
 
     private bool TryEmitErase(StringBuilder sb, string line)

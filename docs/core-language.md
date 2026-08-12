@@ -98,6 +98,15 @@ A `Static Function` has its own static procedure semantics as demonstrated in `s
 
 ## If / ElseIf / Else
 
+XPScript supports both single-line and block `If` statements.
+
+```xpscript
+If value > 10 Then Print "high"
+If value = 10 Then Print "ten" Else Print "not ten"
+```
+
+Normal block form is supported:
+
 ```xpscript
 If value > 10 Then
     Print "high"
@@ -107,6 +116,17 @@ Else
     Print "zero or negative"
 End If
 ```
+
+For layout-sensitive source, `Then` may also be placed on the following physical line. The compiler normalizes this form without changing the physical source-line count used by source tracking:
+
+```xpscript
+If value > 10
+Then
+    Print "high"
+End If
+```
+
+The same split `Then` form is supported for `ElseIf`. An `ElseIf` branch may also place its first statement after `Then` on the same line while the surrounding `If` remains a block.
 
 ## Select Case
 
