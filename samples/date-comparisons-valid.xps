@@ -11,8 +11,16 @@ Sub Main()
     textDate = "2026-01-03"
     flexible = endDate
 
-    If endDate > startDate Then Print "date-date ok"
-    If endDate >= serial Then Print "date-numeric ok"
-    If endDate < textDate Then Print "date-string ok"
-    If startDate <= flexible Then Print "date-variant ok"
+    If endDate > startDate Then
+        Print "date-date ok"
+    End If
+    If endDate >= serial Then
+        Print "date-numeric ok"
+    End If
+    If endDate < textDate Then
+        Print "date-string ok"
+    End If
+    If startDate <= flexible Then
+        Print "date-variant ok"
+    End If
 End Sub
