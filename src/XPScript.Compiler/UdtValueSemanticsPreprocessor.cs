@@ -7,6 +7,7 @@ internal sealed class UdtValueSemanticsPreprocessor
     internal sealed record Field(string Name, string Type, bool IsArray);
     internal sealed record TypeInfo(string Name, IReadOnlyList<Field> Fields);
     private sealed record VariableInfo(string Type, bool IsModuleGlobal);
+    private sealed record ArrayPath(string Path, string ElementType);
 
     private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.OrdinalIgnoreCase);
     private int _optionBase;
@@ -199,13 +200,12 @@ internal sealed class UdtValueSemanticsPreprocessor
             var rewritten = raw;
             foreach (var variable in variables.OrderByDescending(x => x.Key.Length))
             {
-                if (!_types.TryGetValue(variable.Value.Type, out var typeInfo)) continue;
-                foreach (var field in typeInfo.Fields.Where(x => x.IsArray).OrderByDescending(x => x.Name.Length))
+                var variableName = Regex.Escape(variable.Key);
+                foreach (var arrayPath in CollectArrayPaths(variable.Value.Type).OrderByDescending(x => x.Path.Length))
                 {
-                    var variableName = Regex.Escape(variable.Key);
-                    var fieldName = Regex.Escape(field.Name);
-                    var target = variable.Key + "." + field.Name;
-                    var setter = Regex.Match(StripComment(rewritten).Trim(), $@"^{variableName}\.{fieldName}\s*\((.*)\)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+                    var pathPattern = Regex.Escape(arrayPath.Path);
+                    var target = variable.Key + "." + arrayPath.Path;
+                    var setter = Regex.Match(StripComment(rewritten).Trim(), $@"^{variableName}\.{pathPattern}\s*\((.*)\)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
                     if (setter.Success)
                     {
                         var indexes = SplitArguments(setter.Groups[1].Value);
@@ -213,27 +213,54 @@ internal sealed class UdtValueSemanticsPreprocessor
                         rewritten = indent + "Call LSArrayRuntime.Set(" + target + ", " + setter.Groups[2].Value.Trim() + (indexes.Count > 0 ? ", " + string.Join(", ", indexes) : "") + ")";
                         continue;
                     }
-                    var redim = Regex.Match(StripComment(rewritten).Trim(), $@"^ReDim\s+(Preserve\s+)?{variableName}\.{fieldName}\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
+                    var redim = Regex.Match(StripComment(rewritten).Trim(), $@"^ReDim\s+(Preserve\s+)?{variableName}\.{pathPattern}\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
                     if (redim.Success)
                     {
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
                         var args = BuildRuntimeBoundArguments(redim.Groups[2].Value, _optionBase);
-                        rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + field.Type + "\", " + (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
+                        rewritten = indent + target + " = XPModuleArrayRuntime.ReDim(" + target + ", \"" + arrayPath.ElementType + "\", " + (!string.IsNullOrWhiteSpace(redim.Groups[1].Value) ? "True" : "False") + ", " + string.Join(", ", args) + ")";
                         continue;
                     }
-                    if (Regex.IsMatch(StripComment(rewritten).Trim(), $@"^Erase\s+{variableName}\.{fieldName}$", RegexOptions.IgnoreCase))
+                    if (Regex.IsMatch(StripComment(rewritten).Trim(), $@"^Erase\s+{variableName}\.{pathPattern}$", RegexOptions.IgnoreCase))
                     {
                         var indent = rewritten[..(rewritten.Length - rewritten.TrimStart().Length)];
                         rewritten = indent + "Call LSArrayRuntime.Erase(" + target + ")";
                         continue;
                     }
-                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bLBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.LBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
-                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bUBound\s*\(\s*{variableName}\.{fieldName}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.UBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
-                    rewritten = ReplaceOutsideStrings(rewritten, $@"(?<![\w.]){variableName}\.{fieldName}\s*\(([^()]*)\)", m => "LSArrayRuntime.Get(" + target + (string.IsNullOrWhiteSpace(m.Groups[1].Value) ? "" : ", " + m.Groups[1].Value) + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bLBound\s*\(\s*{variableName}\.{pathPattern}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.LBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"\bUBound\s*\(\s*{variableName}\.{pathPattern}\s*(?:,\s*([^()]+))?\)", m => "LSArrayRuntime.UBound(" + target + (m.Groups[1].Success ? ", " + m.Groups[1].Value.Trim() : "") + ")");
+                    rewritten = ReplaceOutsideStrings(rewritten, $@"(?<![\w.]){variableName}\.{pathPattern}\s*\(([^()]*)\)", m => "LSArrayRuntime.Get(" + target + (string.IsNullOrWhiteSpace(m.Groups[1].Value) ? "" : ", " + m.Groups[1].Value) + ")");
                 }
             }
             lines[i] = rewritten;
         }
+    }
+
+    private List<ArrayPath> CollectArrayPaths(string typeName)
+    {
+        var result = new List<ArrayPath>();
+        CollectArrayPaths(typeName, "", result, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        return result;
+    }
+
+    private void CollectArrayPaths(string typeName, string prefix, List<ArrayPath> output, HashSet<string> path)
+    {
+        if (!_types.TryGetValue(typeName, out var typeInfo) || !path.Add(typeName)) return;
+        try
+        {
+            foreach (var field in typeInfo.Fields)
+            {
+                var fieldPath = prefix.Length == 0 ? field.Name : prefix + "." + field.Name;
+                if (field.IsArray)
+                {
+                    output.Add(new ArrayPath(fieldPath, field.Type));
+                    continue;
+                }
+                if (_types.ContainsKey(field.Type))
+                    CollectArrayPaths(field.Type, fieldPath, output, path);
+            }
+        }
+        finally { path.Remove(typeName); }
     }
 
     private static int DetectOptionBase(IEnumerable<string> lines)
