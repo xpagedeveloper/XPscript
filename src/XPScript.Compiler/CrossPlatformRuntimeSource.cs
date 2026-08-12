@@ -36,6 +36,7 @@ internal static class XPCrossPlatformRuntime
 
     private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, string arguments, object? windowStyle)
     {
+        fileName = ResolveRequestedProgram(fileName);
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var info = new System.Diagnostics.ProcessStartInfo
         {
@@ -102,13 +103,38 @@ internal static class XPCrossPlatformRuntime
                 return info;
             }
 
-            // Executable binaries and scripts with an executable bit/shebang are started directly.
             info.FileName = fileName;
             AddArguments(info, arguments);
             return info;
         }
 
         throw new PlatformNotSupportedException("Shell is not implemented for platform: " + Platform());
+    }
+
+    private static string ResolveRequestedProgram(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
+
+        try
+        {
+            if (Path.IsPathRooted(fileName) || fileName.Contains(Path.DirectorySeparatorChar) || fileName.Contains(Path.AltDirectorySeparatorChar))
+            {
+                var explicitPath = Path.GetFullPath(fileName);
+                if (!File.Exists(explicitPath))
+                    throw new XPScriptRuntimeException(53, "Requested program or script was not found.");
+                return explicitPath;
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new XPScriptRuntimeException(5, "Requested program or script path is invalid.");
+        }
+
+        var resolved = ResolveFromAbsolutePath(fileName, includeWindowsExtensions: OperatingSystem.IsWindows());
+        if (resolved is null)
+            throw new XPScriptRuntimeException(53, "Requested program or script was not found in absolute PATH locations.");
+        return resolved;
     }
 
     private static string ResolveWindowsPowerShell()
@@ -120,7 +146,7 @@ internal static class XPCrossPlatformRuntime
             if (File.Exists(pwsh)) return pwsh;
         }
 
-        var fromPath = ResolveFromAbsolutePath("pwsh.exe");
+        var fromPath = ResolveFromAbsolutePath("pwsh.exe", includeWindowsExtensions: false);
         if (fromPath is not null) return fromPath;
 
         var windowsPowerShell = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
@@ -133,12 +159,13 @@ internal static class XPCrossPlatformRuntime
         foreach (var candidate in new[] { "/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/homebrew/bin/pwsh" })
             if (File.Exists(candidate)) return candidate;
 
-        return ResolveFromAbsolutePath("pwsh")
+        return ResolveFromAbsolutePath("pwsh", includeWindowsExtensions: false)
             ?? throw new XPScriptRuntimeException(53, "PowerShell executable was not found.");
     }
 
-    private static string? ResolveFromAbsolutePath(string executableName)
+    private static string? ResolveFromAbsolutePath(string executableName, bool includeWindowsExtensions)
     {
+        var names = CandidateExecutableNames(executableName, includeWindowsExtensions);
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         foreach (var rawDirectory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -146,12 +173,30 @@ internal static class XPCrossPlatformRuntime
             {
                 var directory = rawDirectory.Trim().Trim('"');
                 if (!Path.IsPathRooted(directory)) continue;
-                var candidate = Path.Combine(Path.GetFullPath(directory), executableName);
-                if (File.Exists(candidate)) return candidate;
+                directory = Path.GetFullPath(directory);
+                foreach (var name in names)
+                {
+                    var candidate = Path.Combine(directory, name);
+                    if (File.Exists(candidate)) return candidate;
+                }
             }
             catch { }
         }
         return null;
+    }
+
+    private static IReadOnlyList<string> CandidateExecutableNames(string executableName, bool includeWindowsExtensions)
+    {
+        if (!includeWindowsExtensions || Path.HasExtension(executableName)) return [executableName];
+
+        var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => x.StartsWith('.', StringComparison.Ordinal) && x.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '\0']) < 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return extensions.Length == 0
+            ? [executableName + ".exe", executableName + ".com", executableName + ".cmd", executableName + ".bat"]
+            : extensions.Select(x => executableName + x).ToArray();
     }
 
     private static void AddArguments(System.Diagnostics.ProcessStartInfo info, string rawArguments)
