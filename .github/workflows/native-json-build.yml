@@ -1,0 +1,45 @@
+name: Native JSON Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-json:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile and verify Native JSON API
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-json-regression.xps -o ./out/native-json-regression.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native JSON sample compilation failed.' }
+          $output = & ./out/native-json-regression.exe
+          $required = @(
+            'DOCUMENT={"name":"Alice","active":true}',
+            'OBJCOUNT=2',
+            'OBJNAME=Fredrik',
+            'OBJHAS=True',
+            'OBJCOUNT2=1',
+            'ARRAYCOUNT=2',
+            'ARRAYVALUE=TWO',
+            'ARRAYCOUNT2=1',
+            'ARRAYFIRST=TWO',
+            'ELEMENTTYPE=Number',
+            'ELEMENTVALUE=123',
+            'STRINGIFY={"name":"Fredrik"}',
+            'ENCODE=["TWO"]',
+            'DECODE={"ok":true}'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Native JSON output missing: $value`n$output" }
+          }
