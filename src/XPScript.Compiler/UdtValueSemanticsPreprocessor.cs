@@ -235,15 +235,17 @@ internal sealed class UdtValueSemanticsPreprocessor
 
             foreach (var variable in variables.OrderByDescending(x => x.Key.Length))
             {
-                foreach (var nestedPath in CollectNestedPaths(variable.Value.Type).OrderByDescending(x => x.SourcePath.Length))
+                var paths = CollectNestedPaths(variable.Value.Type).OrderByDescending(x => x.SourcePath.Length).ToArray();
+                if (paths.Length == 0) continue;
+
+                var bySource = paths.ToDictionary(x => x.SourcePath, StringComparer.OrdinalIgnoreCase);
+                var alternatives = string.Join("|", paths.Select(x => Regex.Escape(x.SourcePath)));
+                var pattern = $@"(?<![\w.]){Regex.Escape(variable.Key)}\.(?<path>{alternatives})\.";
+                rewritten = ReplaceOutsideStrings(rewritten, pattern, match =>
                 {
-                    var sourcePrefix = variable.Key + "." + nestedPath.SourcePath;
-                    var loweredPrefix = variable.Key + "." + nestedPath.LoweredPath;
-                    rewritten = ReplaceOutsideStrings(
-                        rewritten,
-                        $@"(?<![\w.]){Regex.Escape(sourcePrefix)}\.",
-                        _ => loweredPrefix + ".");
-                }
+                    var path = match.Groups["path"].Value;
+                    return variable.Key + "." + bySource[path].LoweredPath + ".";
+                });
             }
             lines[i] = rewritten;
         }
