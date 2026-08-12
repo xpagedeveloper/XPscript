@@ -17,11 +17,19 @@ Rules:
   - Implementation changed `SourceLineMarkerPreprocessor` to carry continuation state from the procedure/property start line.
   - Mark `[x]` only after the full statement-layout regression passes.
 
-- [ ] single-line `If` / inline `ElseIf` with compound comparison conditions using `And` / `Or` must use the same logical-comparison lowering as block `If ... Then` headers.
+- [>] single-line `If` / inline `ElseIf` with compound comparison conditions using `And` / `Or` must use the same logical-comparison lowering as block `If ... Then` headers.
   - Discovered after the continued-header fix allowed the audit sample to execute.
   - Reproducer: `If total = 3 And total > 0 Then Print "..."`.
-  - Current failure: generated/runtime expression can compare incompatible values such as `int == bool` because `RewriteLogicalComparisonCondition` currently recognizes only lines ending exactly at `Then`.
-  - Regression must cover both block and single-line conditions and preserve trailing `Then statement` / `Else statement` syntax.
+  - Previous failure: generated/runtime expression compared incompatible values such as `int == bool` because `RewriteLogicalComparisonCondition` recognized only lines ending exactly at `Then`.
+  - Implementation now preserves and lowers trailing `Then statement` / `Else statement` syntax.
+  - Mark `[x]` only after the full statement-layout regression passes.
+
+- [ ] `While`, `Do While` and `Do Until` compound comparison conditions using `And` / `Or` must use the same precedence-safe logical-comparison lowering as `If`.
+  - Discovered by the same broad layout regression after the single-line `If` fix.
+  - Reproducer includes `While i < 2 And total = 3` after `_` continuation normalization.
+  - Current runtime diagnostic: `Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Operator '==' cannot be applied to operands of type 'bool' and 'int'`.
+  - Audit trailing `Loop While` / `Loop Until` too if those forms are supported by the compiler.
+  - Regression must cover `And` and `Or` and all supported pre-test/post-test loop condition layouts.
 
 ## Layout coverage
 
