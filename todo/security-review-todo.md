@@ -104,21 +104,31 @@ Status:
 - [>] `SetHeader` rejects CR, LF, NUL and other prohibited control characters in header values before request construction
 - [>] `RemoveHeader` applies the same header-name validation
 - [>] URLs are restricted to absolute `http://` and `https://` schemes
-- [>] invalid URL/network/timeout diagnostics no longer echo the complete request URL or underlying exception message
+- [>] invalid URL/network/timeout diagnostics do not echo the complete request URL or underlying exception message
 - [>] invalid `Content-Type` is converted to a bounded XPScript error instead of leaking parser exception text
-- [>] offline regression source: `samples/native-http-header-validation.xps`
-- [ ] review redirect behavior and credential/header forwarding across origins
-- [ ] review request body size and response body size/resource limits
-- [ ] review local-network/loopback access as an application-level SSRF boundary
-- [ ] review timeout/cancellation/disposal behavior
-- [ ] build/runtime verification when execution is re-enabled
+- [>] automatic redirects are disabled; 3xx responses are returned to the caller so credentials/custom headers are not silently forwarded across origins
+- [>] request bodies are limited to 8 MiB UTF-8
+- [>] response bodies are limited to 8 MiB and read with `ResponseHeadersRead`; oversized declared or streamed bodies are rejected
+- [>] Timeout rejects zero, negative, NaN and Infinity values
+- [>] HttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
+- [>] loopback/private-network access remains intentionally available because this is a general-purpose HTTP API; SSRF host/network allowlists are an application boundary
+- [>] regression sources: `samples/native-http-header-validation.xps`, `samples/native-http-resource-limits.xps`
+- [ ] verify redirects/body limits/timeout/disposal against controlled endpoints when execution is re-enabled
 
 ## JSON
 
-- [ ] review recursion/depth limits for parsing and serialization
-- [ ] review oversized JSON allocation behavior
-- [ ] review number conversion/overflow behavior
-- [ ] ensure JSON diagnostics do not expose unrelated secret values
+- [>] parser input is limited to 8 MiB UTF-8
+- [>] parse/serialization nesting is limited to 64 levels
+- [>] JSON graph size is limited to 100000 nodes
+- [>] estimated JSON payload is limited to 16 MiB
+- [>] serialized JSON output is limited to 16 MiB UTF-8
+- [>] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
+- [>] budget arithmetic overflow is normalized to a bounded XPScript error
+- [>] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
+- [>] parsed numeric conversion refuses non-finite Double results
+- [>] malformed JSON diagnostics do not echo the complete JSON source payload
+- [>] regression source: `samples/json-resource-limits.xps`
+- [ ] build/runtime verification of parse/depth/node/payload/numeric limits when execution is re-enabled
 
 ## Native interop
 
@@ -138,7 +148,8 @@ Status:
 ## Diagnostics
 
 - [>] Evaluate diagnostics have explicit secret sanitization
-- [>] native HTTP validation/network diagnostics no longer echo URL/header payload values in the newly hardened paths
+- [>] native HTTP validation/network diagnostics do not echo URL/header payload values in hardened paths
+- [>] JSON parser/budget diagnostics do not echo JSON payloads
 - [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
 - [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
 - [ ] review runtime errors from file I/O and native interop for unnecessary sensitive values
@@ -148,6 +159,7 @@ Status:
 
 - [>] `docs/evaluate.md` documents Evaluate isolation and non-sandbox boundary
 - [>] `docs/platform-native.md` documents native/process platform behavior
+- [>] `docs/native-http-json.md` documents redirect policy and HTTP/JSON resource budgets
 - [>] `docs/security.md` covers powerful APIs, compiler hardening and trust boundaries
 - [>] security documentation is linked from `docs/index.md` and README
 
