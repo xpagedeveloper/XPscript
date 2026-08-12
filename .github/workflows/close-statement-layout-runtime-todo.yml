@@ -1,0 +1,30 @@
+name: Close Statement Layout Runtime TODO
+
+on:
+  push:
+    branches: [todo-statement-layout-audit]
+    paths:
+      - '.github/workflows/close-statement-layout-runtime-todo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Update TODO
+        run: python tools/close-statement-layout-runtime-todo.py
+      - name: Commit update
+        shell: bash
+        run: |
+          rm .github/workflows/close-statement-layout-runtime-todo.yml
+          rm tools/close-statement-layout-runtime-todo.py
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add -A
+          git commit -m "Close verified statement layout runtime TODO"
+          git push
