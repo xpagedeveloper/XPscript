@@ -50,12 +50,13 @@ Status:
 ## 3. Control flow and error handling
 
 - [x] `If`, `ElseIf`, `Else`, `Select Case`
-- [ ] support all valid `If` statement layouts consistently:
-  - [ ] single-line `If condition Then statement`
-  - [ ] single-line branches such as `If condition Then statement Else statement` and applicable `ElseIf condition Then statement` forms
-  - [ ] `If condition Then` followed by statement(s) and `End If` on a later line
-  - [ ] fully multiline block form with `If`, `Then`, body and `End If` on separate lines
-  - [ ] ensure Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; regression discovered by `examples/date-comparisons.xps` testing
+- [x] support all valid `If` statement layouts consistently; source: `samples/if-layouts.xps`; permanent manual gate: `Control Flow and Error Handling Compatibility`:
+  - [x] single-line `If condition Then statement`
+  - [x] single-line branches such as `If condition Then statement Else statement` and block `ElseIf condition Then statement` forms
+  - [x] `If condition Then` followed by statement(s) and `End If` on a later line
+  - [x] split `If condition` / `Then` and `ElseIf condition` / `Then` forms while preserving physical source line count
+  - [x] fully multiline block form with `If`, `Then`, body and `End If` on separate lines
+  - [x] Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; original regression discovered by `examples/date-comparisons.xps` testing
 - [ ] audit all documented control-flow/declaration statement layouts for the same line-shape assumption:
   - [ ] verify `_` line continuation remains accepted for long expressions, argument lists, procedure headers and control-flow expressions
   - [ ] verify `ElseIf` / `Else` supported layouts and nested single-line/block combinations
