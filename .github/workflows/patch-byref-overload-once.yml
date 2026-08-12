@@ -5,6 +5,7 @@ on:
     branches: [todo-overload-byref]
     paths:
       - '.github/workflows/patch-byref-overload-once.yml'
+      - 'scripts/patch-byref-overload.py'
 
 permissions:
   contents: write
