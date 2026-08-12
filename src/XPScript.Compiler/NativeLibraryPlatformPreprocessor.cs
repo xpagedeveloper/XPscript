@@ -13,14 +13,18 @@ internal sealed class NativeLibraryPlatformPreprocessor
     ];
 
     private readonly string _runtimeIdentifier;
+    private readonly HashSet<string> _applicationLocalLoadNames = new(StringComparer.OrdinalIgnoreCase);
 
     public NativeLibraryPlatformPreprocessor(string runtimeIdentifier)
     {
         _runtimeIdentifier = (runtimeIdentifier ?? "").Trim().ToLowerInvariant();
     }
 
+    public IReadOnlySet<string> ApplicationLocalLoadNames => _applicationLocalLoadNames;
+
     public string Transform(string source)
     {
+        _applicationLocalLoadNames.Clear();
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new string[lines.Length];
 
@@ -61,9 +65,13 @@ internal sealed class NativeLibraryPlatformPreprocessor
         if (string.IsNullOrWhiteSpace(selectedLibrary))
             throw new CompilerException("Declare requires a native library for target runtime '" + _runtimeIdentifier + "'.");
 
-        var loadLibrary = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary)
+        var isApplicationLocal = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary);
+        var loadLibrary = isApplicationLocal
             ? NativeDependencyPackager.PortableFileName(selectedLibrary)
             : selectedLibrary;
+
+        if (isApplicationLocal)
+            _applicationLocalLoadNames.Add(loadLibrary);
 
         var rewritten = Regex.Replace(code, "\\bLib\\s+\"[^\"]+\"", "Lib \"" + Escape(loadLibrary) + "\"", RegexOptions.IgnoreCase);
         foreach (var keyword in SelectableKeywords)
