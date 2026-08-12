@@ -306,7 +306,7 @@ internal sealed class CoreCompatibilityTranspiler
                 var finalLine = RewriteByRefParameterUses(expanded, proc.Parameters.Where(x => x.ByRef && !x.IsArray && !x.IsList).ToList());
                 finalLine = RewriteByRefCalls(finalLine, className, scalarTypes);
                 finalLine = RewriteErrorExpressions(finalLine);
-                finalLine = RewriteArrayReads(finalLine, arrays);
+                finalLine = RewriteArrayReads(finalLine, arrays, scalarTypes);
                 finalLine = RewriteStaticNames(finalLine, staticNames);
 
                 if (hasOnError && IsProtectableStatement(finalLine))
@@ -539,7 +539,7 @@ internal sealed class CoreCompatibilityTranspiler
         }
 
         var arrayAssignment = Regex.Match(line, @"^([A-Za-z_]\w*)\s*\((.*)\)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-        if (arrayAssignment.Success && arrays.ContainsKey(arrayAssignment.Groups[1].Value))
+        if (arrayAssignment.Success && (arrays.ContainsKey(arrayAssignment.Groups[1].Value) || (scalarTypes.TryGetValue(arrayAssignment.Groups[1].Value, out var indexedScalarType) && indexedScalarType.Equals("Variant", StringComparison.OrdinalIgnoreCase))))
         {
             var args = string.Join(", ", SplitArguments(arrayAssignment.Groups[2].Value));
             output.Add($"Call LSArrayRuntime.Set({arrayAssignment.Groups[1].Value}, {arrayAssignment.Groups[3].Value}, {args})");
@@ -713,11 +713,13 @@ internal sealed class CoreCompatibilityTranspiler
         return ("new int[] { " + string.Join(", ", lower) + " }", "new int[] { " + string.Join(", ", upper) + " }");
     }
 
-    private string RewriteArrayReads(string line, Dictionary<string, ArrayInfo> arrays)
+    private string RewriteArrayReads(string line, Dictionary<string, ArrayInfo> arrays, Dictionary<string, string> scalarTypes)
     {
         line = Regex.Replace(line, @"(?<![\w.])LBound\s*\(", "LSArrayRuntime.LBound(", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])UBound\s*\(", "LSArrayRuntime.UBound(", RegexOptions.IgnoreCase);
         foreach (var name in arrays.Keys.OrderByDescending(x => x.Length))
+            line = ReplaceCall(line, name, args => $"LSArrayRuntime.Get({name}{(args.Length > 0 ? ", " + args : "")})");
+        foreach (var name in scalarTypes.Where(x => x.Value.Equals("Variant", StringComparison.OrdinalIgnoreCase)).Select(x => x.Key).OrderByDescending(x => x.Length))
             line = ReplaceCall(line, name, args => $"LSArrayRuntime.Get({name}{(args.Length > 0 ? ", " + args : "")})");
         return line;
     }

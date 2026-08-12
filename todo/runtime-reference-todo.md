@@ -113,6 +113,7 @@ Status:
 - [x] `Array`, `ReDim`, `ReDim Preserve`, `Erase`, `LBound`, `UBound`
 - [x] array helper functions and keyed lists
 - [x] arrays as `Type` members including deep-copy of array storage
+- [x] `Variant` values containing runtime XPScript arrays support indexed reads and writes; discovered by the `Base64DecodeBinary()` regression and covered by `samples/variant-runtime-array-indexing.xps`
 
 ## 9. File I/O and filesystem
 
@@ -136,7 +137,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 - [x] `ToBase64`, `FromBase64`, `UrlEncode`, `UrlDecode`
 - [x] `Base64Encode`, `Base64Decode`
-- [>] binary-return Base64 decode via `Base64DecodeBinary()`; source: `samples/base64-binary.xps`
+- [x] binary-return Base64 decode via `Base64DecodeBinary()` returning a normal XPScript Byte array; source: `samples/base64-binary.xps`
 
 ## 12. Native HTTP API
 
