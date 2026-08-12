@@ -155,7 +155,7 @@ Status:
 - [>] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
 - [>] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
 - [>] legacy disabled coverage exists in `samples/runtime-sax.xps`
-- [ ] sanitize `GetObject` activation failures so underlying COM exception text does not echo sensitive moniker/path details
+- [>] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text
 - [ ] runtime verification on Windows when execution is re-enabled
 
 ## Diagnostics
@@ -164,8 +164,9 @@ Status:
 - [>] native HTTP validation/network diagnostics do not echo URL/header payload values in hardened paths
 - [>] JSON parser/budget diagnostics do not echo JSON payloads
 - [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
+- [>] COM `GetObject` activation failures no longer echo underlying COM exception details
 - [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
-- [ ] review runtime errors from file I/O, COM and native interop for unnecessary sensitive values
+- [ ] review runtime errors from file I/O and native interop for unnecessary sensitive values
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
