@@ -7,12 +7,17 @@ internal sealed class ReservedIdentifierPreprocessor
     private static readonly HashSet<string> ReservedTypeNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "Program", "Script",
-        "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO", "XPScriptFileSystemRuntime",
+        "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO", "XPScriptFileSystemRuntime", "XPScriptApplicationRuntime",
         "XPScriptEvaluateRuntime", "XPScriptEvaluateCollectionRuntime", "XPScriptEvaluateSemanticsRuntime", "XPScriptEvaluateFunctionArityRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
         "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
         "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement",
         "UIForm", "UIData", "UIItem", "UIFieldValue"
+    };
+
+    private static readonly HashSet<string> ReservedValueNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Application"
     };
 
     public string Transform(string source)
@@ -131,6 +136,9 @@ internal sealed class ReservedIdentifierPreprocessor
     {
         if (name.StartsWith("__", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException($"input.xps({line},1): Identifier '{name}' is reserved for XPScript compiler-generated state.");
+
+        if (ReservedValueNames.Contains(name))
+            throw new CompilerException($"input.xps({line},1): Identifier '{name}' is reserved by the XPScript runtime.");
 
         if (typeDeclaration && ReservedTypeNames.Contains(name))
             throw new CompilerException($"input.xps({line},1): Type name '{name}' is reserved by the XPScript runtime.");
