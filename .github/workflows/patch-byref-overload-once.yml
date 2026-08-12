@@ -17,63 +17,36 @@ jobs:
         with:
           ref: todo-overload-byref
       - name: Patch overload-aware ByRef lowering
-        shell: pwsh
+        shell: bash
         run: |
-          $path = 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
-          $text = Get-Content -Raw -Path $path
-
-          $old = 'private readonly Dictionary<string, ProcedureInfo> _procedures = new(StringComparer.OrdinalIgnoreCase);'
-          $new = 'private readonly List<ProcedureInfo> _procedures = [];'
-          if (-not $text.Contains($old)) { throw 'Procedure collection declaration not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = @'
-            var proc = ParseProcedureHeader(line, currentClass);
-            if (proc is not null)
-                _procedures[ProcedureKey(proc.Name, currentClass)] = proc;
-'@
-          $new = @'
-            var proc = ParseProcedureHeader(line, currentClass);
-            if (proc is not null)
-                _procedures.Add(proc);
-'@
-          if (-not $text.Contains($old)) { throw 'Analyze procedure registration block not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = @'
-        var match = Regex.Match(line, @"^(?:Static\s+)?(?:(?:Public|Private)\s+)?(?:Sub|Function)\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
-        if (!match.Success) return null;
-        return _procedures.TryGetValue(ProcedureKey(match.Groups[1].Value, className), out var info) ? info : null;
-'@
-          $new = @'
-        return ParseProcedureHeader(line, className);
-'@
-          if (-not $text.Contains($old)) { throw 'Procedure lookup block not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = 'foreach (var proc in _procedures.Values.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))'
-          $new = 'foreach (var proc in _procedures.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))'
-          if (-not $text.Contains($old)) { throw 'ByRef procedure enumeration not found.' }
-          $text = $text.Replace($old, $new)
-
-          $old = @'
-                    if (!Regex.IsMatch(target, @"^[A-Za-z_]\w*(?:\.Value)?(?:\.[A-Za-z_]\w*)*$"))
-                        throw new CompilerException($"ByRef argument {i + 1} for {proc.Name} must be assignable.");
-'@
-          $new = @'
-                    if (!Regex.IsMatch(target, @"^[A-Za-z_]\w*(?:\.Value)?(?:\.[A-Za-z_]\w*)*$"))
-                        return proc.Name + "(" + argsRaw + ")";
-'@
-          if (-not $text.Contains($old)) { throw 'ByRef assignability block not found.' }
-          $text = $text.Replace($old, $new)
-
-          Set-Content -Path $path -Value $text -NoNewline -Encoding utf8
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/XPScript.Compiler/CoreCompatibilityTranspiler.cs')
+          s = p.read_text(encoding='utf-8')
+          replacements = [
+              ('private readonly Dictionary<string, ProcedureInfo> _procedures = new(StringComparer.OrdinalIgnoreCase);',
+               'private readonly List<ProcedureInfo> _procedures = [];'),
+              ('_procedures[ProcedureKey(proc.Name, currentClass)] = proc;',
+               '_procedures.Add(proc);'),
+              ('return _procedures.TryGetValue(ProcedureKey(match.Groups[1].Value, className), out var info) ? info : null;',
+               'return ParseProcedureHeader(line, className);'),
+              ('foreach (var proc in _procedures.Values.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))',
+               'foreach (var proc in _procedures.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))'),
+              ('throw new CompilerException($"ByRef argument {i + 1} for {proc.Name} must be assignable.");',
+               'return proc.Name + "(" + argsRaw + ")";'),
+          ]
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit(f'Expected source fragment not found: {old}')
+              s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          PY
       - name: Commit implementation
         shell: bash
         run: |
           git config user.name "xpagedeveloper"
           git config user.email "fredrik@xpagedeveloper.com"
           git add src/XPScript.Compiler/CoreCompatibilityTranspiler.cs
-          if git diff --cached --quiet; then exit 0; fi
+          git diff --cached --quiet && exit 0
           git commit -m "Make scalar ByRef lowering overload-aware"
           git push origin HEAD:todo-overload-byref
