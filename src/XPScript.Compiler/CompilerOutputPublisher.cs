@@ -2,9 +2,36 @@ namespace XPScript.Compiler;
 
 internal static class CompilerOutputPublisher
 {
-    internal sealed record Dependency(string SourcePath, string FileName);
+    private sealed record Dependency(string SourcePath, string FileName);
 
     public static void Publish(
+        string generatedExecutable,
+        string outputPath,
+        string sourcePath,
+        IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> managedNativeDependencies,
+        bool makeExecutable)
+    {
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var dependencies = new List<Dependency>();
+
+        foreach (var dependency in nativeDependencies)
+        {
+            dependencies.Add(new Dependency(
+                CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, dependency.DeclaredPath),
+                dependency.LoadName));
+        }
+
+        foreach (var dependency in managedNativeDependencies)
+        {
+            var sourceFile = CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
+            dependencies.Add(new Dependency(sourceFile, Path.GetFileName(sourceFile)));
+        }
+
+        PublishStaged(generatedExecutable, outputPath, dependencies, makeExecutable);
+    }
+
+    private static void PublishStaged(
         string generatedExecutable,
         string outputPath,
         IReadOnlyList<Dependency> dependencies,
