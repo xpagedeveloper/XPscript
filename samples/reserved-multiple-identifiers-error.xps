@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim good As Integer, __compilerState As Integer
+    good = 1
+    Print CStr(good)
+End Sub
