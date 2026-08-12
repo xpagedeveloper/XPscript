@@ -208,7 +208,10 @@ public sealed class CompilerDriver
             var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "Managed Reference");
             var fileName = Path.GetFileName(resolved);
             var staged = Path.Combine(referenceDirectory, fileName);
-            File.Copy(resolved, staged, overwrite: true);
+            CompilerSecureFileCopy.CopyValidatedRegularFile(
+                resolved,
+                staged,
+                "Managed Reference");
             CompilerPathSecurity.HardenTemporaryFile(staged);
             result.Add(new StagedManagedReference(Path.GetFileNameWithoutExtension(fileName), staged));
         }
