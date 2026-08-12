@@ -16,7 +16,7 @@ Status:
 - [x] `Application.ArgCount`
 - [x] `Application.Args(index)` with zero-based indexes
 - [>] `Application.Args` returns a defensive-copy XPScript String array
-- [>] invalid argument index raises XPScript error 9
+- [x] invalid argument index raises XPScript error 9
 - [>] `Application.CommandLine` convenience representation
 - [>] `Application.ExecutablePath`
 - [>] `Application.ExecutableFileName`
@@ -25,7 +25,8 @@ Status:
 - [>] `Application.TempFolder` alias
 - [>] `Application.Path` alias
 - [>] `Application.FileName` alias
-- [>] Application properties and argument values are read-only at the XPScript source surface
+- [x] Application argument values are read-only at the XPScript source surface
+- [>] other Application properties are read-only at the XPScript source surface
 - [>] internal argument storage is copied from .NET `Main(string[] args)`
 - [>] full `Application.Args` array is detached from runtime-owned argument storage
 
@@ -44,8 +45,9 @@ Status:
 - [x] verify empty-string argument in PowerShell on the Windows GitHub runner
 - [x] verify Unicode command-line arguments
 - [x] verify `ArgCount` equals the number of values available through `Application.Args(index)`
-- [ ] verify out-of-range indexes produce error 9
-- [ ] verify attempts to assign `Application.Args(0)` or another Application property fail at compile time
+- [x] verify out-of-range indexes produce error 9
+- [x] verify attempts to assign `Application.Args(0)` fail at compile time
+- [ ] verify attempts to assign another Application property fail at compile time
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on Windows
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on Linux
 - [ ] verify `Application.ExecutablePath` points to the actual generated executable on macOS
