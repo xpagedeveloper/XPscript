@@ -304,7 +304,7 @@ internal sealed class CoreCompatibilityTranspiler
             foreach (var expanded in transformed)
             {
                 var finalLine = RewriteByRefParameterUses(expanded, proc.Parameters.Where(x => x.ByRef && !x.IsArray && !x.IsList).ToList());
-                finalLine = RewriteByRefCalls(finalLine, className);
+                finalLine = RewriteByRefCalls(finalLine, className, scalarTypes);
                 finalLine = RewriteErrorExpressions(finalLine);
                 finalLine = RewriteArrayReads(finalLine, arrays);
                 finalLine = RewriteStaticNames(finalLine, staticNames);
@@ -732,26 +732,84 @@ internal sealed class CoreCompatibilityTranspiler
         return line;
     }
 
-    private string RewriteByRefCalls(string line, string? className)
+    private string RewriteByRefCalls(string line, string? className, IReadOnlyDictionary<string, string> scalarTypes)
     {
         foreach (var proc in _procedures.Where(x => x.Parameters.Any(p => p.ByRef && !p.IsArray && !p.IsList)))
         {
-            line = ReplaceCall(line, proc.Name, argsRaw =>
+            if (proc.ClassName is null)
             {
-                var args = SplitArguments(argsRaw);
-                for (var i = 0; i < Math.Min(args.Count, proc.Parameters.Count); i++)
+                line = ReplaceCall(line, proc.Name, argsRaw =>
                 {
-                    var p = proc.Parameters[i];
-                    if (!p.ByRef || p.IsArray || p.IsList) continue;
-                    var target = args[i].Trim();
-                    if (!Regex.IsMatch(target, @"^[A-Za-z_]\w*(?:\.Value)?(?:\.[A-Za-z_]\w*)*$"))
-                        return proc.Name + "(" + argsRaw + ")";
-                    args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(p.Type, "__lsv")})";
+                    var args = SplitArguments(argsRaw);
+                    return TryWrapByRefArguments(proc, args, scalarTypes)
+                        ? proc.Name + "(" + string.Join(", ", args) + ")"
+                        : proc.Name + "(" + argsRaw + ")";
+                });
+                continue;
+            }
+
+            var memberPattern = new Regex($@"(?<target>[A-Za-z_]\w*|Me)\.{Regex.Escape(proc.Name)}\s*\(", RegexOptions.IgnoreCase);
+            var offset = 0;
+            while (true)
+            {
+                var match = memberPattern.Match(line, offset);
+                if (!match.Success) break;
+                var target = match.Groups["target"].Value;
+                string? targetType = target.Equals("Me", StringComparison.OrdinalIgnoreCase)
+                    ? className
+                    : scalarTypes.TryGetValue(target, out var knownType) ? knownType : null;
+                if (!proc.ClassName.Equals(targetType, StringComparison.OrdinalIgnoreCase))
+                {
+                    offset = match.Index + match.Length;
+                    continue;
                 }
-                return proc.Name + "(" + string.Join(", ", args) + ")";
-            });
+
+                var open = line.IndexOf('(', match.Index);
+                var close = FindMatchingParen(line, open);
+                if (close < 0) break;
+                var argsRaw = line[(open + 1)..close];
+                var args = SplitArguments(argsRaw);
+                if (!TryWrapByRefArguments(proc, args, scalarTypes))
+                {
+                    offset = close + 1;
+                    continue;
+                }
+
+                var rendered = target + "." + proc.Name + "(" + string.Join(", ", args) + ")";
+                line = line[..match.Index] + rendered + line[(close + 1)..];
+                offset = match.Index + rendered.Length;
+            }
+
+            if (proc.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase))
+            {
+                line = ReplaceCall(line, proc.Name, argsRaw =>
+                {
+                    var args = SplitArguments(argsRaw);
+                    return TryWrapByRefArguments(proc, args, scalarTypes)
+                        ? proc.Name + "(" + string.Join(", ", args) + ")"
+                        : proc.Name + "(" + argsRaw + ")";
+                });
+            }
         }
         return line;
+    }
+
+    private static bool TryWrapByRefArguments(ProcedureInfo proc, List<string> args, IReadOnlyDictionary<string, string> scalarTypes)
+    {
+        if (args.Count != proc.Parameters.Count) return false;
+        for (var i = 0; i < args.Count; i++)
+        {
+            var parameter = proc.Parameters[i];
+            if (!parameter.ByRef || parameter.IsArray || parameter.IsList) continue;
+            var target = args[i].Trim();
+            var targetMatch = Regex.Match(target, @"^(?<name>[A-Za-z_]\w*)(?:\.Value)?$");
+            if (!targetMatch.Success) return false;
+            var root = targetMatch.Groups["name"].Value;
+            if (!scalarTypes.TryGetValue(root, out var actualType) || !actualType.Equals(parameter.Type, StringComparison.OrdinalIgnoreCase))
+                return false;
+            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+        }
+        return true;
     }
 
     private string RewriteErrorExpressions(string line)
