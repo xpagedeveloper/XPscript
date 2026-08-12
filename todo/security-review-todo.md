@@ -135,15 +135,28 @@ Status:
 - [>] target-specific native library selection is compile-target based
 - [>] application-local native file extensions are target validated
 - [>] loader failures are wrapped with XPScript diagnostics
-- [ ] review P/Invoke calling-convention and signature mismatch hazards
-- [ ] review search-path/DLL-preloading behavior on every target OS
-- [ ] document that native interop executes unmanaged code with process privileges
+- [>] native parameters must be explicit `ByVal`; `ByRef` and omitted passing mode are rejected until target-correct ref/out marshalling is implemented
+- [>] application-local native declarations are marked internally during preprocessing and emitted with their normal portable filename only after secure wrapper generation
+- [>] application-local native libraries are resolved through `DllImportResolver` from exactly `AppContext.BaseDirectory` / executable directory
+- [>] application-local resolution does not search current working directory, PATH or arbitrary loader directories
+- [>] application-local library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
+- [>] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
+- [>] documentation states that native interop executes unmanaged code with process privileges
+- [>] negative ABI source: `samples/native-byref-error.xps`
+- [ ] verify calling-convention behavior for supported scalar signatures on Windows/Linux/macOS
+- [ ] verify application-local loader behavior on Windows/Linux/macOS
+- [ ] review transitive native dependency search/preloading behavior for dependencies of the selected application-local library
 
 ## COM / compatibility APIs
 
-- [ ] inventory all COM/OLE compatibility entry points still reachable from standalone XPScript
-- [ ] decide which APIs remain Windows-only compatibility features
-- [ ] document that COM/OLE object activation is a powerful local-code boundary
+- [>] standalone inventory found `GetObject(pathname, className)` as the retained COM/OLE activation entry point
+- [>] `GetObject` is explicitly Windows-only
+- [>] pathname mode uses COM moniker binding; ProgID mode resolves/activates the registered COM class
+- [>] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
+- [>] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
+- [>] legacy disabled coverage exists in `samples/runtime-sax.xps`
+- [ ] sanitize `GetObject` activation failures so underlying COM exception text does not echo sensitive moniker/path details
+- [ ] runtime verification on Windows when execution is re-enabled
 
 ## Diagnostics
 
@@ -152,15 +165,15 @@ Status:
 - [>] JSON parser/budget diagnostics do not echo JSON payloads
 - [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
 - [ ] review compiler diagnostics for absolute paths, generated-source leakage and secret source literals
-- [ ] review runtime errors from file I/O and native interop for unnecessary sensitive values
+- [ ] review runtime errors from file I/O, COM and native interop for unnecessary sensitive values
 - [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
 
 ## Documentation
 
 - [>] `docs/evaluate.md` documents Evaluate isolation and non-sandbox boundary
-- [>] `docs/platform-native.md` documents native/process platform behavior
+- [>] `docs/platform-native.md` documents native/process platform behavior, native ABI constraints and application-local resolver policy
 - [>] `docs/native-http-json.md` documents redirect policy and HTTP/JSON resource budgets
-- [>] `docs/security.md` covers powerful APIs, compiler hardening and trust boundaries
+- [>] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
 - [>] security documentation is linked from `docs/index.md` and README
 
 ## Verification gate
