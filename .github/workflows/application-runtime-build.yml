@@ -98,3 +98,13 @@ jobs:
           if ($compilerExitCode -eq 0) { throw 'Expected assignment to Application.Args to fail compilation.' }
           $result = $resultText | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler error for read-only Application.Args assignment.' }
+
+      - name: Verify Application properties are read-only
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime-property-readonly-error.xps -o ./out/application-runtime-property-readonly-error.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Expected assignment to Application.TempPath to fail compilation.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler error for read-only Application property assignment.' }
