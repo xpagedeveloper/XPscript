@@ -20,6 +20,7 @@ public sealed class XPScriptTranspiler
         source = new IfLayoutPreprocessor().Transform(source);
         source = new SourceLineContinuationPreprocessor().Transform(source);
         source = new SourceLineMarkerPreprocessor().Transform(source);
+        source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
 
