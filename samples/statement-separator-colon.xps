@@ -6,6 +6,14 @@ Sub Main()
     Print "STRING=A:B:C"
     Print "COMMENT=OK" ' this colon: must stay inside the comment
 
+    If True Then Print "IF-A": Print "IF-B" Else Print "IF-BAD"
+    If False Then Print "IF-BAD": Print "IF-BAD-2" Else Print "ELSE-A": Print "ELSE-B"
+
+    If False Then
+        Print "ELSEIF-BAD"
+    ElseIf True Then Print "ELSEIF-A": Print "ELSEIF-B"
+    End If
+
     GoTo AfterSkippedLabel
 SkippedLabel:
     Print "LABEL-BAD"
