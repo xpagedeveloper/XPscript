@@ -1,3 +1,9 @@
+Declare Function NativeProcessId Lib "native-process" _
+    WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
+    LinuxLib "libc.so.6" LinuxAlias "getpid" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
+    () As Integer
+
 Class BaseBox
     Public Value As Integer
 End Class
@@ -28,6 +34,8 @@ Sub Main()
     Dim total As Integer
     Dim i As Integer
     Dim box As New ChildBox
+    Dim names List As String
+    Dim forallCount As Integer
 
     total = AddValues( _
         1, _
@@ -50,6 +58,15 @@ Sub Main()
         Step 1
         Print "FOR=" & CStr(i)
     Next i
+
+    names("first") = "A"
+    names("second") = "B"
+    forallCount = 0
+    ForAll item In _
+        names
+        forallCount = forallCount + 1
+    End ForAll
+    Print "FORALL=" & CStr(forallCount)
 
     i = 0
     While i < 2 _
@@ -85,4 +102,5 @@ Sub Main()
         4 _
     ))
     Print "PROPERTY=" & CStr(box.Current)
+    Print "DECLARE=COMPILED"
 End Sub
