@@ -17,10 +17,22 @@ Sub Main()
     Print "OSDATE=" & Format$(startDate, startDate.OSDateFormatting)
     Print "OSTIME=" & Format$(endDate, endDate.OSTimeFormatting)
 
-    If endDate > adjustedDate Then Print "GT=TRUE"
-    If endDate >= adjustedDate Then Print "GTE=TRUE"
-    If adjustedDate < endDate Then Print "LT=TRUE"
-    If adjustedDate <= endDate Then Print "LTE=TRUE"
-    If adjustedDate <> endDate Then Print "NE=TRUE"
-    If adjustedDate = adjustedDate Then Print "EQ=TRUE"
+    If endDate > adjustedDate Then
+        Print "GT=TRUE"
+    End If
+    If endDate >= adjustedDate Then
+        Print "GTE=TRUE"
+    End If
+    If adjustedDate < endDate Then
+        Print "LT=TRUE"
+    End If
+    If adjustedDate <= endDate Then
+        Print "LTE=TRUE"
+    End If
+    If adjustedDate <> endDate Then
+        Print "NE=TRUE"
+    End If
+    If adjustedDate = adjustedDate Then
+        Print "EQ=TRUE"
+    End If
 End Sub
