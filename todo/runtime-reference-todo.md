@@ -4,10 +4,10 @@
 
 Tracks implementation against the standalone XPScript runtime reference.
 
-Development note: while GitHub workflows are disabled by user request, implementation work is committed to `runtime-development-no-ci`. No workflow is started by this work.
+Development note: GitHub Actions verification is enabled on `runtime-development-no-ci`. Features are marked `[x]` only after their applicable compiler/runtime regression gates pass.
 
 Status:
-- `[x]` implemented and previously verified
+- `[x]` implemented and verified
 - `[-]` partially implemented
 - `[>]` implemented/in progress, awaiting explicit verification
 - `[ ]` not implemented
@@ -18,17 +18,17 @@ Status:
 - [x] scalar types: Variant, Boolean, Byte, Integer, Long, Single, Double, Currency, String, Date, Object
 - [x] `Dim`, `Static`, `ByVal`, explicit `ByRef`, `Set`, `New`, `Delete`
 - [x] `Optional` parameters, defaults, omitted trailing arguments and omitted slots
-- [>] module-level `Public` scalar variables
-- [>] module-level `Private` scalar variables
-- [>] module-level fixed/dynamic arrays with `ReDim`, `ReDim Preserve`, indexed reads/writes, bounds and `Erase`; source: `samples/module-arrays.xps`
-- [>] module-level custom `Type` values; source: `samples/module-type-values.xps`
-- [>] module-level class/object references with `Set`, `New`, aliases, `Nothing`, identity, member access and `Delete`; source: `samples/module-object-references.xps`
-- [>] `Type ... End Type`: scalar fields, auto initialization and scalar value-copy; source: `samples/type-value-copy.xps`
-- [>] `Type` array fields: fixed/dynamic fields, indexing, `ReDim`, `Erase`, bounds and deep array-copy; source: `samples/type-array-members.xps`
-- [>] nested `Type` deep-copy recursively clones nested values and nested array storage; source: `samples/type-nested-value-copy.xps`
-- [>] cyclic nested `Type` copy graphs produce an explicit compiler diagnostic instead of unbounded clone generation; source: `samples/type-cycle-error.xps`
-- [>] implicit lower bounds in `ReDim typeValue.arrayField(n)` honor active `Option Base`; source: `samples/type-array-option-base.xps`
-- [>] nested `Type` copy into module-level `Type` values uses detached copy-then-commit semantics and handles self-assignment; source: `samples/module-nested-type-value-copy.xps`
+- [x] module-level `Public` scalar variables
+- [x] module-level `Private` scalar variables
+- [x] module-level fixed/dynamic arrays with `ReDim`, `ReDim Preserve`, indexed reads/writes, bounds and `Erase`; source: `samples/module-arrays.xps`
+- [x] module-level custom `Type` values; source: `samples/module-type-values.xps`
+- [x] module-level class/object references with `Set`, `New`, aliases, `Nothing`, identity, member access and `Delete`; source: `samples/module-object-references.xps`
+- [x] `Type ... End Type`: scalar fields, auto initialization and scalar value-copy; source: `samples/type-value-copy.xps`
+- [x] `Type` array fields: fixed/dynamic fields, indexing, `ReDim`, `Erase`, bounds and deep array-copy; source: `samples/type-array-members.xps`
+- [x] nested `Type` deep-copy recursively clones nested values and nested array storage; source: `samples/type-nested-value-copy.xps`
+- [x] cyclic nested `Type` copy graphs produce an explicit compiler diagnostic instead of unbounded clone generation; source: `samples/type-cycle-error.xps`
+- [x] implicit lower bounds in `ReDim typeValue.arrayField(n)` honor active `Option Base`; source: `samples/type-array-option-base.xps`
+- [x] nested `Type` copy into module-level `Type` values uses detached copy-then-commit semantics and handles self-assignment; source: `samples/module-nested-type-value-copy.xps`
 - [x] `Enum ... End Enum`: explicit values, auto increment, qualified/unqualified members
 
 ## 2. Classes and properties
@@ -81,18 +81,21 @@ Status:
 
 ### Date object enhancements
 
-- [>] `Date.Adjust(years, months, days, hours, minutes, seconds)` implemented in runtime/preprocessor, awaiting verification
-- [>] all `Adjust` components accept positive, zero or negative integer values
-- [>] combined year/month/day/hour/minute/second adjustment supported
-- [>] calendar-safe month/year semantics rely on .NET `DateTime.AddYears/AddMonths`
-- [>] leap-year behavior follows .NET DateTime semantics
-- [>] Date time component is preserved for date-only adjustments
-- [>] `Adjust` returns a new Date value
-- [>] `Date.Difference(otherDate)` implemented as signed total seconds (`otherDate - currentDate`)
-- [>] Date comparison operators use full DateTime values where date typing is known
-- [>] negative type diagnostics reject statically known nonsensical Date comparisons (Boolean, Object, arrays, Class/Type values) while preserving Date/String/numeric/Variant coercion paths; sources: `samples/date-comparisons-valid.xps`, `samples/date-comparisons-invalid.xps`
-- [ ] runtime regression verification when test execution is re-enabled
-- [ ] English documentation/examples under `docs/` and `examples/`
+- [x] `Date.Adjust(years, months, days, hours, minutes, seconds)`
+- [x] all `Adjust` components accept positive, zero or negative integer values
+- [x] combined year/month/day/hour/minute/second adjustment supported
+- [x] calendar-safe month/year semantics rely on .NET `DateTime.AddYears/AddMonths`
+- [x] leap-year behavior follows .NET DateTime semantics
+- [x] Date time component is preserved for date-only adjustments
+- [x] `Adjust` returns a new Date value
+- [x] `Date.Difference(otherDate)` returns signed total seconds (`otherDate - currentDate`)
+- [x] Date comparison operators use full DateTime values where date typing is known
+- [x] Date/String/numeric/Variant coercion paths are regression-tested, including mixed equality
+- [x] negative type diagnostics reject statically known nonsensical Date comparisons (Boolean, Object, arrays, Class/Type values); sources: `samples/date-comparisons-valid.xps`, `samples/date-comparisons-invalid.xps`
+- [x] `Date.OSDateFormatting` exposes the current OS/culture short-date mask in `Format`/`Format$` syntax
+- [x] `Date.OSTimeFormatting` exposes the current OS/culture long-time mask in `Format`/`Format$` syntax
+- [x] runtime regression verification via Language Extensions Compatibility
+- [>] English documentation in `docs/date-time.md`; reusable `examples/` coverage remains pending
 
 ## 8. Arrays and lists
 
@@ -100,7 +103,7 @@ Status:
 - [x] fixed/multidimensional arrays and explicit bounds
 - [x] `Array`, `ReDim`, `ReDim Preserve`, `Erase`, `LBound`, `UBound`
 - [x] array helper functions and keyed lists
-- [>] arrays as `Type` members including deep-copy of array storage
+- [x] arrays as `Type` members including deep-copy of array storage
 
 ## 9. File I/O and filesystem
 
