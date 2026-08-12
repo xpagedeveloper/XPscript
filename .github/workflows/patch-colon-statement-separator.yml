@@ -1,0 +1,30 @@
+name: Patch Colon Statement Separator
+
+on:
+  push:
+    branches: [todo-statement-separator-colon]
+    paths:
+      - '.github/workflows/patch-colon-statement-separator.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python tools/patch-colon-statement-separator.py
+      - name: Commit patch and clean helper files
+        shell: bash
+        run: |
+          rm .github/workflows/patch-colon-statement-separator.yml
+          rm tools/patch-colon-statement-separator.py
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add -A
+          git commit -m "Support colon statement separators"
+          git push
