@@ -70,7 +70,7 @@ internal sealed class NativeDependencyPackager
     private static bool IsAbsolutePortablePath(string value)
     {
         var normalized = value.Replace('\\', '/');
-        return normalized.StartsWith('/', StringComparison.Ordinal) ||
+        return normalized.StartsWith("/", StringComparison.Ordinal) ||
                normalized.StartsWith("//", StringComparison.Ordinal) ||
                Regex.IsMatch(normalized, @"^[A-Za-z]:/");
     }
