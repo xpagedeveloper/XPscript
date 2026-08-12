@@ -5,6 +5,7 @@ on:
     branches: [todo-date-examples]
     paths:
       - '.github/workflows/date-examples-temp.yml'
+      - 'examples/date-*.xps'
 
 permissions:
   contents: read
