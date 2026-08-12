@@ -41,7 +41,7 @@ internal static class XPNativeInteropRuntime
         var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
         var candidate = Path.GetFullPath(Path.Combine(baseDirectory, libraryName));
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        var basePrefix = baseDirectory.EndsWith(Path.DirectorySeparatorChar)
+        var basePrefix = baseDirectory.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
             ? baseDirectory
             : baseDirectory + Path.DirectorySeparatorChar;
 
