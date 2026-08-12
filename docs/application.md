@@ -118,4 +118,4 @@ The sample prints executable metadata and enumerates every command-line argument
 
 ## Verification status
 
-The implementation is currently on branch `runtime-development-no-ci` and is marked `[>]` until compiler/runtime execution is explicitly re-enabled.
+The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
