@@ -1,0 +1,22 @@
+Option Declare
+
+Class Mutator
+    Public Sub Update(ByRef value As Integer)
+        value = value + 1
+        Print "BYREF-INNER=" & CStr(value)
+    End Sub
+
+    Public Sub Update(ByVal value As String)
+        Print "BYVAL-STRING=" & value
+    End Sub
+End Class
+
+Sub Main()
+    Dim mutator As New Mutator
+    Dim number As Integer
+
+    number = 10
+    Call mutator.Update(number)
+    Print "BYREF-AFTER=" & CStr(number)
+    Call mutator.Update("hello")
+End Sub
