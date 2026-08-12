@@ -1,0 +1,13 @@
+Sub Main()
+    Dim values As Variant
+
+    values = Base64DecodeBinary("ChQe")
+    Print "READ0=" & CStr(values(0))
+    Print "READ1=" & CStr(values(1))
+    Print "READ2=" & CStr(values(2))
+
+    values(1) = 99
+    Print "WRITE1=" & CStr(values(1))
+    Print "LOW=" & CStr(LBound(values))
+    Print "HIGH=" & CStr(UBound(values))
+End Sub
