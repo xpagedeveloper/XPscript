@@ -504,6 +504,17 @@ internal static class Script
 
         var ifMatch = Regex.Match(line, @"^If\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
         if (ifMatch.Success) { Write(sb, $"if ({TransformCondition(ifMatch.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
+        var elseifInline = Regex.Match(line, @"^ElseIf\s+(.+?)\s+Then\s+(.+)$", RegexOptions.IgnoreCase);
+        if (elseifInline.Success)
+        {
+            _indent--;
+            Write(sb, "}");
+            Write(sb, $"else if ({TransformCondition(elseifInline.Groups[1].Value)})");
+            Write(sb, "{");
+            _indent++;
+            EmitStatement(sb, elseifInline.Groups[2].Value.Trim());
+            return;
+        }
         var elseif = Regex.Match(line, @"^ElseIf\s+(.+)\s+Then$", RegexOptions.IgnoreCase);
         if (elseif.Success) { _indent--; Write(sb, "}"); Write(sb, $"else if ({TransformCondition(elseif.Groups[1].Value)})"); Write(sb, "{"); _indent++; return; }
         if (Regex.IsMatch(line, @"^Else$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); Write(sb, "else"); Write(sb, "{"); _indent++; return; }
