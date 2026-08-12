@@ -1,0 +1,35 @@
+Sub Main()
+    Dim value As Integer
+
+    Print "COLON-A": Print "COLON-B"
+    value = 1: value = value + 1: Print "VALUE=" & CStr(value)
+    Print "STRING=A:B:C"
+    Print |ALT=A:B:C|
+    Print {BRACE=A:B:C}
+    Print "COMMENT=OK" ' this colon: must stay inside the comment
+
+    If True Then Print "IF-A": Print "IF-B" Else Print "IF-BAD"
+    If False Then Print "IF-BAD": Print "IF-BAD-2" Else Print "ELSE-A": Print "ELSE-B"
+
+    If False Then
+        Print "ELSEIF-BAD"
+    ElseIf True Then Print "ELSEIF-A": Print "ELSEIF-B"
+    End If
+
+    GoTo AfterSkippedLabel
+SkippedLabel:
+    Print "LABEL-BAD"
+AfterSkippedLabel:
+    Print "LABEL=OK"
+InlineLabel: Print "INLINE-LABEL=OK"
+
+    Call VerifyColonErl()
+End Sub
+
+Sub VerifyColonErl()
+    On Error GoTo Handler
+    Print "ERL-BEFORE": Error 7101, "colon-error": Print "ERL-AFTER-BAD"
+    Exit Sub
+Handler:
+    Print "COLON-ERL=" & CStr(Erl)
+End Sub
