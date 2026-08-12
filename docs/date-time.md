@@ -57,6 +57,29 @@ Print CStr(Minute(d))
 Print CStr(Second(d))
 ```
 
+## OS date and time format properties
+
+Every typed Date value exposes two read-only formatting properties:
+
+- `OSDateFormatting` returns the current operating-system/user culture short-date format mask.
+- `OSTimeFormatting` returns the current operating-system/user culture long-time format mask.
+
+The returned strings use the same custom date/time formatting syntax accepted by XPScript `Format` and `Format$`, so they can be passed directly to those functions.
+
+```xpscript
+Dim value As Date
+value = Now
+
+Print value.OSDateFormatting
+Print value.OSTimeFormatting
+Print Format$(value, value.OSDateFormatting)
+Print Format$(value, value.OSTimeFormatting)
+```
+
+For example, a Swedish environment may return a date mask similar to `yyyy-MM-dd`, while another locale can return a different mask. Programs should use the returned value rather than assuming a specific separator, field order, 12/24-hour clock or seconds layout.
+
+These properties describe the culture visible to the running XPScript process. They are read-only and do not change the operating-system settings.
+
 ## Date.Adjust
 
 Returns a new Date adjusted by the supplied components.
