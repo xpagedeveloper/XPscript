@@ -1,0 +1,35 @@
+name: Scalar ByRef Overload Regression Temp
+
+on:
+  push:
+    branches: [todo-overload-byref]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/class-method-overloads-byref.xps'
+      - '.github/workflows/byref-overload-temp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify scalar ByRef class overload
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-method-overloads-byref.xps -o ./out/class-method-overloads-byref.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Scalar ByRef overload sample compilation failed.' }
+          $output = & ./out/class-method-overloads-byref.exe
+          if ($LASTEXITCODE -ne 0) { throw "Scalar ByRef overload sample exited with code $LASTEXITCODE.`n$output" }
+          foreach ($value in @('BYREF-INNER=11','BYREF-AFTER=11','BYVAL-STRING=hello')) {
+            if ($output -notcontains $value) { throw "Scalar ByRef overload output missing: $value`n$output" }
+          }
