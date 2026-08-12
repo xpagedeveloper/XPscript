@@ -45,15 +45,18 @@ Status:
 
 - [>] requested output path is normalized with `Path.GetFullPath`
 - [>] output paths resolving to an existing directory are rejected
+- [>] an explicitly requested existing regular output file is allowed to be replaced as the compiler's upgrade/overwrite behavior
+- [>] the requested output may not equal the `.xps` source file
+- [>] output directory components and existing output targets may not be symbolic links/junctions/reparse points
 - [>] native/managed-native dependency output names are reduced to file names and collision checked
+- [>] a native dependency already located exactly at its final target path is left in place instead of replacing its own source
 - [>] executable plus dependencies are first copied into a unique staging directory beside the final output
 - [>] existing output files are backed up within the same output filesystem before replacement
 - [>] dependencies are committed before the executable; the executable is made visible last
 - [>] publication failure rolls back newly installed files and restores backed-up prior files on a best-effort basis
 - [>] sibling staging keeps final `File.Move` operations on the same filesystem where normal platform semantics permit atomic rename
-- [ ] define/document whether explicitly supplied output paths are always allowed to overwrite an existing file
-- [ ] decide whether the compiler should reject output paths pointing into its own compiler/runtime source tree
-- [ ] review destination-directory symlink/reparse behavior separately from source dependency containment
+- [ ] decide whether the compiler should reject other output paths pointing into its own installed compiler/runtime files
+- [ ] verify destination-directory symlink/reparse rejection on Windows/Linux/macOS
 - [ ] verify rollback behavior under forced copy/move/delete failures
 
 ## Project-local dependency containment
