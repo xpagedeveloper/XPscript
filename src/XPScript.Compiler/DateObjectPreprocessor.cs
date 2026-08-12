@@ -13,6 +13,7 @@ internal sealed class DateObjectPreprocessor
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
+            var comparisonContext = IsComparisonContext(line);
             foreach (var variable in dateVariables.OrderByDescending(x => x.Length))
             {
                 var escaped = Regex.Escape(variable);
@@ -35,10 +36,28 @@ internal sealed class DateObjectPreprocessor
                 line = ReplaceOutsideStrings(line,
                     $@"\b([A-Za-z_]\w*)\s*(<=|>=|<>|<|>)\s*{escaped}(?![\w.])",
                     m => BuildComparison(m.Groups[1].Value, m.Groups[2].Value, variable));
+
+                if (comparisonContext)
+                {
+                    line = ReplaceOutsideStrings(line,
+                        $@"(?<![\w.]){escaped}\s*=\s*([A-Za-z_]\w*)\b",
+                        m => BuildComparison(variable, "=", m.Groups[1].Value));
+                    line = ReplaceOutsideStrings(line,
+                        $@"\b([A-Za-z_]\w*)\s*=\s*{escaped}(?![\w.])",
+                        m => BuildComparison(m.Groups[1].Value, "=", variable));
+                }
             }
             lines[i] = line;
         }
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static bool IsComparisonContext(string line)
+    {
+        var code = line.TrimStart();
+        return Regex.IsMatch(code,
+            @"^(?:If|ElseIf|While|Do\s+(?:While|Until)|Loop\s+(?:While|Until))\b",
+            RegexOptions.IgnoreCase);
     }
 
     private static string BuildComparison(string left, string op, string right)
@@ -46,6 +65,7 @@ internal sealed class DateObjectPreprocessor
         var comparison = $"XPDateRuntime.Compare({left}, {right})";
         return op switch
         {
+            "=" => comparison + " = 0",
             "<>" => comparison + " <> 0",
             "<" => comparison + " < 0",
             "<=" => comparison + " <= 0",
