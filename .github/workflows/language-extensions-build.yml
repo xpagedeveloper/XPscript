@@ -71,11 +71,15 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/date-object-enhancements.xps -o ./out/date-object-enhancements.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Date object enhancement compilation failed.' }
 
-      - name: Verify Date OS formatting properties
+      - name: Verify Date object enhancements and OS formatting
         shell: pwsh
         run: |
           $output = & ./out/date-object-enhancements.exe
           if ($LASTEXITCODE -ne 0) { throw "Date object enhancement sample exited with code $LASTEXITCODE." }
+
+          foreach ($value in @('DIFFERENCE=95415','GT=TRUE','GTE=TRUE','LT=TRUE','LTE=TRUE','NE=TRUE','EQ=TRUE')) {
+            if ($output -notcontains $value) { throw "Date object output missing: $value" }
+          }
 
           $dateMask = ($output | Where-Object { $_ -like 'OSDATEFORMAT=*' } | Select-Object -First 1)
           $timeMask = ($output | Where-Object { $_ -like 'OSTIMEFORMAT=*' } | Select-Object -First 1)
@@ -86,3 +90,24 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($timeMask) -or $timeMask -eq 'OSTIMEFORMAT=') { throw 'OSTimeFormatting returned an empty format mask.' }
           if ([string]::IsNullOrWhiteSpace($dateValue) -or $dateValue -eq 'OSDATE=') { throw 'Format$ with OSDateFormatting returned an empty value.' }
           if ([string]::IsNullOrWhiteSpace($timeValue) -or $timeValue -eq 'OSTIME=') { throw 'Format$ with OSTimeFormatting returned an empty value.' }
+
+      - name: Verify valid Date comparisons
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/date-comparisons-valid.xps -o ./out/date-comparisons-valid.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Valid Date comparison sample compilation failed.' }
+          $output = & ./out/date-comparisons-valid.exe
+          if ($LASTEXITCODE -ne 0) { throw "Valid Date comparison sample exited with code $LASTEXITCODE." }
+          foreach ($value in @('date-date ok','date-numeric ok','date-string ok','date-variant ok')) {
+            if ($output -notcontains $value) { throw "Valid Date comparison output missing: $value" }
+          }
+
+      - name: Verify invalid Date comparisons are rejected
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/date-comparisons-invalid.xps -o ./out/date-comparisons-invalid.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Invalid Date comparison sample unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler diagnostics for invalid Date comparisons.' }
