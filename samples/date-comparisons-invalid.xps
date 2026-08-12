@@ -12,8 +12,16 @@ Sub Main()
     whenValue = DateNumber(2026, 8, 12)
     flag = True
 
-    If whenValue > flag Then Print "invalid"
-    If whenValue < obj Then Print "invalid"
-    If whenValue >= values Then Print "invalid"
-    If whenValue <> payload Then Print "invalid"
+    If whenValue > flag Then
+        Print "invalid"
+    End If
+    If whenValue < obj Then
+        Print "invalid"
+    End If
+    If whenValue >= values Then
+        Print "invalid"
+    End If
+    If whenValue <> payload Then
+        Print "invalid"
+    End If
 End Sub
