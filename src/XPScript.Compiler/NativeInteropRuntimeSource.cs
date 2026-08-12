@@ -11,9 +11,12 @@ internal static class XPNativeInteropRuntime
 
     public static void EnsureApplicationLocalLibrary(string library)
     {
+        var directorySeparator = Path.DirectorySeparatorChar.ToString();
+        var alternateSeparator = Path.AltDirectorySeparatorChar.ToString();
         if (string.IsNullOrWhiteSpace(library) ||
             library != Path.GetFileName(library) ||
-            library.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0)
+            library.Contains(directorySeparator, StringComparison.Ordinal) ||
+            library.Contains(alternateSeparator, StringComparison.Ordinal))
             throw new InvalidOperationException("Invalid application-local native library name.");
 
         lock (ResolverGate)
@@ -41,9 +44,10 @@ internal static class XPNativeInteropRuntime
         var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
         var candidate = Path.GetFullPath(Path.Combine(baseDirectory, libraryName));
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        var basePrefix = baseDirectory.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+        var directorySeparator = Path.DirectorySeparatorChar.ToString();
+        var basePrefix = baseDirectory.EndsWith(directorySeparator, StringComparison.Ordinal)
             ? baseDirectory
-            : baseDirectory + Path.DirectorySeparatorChar;
+            : baseDirectory + directorySeparator;
 
         if (!candidate.StartsWith(basePrefix, comparison))
             throw new DllNotFoundException("Application-local native library path escaped the executable directory.");
