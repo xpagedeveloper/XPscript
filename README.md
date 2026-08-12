@@ -1,6 +1,7 @@
 # XPScript
 
 (c) xpagedeveloper.com 2026
+Source available for testing and internal use only. No commercial rights are granted. Commercial use requires a separate written license from the copyright holder.
 
 
 XPScript is a standalone Lotusscript -inspired compiler written in C#/.NET 10.
