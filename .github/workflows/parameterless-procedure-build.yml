@@ -2,13 +2,6 @@ name: Parameterless Procedure Header Compatibility
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-cross-platform-file-io-portability]
-    paths:
-      - '.github/workflows/parameterless-procedure-build.yml'
-      - 'samples/parameterless-procedure-headers.xps'
-      - 'src/XPScript.Compiler/ParameterlessProcedureHeaderPreprocessor.cs'
-      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
 
 permissions:
   contents: read
