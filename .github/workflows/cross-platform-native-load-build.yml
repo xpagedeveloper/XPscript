@@ -2,12 +2,6 @@ name: Cross Platform Native Loader Compatibility
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-cross-platform-native-load]
-    paths:
-      - '.github/workflows/cross-platform-native-load-build.yml'
-      - 'samples/platform-native-library.xps'
-      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
