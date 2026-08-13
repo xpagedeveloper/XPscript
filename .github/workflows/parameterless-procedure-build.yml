@@ -2,6 +2,14 @@ name: Parameterless Procedure Header Compatibility
 
 on:
   workflow_dispatch:
+  push:
+    branches: [todo-cross-platform-file-io-portability]
+    paths:
+      - '.github/workflows/parameterless-procedure-build.yml'
+      - 'samples/parameterless-procedure-headers.xps'
+      - 'samples/parameterless-procedure-header-error.xps'
+      - 'src/XPScript.Compiler/ParameterlessProcedureHeaderPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
 
 permissions:
   contents: read
@@ -31,3 +39,16 @@ jobs:
           foreach ($value in @('INITIALIZE=OK','FUNCTION=HELLO','CLASS_FUNCTION=5','CLASS_SUB=6','MAIN=OK')) {
             if ($output -notcontains $value) { throw "Parameterless procedure output missing: $value`n$output" }
           }
+      - name: Reject malformed non-empty parameter declaration
+        shell: pwsh
+        run: |
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-header-error.xps -o ./out/parameterless-procedure-header-error.exe --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compilerExitCode -eq 0) { throw 'Malformed procedure header unexpectedly compiled.' }
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or @($result.errors).Count -lt 1) { throw "Expected structured compiler error.`n$resultText" }
+          $diagnostic = @($result.errors) | Where-Object { $_.line -eq 1 } | Select-Object -First 1
+          if (-not $diagnostic) { throw "Expected diagnostic on malformed declaration line 1.`n$resultText" }
+          if ([string]::IsNullOrWhiteSpace($diagnostic.description)) { throw "Expected non-empty malformed declaration description.`n$resultText" }
+          if ($diagnostic.code -notlike 'Sub Broken*') { throw "Expected malformed procedure source in diagnostic.`n$resultText" }
