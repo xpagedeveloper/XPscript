@@ -1,0 +1,4 @@
+Sub Main()
+    Print "QUOTE=A\"B"
+    Print "DOUBLE=A""B"
+End Sub

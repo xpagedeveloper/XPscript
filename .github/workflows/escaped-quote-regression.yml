@@ -1,0 +1,47 @@
+name: Escaped Quote Regression
+
+on:
+  push:
+    branches: [todo-escaped-quote-regression]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify backslash escaped quotes and doubled quotes
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/escaped-quotes.xps -o ./out/escaped-quotes.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Escaped quote sample compilation failed.' }
+          $output = & ./out/escaped-quotes.exe
+          foreach ($value in @('QUOTE=A"B','DOUBLE=A"B')) {
+            if ($output -notcontains $value) { throw "Escaped quote output missing: $value`n$output" }
+          }
+
+      - name: Verify escaped quote diagnostic redaction
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/escaped-quote-diagnostic-error.xps -o ./out/escaped-quote-diagnostic-error.exe --framework-dependent --result-format json 2>&1
+          $compilerExitCode = $LASTEXITCODE
+          if ($compilerExitCode -eq 0) { throw "Diagnostic regression sample unexpectedly compiled.`n$output" }
+          $text = $output -join "`n"
+          if ($text -match 'TOPSECRET|STILLSECRET') { throw "String contents leaked through compiler diagnostics.`n$text" }
+          if ($text -notmatch 'expects Integer.*received String') { throw "Expected type diagnostic was not produced.`n$text" }
+          exit 0
