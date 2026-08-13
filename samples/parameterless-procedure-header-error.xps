@@ -1,0 +1,7 @@
+Sub Broken(ByVal value As Integer
+    Print "BAD"
+End Sub
+
+Sub Main
+    Print "SHOULD-NOT-RUN"
+End Sub
