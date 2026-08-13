@@ -1,0 +1,19 @@
+' Leaves selected files in place so the compatibility workflow can inspect real OS bytes, newlines and permissions.
+Sub Main()
+    Dim f As Integer
+
+    f = FreeFile
+    Open "xps-portability-latin1.txt" For Output As #f
+    Print #f, "åäö"
+    Close #f
+
+    f = FreeFile
+    Open "xps-portability-newline.txt" For Output As #f Charset "utf-8"
+    Print #f, "A"
+    Print #f, "B"
+    Close #f
+
+    FileCopy "xps-exec-source.sh", "xps-exec-copy.sh"
+
+    Print "OBSERVABLE_FILE_PORTABILITY_OK"
+End Sub

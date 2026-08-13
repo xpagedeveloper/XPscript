@@ -1,0 +1,39 @@
+Class HeaderBox
+    Public Value As Integer
+
+    Sub New
+        Value = 5
+    End Sub
+
+    Function Current As Integer
+        Current = Value
+    End Function
+
+    Sub Increment
+        Value = Value + 1
+    End Sub
+
+    Sub Delete
+        Value = 0
+    End Sub
+End Class
+
+Function Greeting As String
+    Greeting = "HELLO"
+End Function
+
+Sub Initialize
+    Print "INITIALIZE=OK"
+End Sub
+
+Sub Main
+    Dim box As New HeaderBox
+
+    Call Initialize()
+    Print "FUNCTION=" & Greeting()
+    Print "CLASS_FUNCTION=" & CStr(box.Current())
+    Call box.Increment()
+    Print "CLASS_SUB=" & CStr(box.Value)
+    Delete box
+    Print "MAIN=OK"
+End Sub

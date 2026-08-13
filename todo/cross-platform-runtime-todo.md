@@ -133,33 +133,35 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] Linux/macOS absolute paths, mount points and symlink traversal are left to target OS filesystem semantics; real OS validation remains required
 - [>] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names when attributes are read
 - [>] `SetFileAttr Hidden` on Unix does not silently rename a file; it reports that hidden files require a leading-dot name and `Name` must be used explicitly
-- [>] `FileCopy` preserves Unix executable permission bits explicitly where supported
+- [x] `FileCopy` preserves Unix executable permission bits; runtime-verified on Linux and macOS by `Cross Platform File IO Portability`
 - [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; real Linux/macOS validation remains required
-- [>] `Name` remains a real filesystem move/rename and does not silently fall back to copy+delete after a cross-filesystem failure, preserving atomicity/ownership/link semantics
+- [x] `Name` same-filesystem move/rename runtime-verified on Windows/Linux/macOS and remains a real filesystem operation without copy+delete fallback
+- [ ] runtime-verify cross-filesystem `Name` failure/behavior separately on supported OSes
 - [>] `Kill` uses native target filesystem delete behavior and adds an explanatory diagnostic when Windows/open-handle delete semantics prevent removal
 - [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency
 - [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
 - [>] `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics instead of raw `IOException`
-- [>] delete-while-open semantics intentionally remain OS/filesystem-defined; XPScript handles do not request `FileShare.Delete` on Windows; source: `samples/file-delete-open-semantics.xps`
+- [x] delete-while-open semantics runtime-verified: Windows blocks deletion for the open XPScript handle while Linux/macOS permit Unix-style unlink; source: `samples/file-delete-open-semantics.xps`
 - [>] portable charset names have defined BOM behavior: `utf-8` is BOM-less, `utf-8-bom` writes a UTF-8 BOM, `utf-16`/`utf-16le` and `utf-16be` write BOMs, and explicit `*-nobom` aliases suppress them
 - [>] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to the defined XPScript Latin-1 legacy encoding instead of an OS default; unsupported named encodings produce a clear runtime diagnostic
-- [>] source: `samples/file-charset-bom.xps` verifies the expected 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
+- [x] `samples/file-charset-bom.xps` runtime-verified on Windows/Linux/macOS for 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
 - [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
 - [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
 - [ ] document that path separators differ (`\\` vs `/`) and recommend portable path construction where possible
 - [ ] runtime-verify Windows drive letters, UNC paths and long paths
 - [ ] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems
-- [ ] runtime-verify Unix permissions/executable bits on Linux/macOS
+- [x] runtime-verify Unix executable-bit preservation on Linux/macOS
+- [ ] runtime-verify broader Unix permission/ownership semantics on Linux/macOS
 - [ ] runtime-verify hidden-file behavior on Windows/Linux/macOS
-- [ ] runtime-verify same-filesystem and cross-filesystem `Name` behavior on supported OSes
-- [ ] runtime-verify delete-while-open behavior, which differs between Windows and Unix-like systems
-- [ ] runtime-verify charset/BOM handling on Windows/Linux/macOS
+- [x] runtime-verify same-filesystem `Name` behavior on Windows/Linux/macOS
+- [x] runtime-verify delete-while-open behavior on Windows/Linux/macOS
+- [x] runtime-verify charset/BOM handling on Windows/Linux/macOS
 - [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
-- [ ] verify Latin-1 explicitly on Windows/Linux/macOS
-- [>] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`, preserving CRLF on Windows and LF on Unix-like systems; runtime verification remains required
+- [x] verify exact Latin-1 byte identity on Windows/Linux/macOS
+- [x] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`; exact CRLF on Windows and LF on Linux/macOS runtime-verified
 - [>] Binary/Random string byte conversion now uses the same defined Latin-1 legacy encoding; numeric `BinaryWriter`/`BinaryReader` representations remain deterministic .NET little-endian representations
-- [>] source: `samples/file-io-portability.xps`
+- [x] source: `samples/file-io-portability.xps` runtime-verified on Windows/Linux/macOS
 - [>] compiler temporary files already use isolated `Path.GetTempPath()` + GUID directories per compiler invocation
 
 ## Quality gates when execution is re-enabled

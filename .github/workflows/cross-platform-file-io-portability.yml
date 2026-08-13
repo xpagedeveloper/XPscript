@@ -1,0 +1,116 @@
+name: Cross Platform File IO Portability
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portability:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$os-$arch" >> $env:GITHUB_OUTPUT
+      - name: Verify portable text round-trip
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-io-portability.exe' } else { './out/file-io-portability' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-io-portability.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-io-portability.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Portable text round-trip failed with exit code $LASTEXITCODE." }
+      - name: Verify charset BOM behavior
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-charset-bom.exe' } else { './out/file-charset-bom' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-charset-bom.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-charset-bom.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0 -or $result -notcontains 'CHARSET_BOM_OK') { throw "Charset/BOM regression failed.`n$result" }
+      - name: Verify copy and same-filesystem rename
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/filesystem-portability.exe' } else { './out/filesystem-portability' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/filesystem-portability-semantics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'filesystem-portability-semantics.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Filesystem copy/rename regression failed with exit code $LASTEXITCODE." }
+      - name: Verify delete while open follows host semantics
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-delete-open.exe' } else { './out/file-delete-open' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-delete-open-semantics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-delete-open-semantics.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Delete-open fixture exited with $LASTEXITCODE.`n$result" }
+          if ($env:RUNNER_OS -eq 'Windows') {
+            if (-not ($result | Where-Object { $_ -like 'DELETE_WHILE_OPEN_BLOCKED Platform=Windows*' })) { throw "Windows should block delete while the XPScript handle is open.`n$result" }
+          } else {
+            $platform = if ($env:RUNNER_OS -eq 'Linux') { 'Linux' } else { 'MacOS' }
+            if (-not ($result | Where-Object { $_ -eq "DELETE_WHILE_OPEN_SUCCEEDED Platform=$platform" })) { throw "Unix-like delete-while-open behavior was not observed.`n$result" }
+          }
+      - name: Prepare executable-copy fixture
+        shell: pwsh
+        run: |
+          Set-Content -LiteralPath './xps-exec-source.sh' -Value '#!/bin/sh`necho portable' -NoNewline
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x ./xps-exec-source.sh }
+      - name: Generate observable portability files
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-portability-observable.exe' } else { './out/file-portability-observable' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-portability-observable.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-portability-observable.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0 -or $result -notcontains 'OBSERVABLE_FILE_PORTABILITY_OK') { throw "Observable portability fixture failed.`n$result" }
+      - name: Inspect exact bytes, newline and executable mode
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+
+          latin = Path('xps-portability-latin1.txt').read_bytes()
+          newline = b'\r\n' if os.name == 'nt' else b'\n'
+          expected_latin = bytes([0xE5, 0xE4, 0xF6]) + newline
+          if latin != expected_latin:
+              raise SystemExit(f'Latin-1 byte identity mismatch: {latin!r} != {expected_latin!r}')
+
+          lines = Path('xps-portability-newline.txt').read_bytes()
+          expected_lines = b'A' + newline + b'B' + newline
+          if lines != expected_lines:
+              raise SystemExit(f'OS newline mismatch: {lines!r} != {expected_lines!r}')
+
+          if os.name != 'nt':
+              src_mode = Path('xps-exec-source.sh').stat().st_mode
+              dst_mode = Path('xps-exec-copy.sh').stat().st_mode
+              if not (src_mode & 0o111):
+                  raise SystemExit('Executable source fixture was not executable.')
+              if not (dst_mode & 0o111):
+                  raise SystemExit('FileCopy did not preserve Unix executable permission bits.')
+      - name: Cleanup observable files
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./xps-portability-latin1.txt, ./xps-portability-newline.txt, ./xps-exec-source.sh, ./xps-exec-copy.sh, ./xps-delete-open.bin
