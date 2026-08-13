@@ -10,6 +10,7 @@ public sealed class XPScriptTranspiler
 
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
+        source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
         new ClassOverloadValidator().Validate(source, sourceName);
