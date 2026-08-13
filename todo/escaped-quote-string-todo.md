@@ -6,7 +6,7 @@ Discovered by cross-platform runtime verification while compiling documented she
 
 ## Regression
 
-- [>] support documented backslash-escaped quote form `\"` inside an XPScript string literal in addition to doubled-quote form `""`.
+- [x] support documented backslash-escaped quote form `\"` inside an XPScript string literal in addition to doubled-quote form `""`.
   - Reproducer: `Call Shell("/bin/sh -c \"echo XPScript-Linux\"")`.
   - Previous behavior: the quote after the backslash could terminate the XPScript string and later generated code failed with syntax diagnostics.
   - Expected behavior: `\"` represents a literal `"` character in the XPScript string and does not terminate the source string.
