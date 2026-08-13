@@ -181,7 +181,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [>] application-local native `.dll`, `.so`, `.dylib` paths are validated and copied beside generated output; system-library names remain OS-resolved; path escape, missing-file, output-name collision and executable-overwrite checks are implemented; source: `samples/native-dependency-packaging.xps`
 - [>] architecture-specific native assets and aliases are selected by exact target RID for x64/arm64, with OS/base fallback; source: `samples/native-architecture-assets.xps`
 - [>] managed .NET assembly references are separate from native `Declare`: `Reference "path.dll"` stages a project-local managed assembly and repeatable `ReferenceNative "path" Runtime "rid"` packages RID-specific native dependencies; detailed syntax/security rules: `todo/cross-platform-runtime-todo.md`
-- [ ] validate native-library search paths and loading behavior on Windows, Linux and macOS
+- [x] validate native-library search paths and loading behavior on Windows, Linux and macOS; verified with real system-library calls by `Cross Platform Native Loader Compatibility` on `win-x64`, `linux-x64` and `osx-arm64`; remaining architecture-specific coverage is tracked in `todo/cross-platform-runtime-todo.md`
 - [ ] validate file-I/O portability across Windows, Linux and macOS: path separators, roots/drives, case sensitivity, permissions, symlinks, file sharing, delete-open-file semantics, rename/move behavior, newline handling, charset/BOM and binary identity
 - [ ] validate OS file locks and region locks separately on Windows, Linux and macOS
 - [ ] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
