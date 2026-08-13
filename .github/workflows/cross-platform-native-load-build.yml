@@ -1,0 +1,56 @@
+# Manual compatibility gate for real native system-library loading on each available GitHub-hosted OS/architecture.
+name: Cross Platform Native Loader Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-loader:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Resolve runner RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          $rid = "$os-$arch"
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "runner_os=$env:RUNNER_OS" >> $env:GITHUB_OUTPUT
+          Write-Host "Testing native loader on $env:RUNNER_OS/$env:RUNNER_ARCH using RID $rid"
+      - name: Compile native platform sample
+        shell: pwsh
+        run: |
+          $rid = '${{ steps.rid.outputs.rid }}'
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/platform-native.exe' } else { './out/platform-native' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-native-library.xps --runtime $rid -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "Native platform sample compilation failed for $rid." }
+      - name: Execute and verify native system library load
+        shell: pwsh
+        run: |
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/platform-native.exe' } else { './out/platform-native' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $output }
+          $result = & $output
+          if ($LASTEXITCODE -ne 0) { throw "Native platform sample exited with code $LASTEXITCODE.`n$result" }
+          $expectedPlatform = if ($env:RUNNER_OS -eq 'Windows') { 'Windows' } elseif ($env:RUNNER_OS -eq 'Linux') { 'Linux' } else { 'MacOS' }
+          if ($result -notcontains "PLATFORM=$expectedPlatform") { throw "Expected PLATFORM=$expectedPlatform.`n$result" }
+          $pidLine = $result | Where-Object { $_ -match '^PID=\d+$' } | Select-Object -First 1
+          if (-not $pidLine) { throw "Native get-process-id call did not return a numeric PID.`n$result" }
+          $pidValue = [int64]($pidLine -replace '^PID=', '')
+          if ($pidValue -le 0) { throw "Native PID must be > 0.`n$result" }
+          Write-Host "Native loader verified: $pidLine"

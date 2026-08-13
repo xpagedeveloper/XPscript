@@ -56,9 +56,12 @@ XPScript `Declare ... Lib` must not assume that every platform uses a Windows DL
 - [>] if an OS/architecture-specific library or alias is omitted, resolution falls back through OS-specific then base `Lib`/`Alias`
 - [>] generated native calls are wrapped so missing library, missing entry point and wrong binary architecture produce explicit XPScript runtime diagnostics; source: `samples/native-loader-diagnostics.xps`
 - [>] missing-library diagnostics state that application-local libraries are searched beside the generated application while bare system names remain OS-loader resolved
-- [ ] validate `.dll` P/Invoke on Windows x64 and ARM64
-- [ ] validate `.so` P/Invoke on Linux x64 and ARM64
-- [ ] validate `.dylib` P/Invoke on macOS x64 and ARM64
+- [x] validate `.dll` P/Invoke on Windows x64; `kernel32.dll` / `GetCurrentProcessId` verified by `Cross Platform Native Loader Compatibility`
+- [ ] validate `.dll` P/Invoke on Windows ARM64 on a real ARM64 runner
+- [x] validate `.so` P/Invoke on Linux x64; `libc.so.6` / `getpid` verified by `Cross Platform Native Loader Compatibility`
+- [ ] validate `.so` P/Invoke on Linux ARM64 on a real ARM64 runner
+- [ ] validate `.dylib` P/Invoke on macOS x64 on a real x64 runner
+- [x] validate `.dylib` P/Invoke on macOS ARM64; `libSystem.B.dylib` / `getpid` verified by `Cross Platform Native Loader Compatibility`
 - [ ] define platform-specific calling-convention support where required
 - [ ] define behavior when the native function signature itself differs by platform; likely require separate declarations plus `Platform()` branching
 
