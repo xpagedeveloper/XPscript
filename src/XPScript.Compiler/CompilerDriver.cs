@@ -334,6 +334,14 @@ public sealed class CompilerDriver
         for (var i = 0; i < line.Length; i++)
         {
             var c = line[i];
+
+            if (inString && c == '\\' && i + 1 < line.Length && line[i + 1] == '"')
+            {
+                output.Append("**");
+                i++;
+                continue;
+            }
+
             if (c == '"')
             {
                 output.Append(c);
