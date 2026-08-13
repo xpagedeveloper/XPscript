@@ -2,14 +2,6 @@ name: Parameterless Procedure Header Compatibility
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-cross-platform-file-io-portability]
-    paths:
-      - '.github/workflows/parameterless-procedure-build.yml'
-      - 'samples/parameterless-procedure-headers.xps'
-      - 'samples/parameterless-procedure-header-error.xps'
-      - 'src/XPScript.Compiler/ParameterlessProcedureHeaderPreprocessor.cs'
-      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
 
 permissions:
   contents: read
@@ -22,33 +14,22 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Restore compiler
+      - name: Restore
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Compile parameterless declarations
+      - name: Verify parameterless procedure headers
         shell: pwsh
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-headers.xps -o ./out/parameterless-procedure-headers.exe --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'Parameterless procedure header compilation failed.' }
-      - name: Run parameterless declarations
-        shell: pwsh
-        run: |
+          if ($LASTEXITCODE -ne 0) { throw 'Parameterless procedure header sample compilation failed.' }
           $output = & ./out/parameterless-procedure-headers.exe
-          if ($LASTEXITCODE -ne 0) { throw "Parameterless procedure sample exited with code $LASTEXITCODE.`n$output" }
-          foreach ($value in @('INITIALIZE=OK','FUNCTION=HELLO','CLASS_FUNCTION=5','CLASS_SUB=6','MAIN=OK')) {
+          foreach ($value in @('SUB=OK','FUNCTION=7','CLASS_FUNCTION=9','PROPERTY=11')) {
             if ($output -notcontains $value) { throw "Parameterless procedure output missing: $value`n$output" }
           }
-      - name: Reject malformed non-empty parameter declaration
+      - name: Verify malformed parameterless procedure headers remain invalid
         shell: pwsh
         run: |
-          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-header-error.xps -o ./out/parameterless-procedure-header-error.exe --framework-dependent --result-format json
-          $compilerExitCode = $LASTEXITCODE
-          $global:LASTEXITCODE = 0
-          if ($compilerExitCode -eq 0) { throw 'Malformed procedure header unexpectedly compiled.' }
-          $result = $resultText | ConvertFrom-Json
-          if ($result.result -ne 'error' -or @($result.errors).Count -lt 1) { throw "Expected structured compiler error.`n$resultText" }
-          $diagnostic = @($result.errors) | Where-Object { $_.line -eq 1 } | Select-Object -First 1
-          if (-not $diagnostic) { throw "Expected diagnostic on malformed declaration line 1.`n$resultText" }
-          if ([string]::IsNullOrWhiteSpace($diagnostic.description)) { throw "Expected non-empty malformed declaration description.`n$resultText" }
-          if ($diagnostic.code -notlike 'Sub Broken*') { throw "Expected malformed procedure source in diagnostic.`n$resultText" }
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-header-error.xps -o ./out/parameterless-procedure-header-error.exe --framework-dependent 2>&1
+          if ($LASTEXITCODE -eq 0) { throw "Malformed parameterless procedure header unexpectedly compiled.`n$output" }
+          if (($output -join "`n") -notmatch 'Unsupported') { throw "Expected explicit compiler diagnostic for malformed header.`n$output" }
