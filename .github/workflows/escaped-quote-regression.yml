@@ -42,4 +42,4 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw "Diagnostic regression sample unexpectedly compiled.`n$output" }
           $text = $output -join "`n"
           if ($text -match 'TOPSECRET|STILLSECRET') { throw "String contents leaked through compiler diagnostics.`n$text" }
-          if ($text -notmatch 'Unable to use String where Integer is required') { throw "Expected type diagnostic was not produced.`n$text" }
+          if ($text -notmatch 'expects Integer.*received String') { throw "Expected type diagnostic was not produced.`n$text" }
