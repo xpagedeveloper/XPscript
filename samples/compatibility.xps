@@ -12,6 +12,11 @@ Sub Main()
     Print Bin(10)
     Print CStr(Sgn(-4))
 
+    If "A\"B" <> "A""B" Then
+        Error 9201, "Escaped quote normalization failed"
+    End If
+    Print "ESCAPED-QUOTE-OK"
+
     d = DateNumber(2026, 8, 11)
     Print CStr(Year(d))
     Print CStr(Month(d))
