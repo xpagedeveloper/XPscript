@@ -2,16 +2,6 @@ name: Cross Platform File IO Portability
 
 on:
   workflow_dispatch:
-  push:
-    branches: [todo-cross-platform-file-io-portability]
-    paths:
-      - '.github/workflows/cross-platform-file-io-portability.yml'
-      - 'samples/file-io-portability.xps'
-      - 'samples/file-charset-bom.xps'
-      - 'samples/filesystem-portability-semantics.xps'
-      - 'samples/file-delete-open-semantics.xps'
-      - 'samples/file-portability-observable.xps'
-      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
