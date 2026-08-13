@@ -1,4 +1,4 @@
-' Leaves selected files in place so the compatibility workflow can inspect real OS bytes and permissions.
+' Leaves selected files in place so the compatibility workflow can inspect real OS bytes, newlines and permissions.
 Sub Main()
     Dim f As Integer
 
