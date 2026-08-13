@@ -1,0 +1,40 @@
+name: Parameterless Procedure Header Compatibility
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [todo-cross-platform-file-io-portability]
+    paths:
+      - '.github/workflows/parameterless-procedure-build.yml'
+      - 'samples/parameterless-procedure-headers.xps'
+      - 'src/XPScript.Compiler/ParameterlessProcedureHeaderPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile parameterless declarations
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-headers.xps -o ./out/parameterless-procedure-headers.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Parameterless procedure header compilation failed.' }
+      - name: Run parameterless declarations
+        shell: pwsh
+        run: |
+          $output = & ./out/parameterless-procedure-headers.exe
+          if ($LASTEXITCODE -ne 0) { throw "Parameterless procedure sample exited with code $LASTEXITCODE.`n$output" }
+          foreach ($value in @('INITIALIZE=OK','FUNCTION=HELLO','CLASS_FUNCTION=5','CLASS_SUB=6','MAIN=OK')) {
+            if ($output -notcontains $value) { throw "Parameterless procedure output missing: $value`n$output" }
+          }
