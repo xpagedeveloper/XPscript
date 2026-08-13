@@ -1,0 +1,52 @@
+name: Sync Native Loader TODO Temp
+
+on:
+  push:
+    branches: [todo-cross-platform-native-load]
+    paths:
+      - '.github/workflows/sync-native-loader-todo-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Update TODO verification status
+        shell: python
+        run: |
+          from pathlib import Path
+
+          runtime = Path('todo/runtime-reference-todo.md')
+          text = runtime.read_text(encoding='utf-8')
+          old = '- [ ] validate native-library search paths and loading behavior on Windows, Linux and macOS'
+          new = '- [x] validate native-library search paths and loading behavior on Windows, Linux and macOS; verified with real system-library calls by `Cross Platform Native Loader Compatibility` on `win-x64`, `linux-x64` and `osx-arm64`; remaining architecture-specific coverage is tracked in `todo/cross-platform-runtime-todo.md`'
+          if old not in text:
+              raise SystemExit('runtime native loader TODO line not found')
+          runtime.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          detail = Path('todo/cross-platform-runtime-todo.md')
+          text = detail.read_text(encoding='utf-8')
+          replacements = {
+              '- [ ] validate `.dll` P/Invoke on Windows x64 and ARM64': '- [x] validate `.dll` P/Invoke on Windows x64; `kernel32.dll` / `GetCurrentProcessId` verified by `Cross Platform Native Loader Compatibility`\n- [ ] validate `.dll` P/Invoke on Windows ARM64 on a real ARM64 runner',
+              '- [ ] validate `.so` P/Invoke on Linux x64 and ARM64': '- [x] validate `.so` P/Invoke on Linux x64; `libc.so.6` / `getpid` verified by `Cross Platform Native Loader Compatibility`\n- [ ] validate `.so` P/Invoke on Linux ARM64 on a real ARM64 runner',
+              '- [ ] validate `.dylib` P/Invoke on macOS x64 and ARM64': '- [ ] validate `.dylib` P/Invoke on macOS x64 on a real x64 runner\n- [x] validate `.dylib` P/Invoke on macOS ARM64; `libSystem.B.dylib` / `getpid` verified by `Cross Platform Native Loader Compatibility`',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'detailed native loader TODO line not found: {old}')
+              text = text.replace(old, new, 1)
+          detail.write_text(text, encoding='utf-8')
+      - name: Commit and remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/sync-native-loader-todo-temp.yml
+          git config user.name "xpagedeveloper"
+          git config user.email "fredrik@xpagedeveloper.com"
+          git add todo/runtime-reference-todo.md todo/cross-platform-runtime-todo.md
+          git commit -m "Mark verified native loader targets"
+          git push
