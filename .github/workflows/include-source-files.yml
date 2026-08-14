@@ -2,7 +2,9 @@ name: Include Source Files
 
 on:
   push:
-    branches: [todo-include-source-files]
+    branches:
+      - todo-include-source-files
+      - todo-include-restricted-source-roots
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/include-source/**'
@@ -67,6 +69,41 @@ jobs:
           if ($output -notcontains 'COMMON=OK') { throw "Direct common include output missing.`n$output" }
           if ($output -notcontains 'NESTED=OK') { throw "Direct nested include output missing.`n$output" }
           if ($output -notcontains 'UNICODE=OK') { throw "Direct Unicode include output missing.`n$output" }
+
+      - name: Verify restricted source roots block traversal
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $restrictedOutput = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/restricted/root.xps -o "./out/restricted$extension" --framework-dependent --restricted 2>&1
+          $restrictedExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          $restrictedText = $restrictedOutput -join "`n"
+          if ($restrictedExit -ne 2) { throw "Restricted traversal should return compiler exit code 2, got $restrictedExit.`n$restrictedText" }
+          if ($restrictedText -notmatch 'outside the allowed source roots') { throw "Restricted traversal diagnostic was unclear.`n$restrictedText" }
+          if ($restrictedText -notmatch 'outside-restricted\.xps') { throw "Restricted traversal diagnostic did not identify the rejected include.`n$restrictedText" }
+
+          $directOutput = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/include-source/restricted/root.xps --restricted 2>&1
+          $directExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          $directText = $directOutput -join "`n"
+          if ($directExit -ne 2) { throw "Restricted direct run should return compiler exit code 2, got $directExit.`n$directText" }
+          if ($directText -notmatch 'outside the allowed source roots') { throw "Restricted direct-run diagnostic was unclear.`n$directText" }
+
+      - name: Verify explicit source root allows shared include
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $exe = "./out/allowed-root$extension"
+          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/restricted/root.xps -o $exe --framework-dependent --source-root ./samples/include-source
+          if ($LASTEXITCODE -ne 0) { throw "Explicit source root compile failed.`n$compile" }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $output = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Explicit source root executable failed.`n$output" }
+          if ($output -notcontains 'RESTRICTED-OUTSIDE=OK') { throw "Explicit source root output missing.`n$output" }
+
+          $direct = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/include-source/restricted/root.xps --source-root ./samples/include-source
+          if ($LASTEXITCODE -ne 0) { throw "Explicit source root direct run failed.`n$direct" }
+          if ($direct -notcontains 'RESTRICTED-OUTSIDE=OK') { throw "Explicit source root direct output missing.`n$direct" }
 
       - name: Verify missing include diagnostic
         shell: pwsh
