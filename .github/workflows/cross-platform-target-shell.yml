@@ -52,6 +52,9 @@ jobs:
       - name: Create Shell helper scripts
         shell: pwsh
         run: |
+          $helperDir = './shell test åäö'
+          New-Item -ItemType Directory -Force $helperDir | Out-Null
+
           @'
           @echo off
           > shell-cmd.out (
@@ -59,18 +62,18 @@ jobs:
           echo ARG2=[%~2]
           echo ARG3=[%~3]
           )
-          '@ | Set-Content -Encoding ascii ./shell-args-helper.cmd
+          '@ | Set-Content -Encoding ascii "$helperDir/shell-args-helper.cmd"
 
           @'
           param([string]$a1,[string]$a2,[string]$a3)
           @("ARG1=[$a1]", "ARG2=[$a2]", "ARG3=[$a3]") | Set-Content -Encoding utf8 ./shell-ps1.out
-          '@ | Set-Content -Encoding utf8 ./shell-args-helper.ps1
+          '@ | Set-Content -Encoding utf8 "$helperDir/shell-args-helper.ps1"
 
           @'
           #!/bin/sh
           printf 'ARG1=[%s]\nARG2=[%s]\nARG3=[%s]\nARG4=[%s]\n' "$1" "$2" "$3" "$4" > shell-sh.out
-          '@ | Set-Content -Encoding utf8NoBOM ./shell-args-helper.sh
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x ./shell-args-helper.sh }
+          '@ | Set-Content -Encoding utf8NoBOM "$helperDir/shell-args-helper.sh"
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x "$helperDir/shell-args-helper.sh" }
 
       - name: Verify default RID and default output extension
         shell: pwsh
