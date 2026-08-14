@@ -39,13 +39,15 @@ The executable filename itself is not part of `Application.Args`; this follows t
 
 Reading an index below zero or greater than or equal to `Application.ArgCount` raises XPScript error 9.
 
-## Args array
+## Argument ownership and Args array
+
+When the generated .NET entry point initializes `Application`, the runtime copies the supplied `Main(string[] args)` array. The runtime therefore owns its argument state independently; later changes to the original .NET array cannot change values exposed through `Application`.
 
 `Application.Args` without an index returns a defensive-copy XPScript String array containing the current arguments. For normal command-line processing, direct `Application.Args(index)` access is preferred.
 
 The array uses zero-based argument indexes. When no arguments were supplied, `Application.ArgCount` is zero and callers should not index `Application.Args`.
 
-The returned array is detached from the runtime-owned argument list. Modifying a copied array cannot alter the values stored by `Application`.
+Every full-array read is detached from the runtime-owned argument list and from other returned copies. Modifying one copied array cannot alter the values stored by `Application`, another previously returned copy or a later fresh copy.
 
 ## Executable information
 
@@ -136,3 +138,5 @@ The sample prints executable metadata and enumerates every command-line argument
 ## Verification status
 
 The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, verifies the documented lossy `Application.CommandLine` representation, verifies `Application.Path` exactly equals `Application.ExecutablePath`, verifies `Application.FileName` exactly equals `Application.ExecutableFileName`, verifies `Application.TempFolder` exactly equals `Application.TempPath`, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
+
+`.github/workflows/application-runtime-isolation.yml` independently compiles the exact generated runtime source on Windows, Ubuntu and macOS. It verifies that runtime initialization copies the original .NET `Main(string[] args)` array and that every full `Application.Args` result is detached from runtime-owned storage and from other returned copies.
