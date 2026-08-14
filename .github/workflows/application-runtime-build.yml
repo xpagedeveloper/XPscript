@@ -2,7 +2,7 @@ name: Application Runtime Compatibility
 
 on:
   push:
-    branches: [main, runtime-development-no-ci]
+    branches: [main, runtime-development-no-ci, todo-application-commandline-verification]
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/application-runtime*.xps'
@@ -53,6 +53,7 @@ jobs:
           $output = & ./out/application-runtime.exe
           if ($LASTEXITCODE -ne 0) { throw "Application runtime exited with code $LASTEXITCODE." }
           if ($output -notcontains 'ARGCOUNT=0') { throw 'Expected ARGCOUNT=0.' }
+          if ($output -notcontains 'COMMANDLINE=') { throw 'Expected empty Application.CommandLine for zero arguments.' }
           if ($output | Where-Object { $_ -like 'ARG0=*' }) { throw 'Unexpected ARG0 output for zero arguments.' }
 
       - name: Verify one argument
@@ -60,7 +61,7 @@ jobs:
         run: |
           $output = & ./out/application-runtime.exe 'one'
           if ($LASTEXITCODE -ne 0) { throw "Application runtime exited with code $LASTEXITCODE." }
-          foreach ($value in @('ARGCOUNT=1','ARG0=one')) {
+          foreach ($value in @('ARGCOUNT=1','ARG0=one','COMMANDLINE=one')) {
             if ($output -notcontains $value) { throw "Application runtime output missing: $value" }
           }
 
@@ -69,7 +70,7 @@ jobs:
         run: |
           $output = & ./out/application-runtime.exe 'first' 'two words' 'ÅÄÖ-漢字' ''
           if ($LASTEXITCODE -ne 0) { throw "Application runtime exited with code $LASTEXITCODE." }
-          foreach ($value in @('ARGCOUNT=4','ARG0=first','ARG1=two words','ARG2=ÅÄÖ-漢字','ARG3=')) {
+          foreach ($value in @('ARGCOUNT=4','ARG0=first','ARG1=two words','ARG2=ÅÄÖ-漢字','ARG3=','COMMANDLINE=first two words ÅÄÖ-漢字 ')) {
             if ($output -notcontains $value) { throw "Application runtime output missing: $value" }
           }
 
