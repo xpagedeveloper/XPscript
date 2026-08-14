@@ -1,0 +1,11 @@
+Sub Main()
+    If Platform() = "Windows" Then
+        Call Shell("shell-fixtures/marker.cmd ../out/shell-cmd.txt")
+        Call Shell("shell-fixtures/marker.bat ../out/shell-bat.txt")
+    ElseIf Platform() = "Linux" Or Platform() = "MacOS" Then
+        Call Shell("shell-fixtures/marker.sh ../out/shell-sh.txt")
+        Call Shell("shell-fixtures/marker.bash ../out/shell-bash.txt")
+    End If
+
+    Print "SHELL-SCRIPT-ROUTING-LAUNCHED"
+End Sub
