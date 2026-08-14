@@ -53,6 +53,34 @@ jobs:
           if ($output -notcontains 'ARG1=second value') { throw "Second argument was not forwarded unchanged.`n$output" }
           if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Direct run working directory was not the source directory.`n$output" }
 
+      - name: Verify Unicode paths and temporary cleanup
+        shell: pwsh
+        run: |
+          $xpsTempRoot = Join-Path ([IO.Path]::GetTempPath()) 'XPScript'
+          $before = @()
+          if (Test-Path $xpsTempRoot) {
+            $before = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+
+          $unicodeDirectory = Join-Path $env:RUNNER_TEMP 'xps åäö 漢字 path'
+          New-Item -ItemType Directory -Force $unicodeDirectory | Out-Null
+          $unicodeSource = Join-Path $unicodeDirectory 'direct run å.xps'
+          Copy-Item ./samples/direct-run.xps $unicodeSource
+          $expectedDirectory = (Resolve-Path $unicodeDirectory).Path
+
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $unicodeSource 'åäö 漢字' 'value with spaces'
+          if ($LASTEXITCODE -ne 0) { throw "Unicode path direct run failed.`n$output" }
+          if ($output -notcontains 'ARG0=åäö 漢字') { throw "Unicode argument was not forwarded unchanged.`n$output" }
+          if ($output -notcontains 'ARG1=value with spaces') { throw "Spaced argument was not forwarded unchanged.`n$output" }
+          if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Unicode source directory was not used as working directory.`n$output" }
+
+          $after = @()
+          if (Test-Path $xpsTempRoot) {
+            $after = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+          $leaked = @($after | Where-Object { $_ -notin $before })
+          if ($leaked.Count -gt 0) { throw "Direct run temporary directories were not cleaned: $($leaked -join ', ')" }
+
       - name: Verify option terminator forwards compiler-like argument
         shell: pwsh
         run: |
