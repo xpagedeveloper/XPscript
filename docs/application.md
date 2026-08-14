@@ -80,7 +80,11 @@ Convenience aliases are also available:
 Print Application.TempPath
 ```
 
-`Application.TempFolder` is an alias for `Application.TempPath`.
+`Application.TempFolder` is a strict alias for `Application.TempPath`; both properties return the same string value.
+
+```xpscript
+Print Application.TempFolder
+```
 
 This is the OS/user temporary directory, not the compiler's private build workspace.
 
@@ -126,4 +130,4 @@ The sample prints executable metadata and enumerates every command-line argument
 
 ## Verification status
 
-The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, verifies the documented lossy `Application.CommandLine` representation, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
+The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, verifies the documented lossy `Application.CommandLine` representation, verifies `Application.TempFolder` exactly equals `Application.TempPath`, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
