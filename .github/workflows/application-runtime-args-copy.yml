@@ -1,0 +1,65 @@
+name: Application Args Defensive Copy
+
+on:
+  push:
+    branches: [main, todo-application-args-defensive-copy]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/application-runtime-args-copy.xps'
+      - '.github/workflows/application-runtime-args-copy.yml'
+      - 'todo/application-runtime-todo.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/application-runtime-args-copy.xps'
+      - '.github/workflows/application-runtime-args-copy.yml'
+      - 'todo/application-runtime-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  args-copy:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify Application.Args defensive String-array copy
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime-args-copy.xps -o ./out/application-runtime-args-copy.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Application.Args copy sample compilation failed.' }
+
+          $output = & ./out/application-runtime-args-copy.exe 'original' 'second'
+          if ($LASTEXITCODE -ne 0) { throw "Application.Args copy sample exited with code $LASTEXITCODE." }
+
+          foreach ($expected in @(
+            'LOW=0',
+            'HIGH=1',
+            'TYPE0=String',
+            'FIRST0-BEFORE=original',
+            'SECOND0-BEFORE=original',
+            'TYPE0-AFTER=String',
+            'FIRST0-AFTER=123',
+            'SECOND0-AFTER=original',
+            'RUNTIME0-AFTER=original'
+          )) {
+            if ($output -notcontains $expected) {
+              $rendered = $output -join [Environment]::NewLine
+              throw "Expected '$expected'. Actual output:`n$rendered"
+            }
+          }
