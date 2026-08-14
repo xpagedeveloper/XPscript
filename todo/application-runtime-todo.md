@@ -24,7 +24,7 @@ Status:
 - [x] `Application.TempPath`
 - [x] `Application.TempFolder` alias
 - [x] `Application.Path` alias
-- [>] `Application.FileName` alias
+- [x] `Application.FileName` alias
 - [x] Application argument values are read-only at the XPScript source surface
 - [x] other Application properties are read-only at the XPScript source surface
 - [>] internal argument storage is copied from .NET `Main(string[] args)`
@@ -56,6 +56,7 @@ Status:
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on macOS
 - [x] verify executable filename/directory values on Windows, Linux and macOS
 - [x] verify `Application.Path` exactly matches `Application.ExecutablePath` on Windows, Linux and macOS
+- [x] verify `Application.FileName` exactly matches `Application.ExecutableFileName` on Windows, Linux and macOS
 - [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
 - [x] verify `Application.TempFolder` exactly matches `Application.TempPath` on Windows, Linux and macOS
 - [x] verify concurrent reads do not alter runtime state
@@ -66,6 +67,8 @@ Cross-platform Application runtime verification is enabled in `.github/workflows
 `Application Runtime Compatibility` verifies `Application.CommandLine` as the documented convenience representation: zero arguments produce an empty string, while argument values are joined with one space. Because the representation is intentionally lossy, an argument that itself contains spaces is indistinguishable from multiple arguments in `CommandLine`; exact boundaries remain available through `Application.Args`.
 
 The same workflow verifies that `Application.Path` is a strict alias of `Application.ExecutablePath` by comparing the two values produced by a compiled XPScript program on Windows, Ubuntu and macOS.
+
+The same workflow verifies that `Application.FileName` is a strict alias of `Application.ExecutableFileName` by comparing the two values produced by a compiled XPScript program on Windows, Ubuntu and macOS.
 
 The same workflow verifies that `Application.TempFolder` is a strict alias of `Application.TempPath` by comparing the two values produced by a compiled XPScript program on Windows, Ubuntu and macOS.
 
