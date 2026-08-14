@@ -54,6 +54,8 @@ jobs:
           if ($output -notcontains 'ARG0=first') { throw "First argument was not forwarded.`n$output" }
           if ($output -notcontains 'ARG1=second value') { throw "Second argument was not forwarded unchanged.`n$output" }
           if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Direct run working directory was not the source directory.`n$output" }
+          if ($output -notcontains 'RELATIVE=RELATIVE-FILE-OK') { throw "Relative file access did not resolve from the script directory.`n$output" }
+          if (Test-Path ./samples/direct-run-relative.txt) { throw 'Relative direct-run test file was not removed.' }
 
       - name: Verify Unicode paths and temporary cleanup
         shell: pwsh
@@ -75,6 +77,8 @@ jobs:
           if ($output -notcontains 'ARG0=åäö 漢字') { throw "Unicode argument was not forwarded unchanged.`n$output" }
           if ($output -notcontains 'ARG1=value with spaces') { throw "Spaced argument was not forwarded unchanged.`n$output" }
           if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Unicode source directory was not used as working directory.`n$output" }
+          if ($output -notcontains 'RELATIVE=RELATIVE-FILE-OK') { throw "Relative file access failed from Unicode source directory.`n$output" }
+          if (Test-Path (Join-Path $unicodeDirectory 'direct-run-relative.txt')) { throw 'Unicode-path relative test file was not removed.' }
 
           $after = @()
           if (Test-Path $xpsTempRoot) {
