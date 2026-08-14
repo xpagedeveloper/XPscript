@@ -1,0 +1,5 @@
+Include "nested/nested.xps"
+
+Function CommonMessage() As String
+    CommonMessage = "OK"
+End Function

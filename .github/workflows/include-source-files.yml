@@ -1,0 +1,103 @@
+name: Include Source Files
+
+on:
+  push:
+    branches: [todo-include-source-files]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/include-source/**'
+      - 'todo/include-source-files-todo.md'
+      - '.github/workflows/include-source-files.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/include-source/**'
+      - 'todo/include-source-files-todo.md'
+      - '.github/workflows/include-source-files.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  include-source:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile and run includes
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $exe = "./out/include-source$extension"
+
+          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/root.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "Include compile failed.`n$compile" }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+
+          $output = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Compiled include program failed.`n$output" }
+          if ($output -notcontains 'COMMON=OK') { throw "Common include output missing.`n$output" }
+          if ($output -notcontains 'NESTED=OK') { throw "Nested include output missing.`n$output" }
+          if ($output -notcontains 'UNICODE=OK') { throw "Unicode include output missing.`n$output" }
+
+      - name: Verify direct run uses identical include semantics
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/include-source/root.xps
+          if ($LASTEXITCODE -ne 0) { throw "Direct include run failed.`n$output" }
+          if ($output -notcontains 'COMMON=OK') { throw "Direct common include output missing.`n$output" }
+          if ($output -notcontains 'NESTED=OK') { throw "Direct nested include output missing.`n$output" }
+          if ($output -notcontains 'UNICODE=OK') { throw "Direct Unicode include output missing.`n$output" }
+
+      - name: Verify missing include diagnostic
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/missing.xps -o "./out/missing$extension" --framework-dependent 2>&1
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -ne 2) { throw "Missing include should return compile exit code 2, got $exitCode.`n$output" }
+          $text = $output -join "`n"
+          if ($text -notmatch 'Included source file was not found') { throw "Missing include diagnostic was unclear.`n$text" }
+          if ($text -notmatch 'line:\s*1') { throw "Missing include diagnostic did not preserve root source line 1.`n$text" }
+
+      - name: Verify direct include cycle diagnostic
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/cycle-direct.xps -o "./out/cycle-direct$extension" --framework-dependent 2>&1
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -ne 2) { throw "Direct cycle should return compile exit code 2, got $exitCode.`n$output" }
+          $text = $output -join "`n"
+          if ($text -notmatch 'Include cycle detected: cycle-direct\.xps -> cycle-direct\.xps') { throw "Direct cycle chain missing.`n$text" }
+
+      - name: Verify indirect include cycle diagnostic
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/include-source/cycle-a.xps -o "./out/cycle-indirect$extension" --framework-dependent 2>&1
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -ne 2) { throw "Indirect cycle should return compile exit code 2, got $exitCode.`n$output" }
+          $text = $output -join "`n"
+          if ($text -notmatch 'cycle-a\.xps -> cycle-b\.xps -> cycle-c\.xps -> cycle-a\.xps') { throw "Indirect cycle chain missing.`n$text" }

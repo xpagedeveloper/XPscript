@@ -1,0 +1,5 @@
+Include "does-not-exist.xps"
+
+Sub Main()
+    Print "SHOULD-NOT-RUN"
+End Sub

@@ -1,0 +1,3 @@
+Function UnicodeMessage() As String
+    UnicodeMessage = "OK"
+End Function
