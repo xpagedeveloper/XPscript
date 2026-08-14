@@ -16,6 +16,10 @@ internal sealed class IncludeSourcePreprocessor
         if (string.IsNullOrWhiteSpace(rootSourcePath))
             throw new CompilerException("Include processing requires a source file path.");
 
+        var prepared = ExpandedSourceContext.Current;
+        if (prepared is not null && prepared.Matches(rootSource, rootSourcePath))
+            return new Result(rootSource, prepared.Map);
+
         var rootPath = Path.GetFullPath(rootSourcePath);
         IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
 
