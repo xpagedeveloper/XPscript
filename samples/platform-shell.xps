@@ -1,5 +1,6 @@
 Sub Main()
-    Print "PLATFORM=" & Platform()
+    Print "PLATFORM-CALL=" & Platform()
+    Print "PLATFORM-BARE=" & Platform
 
     If Platform() = "Windows" Then
         Call Shell("cmd.exe /c echo XPScript-Windows")
