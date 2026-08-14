@@ -13,6 +13,7 @@ on:
       - 'samples/shell-argument-verification.xps'
       - 'samples/shell-script-routing.xps'
       - 'samples/shell-fixtures/**'
+      - 'tests/ShellArgumentCapture/**'
   workflow_dispatch:
 
 permissions:
@@ -104,24 +105,29 @@ jobs:
       - name: Verify Shell structured arguments
         shell: pwsh
         run: |
-          $fixture = (Resolve-Path ./samples/shell-fixtures/capture-args.ps1).Path
+          $helperDir = Join-Path $PWD 'out/shell-helper'
+          dotnet publish ./tests/ShellArgumentCapture/ShellArgumentCapture.csproj -c Release -r '${{ steps.rid.outputs.rid }}' --self-contained false -o $helperDir
+          if ($LASTEXITCODE -ne 0) { throw 'Shell argv helper publish failed.' }
+          $helper = Join-Path $helperDir ('ShellArgumentCapture${{ steps.rid.outputs.extension }}')
+          if (-not (Test-Path -LiteralPath $helper -PathType Leaf)) { throw "Shell argv helper was not produced: $helper" }
           $capture = Join-Path $PWD 'out/shell-args.txt'
           Remove-Item -Force -ErrorAction SilentlyContinue $capture
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-argument-verification.xps -- $fixture $capture
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-argument-verification.xps -- $helper $capture
           if ($LASTEXITCODE -ne 0) { throw 'Shell argument verification script failed to launch.' }
           for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $capture); $i++) { Start-Sleep -Milliseconds 100 }
           if (-not (Test-Path -LiteralPath $capture)) { throw 'Shell argument capture file was not produced.' }
           $lines = Get-Content -LiteralPath $capture -Encoding UTF8
+          Write-Host ($lines -join "`n")
           if ($lines -notcontains 'COUNT=4') { throw "Shell did not preserve four structured arguments.`n$($lines -join "`n")" }
-          if ($lines -notcontains 'ARG0=space value') { throw 'Shell did not preserve an argument containing spaces.' }
-          if ($lines -notcontains 'ARG1=') { throw 'Shell did not preserve an explicit empty argument.' }
-          if ($lines -notcontains 'ARG2=åäö 漢字') { throw 'Shell did not preserve Unicode arguments.' }
-          if ($lines -notcontains 'ARG3=semi;dollar$bracket[]') { throw 'Shell did not preserve non-shell special characters.' }
+          if ($lines -notcontains 'ARG0=space value') { throw "Shell did not preserve an argument containing spaces.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG1=') { throw "Shell did not preserve an explicit empty argument.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG2=åäö 漢字') { throw "Shell did not preserve Unicode arguments.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG3=semi;dollar$bracket[]') { throw "Shell did not preserve non-shell special characters.`n$($lines -join "`n")" }
 
       - name: Verify platform script routing
         shell: pwsh
         run: |
-          Remove-Item -Force -ErrorAction SilentlyContinue ./out/shell-cmd.txt, ./out/shell-bat.txt, ./out/shell-sh.txt, ./out/shell-bash.txt
+          Remove-Item -Force -ErrorAction SilentlyContinue ./out/shell-cmd.txt, ./out/shell-bat.txt, ./out/shell-sh.txt, ./out/shell-bash.txt, ./out/shell-ps1.txt
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-script-routing.xps
           if ($LASTEXITCODE -ne 0) { throw 'Shell script-routing sample failed.' }
           if ($env:RUNNER_OS -eq 'Windows') {
@@ -139,6 +145,9 @@ jobs:
             if ((Get-Content ./out/shell-sh.txt -Raw).Trim() -ne 'SH=OK') { throw '.sh routing failed.' }
             if ((Get-Content ./out/shell-bash.txt -Raw).Trim() -ne 'BASH=OK') { throw '.bash routing failed.' }
           }
+          for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath ./out/shell-ps1.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path -LiteralPath ./out/shell-ps1.txt)) { throw 'PowerShell routing did not produce its marker.' }
+          if ((Get-Content ./out/shell-ps1.txt -Raw).Trim() -ne 'PS1=OK') { throw '.ps1 routing failed.' }
 
   cross-compile-supported-rids:
     runs-on: ubuntu-latest
