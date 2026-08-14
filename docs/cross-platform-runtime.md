@@ -34,7 +34,7 @@ Prefer paths supplied by configuration, command-line arguments or runtime APIs. 
 
 ## Shell
 
-`Shell()` is routed through the cross-platform runtime and may run ordinary executables/commands as well as supported script files. Program names are resolved only from absolute PATH entries when an explicit path is not supplied.
+`Shell()` is routed through the cross-platform runtime and can run ordinary executables, supported script files, operating-system shell built-ins and commands that use shell operators such as pipes and redirection.
 
 `Shell()` waits for the launched process to finish, captures its standard output, and returns that output as an XPScript `String`.
 
@@ -42,19 +42,22 @@ Prefer paths supplied by configuration, command-line arguments or runtime APIs. 
 Dim Result As String
 Result = Shell("dotnet --version")
 Print Result
+
+Result = Shell("echo hello | findstr hello")   ' Windows
+Result = Shell("printf hello | grep hello")   ' Linux/macOS
 ```
 
 `Call Shell("...")` is also valid when the caller does not need the returned text; in that form the captured standard output is simply ignored.
 
-Windows supports direct executables, `.cmd` and `.bat` through `cmd.exe`, and PowerShell scripts through `pwsh.exe` when available with Windows PowerShell as fallback.
+For ordinary executables, XPScript first resolves the executable from an explicit path or absolute PATH entries and uses structured `ProcessStartInfo.ArgumentList` arguments. This path avoids unnecessary shell parsing.
 
-Linux and macOS support direct executable files and scripts, `.sh` and `.bash` through `/bin/sh`, and PowerShell scripts through `pwsh` when installed.
+When the first command is a shell built-in or the command contains unquoted shell operators such as `|`, `>`, `<`, `&` or `;`, XPScript intentionally invokes the platform command interpreter: `cmd.exe /d /s /c` on Windows and `/bin/sh -c` on Linux/macOS. Standard output from that command interpreter is returned by `Shell()` in the same way as direct executable output.
 
-Direct executables, PowerShell scripts and Unix shell scripts use structured `ProcessStartInfo.ArgumentList` arguments. Windows `.cmd`/`.bat` execution requires a validated `cmd.exe /c` command string; XPScript rejects command-shell metacharacters in batch paths and arguments before building that command string.
+Windows also supports `.cmd` and `.bat` through `cmd.exe`, and PowerShell scripts through `pwsh.exe` when available with Windows PowerShell as fallback. Linux and macOS support direct executable files and scripts, `.sh` and `.bash` through `/bin/sh`, and PowerShell scripts through `pwsh` when installed.
 
-XPScript does not implicitly treat pipes, redirection or globbing as shell syntax for direct executable invocation. When those shell-specific semantics are intentionally required, put the operation in an explicit `.cmd`/`.bat`, `.sh`/`.bash` or `.ps1` script and invoke that script through `Shell()`.
+Direct executables, PowerShell scripts and Unix shell scripts use structured arguments. Windows `.cmd`/`.bat` execution requires a validated `cmd.exe /c` command string; XPScript rejects command-shell metacharacters in batch paths and arguments before building that command string.
 
-Do not build Shell commands from untrusted input. Prefer direct executable invocation and structured argument passing whenever possible.
+A raw shell command is intentionally interpreted by the operating-system shell. Do not concatenate untrusted data into such commands. Prefer direct executable invocation and structured arguments whenever user-controlled values are involved.
 
 ## File locking
 
