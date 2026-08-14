@@ -1,0 +1,65 @@
+name: Branding Regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.xps'
+      - '**/*.json'
+      - '**/*.py'
+      - '**/*.ps1'
+      - '**/*.txt'
+      - '**/*.props'
+      - '**/*.targets'
+      - '.github/workflows/branding-regression.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.xps'
+      - '**/*.json'
+      - '**/*.py'
+      - '**/*.ps1'
+      - '**/*.txt'
+      - '**/*.props'
+      - '**/*.targets'
+      - '.github/workflows/branding-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify branding and script extension
+        shell: pwsh
+        run: |
+          $forbidden = @(
+            ('LS' + ' Lite'), ('LS' + 'Lite'), ('ls' + 'lite'), ('LS' + ' Light'), ('ls' + ' light'),
+            ('L' + 'otusScript'), ('L' + 'otus'), ('H' + 'CL'), ('D' + 'omino')
+          )
+          $textExtensions = @('.cs','.csproj','.sln','.md','.yml','.yaml','.xps','.json','.py','.ps1','.txt','.props','.targets')
+          $trackedFiles = git ls-files | Where-Object {
+            $textExtensions -contains [System.IO.Path]::GetExtension($_).ToLowerInvariant()
+          }
+          foreach ($term in $forbidden) {
+            foreach ($path in $trackedFiles) {
+              $matches = Select-String -Path $path -SimpleMatch $term -ErrorAction SilentlyContinue
+              if ($matches) { throw "Old branding still exists: $($matches[0].Path):$($matches[0].LineNumber)" }
+            }
+          }
+          if (git ls-files 'samples/*.ls') { throw 'Old script extension still exists.' }
