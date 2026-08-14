@@ -30,8 +30,8 @@ internal sealed class NativeDependencyPackager
 
             var location = sourceMap?.Resolve(startLine, sourceName, current)
                 ?? new SourceMap.Location(sourceName, startLine, current);
-            var dependency = TryCollect(combined, location);
-            if (dependency is not null && !result.Any(x => SameDeclaration(x, dependency)))
+            var dependency = TryCollect(combined, location, sourceName);
+            if (dependency is not null && !result.Any(x => x.DeclaredPath.Equals(dependency.DeclaredPath, StringComparison.OrdinalIgnoreCase)))
                 result.Add(dependency);
         }
 
@@ -51,7 +51,7 @@ internal sealed class NativeDependencyPackager
         return slash >= 0 ? normalized[(slash + 1)..] : normalized;
     }
 
-    private Dependency? TryCollect(string raw, SourceMap.Location location)
+    private Dependency? TryCollect(string raw, SourceMap.Location location, string rootSourcePath)
     {
         var code = StripComment(raw);
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
@@ -67,7 +67,17 @@ internal sealed class NativeDependencyPackager
             throw Error(location, "Application-local native library path must end with a file name: " + selected);
 
         ValidateTargetFileName(loadName, selected, location);
-        return new Dependency(selected, loadName, location.SourcePath, location.Line);
+        var projectPath = NormalizeProjectPath(selected, location.SourcePath, rootSourcePath);
+        return new Dependency(projectPath, loadName, location.SourcePath, location.Line);
+    }
+
+    private static string NormalizeProjectPath(string declaredPath, string declaringSourcePath, string rootSourcePath)
+    {
+        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var declaringDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(declaringSourcePath)) ?? Environment.CurrentDirectory);
+        var rootDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(rootSourcePath)) ?? Environment.CurrentDirectory);
+        var resolved = Path.GetFullPath(Path.Combine(declaringDirectory, portable));
+        return Path.GetRelativePath(rootDirectory, resolved);
     }
 
     private static bool IsAbsolutePortablePath(string value)
@@ -121,12 +131,6 @@ internal sealed class NativeDependencyPackager
         var match = Regex.Match(code, "\\b" + Regex.Escape(keyword) + "\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value : null;
     }
-
-    private static bool SameDeclaration(Dependency left, Dependency right) =>
-        left.DeclaredPath.Equals(right.DeclaredPath, StringComparison.OrdinalIgnoreCase) &&
-        Path.GetFullPath(left.SourcePath).Equals(
-            Path.GetFullPath(right.SourcePath),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     private static CompilerException Error(SourceMap.Location location, string message) =>
         new($"{location.SourcePath}({location.Line},1): {message}");
