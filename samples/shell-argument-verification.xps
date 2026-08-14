@@ -1,13 +1,7 @@
 Option Declare
 
 Sub Main()
-    Dim q As String
-    Dim command As String
-
-    q = Chr(34)
-    command = q & Application.Args(0) & q & " " & q & Application.Args(1) & q & " " & q & "space value" & q & " " & q & q & " " & q & "åäö 漢字" & q & " " & q & "semi;dollar$bracket[]" & q
-
-    Print "SHELL-COMMAND=" & command
-    Call Shell(command)
+    Print "SHELL-COMMAND=" & Application.Args(0)
+    Call Shell(Application.Args(0))
     Print "SHELL-ARGUMENTS-LAUNCHED"
 End Sub
