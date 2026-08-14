@@ -11,33 +11,33 @@ Status:
 
 ## Compiler targets
 
-- [>] support explicit `--runtime` / `--rid` target selection
-- [>] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
-- [>] default target follows the compiler host OS + architecture when no RID is supplied
-- [>] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
-- [ ] verify self-contained single-file output on every target OS
-- [ ] verify framework-dependent output on every target OS
-- [ ] verify executable permissions on Linux/macOS
+- [x] support explicit `--runtime` / `--rid` target selection
+- [x] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`; all six are cross-compiled by `Cross Platform Targets and Shell`
+- [x] default target follows the compiler host OS + architecture when no RID is supplied
+- [x] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
+- [x] verify self-contained single-file output on every target OS on the runner architecture
+- [x] verify framework-dependent output on every target OS on the runner architecture
+- [x] verify executable permissions on Linux/macOS
 
 ## Platform function
 
-- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Runtime Verification`
-- [>] support both `Platform()` and bare `Platform` expression forms
+- [x] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified
+- [x] support both `Platform()` and bare `Platform` expression forms
 - [x] document platform branching examples; source: `docs/cross-platform-runtime.md`
 
 ## Shell
 
-- [>] route `Shell()` through a cross-platform runtime; basic execution is runtime-verified on Windows/Linux/macOS by `Cross Platform Runtime Verification`
-- [>] Windows: direct executables
-- [>] Windows: `.cmd` / `.bat` through `cmd.exe`
-- [>] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
-- [>] Linux/macOS: direct executable binaries and executable/shebang scripts
-- [>] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
-- [>] Linux/macOS: `.ps1` through `pwsh`
-- [>] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
-- [ ] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on every OS
-- [ ] define whether an explicit shell-execution mode is needed for users who intentionally want pipes/redirection/globbing
-- [ ] security review command/path injection behavior
+- [x] route `Shell()` through a cross-platform runtime; execution is runtime-verified on Windows/Linux/macOS
+- [x] Windows: direct executables
+- [x] Windows: `.cmd` / `.bat` through `cmd.exe`
+- [x] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
+- [x] Linux/macOS: direct executable binaries and executable/shebang scripts
+- [x] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
+- [x] Linux/macOS: `.ps1` through `pwsh`
+- [x] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
+- [x] verify quoted arguments, spaces, Unicode paths/text, empty arguments and non-shell special characters on every OS
+- [x] explicit shell-execution mode is defined by intentionally launching `cmd.exe /c` or `/bin/sh -c`; XPScript does not add implicit pipe/redirection/globbing expansion
+- [x] security review command/path injection behavior: direct/script routes use structured arguments, executable lookup ignores relative PATH entries, Windows batch metacharacters are rejected, and explicitly requested command shells retain their native parsing/injection semantics
 
 ## Native/external libraries
 
@@ -168,10 +168,12 @@ File I/O must use the target operating system's real filesystem semantics rather
 
 ## Quality gates
 
-- [ ] compile the same portable `.xps` source for all supported RIDs
+- [x] compile the same portable `.xps` source for all supported RIDs
 - [ ] execute the matching artifact on each target OS and architecture
-- [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
+- [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification` and `Cross Platform Targets and Shell`
 - [ ] run native library loader tests on each OS and architecture
 - [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
 - [ ] run path/permission/symlink/file-sharing negative tests
 - [ ] run security tests for Shell, external libraries and file paths
+
+`Cross Platform Targets and Shell` cross-compiles the same portable source for all six supported RIDs. On Windows, Ubuntu and macOS it also verifies host-default target selection and output naming, explicit framework-dependent publication, explicit self-contained single-file publication, executable permission bits on Unix-like systems, both `Platform()` and bare `Platform`, direct and extension-routed Shell execution, and structured Shell arguments including spaces, Unicode, explicit empty arguments and non-shell special characters.
