@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - todo-include-source-mapping
+      - todo-include-diagnostic-source-lines
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/include-source-map/**'
@@ -42,6 +43,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           $PSNativeCommandUseErrorActionPreference = $false
+          $expectedCode = '    value = "*****"'
+          $expectedMarker = $expectedCode + [Environment]::NewLine + (' ' * 12) + '^'
 
           function Invoke-ExpectedCompileFailure([string] $format, [bool] $directRun) {
             if ($directRun) {
@@ -63,22 +66,28 @@ jobs:
           if ($text -notmatch '(?m)^\s*line:\s*5\s*$') { throw "Text diagnostic did not report include-local line 5.`n$text" }
           if ($text -match '(?m)^\s*line:\s*15\s*$') { throw "Text diagnostic leaked flattened line 15.`n$text" }
           if ($text -notmatch 'description:\s*compile-error\.xps:') { throw "Text diagnostic description did not preserve include filename.`n$text" }
+          if ($text -notmatch 'code:\s+value = "\*{5}"') { throw "Text diagnostic did not use the included source line.`n$text" }
 
           $jsonText = Invoke-ExpectedCompileFailure 'json' $false
           $json = $jsonText | ConvertFrom-Json
           if ($json.result -ne 'error') { throw "JSON result was not error.`n$jsonText" }
           if ($json.errors[0].line -ne 5) { throw "JSON diagnostic line was $($json.errors[0].line), expected 5.`n$jsonText" }
           if ($json.errors[0].description -notmatch '^compile-error\.xps:') { throw "JSON diagnostic did not preserve include filename.`n$jsonText" }
+          if ($json.errors[0].code -ne $expectedCode) { throw "JSON diagnostic code came from the wrong source line. Got '$($json.errors[0].code)'.`n$jsonText" }
+          if ($json.errors[0].markedCode -ne $expectedMarker) { throw "JSON diagnostic marker did not point into the included source line.`n$jsonText" }
 
           $xmlText = Invoke-ExpectedCompileFailure 'xml' $false
           [xml]$xml = $xmlText
           $xmlError = $xml.compileResult.errors.error | Select-Object -First 1
           if ([int]$xmlError.line -ne 5) { throw "XML diagnostic line was $($xmlError.line), expected 5.`n$xmlText" }
           if ([string]$xmlError.description -notmatch '^compile-error\.xps:') { throw "XML diagnostic did not preserve include filename.`n$xmlText" }
+          if ([string]$xmlError.code -ne $expectedCode) { throw "XML diagnostic code came from the wrong source line.`n$xmlText" }
+          if ([string]$xmlError.markedCode -ne $expectedMarker) { throw "XML diagnostic marker did not point into the included source line.`n$xmlText" }
 
           $runText = Invoke-ExpectedCompileFailure 'text' $true
           if ($runText -notmatch 'compile-error\.xps') { throw "Direct-run diagnostic did not include include filename.`n$runText" }
           if ($runText -notmatch '(?m)^\s*line:\s*5\s*$') { throw "Direct-run diagnostic did not report include-local line 5.`n$runText" }
+          if ($runText -notmatch 'code:\s+value = "\*{5}"') { throw "Direct-run diagnostic did not use the included source line.`n$runText" }
 
           # The last native invocation is expected to return 2. Explicit success prevents
           # PowerShell/GitHub Actions from propagating that expected compiler exit code.
