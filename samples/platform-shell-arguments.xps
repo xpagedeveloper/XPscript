@@ -1,0 +1,12 @@
+Sub Main()
+    Print "PLATFORM-CALL=" & Platform()
+    Print "PLATFORM-BARE=" & Platform
+
+    If Platform() = "Windows" Then
+        Call Shell("./shell-args-helper.cmd \"space value\" \"\" \"brackets-$[]{}\"")
+        Call Shell("./shell-args-helper.ps1 \"unicode-åäö-漢字\" \"space value\" \"\"")
+    ElseIf Platform() = "Linux" Or Platform() = "MacOS" Then
+        Call Shell("./shell-args-helper.sh \"space value\" \"unicode-åäö-漢字\" \"\" \"brackets-$[]{}\"")
+        Call Shell("./shell-args-helper.ps1 \"unicode-åäö-漢字\" \"space value\" \"\"")
+    End If
+End Sub
