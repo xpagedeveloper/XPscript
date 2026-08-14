@@ -45,6 +45,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           $expectedCode = '    value = "*****"'
           $expectedMarker = $expectedCode + [Environment]::NewLine + (' ' * 12) + '^'
+          $expectedMarkerNormalized = $expectedCode + "`n" + (' ' * 12) + '^'
 
           function Invoke-ExpectedCompileFailure([string] $format, [bool] $directRun) {
             if ($directRun) {
@@ -82,7 +83,8 @@ jobs:
           if ([int]$xmlError.line -ne 5) { throw "XML diagnostic line was $($xmlError.line), expected 5.`n$xmlText" }
           if ([string]$xmlError.description -notmatch '^compile-error\.xps:') { throw "XML diagnostic did not preserve include filename.`n$xmlText" }
           if ([string]$xmlError.code -ne $expectedCode) { throw "XML diagnostic code came from the wrong source line.`n$xmlText" }
-          if ([string]$xmlError.markedCode -ne $expectedMarker) { throw "XML diagnostic marker did not point into the included source line.`n$xmlText" }
+          $xmlMarkerNormalized = ([string]$xmlError.markedCode).Replace("`r`n", "`n").Replace("`r", "`n")
+          if ($xmlMarkerNormalized -ne $expectedMarkerNormalized) { throw "XML diagnostic marker did not point into the included source line.`n$xmlText" }
 
           $runText = Invoke-ExpectedCompileFailure 'text' $true
           if ($runText -notmatch 'compile-error\.xps') { throw "Direct-run diagnostic did not include include filename.`n$runText" }
