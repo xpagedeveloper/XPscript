@@ -1,10 +1,11 @@
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
 internal sealed class IncludeSourcePreprocessor
 {
+    internal sealed record Result(string Source, SourceMap Map);
+
     private static readonly Regex IncludePattern = new(
         "^Include\\s+\"([^\"]+)\"\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -13,7 +14,7 @@ internal sealed class IncludeSourcePreprocessor
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
 
-    public string Transform(string rootSource, string rootSourcePath)
+    public Result Transform(string rootSource, string rootSourcePath)
     {
         if (string.IsNullOrWhiteSpace(rootSourcePath))
             throw new CompilerException("Include processing requires a source file path.");
@@ -21,34 +22,35 @@ internal sealed class IncludeSourcePreprocessor
         var rootPath = Path.GetFullPath(rootSourcePath);
         var included = new HashSet<string>(_pathComparer);
         var stack = new List<string>();
-        return Expand(rootPath, rootSource, included, stack);
+        var output = new List<string>();
+        var map = new List<SourceMap.Location>();
+        Expand(rootPath, rootSource, included, stack, output, map);
+        return new Result(string.Join(Environment.NewLine, output), new SourceMap(map));
     }
 
-    private string Expand(
+    private void Expand(
         string sourcePath,
         string source,
         HashSet<string> included,
-        List<string> stack)
+        List<string> stack,
+        List<string> output,
+        List<SourceMap.Location> map)
     {
         sourcePath = Path.GetFullPath(sourcePath);
 
         var cycleIndex = stack.FindIndex(path => _pathComparer.Equals(path, sourcePath));
         if (cycleIndex >= 0)
         {
-            var cycle = stack.Skip(cycleIndex)
-                .Concat([sourcePath])
-                .Select(Path.GetFileName);
+            var cycle = stack.Skip(cycleIndex).Concat([sourcePath]).Select(Path.GetFileName);
             throw new CompilerException("Include cycle detected: " + string.Join(" -> ", cycle));
         }
 
-        if (!included.Add(sourcePath))
-            return string.Empty;
+        if (!included.Add(sourcePath)) return;
 
         stack.Add(sourcePath);
         try
         {
             var lines = NormalizeLines(source);
-            var output = new StringBuilder(source.Length);
             var sourceDirectory = Path.GetDirectoryName(sourcePath)
                 ?? throw new CompilerException("Unable to resolve Include base directory for " + Path.GetFileName(sourcePath) + ".");
 
@@ -62,7 +64,7 @@ internal sealed class IncludeSourcePreprocessor
                     if (Regex.IsMatch(code, @"^Include\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                         throw IncludeError(sourcePath, i + 1, "Invalid Include directive. Expected Include \"file.xps\".");
 
-                    output.AppendLine(raw);
+                    AddLine(output, map, raw, sourcePath, i + 1);
                     continue;
                 }
 
@@ -73,27 +75,19 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Include source files must use the .xps extension: " + SafePath(declaredPath));
 
                 string includePath;
-                try
-                {
-                    includePath = Path.GetFullPath(declaredPath, sourceDirectory);
-                }
-                catch
-                {
-                    throw IncludeError(sourcePath, i + 1, "Invalid Include path: " + SafePath(declaredPath));
-                }
+                try { includePath = Path.GetFullPath(declaredPath, sourceDirectory); }
+                catch { throw IncludeError(sourcePath, i + 1, "Invalid Include path: " + SafePath(declaredPath)); }
 
                 var nestedCycleIndex = stack.FindIndex(path => _pathComparer.Equals(path, includePath));
                 if (nestedCycleIndex >= 0)
                 {
-                    var cycle = stack.Skip(nestedCycleIndex)
-                        .Concat([includePath])
-                        .Select(Path.GetFileName);
+                    var cycle = stack.Skip(nestedCycleIndex).Concat([includePath]).Select(Path.GetFileName);
                     throw IncludeError(sourcePath, i + 1, "Include cycle detected: " + string.Join(" -> ", cycle));
                 }
 
                 if (included.Contains(includePath))
                 {
-                    output.AppendLine();
+                    AddLine(output, map, string.Empty, sourcePath, i + 1);
                     continue;
                 }
 
@@ -101,24 +95,25 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Included source file was not found: " + SafePath(declaredPath));
 
                 string includeSource;
-                try
-                {
-                    includeSource = File.ReadAllText(includePath);
-                }
+                try { includeSource = File.ReadAllText(includePath); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                output.Append(Expand(includePath, includeSource, included, stack));
+                Expand(includePath, includeSource, included, stack, output, map);
             }
-
-            return output.ToString();
         }
         finally
         {
             stack.RemoveAt(stack.Count - 1);
         }
+    }
+
+    private static void AddLine(List<string> output, List<SourceMap.Location> map, string text, string path, int line)
+    {
+        output.Add(text);
+        map.Add(new SourceMap.Location(path, line, text));
     }
 
     private static string[] NormalizeLines(string source) =>
@@ -131,17 +126,10 @@ internal sealed class IncludeSourcePreprocessor
         {
             if (line[i] == '"')
             {
-                if (inString && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    i++;
-                    continue;
-                }
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
                 inString = !inString;
             }
-            else if (!inString && line[i] == '\'')
-            {
-                return line[..i];
-            }
+            else if (!inString && line[i] == '\'') return line[..i];
         }
         return line;
     }

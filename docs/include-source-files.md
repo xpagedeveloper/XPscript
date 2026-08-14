@@ -62,6 +62,16 @@ Include cycle detected: a.xps -> b.xps -> c.xps -> a.xps
 
 A missing include is also a compile error and reports the source line containing the `Include` directive.
 
+## Diagnostics and source mapping
+
+Include expansion maintains a line-by-line source map. When a compiler diagnostic originates inside an included file, its line number is counted from line 1 of that physical include file and the include file name is included in the diagnostic.
+
+For example, if `lib/common.xps` contains an invalid assignment on its own line 12, the error is reported against `common.xps` line 12 even if the expanded source places that statement hundreds of lines into the combined compilation unit.
+
+This behavior is used by normal compilation and by `xpscriptc run`, and is regression-tested for text, JSON and XML compiler result formats on Windows, Linux and macOS.
+
+The remaining source-mapping work is to make `code` / `markedCode` always read the included physical source line and to preserve per-file runtime `Erl` tracking through later source rewrites.
+
 ## Direct execution
 
 `xpscriptc run` uses the same compiler pipeline, so include resolution is identical for direct execution and normal compilation.
@@ -71,10 +81,6 @@ xpscriptc run main.xps
 ```
 
 The include files remain source inputs only. They are not copied beside the generated executable.
-
-## Current source-mapping limitation
-
-Include expansion currently produces one flattened compilation unit before the existing validation/transpilation stages. Diagnostics raised by the `Include` processor itself identify the containing source file and line, including missing files and cycles. Full physical file/line mapping for arbitrary syntax/type errors inside included files, and per-file `Erl` preservation, remain follow-up work requiring a multi-file source map.
 
 ## Project-level directives
 

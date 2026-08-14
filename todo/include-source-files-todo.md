@@ -27,9 +27,10 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 ## Diagnostics and source mapping
 
 - [x] missing include files produce a clear compiler diagnostic with containing source file and source line
-- [ ] syntax/type errors inside included files must report the included file name plus correct physical line/position
+- [x] syntax/type errors inside included files report the included file name plus correct physical line/position counted from line 1 of that include file
+- [ ] make `code` / `markedCode` for an included-file diagnostic use the included source line rather than the same-numbered line from the root source
 - [ ] `Erl` / source-line tracking must remain correct for included files
-- [>] diagnostics distinguish root/include files for errors produced by the Include preprocessor; arbitrary downstream syntax/type diagnostics still need a multi-file source map
+- [x] downstream compiler diagnostics that carry an XPScript source location are remapped through the multi-file include source map before being returned
 
 ## Security and build behavior
 
@@ -50,10 +51,13 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] missing include diagnostic
 - [x] direct include cycle diagnostic
 - [x] indirect include cycle diagnostic with include chain
-- [ ] included-file compiler error reports correct source file and physical source line
+- [x] included-file compiler error reports correct source file and physical source line in text, JSON, XML and direct `run`
 - [x] paths containing spaces and Unicode
 - [x] Windows, Linux and macOS path-resolution regression tests
+- [x] Windows, Linux and macOS include diagnostic source-map regression tests
 
 ## Verification
 
 The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, missing includes and direct/indirect cycle diagnostics.
+
+The `Include Source Mapping` workflow additionally verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — in text, JSON, XML and direct-run compiler output on Windows, Linux and macOS.

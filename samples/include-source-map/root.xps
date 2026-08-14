@@ -1,0 +1,15 @@
+Option Declare
+
+' Padding deliberately keeps the Include away from the top of the root file.
+' Diagnostics from compile-error.xps must not use these root-file line numbers.
+' padding 1
+' padding 2
+' padding 3
+' padding 4
+' padding 5
+' padding 6
+Include "lib/compile-error.xps"
+
+Sub Main()
+    Broken()
+End Sub

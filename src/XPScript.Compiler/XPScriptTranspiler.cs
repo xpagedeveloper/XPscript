@@ -10,7 +10,21 @@ public sealed class XPScriptTranspiler
 
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
-        source = new IncludeSourcePreprocessor().Transform(source, sourceName);
+        var includeResult = new IncludeSourcePreprocessor().Transform(source, sourceName);
+        try
+        {
+            return TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier);
+        }
+        catch (CompilerException ex)
+        {
+            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, includeResult.Map);
+            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
+            throw new CompilerException(remapped);
+        }
+    }
+
+    private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier)
+    {
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
