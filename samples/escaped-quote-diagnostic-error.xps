@@ -1,0 +1,6 @@
+Sub NeedsInteger(value As Integer)
+End Sub
+
+Sub Main()
+    Call NeedsInteger("TOPSECRET\"STILLSECRET")
+End Sub
