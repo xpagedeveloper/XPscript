@@ -100,16 +100,35 @@ Runtime source-line tracking uses the same include source map. `Erl` therefore r
 
 This behavior is used by normal compilation and by `xpscriptc run`, and is regression-tested on Windows, Linux and macOS.
 
+## Dependency directives in include files
+
+Dependency discovery runs after Include expansion. This means dependency declarations may live in the source file that actually needs them instead of being forced into the root script.
+
+Supported include-local dependency declarations are:
+
+```xps
+Reference "../deps/MyLibrary.dll"
+ReferenceNative "../deps/native/helper.dll" Runtime "win-x64"
+
+Declare Function NativeVersion Lib "../deps/native/default.dll" Alias "native_version" _
+    WindowsLib "../deps/native/windows.dll" _
+    LinuxLib "../deps/native/linux.so" _
+    MacOSLib "../deps/native/macos.dylib" _
+    () As Integer
+```
+
+A dependency path is first resolved relative to the physical `.xps` file containing the directive. The compiler then converts that location back into project-root-relative form and applies the existing dependency security policy. Dependencies therefore still must remain inside the root XPScript project's allowed dependency directory; moving dependency discovery after Include expansion does not weaken project-local containment or symbolic-link/reparse-point checks.
+
+This applies to managed `Reference`, RID-specific `ReferenceNative`, and application-local native paths selected by `Declare ... Lib`/platform-specific `*Lib` attributes.
+
+The same post-Include dependency discovery path is used for normal compilation and `xpscriptc run`.
+
 ## Direct execution
 
-`xpscriptc run` uses the same compiler pipeline, so include resolution, filesystem-aware path identity, restricted source-root enforcement and `Erl` source-line behavior are identical for direct execution and normal compilation.
+`xpscriptc run` uses the same compiler pipeline, so include resolution, filesystem-aware path identity, restricted source-root enforcement, dependency discovery and `Erl` source-line behavior are identical for direct execution and normal compilation.
 
 ```text
 xpscriptc run main.xps
 ```
 
 The include files remain source inputs only. They are not copied beside the generated executable.
-
-## Project-level directives
-
-Keep project-level dependency declarations such as managed `Reference` directives in the root source file. Include files are intended for XPScript declarations and executable source. This keeps dependency discovery deterministic before the source files are flattened.

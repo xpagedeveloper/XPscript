@@ -1,0 +1,13 @@
+Reference "../deps/Helper.dll"
+ReferenceNative "../deps/win-x64-helper.dll" Runtime "win-x64"
+ReferenceNative "../deps/win-arm64-helper.dll" Runtime "win-arm64"
+ReferenceNative "../deps/linux-x64-helper.so" Runtime "linux-x64"
+ReferenceNative "../deps/linux-arm64-helper.so" Runtime "linux-arm64"
+ReferenceNative "../deps/osx-x64-helper.dylib" Runtime "osx-x64"
+ReferenceNative "../deps/osx-arm64-helper.dylib" Runtime "osx-arm64"
+
+Declare Function IncludedNative Lib "../deps/native/default.dll" Alias "dummy" _
+    WindowsLib "../deps/native/windows.dll" _
+    LinuxLib "../deps/native/linux.so" _
+    MacOSLib "../deps/native/macos.dylib" _
+    () As Integer
