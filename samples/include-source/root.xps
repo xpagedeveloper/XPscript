@@ -1,0 +1,9 @@
+Include "lib/common.xps"
+Include "./lib/../lib/common.xps"
+Include "lib/åäö 漢字 helper.xps"
+
+Sub Main()
+    Print "COMMON=" & CommonMessage()
+    Print "NESTED=" & NestedMessage()
+    Print "UNICODE=" & UnicodeMessage()
+End Sub
