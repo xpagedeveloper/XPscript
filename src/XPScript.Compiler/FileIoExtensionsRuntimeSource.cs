@@ -8,7 +8,7 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
-    private const int DarwinFSetLk = 8;
+    private const int DarwinFOFDSetLk = 90;
     private const short DarwinFUnlck = 2;
     private const short DarwinFWrlck = 3;
     private const short DarwinSeekSet = 0;
@@ -207,7 +207,7 @@ internal static class XPScriptFileIO
             Whence = DarwinSeekSet
         };
 
-        if (DarwinFcntl(descriptor, DarwinFSetLk, ref value) == 0)
+        if (DarwinFcntl(descriptor, DarwinFOFDSetLk, ref value) == 0)
             return;
 
         var errno = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
