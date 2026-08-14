@@ -31,8 +31,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
-          MERGED_PR_HEAD: ${{ github.event.pull_request.head.ref || '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -44,15 +42,6 @@ jobs:
           fi
 
           owner="${REPOSITORY%%/*}"
-          mapfile -t protected_branches < <(gh api --paginate "repos/${REPOSITORY}/branches?protected=true&per_page=100" --jq '.[].name')
-
-          is_protected() {
-            local candidate="$1"
-            for protected in "${protected_branches[@]:-}"; do
-              [[ "$candidate" == "$protected" ]] && return 0
-            done
-            return 1
-          }
 
           has_open_pr() {
             local branch="$1"
@@ -69,25 +58,25 @@ jobs:
             [[ "$count" != "0" ]]
           }
 
-          delete_branch() {
+          try_delete_branch() {
             local branch="$1"
             echo "Delete merged branch: $branch"
-            gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"
+            if gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"; then
+              return 0
+            fi
+
+            echo "Keep merged branch because GitHub blocked deletion (branch protection/ruleset or permissions): $branch"
+            return 1
           }
 
           deleted=0
           skipped=0
+          blocked=0
 
           while IFS= read -r remote_ref; do
             branch="${remote_ref#origin/}"
 
             if [[ -z "$branch" || "$branch" == "main" || "$branch" == "HEAD" ]]; then
-              continue
-            fi
-
-            if is_protected "$branch"; then
-              echo "Skip protected branch: $branch"
-              ((skipped+=1))
               continue
             fi
 
@@ -109,12 +98,16 @@ jobs:
             fi
 
             if [[ "$merged_by_history" == "true" || "$merged_by_pr" == "true" ]]; then
-              delete_branch "$branch"
-              ((deleted+=1))
+              if try_delete_branch "$branch"; then
+                ((deleted+=1))
+              else
+                ((blocked+=1))
+              fi
             else
               echo "Keep unmerged branch: $branch"
             fi
           done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sort)
 
           echo "Deleted merged branches: $deleted"
-          echo "Skipped protected/open-PR branches: $skipped"
+          echo "Skipped open-PR branches: $skipped"
+          echo "Merged branches blocked from deletion: $blocked"
