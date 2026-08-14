@@ -70,13 +70,13 @@ For example, if `lib/common.xps` contains an invalid assignment on its own line 
 
 The `code` and `markedCode` fields are also loaded from the physical include file. This means the returned source snippet and caret marker correspond to the reported include-local line and position rather than accidentally reading the same line number from the root source file. Existing root-file diagnostics retain their established output contract.
 
-This behavior is used by normal compilation and by `xpscriptc run`, and is regression-tested for text, JSON and XML compiler result formats on Windows, Linux and macOS.
+Runtime source-line tracking uses the same include source map. `Erl` therefore reports the physical line number local to the source file containing the running statement. If a runtime error occurs on line 5 of an included file, `Erl` is 5 even when that included statement appears much later in the flattened compilation unit.
 
-The remaining source-mapping work is to preserve per-file runtime `Erl` tracking through later source rewrites.
+This behavior is used by normal compilation and by `xpscriptc run`, and is regression-tested on Windows, Linux and macOS.
 
 ## Direct execution
 
-`xpscriptc run` uses the same compiler pipeline, so include resolution is identical for direct execution and normal compilation.
+`xpscriptc run` uses the same compiler pipeline, so include resolution and `Erl` source-line behavior are identical for direct execution and normal compilation.
 
 ```text
 xpscriptc run main.xps

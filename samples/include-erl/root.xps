@@ -1,0 +1,16 @@
+Option Declare
+
+' Padding deliberately ensures flattened line numbers differ from include-local lines.
+' root padding 1
+' root padding 2
+' root padding 3
+' root padding 4
+' root padding 5
+' root padding 6
+' root padding 7
+' root padding 8
+Include "lib/erl-worker.xps"
+
+Sub Main()
+    IncludedErlWorker()
+End Sub

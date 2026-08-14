@@ -13,7 +13,7 @@ public sealed class XPScriptTranspiler
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourceName);
         try
         {
-            return TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier);
+            return TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
         }
         catch (CompilerException ex)
         {
@@ -23,7 +23,7 @@ public sealed class XPScriptTranspiler
         }
     }
 
-    private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier)
+    private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
@@ -36,7 +36,7 @@ public sealed class XPScriptTranspiler
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new SourceLineContinuationPreprocessor().Transform(source);
-        source = new SourceLineMarkerPreprocessor().Transform(source);
+        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);

@@ -6,9 +6,11 @@ on:
     branches:
       - todo-include-source-mapping
       - todo-include-diagnostic-source-lines
+      - todo-include-erl-source-lines
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/include-source-map/**'
+      - 'samples/include-erl/**'
       - '.github/workflows/include-source-mapping.yml'
   pull_request:
     branches:
@@ -16,6 +18,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/include-source-map/**'
+      - 'samples/include-erl/**'
       - '.github/workflows/include-source-mapping.yml'
 
 jobs:
@@ -91,6 +94,21 @@ jobs:
           if ($runText -notmatch '(?m)^\s*line:\s*5\s*$') { throw "Direct-run diagnostic did not report include-local line 5.`n$runText" }
           if ($runText -notmatch 'code:\s+value = "\*{5}"') { throw "Direct-run diagnostic did not use the included source line.`n$runText" }
 
-          # The last native invocation is expected to return 2. Explicit success prevents
-          # PowerShell/GitHub Actions from propagating that expected compiler exit code.
           exit 0
+
+      - name: Verify include-local Erl runtime mapping
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $outputPath = if ($IsWindows) { 'out/include-erl.exe' } else { 'out/include-erl' }
+
+          dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- samples/include-erl/root.xps -o $outputPath --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Include Erl fixture compilation failed.' }
+
+          $compiledOutput = (& $outputPath | Out-String)
+          if ($LASTEXITCODE -ne 0) { throw "Compiled include Erl fixture failed.`n$compiledOutput" }
+          if ($compiledOutput -notmatch '(?m)^INCLUDE-ERL=5\s*$') { throw "Compiled execution did not report include-local Erl=5.`n$compiledOutput" }
+
+          $directOutput = (& dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- run samples/include-erl/root.xps 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 0) { throw "Direct include Erl execution failed.`n$directOutput" }
+          if ($directOutput -notmatch '(?m)^INCLUDE-ERL=5\s*$') { throw "Direct execution did not report include-local Erl=5.`n$directOutput" }

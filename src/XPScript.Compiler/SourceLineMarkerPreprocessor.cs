@@ -4,7 +4,9 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceLineMarkerPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source) => Transform(source, null, "input.xps");
+
+    public string Transform(string source, SourceMap? sourceMap, string sourceName)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length * 2);
@@ -41,7 +43,9 @@ internal sealed class SourceLineMarkerPreprocessor
                 if (!continuation && code.Length > 0)
                 {
                     var indent = Regex.Match(raw, @"^\s*").Value;
-                    output.Add(indent + $"Call XPSourceLineRuntime.Set({i + 1})");
+                    var expandedLine = i + 1;
+                    var physicalLine = sourceMap?.Resolve(expandedLine, sourceName).Line ?? expandedLine;
+                    output.Add(indent + $"Call XPSourceLineRuntime.Set({physicalLine})");
                 }
 
                 output.Add(raw);
