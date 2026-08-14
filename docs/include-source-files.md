@@ -37,7 +37,11 @@ Include "lib/common.xps"
 Include "nested/helpers.xps"
 ```
 
-Paths are converted to full normalized paths before duplicate/cycle detection, so spellings such as `lib/common.xps` and `./lib/../lib/common.xps` refer to the same include on the same platform. Windows path comparison is case-insensitive. Linux and macOS path comparison is case-sensitive, matching the compiler's conservative platform path semantics.
+Paths are converted to full normalized paths before duplicate/cycle detection, so spellings such as `lib/common.xps` and `./lib/../lib/common.xps` refer to the same include.
+
+Include identity follows the actual source filesystem's case-sensitivity rather than being hard-coded from the operating system. On a case-insensitive filesystem, `Common.xps` and `common.xps` are treated as the same physical include. On a case-sensitive filesystem, two existing files whose names differ only by case remain distinct source files and may both be included. The compiler determines this from existing source filesystem entries without creating probe files in source directories.
+
+This matters on platforms such as macOS where different volumes may use different case-sensitivity settings even though the operating system is the same.
 
 Paths containing spaces and Unicode characters are supported.
 
@@ -65,18 +69,18 @@ The restriction is enforced during Include expansion immediately before source f
 
 ## Duplicate includes
 
-Each normalized source file is expanded at most once per compilation. Repeating an include does not duplicate functions, classes or executable source.
+Each normalized physical source file is expanded at most once per compilation. Repeating an include does not duplicate functions, classes or executable source.
 
 ```xps
 Include "lib/common.xps"
 Include "./lib/../lib/common.xps"
 ```
 
-The example above includes `common.xps` once.
+The example above includes `common.xps` once. Differently-cased spellings are also deduplicated when the source filesystem itself resolves them to the same physical file.
 
 ## Include cycles
 
-Direct and indirect cycles are rejected. The compiler reports the include chain, for example:
+Direct and indirect cycles are rejected. Cycle identity uses the same filesystem-aware path rules as duplicate detection. The compiler reports the include chain, for example:
 
 ```text
 Include cycle detected: a.xps -> b.xps -> c.xps -> a.xps
@@ -98,7 +102,7 @@ This behavior is used by normal compilation and by `xpscriptc run`, and is regre
 
 ## Direct execution
 
-`xpscriptc run` uses the same compiler pipeline, so include resolution, restricted source-root enforcement and `Erl` source-line behavior are identical for direct execution and normal compilation.
+`xpscriptc run` uses the same compiler pipeline, so include resolution, filesystem-aware path identity, restricted source-root enforcement and `Erl` source-line behavior are identical for direct execution and normal compilation.
 
 ```text
 xpscriptc run main.xps
