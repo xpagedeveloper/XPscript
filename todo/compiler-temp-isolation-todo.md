@@ -5,7 +5,7 @@
 Security and concurrency checklist for compiler-generated temporary files, build directories and final output paths.
 
 Status:
-- `[x]` implemented and verified
+- `[x]` implemented/decided and verified
 - `[>]` implemented/reviewed, awaiting verification
 - `[ ]` not implemented/reviewed
 
@@ -15,7 +15,7 @@ Status:
 - [x] concurrent compiler invocations do not intentionally share generated source, project or publish paths
 - [x] generated source and project files use predictable names only inside a unique invocation directory
 - [x] cleanup targets only the workspace created by the current invocation
-- [>] failed builds do not intentionally reuse writable workspace state in later builds
+- [x] failed builds do not intentionally reuse writable workspace state in later builds
 
 ## Workspace creation
 
@@ -23,10 +23,10 @@ Status:
 - [x] workspaces are created beneath `<Path.GetTempPath()>/XPScript/<guid>/`
 - [x] `Path.GetTempPath()` is only the root; generated files are not written directly into a fixed shared build directory
 - [x] generated project/source/publish paths are invocation-local
-- [>] compiler invokes `dotnet publish` with `WorkingDirectory` set to the invocation workspace
-- [>] process-temp, dotnet-home and NuGet package directories are invocation-local children
-- [ ] consider separate explicit `src`, `obj`, `bin`, `publish` and `logs` children if later tooling requires them
-- [ ] runtime verification that an existing invocation directory can never be accidentally reused
+- [x] compiler invokes `dotnet publish` with `WorkingDirectory` set to the invocation workspace
+- [x] process-temp, dotnet-home and NuGet package directories are invocation-local children
+- [x] separate explicit `src` and `logs` children are not added now; `Program.cs`/`Generated.csproj` remain at the isolated workspace root, while SDK-created `obj`/`bin` and explicit `publish` already remain invocation-local
+- [x] runtime verification that an existing invocation directory can never be accidentally reused
 
 ## Permissions and symlinks
 
@@ -72,24 +72,24 @@ Status:
 
 ## Process execution
 
-- [>] `dotnet` is invoked with an explicit working directory set to the current invocation workspace
-- [>] publish arguments are passed through `ProcessStartInfo.ArgumentList`, not shell-concatenated command strings
-- [>] `UseShellExecute` is disabled
-- [>] `dotnet` is resolved to an absolute host path; relative/current-directory PATH entries are ignored
-- [>] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are redirected into the invocation workspace
-- [>] dotnet first-run/telemetry side effects are disabled for generated builds
-- [>] common inherited MSBuild path-redirection environment variables are removed before publish
-- [>] generated output/cache state is intentionally invocation-local rather than shared writable state
-- [ ] verify SDK resolution still works for supported Windows/Linux/macOS .NET 10 installations
-- [ ] decide whether any read-only/per-user NuGet caches should be optionally shared for performance after security verification
+- [x] `dotnet` is invoked with an explicit working directory set to the current invocation workspace
+- [x] publish arguments are passed through `ProcessStartInfo.ArgumentList`, not shell-concatenated command strings
+- [x] `UseShellExecute` is disabled
+- [x] `dotnet` is resolved to an absolute host path; relative/current-directory PATH entries are ignored
+- [x] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are redirected into the invocation workspace
+- [x] dotnet first-run/telemetry side effects are disabled for generated builds
+- [x] common inherited MSBuild path-redirection environment variables are removed before publish
+- [x] generated output/cache state is intentionally invocation-local rather than shared writable state
+- [x] SDK resolution works for supported Windows/Linux/macOS .NET 10 CI installations
+- [x] shared writable/per-user NuGet caches are intentionally not enabled; security isolation takes priority over restore-cache performance
 
 ## Cleanup/lifetime
 
-- [>] cleanup happens in `finally` after success or failure
-- [>] cleanup only accepts a descendant of the compiler XPScript temp root
+- [x] cleanup happens in `finally` after success or failure
+- [x] cleanup only accepts a descendant of the compiler XPScript temp root
 - [>] cleanup does not recursively follow symlink/reparse-point descendants
-- [>] cleanup failure is swallowed so it does not mask the original compiler error
-- [ ] optionally support `--keep-temp` for debugging while clearly printing the exact isolated workspace path
+- [x] cleanup failure is swallowed so it does not mask the original compiler error
+- [x] `--keep-temp` is intentionally not exposed in the production CLI; debugging must not disable automatic isolated-workspace cleanup
 - [ ] define age-based cleanup of abandoned compiler workspaces from crashed processes without touching active ones
 
 ## Concurrency verification when execution is re-enabled
@@ -105,3 +105,5 @@ Status:
 `Compiler Workspace Isolation` runs two real compiler invocations on Windows, Ubuntu and macOS. It observes each live workspace beneath `<Path.GetTempPath()>/XPScript/`, requires a unique 32-hex-character GUID directory for each invocation, verifies `Generated.csproj`, `Program.cs` and `publish` stay beneath that invocation directory, and verifies the workspace is removed after successful compilation. The probe also keeps an unrelated sibling sentinel directory and file under the same compiler temp root and requires both to remain unchanged after each compiler cleanup, proving cleanup is scoped to the current invocation workspace.
 
 `Compiler Parallel Isolation` runs 10 real compiler invocations concurrently on Windows, Ubuntu and macOS. All invocations intentionally read the same root `.xps` source and the same include files, which are allowed to be shared read-only inputs, while each invocation must use a distinct compiler-owned GUID workspace and distinct output path. The test requires 10 unique workspaces, invocation-local `Generated.csproj`, `Program.cs` and `publish` state, successful distinct outputs and cleanup of every observed workspace.
+
+`Compiler Process Isolation` forces a real post-publish failure followed by a successful compilation on Windows, Ubuntu and macOS. It verifies that failed and successful invocations use different GUID workspaces, that a pre-existing GUID-shaped workspace is never reused or modified, that `process-temp`, `dotnet-home` and `nuget-packages` are invocation-local, that the SDK resolves and publishes successfully, and that both successful and failed invocation workspaces are removed by `finally` cleanup.
