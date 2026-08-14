@@ -1,0 +1,5 @@
+Include "cycle-a.xps"
+
+Function CycleC() As String
+    CycleC = "C"
+End Function
