@@ -74,9 +74,16 @@ async Task VerifyKilledCompilerDoesNotAffectSiblingAsync()
     await File.WriteAllTextAsync(killSource, validSource);
     await File.WriteAllTextAsync(survivorSource, validSource);
 
-    var compilerAssembly = typeof(CompilerDriver).Assembly.Location;
+    var builtCompiler = Path.Combine(
+        Directory.GetCurrentDirectory(),
+        "src", "XPScript.Compiler", "bin", "Release", "net10.0", "xpscriptc.dll");
+    var compilerAssembly = File.Exists(builtCompiler) ? builtCompiler : typeof(CompilerDriver).Assembly.Location;
     if (string.IsNullOrWhiteSpace(compilerAssembly) || !File.Exists(compilerAssembly))
         throw new Exception("Unable to locate compiler assembly for process-level isolation test.");
+
+    var runtimeConfig = Path.ChangeExtension(compilerAssembly, ".runtimeconfig.json");
+    if (!File.Exists(runtimeConfig))
+        throw new Exception("Compiler runtimeconfig is missing for process-level isolation test: " + runtimeConfig);
 
     var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
     Directory.CreateDirectory(tempRoot);
@@ -117,9 +124,10 @@ async Task VerifyKilledCompilerDoesNotAffectSiblingAsync()
     if (!File.Exists(survivorOutput))
         throw new Exception("Survivor compiler did not produce its output after sibling process kill.");
 
-    // A hard-killed process may leave its private GUID workspace behind. That is expected;
-    // importantly, it does not affect the sibling invocation. Remove only newly abandoned
-    // GUID workspaces created by this probe after both compiler processes are no longer active.
+    // A hard-killed process may leave its private GUID workspace behind. This is expected.
+    // The production compiler does not sweep other workspaces by age alone, because age cannot
+    // prove inactivity. This probe cleans only GUID workspaces created after its own baseline,
+    // and only after both child compiler processes are no longer active.
     foreach (var workspace in Directory.EnumerateDirectories(tempRoot).Select(Path.GetFullPath).Where(path => !baseline.Contains(path)))
     {
         if (!Guid.TryParseExact(Path.GetFileName(workspace), "N", out _)) continue;
