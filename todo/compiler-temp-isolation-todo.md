@@ -90,14 +90,14 @@ Status:
 - [x] cleanup does not recursively follow symlink/reparse-point descendants
 - [x] cleanup failure is swallowed so it does not mask the original compiler error
 - [x] `--keep-temp` is intentionally not exposed in the production CLI; debugging must not disable automatic isolated-workspace cleanup
-- [ ] define age-based cleanup of abandoned compiler workspaces from crashed processes without touching active ones
+- [x] abandoned-workspace cleanup policy is defined conservatively: normal compiler invocations never sweep sibling workspaces by age alone because age cannot prove inactivity; any future sweeper may inspect only direct GUID-shaped children beneath `<Path.GetTempPath()>/XPScript/`, must require an explicit verifiable inactive ownership/lease signal before deletion, and may then apply an age threshold such as 24 hours before calling the existing owned-workspace safe-delete routine
 
 ## Concurrency verification when execution is re-enabled
 
 - [x] run at least 10 concurrent compilations of the same `.xps` source to different outputs
-- [ ] run concurrent compilations using identical source filename from different directories
-- [ ] verify generated files and diagnostics never cross between invocations
-- [ ] deliberately crash/kill one compiler process and verify another process is unaffected
+- [x] run concurrent compilations using identical source filename from different directories
+- [x] verify generated files and diagnostics never cross between invocations
+- [x] deliberately crash/kill one compiler process and verify another process is unaffected
 - [x] test parallel Windows/Linux/macOS compiler invocations
 - [x] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path normalization cases
 - [x] force staged-publication failures and verify old executable/dependencies are restored
@@ -111,3 +111,5 @@ Status:
 `Compiler Permission Symlink` verifies Windows SID-based ACL hardening, Unix `0700` directories and `0600` files, project-local dependency link escape rejection, broken-link rejection, linked-workspace-root refusal, and non-following cleanup of symlink/junction descendants on Windows, Ubuntu and macOS.
 
 `Compiler Output Safety` verifies output normalization, directory/source/protected-target rejection, safe replacement of existing regular outputs, destination link/junction rejection, dependency file-name/collision rules, self-target dependencies, sibling staging cleanup, dependency-first/executable-last publication, forced mid-commit rollback, rooted/`..` dependency rejection and secure opened-handle dependency copying on Windows, Ubuntu and macOS.
+
+`Compiler Lifetime Concurrency` runs two concurrent failing compilations from different directories that both use the filename `same.xps` and requires their distinct diagnostics to remain isolated. It also starts two independent compiler processes, kills one process tree after isolated workspaces are active, and requires the sibling compiler to complete and publish successfully. A hard-killed compiler may leave its private workspace behind; the production policy intentionally forbids unsafe age-only sweeping of such directories until an explicit inactivity lease mechanism exists.

@@ -1,0 +1,31 @@
+name: Compiler Lifetime Concurrency
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/CompilerPathSecurity.cs'
+      - 'tests/CompilerLifetimeConcurrencyProbe/**'
+      - '.github/workflows/compiler-lifetime-concurrency.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lifetime-concurrency:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler for child-process isolation test
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Verify lifetime, same-filename and diagnostic isolation
+        run: dotnet run --project ./tests/CompilerLifetimeConcurrencyProbe/CompilerLifetimeConcurrencyProbe.csproj -c Release
