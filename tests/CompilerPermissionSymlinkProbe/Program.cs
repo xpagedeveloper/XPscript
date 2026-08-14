@@ -17,6 +17,7 @@ try
 {
     await VerifyPermissionsAsync();
     await VerifyDependencySymlinkEscapeAsync();
+    VerifyBrokenSymlinkRejected();
     await VerifyCleanupDoesNotFollowLinksAsync();
     await VerifyLinkedWorkspaceRootRejectedAsync();
     Console.WriteLine("PERMISSION-SYMLINK=OK");
@@ -80,6 +81,18 @@ async Task VerifyDependencySymlinkEscapeAsync()
 
     ExpectCompilerFailure(() => Invoke(resolveProjectLocal, sourceRoot, Path.Combine("escape", "outside.dll"), "Managed Reference"));
     ExpectCompilerFailure(() => Invoke(resolveNative, sourceRoot, Path.Combine("escape", "outside.dll")));
+}
+
+void VerifyBrokenSymlinkRejected()
+{
+    if (OperatingSystem.IsWindows()) return;
+
+    var sourceRoot = Path.Combine(probeRoot, "broken-source-root");
+    Directory.CreateDirectory(sourceRoot);
+    var broken = Path.Combine(sourceRoot, "broken.dll");
+    File.CreateSymbolicLink(broken, Path.Combine(probeRoot, "does-not-exist.dll"));
+    ExpectCompilerFailure(() => Invoke(resolveProjectLocal, sourceRoot, "broken.dll", "Managed Reference"));
+    ExpectCompilerFailure(() => Invoke(resolveNative, sourceRoot, "broken.dll"));
 }
 
 async Task VerifyCleanupDoesNotFollowLinksAsync()
