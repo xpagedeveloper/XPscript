@@ -36,8 +36,9 @@ internal sealed class ManagedAssemblyReferencePreprocessor
                 if (path.Length == 0) throw Error(location, "Reference requires a managed .NET assembly path.");
                 if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
                     throw Error(location, "Managed Reference must point to a .dll file: " + path);
-                if (!managed.Any(x => SameDeclaration(x.DeclaredPath, x.SourcePath, path, location.SourcePath)))
-                    managed.Add(new ManagedReference(path, location.SourcePath, location.Line));
+                var projectPath = NormalizeProjectPath(path, location.SourcePath, sourceName);
+                if (!managed.Any(x => x.DeclaredPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
+                    managed.Add(new ManagedReference(projectPath, location.SourcePath, location.Line));
                 output[i] = "";
                 continue;
             }
@@ -52,9 +53,10 @@ internal sealed class ManagedAssemblyReferencePreprocessor
                 if (path.Length == 0) throw Error(location, "ReferenceNative requires a native dependency path.");
                 if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
                     throw Error(location, "ReferenceNative uses unsupported runtime identifier '" + rid + "'.");
+                var projectPath = NormalizeProjectPath(path, location.SourcePath, sourceName);
                 if (rid.Equals(_runtimeIdentifier, StringComparison.OrdinalIgnoreCase) &&
-                    !native.Any(x => SameDeclaration(x.DeclaredPath, x.SourcePath, path, location.SourcePath)))
-                    native.Add(new NativeReference(path, rid, location.SourcePath, location.Line));
+                    !native.Any(x => x.DeclaredPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
+                    native.Add(new NativeReference(projectPath, rid, location.SourcePath, location.Line));
                 output[i] = "";
                 continue;
             }
@@ -68,11 +70,16 @@ internal sealed class ManagedAssemblyReferencePreprocessor
         return new Result(string.Join(Environment.NewLine, output.Select(x => x ?? "")), managed, native);
     }
 
-    private static bool SameDeclaration(string leftPath, string leftSource, string rightPath, string rightSource) =>
-        leftPath.Equals(rightPath, StringComparison.OrdinalIgnoreCase) &&
-        Path.GetFullPath(leftSource).Equals(
-            Path.GetFullPath(rightSource),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    private static string NormalizeProjectPath(string declaredPath, string declaringSourcePath, string rootSourcePath)
+    {
+        var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(portable)) return declaredPath;
+
+        var declaringDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(declaringSourcePath)) ?? Environment.CurrentDirectory);
+        var rootDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(rootSourcePath)) ?? Environment.CurrentDirectory);
+        var resolved = Path.GetFullPath(Path.Combine(declaringDirectory, portable));
+        return Path.GetRelativePath(rootDirectory, resolved);
+    }
 
     private static CompilerException Error(SourceMap.Location location, string message) =>
         new($"{location.SourcePath}({location.Line},1): {message}");
