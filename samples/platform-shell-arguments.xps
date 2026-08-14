@@ -12,9 +12,17 @@ Sub Main()
     End If
 
     If Platform() = "Windows" Then
+        Result = Shell("ver")
+        If Len(Result) > 0 Then Print "SHELL-BUILTIN=OK" Else Print "SHELL-BUILTIN=EMPTY"
+        Result = Shell("echo PIPE-OK | findstr PIPE-OK")
+        If Len(Result) > 0 Then Print "SHELL-PIPE=OK" Else Print "SHELL-PIPE=EMPTY"
         Call Shell("\"./shell test åäö/shell-args-helper.cmd\" \"space value\" \"\" \"brackets-$[]{}\"")
         Call Shell("\"./shell test åäö/shell-args-helper.ps1\" \"unicode-åäö-漢字\" \"space value\" \"\"")
     ElseIf Platform() = "Linux" Or Platform() = "MacOS" Then
+        Result = Shell("umask")
+        If Len(Result) > 0 Then Print "SHELL-BUILTIN=OK" Else Print "SHELL-BUILTIN=EMPTY"
+        Result = Shell("printf PIPE-OK | grep PIPE-OK")
+        If Len(Result) > 0 Then Print "SHELL-PIPE=OK" Else Print "SHELL-PIPE=EMPTY"
         Call Shell("\"./shell test åäö/shell-args-helper.sh\" \"space value\" \"unicode-åäö-漢字\" \"\" \"brackets-$[]{}\"")
         Call Shell("\"./shell test åäö/shell-args-helper.ps1\" \"unicode-åäö-漢字\" \"space value\" \"\"")
     End If
