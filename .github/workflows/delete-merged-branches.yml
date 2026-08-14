@@ -2,6 +2,10 @@ name: Delete Merged Branches
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
   schedule:
     - cron: '17 3 * * 0'
 
@@ -11,6 +15,9 @@ permissions:
 
 jobs:
   cleanup:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -20,10 +27,12 @@ jobs:
       - name: Fetch all remote branches
         run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
 
-      - name: Delete branches fully merged into main
+      - name: Delete branches merged into main
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          MERGED_PR_HEAD: ${{ github.event.pull_request.head.ref || '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -34,6 +43,7 @@ jobs:
             exit 1
           fi
 
+          owner="${REPOSITORY%%/*}"
           mapfile -t protected_branches < <(gh api --paginate "repos/${REPOSITORY}/branches?protected=true&per_page=100" --jq '.[].name')
 
           is_protected() {
@@ -42,6 +52,27 @@ jobs:
               [[ "$candidate" == "$protected" ]] && return 0
             done
             return 1
+          }
+
+          has_open_pr() {
+            local branch="$1"
+            local count
+            count="$(gh api "repos/${REPOSITORY}/pulls?state=open&base=main&head=${owner}:${branch}&per_page=1" --jq 'length')"
+            [[ "$count" != "0" ]]
+          }
+
+          has_merged_pr() {
+            local branch="$1"
+            local count
+            count="$(gh api "repos/${REPOSITORY}/pulls?state=closed&base=main&head=${owner}:${branch}&per_page=100" \
+              --jq '[.[] | select(.merged_at != null)] | length')"
+            [[ "$count" != "0" ]]
+          }
+
+          delete_branch() {
+            local branch="$1"
+            echo "Delete merged branch: $branch"
+            gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"
           }
 
           deleted=0
@@ -60,17 +91,28 @@ jobs:
               continue
             fi
 
-            open_prs="$(gh api "repos/${REPOSITORY}/pulls?state=open&head=${REPOSITORY%%/*}:${branch}&per_page=1" --jq 'length')"
-            if [[ "$open_prs" != "0" ]]; then
+            if has_open_pr "$branch"; then
               echo "Skip branch with open PR: $branch"
               ((skipped+=1))
               continue
             fi
 
+            merged_by_history=false
+            merged_by_pr=false
+
             if git merge-base --is-ancestor "refs/remotes/origin/${branch}" refs/remotes/origin/main; then
-              echo "Delete merged branch: $branch"
-              gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"
+              merged_by_history=true
+            fi
+
+            if has_merged_pr "$branch"; then
+              merged_by_pr=true
+            fi
+
+            if [[ "$merged_by_history" == "true" || "$merged_by_pr" == "true" ]]; then
+              delete_branch "$branch"
               ((deleted+=1))
+            else
+              echo "Keep unmerged branch: $branch"
             fi
           done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sort)
 
