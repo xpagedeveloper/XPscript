@@ -4,17 +4,19 @@ on:
   push:
     branches: [main, todo-application-args-defensive-copy]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/application-runtime-args-copy.xps'
       - '.github/workflows/application-runtime-args-copy.yml'
-      - 'todo/application-runtime-todo.md'
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/application-runtime-args-copy.xps'
       - '.github/workflows/application-runtime-args-copy.yml'
-      - 'todo/application-runtime-todo.md'
   workflow_dispatch:
 
 permissions:
