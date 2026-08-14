@@ -11,33 +11,33 @@ Status:
 
 ## Compiler targets
 
-- [>] support explicit `--runtime` / `--rid` target selection
-- [>] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
-- [>] default target follows the compiler host OS + architecture when no RID is supplied
-- [>] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
-- [ ] verify self-contained single-file output on every target OS
-- [ ] verify framework-dependent output on every target OS
-- [ ] verify executable permissions on Linux/macOS
+- [x] support explicit `--runtime` / `--rid` target selection; verified for the matching Windows/Linux/macOS runner RIDs by `Cross Platform Target Shell`
+- [>] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`; all six are implemented, while real runtime verification still lacks Windows ARM64, Linux ARM64 and macOS x64 hardware
+- [x] default target follows the compiler host OS + architecture when no RID is supplied
+- [x] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
+- [x] verify self-contained single-file output on every currently available target OS runner
+- [x] verify framework-dependent output on every currently available target OS runner
+- [x] verify compiler-produced executable permissions on Linux/macOS without CI-side `chmod`
 
 ## Platform function
 
-- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Runtime Verification`
-- [>] support both `Platform()` and bare `Platform` expression forms
+- [x] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Target Shell`
+- [x] support both `Platform()` and bare `Platform` expression forms
 - [x] document platform branching examples; source: `docs/cross-platform-runtime.md`
 
 ## Shell
 
-- [>] route `Shell()` through a cross-platform runtime; basic execution is runtime-verified on Windows/Linux/macOS by `Cross Platform Runtime Verification`
-- [>] Windows: direct executables
-- [>] Windows: `.cmd` / `.bat` through `cmd.exe`
-- [>] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
-- [>] Linux/macOS: direct executable binaries and executable/shebang scripts
-- [>] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
-- [>] Linux/macOS: `.ps1` through `pwsh`
-- [>] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
-- [ ] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on every OS
-- [ ] define whether an explicit shell-execution mode is needed for users who intentionally want pipes/redirection/globbing
-- [ ] security review command/path injection behavior
+- [x] route `Shell()` through a cross-platform runtime and return captured standard output as an XPScript `String`; `Result = Shell("...")` is runtime-verified on Windows/Linux/macOS
+- [x] Windows: direct executables
+- [x] Windows: `.cmd` / `.bat` through `cmd.exe`
+- [x] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
+- [x] Linux/macOS: direct executable binaries and executable/shebang scripts
+- [x] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
+- [x] Linux/macOS: `.ps1` through `pwsh`
+- [x] use `ProcessStartInfo.ArgumentList` for direct programs and supported script argument handling where a command interpreter is not required; raw shell syntax and Windows batch execution use the platform command interpreter intentionally
+- [x] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on Windows/Linux/macOS
+- [x] shell-execution behavior is defined: direct resolvable programs are invoked structurally, while shell built-ins or commands containing unquoted shell operators are executed through `cmd.exe /d /s /c` on Windows or `/bin/sh -c` on Unix-like targets
+- [x] security review command/path injection behavior: direct executable resolution accepts explicit paths or absolute PATH entries and avoids shell parsing; commands intentionally routed through a shell interpret shell syntax and must not concatenate untrusted input
 
 ## Native/external libraries
 
