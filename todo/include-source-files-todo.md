@@ -34,7 +34,7 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 
 ## Security and build behavior
 
-- [ ] prevent unintended include path traversal outside allowed source roots when secure/restricted compilation is enabled
+- [x] prevent unintended include path traversal outside allowed source roots when secure/restricted compilation is enabled
 - [x] include processing is read-only and cannot overwrite or alter unrelated files during compilation
 - [x] include files are source-only inputs and are not copied beside output
 - [x] direct `.xps` execution and normal compiled execution use identical include resolution semantics
@@ -54,12 +54,15 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] included-file compiler error reports correct source file and physical source line in text, JSON, XML and direct `run`
 - [x] included-file compiler error returns `code` and `markedCode` from the included physical source file
 - [x] included-file runtime error reports include-local `Erl` for compiled execution and direct `run`
+- [x] restricted compilation blocks `..` traversal outside the default root in compile and direct `run`
+- [x] repeated `--source-root` support allows explicitly trusted shared source directories
+- [x] restricted source-root behavior is regression-tested on Windows, Linux and macOS
 - [x] paths containing spaces and Unicode
 - [x] Windows, Linux and macOS path-resolution regression tests
 - [x] Windows, Linux and macOS include diagnostic/source-line/Erl source-map regression tests
 
 ## Verification
 
-The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, missing includes and direct/indirect cycle diagnostics.
+The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, missing includes, direct/indirect cycle diagnostics, restricted traversal rejection and explicitly allowed shared source roots.
 
 The `Include Source Mapping` workflow verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — and that `code` / `markedCode` come from the physical include file in text, JSON, XML and direct-run compiler output. It also verifies that a runtime error physically located on line 5 of an included file reports `Erl=5` in both compiled execution and direct `run` on Windows, Linux and macOS.
