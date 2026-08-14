@@ -1,0 +1,29 @@
+name: Compiler Workspace Isolation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/CompilerPathSecurity.cs'
+      - 'tests/CompilerWorkspaceProbe/**'
+      - '.github/workflows/compiler-workspace-isolation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workspace-isolation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify unique GUID compiler workspaces
+        run: dotnet run --project ./tests/CompilerWorkspaceProbe/CompilerWorkspaceProbe.csproj -c Release
