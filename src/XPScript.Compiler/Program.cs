@@ -10,8 +10,8 @@ XPScript Compiler
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscriptc <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
-  xpscriptc run <source.xps> [--runtime RID] [--] [script arguments...]
+  xpscriptc <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...]
+  xpscriptc run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -21,11 +21,16 @@ Examples:
   xpscriptc hello.xps --runtime linux-x64 -o hello
   xpscriptc hello.xps --runtime osx-arm64 -o hello
   xpscriptc hello.xps --runtime win-x64 -o Hello.exe --result-format json
+  xpscriptc hello.xps --restricted
+  xpscriptc hello.xps --source-root ./src --source-root ../shared-xps
   xpscriptc run hello.xps
+  xpscriptc run hello.xps --restricted
   xpscriptc run hello.xps first "second value"
   xpscriptc run hello.xps -- --runtime passed-to-script
 
 If --runtime is omitted, XPScript targets the current operating system and process architecture.
+--restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
+--source-root may be repeated and automatically enables restricted Include processing.
 The run command can execute only the current OS/architecture target. Its default working directory is the source script directory.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
@@ -40,6 +45,8 @@ string? outputPath = null;
 var selfContained = true;
 var resultFormat = "text";
 var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+var restricted = false;
+var sourceRoots = new List<string>();
 
 try
 {
@@ -53,6 +60,13 @@ try
             selfContained = false;
         else if (args[i] == "--result-format" && i + 1 < args.Length)
             resultFormat = args[++i].ToLowerInvariant();
+        else if (args[i] == "--restricted")
+            restricted = true;
+        else if (args[i] == "--source-root" && i + 1 < args.Length)
+        {
+            restricted = true;
+            sourceRoots.Add(Path.GetFullPath(args[++i]));
+        }
         else
             throw new ArgumentException($"Unknown argument: {args[i]}");
     }
@@ -60,10 +74,14 @@ try
     if (resultFormat is not ("text" or "json" or "xml"))
         throw new ArgumentException("--result-format must be text, json, or xml.");
 
+    if (restricted && sourceRoots.Count == 0)
+        sourceRoots.Add(Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory);
+
     var fileName = Path.GetFileNameWithoutExtension(sourcePath);
     var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
     outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
+    using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
     var compiler = new CompilerDriver();
     var result = await compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
     WriteResult(result, resultFormat);
@@ -93,6 +111,8 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         var scriptArgs = new List<string>();
         var parseRunOptions = true;
+        var restricted = false;
+        var sourceRoots = new List<string>();
 
         for (var i = 2; i < commandLineArgs.Length; i++)
         {
@@ -121,6 +141,21 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
                 continue;
             }
 
+            if (parseRunOptions && value == "--restricted")
+            {
+                restricted = true;
+                continue;
+            }
+
+            if (parseRunOptions && value == "--source-root")
+            {
+                if (i + 1 >= commandLineArgs.Length)
+                    throw new ArgumentException("--source-root requires a directory path.");
+                restricted = true;
+                sourceRoots.Add(Path.GetFullPath(commandLineArgs[++i]));
+                continue;
+            }
+
             parseRunOptions = false;
             scriptArgs.Add(value);
         }
@@ -146,12 +181,16 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
         var sourceDirectory = Path.GetDirectoryName(sourcePath)
             ?? throw new InvalidOperationException("Unable to determine the XPScript source directory.");
 
+        if (restricted && sourceRoots.Count == 0)
+            sourceRoots.Add(sourceDirectory);
+
         tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-");
 
         var executableName = Path.GetFileNameWithoutExtension(sourcePath) +
             (OperatingSystem.IsWindows() ? ".exe" : "");
         var executablePath = Path.Combine(tempRoot, executableName);
 
+        using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
         var compiler = new CompilerDriver();
         var compileResult = await compiler.CompileWithResultAsync(
             sourcePath,
