@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Xml.Serialization;
 using XPScript.Compiler;
 
-if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
+if (args.Length == 0 || args[0] == "--help" || args[0] == "-h")
 {
     Console.WriteLine("""
 XPScript Compiler
