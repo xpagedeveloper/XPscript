@@ -76,30 +76,37 @@ jobs:
         run: |
           $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
           $contender = "./out/file-lock-contender${{ steps.rid.outputs.extension }}"
-          Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin
+          Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin, ./xps-lock-ready.flag
           $process = Start-Process -FilePath $holder -RedirectStandardOutput ./holder.out -RedirectStandardError ./holder.err -PassThru
 
-          $lockObserved = $false
-          $lastContenderResult = @()
-          for ($i = 0; $i -lt 100; $i++) {
-            if ($process.HasExited) { break }
-            $lastContenderResult = & $contender
-            $contenderExit = $LASTEXITCODE
-            if ($contenderExit -ne 0) { throw "Lock contender exited with $contenderExit.`n$lastContenderResult" }
-            if ($lastContenderResult | Where-Object { $_ -like 'LOCK_FAILED Err=70*' }) {
-              $lockObserved = $true
+          $ready = $false
+          for ($i = 0; $i -lt 150; $i++) {
+            if (Test-Path ./xps-lock-ready.flag) {
+              $ready = $true
               break
             }
-            Start-Sleep -Milliseconds 50
+            if ($process.HasExited) {
+              $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
+              $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+              throw "Holder exited before publishing the ready marker.`n$holderResult`n$holderError"
+            }
+            Start-Sleep -Milliseconds 100
+          }
+          if (-not $ready) {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+            throw 'Timed out waiting for holder lock ready marker.'
           }
 
+          $contenderResult = & $contender
+          $contenderExit = $LASTEXITCODE
           $process.WaitForExit()
           $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
           $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+          if ($contenderExit -ne 0) { throw "Lock contender exited with $contenderExit.`n$contenderResult" }
           if ($holderResult -notcontains 'LOCKED' -or $holderResult -notcontains 'UNLOCKED') { throw "Holder did not complete expected lock cycle.`n$holderResult`n$holderError" }
-          if (-not $lockObserved) { throw "No overlapping lock conflict was observed while holder was running.`n$lastContenderResult" }
+          if (-not ($contenderResult | Where-Object { $_ -like 'LOCK_FAILED Err=70*' })) { throw "Second process unexpectedly acquired the locked range or returned the wrong diagnostic.`n$contenderResult" }
 
       - name: Cleanup
         if: always()
         shell: pwsh
-        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./holder.out, ./holder.err
+        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./holder.out, ./holder.err
