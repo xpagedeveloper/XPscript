@@ -4,6 +4,11 @@ using XPScript.Compiler;
 var compilerTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
 var probeRoot = Path.Combine(Directory.GetCurrentDirectory(), ".process-isolation-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
+Directory.CreateDirectory(compilerTempRoot);
+var preexistingWorkspace = Path.Combine(compilerTempRoot, Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(preexistingWorkspace);
+var preexistingSentinel = Path.Combine(preexistingWorkspace, "do-not-reuse.txt");
+await File.WriteAllTextAsync(preexistingSentinel, "existing-workspace");
 
 try
 {
@@ -27,18 +32,23 @@ End Sub
 
     if (failed.Workspace.Equals(succeeded.Workspace, PathComparison()))
         throw new Exception("A later compiler invocation reused writable state from a failed invocation: " + failed.Workspace);
-
+    if (failed.Workspace.Equals(preexistingWorkspace, PathComparison()) || succeeded.Workspace.Equals(preexistingWorkspace, PathComparison()))
+        throw new Exception("Compiler reused a pre-existing GUID workspace directory.");
+    if (!File.Exists(preexistingSentinel) || await File.ReadAllTextAsync(preexistingSentinel) != "existing-workspace")
+        throw new Exception("Compiler modified or removed a pre-existing workspace candidate.");
     if (Directory.Exists(failed.Workspace) || Directory.Exists(succeeded.Workspace))
         throw new Exception("Compiler workspace remained after invocation cleanup.");
 
     Console.WriteLine("FAILED-WORKSPACE=" + Path.GetFileName(failed.Workspace));
     Console.WriteLine("SUCCESS-WORKSPACE=" + Path.GetFileName(succeeded.Workspace));
     Console.WriteLine("FAILED-BUILD-NO-REUSE=OK");
+    Console.WriteLine("EXISTING-WORKSPACE-NO-REUSE=OK");
     Console.WriteLine("PROCESS-STATE-ISOLATION=OK");
 }
 finally
 {
     try { Directory.Delete(probeRoot, recursive: true); } catch { }
+    try { Directory.Delete(preexistingWorkspace, recursive: true); } catch { }
 }
 
 async Task<Observation> RunAndObserveAsync(string sourcePath, string outputPath, bool expectFailure)
