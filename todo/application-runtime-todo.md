@@ -54,6 +54,8 @@ Status:
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on macOS
 - [x] verify executable filename/directory values on Windows, Linux and macOS
 - [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
-- [ ] verify concurrent reads do not alter runtime state
+- [x] verify concurrent reads do not alter runtime state
 
 Cross-platform Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml` for Windows, Ubuntu and macOS.
+
+`Application Runtime Concurrency` compiles the exact generated `ApplicationRuntimeSource.Code` with minimal runtime stubs and performs 20,000 parallel read iterations on Windows, Ubuntu and macOS. It verifies stable argument/path values and confirms that mutating a returned `Application.Args` copy cannot alter runtime-owned argument state.
