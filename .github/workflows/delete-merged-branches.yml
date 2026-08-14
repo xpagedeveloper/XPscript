@@ -2,8 +2,7 @@ name: Delete Merged Branches
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - main
   schedule:
@@ -15,9 +14,6 @@ permissions:
 
 jobs:
   cleanup:
-    if: >-
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -66,6 +62,12 @@ jobs:
             local branch="$1"
             echo "Delete merged branch: $branch"
             if gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"; then
+              return 0
+            fi
+
+            # A concurrent cleanup run may already have removed the branch.
+            if ! gh api "repos/${REPOSITORY}/git/ref/heads/${branch}" >/dev/null 2>&1; then
+              echo "Branch already deleted by another cleanup run: $branch"
               return 0
             fi
 
@@ -124,6 +126,6 @@ jobs:
           echo "Merged branches blocked from deletion: $blocked"
 
           if (( blocked > 0 )); then
-            echo "::error::GitHub repository rules blocked deletion of $blocked merged branch(es). Update the repository ruleset so deletion protection applies to main rather than all branches, then rerun this workflow."
+            echo "::error::GitHub repository rules blocked deletion of $blocked merged branch(es). Check branch protection/rulesets and rerun this workflow."
             exit 1
           fi
