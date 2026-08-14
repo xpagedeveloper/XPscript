@@ -8,10 +8,11 @@ internal static class SourceMapDiagnostics
     {
         if (string.IsNullOrEmpty(message) || map.Count == 0) return message;
 
+        var rootFullPath = SafeFullPath(flattenedSourceName);
         var candidates = new[]
         {
             flattenedSourceName,
-            SafeFullPath(flattenedSourceName),
+            rootFullPath,
             Path.GetFileName(flattenedSourceName)
         }
         .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -34,10 +35,18 @@ internal static class SourceMapDiagnostics
             var fileName = Path.GetFileName(location.SourcePath);
             var position = match.Groups["pos"].Success ? match.Groups["pos"].Value : "1";
             var description = match.Groups["description"].Value.Trim();
+            var locationFullPath = SafeFullPath(location.SourcePath);
+            var isRootSource = string.Equals(
+                locationFullPath,
+                rootFullPath,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-            // Keep the file name in the description as well as the location. CompileResult
-            // currently exposes line/position/description but no dedicated file property.
-            // This guarantees text, JSON and XML diagnostics all identify the include file.
+            // Root-file diagnostics must keep the established description contract unchanged.
+            // For include-file diagnostics, CompileResult currently has no dedicated file field,
+            // so preserve the include filename in description as well as in the source location.
+            if (isRootSource)
+                return $"{fileName}({location.Line},{position}): {description}";
+
             return $"{fileName}({location.Line},{position}): {fileName}: {description}";
         });
     }
