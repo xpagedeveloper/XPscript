@@ -27,8 +27,8 @@ Status:
 - [x] `Application.FileName` alias
 - [x] Application argument values are read-only at the XPScript source surface
 - [x] other Application properties are read-only at the XPScript source surface
-- [>] internal argument storage is copied from .NET `Main(string[] args)`
-- [>] full `Application.Args` array is detached from runtime-owned argument storage
+- [x] internal argument storage is copied from .NET `Main(string[] args)`
+- [x] full `Application.Args` array is detached from runtime-owned argument storage
 
 ## Samples and documentation
 
@@ -60,6 +60,7 @@ Status:
 - [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
 - [x] verify `Application.TempFolder` exactly matches `Application.TempPath` on Windows, Linux and macOS
 - [x] verify concurrent reads do not alter runtime state
+- [x] verify mutating the original .NET argument array after runtime initialization does not alter runtime-owned Application arguments
 - [x] verify `Application.Args` returns a zero-based XPScript String array whose returned copies can be mutated without altering another copy or runtime-owned arguments
 
 Cross-platform Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml` for Windows, Ubuntu and macOS.
@@ -75,3 +76,5 @@ The same workflow verifies that `Application.TempFolder` is a strict alias of `A
 `Application Runtime Concurrency` compiles the exact generated `ApplicationRuntimeSource.Code` with minimal runtime stubs and performs 20,000 parallel read iterations on Windows, Ubuntu and macOS. It verifies stable argument/path values and confirms that mutating a returned `Application.Args` copy cannot alter runtime-owned argument state.
 
 `Application Args Defensive Copy` compiles and runs `samples/application-runtime-args-copy.xps` on Windows, Ubuntu and macOS. It verifies zero-based bounds, String element coercion, independent returned arrays and unchanged `Application.Args(index)` runtime state after mutating a copy.
+
+`Application Runtime Isolation` compiles the exact generated `ApplicationRuntimeSource.Code` with minimal runtime stubs on Windows, Ubuntu and macOS. It mutates the original .NET argument array after `SetArgs` to verify runtime ownership is detached, then mutates one returned `Application.Args` array and verifies the runtime, another existing copy and a fresh copy all retain the original values.
