@@ -27,7 +27,11 @@ internal sealed class ExpandedSourceContext : IDisposable
         if (!string.Equals(Source, source, StringComparison.Ordinal)) return false;
         try
         {
-            return FileSystemPathIdentity.PathsEquivalent(SourcePath, Path.GetFullPath(sourcePath));
+            var identity = new FileSystemPathIdentity();
+            return string.Equals(
+                identity.ComparisonKey(SourcePath),
+                identity.ComparisonKey(Path.GetFullPath(sourcePath)),
+                StringComparison.Ordinal);
         }
         catch
         {
