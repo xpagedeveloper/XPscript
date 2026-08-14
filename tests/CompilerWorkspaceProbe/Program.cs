@@ -2,7 +2,9 @@ using System.Text.RegularExpressions;
 using XPScript.Compiler;
 
 var compilerTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
-var probeRoot = Path.Combine(Path.GetTempPath(), "XPScriptWorkspaceProbe-" + Guid.NewGuid().ToString("N"));
+// Keep source/output under the checked-out repository so macOS /var -> /private/var
+// temp-path indirection does not exercise the separate output-symlink policy here.
+var probeRoot = Path.Combine(Directory.GetCurrentDirectory(), ".workspace-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
 
 try
