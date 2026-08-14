@@ -6,6 +6,7 @@ Sub Main()
     Print "EXEPATH=" & Application.ExecutablePath
     Print "PATH=" & Application.Path
     Print "EXEFILE=" & Application.ExecutableFileName
+    Print "FILENAME=" & Application.FileName
     Print "EXEDIR=" & Application.ExecutableDirectory
     Print "TEMPPATH=" & Application.TempPath
     Print "TEMPFOLDER=" & Application.TempFolder
