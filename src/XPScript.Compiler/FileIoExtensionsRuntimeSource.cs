@@ -8,11 +8,6 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
-    private const int DarwinFUnlock = 0;
-    private const int DarwinFTryLock = 2;
-
-    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lockf", SetLastError = true)]
-    private static extern int DarwinLockF(int fd, int function, long size);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -124,12 +119,6 @@ internal static class XPScriptFileIO
 
     private static void LockRegion(FileStream stream, long offset, long length)
     {
-        if (OperatingSystem.IsMacOS())
-        {
-            DarwinSetRegionLock(stream, offset, length, DarwinFTryLock, "lock");
-            return;
-        }
-
         try
         {
             stream.Lock(offset, length);
@@ -153,12 +142,6 @@ internal static class XPScriptFileIO
 
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
-        if (OperatingSystem.IsMacOS())
-        {
-            DarwinSetRegionLock(stream, offset, length, DarwinFUnlock, "unlock");
-            return;
-        }
-
         try
         {
             stream.Unlock(offset, length);
@@ -177,32 +160,6 @@ internal static class XPScriptFileIO
                 "Unable to unlock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
                 " length " + length.ToString(CultureInfo.InvariantCulture) +
                 ". The current handle may not own the requested lock. " + ex.Message);
-        }
-    }
-
-    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, int function, string operationName)
-    {
-        if (stream.SafeFileHandle.IsInvalid || stream.SafeFileHandle.IsClosed)
-            throw new XPScriptRuntimeException(70, "Unable to " + operationName + " file region because the file handle is closed or invalid.");
-
-        var descriptor = checked((int)stream.SafeFileHandle.DangerousGetHandle());
-        var originalPosition = stream.Position;
-        try
-        {
-            stream.Position = offset;
-            var nativeLength = length == WholeFileLockLength ? 0 : length;
-            if (DarwinLockF(descriptor, function, nativeLength) == 0)
-                return;
-
-            var errno = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
-            throw new XPScriptRuntimeException(70,
-                "Unable to " + operationName + " file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
-                " length " + length.ToString(CultureInfo.InvariantCulture) +
-                " on macOS. Another process or handle may hold an overlapping lock. Native lockf returned errno " + errno.ToString(CultureInfo.InvariantCulture) + ".");
-        }
-        finally
-        {
-            stream.Position = originalPosition;
         }
     }
 
