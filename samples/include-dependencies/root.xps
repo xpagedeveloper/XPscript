@@ -1,0 +1,5 @@
+Include "lib/dependencies.xps"
+
+Sub Main()
+    Print "INCLUDE-DEPS=OK"
+End Sub
