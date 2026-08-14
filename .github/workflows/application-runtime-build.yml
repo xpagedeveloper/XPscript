@@ -2,21 +2,25 @@ name: Application Runtime Compatibility
 
 on:
   push:
-    branches: [main, runtime-development-no-ci, todo-application-tempfolder-alias]
+    branches: [main, runtime-development-no-ci, todo-application-path-alias]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/application-runtime*.xps'
       - 'samples/application-reserved-identifier-error.xps'
       - '.github/workflows/application-runtime-build.yml'
-      - 'todo/application-runtime-todo.md'
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/application-runtime*.xps'
       - 'samples/application-reserved-identifier-error.xps'
       - '.github/workflows/application-runtime-build.yml'
-      - 'todo/application-runtime-todo.md'
   workflow_dispatch:
 
 permissions:
@@ -79,11 +83,13 @@ jobs:
         run: |
           $output = & ./out/application-runtime.exe
           $exePath = ($output | Where-Object { $_ -like 'EXEPATH=*' } | Select-Object -First 1).Substring(8)
+          $pathAlias = ($output | Where-Object { $_ -like 'PATH=*' } | Select-Object -First 1).Substring(5)
           $exeFile = ($output | Where-Object { $_ -like 'EXEFILE=*' } | Select-Object -First 1).Substring(8)
           $exeDir = ($output | Where-Object { $_ -like 'EXEDIR=*' } | Select-Object -First 1).Substring(7)
           $tempPath = ($output | Where-Object { $_ -like 'TEMPPATH=*' } | Select-Object -First 1).Substring(9)
           $tempFolder = ($output | Where-Object { $_ -like 'TEMPFOLDER=*' } | Select-Object -First 1).Substring(11)
           if ([string]::IsNullOrWhiteSpace($exePath) -or -not (Test-Path -LiteralPath $exePath)) { throw 'ExecutablePath is invalid.' }
+          if ($pathAlias -ne $exePath) { throw "Application.Path alias mismatch. ExecutablePath='$exePath' Path='$pathAlias'." }
           if ($exeFile -ne [System.IO.Path]::GetFileName($exePath)) { throw 'ExecutableFileName does not match ExecutablePath.' }
           if ($exeDir -ne [System.IO.Path]::GetDirectoryName($exePath)) { throw 'ExecutableDirectory does not match ExecutablePath.' }
           if ([string]::IsNullOrWhiteSpace($tempPath) -or -not (Test-Path -LiteralPath $tempPath -PathType Container)) { throw 'TempPath is invalid.' }
