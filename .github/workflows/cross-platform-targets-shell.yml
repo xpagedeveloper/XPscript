@@ -11,6 +11,7 @@ on:
       - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
       - 'samples/platform-shell.xps'
       - 'samples/shell-argument-verification.xps'
+      - 'samples/shell-script-routing.xps'
       - 'samples/shell-fixtures/**'
   workflow_dispatch:
 
@@ -116,6 +117,28 @@ jobs:
           if ($lines -notcontains 'ARG1=') { throw 'Shell did not preserve an explicit empty argument.' }
           if ($lines -notcontains 'ARG2=åäö 漢字') { throw 'Shell did not preserve Unicode arguments.' }
           if ($lines -notcontains 'ARG3=semi;dollar$bracket[]') { throw 'Shell did not preserve non-shell special characters.' }
+
+      - name: Verify platform script routing
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./out/shell-cmd.txt, ./out/shell-bat.txt, ./out/shell-sh.txt, ./out/shell-bash.txt
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-script-routing.xps
+          if ($LASTEXITCODE -ne 0) { throw 'Shell script-routing sample failed.' }
+          if ($env:RUNNER_OS -eq 'Windows') {
+            foreach ($file in @('./out/shell-cmd.txt', './out/shell-bat.txt')) {
+              for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $file); $i++) { Start-Sleep -Milliseconds 100 }
+              if (-not (Test-Path -LiteralPath $file)) { throw "Windows Shell routing did not produce $file" }
+            }
+            if ((Get-Content ./out/shell-cmd.txt -Raw).Trim() -ne 'CMD=OK') { throw '.cmd routing failed.' }
+            if ((Get-Content ./out/shell-bat.txt -Raw).Trim() -ne 'BAT=OK') { throw '.bat routing failed.' }
+          } else {
+            foreach ($file in @('./out/shell-sh.txt', './out/shell-bash.txt')) {
+              for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $file); $i++) { Start-Sleep -Milliseconds 100 }
+              if (-not (Test-Path -LiteralPath $file)) { throw "Unix Shell routing did not produce $file" }
+            }
+            if ((Get-Content ./out/shell-sh.txt -Raw).Trim() -ne 'SH=OK') { throw '.sh routing failed.' }
+            if ((Get-Content ./out/shell-bash.txt -Raw).Trim() -ne 'BASH=OK') { throw '.bash routing failed.' }
+          }
 
   cross-compile-supported-rids:
     runs-on: ubuntu-latest
