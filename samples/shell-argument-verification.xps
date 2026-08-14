@@ -5,12 +5,7 @@ Sub Main()
     Dim command As String
 
     q = Chr(34)
-    command = q & Application.Args(0) & q
-    command = command & " " & q & Application.Args(1) & q
-    command = command & " " & q & "space value" & q
-    command = command & " " & q & q
-    command = command & " " & q & "åäö 漢字" & q
-    command = command & " " & q & "semi;dollar$bracket[]" & q
+    command = q & Application.Args(0) & q & " " & q & Application.Args(1) & q & " " & q & "space value" & q & " " & q & q & " " & q & "åäö 漢字" & q & " " & q & "semi;dollar$bracket[]" & q
 
     Print "SHELL-COMMAND=" & command
     Call Shell(command)
