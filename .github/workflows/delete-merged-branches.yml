@@ -50,11 +50,15 @@ jobs:
             [[ "$count" != "0" ]]
           }
 
-          has_merged_pr() {
+          has_merged_pr_for_current_tip() {
             local branch="$1"
+            local current_sha="$2"
             local count
-            count="$(gh api "repos/${REPOSITORY}/pulls?state=closed&base=main&head=${owner}:${branch}&per_page=100" \
-              --jq '[.[] | select(.merged_at != null)] | length')"
+
+            count="$(
+              gh api "repos/${REPOSITORY}/pulls?state=closed&base=main&head=${owner}:${branch}&per_page=100" |
+                jq --arg sha "$current_sha" '[.[] | select(.merged_at != null and .head.sha == $sha)] | length'
+            )"
             [[ "$count" != "0" ]]
           }
 
@@ -72,6 +76,7 @@ jobs:
           deleted=0
           skipped=0
           blocked=0
+          kept=0
 
           while IFS= read -r remote_ref; do
             branch="${remote_ref#origin/}"
@@ -86,14 +91,18 @@ jobs:
               continue
             fi
 
+            current_sha="$(git rev-parse "refs/remotes/origin/${branch}")"
             merged_by_history=false
             merged_by_pr=false
 
+            # Normal/rebase/fast-forward merge: the current branch tip is already in main.
             if git merge-base --is-ancestor "refs/remotes/origin/${branch}" refs/remotes/origin/main; then
               merged_by_history=true
             fi
 
-            if has_merged_pr "$branch"; then
+            # Squash merge: only delete when the branch has not moved since the merged PR.
+            # This prevents deleting a reused branch that received new commits after an older merge.
+            if has_merged_pr_for_current_tip "$branch" "$current_sha"; then
               merged_by_pr=true
             fi
 
@@ -104,10 +113,17 @@ jobs:
                 ((blocked+=1))
               fi
             else
-              echo "Keep unmerged branch: $branch"
+              echo "Keep branch with commits not proven merged into main: $branch"
+              ((kept+=1))
             fi
           done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sort)
 
           echo "Deleted merged branches: $deleted"
           echo "Skipped open-PR branches: $skipped"
+          echo "Kept branches not proven fully merged: $kept"
           echo "Merged branches blocked from deletion: $blocked"
+
+          if (( blocked > 0 )); then
+            echo "::error::GitHub repository rules blocked deletion of $blocked merged branch(es). Update the repository ruleset so deletion protection applies to main rather than all branches, then rerun this workflow."
+            exit 1
+          fi
