@@ -293,15 +293,15 @@ public sealed class CompilerDriver
     private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source)
     {
         var result = new List<CompileDiagnostic>();
-        var sourceLines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var escapedSource = Regex.Escape(sourcePath).Replace("\\\\", @"[\\/]");
-        var sourcePattern = new Regex($@"(?:{escapedSource}|[^\r\n]*\.xps)\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?<desc>[^\r\n]+)", RegexOptions.IgnoreCase);
+        var sourcePattern = new Regex($@"(?<file>{escapedSource}|[^\r\n]*\.xps)\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?<desc>[^\r\n]+)", RegexOptions.IgnoreCase);
 
         foreach (Match match in sourcePattern.Matches(message))
         {
             var line = int.Parse(match.Groups["line"].Value);
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
-            var code = line > 0 && line <= sourceLines.Length ? RedactSourceLine(sourceLines[line - 1]) : "";
+            var diagnosticSource = match.Groups["file"].Value.Trim();
+            var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
             result.Add(CreateDiagnostic(line, pos, Humanize(match.Groups["desc"].Value.Trim()), code, Mark(code, pos)));
         }
         if (result.Count > 0) return result.GroupBy(x => (x.Line, x.Position, x.Description)).Select(x => x.First()).ToList();
@@ -313,6 +313,52 @@ public sealed class CompilerDriver
         }
         if (result.Count == 0) result.Add(CreateDiagnostic(0, 0, Humanize(message.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Compilation failed."), "", ""));
         return result;
+    }
+
+    private static string DiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, int line)
+    {
+        if (line <= 0) return "";
+
+        if (IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath))
+            return SourceLine(rootSource, line);
+
+        try
+        {
+            var resolved = Path.IsPathRooted(diagnosticSourcePath)
+                ? Path.GetFullPath(diagnosticSourcePath)
+                : Path.GetFullPath(Path.Combine(SourceDirectory(rootSourcePath), diagnosticSourcePath));
+
+            if (!Path.GetExtension(resolved).Equals(".xps", StringComparison.OrdinalIgnoreCase) || !File.Exists(resolved))
+                return "";
+
+            return SourceLine(File.ReadAllText(resolved), line);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private static bool IsRootDiagnosticSource(string rootSourcePath, string diagnosticSourcePath)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (string.Equals(rootSourcePath, diagnosticSourcePath, comparison)) return true;
+
+        try
+        {
+            if (Path.IsPathRooted(diagnosticSourcePath))
+                return string.Equals(Path.GetFullPath(rootSourcePath), Path.GetFullPath(diagnosticSourcePath), comparison);
+        }
+        catch { }
+
+        return !Path.IsPathRooted(diagnosticSourcePath)
+            && string.Equals(Path.GetFileName(rootSourcePath), Path.GetFileName(diagnosticSourcePath), comparison);
+    }
+
+    private static string SourceLine(string source, int line)
+    {
+        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        return line > 0 && line <= lines.Length ? RedactSourceLine(lines[line - 1]) : "";
     }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
