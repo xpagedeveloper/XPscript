@@ -86,13 +86,21 @@ This is the OS/user temporary directory, not the compiler's private build worksp
 
 ## CommandLine
 
-`Application.CommandLine` returns the command-line arguments joined as text.
+`Application.CommandLine` returns the runtime argument values joined with one space.
 
 ```xpscript
 Print Application.CommandLine
 ```
 
-Use `Application.Args(index)` when exact argument boundaries matter. `Application.CommandLine` is a convenience representation and does not preserve the original quoting characters used by the launching shell.
+Examples:
+
+- no arguments -> empty string
+- `one` -> `one`
+- arguments `first`, `two words`, `ÅÄÖ-漢字`, and an empty final argument -> `first two words ÅÄÖ-漢字 `
+
+`Application.CommandLine` is intentionally a convenience representation. It does **not** reconstruct quoting characters removed by the launching shell and it does not preserve exact argument boundaries. In the example above, the text does not reveal whether `two words` was one argument or two separate arguments, and the final empty argument is represented only by the trailing separator.
+
+Use `Application.Args(index)` or the defensive-copy `Application.Args` array whenever exact argument boundaries matter.
 
 ## Read-only behavior
 
@@ -118,4 +126,4 @@ The sample prints executable metadata and enumerates every command-line argument
 
 ## Verification status
 
-The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
+The Application runtime is continuously verified by `.github/workflows/application-runtime-build.yml` on Windows, Ubuntu and macOS. The workflow compiles and executes the runtime sample, checks command-line argument handling including spaces, empty strings and Unicode, verifies the documented lossy `Application.CommandLine` representation, validates executable and temp-path metadata, verifies error 9 for invalid argument indexes, and verifies the read-only compiler rules.
