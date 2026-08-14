@@ -1,0 +1,104 @@
+name: Cross Platform Shell
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-shell.yml'
+      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - 'samples/shell-argument-verification.xps'
+      - 'samples/shell-script-routing.xps'
+      - 'samples/shell-fixtures/**'
+      - 'tests/ShellArgumentCapture/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $extension = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "extension=$extension" >> $env:GITHUB_OUTPUT
+
+      - name: Verify Shell structured arguments
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $helperDir = Join-Path $PWD 'out/shell-helper'
+          dotnet publish ./tests/ShellArgumentCapture/ShellArgumentCapture.csproj -c Release -r '${{ steps.rid.outputs.rid }}' --self-contained false -o $helperDir
+          if ($LASTEXITCODE -ne 0) { throw 'Shell argv helper publish failed.' }
+          $helper = (Resolve-Path (Join-Path $helperDir ('ShellArgumentCapture${{ steps.rid.outputs.extension }}'))).Path
+          $capture = Join-Path $PWD 'out/shell-args.txt'
+          Remove-Item -Force -ErrorAction SilentlyContinue $capture
+
+          $q = '"'
+          $command = $q + $helper + $q + ' ' + $q + $capture + $q + ' ' + $q + 'space value' + $q + ' ' + $q + $q + ' ' + $q + 'åäö 漢字' + $q + ' ' + $q + 'semi;dollar$bracket[]' + $q
+          Write-Host "COMMAND=$command"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-argument-verification.xps -- $command
+          if ($LASTEXITCODE -ne 0) { throw 'Shell argument verification script failed to launch.' }
+
+          for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $capture); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path -LiteralPath $capture)) { throw 'Shell argument capture file was not produced.' }
+          $lines = Get-Content -LiteralPath $capture -Encoding UTF8
+          Write-Host ($lines -join "`n")
+          if ($lines -notcontains 'COUNT=4') { throw "Shell did not preserve four structured arguments.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG0=space value') { throw "Shell did not preserve an argument containing spaces.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG1=') { throw "Shell did not preserve an explicit empty argument.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG2=åäö 漢字') { throw "Shell did not preserve Unicode arguments.`n$($lines -join "`n")" }
+          if ($lines -notcontains 'ARG3=semi;dollar$bracket[]') { throw "Shell did not preserve non-shell special characters.`n$($lines -join "`n")" }
+
+      - name: Verify platform script routing
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./out/shell-cmd.txt, ./out/shell-bat.txt, ./out/shell-sh.txt, ./out/shell-bash.txt, ./out/shell-ps1.txt
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/shell-script-routing.xps
+          if ($LASTEXITCODE -ne 0) { throw 'Shell script-routing sample failed.' }
+
+          if ($env:RUNNER_OS -eq 'Windows') {
+            foreach ($file in @('./out/shell-cmd.txt', './out/shell-bat.txt')) {
+              for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $file); $i++) { Start-Sleep -Milliseconds 100 }
+              if (-not (Test-Path -LiteralPath $file)) { throw "Windows Shell routing did not produce $file" }
+            }
+            if ((Get-Content ./out/shell-cmd.txt -Raw).Trim() -ne 'CMD=OK') { throw '.cmd routing failed.' }
+            if ((Get-Content ./out/shell-bat.txt -Raw).Trim() -ne 'BAT=OK') { throw '.bat routing failed.' }
+          } else {
+            foreach ($file in @('./out/shell-sh.txt', './out/shell-bash.txt')) {
+              for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath $file); $i++) { Start-Sleep -Milliseconds 100 }
+              if (-not (Test-Path -LiteralPath $file)) { throw "Unix Shell routing did not produce $file" }
+            }
+            if ((Get-Content ./out/shell-sh.txt -Raw).Trim() -ne 'SH=OK') { throw '.sh routing failed.' }
+            if ((Get-Content ./out/shell-bash.txt -Raw).Trim() -ne 'BASH=OK') { throw '.bash routing failed.' }
+          }
+
+          for ($i = 0; $i -lt 100 -and -not (Test-Path -LiteralPath ./out/shell-ps1.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path -LiteralPath ./out/shell-ps1.txt)) { throw 'PowerShell routing did not produce its marker.' }
+          if ((Get-Content ./out/shell-ps1.txt -Raw).Trim() -ne 'PS1=OK') { throw '.ps1 routing failed.' }
