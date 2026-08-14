@@ -11,18 +11,18 @@ Status:
 
 ## Goals
 
-- [>] every compiler invocation gets a unique GUID build workspace
+- [x] every compiler invocation gets a unique GUID build workspace
 - [>] concurrent compiler invocations do not intentionally share generated source, project or publish paths
-- [>] generated source and project files use predictable names only inside a unique invocation directory
+- [x] generated source and project files use predictable names only inside a unique invocation directory
 - [>] cleanup targets only the workspace created by the current invocation
 - [>] failed builds do not intentionally reuse writable workspace state in later builds
 
 ## Workspace creation
 
-- [>] GUID-based invocation identifier
-- [>] workspaces are created beneath `<Path.GetTempPath()>/XPScript/<guid>/`
-- [>] `Path.GetTempPath()` is only the root; generated files are not written directly into a fixed shared build directory
-- [>] generated project/source/publish paths are invocation-local
+- [x] GUID-based invocation identifier
+- [x] workspaces are created beneath `<Path.GetTempPath()>/XPScript/<guid>/`
+- [x] `Path.GetTempPath()` is only the root; generated files are not written directly into a fixed shared build directory
+- [x] generated project/source/publish paths are invocation-local
 - [>] compiler invokes `dotnet publish` with `WorkingDirectory` set to the invocation workspace
 - [>] process-temp, dotnet-home and NuGet package directories are invocation-local children
 - [ ] consider separate explicit `src`, `obj`, `bin`, `publish` and `logs` children if later tooling requires them
@@ -101,3 +101,5 @@ Status:
 - [ ] test parallel Windows/Linux/macOS compiler invocations
 - [ ] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path tricks
 - [ ] force staged-publication failures and verify old executable/dependencies are restored
+
+`Compiler Workspace Isolation` runs two real compiler invocations on Windows, Ubuntu and macOS. It observes each live workspace beneath `<Path.GetTempPath()>/XPScript/`, requires a unique 32-hex-character GUID directory for each invocation, verifies `Generated.csproj`, `Program.cs` and `publish` stay beneath that invocation directory, and verifies the workspace is removed after successful compilation.
