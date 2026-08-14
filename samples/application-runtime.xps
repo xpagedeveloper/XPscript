@@ -4,6 +4,7 @@ Sub Main()
     Dim i As Integer
 
     Print "EXEPATH=" & Application.ExecutablePath
+    Print "PATH=" & Application.Path
     Print "EXEFILE=" & Application.ExecutableFileName
     Print "EXEDIR=" & Application.ExecutableDirectory
     Print "TEMPPATH=" & Application.TempPath
