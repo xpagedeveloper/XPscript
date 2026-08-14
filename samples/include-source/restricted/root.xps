@@ -1,0 +1,5 @@
+Include "../outside-restricted.xps"
+
+Sub Main()
+    Print RestrictedOutsideMessage()
+End Sub
