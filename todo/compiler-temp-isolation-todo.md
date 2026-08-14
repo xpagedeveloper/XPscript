@@ -30,16 +30,16 @@ Status:
 
 ## Permissions and symlinks
 
-- [>] Windows invocation/staging directories remove inherited ACLs and grant the current Windows account full control through `icacls.exe`; child files inherit this restricted ACL
-- [>] Unix invocation and staging directories are hardened to user-only `0700` semantics where `UnixFileMode` is supported
-- [>] generated/staged temporary files are hardened to user-only read/write `0600` semantics where supported
-- [>] project-local managed/native dependency paths reject symlink/reparse-point resolution outside the source tree
-- [>] compiler cleanup refuses to recursively clean a workspace root that is itself a symlink/reparse point
-- [>] cleanup enumerates descendants and deletes symlink/reparse entries without recursively following their targets
-- [>] generated source/project files are not intentionally world-readable after platform-specific hardening
-- [ ] Windows ACL behavior must be verified with local, domain and service accounts
-- [ ] Windows junction/symlink behavior must be verified on a real Windows filesystem
-- [ ] Linux/macOS symlink behavior must be verified on real target filesystems
+- [x] Windows invocation/staging directories remove inherited ACLs and grant the current Windows security principal full control through `icacls.exe`; the grant uses the current user SID so it is independent of local/domain/service account naming
+- [x] Unix invocation and staging directories are hardened to user-only `0700` semantics where `UnixFileMode` is supported
+- [x] generated/staged temporary files are hardened to user-only read/write `0600` semantics where supported
+- [x] project-local managed/native dependency paths reject symlink/reparse-point resolution outside the source tree
+- [x] compiler cleanup refuses to recursively clean a workspace root that is itself a symlink/reparse point
+- [x] cleanup enumerates descendants and deletes symlink/reparse entries without recursively following their targets
+- [x] generated source/project files are not intentionally world-readable after platform-specific hardening
+- [x] Windows ACL behavior is account-type neutral by granting the current SID instead of an account name; real Windows filesystem verification checks the effective SID grant
+- [x] Windows junction/reparse behavior is verified on the GitHub Windows filesystem
+- [x] Linux/macOS symlink behavior is verified on real GitHub runner filesystems
 
 ## Output safety
 
@@ -64,11 +64,11 @@ Status:
 - [>] `Reference` and `ReferenceNative` reject rooted paths
 - [>] application-local native dependency paths reject rooted paths
 - [>] lexical `..` escape outside the source directory is rejected
-- [>] each existing dependency path component is checked for symlink/reparse-point resolution
-- [>] links resolving outside the XPScript source directory are rejected
-- [>] unresolved reparse points/links are rejected rather than trusted
+- [x] each existing dependency path component is checked for symlink/reparse-point resolution
+- [x] links resolving outside the XPScript source directory are rejected
+- [x] unresolved/broken reparse points and links are rejected rather than trusted
 - [ ] review TOCTOU race between dependency validation and staging copy
-- [ ] add filesystem-level regression setup for project-local symlink escape when execution is re-enabled
+- [x] filesystem-level regression setup verifies project-local symlink escape rejection on Windows/Linux/macOS
 
 ## Process execution
 
@@ -87,7 +87,7 @@ Status:
 
 - [x] cleanup happens in `finally` after success or failure
 - [x] cleanup only accepts a descendant of the compiler XPScript temp root
-- [>] cleanup does not recursively follow symlink/reparse-point descendants
+- [x] cleanup does not recursively follow symlink/reparse-point descendants
 - [x] cleanup failure is swallowed so it does not mask the original compiler error
 - [x] `--keep-temp` is intentionally not exposed in the production CLI; debugging must not disable automatic isolated-workspace cleanup
 - [ ] define age-based cleanup of abandoned compiler workspaces from crashed processes without touching active ones
@@ -107,3 +107,5 @@ Status:
 `Compiler Parallel Isolation` runs 10 real compiler invocations concurrently on Windows, Ubuntu and macOS. All invocations intentionally read the same root `.xps` source and the same include files, which are allowed to be shared read-only inputs, while each invocation must use a distinct compiler-owned GUID workspace and distinct output path. The test requires 10 unique workspaces, invocation-local `Generated.csproj`, `Program.cs` and `publish` state, successful distinct outputs and cleanup of every observed workspace.
 
 `Compiler Process Isolation` forces a real post-publish failure followed by a successful compilation on Windows, Ubuntu and macOS. It verifies that failed and successful invocations use different GUID workspaces, that a pre-existing GUID-shaped workspace is never reused or modified, that `process-temp`, `dotnet-home` and `nuget-packages` are invocation-local, that the SDK resolves and publishes successfully, and that both successful and failed invocation workspaces are removed by `finally` cleanup.
+
+`Compiler Permission Symlink` verifies Windows SID-based ACL hardening, Unix `0700` directories and `0600` files, project-local dependency link escape rejection, broken-link rejection, linked-workspace-root refusal, and non-following cleanup of symlink/junction descendants on Windows, Ubuntu and macOS.
