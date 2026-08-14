@@ -1,6 +1,15 @@
 Sub Main()
+    Dim Result As String
+
     Print "PLATFORM-CALL=" & Platform()
     Print "PLATFORM-BARE=" & Platform
+
+    Result = Shell("dotnet --version")
+    If Len(Result) > 0 Then
+        Print "SHELL-CAPTURE=OK"
+    Else
+        Print "SHELL-CAPTURE=EMPTY"
+    End If
 
     If Platform() = "Windows" Then
         Call Shell("./shell-args-helper.cmd \"space value\" \"\" \"brackets-$[]{}\"")
