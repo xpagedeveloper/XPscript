@@ -9,6 +9,7 @@ on:
       - 'samples/platform-shell.xps'
       - 'samples/file-lock-holder.xps'
       - 'samples/file-lock-contender.xps'
+      - 'samples/file-lock-platform-support.xps'
   workflow_dispatch:
 
 permissions:
@@ -61,6 +62,7 @@ jobs:
           if ($result -notcontains 'PLATFORM=${{ steps.rid.outputs.platform }}') { throw "Unexpected Platform() result.`n$result" }
 
       - name: Compile cross-process lock fixtures
+        if: runner.os != 'macOS'
         shell: pwsh
         run: |
           $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
@@ -72,6 +74,7 @@ jobs:
           if ($env:RUNNER_OS -ne 'Windows') { chmod +x $holder $contender }
 
       - name: Verify cross-process Lock and Unlock
+        if: runner.os != 'macOS'
         shell: pwsh
         run: |
           $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
@@ -106,7 +109,19 @@ jobs:
           if ($holderResult -notcontains 'LOCKED' -or $holderResult -notcontains 'UNLOCKED') { throw "Holder did not complete expected lock cycle.`n$holderResult`n$holderError" }
           if (-not ($contenderResult | Where-Object { $_ -like 'LOCK_FAILED Err=70*' })) { throw "Second process unexpectedly acquired the locked range or returned the wrong diagnostic.`n$contenderResult" }
 
+      - name: Verify macOS Lock limitation is explicit
+        if: runner.os == 'macOS'
+        shell: pwsh
+        run: |
+          $exe = './out/file-lock-platform-support'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-lock-platform-support.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-lock-platform-support.xps compilation failed.' }
+          chmod +x $exe
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "macOS Lock diagnostic fixture exited with $LASTEXITCODE.`n$result" }
+          if (-not ($result | Where-Object { $_ -like 'LOCK_UNSUPPORTED Err=5*' })) { throw "Expected explicit macOS Lock unsupported diagnostic was not returned.`n$result" }
+
       - name: Cleanup
         if: always()
         shell: pwsh
-        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./holder.out, ./holder.err
+        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./xps-lock-platform.bin, ./holder.out, ./holder.err
