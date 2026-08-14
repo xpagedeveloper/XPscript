@@ -1,0 +1,200 @@
+name: Direct Script Execution
+
+on:
+  push:
+    branches: [todo-direct-script-execution]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/direct-run.xps'
+      - 'samples/direct-run-runtime-error.xps'
+      - 'samples/direct-run-concurrent.xps'
+      - '.github/workflows/direct-script-execution.yml'
+      - 'todo/direct-script-execution-todo.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/direct-run.xps'
+      - 'samples/direct-run-runtime-error.xps'
+      - 'samples/direct-run-concurrent.xps'
+      - '.github/workflows/direct-script-execution.yml'
+      - 'todo/direct-script-execution-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direct-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Run XPScript directly
+        shell: pwsh
+        run: |
+          $expectedDirectory = (Resolve-Path ./samples).Path
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps first 'second value'
+          if ($LASTEXITCODE -ne 0) { throw "Direct run failed with exit code $LASTEXITCODE.`n$output" }
+          if ($output -notcontains 'ARGCOUNT=2') { throw "Argument count was not forwarded.`n$output" }
+          if ($output -notcontains 'ARG0=first') { throw "First argument was not forwarded.`n$output" }
+          if ($output -notcontains 'ARG1=second value') { throw "Second argument was not forwarded unchanged.`n$output" }
+          if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Direct run working directory was not the source directory.`n$output" }
+          if ($output -notcontains 'RELATIVE=RELATIVE-FILE-OK') { throw "Relative file access did not resolve from the script directory.`n$output" }
+          if (Test-Path ./samples/direct-run-relative.txt) { throw 'Relative direct-run test file was not removed.' }
+
+      - name: Verify Unicode paths and temporary cleanup
+        shell: pwsh
+        run: |
+          $xpsTempRoot = Join-Path ([IO.Path]::GetTempPath()) 'XPScript'
+          $before = @()
+          if (Test-Path $xpsTempRoot) {
+            $before = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+
+          $unicodeDirectory = Join-Path $env:RUNNER_TEMP 'xps åäö 漢字 path'
+          New-Item -ItemType Directory -Force $unicodeDirectory | Out-Null
+          $unicodeSource = Join-Path $unicodeDirectory 'direct run å.xps'
+          Copy-Item ./samples/direct-run.xps $unicodeSource
+          $expectedDirectory = (Resolve-Path $unicodeDirectory).Path
+
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $unicodeSource 'åäö 漢字' 'value with spaces'
+          if ($LASTEXITCODE -ne 0) { throw "Unicode path direct run failed.`n$output" }
+          if ($output -notcontains 'ARG0=åäö 漢字') { throw "Unicode argument was not forwarded unchanged.`n$output" }
+          if ($output -notcontains 'ARG1=value with spaces') { throw "Spaced argument was not forwarded unchanged.`n$output" }
+          if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Unicode source directory was not used as working directory.`n$output" }
+          if ($output -notcontains 'RELATIVE=RELATIVE-FILE-OK') { throw "Relative file access failed from Unicode source directory.`n$output" }
+          if (Test-Path (Join-Path $unicodeDirectory 'direct-run-relative.txt')) { throw 'Unicode-path relative test file was not removed.' }
+
+          $after = @()
+          if (Test-Path $xpsTempRoot) {
+            $after = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+          $leaked = @($after | Where-Object { $_ -notin $before })
+          if ($leaked.Count -gt 0) { throw "Direct run temporary directories were not cleaned: $($leaked -join ', ')" }
+
+      - name: Verify option terminator forwards compiler-like argument
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps -- --runtime --help
+          if ($LASTEXITCODE -ne 0) { throw "Direct run with option terminator failed.`n$output" }
+          if ($output -notcontains 'ARGCOUNT=2') { throw "Option terminator argument count failed.`n$output" }
+          if ($output -notcontains 'ARG0=--runtime') { throw "Compiler-like script argument was consumed by the compiler.`n$output" }
+          if ($output -notcontains 'ARG1=--help') { throw "Help-like script argument was consumed by the compiler.`n$output" }
+
+      - name: Verify child exit code propagation
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $normalExecutable = "./out/direct-run-runtime-error$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/direct-run-runtime-error.xps -o $normalExecutable --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime error regression sample did not compile.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $normalExecutable }
+
+          & $normalExecutable *> $null
+          $expectedExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($expectedExit -eq 0) { throw 'Runtime error regression sample unexpectedly exited successfully.' }
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run-runtime-error.xps *> $null
+          $directExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($directExit -ne $expectedExit) { throw "Direct run did not propagate the child exit code. Expected $expectedExit, got $directExit." }
+
+      - name: Verify concurrent direct executions are isolated
+        shell: pwsh
+        run: |
+          $xpsTempRoot = Join-Path ([IO.Path]::GetTempPath()) 'XPScript'
+          $before = @()
+          if (Test-Path $xpsTempRoot) {
+            $before = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+
+          $out1 = Join-Path $env:RUNNER_TEMP 'direct-run-concurrent-1.out'
+          $err1 = Join-Path $env:RUNNER_TEMP 'direct-run-concurrent-1.err'
+          $out2 = Join-Path $env:RUNNER_TEMP 'direct-run-concurrent-2.out'
+          $err2 = Join-Path $env:RUNNER_TEMP 'direct-run-concurrent-2.err'
+          Remove-Item $out1,$err1,$out2,$err2 -Force -ErrorAction SilentlyContinue
+
+          $arguments = @('run','--project','./src/XPScript.Compiler/XPScript.Compiler.csproj','-c','Release','--no-build','--','run','./samples/direct-run-concurrent.xps')
+          $p1 = Start-Process dotnet -ArgumentList $arguments -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
+          $p2 = Start-Process dotnet -ArgumentList $arguments -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
+
+          $observedTwo = $false
+          for ($i = 0; $i -lt 300; $i++) {
+            if (Test-Path $xpsTempRoot) {
+              $current = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+              $new = @($current | Where-Object { $_ -notin $before })
+              if ($new.Count -ge 2) {
+                $observedTwo = $true
+                break
+              }
+            }
+            if ($p1.HasExited -and $p2.HasExited) { break }
+            Start-Sleep -Milliseconds 100
+          }
+
+          $p1.WaitForExit()
+          $p2.WaitForExit()
+          if ($p1.ExitCode -ne 0 -or $p2.ExitCode -ne 0) {
+            $details = "P1=$($p1.ExitCode) P2=$($p2.ExitCode)`n$(Get-Content $err1 -Raw -ErrorAction SilentlyContinue)`n$(Get-Content $err2 -Raw -ErrorAction SilentlyContinue)"
+            throw "Concurrent direct execution failed.`n$details"
+          }
+          if (-not $observedTwo) { throw 'Two distinct direct-run temporary directories were not observed during concurrent execution.' }
+          if ((Get-Content $out1 -Raw) -notmatch 'CONCURRENT-DONE' -or (Get-Content $out2 -Raw) -notmatch 'CONCURRENT-DONE') {
+            throw 'Concurrent direct-run applications did not both complete.'
+          }
+
+          $after = @()
+          if (Test-Path $xpsTempRoot) {
+            $after = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+          $leaked = @($after | Where-Object { $_ -notin $before })
+          if ($leaked.Count -gt 0) { throw "Concurrent direct execution left temporary directories: $($leaked -join ', ')" }
+
+      - name: Verify compile diagnostics and cross-target rejection
+        shell: pwsh
+        run: |
+          $xpsTempRoot = Join-Path ([IO.Path]::GetTempPath()) 'XPScript'
+          $before = @()
+          if (Test-Path $xpsTempRoot) {
+            $before = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+
+          $badSource = Join-Path $env:RUNNER_TEMP 'direct-run-error.xps'
+          Set-Content -Path $badSource -Value 'Sub Main()' -Encoding utf8
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $badSource
+          $compileExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compileExit -ne 2) { throw "Expected compile failure exit code 2, got $compileExit." }
+
+          $after = @()
+          if (Test-Path $xpsTempRoot) {
+            $after = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+          $leaked = @($after | Where-Object { $_ -notin $before })
+          if ($leaked.Count -gt 0) { throw "Compile failure left direct-run temporary directories: $($leaked -join ', ')" }
+
+          if ($env:RUNNER_OS -eq 'Windows') { $wrongRid = 'linux-x64' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $wrongRid = 'win-x64' }
+          else { $wrongRid = 'win-x64' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps --runtime $wrongRid
+          $targetExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($targetExit -ne 1) { throw "Expected cross-target direct-run rejection exit code 1, got $targetExit." }

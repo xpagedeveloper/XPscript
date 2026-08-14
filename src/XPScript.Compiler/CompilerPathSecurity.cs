@@ -36,6 +36,20 @@ internal static class CompilerPathSecurity
         return resolved;
     }
 
+    public static string CreateOwnedTemporaryDirectory(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+            throw new ArgumentException("Temporary directory prefix must not be empty.", nameof(prefix));
+
+        var logicalRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        Directory.CreateDirectory(logicalRoot);
+        var physicalRoot = CanonicalizeExistingDirectory(logicalRoot);
+        var directory = Path.Combine(physicalRoot, prefix + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        HardenTemporaryDirectory(directory);
+        return directory;
+    }
+
     public static void HardenTemporaryDirectory(string path)
     {
         if (OperatingSystem.IsWindows())
@@ -60,7 +74,6 @@ internal static class CompilerPathSecurity
 
     public static void HardenTemporaryFile(string path)
     {
-        // Windows files inherit the restricted ACL from the compiler-owned directory.
         if (OperatingSystem.IsWindows()) return;
 
         try
@@ -76,8 +89,10 @@ internal static class CompilerPathSecurity
 
     public static void DeleteOwnedTemporaryDirectory(string path)
     {
-        var full = Path.GetFullPath(path);
-        var tempRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "XPScript"));
+        var full = CanonicalizeExistingDirectory(Path.GetFullPath(path));
+        var logicalTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        if (!Directory.Exists(logicalTempRoot)) return;
+        var tempRoot = CanonicalizeExistingDirectory(logicalTempRoot);
         EnsureLexicallyContained(tempRoot, full, "Compiler temporary workspace", full);
 
         if (!Directory.Exists(full)) return;
@@ -87,6 +102,40 @@ internal static class CompilerPathSecurity
             throw new CompilerException("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
 
         DeleteDirectoryWithoutFollowingLinks(rootInfo);
+    }
+
+    private static string CanonicalizeExistingDirectory(string path)
+    {
+        var full = Path.GetFullPath(path);
+        if (OperatingSystem.IsWindows() || !Directory.Exists(full))
+            return full;
+
+        var root = Path.GetPathRoot(full);
+        if (string.IsNullOrWhiteSpace(root))
+            return full;
+
+        var current = root;
+        var relative = Path.GetRelativePath(root, full);
+        foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            var info = new DirectoryInfo(current);
+            if (!info.Exists || !IsLinkOrReparsePoint(info))
+                continue;
+
+            try
+            {
+                var target = info.ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+                if (!string.IsNullOrWhiteSpace(target))
+                    current = Path.GetFullPath(target);
+            }
+            catch (IOException ex)
+            {
+                throw new CompilerException("Unable to resolve compiler temporary directory path: " + ex.Message);
+            }
+        }
+
+        return Path.GetFullPath(current);
     }
 
     private static void HardenWindowsDirectoryAcl(string path)

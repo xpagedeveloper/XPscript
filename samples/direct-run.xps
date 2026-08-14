@@ -1,0 +1,23 @@
+Option Declare
+
+Sub Main()
+    Dim f As Integer
+    Dim text As String
+
+    Print "ARGCOUNT=" & CStr(Application.ArgCount)
+    If Application.ArgCount > 0 Then Print "ARG0=" & Application.Args(0)
+    If Application.ArgCount > 1 Then Print "ARG1=" & Application.Args(1)
+    Print "CWD=" & CurDir()
+
+    f = FreeFile()
+    Open "direct-run-relative.txt" For Output As #f
+    Print #f, "RELATIVE-FILE-OK"
+    Close #f
+
+    f = FreeFile()
+    Open "direct-run-relative.txt" For Input As #f
+    Line Input #f, text
+    Close #f
+    Print "RELATIVE=" & text
+    Kill "direct-run-relative.txt"
+End Sub
