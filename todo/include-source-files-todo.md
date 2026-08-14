@@ -29,7 +29,7 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] missing include files produce a clear compiler diagnostic with containing source file and source line
 - [x] syntax/type errors inside included files report the included file name plus correct physical line/position counted from line 1 of that include file
 - [x] `code` / `markedCode` for an included-file diagnostic use the included physical source line and caret position rather than the same-numbered line from the root source
-- [ ] `Erl` / source-line tracking must remain correct for included files
+- [x] `Erl` / source-line tracking remains correct for included files and reports the include-local physical source line
 - [x] downstream compiler diagnostics that carry an XPScript source location are remapped through the multi-file include source map before being returned
 
 ## Security and build behavior
@@ -53,12 +53,13 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] indirect include cycle diagnostic with include chain
 - [x] included-file compiler error reports correct source file and physical source line in text, JSON, XML and direct `run`
 - [x] included-file compiler error returns `code` and `markedCode` from the included physical source file
+- [x] included-file runtime error reports include-local `Erl` for compiled execution and direct `run`
 - [x] paths containing spaces and Unicode
 - [x] Windows, Linux and macOS path-resolution regression tests
-- [x] Windows, Linux and macOS include diagnostic source-map regression tests
+- [x] Windows, Linux and macOS include diagnostic/source-line/Erl source-map regression tests
 
 ## Verification
 
 The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, missing includes and direct/indirect cycle diagnostics.
 
-The `Include Source Mapping` workflow additionally verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — and that `code` / `markedCode` come from the physical include file in text, JSON, XML and direct-run compiler output on Windows, Linux and macOS.
+The `Include Source Mapping` workflow verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — and that `code` / `markedCode` come from the physical include file in text, JSON, XML and direct-run compiler output. It also verifies that a runtime error physically located on line 5 of an included file reports `Erl=5` in both compiled execution and direct `run` on Windows, Linux and macOS.
