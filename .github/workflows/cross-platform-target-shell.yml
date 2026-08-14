@@ -88,9 +88,8 @@ jobs:
           $expected = "./out/default/default-target${{ steps.target.outputs.extension }}"
           if (-not (Test-Path $expected -PathType Leaf)) { throw "Default output name/extension is wrong: $expected" }
           if ($env:RUNNER_OS -ne 'Windows') {
-            chmod +x $expected
             & $expected | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw 'Default Unix artifact was not executable.' }
+            if ($LASTEXITCODE -ne 0) { throw 'Default Unix artifact was not executable directly after compilation.' }
           }
 
       - name: Verify explicit --runtime framework-dependent artifact
@@ -99,9 +98,8 @@ jobs:
           $exe = "./out/runtime-fd${{ steps.target.outputs.extension }}"
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw '--runtime framework-dependent compilation failed.' }
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
           $result = & $exe
-          if ($LASTEXITCODE -ne 0) { throw "Framework-dependent artifact failed.`n$result" }
+          if ($LASTEXITCODE -ne 0) { throw "Framework-dependent artifact failed or was not executable.`n$result" }
           if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Platform() mismatch.`n$result" }
           if ($result -notcontains 'PLATFORM-BARE=${{ steps.target.outputs.platform }}') { throw "Bare Platform mismatch.`n$result" }
           if ($result -notcontains 'SHELL-CAPTURE=OK') { throw "Direct executable stdout was not returned by Shell().`n$result" }
@@ -142,9 +140,8 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --rid '${{ steps.target.outputs.rid }}' -o $exe
           if ($LASTEXITCODE -ne 0) { throw '--rid self-contained compilation failed.' }
           if (-not (Test-Path $exe -PathType Leaf)) { throw 'Self-contained executable was not produced.' }
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
           $result = & $exe
-          if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact failed.`n$result" }
+          if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact failed or was not executable.`n$result" }
           if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Self-contained Platform() mismatch.`n$result" }
           if ($result -notcontains 'SHELL-CAPTURE=OK') { throw "Self-contained Shell stdout capture failed.`n$result" }
           if ($result -notcontains 'SHELL-BUILTIN=OK') { throw "Self-contained Shell built-in capture failed.`n$result" }
