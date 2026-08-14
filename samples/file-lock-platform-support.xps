@@ -1,0 +1,19 @@
+' Verifies the platform contract for Lock when the runtime cannot provide OS byte-range locking.
+Sub Main()
+    Dim f As Integer
+    f = FreeFile
+
+    Open "xps-lock-platform.bin" For Binary As #f
+    On Error GoTo LockUnsupported
+
+    Lock #f, 1 To 64
+    Unlock #f, 1 To 64
+    Close #f
+    Print "LOCK_SUPPORTED"
+    Exit Sub
+
+LockUnsupported:
+    Print "LOCK_UNSUPPORTED Err=" & CStr(Err) & " Error=" & Error$
+    On Error GoTo 0
+    Close #f
+End Sub

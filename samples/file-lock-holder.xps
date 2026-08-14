@@ -2,10 +2,17 @@
 ' Run together with file-lock-contender.xps against the same working directory.
 Sub Main()
     Dim f As Integer
+    Dim ready As Integer
     f = FreeFile
 
     Open "xps-lock-test.bin" For Binary As #f
     Lock #f, 1 To 64
+
+    ready = FreeFile
+    Open "xps-lock-ready.flag" For Output As #ready
+    Print #ready, "LOCKED"
+    Close #ready
+
     Print "LOCKED"
     Sleep 5
     Unlock #f, 1 To 64
