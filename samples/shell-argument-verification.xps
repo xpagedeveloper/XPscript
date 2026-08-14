@@ -12,6 +12,7 @@ Sub Main()
     command = command & " " & q & "åäö 漢字" & q
     command = command & " " & q & "semi;dollar$bracket[]" & q
 
+    Print "SHELL-COMMAND=" & command
     Call Shell(command)
     Print "SHELL-ARGUMENTS-LAUNCHED"
 End Sub
