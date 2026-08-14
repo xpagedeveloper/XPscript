@@ -3,8 +3,22 @@ name: Escaped Quote Regression
 on:
   push:
     branches: [todo-escaped-quote-regression]
+    paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'samples/escaped-quotes.xps'
+      - 'samples/escaped-quote-diagnostic-error.xps'
+      - '.github/workflows/escaped-quote-regression.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'samples/escaped-quotes.xps'
+      - 'samples/escaped-quote-diagnostic-error.xps'
+      - '.github/workflows/escaped-quote-regression.yml'
   workflow_dispatch:
 
 permissions:
