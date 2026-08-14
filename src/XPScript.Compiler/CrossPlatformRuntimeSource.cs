@@ -18,15 +18,17 @@ internal static class XPCrossPlatformRuntime
     {
         var raw = XPScriptRuntime.CStr(command).Trim();
         if (raw.Length == 0)
-            throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
+            throw new XPScriptRuntimeException(5, "Shell requires a program, script or command.");
 
-        var parsed = SplitCommand(raw);
         try
         {
-            var start = BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);
+            var parsed = SplitCommand(raw);
+            var start = RequiresCommandShell(raw, parsed.FileName)
+                ? BuildCommandShellStartInfo(raw, windowStyle)
+                : BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);
             start.RedirectStandardOutput = true;
             using var process = System.Diagnostics.Process.Start(start)
-                ?? throw new FileNotFoundException("Could not start the requested program or script.");
+                ?? throw new FileNotFoundException("Could not start the requested program, script or command.");
             var output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
             return output;
@@ -35,6 +37,63 @@ internal static class XPCrossPlatformRuntime
         {
             throw LSExtendedErrorRuntime.Normalize(ex);
         }
+    }
+
+    private static bool RequiresCommandShell(string raw, string fileName)
+    {
+        if (ContainsUnquotedShellOperator(raw)) return true;
+        if (IsExplicitPath(fileName)) return false;
+        return ResolveFromAbsolutePath(fileName, includeWindowsExtensions: OperatingSystem.IsWindows()) is null;
+    }
+
+    private static bool ContainsUnquotedShellOperator(string command)
+    {
+        var inQuotes = false;
+        for (var i = 0; i < command.Length; i++)
+        {
+            var c = command[i];
+            if (c == '"')
+            {
+                if (i > 0 && command[i - 1] == '\\') continue;
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (!inQuotes && c is '|' or '>' or '<' or '&' or ';') return true;
+        }
+        return false;
+    }
+
+    private static bool IsExplicitPath(string fileName) =>
+        Path.IsPathRooted(fileName) ||
+        fileName.Contains(Path.DirectorySeparatorChar) ||
+        fileName.Contains(Path.AltDirectorySeparatorChar);
+
+    private static System.Diagnostics.ProcessStartInfo BuildCommandShellStartInfo(string command, object? windowStyle)
+    {
+        var info = new System.Diagnostics.ProcessStartInfo
+        {
+            UseShellExecute = false,
+            CreateNoWindow = false
+        };
+
+        if (OperatingSystem.IsWindows())
+        {
+            info.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+            info.Arguments = "/d /s /c \"" + command + "\"";
+            ApplyWindowsWindowStyle(info, windowStyle);
+            return info;
+        }
+
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
+        {
+            info.FileName = "/bin/sh";
+            info.ArgumentList.Add("-c");
+            info.ArgumentList.Add(command);
+            return info;
+        }
+
+        throw new PlatformNotSupportedException("Shell is not implemented for platform: " + Platform());
     }
 
     private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, string arguments, object? windowStyle)
@@ -69,16 +128,7 @@ internal static class XPCrossPlatformRuntime
                 AddArguments(info, arguments);
             }
 
-            if (windowStyle is not null)
-            {
-                info.WindowStyle = XPScriptRuntime.CInt(windowStyle) switch
-                {
-                    0 => System.Diagnostics.ProcessWindowStyle.Hidden,
-                    2 => System.Diagnostics.ProcessWindowStyle.Minimized,
-                    3 => System.Diagnostics.ProcessWindowStyle.Maximized,
-                    _ => System.Diagnostics.ProcessWindowStyle.Normal
-                };
-            }
+            ApplyWindowsWindowStyle(info, windowStyle);
             return info;
         }
 
@@ -111,6 +161,18 @@ internal static class XPCrossPlatformRuntime
         throw new PlatformNotSupportedException("Shell is not implemented for platform: " + Platform());
     }
 
+    private static void ApplyWindowsWindowStyle(System.Diagnostics.ProcessStartInfo info, object? windowStyle)
+    {
+        if (windowStyle is null) return;
+        info.WindowStyle = XPScriptRuntime.CInt(windowStyle) switch
+        {
+            0 => System.Diagnostics.ProcessWindowStyle.Hidden,
+            2 => System.Diagnostics.ProcessWindowStyle.Minimized,
+            3 => System.Diagnostics.ProcessWindowStyle.Maximized,
+            _ => System.Diagnostics.ProcessWindowStyle.Normal
+        };
+    }
+
     private static string ResolveRequestedProgram(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -118,7 +180,7 @@ internal static class XPCrossPlatformRuntime
 
         try
         {
-            if (Path.IsPathRooted(fileName) || fileName.Contains(Path.DirectorySeparatorChar) || fileName.Contains(Path.AltDirectorySeparatorChar))
+            if (IsExplicitPath(fileName))
             {
                 var explicitPath = Path.GetFullPath(fileName);
                 if (!File.Exists(explicitPath))
