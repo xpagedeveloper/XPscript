@@ -1,0 +1,3 @@
+Function NestedMessage() As String
+    NestedMessage = "OK"
+End Function
