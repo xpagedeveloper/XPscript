@@ -1,0 +1,3 @@
+Function RestrictedOutsideMessage() As String
+    RestrictedOutsideMessage = "RESTRICTED-OUTSIDE=OK"
+End Function
