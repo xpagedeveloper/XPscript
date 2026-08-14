@@ -156,7 +156,6 @@ internal static class CompilerPathSecurity
         if (string.IsNullOrWhiteSpace(sid))
             throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
 
-        // icacls accepts *SID form and therefore does not depend on local/domain/service account naming.
         RunIcacls(fullPath, "/inheritance:r");
         RunIcacls(fullPath, "/grant:r", "*" + sid + ":(OI)(CI)F");
     }
@@ -178,8 +177,8 @@ internal static class CompilerPathSecurity
         {
             using var process = Process.Start(start)
                 ?? throw new CompilerException("Unable to start icacls.exe while securing compiler temporary workspace ACLs.");
-            var stdout = process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
+            _ = process.StandardOutput.ReadToEnd();
+            _ = process.StandardError.ReadToEnd();
             process.WaitForExit();
             if (process.ExitCode != 0)
                 throw new CompilerException("Unable to secure compiler temporary workspace ACLs with icacls.exe (exit code " + process.ExitCode + ").");
@@ -239,11 +238,8 @@ internal static class CompilerPathSecurity
         foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
         {
             current = Path.Combine(current, segment);
-            if (!File.Exists(current) && !Directory.Exists(current))
-                continue;
-
-            FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
-            if (!IsLinkOrReparsePoint(info))
+            var info = TryGetFileSystemInfoIncludingBrokenLink(current, kind, declaredPath);
+            if (info is null || !IsLinkOrReparsePoint(info))
                 continue;
 
             string? resolvedTarget;
@@ -264,5 +260,36 @@ internal static class CompilerPathSecurity
             if (!finalTarget.Equals(root, comparison) && !finalTarget.StartsWith(rootPrefix, comparison))
                 throw new CompilerException(kind + " path resolves through a symbolic link or reparse point outside the XPScript source directory: " + declaredPath);
         }
+    }
+
+    private static FileSystemInfo? TryGetFileSystemInfoIncludingBrokenLink(string path, string kind, string declaredPath)
+    {
+        try
+        {
+            var directory = new DirectoryInfo(path);
+            if (directory.Exists || directory.LinkTarget is not null || (directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                return directory;
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
+        catch (IOException)
+        {
+            throw new CompilerException(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
+        }
+
+        try
+        {
+            var file = new FileInfo(path);
+            if (file.Exists || file.LinkTarget is not null || (file.Attributes & FileAttributes.ReparsePoint) != 0)
+                return file;
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
+        catch (IOException)
+        {
+            throw new CompilerException(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
+        }
+
+        return null;
     }
 }
