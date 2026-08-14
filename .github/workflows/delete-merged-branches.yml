@@ -1,12 +1,9 @@
 name: Delete Merged Branches
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-  schedule:
-    - cron: '17 3 * * 0'
 
 permissions:
   contents: write
