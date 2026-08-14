@@ -1,7 +1,8 @@
 name: Delete Merged Branches
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
@@ -11,11 +12,15 @@ permissions:
 
 jobs:
   cleanup:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Fetch all remote branches
         run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
@@ -62,7 +67,6 @@ jobs:
               return 0
             fi
 
-            # A concurrent cleanup run may already have removed the branch.
             if ! gh api "repos/${REPOSITORY}/git/ref/heads/${branch}" >/dev/null 2>&1; then
               echo "Branch already deleted by another cleanup run: $branch"
               return 0
@@ -94,13 +98,10 @@ jobs:
             merged_by_history=false
             merged_by_pr=false
 
-            # Normal/rebase/fast-forward merge: the current branch tip is already in main.
             if git merge-base --is-ancestor "refs/remotes/origin/${branch}" refs/remotes/origin/main; then
               merged_by_history=true
             fi
 
-            # Squash merge: only delete when the branch has not moved since the merged PR.
-            # This prevents deleting a reused branch that received new commits after an older merge.
             if has_merged_pr_for_current_tip "$branch" "$current_sha"; then
               merged_by_pr=true
             fi
