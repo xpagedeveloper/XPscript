@@ -8,23 +8,12 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
-    private const int DarwinFOFDSetLk = 90;
-    private const short DarwinFUnlck = 2;
-    private const short DarwinFWrlck = 3;
-    private const short DarwinSeekSet = 0;
+    private const int DarwinLockExclusive = 2;
+    private const int DarwinLockNonBlocking = 4;
+    private const int DarwinLockUnlock = 8;
 
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct DarwinFlock
-    {
-        public long Start;
-        public long Length;
-        public int Pid;
-        public short Type;
-        public short Whence;
-    }
-
-    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
-    private static extern int DarwinFcntl(int fd, int command, ref DarwinFlock value);
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "flock", SetLastError = true)]
+    private static extern int DarwinFlock(int fd, int operation);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -138,7 +127,7 @@ internal static class XPScriptFileIO
     {
         if (OperatingSystem.IsMacOS())
         {
-            DarwinSetLock(stream, offset, length, DarwinFWrlck, "lock");
+            DarwinSetWholeFileLock(stream, DarwinLockExclusive | DarwinLockNonBlocking, "lock", offset, length);
             return;
         }
 
@@ -167,7 +156,7 @@ internal static class XPScriptFileIO
     {
         if (OperatingSystem.IsMacOS())
         {
-            DarwinSetLock(stream, offset, length, DarwinFUnlck, "unlock");
+            DarwinSetWholeFileLock(stream, DarwinLockUnlock, "unlock", offset, length);
             return;
         }
 
@@ -192,29 +181,20 @@ internal static class XPScriptFileIO
         }
     }
 
-    private static void DarwinSetLock(FileStream stream, long offset, long length, short type, string operation)
+    private static void DarwinSetWholeFileLock(FileStream stream, int operation, string operationName, long offset, long length)
     {
         if (stream.SafeFileHandle.IsInvalid || stream.SafeFileHandle.IsClosed)
-            throw new XPScriptRuntimeException(70, "Unable to " + operation + " file region because the file handle is closed or invalid.");
+            throw new XPScriptRuntimeException(70, "Unable to " + operationName + " file because the file handle is closed or invalid.");
 
         var descriptor = checked((int)stream.SafeFileHandle.DangerousGetHandle());
-        var value = new DarwinFlock
-        {
-            Start = offset,
-            Length = length == WholeFileLockLength ? 0 : length,
-            Pid = 0,
-            Type = type,
-            Whence = DarwinSeekSet
-        };
-
-        if (DarwinFcntl(descriptor, DarwinFOFDSetLk, ref value) == 0)
+        if (DarwinFlock(descriptor, operation) == 0)
             return;
 
         var errno = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
         throw new XPScriptRuntimeException(70,
-            "Unable to " + operation + " file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+            "Unable to " + operationName + " file on macOS for requested region offset " + offset.ToString(CultureInfo.InvariantCulture) +
             " length " + length.ToString(CultureInfo.InvariantCulture) +
-            " on macOS. Native fcntl returned errno " + errno.ToString(CultureInfo.InvariantCulture) + ".");
+            ". macOS uses a whole-file advisory lock fallback. Native flock returned errno " + errno.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     private static object GetOpenState(int number)
