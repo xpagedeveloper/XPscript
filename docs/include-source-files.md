@@ -41,6 +41,28 @@ Paths are converted to full normalized paths before duplicate/cycle detection, s
 
 Paths containing spaces and Unicode characters are supported.
 
+## Restricted compilation
+
+Normal compilation keeps the historical Include behavior. Use `--restricted` when compiling untrusted or tenant-controlled source and you want Include reads constrained to trusted source directories.
+
+```text
+xpscriptc main.xps --restricted
+xpscriptc run main.xps --restricted
+```
+
+With `--restricted`, the directory containing the root `.xps` file is the only allowed source root by default. An Include that resolves outside that directory, for example through `..`, is rejected before the file is read.
+
+Trusted shared source directories can be allowed explicitly with `--source-root`. The option may be repeated and automatically enables restricted Include processing.
+
+```text
+xpscriptc main.xps --source-root ./src --source-root ../shared-xps
+xpscriptc run main.xps --source-root ./src --source-root ../shared-xps
+```
+
+Allowed roots and Include paths are normalized to physical paths. Existing symbolic links and reparse points are resolved before containment is accepted, so a path cannot escape an allowed root merely by traversing a link into another directory. The root script itself must also reside beneath one of the configured source roots.
+
+The restriction is enforced during Include expansion immediately before source files are read, and the same policy applies to normal compilation and direct `run` execution.
+
 ## Duplicate includes
 
 Each normalized source file is expanded at most once per compilation. Repeating an include does not duplicate functions, classes or executable source.
@@ -76,7 +98,7 @@ This behavior is used by normal compilation and by `xpscriptc run`, and is regre
 
 ## Direct execution
 
-`xpscriptc run` uses the same compiler pipeline, so include resolution and `Erl` source-line behavior are identical for direct execution and normal compilation.
+`xpscriptc run` uses the same compiler pipeline, so include resolution, restricted source-root enforcement and `Erl` source-line behavior are identical for direct execution and normal compilation.
 
 ```text
 xpscriptc run main.xps
