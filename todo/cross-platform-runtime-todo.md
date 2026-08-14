@@ -4,9 +4,10 @@
 
 This checklist expands the cross-platform section in `todo/runtime-reference-todo.md`.
 
-Status while workflow execution is disabled:
-- `[>]` implemented in source but not executed/verified
-- `[ ]` not implemented
+Status:
+- `[x]` implemented and runtime-verified by an applicable gate
+- `[>]` implemented in source but not fully runtime-verified for every applicable platform or architecture
+- `[ ]` not implemented or not yet verified
 
 ## Compiler targets
 
@@ -20,13 +21,13 @@ Status while workflow execution is disabled:
 
 ## Platform function
 
-- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`
+- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Runtime Verification`
 - [>] support both `Platform()` and bare `Platform` expression forms
-- [ ] document platform branching examples
+- [x] document platform branching examples; source: `docs/cross-platform-runtime.md`
 
 ## Shell
 
-- [>] route `Shell()` through a cross-platform runtime
+- [>] route `Shell()` through a cross-platform runtime; basic execution is runtime-verified on Windows/Linux/macOS by `Cross Platform Runtime Verification`
 - [>] Windows: direct executables
 - [>] Windows: `.cmd` / `.bat` through `cmd.exe`
 - [>] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
@@ -138,17 +139,18 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] `Name` same-filesystem move/rename runtime-verified on Windows/Linux/macOS and remains a real filesystem operation without copy+delete fallback
 - [ ] runtime-verify cross-filesystem `Name` failure/behavior separately on supported OSes
 - [>] `Kill` uses native target filesystem delete behavior and adds an explanatory diagnostic when Windows/open-handle delete semantics prevent removal
-- [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency
+- [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency where the target runtime supports byte-range locking
 - [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
-- [>] `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics instead of raw `IOException`
+- [>] Windows/Linux `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics. .NET 10 does not support `FileStream.Lock/Unlock` on macOS, so XPScript returns explicit runtime error 5 instead of weakening range-lock semantics
 - [x] delete-while-open semantics runtime-verified: Windows blocks deletion for the open XPScript handle while Linux/macOS permit Unix-style unlink; source: `samples/file-delete-open-semantics.xps`
 - [>] portable charset names have defined BOM behavior: `utf-8` is BOM-less, `utf-8-bom` writes a UTF-8 BOM, `utf-16`/`utf-16le` and `utf-16be` write BOMs, and explicit `*-nobom` aliases suppress them
 - [>] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to the defined XPScript Latin-1 legacy encoding instead of an OS default; unsupported named encodings produce a clear runtime diagnostic
 - [x] `samples/file-charset-bom.xps` runtime-verified on Windows/Linux/macOS for 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
-- [ ] verify `Lock` / `Unlock` from a second process/handle on Windows
-- [ ] verify `Lock` / `Unlock` from a second process/handle on Linux
-- [ ] verify `Lock` / `Unlock` from a second process/handle on macOS
-- [ ] document that path separators differ (`\\` vs `/`) and recommend portable path construction where possible
+- [x] verify `Lock` / `Unlock` from a second process/handle on Windows; `Cross Platform Runtime Verification`
+- [x] verify `Lock` / `Unlock` from a second process/handle on Linux; `Cross Platform Runtime Verification`
+- [x] verify macOS Lock limitation returns explicit XPScript error 5; source: `samples/file-lock-platform-support.xps`
+- [ ] implement safe macOS byte-range locking with semantics compatible with .NET file sharing before claiming native `Lock` / `Unlock` support on macOS
+- [x] document that path separators differ (`\\` vs `/`) and recommend portable path construction; source: `docs/cross-platform-runtime.md`
 - [ ] runtime-verify Windows drive letters, UNC paths and long paths
 - [ ] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems
 - [x] runtime-verify Unix executable-bit preservation on Linux/macOS
@@ -164,12 +166,12 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] source: `samples/file-io-portability.xps` runtime-verified on Windows/Linux/macOS
 - [>] compiler temporary files already use isolated `Path.GetTempPath()` + GUID directories per compiler invocation
 
-## Quality gates when execution is re-enabled
+## Quality gates
 
 - [ ] compile the same portable `.xps` source for all supported RIDs
-- [ ] execute the matching artifact on each target OS
-- [ ] run Platform/Shell tests on each OS
+- [ ] execute the matching artifact on each target OS and architecture
+- [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
 - [ ] run native library loader tests on each OS and architecture
-- [ ] run file I/O and cross-process locking tests on each OS
+- [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
 - [ ] run path/permission/symlink/file-sharing negative tests
 - [ ] run security tests for Shell, external libraries and file paths
