@@ -43,31 +43,31 @@ Status:
 
 ## Output safety
 
-- [>] requested output path is normalized with `Path.GetFullPath`
-- [>] output paths resolving to an existing directory are rejected
-- [>] an explicitly requested existing regular output file is allowed to be replaced as the compiler's upgrade/overwrite behavior
-- [>] the requested output may not equal the `.xps` source file
-- [>] output directory components and existing output targets may not be symbolic links/junctions/reparse points
-- [>] native/managed-native dependency output names are reduced to file names and collision checked
-- [>] a native dependency already located exactly at its final target path is left in place instead of replacing its own source
-- [>] executable plus dependencies are first copied into a unique staging directory beside the final output
-- [>] existing output files are backed up within the same output filesystem before replacement
-- [>] dependencies are committed before the executable; the executable is made visible last
-- [>] publication failure rolls back newly installed files and restores backed-up prior files on a best-effort basis
-- [>] sibling staging keeps final `File.Move` operations on the same filesystem where normal platform semantics permit atomic rename
-- [ ] decide whether the compiler should reject other output paths pointing into its own installed compiler/runtime files
-- [ ] verify destination-directory symlink/reparse rejection on Windows/Linux/macOS
-- [ ] verify rollback behavior under forced copy/move/delete failures
+- [x] requested output path is normalized with `Path.GetFullPath`
+- [x] output paths resolving to an existing directory are rejected
+- [x] an explicitly requested existing regular output file is allowed to be replaced as the compiler's upgrade/overwrite behavior
+- [x] the requested output may not equal the `.xps` source file
+- [x] output directory components and existing output targets may not be symbolic links/junctions/reparse points
+- [x] native/managed-native dependency output names are reduced to file names and collision checked
+- [x] a native dependency already located exactly at its final target path is left in place instead of replacing its own source
+- [x] executable plus dependencies are first copied into a unique staging directory beside the final output
+- [x] existing output files are backed up within the same output filesystem before replacement
+- [x] dependencies are committed before the executable; the executable is made visible last
+- [x] publication failure rolls back newly installed files and restores backed-up prior files on a best-effort basis
+- [x] sibling staging keeps final `File.Move` operations on the same filesystem where normal platform semantics permit atomic rename
+- [x] compiler/runtime binaries currently in use are protected output targets and may not be replaced by compiler publication
+- [x] destination-directory symlink/reparse rejection is verified on Windows/Linux/macOS
+- [x] rollback behavior is verified under a forced mid-commit failure after an earlier dependency has already been replaced
 
 ## Project-local dependency containment
 
-- [>] `Reference` and `ReferenceNative` reject rooted paths
-- [>] application-local native dependency paths reject rooted paths
-- [>] lexical `..` escape outside the source directory is rejected
+- [x] `Reference` and `ReferenceNative` reject rooted paths
+- [x] application-local native dependency paths reject rooted paths
+- [x] lexical `..` escape outside the source directory is rejected
 - [x] each existing dependency path component is checked for symlink/reparse-point resolution
 - [x] links resolving outside the XPScript source directory are rejected
 - [x] unresolved/broken reparse points and links are rejected rather than trusted
-- [ ] review TOCTOU race between dependency validation and staging copy
+- [x] TOCTOU risk is reduced by validating the dependency path, opening the source handle, re-checking link/reparse metadata, and copying from the already-open handle rather than reopening by path
 - [x] filesystem-level regression setup verifies project-local symlink escape rejection on Windows/Linux/macOS
 
 ## Process execution
@@ -99,8 +99,8 @@ Status:
 - [ ] verify generated files and diagnostics never cross between invocations
 - [ ] deliberately crash/kill one compiler process and verify another process is unaffected
 - [x] test parallel Windows/Linux/macOS compiler invocations
-- [ ] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path tricks
-- [ ] force staged-publication failures and verify old executable/dependencies are restored
+- [x] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path normalization cases
+- [x] force staged-publication failures and verify old executable/dependencies are restored
 
 `Compiler Workspace Isolation` runs two real compiler invocations on Windows, Ubuntu and macOS. It observes each live workspace beneath `<Path.GetTempPath()>/XPScript/`, requires a unique 32-hex-character GUID directory for each invocation, verifies `Generated.csproj`, `Program.cs` and `publish` stay beneath that invocation directory, and verifies the workspace is removed after successful compilation. The probe also keeps an unrelated sibling sentinel directory and file under the same compiler temp root and requires both to remain unchanged after each compiler cleanup, proving cleanup is scoped to the current invocation workspace.
 
@@ -109,3 +109,5 @@ Status:
 `Compiler Process Isolation` forces a real post-publish failure followed by a successful compilation on Windows, Ubuntu and macOS. It verifies that failed and successful invocations use different GUID workspaces, that a pre-existing GUID-shaped workspace is never reused or modified, that `process-temp`, `dotnet-home` and `nuget-packages` are invocation-local, that the SDK resolves and publishes successfully, and that both successful and failed invocation workspaces are removed by `finally` cleanup.
 
 `Compiler Permission Symlink` verifies Windows SID-based ACL hardening, Unix `0700` directories and `0600` files, project-local dependency link escape rejection, broken-link rejection, linked-workspace-root refusal, and non-following cleanup of symlink/junction descendants on Windows, Ubuntu and macOS.
+
+`Compiler Output Safety` verifies output normalization, directory/source/protected-target rejection, safe replacement of existing regular outputs, destination link/junction rejection, dependency file-name/collision rules, self-target dependencies, sibling staging cleanup, dependency-first/executable-last publication, forced mid-commit rollback, rooted/`..` dependency rejection and secure opened-handle dependency copying on Windows, Ubuntu and macOS.
