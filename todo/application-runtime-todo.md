@@ -22,7 +22,7 @@ Status:
 - [x] `Application.ExecutableFileName`
 - [x] `Application.ExecutableDirectory`
 - [x] `Application.TempPath`
-- [>] `Application.TempFolder` alias
+- [x] `Application.TempFolder` alias
 - [>] `Application.Path` alias
 - [>] `Application.FileName` alias
 - [x] Application argument values are read-only at the XPScript source surface
@@ -56,12 +56,15 @@ Status:
 - [x] verify `Application.ExecutablePath` points to the actual generated executable on macOS
 - [x] verify executable filename/directory values on Windows, Linux and macOS
 - [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
+- [x] verify `Application.TempFolder` exactly matches `Application.TempPath` on Windows, Linux and macOS
 - [x] verify concurrent reads do not alter runtime state
 - [x] verify `Application.Args` returns a zero-based XPScript String array whose returned copies can be mutated without altering another copy or runtime-owned arguments
 
 Cross-platform Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml` for Windows, Ubuntu and macOS.
 
 `Application Runtime Compatibility` verifies `Application.CommandLine` as the documented convenience representation: zero arguments produce an empty string, while argument values are joined with one space. Because the representation is intentionally lossy, an argument that itself contains spaces is indistinguishable from multiple arguments in `CommandLine`; exact boundaries remain available through `Application.Args`.
+
+The same workflow verifies that `Application.TempFolder` is a strict alias of `Application.TempPath` by comparing the two values produced by a compiled XPScript program on Windows, Ubuntu and macOS.
 
 `Application Runtime Concurrency` compiles the exact generated `ApplicationRuntimeSource.Code` with minimal runtime stubs and performs 20,000 parallel read iterations on Windows, Ubuntu and macOS. It verifies stable argument/path values and confirms that mutating a returned `Application.Args` copy cannot alter runtime-owned argument state.
 
