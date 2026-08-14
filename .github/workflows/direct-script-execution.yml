@@ -92,11 +92,11 @@ jobs:
       - name: Verify option terminator forwards compiler-like argument
         shell: pwsh
         run: |
-          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps -- --runtime passed-to-script
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps -- --runtime --help
           if ($LASTEXITCODE -ne 0) { throw "Direct run with option terminator failed.`n$output" }
           if ($output -notcontains 'ARGCOUNT=2') { throw "Option terminator argument count failed.`n$output" }
           if ($output -notcontains 'ARG0=--runtime') { throw "Compiler-like script argument was consumed by the compiler.`n$output" }
-          if ($output -notcontains 'ARG1=passed-to-script') { throw "Compiler-like script argument value was not forwarded.`n$output" }
+          if ($output -notcontains 'ARG1=--help') { throw "Help-like script argument was consumed by the compiler.`n$output" }
 
       - name: Verify child exit code propagation
         shell: pwsh
