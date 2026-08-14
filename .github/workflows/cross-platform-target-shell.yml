@@ -1,0 +1,142 @@
+name: Cross Platform Target Shell
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-target-shell.yml'
+      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'samples/platform-shell-arguments.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+
+permissions:
+  contents: read
+
+jobs:
+  target-shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+
+      - name: Resolve runner target
+        id: target
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $platform = 'Windows'; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $platform = 'Linux'; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $platform = 'MacOS'; $extension = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "platform=$platform" >> $env:GITHUB_OUTPUT
+          "extension=$extension" >> $env:GITHUB_OUTPUT
+
+      - name: Create Shell helper scripts
+        shell: pwsh
+        run: |
+          @'
+          @echo off
+          > shell-cmd.out (
+          echo ARG1=[%~1]
+          echo ARG2=[%~2]
+          echo ARG3=[%~3]
+          )
+          '@ | Set-Content -Encoding ascii ./shell-args-helper.cmd
+
+          @'
+          param([string]$a1,[string]$a2,[string]$a3)
+          @("ARG1=[$a1]", "ARG2=[$a2]", "ARG3=[$a3]") | Set-Content -Encoding utf8 ./shell-ps1.out
+          '@ | Set-Content -Encoding utf8 ./shell-args-helper.ps1
+
+          @'
+          #!/bin/sh
+          printf 'ARG1=[%s]\nARG2=[%s]\nARG3=[%s]\nARG4=[%s]\n' "$1" "$2" "$3" "$4" > shell-sh.out
+          '@ | Set-Content -Encoding utf8NoBOM ./shell-args-helper.sh
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x ./shell-args-helper.sh }
+
+      - name: Verify default RID and default output extension
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/default | Out-Null
+          Copy-Item ./samples/platform-shell-arguments.xps ./out/default/default-target.xps
+          Push-Location ./out/default
+          dotnet run --project ../../src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./default-target.xps --framework-dependent
+          $exit = $LASTEXITCODE
+          Pop-Location
+          if ($exit -ne 0) { throw 'Default-target compilation failed.' }
+          $expected = "./out/default/default-target${{ steps.target.outputs.extension }}"
+          if (-not (Test-Path $expected -PathType Leaf)) { throw "Default output name/extension is wrong: $expected" }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            chmod +x $expected
+            & $expected | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Default Unix artifact was not executable.' }
+          }
+
+      - name: Verify explicit --runtime framework-dependent artifact
+        shell: pwsh
+        run: |
+          $exe = "./out/runtime-fd${{ steps.target.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw '--runtime framework-dependent compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Framework-dependent artifact failed.`n$result" }
+          if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Platform() mismatch.`n$result" }
+          if ($result -notcontains 'PLATFORM-BARE=${{ steps.target.outputs.platform }}') { throw "Bare Platform mismatch.`n$result" }
+
+      - name: Verify Shell structured arguments
+        shell: pwsh
+        run: |
+          $required = if ($env:RUNNER_OS -eq 'Windows') { @('./shell-cmd.out','./shell-ps1.out') } else { @('./shell-sh.out','./shell-ps1.out') }
+          for ($i = 0; $i -lt 100; $i++) {
+            if (($required | Where-Object { -not (Test-Path $_) }).Count -eq 0) { break }
+            Start-Sleep -Milliseconds 100
+          }
+          foreach ($path in $required) { if (-not (Test-Path $path)) { throw "Shell helper did not create $path" } }
+
+          if ($env:RUNNER_OS -eq 'Windows') {
+            $cmd = Get-Content ./shell-cmd.out
+            if ($cmd -notcontains 'ARG1=[space value]') { throw "CMD space argument failed.`n$cmd" }
+            if ($cmd -notcontains 'ARG2=[]') { throw "CMD empty argument failed.`n$cmd" }
+            if ($cmd -notcontains 'ARG3=[brackets-$[]{}]') { throw "CMD special argument failed.`n$cmd" }
+          } else {
+            $sh = Get-Content ./shell-sh.out
+            if ($sh -notcontains 'ARG1=[space value]') { throw "SH space argument failed.`n$sh" }
+            if ($sh -notcontains 'ARG2=[unicode-åäö-漢字]') { throw "SH Unicode argument failed.`n$sh" }
+            if ($sh -notcontains 'ARG3=[]') { throw "SH empty argument failed.`n$sh" }
+            if ($sh -notcontains 'ARG4=[brackets-$[]{}]') { throw "SH special argument failed.`n$sh" }
+          }
+          $ps = Get-Content ./shell-ps1.out
+          if ($ps -notcontains 'ARG1=[unicode-åäö-漢字]') { throw "PowerShell Unicode argument failed.`n$ps" }
+          if ($ps -notcontains 'ARG2=[space value]') { throw "PowerShell space argument failed.`n$ps" }
+          if ($ps -notcontains 'ARG3=[]') { throw "PowerShell empty argument failed.`n$ps" }
+
+      - name: Verify explicit --rid self-contained single-file artifact
+        shell: pwsh
+        run: |
+          $exe = "./out/rid-self-contained${{ steps.target.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --rid '${{ steps.target.outputs.rid }}' -o $exe
+          if ($LASTEXITCODE -ne 0) { throw '--rid self-contained compilation failed.' }
+          if (-not (Test-Path $exe -PathType Leaf)) { throw 'Self-contained executable was not produced.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact failed.`n$result" }
+          if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Self-contained Platform() mismatch.`n$result" }
