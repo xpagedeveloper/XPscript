@@ -1,0 +1,5 @@
+Sub Main()
+    Print "CONCURRENT-START"
+    Sleep 5
+    Print "CONCURRENT-DONE"
+End Sub
