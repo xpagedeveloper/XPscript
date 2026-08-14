@@ -49,11 +49,10 @@ internal static class SourceMapDiagnostics
             var position = match.Groups["pos"].Success ? match.Groups["pos"].Value : "1";
             var description = match.Groups["description"].Value.Trim();
 
-            // CompileResult currently has no dedicated source-file field. Preserve the
-            // include filename both in the compiler location and in description so text,
-            // JSON and XML callers can identify the included file while line stays local
-            // to that file (starting at 1).
-            return $"{fileName}({location.Line},{position}): {fileName}: {description}";
+            // Keep the physical path only in the internal compiler-location prefix. The
+            // public CompileResult parser consumes that prefix to retrieve the correct
+            // source line, while description continues to expose only the include filename.
+            return $"{locationFullPath}({location.Line},{position}): {fileName}: {description}";
         });
     }
 
