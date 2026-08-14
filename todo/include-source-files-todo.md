@@ -13,7 +13,7 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] support nested includes
 - [x] normalize paths before duplicate detection, including `.` / `..` segments and platform path separators
 - [x] use canonical/full paths for duplicate detection so the same physical file cannot be included more than once through different relative path spellings
-- [>] define case-sensitivity behavior consistently with the target/source filesystem. Current behavior is documented as case-insensitive on Windows and case-sensitive on Linux/macOS; filesystem-capability probing is not implemented.
+- [x] determine case-sensitivity from the actual source filesystem for include identity, duplicate detection and cycle handling rather than assuming behavior from the operating system
 - [x] preserve deterministic include order
 
 ## Duplicate and cycle handling
@@ -48,6 +48,8 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] same file referenced twice is included only once
 - [x] same physical file referenced through different relative paths is included only once
 - [x] duplicate function/class declarations are not created merely because the same include appears twice
+- [x] case-insensitive filesystems deduplicate differently-cased paths that resolve to the same source file
+- [x] case-sensitive filesystems allow distinct source files whose names differ only by case
 - [x] missing include diagnostic
 - [x] direct include cycle diagnostic
 - [x] indirect include cycle diagnostic with include chain
@@ -58,11 +60,11 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] repeated `--source-root` support allows explicitly trusted shared source directories
 - [x] restricted source-root behavior is regression-tested on Windows, Linux and macOS
 - [x] paths containing spaces and Unicode
-- [x] Windows, Linux and macOS path-resolution regression tests
+- [x] Windows, Linux and macOS filesystem-aware path/casing regression tests
 - [x] Windows, Linux and macOS include diagnostic/source-line/Erl source-map regression tests
 
 ## Verification
 
-The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, missing includes, direct/indirect cycle diagnostics, restricted traversal rejection and explicitly allowed shared source roots.
+The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, actual filesystem case-sensitivity behavior, missing includes, direct/indirect cycle diagnostics, restricted traversal rejection and explicitly allowed shared source roots.
 
 The `Include Source Mapping` workflow verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — and that `code` / `markedCode` come from the physical include file in text, JSON, XML and direct-run compiler output. It also verifies that a runtime error physically located on line 5 of an included file reports `Erl=5` in both compiled execution and direct `run` on Windows, Linux and macOS.
