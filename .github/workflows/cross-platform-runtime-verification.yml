@@ -81,7 +81,7 @@ jobs:
           Start-Sleep -Seconds 1
           $contenderResult = & $contender
           $contenderExit = $LASTEXITCODE
-          Wait-Process -Id $process.Id
+          $process.WaitForExit()
           $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
           $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
           if ($contenderExit -ne 0) { throw "Lock contender exited with $contenderExit.`n$contenderResult" }
