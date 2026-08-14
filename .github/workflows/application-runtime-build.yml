@@ -2,7 +2,7 @@ name: Application Runtime Compatibility
 
 on:
   push:
-    branches: [main, runtime-development-no-ci, todo-application-commandline-verification]
+    branches: [main, runtime-development-no-ci, todo-application-tempfolder-alias]
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/application-runtime*.xps'
@@ -82,10 +82,12 @@ jobs:
           $exeFile = ($output | Where-Object { $_ -like 'EXEFILE=*' } | Select-Object -First 1).Substring(8)
           $exeDir = ($output | Where-Object { $_ -like 'EXEDIR=*' } | Select-Object -First 1).Substring(7)
           $tempPath = ($output | Where-Object { $_ -like 'TEMPPATH=*' } | Select-Object -First 1).Substring(9)
+          $tempFolder = ($output | Where-Object { $_ -like 'TEMPFOLDER=*' } | Select-Object -First 1).Substring(11)
           if ([string]::IsNullOrWhiteSpace($exePath) -or -not (Test-Path -LiteralPath $exePath)) { throw 'ExecutablePath is invalid.' }
           if ($exeFile -ne [System.IO.Path]::GetFileName($exePath)) { throw 'ExecutableFileName does not match ExecutablePath.' }
           if ($exeDir -ne [System.IO.Path]::GetDirectoryName($exePath)) { throw 'ExecutableDirectory does not match ExecutablePath.' }
           if ([string]::IsNullOrWhiteSpace($tempPath) -or -not (Test-Path -LiteralPath $tempPath -PathType Container)) { throw 'TempPath is invalid.' }
+          if ($tempFolder -ne $tempPath) { throw "TempFolder alias mismatch. TempPath='$tempPath' TempFolder='$tempFolder'." }
 
       - name: Verify out-of-range argument error
         shell: pwsh
