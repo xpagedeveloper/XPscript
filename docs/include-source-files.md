@@ -68,9 +68,11 @@ Include expansion maintains a line-by-line source map. When a compiler diagnosti
 
 For example, if `lib/common.xps` contains an invalid assignment on its own line 12, the error is reported against `common.xps` line 12 even if the expanded source places that statement hundreds of lines into the combined compilation unit.
 
+The `code` and `markedCode` fields are also loaded from the physical include file. This means the returned source snippet and caret marker correspond to the reported include-local line and position rather than accidentally reading the same line number from the root source file. Existing root-file diagnostics retain their established output contract.
+
 This behavior is used by normal compilation and by `xpscriptc run`, and is regression-tested for text, JSON and XML compiler result formats on Windows, Linux and macOS.
 
-The remaining source-mapping work is to make `code` / `markedCode` always read the included physical source line and to preserve per-file runtime `Erl` tracking through later source rewrites.
+The remaining source-mapping work is to preserve per-file runtime `Erl` tracking through later source rewrites.
 
 ## Direct execution
 
