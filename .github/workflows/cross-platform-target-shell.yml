@@ -105,6 +105,8 @@ jobs:
           if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Platform() mismatch.`n$result" }
           if ($result -notcontains 'PLATFORM-BARE=${{ steps.target.outputs.platform }}') { throw "Bare Platform mismatch.`n$result" }
           if ($result -notcontains 'SHELL-CAPTURE=OK') { throw "Direct executable stdout was not returned by Shell().`n$result" }
+          if ($result -notcontains 'SHELL-BUILTIN=OK') { throw "Shell built-in output was not returned by Shell().`n$result" }
+          if ($result -notcontains 'SHELL-PIPE=OK') { throw "Shell pipeline output was not returned by Shell().`n$result" }
 
       - name: Verify Shell structured arguments
         shell: pwsh
@@ -145,3 +147,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact failed.`n$result" }
           if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Self-contained Platform() mismatch.`n$result" }
           if ($result -notcontains 'SHELL-CAPTURE=OK') { throw "Self-contained Shell stdout capture failed.`n$result" }
+          if ($result -notcontains 'SHELL-BUILTIN=OK') { throw "Self-contained Shell built-in capture failed.`n$result" }
+          if ($result -notcontains 'SHELL-PIPE=OK') { throw "Self-contained Shell pipeline capture failed.`n$result" }
