@@ -7,14 +7,12 @@ on:
     paths:
       - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
       - 'tests/ApplicationRuntimeConcurrencyProbe/**'
-      - 'todo/application-runtime-todo.md'
       - '.github/workflows/application-runtime-concurrency.yml'
   pull_request:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
       - 'tests/ApplicationRuntimeConcurrencyProbe/**'
-      - 'todo/application-runtime-todo.md'
       - '.github/workflows/application-runtime-concurrency.yml'
   workflow_dispatch:
 
@@ -38,4 +36,4 @@ jobs:
         shell: pwsh
         run: |
           dotnet run --project ./tests/ApplicationRuntimeConcurrencyProbe/ApplicationRuntimeConcurrencyProbe.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'Application runtime concurrency probe failed.' }
+          if ($LASTEXITCODE -ne 0) { throw "Application runtime concurrency probe failed with exit code $LASTEXITCODE." }
