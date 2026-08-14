@@ -67,15 +67,18 @@ public sealed class CompilerDriver
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
-        var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(originalSource);
+        var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
+        var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
 
-        var nativeDependencies = new NativeDependencyPackager(rid).Collect(source);
+        var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
         ValidateNativeDependencies(sourcePath, nativeDependencies);
         ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
         var transpiler = new XPScriptTranspiler();
-        var generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        string generatedSource;
+        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
+            generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
         var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
