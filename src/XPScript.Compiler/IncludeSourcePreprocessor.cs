@@ -20,6 +20,8 @@ internal sealed class IncludeSourcePreprocessor
             throw new CompilerException("Include processing requires a source file path.");
 
         var rootPath = Path.GetFullPath(rootSourcePath);
+        IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
+
         var included = new HashSet<string>(_pathComparer);
         var stack = new List<string>();
         var output = new List<string>();
@@ -77,6 +79,15 @@ internal sealed class IncludeSourcePreprocessor
                 string includePath;
                 try { includePath = Path.GetFullPath(declaredPath, sourceDirectory); }
                 catch { throw IncludeError(sourcePath, i + 1, "Invalid Include path: " + SafePath(declaredPath)); }
+
+                try
+                {
+                    IncludeSecurityContext.Current?.EnsureAllowed(includePath, declaredPath);
+                }
+                catch (CompilerException ex)
+                {
+                    throw IncludeError(sourcePath, i + 1, ex.Message);
+                }
 
                 var nestedCycleIndex = stack.FindIndex(path => _pathComparer.Equals(path, includePath));
                 if (nestedCycleIndex >= 0)
