@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Principal;
+using XPScript.Compiler;
 
-var securityType = Type.GetType("XPScript.Compiler.CompilerPathSecurity, XPScript.Compiler", throwOnError: true)!;
+var securityType = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.CompilerPathSecurity", throwOnError: true)!;
 var hardenDirectory = securityType.GetMethod("HardenTemporaryDirectory", BindingFlags.Static | BindingFlags.Public)!;
 var hardenFile = securityType.GetMethod("HardenTemporaryFile", BindingFlags.Static | BindingFlags.Public)!;
 var createOwnedDirectory = securityType.GetMethod("CreateOwnedTemporaryDirectory", BindingFlags.Static | BindingFlags.Public)!;
