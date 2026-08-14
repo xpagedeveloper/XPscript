@@ -1,0 +1,8 @@
+Option Declare
+
+Sub Main()
+    Print "ARGCOUNT=" & CStr(Application.ArgCount)
+    If Application.ArgCount > 0 Then Print "ARG0=" & Application.Args(0)
+    If Application.ArgCount > 1 Then Print "ARG1=" & Application.Args(1)
+    Print "CWD=" & CurDir()
+End Sub
