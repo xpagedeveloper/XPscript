@@ -5,12 +5,12 @@ Sub Main()
     Dim command As String
 
     q = Chr(34)
-    command = q & Application.Args(0) & q & " " & _
-        q & Application.Args(1) & q & " " & _
-        q & "space value" & q & " " & _
-        q & q & " " & _
-        q & "åäö 漢字" & q & " " & _
-        q & "semi;dollar$bracket[]" & q
+    command = q & Application.Args(0) & q
+    command = command & " " & q & Application.Args(1) & q
+    command = command & " " & q & "space value" & q
+    command = command & " " & q & q
+    command = command & " " & q & "åäö 漢字" & q
+    command = command & " " & q & "semi;dollar$bracket[]" & q
 
     Call Shell(command)
     Print "SHELL-ARGUMENTS-LAUNCHED"
