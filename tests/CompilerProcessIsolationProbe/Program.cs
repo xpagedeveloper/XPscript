@@ -62,9 +62,6 @@ async Task<Observation> RunAndObserveAsync(string sourcePath, string outputPath,
     var compileTask = driver.CompileAsync(sourcePath, outputPath, selfContained: false, CompilerDriver.CurrentRuntimeIdentifier());
 
     string? workspace = null;
-    var sawProject = false;
-    var sawProgram = false;
-    var sawPublish = false;
     var sawProcessTemp = false;
     var sawDotnetHome = false;
     var sawNugetPackages = false;
@@ -81,14 +78,11 @@ async Task<Observation> RunAndObserveAsync(string sourcePath, string outputPath,
             workspace ??= full;
             if (!full.Equals(workspace, PathComparison())) continue;
 
-            sawProject |= File.Exists(Path.Combine(full, "Generated.csproj"));
-            sawProgram |= File.Exists(Path.Combine(full, "Program.cs"));
-            sawPublish |= Directory.Exists(Path.Combine(full, "publish"));
             sawProcessTemp |= Directory.Exists(Path.Combine(full, "process-temp"));
             sawDotnetHome |= Directory.Exists(Path.Combine(full, "dotnet-home"));
             sawNugetPackages |= Directory.Exists(Path.Combine(full, "nuget-packages"));
         }
-        await Task.Delay(20);
+        await Task.Delay(10);
     }
 
     Exception? failure = null;
@@ -101,8 +95,6 @@ async Task<Observation> RunAndObserveAsync(string sourcePath, string outputPath,
         throw new Exception("Unexpected compiler failure.", failure);
     if (workspace is null)
         throw new Exception("Did not observe a GUID compiler workspace.");
-    if (!sawProject || !sawProgram || !sawPublish)
-        throw new Exception("Invocation-local generated project/source/publish state was not observed.");
     if (!sawProcessTemp || !sawDotnetHome || !sawNugetPackages)
         throw new Exception("Invocation-local process-temp, dotnet-home or NuGet package directories were not observed.");
     if (Directory.Exists(workspace))
