@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeDependencyPackager
 {
-    internal sealed record Dependency(string DeclaredPath, string LoadName);
+    internal sealed record Dependency(string DeclaredPath, string LoadName, string SourcePath, int SourceLine);
 
     private readonly string _runtimeIdentifier;
 
@@ -13,13 +13,14 @@ internal sealed class NativeDependencyPackager
         _runtimeIdentifier = (runtimeIdentifier ?? "").Trim().ToLowerInvariant();
     }
 
-    public IReadOnlyList<Dependency> Collect(string source)
+    public IReadOnlyList<Dependency> Collect(string source, SourceMap? sourceMap = null, string sourceName = "input.xps")
     {
         var result = new List<Dependency>();
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
         for (var i = 0; i < lines.Length; i++)
         {
+            var startLine = i + 1;
             var current = lines[i];
             if (!Regex.IsMatch(StripComment(current).Trim(), @"^Declare\b", RegexOptions.IgnoreCase)) continue;
 
@@ -27,8 +28,10 @@ internal sealed class NativeDependencyPackager
             while (EndsWithContinuation(combined) && i + 1 < lines.Length)
                 combined = RemoveContinuation(combined) + " " + lines[++i].TrimStart();
 
-            var dependency = TryCollect(combined);
-            if (dependency is not null && !result.Any(x => x.DeclaredPath.Equals(dependency.DeclaredPath, StringComparison.OrdinalIgnoreCase)))
+            var location = sourceMap?.Resolve(startLine, sourceName, current)
+                ?? new SourceMap.Location(sourceName, startLine, current);
+            var dependency = TryCollect(combined, location);
+            if (dependency is not null && !result.Any(x => SameDeclaration(x, dependency)))
                 result.Add(dependency);
         }
 
@@ -48,7 +51,7 @@ internal sealed class NativeDependencyPackager
         return slash >= 0 ? normalized[(slash + 1)..] : normalized;
     }
 
-    private Dependency? TryCollect(string raw)
+    private Dependency? TryCollect(string raw, SourceMap.Location location)
     {
         var code = StripComment(raw);
         var baseLib = Regex.Match(code, "\\bLib\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
@@ -57,14 +60,14 @@ internal sealed class NativeDependencyPackager
         var selected = SelectTargetLibrary(code, baseLib.Groups[1].Value);
         if (string.IsNullOrWhiteSpace(selected) || !IsApplicationLocalPath(selected)) return null;
         if (IsAbsolutePortablePath(selected))
-            throw new CompilerException("Application-local native dependency paths must be relative to the XPScript source directory: " + selected);
+            throw Error(location, "Application-local native dependency paths must be relative to the XPScript source directory: " + selected);
 
         var loadName = PortableFileName(selected);
         if (string.IsNullOrWhiteSpace(loadName))
-            throw new CompilerException("Application-local native library path must end with a file name: " + selected);
+            throw Error(location, "Application-local native library path must end with a file name: " + selected);
 
-        ValidateTargetFileName(loadName, selected);
-        return new Dependency(selected, loadName);
+        ValidateTargetFileName(loadName, selected, location);
+        return new Dependency(selected, loadName, location.SourcePath, location.Line);
     }
 
     private static bool IsAbsolutePortablePath(string value)
@@ -75,7 +78,7 @@ internal sealed class NativeDependencyPackager
                Regex.IsMatch(normalized, @"^[A-Za-z]:/");
     }
 
-    private void ValidateTargetFileName(string loadName, string declaredPath)
+    private void ValidateTargetFileName(string loadName, string declaredPath, SourceMap.Location location)
     {
         var valid = _runtimeIdentifier switch
         {
@@ -92,7 +95,7 @@ internal sealed class NativeDependencyPackager
         var expected = _runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".dll" :
             _runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase) ? ".so or versioned .so.N" :
             _runtimeIdentifier.StartsWith("osx-", StringComparison.OrdinalIgnoreCase) ? ".dylib" : "a native-library file";
-        throw new CompilerException(
+        throw Error(location,
             $"Application-local native dependency '{declaredPath}' does not match target runtime '{_runtimeIdentifier}'. Expected {expected}.");
     }
 
@@ -118,6 +121,15 @@ internal sealed class NativeDependencyPackager
         var match = Regex.Match(code, "\\b" + Regex.Escape(keyword) + "\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value : null;
     }
+
+    private static bool SameDeclaration(Dependency left, Dependency right) =>
+        left.DeclaredPath.Equals(right.DeclaredPath, StringComparison.OrdinalIgnoreCase) &&
+        Path.GetFullPath(left.SourcePath).Equals(
+            Path.GetFullPath(right.SourcePath),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    private static CompilerException Error(SourceMap.Location location, string message) =>
+        new($"{location.SourcePath}({location.Line},1): {message}");
 
     private static bool EndsWithContinuation(string line)
     {
