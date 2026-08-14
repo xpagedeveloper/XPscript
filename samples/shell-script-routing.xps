@@ -7,5 +7,6 @@ Sub Main()
         Call Shell("shell-fixtures/marker.bash ../out/shell-bash.txt")
     End If
 
+    Call Shell("shell-fixtures/marker.ps1 ../out/shell-ps1.txt")
     Print "SHELL-SCRIPT-ROUTING-LAUNCHED"
 End Sub
