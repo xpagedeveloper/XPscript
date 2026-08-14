@@ -5,14 +5,11 @@ namespace XPScript.Compiler;
 internal sealed class IncludeSourcePreprocessor
 {
     internal sealed record Result(string Source, SourceMap Map);
+    private sealed record IncludeStackEntry(string Path, string Key);
 
     private static readonly Regex IncludePattern = new(
         "^Include\\s+\"([^\"]+)\"\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    private readonly StringComparer _pathComparer = OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
 
     public Result Transform(string rootSource, string rootSourcePath)
     {
@@ -22,34 +19,37 @@ internal sealed class IncludeSourcePreprocessor
         var rootPath = Path.GetFullPath(rootSourcePath);
         IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
 
-        var included = new HashSet<string>(_pathComparer);
-        var stack = new List<string>();
+        var pathIdentity = new FileSystemPathIdentity();
+        var included = new HashSet<string>(StringComparer.Ordinal);
+        var stack = new List<IncludeStackEntry>();
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
-        Expand(rootPath, rootSource, included, stack, output, map);
+        Expand(rootPath, rootSource, pathIdentity, included, stack, output, map);
         return new Result(string.Join(Environment.NewLine, output), new SourceMap(map));
     }
 
     private void Expand(
         string sourcePath,
         string source,
+        FileSystemPathIdentity pathIdentity,
         HashSet<string> included,
-        List<string> stack,
+        List<IncludeStackEntry> stack,
         List<string> output,
         List<SourceMap.Location> map)
     {
         sourcePath = Path.GetFullPath(sourcePath);
+        var sourceKey = pathIdentity.ComparisonKey(sourcePath);
 
-        var cycleIndex = stack.FindIndex(path => _pathComparer.Equals(path, sourcePath));
+        var cycleIndex = stack.FindIndex(entry => string.Equals(entry.Key, sourceKey, StringComparison.Ordinal));
         if (cycleIndex >= 0)
         {
-            var cycle = stack.Skip(cycleIndex).Concat([sourcePath]).Select(Path.GetFileName);
+            var cycle = stack.Skip(cycleIndex).Select(entry => entry.Path).Concat([sourcePath]).Select(Path.GetFileName);
             throw new CompilerException("Include cycle detected: " + string.Join(" -> ", cycle));
         }
 
-        if (!included.Add(sourcePath)) return;
+        if (!included.Add(sourceKey)) return;
 
-        stack.Add(sourcePath);
+        stack.Add(new IncludeStackEntry(sourcePath, sourceKey));
         try
         {
             var lines = NormalizeLines(source);
@@ -89,14 +89,15 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, ex.Message);
                 }
 
-                var nestedCycleIndex = stack.FindIndex(path => _pathComparer.Equals(path, includePath));
+                var includeKey = pathIdentity.ComparisonKey(includePath);
+                var nestedCycleIndex = stack.FindIndex(entry => string.Equals(entry.Key, includeKey, StringComparison.Ordinal));
                 if (nestedCycleIndex >= 0)
                 {
-                    var cycle = stack.Skip(nestedCycleIndex).Concat([includePath]).Select(Path.GetFileName);
+                    var cycle = stack.Skip(nestedCycleIndex).Select(entry => entry.Path).Concat([includePath]).Select(Path.GetFileName);
                     throw IncludeError(sourcePath, i + 1, "Include cycle detected: " + string.Join(" -> ", cycle));
                 }
 
-                if (included.Contains(includePath))
+                if (included.Contains(includeKey))
                 {
                     AddLine(output, map, string.Empty, sourcePath, i + 1);
                     continue;
@@ -112,7 +113,7 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                Expand(includePath, includeSource, included, stack, output, map);
+                Expand(includePath, includeSource, pathIdentity, included, stack, output, map);
             }
         }
         finally
