@@ -111,3 +111,8 @@ jobs:
           echo "Deleted merged branches: $deleted"
           echo "Skipped open-PR branches: $skipped"
           echo "Merged branches blocked from deletion: $blocked"
+
+          if (( blocked > 0 )); then
+            echo "::error::GitHub repository rules blocked deletion of $blocked merged branch(es). Update the repository ruleset so deletion protection applies to main rather than all branches, then rerun this workflow."
+            exit 1
+          fi
