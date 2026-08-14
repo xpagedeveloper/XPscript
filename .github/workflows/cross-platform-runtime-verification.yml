@@ -78,7 +78,27 @@ jobs:
           $contender = "./out/file-lock-contender${{ steps.rid.outputs.extension }}"
           Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin
           $process = Start-Process -FilePath $holder -RedirectStandardOutput ./holder.out -RedirectStandardError ./holder.err -PassThru
-          Start-Sleep -Seconds 1
+
+          $holderLocked = $false
+          for ($i = 0; $i -lt 150; $i++) {
+            Start-Sleep -Milliseconds 100
+            $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
+            if ($holderResult -contains 'LOCKED') {
+              $holderLocked = $true
+              break
+            }
+            if ($process.HasExited) {
+              $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+              throw "Holder exited before acquiring the lock.`n$holderResult`n$holderError"
+            }
+          }
+          if (-not $holderLocked) {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+            $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
+            $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+            throw "Timed out waiting for holder to acquire the lock.`n$holderResult`n$holderError"
+          }
+
           $contenderResult = & $contender
           $contenderExit = $LASTEXITCODE
           $process.WaitForExit()
