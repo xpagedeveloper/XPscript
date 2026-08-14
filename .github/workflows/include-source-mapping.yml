@@ -79,3 +79,7 @@ jobs:
           $runText = Invoke-ExpectedCompileFailure 'text' $true
           if ($runText -notmatch 'compile-error\.xps') { throw "Direct-run diagnostic did not include include filename.`n$runText" }
           if ($runText -notmatch '(?m)^\s*line:\s*5\s*$') { throw "Direct-run diagnostic did not report include-local line 5.`n$runText" }
+
+          # The last native invocation is expected to return 2. Explicit success prevents
+          # PowerShell/GitHub Actions from propagating that expected compiler exit code.
+          exit 0
