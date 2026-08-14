@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/direct-run.xps'
+      - 'samples/direct-run-runtime-error.xps'
       - '.github/workflows/direct-script-execution.yml'
       - 'todo/direct-script-execution-todo.md'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/direct-run.xps'
+      - 'samples/direct-run-runtime-error.xps'
       - '.github/workflows/direct-script-execution.yml'
       - 'todo/direct-script-execution-todo.md'
   workflow_dispatch:
@@ -90,15 +92,47 @@ jobs:
           if ($output -notcontains 'ARG0=--runtime') { throw "Compiler-like script argument was consumed by the compiler.`n$output" }
           if ($output -notcontains 'ARG1=passed-to-script') { throw "Compiler-like script argument value was not forwarded.`n$output" }
 
+      - name: Verify child exit code propagation
+        shell: pwsh
+        run: |
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $normalExecutable = "./out/direct-run-runtime-error$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/direct-run-runtime-error.xps -o $normalExecutable --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime error regression sample did not compile.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $normalExecutable }
+
+          & $normalExecutable *> $null
+          $expectedExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($expectedExit -eq 0) { throw 'Runtime error regression sample unexpectedly exited successfully.' }
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run-runtime-error.xps *> $null
+          $directExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($directExit -ne $expectedExit) { throw "Direct run did not propagate the child exit code. Expected $expectedExit, got $directExit." }
+
       - name: Verify compile diagnostics and cross-target rejection
         shell: pwsh
         run: |
+          $xpsTempRoot = Join-Path ([IO.Path]::GetTempPath()) 'XPScript'
+          $before = @()
+          if (Test-Path $xpsTempRoot) {
+            $before = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+
           $badSource = Join-Path $env:RUNNER_TEMP 'direct-run-error.xps'
           Set-Content -Path $badSource -Value 'Sub Main()' -Encoding utf8
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $badSource
           $compileExit = $LASTEXITCODE
           $global:LASTEXITCODE = 0
           if ($compileExit -ne 2) { throw "Expected compile failure exit code 2, got $compileExit." }
+
+          $after = @()
+          if (Test-Path $xpsTempRoot) {
+            $after = @(Get-ChildItem $xpsTempRoot -Directory -Filter 'run-*' | ForEach-Object FullName)
+          }
+          $leaked = @($after | Where-Object { $_ -notin $before })
+          if ($leaked.Count -gt 0) { throw "Compile failure left direct-run temporary directories: $($leaked -join ', ')" }
 
           if ($env:RUNNER_OS -eq 'Windows') { $wrongRid = 'linux-x64' }
           elseif ($env:RUNNER_OS -eq 'Linux') { $wrongRid = 'win-x64' }
