@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Broken()
+    Dim value As Integer
+    value = "wrong"
+End Sub
