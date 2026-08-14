@@ -1,0 +1,81 @@
+name: Direct Script Execution
+
+on:
+  push:
+    branches: [todo-direct-script-execution]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/direct-run.xps'
+      - '.github/workflows/direct-script-execution.yml'
+      - 'todo/direct-script-execution-todo.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/direct-run.xps'
+      - '.github/workflows/direct-script-execution.yml'
+      - 'todo/direct-script-execution-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direct-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Run XPScript directly
+        shell: pwsh
+        run: |
+          $expectedDirectory = (Resolve-Path ./samples).Path
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps first 'second value'
+          if ($LASTEXITCODE -ne 0) { throw "Direct run failed with exit code $LASTEXITCODE.`n$output" }
+          if ($output -notcontains 'ARGCOUNT=2') { throw "Argument count was not forwarded.`n$output" }
+          if ($output -notcontains 'ARG0=first') { throw "First argument was not forwarded.`n$output" }
+          if ($output -notcontains 'ARG1=second value') { throw "Second argument was not forwarded unchanged.`n$output" }
+          if (-not ($output | Where-Object { $_ -eq "CWD=$expectedDirectory" })) { throw "Direct run working directory was not the source directory.`n$output" }
+
+      - name: Verify option terminator forwards compiler-like argument
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps -- --runtime passed-to-script
+          if ($LASTEXITCODE -ne 0) { throw "Direct run with option terminator failed.`n$output" }
+          if ($output -notcontains 'ARGCOUNT=2') { throw "Option terminator argument count failed.`n$output" }
+          if ($output -notcontains 'ARG0=--runtime') { throw "Compiler-like script argument was consumed by the compiler.`n$output" }
+          if ($output -notcontains 'ARG1=passed-to-script') { throw "Compiler-like script argument value was not forwarded.`n$output" }
+
+      - name: Verify compile diagnostics and cross-target rejection
+        shell: pwsh
+        run: |
+          $badSource = Join-Path $env:RUNNER_TEMP 'direct-run-error.xps'
+          Set-Content -Path $badSource -Value 'Sub Main()' -Encoding utf8
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $badSource
+          $compileExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($compileExit -ne 2) { throw "Expected compile failure exit code 2, got $compileExit." }
+
+          if ($env:RUNNER_OS -eq 'Windows') { $wrongRid = 'linux-x64' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $wrongRid = 'win-x64' }
+          else { $wrongRid = 'win-x64' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps --runtime $wrongRid
+          $targetExit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($targetExit -ne 1) { throw "Expected cross-target direct-run rejection exit code 1, got $targetExit." }
