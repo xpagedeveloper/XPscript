@@ -140,7 +140,7 @@ async Task VerifyRollbackAndExecutableLastAsync()
     var dep1Target = Path.Combine(area, "dep1.bin");
     await File.WriteAllTextAsync(dep1Target, "OLD-DEP1");
     var dep2Target = Path.Combine(area, "dep2.bin");
-    Directory.CreateDirectory(dep2Target); // Forces CommitBatch failure after dep1 has been installed.
+    Directory.CreateDirectory(dep2Target);
 
     var deps = NewDependencyList();
     AddDependency(deps, dep1Source, "dep1.bin");
@@ -161,6 +161,9 @@ void VerifyProtectedCompilerTargetRejected()
     if (string.IsNullOrWhiteSpace(compilerAssemblyPath))
         throw new Exception("Compiler assembly path unavailable for protected-target verification.");
     ExpectCompilerFailure(() => Invoke(rejectProtected, compilerAssemblyPath));
+
+    if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+        ExpectCompilerFailure(() => Invoke(rejectProtected, Environment.ProcessPath!));
 }
 
 async Task VerifyProjectLocalContainmentAsync()
