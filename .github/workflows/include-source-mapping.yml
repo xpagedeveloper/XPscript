@@ -40,7 +40,7 @@ jobs:
       - name: Verify include-local diagnostic mapping
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           $PSNativeCommandUseErrorActionPreference = $false
 
           function Invoke-ExpectedCompileFailure([string] $format, [bool] $directRun) {
@@ -50,6 +50,8 @@ jobs:
               $text = (& dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- samples/include-source-map/root.xps --framework-dependent --result-format $format 2>&1 | Out-String)
             }
             $exitCode = $LASTEXITCODE
+            Write-Host "--- $format run=$directRun exit=$exitCode ---"
+            Write-Host $text
             if ($exitCode -ne 2) {
               throw "Expected compiler exit code 2 for $format (run=$directRun), got $exitCode.`n$text"
             }
