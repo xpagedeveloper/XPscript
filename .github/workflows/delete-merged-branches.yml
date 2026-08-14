@@ -1,0 +1,78 @@
+name: Delete Merged Branches
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 0'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all remote branches
+        run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+
+      - name: Delete branches fully merged into main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          default_branch="$(gh api "repos/${REPOSITORY}" --jq '.default_branch')"
+          if [[ "$default_branch" != "main" ]]; then
+            echo "Refusing cleanup because default branch is '$default_branch', expected 'main'."
+            exit 1
+          fi
+
+          mapfile -t protected_branches < <(gh api --paginate "repos/${REPOSITORY}/branches?protected=true&per_page=100" --jq '.[].name')
+
+          is_protected() {
+            local candidate="$1"
+            for protected in "${protected_branches[@]:-}"; do
+              [[ "$candidate" == "$protected" ]] && return 0
+            done
+            return 1
+          }
+
+          deleted=0
+          skipped=0
+
+          while IFS= read -r remote_ref; do
+            branch="${remote_ref#origin/}"
+
+            if [[ -z "$branch" || "$branch" == "main" || "$branch" == "HEAD" ]]; then
+              continue
+            fi
+
+            if is_protected "$branch"; then
+              echo "Skip protected branch: $branch"
+              ((skipped+=1))
+              continue
+            fi
+
+            open_prs="$(gh api "repos/${REPOSITORY}/pulls?state=open&head=${REPOSITORY%%/*}:${branch}&per_page=1" --jq 'length')"
+            if [[ "$open_prs" != "0" ]]; then
+              echo "Skip branch with open PR: $branch"
+              ((skipped+=1))
+              continue
+            fi
+
+            if git merge-base --is-ancestor "refs/remotes/origin/${branch}" refs/remotes/origin/main; then
+              echo "Delete merged branch: $branch"
+              gh api --method DELETE "repos/${REPOSITORY}/git/refs/heads/${branch}"
+              ((deleted+=1))
+            fi
+          done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sort)
+
+          echo "Deleted merged branches: $deleted"
+          echo "Skipped protected/open-PR branches: $skipped"
