@@ -1,0 +1,5 @@
+Include "cycle-b.xps"
+
+Sub Main()
+    Print "SHOULD-NOT-RUN"
+End Sub
