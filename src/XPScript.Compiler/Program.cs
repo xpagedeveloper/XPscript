@@ -146,9 +146,7 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
         var sourceDirectory = Path.GetDirectoryName(sourcePath)
             ?? throw new InvalidOperationException("Unable to determine the XPScript source directory.");
 
-        tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", "run-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempRoot);
-        CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
+        tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-");
 
         var executableName = Path.GetFileNameWithoutExtension(sourcePath) +
             (OperatingSystem.IsWindows() ? ".exe" : "");
