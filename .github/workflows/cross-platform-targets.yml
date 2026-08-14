@@ -1,0 +1,119 @@
+name: Cross Platform Targets
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-targets.yml'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'samples/platform-shell.xps'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  current-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $platform = 'Windows'; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $platform = 'Linux'; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $platform = 'MacOS'; $extension = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "platform=$platform" >> $env:GITHUB_OUTPUT
+          "extension=$extension" >> $env:GITHUB_OUTPUT
+
+      - name: Verify default target and default output extension
+        shell: pwsh
+        run: |
+          $dir = Join-Path $PWD 'out/default-target'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item ./samples/platform-shell.xps (Join-Path $dir 'default-target.xps')
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- (Join-Path $dir 'default-target.xps') --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Default-target compilation failed.' }
+          $exe = Join-Path $dir ('default-target${{ steps.rid.outputs.extension }}')
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Expected default output was not produced: $exe" }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            $mode = [System.IO.File]::GetUnixFileMode((Resolve-Path -LiteralPath $exe).Path)
+            if (($mode -band [System.IO.UnixFileMode]::UserExecute) -eq 0) { throw "Generated output is not user-executable: $mode" }
+          }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Default-target artifact exited with $LASTEXITCODE.`n$result" }
+          if ($result -notcontains 'PLATFORM-CALL=${{ steps.rid.outputs.platform }}') { throw "Platform() call returned the wrong value.`n$result" }
+          if ($result -notcontains 'PLATFORM-BARE=${{ steps.rid.outputs.platform }}') { throw "Bare Platform expression returned the wrong value.`n$result" }
+
+      - name: Verify explicit framework-dependent target
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = "./out/framework-dependent${{ steps.rid.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            $mode = [System.IO.File]::GetUnixFileMode((Resolve-Path -LiteralPath $exe).Path)
+            if (($mode -band [System.IO.UnixFileMode]::UserExecute) -eq 0) { throw "Framework-dependent output is not executable: $mode" }
+          }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Framework-dependent artifact exited with $LASTEXITCODE.`n$result" }
+
+      - name: Verify explicit self-contained single-file target
+        shell: pwsh
+        run: |
+          $exe = "./out/self-contained${{ steps.rid.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Self-contained compilation failed.' }
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Self-contained single-file output was not produced.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            $mode = [System.IO.File]::GetUnixFileMode((Resolve-Path -LiteralPath $exe).Path)
+            if (($mode -band [System.IO.UnixFileMode]::UserExecute) -eq 0) { throw "Self-contained output is not executable: $mode" }
+          }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact exited with $LASTEXITCODE.`n$result" }
+
+  cross-compile-supported-rids:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Cross-compile portable source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/cross | Out-Null
+          $extension = if ('${{ matrix.rid }}'.StartsWith('win-')) { '.exe' } else { '' }
+          $output = "./out/cross/platform-shell-${{ matrix.rid }}$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Cross-target compilation failed for ${{ matrix.rid }}.' }
+          if (-not (Test-Path -LiteralPath $output -PathType Leaf)) { throw "Cross-target output was not produced: $output" }
