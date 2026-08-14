@@ -5,6 +5,7 @@ on:
     branches:
       - todo-include-source-files
       - todo-include-restricted-source-roots
+      - todo-include-filesystem-case-sensitivity
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/include-source/**'
@@ -69,6 +70,57 @@ jobs:
           if ($output -notcontains 'COMMON=OK') { throw "Direct common include output missing.`n$output" }
           if ($output -notcontains 'NESTED=OK') { throw "Direct nested include output missing.`n$output" }
           if ($output -notcontains 'UNICODE=OK') { throw "Direct Unicode include output missing.`n$output" }
+
+      - name: Verify filesystem-aware case sensitivity
+        shell: pwsh
+        run: |
+          $caseRoot = Join-Path $env:RUNNER_TEMP ("xps-case-" + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Force $caseRoot | Out-Null
+          $upperPath = Join-Path $caseRoot 'CaseProbe.xps'
+          $lowerPath = Join-Path $caseRoot 'caseProbe.xps'
+          Set-Content -LiteralPath $upperPath -Encoding utf8 -Value @'
+          Function UpperCaseMessage() As String
+              UpperCaseMessage = "UPPER"
+          End Function
+          '@
+
+          $isCaseInsensitive = Test-Path -LiteralPath $lowerPath
+          $rootPath = Join-Path $caseRoot 'root.xps'
+
+          if ($isCaseInsensitive) {
+            Set-Content -LiteralPath $rootPath -Encoding utf8 -Value @'
+          Include "CaseProbe.xps"
+          Include "caseProbe.xps"
+
+          Sub Main()
+              Print "CASE=" & UpperCaseMessage()
+          End Sub
+          '@
+          } else {
+            Set-Content -LiteralPath $lowerPath -Encoding utf8 -Value @'
+          Function LowerCaseMessage() As String
+              LowerCaseMessage = "LOWER"
+          End Function
+          '@
+            Set-Content -LiteralPath $rootPath -Encoding utf8 -Value @'
+          Include "CaseProbe.xps"
+          Include "caseProbe.xps"
+
+          Sub Main()
+              Print "CASE=" & UpperCaseMessage() & "+" & LowerCaseMessage()
+          End Sub
+          '@
+          }
+
+          $extension = if ($env:RUNNER_OS -eq 'Windows') { '.exe' } else { '' }
+          $exe = Join-Path $caseRoot ("case-test" + $extension)
+          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $rootPath -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "Filesystem case-sensitivity compile failed. caseInsensitive=$isCaseInsensitive`n$compile" }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $output = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Filesystem case-sensitivity executable failed.`n$output" }
+          $expected = if ($isCaseInsensitive) { 'CASE=UPPER' } else { 'CASE=UPPER+LOWER' }
+          if ($output -notcontains $expected) { throw "Filesystem case-sensitivity output mismatch. Expected $expected.`n$output" }
 
       - name: Verify restricted source roots block traversal
         shell: pwsh
