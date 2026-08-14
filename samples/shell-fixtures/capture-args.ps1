@@ -1,25 +1,10 @@
-param(
-    [Parameter(Mandatory = $true, Position = 0)]
-    [string]$OutputPath,
+if ($args.Count -lt 1) {
+    throw 'capture-args.ps1 requires an output path.'
+}
 
-    [Parameter(Position = 1)]
-    [AllowEmptyString()]
-    [string]$Arg0,
+$OutputPath = [string]$args[0]
+$values = if ($args.Count -gt 1) { @($args[1..($args.Count - 1)]) } else { @() }
 
-    [Parameter(Position = 2)]
-    [AllowEmptyString()]
-    [string]$Arg1,
-
-    [Parameter(Position = 3)]
-    [AllowEmptyString()]
-    [string]$Arg2,
-
-    [Parameter(Position = 4)]
-    [AllowEmptyString()]
-    [string]$Arg3
-)
-
-$values = @($Arg0, $Arg1, $Arg2, $Arg3)
 $lines = [System.Collections.Generic.List[string]]::new()
 $lines.Add("COUNT=$($values.Count)")
 for ($i = 0; $i -lt $values.Count; $i++) {
