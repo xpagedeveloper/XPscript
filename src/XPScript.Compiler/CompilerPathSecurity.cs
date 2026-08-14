@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Security.Principal;
 
 namespace XPScript.Compiler;
@@ -139,6 +140,7 @@ internal static class CompilerPathSecurity
         return Path.GetFullPath(current);
     }
 
+    [SupportedOSPlatform("windows")]
     private static void HardenWindowsDirectoryAcl(string path)
     {
         var fullPath = Path.GetFullPath(path);
