@@ -14,7 +14,7 @@ internal static class XPCrossPlatformRuntime
         return "Unknown";
     }
 
-    public static int Shell(object? command, object? windowStyle = null)
+    public static string Shell(object? command, object? windowStyle = null)
     {
         var raw = XPScriptRuntime.CStr(command).Trim();
         if (raw.Length == 0)
@@ -24,9 +24,12 @@ internal static class XPCrossPlatformRuntime
         try
         {
             var start = BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);
-            _ = System.Diagnostics.Process.Start(start)
+            start.RedirectStandardOutput = true;
+            using var process = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program or script.");
-            return 33;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return output;
         }
         catch (Exception ex)
         {
