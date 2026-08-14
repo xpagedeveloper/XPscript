@@ -39,7 +39,8 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] include files are source-only inputs and are not copied beside output
 - [x] direct `.xps` execution and normal compiled execution use identical include resolution semantics
 - [x] temporary/direct-run builds resolve includes as part of compilation before the temporary executable is produced
-- [>] project-level dependency directives such as managed `Reference` should remain in the root source until dependency discovery is moved after Include expansion
+- [x] dependency discovery runs after Include expansion, so `Reference`, `ReferenceNative` and application-local native `Declare ... Lib` directives may be declared in included source files
+- [x] dependency paths declared in include files are resolved relative to the declaring include file and then remain subject to the existing project-local dependency containment/security policy
 
 ## Regression coverage
 
@@ -59,6 +60,10 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 - [x] restricted compilation blocks `..` traversal outside the default root in compile and direct `run`
 - [x] repeated `--source-root` support allows explicitly trusted shared source directories
 - [x] restricted source-root behavior is regression-tested on Windows, Linux and macOS
+- [x] managed `Reference` declared in an include file is discovered after Include expansion
+- [x] RID-specific `ReferenceNative` declared in an include file is packaged for the selected runtime
+- [x] application-local native `Declare ... Lib` declared in an include file is packaged relative to that include file
+- [x] dependency discovery from includes is regression-tested in normal compile and direct `run` on Windows, Linux and macOS
 - [x] paths containing spaces and Unicode
 - [x] Windows, Linux and macOS filesystem-aware path/casing regression tests
 - [x] Windows, Linux and macOS include diagnostic/source-line/Erl source-map regression tests
@@ -68,3 +73,5 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 The `Include Source Files` GitHub Actions workflow compiles and runs the include fixture on Windows, Linux and macOS and verifies normal compilation, `xpscriptc run`, nested/duplicate/Unicode paths, actual filesystem case-sensitivity behavior, missing includes, direct/indirect cycle diagnostics, restricted traversal rejection and explicitly allowed shared source roots.
 
 The `Include Source Mapping` workflow verifies that an error physically located on line 5 of an included file is reported as line 5 of that file — not as the flattened compilation-unit line — and that `code` / `markedCode` come from the physical include file in text, JSON, XML and direct-run compiler output. It also verifies that a runtime error physically located on line 5 of an included file reports `Erl=5` in both compiled execution and direct `run` on Windows, Linux and macOS.
+
+The `Include Dependency Discovery` workflow builds a managed helper assembly at test time and verifies that `Reference`, RID-specific `ReferenceNative` and application-local native `Declare ... Lib` directives declared in an include file are discovered, validated and packaged on Windows, Linux and macOS. It also verifies direct `run` uses the same post-Include dependency discovery pipeline.
