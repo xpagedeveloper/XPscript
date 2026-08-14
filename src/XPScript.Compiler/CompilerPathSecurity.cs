@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Principal;
 
 namespace XPScript.Compiler;
 
@@ -141,15 +142,23 @@ internal static class CompilerPathSecurity
     private static void HardenWindowsDirectoryAcl(string path)
     {
         var fullPath = Path.GetFullPath(path);
-        var account = string.IsNullOrWhiteSpace(Environment.UserDomainName)
-            ? Environment.UserName
-            : Environment.UserDomainName + "\\" + Environment.UserName;
+        string sid;
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            sid = identity.User?.Value ?? "";
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException)
+        {
+            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs: " + ex.Message);
+        }
 
-        if (string.IsNullOrWhiteSpace(account))
-            throw new CompilerException("Unable to determine the current Windows account for compiler temporary workspace ACLs.");
+        if (string.IsNullOrWhiteSpace(sid))
+            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
 
+        // icacls accepts *SID form and therefore does not depend on local/domain/service account naming.
         RunIcacls(fullPath, "/inheritance:r");
-        RunIcacls(fullPath, "/grant:r", account + ":(OI)(CI)F");
+        RunIcacls(fullPath, "/grant:r", "*" + sid + ":(OI)(CI)F");
     }
 
     private static void RunIcacls(string path, params string[] arguments)
