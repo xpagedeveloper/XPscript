@@ -40,7 +40,10 @@ async Task VerifyPermissionsAsync()
     if (OperatingSystem.IsWindows())
     {
         using var identity = WindowsIdentity.GetCurrent();
-        var sid = identity.User?.Value ?? throw new Exception("Current Windows SID unavailable.");
+        var accountName = identity.Name;
+        if (string.IsNullOrWhiteSpace(accountName))
+            throw new Exception("Current Windows account name unavailable for ACL verification.");
+
         var psi = new ProcessStartInfo
         {
             FileName = Path.Combine(Environment.SystemDirectory, "icacls.exe"),
@@ -55,8 +58,10 @@ async Task VerifyPermissionsAsync()
         var stderr = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
         if (process.ExitCode != 0) throw new Exception("icacls query failed: " + stderr);
-        if (!stdout.Contains(sid, StringComparison.OrdinalIgnoreCase))
-            throw new Exception("Hardened Windows ACL does not contain the current SID: " + stdout);
+        if (!stdout.Contains(accountName, StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Hardened Windows ACL does not contain the current Windows identity: " + stdout);
+        if (!stdout.Contains("(OI)(CI)(F)", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Hardened Windows ACL does not grant inheritable full control to the current identity: " + stdout);
     }
     else
     {
