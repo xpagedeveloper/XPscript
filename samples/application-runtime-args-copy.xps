@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim firstCopy As Variant
+    Dim secondCopy As Variant
+
+    firstCopy = Application.Args
+    secondCopy = Application.Args
+
+    Print "LOW=" & CStr(LBound(firstCopy))
+    Print "HIGH=" & CStr(UBound(firstCopy))
+    Print "TYPE0=" & TypeName(firstCopy(0))
+    Print "FIRST0-BEFORE=" & CStr(firstCopy(0))
+    Print "SECOND0-BEFORE=" & CStr(secondCopy(0))
+
+    firstCopy(0) = 123
+
+    Print "TYPE0-AFTER=" & TypeName(firstCopy(0))
+    Print "FIRST0-AFTER=" & CStr(firstCopy(0))
+    Print "SECOND0-AFTER=" & CStr(secondCopy(0))
+    Print "RUNTIME0-AFTER=" & Application.Args(0)
+End Sub

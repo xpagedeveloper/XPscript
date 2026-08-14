@@ -15,7 +15,7 @@ Status:
 - [x] Application state is initialized before `Main` / `Initialize`
 - [x] `Application.ArgCount`
 - [x] `Application.Args(index)` with zero-based indexes
-- [>] `Application.Args` returns a defensive-copy XPScript String array
+- [x] `Application.Args` returns a defensive-copy XPScript String array
 - [x] invalid argument index raises XPScript error 9
 - [>] `Application.CommandLine` convenience representation
 - [x] `Application.ExecutablePath`
@@ -55,7 +55,10 @@ Status:
 - [x] verify executable filename/directory values on Windows, Linux and macOS
 - [x] verify temp path follows target OS/user temp directory semantics on Windows, Linux and macOS
 - [x] verify concurrent reads do not alter runtime state
+- [x] verify `Application.Args` returns a zero-based XPScript String array whose returned copies can be mutated without altering another copy or runtime-owned arguments
 
 Cross-platform Application runtime verification is enabled in `.github/workflows/application-runtime-build.yml` for Windows, Ubuntu and macOS.
 
 `Application Runtime Concurrency` compiles the exact generated `ApplicationRuntimeSource.Code` with minimal runtime stubs and performs 20,000 parallel read iterations on Windows, Ubuntu and macOS. It verifies stable argument/path values and confirms that mutating a returned `Application.Args` copy cannot alter runtime-owned argument state.
+
+`Application Args Defensive Copy` compiles and runs `samples/application-runtime-args-copy.xps` on Windows, Ubuntu and macOS. It verifies zero-based bounds, String element coercion, independent returned arrays and unchanged `Application.Args(index)` runtime state after mutating a copy.
