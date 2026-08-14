@@ -14,7 +14,7 @@ Status:
 - [x] every compiler invocation gets a unique GUID build workspace
 - [x] concurrent compiler invocations do not intentionally share generated source, project or publish paths
 - [x] generated source and project files use predictable names only inside a unique invocation directory
-- [>] cleanup targets only the workspace created by the current invocation
+- [x] cleanup targets only the workspace created by the current invocation
 - [>] failed builds do not intentionally reuse writable workspace state in later builds
 
 ## Workspace creation
@@ -102,6 +102,6 @@ Status:
 - [ ] test malicious dependency/output paths containing `..`, absolute paths, symlinks, junctions and platform-specific path tricks
 - [ ] force staged-publication failures and verify old executable/dependencies are restored
 
-`Compiler Workspace Isolation` runs two real compiler invocations on Windows, Ubuntu and macOS. It observes each live workspace beneath `<Path.GetTempPath()>/XPScript/`, requires a unique 32-hex-character GUID directory for each invocation, verifies `Generated.csproj`, `Program.cs` and `publish` stay beneath that invocation directory, and verifies the workspace is removed after successful compilation.
+`Compiler Workspace Isolation` runs two real compiler invocations on Windows, Ubuntu and macOS. It observes each live workspace beneath `<Path.GetTempPath()>/XPScript/`, requires a unique 32-hex-character GUID directory for each invocation, verifies `Generated.csproj`, `Program.cs` and `publish` stay beneath that invocation directory, and verifies the workspace is removed after successful compilation. The probe also keeps an unrelated sibling sentinel directory and file under the same compiler temp root and requires both to remain unchanged after each compiler cleanup, proving cleanup is scoped to the current invocation workspace.
 
 `Compiler Parallel Isolation` runs 10 real compiler invocations concurrently on Windows, Ubuntu and macOS. All invocations intentionally read the same root `.xps` source and the same include files, which are allowed to be shared read-only inputs, while each invocation must use a distinct compiler-owned GUID workspace and distinct output path. The test requires 10 unique workspaces, invocation-local `Generated.csproj`, `Program.cs` and `publish` state, successful distinct outputs and cleanup of every observed workspace.

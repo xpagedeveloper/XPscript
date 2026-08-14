@@ -2,10 +2,19 @@ using System.Text.RegularExpressions;
 using XPScript.Compiler;
 
 var compilerTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+Directory.CreateDirectory(compilerTempRoot);
+
 // Keep source/output under the checked-out repository so macOS /var -> /private/var
 // temp-path indirection does not exercise the separate output-symlink policy here.
 var probeRoot = Path.Combine(Directory.GetCurrentDirectory(), ".workspace-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
+
+// A sibling directory under the compiler temp root must never be removed by another
+// invocation's cleanup. It deliberately does not look like a compiler GUID workspace.
+var sentinelRoot = Path.Combine(compilerTempRoot, "cleanup-sentinel-" + Guid.NewGuid().ToString("N"));
+var sentinelFile = Path.Combine(sentinelRoot, "keep.txt");
+Directory.CreateDirectory(sentinelRoot);
+await File.WriteAllTextAsync(sentinelFile, "KEEP-ME");
 
 try
 {
@@ -19,23 +28,37 @@ End Sub
 """);
 
     var first = await RunAndObserveAsync(sourcePath, Path.Combine(probeRoot, "first-output.exe"));
+    AssertSentinelUnchanged();
+
     var second = await RunAndObserveAsync(sourcePath, Path.Combine(probeRoot, "second-output.exe"));
+    AssertSentinelUnchanged();
 
     if (first.Equals(second, StringComparison.OrdinalIgnoreCase))
         throw new Exception("Two compiler invocations reused the same temporary workspace: " + first);
 
     Console.WriteLine("COMPILER-WORKSPACE-FIRST=" + Path.GetFileName(first));
     Console.WriteLine("COMPILER-WORKSPACE-SECOND=" + Path.GetFileName(second));
+    Console.WriteLine("COMPILER-CLEANUP-OWNERSHIP=OK");
     Console.WriteLine("COMPILER-GUID-WORKSPACE=OK");
 }
 finally
 {
     try { Directory.Delete(probeRoot, recursive: true); } catch { }
+    try { Directory.Delete(sentinelRoot, recursive: true); } catch { }
+}
+
+void AssertSentinelUnchanged()
+{
+    if (!Directory.Exists(sentinelRoot))
+        throw new Exception("Compiler cleanup removed an unrelated sibling directory under the XPScript temp root.");
+    if (!File.Exists(sentinelFile))
+        throw new Exception("Compiler cleanup removed a sentinel file from an unrelated sibling directory.");
+    if (File.ReadAllText(sentinelFile) != "KEEP-ME")
+        throw new Exception("Compiler cleanup modified a sentinel file in an unrelated sibling directory.");
 }
 
 async Task<string> RunAndObserveAsync(string sourcePath, string outputPath)
 {
-    Directory.CreateDirectory(compilerTempRoot);
     var baseline = Directory.EnumerateDirectories(compilerTempRoot)
         .Select(Path.GetFullPath)
         .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
