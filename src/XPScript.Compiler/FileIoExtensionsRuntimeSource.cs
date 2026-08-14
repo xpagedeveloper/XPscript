@@ -8,6 +8,23 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
+    private const int DarwinFSetLk = 8;
+    private const short DarwinFUnlck = 2;
+    private const short DarwinFWrlck = 3;
+    private const short DarwinSeekSet = 0;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct DarwinFlock
+    {
+        public long Start;
+        public long Length;
+        public int Pid;
+        public short Type;
+        public short Whence;
+    }
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int DarwinFcntl(int fd, int command, ref DarwinFlock value);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -119,6 +136,12 @@ internal static class XPScriptFileIO
 
     private static void LockRegion(FileStream stream, long offset, long length)
     {
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetLock(stream, offset, length, DarwinFWrlck, "lock");
+            return;
+        }
+
         try
         {
             stream.Lock(offset, length);
@@ -142,6 +165,12 @@ internal static class XPScriptFileIO
 
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetLock(stream, offset, length, DarwinFUnlck, "unlock");
+            return;
+        }
+
         try
         {
             stream.Unlock(offset, length);
@@ -161,6 +190,31 @@ internal static class XPScriptFileIO
                 " length " + length.ToString(CultureInfo.InvariantCulture) +
                 ". The current handle may not own the requested lock. " + ex.Message);
         }
+    }
+
+    private static void DarwinSetLock(FileStream stream, long offset, long length, short type, string operation)
+    {
+        if (stream.SafeFileHandle.IsInvalid || stream.SafeFileHandle.IsClosed)
+            throw new XPScriptRuntimeException(70, "Unable to " + operation + " file region because the file handle is closed or invalid.");
+
+        var descriptor = checked((int)stream.SafeFileHandle.DangerousGetHandle());
+        var value = new DarwinFlock
+        {
+            Start = offset,
+            Length = length == WholeFileLockLength ? 0 : length,
+            Pid = 0,
+            Type = type,
+            Whence = DarwinSeekSet
+        };
+
+        if (DarwinFcntl(descriptor, DarwinFSetLk, ref value) == 0)
+            return;
+
+        var errno = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+        throw new XPScriptRuntimeException(70,
+            "Unable to " + operation + " file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+            " length " + length.ToString(CultureInfo.InvariantCulture) +
+            " on macOS. Native fcntl returned errno " + errno.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     private static object GetOpenState(int number)
