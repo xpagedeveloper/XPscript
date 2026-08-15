@@ -6,102 +6,54 @@ internal sealed class FileSystemPortabilityPostProcessor
     {
         if (string.IsNullOrEmpty(generated)) return generated;
 
-        // Generated runtime source occasionally uses a char literal with StringComparison
-        // overloads that require String. Normalize these centrally instead of maintaining
-        // one-off fixes for individual runtime modules.
         generated = System.Text.RegularExpressions.Regex.Replace(
             generated,
             @"\.(StartsWith|EndsWith)\('([^']{1})',\s*(StringComparison\.[A-Za-z]+)\)",
             m => $".{m.Groups[1].Value}(\"{m.Groups[2].Value}\", {m.Groups[3].Value})",
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
-        // Never let implicit file encoding vary with the target operating system.
-        generated = generated.Replace(
-            "Encoding.Default",
-            "XPScriptFileSystemRuntime.LegacyEncoding",
-            StringComparison.Ordinal);
+        generated = generated.Replace("Encoding.Default", "XPScriptFileSystemRuntime.LegacyEncoding", StringComparison.Ordinal);
+        generated = generated.Replace("Path.GetFullPath(XPScriptRuntime.CStr(pathValue))", "XPScriptFileSystemRuntime.ResolvePath(pathValue)", StringComparison.Ordinal);
+        generated = generated.Replace("Path.GetFullPath(CStr(pathValue))", "XPScriptFileSystemRuntime.ResolvePath(pathValue)", StringComparison.Ordinal);
+        generated = generated.Replace("new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)", "XPScriptFileSystemRuntime.OpenInputStream(path)", StringComparison.Ordinal);
+        generated = generated.Replace("new FileStream(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)", "XPScriptFileSystemRuntime.OpenOutputStream(path, append)", StringComparison.Ordinal);
+        generated = generated.Replace("new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read)", "XPScriptFileSystemRuntime.OpenBinaryStream(path)", StringComparison.Ordinal);
+        generated = generated.Replace("new StreamReader(path, charset, detectEncodingFromByteOrderMarks: true)", "new StreamReader(XPScriptFileSystemRuntime.OpenInputStream(path), charset, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: false)", StringComparison.Ordinal);
+        generated = generated.Replace("public static long FileLen(object? fileName) => new FileInfo(CStr(fileName)).Length;", "public static long FileLen(object? fileName) => XPScriptFileSystemRuntime.FileLen(fileName);", StringComparison.Ordinal);
+        generated = generated.Replace("public static DateTime FileDateTime(object? fileName) => File.GetLastWriteTime(CStr(fileName));", "public static DateTime FileDateTime(object? fileName) => XPScriptFileSystemRuntime.FileDateTime(fileName);", StringComparison.Ordinal);
+        generated = generated.Replace("public static int GetFileAttr(object? fileName) => (int)File.GetAttributes(CStr(fileName));", "public static int GetFileAttr(object? fileName) => XPScriptFileSystemRuntime.GetFileAttr(fileName);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void SetFileAttr(object? fileName, int attributes) => File.SetAttributes(CStr(fileName), (FileAttributes)attributes);", "public static void SetFileAttr(object? fileName, int attributes) => XPScriptFileSystemRuntime.SetFileAttr(fileName, attributes);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void FileCopy(object? source, object? destination) => File.Copy(CStr(source), CStr(destination), true);", "public static void FileCopy(object? source, object? destination) => XPScriptFileSystemRuntime.CopyFile(source, destination);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void Kill(object? path) => File.Delete(CStr(path));", "public static void Kill(object? path) => XPScriptFileSystemRuntime.DeleteFile(path);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void NameFile(object? oldPath, object? newPath) => File.Move(CStr(oldPath), CStr(newPath), true);", "public static void NameFile(object? oldPath, object? newPath) => XPScriptFileSystemRuntime.MoveFile(oldPath, newPath);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void MkDir(object? path) => Directory.CreateDirectory(CStr(path));", "public static void MkDir(object? path) => XPScriptFileSystemRuntime.MakeDirectory(path);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void RmDir(object? path) => Directory.Delete(CStr(path), false);", "public static void RmDir(object? path) => XPScriptFileSystemRuntime.RemoveDirectory(path);", StringComparison.Ordinal);
+        generated = generated.Replace("public static void ChDir(object? path) => Environment.CurrentDirectory = Path.GetFullPath(CStr(path));", "public static void ChDir(object? path) => XPScriptFileSystemRuntime.ChangeDirectory(path);", StringComparison.Ordinal);
 
-        // Route both core and Charset-aware Open paths through one target-OS resolver.
-        generated = generated.Replace(
-            "Path.GetFullPath(XPScriptRuntime.CStr(pathValue))",
-            "XPScriptFileSystemRuntime.ResolvePath(pathValue)",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "Path.GetFullPath(CStr(pathValue))",
-            "XPScriptFileSystemRuntime.ResolvePath(pathValue)",
-            StringComparison.Ordinal);
-
-        // Centralize FileShare semantics. Binary/Random intentionally allow multiple
-        // read/write handles so Lock/Unlock, rather than Open itself, coordinates regions.
-        generated = generated.Replace(
-            "new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)",
-            "XPScriptFileSystemRuntime.OpenInputStream(path)",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "new FileStream(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)",
-            "XPScriptFileSystemRuntime.OpenOutputStream(path, append)",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read)",
-            "XPScriptFileSystemRuntime.OpenBinaryStream(path)",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "new StreamReader(path, charset, detectEncodingFromByteOrderMarks: true)",
-            "new StreamReader(XPScriptFileSystemRuntime.OpenInputStream(path), charset, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: false)",
-            StringComparison.Ordinal);
-
-        // Route the standard filesystem surface through the same portability layer.
-        generated = generated.Replace(
-            "public static long FileLen(object? fileName) => new FileInfo(CStr(fileName)).Length;",
-            "public static long FileLen(object? fileName) => XPScriptFileSystemRuntime.FileLen(fileName);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static DateTime FileDateTime(object? fileName) => File.GetLastWriteTime(CStr(fileName));",
-            "public static DateTime FileDateTime(object? fileName) => XPScriptFileSystemRuntime.FileDateTime(fileName);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static int GetFileAttr(object? fileName) => (int)File.GetAttributes(CStr(fileName));",
-            "public static int GetFileAttr(object? fileName) => XPScriptFileSystemRuntime.GetFileAttr(fileName);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void SetFileAttr(object? fileName, int attributes) => File.SetAttributes(CStr(fileName), (FileAttributes)attributes);",
-            "public static void SetFileAttr(object? fileName, int attributes) => XPScriptFileSystemRuntime.SetFileAttr(fileName, attributes);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void FileCopy(object? source, object? destination) => File.Copy(CStr(source), CStr(destination), true);",
-            "public static void FileCopy(object? source, object? destination) => XPScriptFileSystemRuntime.CopyFile(source, destination);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void Kill(object? path) => File.Delete(CStr(path));",
-            "public static void Kill(object? path) => XPScriptFileSystemRuntime.DeleteFile(path);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void NameFile(object? oldPath, object? newPath) => File.Move(CStr(oldPath), CStr(newPath), true);",
-            "public static void NameFile(object? oldPath, object? newPath) => XPScriptFileSystemRuntime.MoveFile(oldPath, newPath);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void MkDir(object? path) => Directory.CreateDirectory(CStr(path));",
-            "public static void MkDir(object? path) => XPScriptFileSystemRuntime.MakeDirectory(path);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void RmDir(object? path) => Directory.Delete(CStr(path), false);",
-            "public static void RmDir(object? path) => XPScriptFileSystemRuntime.RemoveDirectory(path);",
-            StringComparison.Ordinal);
-        generated = generated.Replace(
-            "public static void ChDir(object? path) => Environment.CurrentDirectory = Path.GetFullPath(CStr(path));",
-            "public static void ChDir(object? path) => XPScriptFileSystemRuntime.ChangeDirectory(path);",
-            StringComparison.Ordinal);
-
-        // Dir keeps its stateful iterator in XPScriptRuntime, but delegates directory/mask
-        // resolution and filesystem case semantics to the portability layer.
         generated = generated.Replace(
             "DirEnumerator = Directory.EnumerateFileSystemEntries(directory, mask)\n                .Select(Path.GetFileName)\n                .Where(x => x is not null)\n                .Cast<string>()\n                .GetEnumerator();",
             "DirEnumerator = XPScriptFileSystemRuntime.Enumerate(raw).GetEnumerator();",
             StringComparison.Ordinal);
 
-        // Evaluate collection isolation is finalized after all runtime source blocks have
-        // been appended. Input snapshots are internal/read-only; returned Lists are converted
-        // back to detached normal XPScript List values.
+        generated = generated.Replace(
+            "public static object? Evaluate(object? sourceText) => Evaluate(sourceText, null);",
+            """
+    public static object? Evaluate(object? sourceText) => Evaluate(sourceText, null);
+
+    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1) =>
+        Evaluate(sourceText, new object?[] { callvar0, callvar1 });
+
+    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2) =>
+        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2 });
+
+    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3) =>
+        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2, callvar3 });
+
+    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3, object? callvar4) =>
+        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2, callvar3, callvar4 });
+""",
+            StringComparison.Ordinal);
+
         generated = generated.Replace(
             "return new Evaluator(source, Snapshot(callvar)).Run();",
             "return new Evaluator(source, XPScriptEvaluateCollectionRuntime.Snapshot(callvar)).Run();",
@@ -130,8 +82,6 @@ internal sealed class FileSystemPortabilityPostProcessor
 """;
         generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
 
-        // Evaluate uses the same dynamic '+' coercion and comparison rules as the main
-        // XPScript runtime instead of maintaining subtly different evaluator-only behavior.
         generated = generated.Replace(
             "if (Match(TokenKind.Plus)) value = Add(value, ParseMultiplicative());",
             "if (Match(TokenKind.Plus)) value = XPScriptCoercion.AddVariant(value, ParseMultiplicative());",
@@ -166,9 +116,6 @@ internal sealed class FileSystemPortabilityPostProcessor
 """;
         generated = generated.Replace(oldCompare, newCompare, StringComparison.Ordinal);
 
-        // Every Evaluate exception, including XPScriptRuntimeException, is sanitized before
-        // crossing the Evaluate boundary. This prevents conversion messages from reflecting
-        // callvar values/secrets into logs or structured compiler/runtime responses.
         generated = generated.Replace(
             "catch (XPScriptRuntimeException) { throw; }",
             "catch (XPScriptRuntimeException ex) { throw XPScriptEvaluateSemanticsRuntime.Sanitize(ex); }",
@@ -181,9 +128,6 @@ internal sealed class FileSystemPortabilityPostProcessor
             "throw new XPScriptRuntimeException(5, \"Invalid numeric literal in Evaluate: \" + text);",
             "throw new XPScriptRuntimeException(5, \"Invalid numeric literal in Evaluate.\");",
             StringComparison.Ordinal);
-
-        // If the function name is known but no switch arm matched, the problem is the
-        // argument count. Keep genuinely unknown function names as unavailable-function errors.
         generated = generated.Replace(
             "_ => throw new XPScriptRuntimeException(5, \"Function is not available inside Evaluate: \" + name)",
             "_ => XPScriptEvaluateFunctionArityRuntime.Throw(name, args.Count)",
