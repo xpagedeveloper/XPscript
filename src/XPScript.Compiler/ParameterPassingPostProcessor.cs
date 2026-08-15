@@ -272,9 +272,13 @@ internal sealed class ParameterPassingPostProcessor
 
     private static string TakeTrailingMemberReceiver(StringBuilder output)
     {
-        if (output.Length < 2 || output[^1] != '.') return "";
+        if (output.Length < 2) return "";
 
-        var dot = output.Length - 1;
+        var end = output.Length;
+        while (end > 0 && char.IsWhiteSpace(output[end - 1])) end--;
+        if (end < 2 || output[end - 1] != '.') return "";
+
+        var dot = end - 1;
         var cursor = dot - 1;
         int start;
         if (output[cursor] == ')')
