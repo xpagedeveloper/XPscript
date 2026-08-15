@@ -1,0 +1,56 @@
+name: Evaluate Negative Assertion Guard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'samples/evaluate-*.xps'
+      - '.github/workflows/evaluate-negative-assertion-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Reject swallowed Evaluate test assertions
+        shell: pwsh
+        run: |
+          $violations = @()
+
+          Get-ChildItem ./samples/evaluate-*.xps | ForEach-Object {
+            $path = $_.FullName
+            $relative = Resolve-Path -Relative $path
+            $resumeNext = $false
+            $lineNumber = 0
+
+            Get-Content $path | ForEach-Object {
+              $lineNumber++
+              $line = $_.Trim()
+
+              if ($line -match '^On\s+Error\s+Resume\s+Next\s*$') {
+                $resumeNext = $true
+                return
+              }
+
+              if ($line -match '^On\s+Error\s+GoTo\s+') {
+                $resumeNext = $false
+                return
+              }
+
+              if ($resumeNext -and $line -match '^Error\s+9\d{3}\b') {
+                $violations += "${relative}:$lineNumber assertion executes while On Error Resume Next is active: $line"
+              }
+            }
+          }
+
+          if ($violations.Count -gt 0) {
+            $violations | ForEach-Object { Write-Error $_ }
+            throw "Found $($violations.Count) swallowed Evaluate regression assertion(s). Snapshot Err/Error$, reset the handler, then assert."
+          }
+
+          Write-Host 'EVALUATE-NEGATIVE-ASSERTION-GUARD=OK'
