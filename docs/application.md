@@ -131,7 +131,7 @@ The identifier `Application` is reserved by the XPScript runtime and cannot be r
 
 See:
 
-- `samples/application-runtime.xps`
+- [samples/application-runtime.xps](../samples/application-runtime.xps)
 
 The sample prints executable metadata and enumerates every command-line argument.
 

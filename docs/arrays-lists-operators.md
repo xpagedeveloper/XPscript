@@ -1,6 +1,5 @@
 # XPScript Arrays, Lists and Operators
 
-This page documents the array, List and operator features demonstrated by `samples/operators-arrays.xps`, `samples/lists-classes.xps`, `samples/module-arrays.xps` and related fixtures.
 
 ## Arrays
 
@@ -223,8 +222,8 @@ A trailing `_` continues a statement on the next physical source line.
 
 ## Samples
 
-- `samples/operators-arrays.xps`
-- `samples/lists-classes.xps`
-- `samples/module-arrays.xps`
-- `samples/evaluate-array-helpers.xps`
-- `samples/evaluate-nested-collections.xps`
+- [samples/operators-arrays.xps](../samples/operators-arrays.xps)
+- [samples/lists-classes.xps](../samples/lists-classes.xps)
+- [samples/module-arrays.xps](../samples/module-arrays.xps)
+- [samples/evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps)
+- [samples/evaluate-nested-collections.xps](../samples/evaluate-nested-collections.xps)

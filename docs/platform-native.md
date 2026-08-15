@@ -1,6 +1,5 @@
 # XPScript Platform, Shell and Native Libraries
 
-This page documents cross-platform functionality demonstrated by `samples/platform-shell.xps`, `samples/platform-native-library.xps`, `samples/native-architecture-assets.xps`, `samples/native-dependency-packaging.xps` and `samples/native-loader-diagnostics.xps`.
 
 ## Platform
 
@@ -71,7 +70,7 @@ Declare Function NativeLength Lib "mylib" Alias "native_length" _
 
 Parameterless native functions are unaffected.
 
-See the negative regression source `samples/native-byref-error.xps`.
+See the negative regression source [samples/native-byref-error.xps](../samples/native-byref-error.xps).
 
 ### Calling convention policy
 
@@ -202,9 +201,9 @@ ReferenceNative "managed/runtimes/win-x64/native/helper.dll" Runtime "win-x64"
 
 ## Samples
 
-- `samples/platform-shell.xps`
-- `samples/platform-native-library.xps`
-- `samples/native-architecture-assets.xps`
-- `samples/native-dependency-packaging.xps`
-- `samples/native-loader-diagnostics.xps`
-- `samples/native-byref-error.xps`
+- [samples/platform-shell.xps](../samples/platform-shell.xps)
+- [samples/platform-native-library.xps](../samples/platform-native-library.xps)
+- [samples/native-architecture-assets.xps](../samples/native-architecture-assets.xps)
+- [samples/native-dependency-packaging.xps](../samples/native-dependency-packaging.xps)
+- [samples/native-loader-diagnostics.xps](../samples/native-loader-diagnostics.xps)
+- [samples/native-byref-error.xps](../samples/native-byref-error.xps)

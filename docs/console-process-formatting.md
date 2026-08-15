@@ -1,6 +1,5 @@
 # XPScript Console, Process, Environment and Formatting
 
-This page documents runtime helpers demonstrated by `samples/textio-console.xps`, `samples/runtime-sax.xps` and `samples/platform-shell.xps`. Older compatibility-only object classes in legacy samples are intentionally not presented here as the preferred standalone XPScript API.
 
 ## Print
 
@@ -79,7 +78,7 @@ Starts an external process/command and returns the runtime result identifier/cod
 result = Shell("command")
 ```
 
-For portable Shell usage, prefer checking `Platform()` and see `docs/platform-native.md`.
+For portable Shell usage, prefer checking `Platform()` and see [docs/platform-native.md](platform-native.md).
 
 ## MessageBox
 
@@ -164,7 +163,7 @@ The latter reads from an open file handle.
 
 ## Samples
 
-- `samples/textio-console.xps`
-- `samples/platform-shell.xps`
-- `samples/runtime-sax.xps` — contains additional legacy compatibility coverage; use the standalone functions documented above for new XPScript programs
-- `samples/file-io-extensions.xps`
+- [samples/textio-console.xps](../samples/textio-console.xps)
+- [samples/platform-shell.xps](../samples/platform-shell.xps)
+- [samples/runtime-sax.xps](../samples/runtime-sax.xps) — contains additional legacy compatibility coverage; use the standalone functions documented above for new XPScript programs
+- [samples/file-io-extensions.xps](../samples/file-io-extensions.xps)

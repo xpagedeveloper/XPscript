@@ -1,6 +1,5 @@
 # XPScript File I/O and Filesystem
 
-This page documents functionality demonstrated by `samples/core-language.xps`, `samples/file-io-extensions.xps`, `samples/file-io-portability.xps`, `samples/filesystem-portability-semantics.xps`, `samples/file-charset-bom.xps`, `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps` and `samples/file-delete-open-semantics.xps`.
 
 ## FreeFile
 
@@ -124,8 +123,8 @@ Binary/Random streams permit multiple read/write handles so explicit `Lock`/`Unl
 
 The cross-process fixtures are intentionally split into:
 
-- `samples/file-lock-holder.xps`
-- `samples/file-lock-contender.xps`
+- [samples/file-lock-holder.xps](../samples/file-lock-holder.xps)
+- [samples/file-lock-contender.xps](../samples/file-lock-contender.xps)
 
 ## Kill
 
@@ -203,11 +202,11 @@ XPScript text output follows the target OS newline convention:
 
 ## Samples
 
-- `samples/core-language.xps`
-- `samples/file-io-extensions.xps`
-- `samples/file-io-portability.xps`
-- `samples/filesystem-portability-semantics.xps`
-- `samples/file-charset-bom.xps`
-- `samples/file-lock-holder.xps`
-- `samples/file-lock-contender.xps`
-- `samples/file-delete-open-semantics.xps`
+- [samples/core-language.xps](../samples/core-language.xps)
+- [samples/file-io-extensions.xps](../samples/file-io-extensions.xps)
+- [samples/file-io-portability.xps](../samples/file-io-portability.xps)
+- [samples/filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps)
+- [samples/file-charset-bom.xps](../samples/file-charset-bom.xps)
+- [samples/file-lock-holder.xps](../samples/file-lock-holder.xps)
+- [samples/file-lock-contender.xps](../samples/file-lock-contender.xps)
+- [samples/file-delete-open-semantics.xps](../samples/file-delete-open-semantics.xps)

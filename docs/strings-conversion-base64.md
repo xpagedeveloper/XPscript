@@ -1,6 +1,5 @@
 # XPScript Strings, Conversion, Inspection and Base64
 
-This page documents functions demonstrated by `samples/reference-runtime-batch1.xps`, `samples/coercion.xps`, `samples/compatibility.xps`, `samples/base64-binary.xps`, `samples/language-extensions.xps` and the Evaluate function samples.
 
 ## Conversion functions
 
@@ -237,10 +236,10 @@ XPScript's forgiving dynamic `+` can perform numeric addition or String concaten
 
 ## Samples
 
-- `samples/reference-runtime-batch1.xps`
-- `samples/coercion.xps`
-- `samples/compatibility.xps`
-- `samples/base64-binary.xps`
-- `samples/language-extensions.xps`
-- `samples/evaluate-standard-functions.xps`
-- `samples/evaluate-coercion-diagnostics.xps`
+- [samples/reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps)
+- [samples/coercion.xps](../samples/coercion.xps)
+- [samples/compatibility.xps](../samples/compatibility.xps)
+- [samples/base64-binary.xps](../samples/base64-binary.xps)
+- [samples/language-extensions.xps](../samples/language-extensions.xps)
+- [samples/evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps)
+- [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps)

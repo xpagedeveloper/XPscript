@@ -171,9 +171,9 @@ The `examples/` programs are intended to be copied or adapted directly:
 
 The compiler/runtime regression suite also covers:
 
-- `samples/date-object-enhancements.xps`
-- `samples/date-comparisons-valid.xps`
-- `samples/date-comparisons-invalid.xps`
-- `samples/reference-runtime-batch1.xps`
-- `samples/evaluate-standard-functions.xps`
-- `samples/evaluate-coercion-diagnostics.xps`
+- [samples/date-object-enhancements.xps](../samples/date-object-enhancements.xps)
+- [samples/date-comparisons-valid.xps](../samples/date-comparisons-valid.xps)
+- [samples/date-comparisons-invalid.xps](../samples/date-comparisons-invalid.xps)
+- [samples/reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps)
+- [samples/evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps)
+- [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps)
