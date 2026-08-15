@@ -259,14 +259,21 @@ internal static class XPCrossPlatformRuntime
     private static string BuildWindowsBatchCommand(string fileName, IReadOnlyList<string> arguments)
     {
         ValidateBatchFileName(fileName);
+
+        // cmd.exe /S /C has special handling for the first and last quote in the
+        // command string. Wrap the complete command in an additional quote pair so
+        // a quoted batch path containing spaces remains the executable token.
+        // Example: ""C:\path with spaces\script.cmd" "arg""
         var command = new System.Text.StringBuilder();
-        command.Append('"').Append(fileName).Append('"');
+        command.Append("\"\"").Append(fileName).Append('"');
 
         foreach (var argument in arguments)
         {
             ValidateBatchArgument(argument);
             command.Append(' ').Append('"').Append(argument).Append('"');
         }
+
+        command.Append('"');
         return command.ToString();
     }
 
