@@ -25,8 +25,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - runner: windows-latest
+            rid: win-x64
+            platform: Windows
+          - runner: windows-11-arm
+            rid: win-arm64
+            platform: Windows
+          - runner: ubuntu-latest
+            rid: linux-x64
+            platform: Linux
+          - runner: ubuntu-24.04-arm
+            rid: linux-arm64
+            platform: Linux
+          - runner: macos-15-intel
+            rid: osx-x64
+            platform: MacOS
+          - runner: macos-latest
+            rid: osx-arm64
+            platform: MacOS
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -45,24 +63,21 @@ jobs:
           dotnet run --project ./tests/NativeTargetResolutionProbe/NativeTargetResolutionProbe.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Native target resolution probe failed.' }
 
-      - name: Resolve runner RID
-        id: rid
+      - name: Verify runner matches requested RID
         shell: pwsh
         run: |
           $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
           $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
-          $rid = "$os-$arch"
-          "rid=$rid" >> $env:GITHUB_OUTPUT
-          "arch=$arch" >> $env:GITHUB_OUTPUT
-          Write-Host "Testing native loader on $env:RUNNER_OS/$env:RUNNER_ARCH using RID $rid"
+          $actual = "$os-$arch"
+          if ($actual -ne '${{ matrix.rid }}') { throw "Runner architecture mismatch: expected ${{ matrix.rid }}, actual $actual" }
 
       - name: Compile native platform sample
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out | Out-Null
           $output = if ($env:RUNNER_OS -eq 'Windows') { './out/platform-native.exe' } else { './out/platform-native' }
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-native-library.xps --runtime '${{ steps.rid.outputs.rid }}' -o $output --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw "Native platform sample compilation failed for ${{ steps.rid.outputs.rid }}." }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-native-library.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native platform sample compilation failed for ${{ matrix.rid }}.' }
 
       - name: Execute and verify native system library load
         shell: pwsh
@@ -75,19 +90,18 @@ jobs:
           }
           $result = & $output
           if ($LASTEXITCODE -ne 0) { throw "Native platform sample exited with code $LASTEXITCODE.`n$result" }
-          $expectedPlatform = if ($env:RUNNER_OS -eq 'Windows') { 'Windows' } elseif ($env:RUNNER_OS -eq 'Linux') { 'Linux' } else { 'MacOS' }
-          if ($result -notcontains "PLATFORM=$expectedPlatform") { throw "Expected PLATFORM=$expectedPlatform.`n$result" }
+          if ($result -notcontains 'PLATFORM=${{ matrix.platform }}') { throw "Expected PLATFORM=${{ matrix.platform }}.`n$result" }
           $pidLine = $result | Where-Object { $_ -match '^PID=\d+$' } | Select-Object -First 1
           if (-not $pidLine) { throw "Native get-process-id call did not return a numeric PID.`n$result" }
           $pidValue = [int64]($pidLine -replace '^PID=', '')
           if ($pidValue -le 0) { throw "Native PID must be > 0.`n$result" }
-          Write-Host "Native loader verified on ${{ steps.rid.outputs.rid }}: $pidLine"
+          Write-Host 'Native loader verified on ${{ matrix.rid }}:' $pidLine
 
       - name: Verify native loader diagnostics
         shell: pwsh
         run: |
           $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-loader-diagnostics.exe' } else { './out/native-loader-diagnostics' }
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-loader-diagnostics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $output --framework-dependent
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-loader-diagnostics.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Native loader diagnostic fixture compilation failed.' }
           $text = & $output 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0) { throw "Handled native loader diagnostic fixture should exit normally.`n$text" }
