@@ -36,9 +36,9 @@ Sub Main()
         Error 9904, "Long -- failed"
     End If
 
-    singleValue = 1.5
+    singleValue = CSng(1.5)
     singleValue++
-    If singleValue <> 2.5 Then
+    If singleValue <> CSng(2.5) Then
         Error 9905, "Single ++ failed"
     End If
 
@@ -81,8 +81,10 @@ Sub Main()
     If counter <> 6 Then
         Error 9913, "/= failed"
     End If
-    counter \= 4
-    If counter <> 1 Then
+
+    longValue = 10
+    longValue \= 4
+    If longValue <> 2 Then
         Error 9914, "\= failed"
     End If
 
@@ -126,9 +128,9 @@ Sub Main()
         Error 9919, "/= division by zero must use error 11"
     End If
 
-    counter = 10
+    longValue = 10
     On Error Resume Next
-    counter \= zero
+    longValue \= zero
     capturedErr = Err
     On Error GoTo 0
     If capturedErr <> 11 Then
