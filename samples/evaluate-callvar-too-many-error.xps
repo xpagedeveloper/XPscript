@@ -1,0 +1,4 @@
+Sub Main()
+    Dim result As Variant
+    result = Evaluate("Return callvar(0)", 1, 2, 3, 4, 5, 6)
+End Sub
