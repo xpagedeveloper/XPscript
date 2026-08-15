@@ -1,0 +1,36 @@
+' (c) xpagedeveloper.com 2026
+' Regression: malformed numeric input must not be echoed and retained structural diagnostics are length-limited.
+
+Sub Main()
+    Dim result As Variant
+    Dim longName As String
+    Dim malformed As String
+
+    malformed = "123e+"
+
+    On Error Resume Next
+    result = Evaluate("Return " & malformed)
+    If Err <> 5 Then
+        Error 9401, "Malformed numeric literal should use error 5, got " & CStr(Err)
+    End If
+    If Instr(Error$, malformed) > 0 Then
+        Error 9402, "Malformed numeric literal leaked into Evaluate diagnostic"
+    End If
+
+    On Error GoTo 0
+    On Error Resume Next
+    longName = String(700, "A")
+    result = Evaluate("Return " & longName)
+    If Err <> 5 Then
+        Error 9403, "Oversized structural diagnostic should use error 5, got " & CStr(Err)
+    End If
+    If Len(Error$) > 515 Then
+        Error 9404, "Evaluate structural diagnostic exceeded the 512-character limit plus ellipsis"
+    End If
+    If Instr(Error$, "Unknown identifier in Evaluate scope: ") <> 1 Then
+        Error 9405, "Expected retained structural unknown-identifier diagnostic"
+    End If
+
+    On Error GoTo 0
+    Print "EVALUATE-DIAGNOSTIC-EDGE=OK"
+End Sub

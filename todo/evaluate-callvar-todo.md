@@ -27,7 +27,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] evaluated code has no implicit access to caller locals; runtime-negative: `samples/evaluate-scope-error.xps`
 - [>] module globals, statics, compiler internals and unrelated state are not bridged by the evaluator implementation; dedicated adversarial coverage remains to be added
 - [x] mutable XPScript arrays and Lists are defensive-copied before evaluation for the verified scalar/array/List and nested-collection paths
-- [>] nested mutable arrays/Lists reachable from callvar are recursively snapshotted; arbitrary mutable object types are rejected instead of being shared into Evaluate, but object-rejection coverage remains to be added to the permanent gate
+- [x] nested mutable arrays/Lists reachable from callvar are recursively snapshotted and arbitrary mutable object types are rejected instead of being shared into Evaluate; runtime coverage: `samples/evaluate-nested-collections.xps`, `samples/evaluate-object-callvar-rejection.xps`
 
 ## Scalar callvar
 
@@ -78,7 +78,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] evaluator exceptions are normalized through the runtime error mapping for verified conversion and divide-by-zero paths
 - [x] conversion/type mismatch maps to XPScript error 13
 - [x] divide-by-zero maps to XPScript error 11
-- [>] overflow maps to XPScript error 6; dedicated runtime assertion remains open
+- [x] overflow maps to XPScript error 6; runtime assertion: `samples/evaluate-coercion-diagnostics.xps`
 - [>] permission/access failures map to XPScript error 70; dedicated runtime assertion remains open
 - [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context; representative arity/unknown-function failures are verified
 - [x] known Evaluate functions distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
@@ -93,7 +93,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] assignment to `callvar` is rejected; source: `samples/evaluate-callvar-readonly-error.xps`
 - [x] caller local variables remain inaccessible unless explicitly passed; source: `samples/evaluate-scope-error.xps`
 - [x] arrays/Lists are defensive-copied before execution for the verified callvar/nested collection paths
-- [>] arbitrary mutable objects are rejected rather than bridged by reference; dedicated runtime fixture remains open
+- [x] arbitrary mutable objects are rejected rather than bridged by reference; runtime fixture: `samples/evaluate-object-callvar-rejection.xps`
 - [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work; exact nesting-boundary runtime coverage remains open
 - [x] collection snapshots enforce a total budget of 100000 collection elements by rejecting an over-budget fixture with controlled XPScript error 5
 - [x] collection snapshots enforce a 16 MiB estimated payload budget by rejecting an over-budget fixture with controlled XPScript error 5
@@ -106,8 +106,8 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] exceptions crossing the verified Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`
 - [x] type/conversion diagnostics use stable descriptions that do not echo secret input values for the verified sanitization path
 - [>] only allowlisted structural parser/API diagnostics retain detail; broader adversarial coverage remains open
-- [>] invalid numeric-literal diagnostics no longer echo the literal text; dedicated runtime fixture remains open
-- [>] retained structural diagnostics are length-limited; explicit oversized-diagnostic runtime fixture remains open
+- [x] invalid numeric-literal diagnostics do not echo the literal text; runtime fixture: `samples/evaluate-diagnostic-edge-cases.xps`
+- [x] retained structural diagnostics are length-limited to 512 characters plus ellipsis; runtime fixture: `samples/evaluate-diagnostic-edge-cases.xps`
 - [x] secret callvar payload is absent from `Error$` in `samples/evaluate-diagnostic-sanitization.xps`
 - [x] secret callvar payload is also rejected from compiler structured output and generated-process stdout/stderr before either stream is written to CI logs; permanent gate: `Evaluate Runtime Compatibility`
 
