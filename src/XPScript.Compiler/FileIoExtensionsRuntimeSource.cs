@@ -9,33 +9,20 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
 
-    // Darwin's struct flock layout differs from Linux: off_t start/len, pid_t, type, whence.
-    // Values and field offsets are permanently verified by the macOS fcntl ABI Probe workflow
-    // on both ARM64 and x64 hosted macOS runners.
-    private const int DarwinFSetLock = 8;
-    private const short DarwinWriteLock = 3;
-    private const short DarwinUnlock = 2;
-    private const short DarwinSeekSet = 0;
+    // Darwin lockf() provides non-blocking advisory record locks without the
+    // variadic fcntl ABI. Constants and direct native behavior are permanently
+    // verified by the macOS Record Lock ABI Probe on ARM64 and x64 runners.
+    private const int DarwinUnlockFunction = 0;
+    private const int DarwinTryLockFunction = 2;
     private const int DarwinEAccess = 13;
     private const int DarwinEAgain = 35;
     private const int DarwinEBadF = 9;
     private const int DarwinEInvalid = 22;
+    private const int DarwinENoLock = 77;
+    private const int DarwinEOpNotSupported = 102;
 
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct DarwinFlock
-    {
-        public long Start;
-        public long Length;
-        public int ProcessId;
-        public short Type;
-        public short Whence;
-    }
-
-    // fcntl is variadic in C. Passing the third argument as an explicit unmanaged pointer
-    // preserves the Darwin vararg ABI instead of asking the marshaller to treat it as a
-    // fixed ref-struct parameter.
-    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
-    private static extern int DarwinFcntl(int fd, int command, nint argument);
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lockf", SetLastError = true)]
+    private static extern int DarwinLockf(int fd, int function, long size);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -149,7 +136,7 @@ internal static class XPScriptFileIO
     {
         if (OperatingSystem.IsMacOS())
         {
-            DarwinSetRegionLock(stream, offset, length, DarwinWriteLock, "lock");
+            DarwinSetRegionLock(stream, offset, length, DarwinTryLockFunction, "lock");
             return;
         }
 
@@ -178,7 +165,7 @@ internal static class XPScriptFileIO
     {
         if (OperatingSystem.IsMacOS())
         {
-            DarwinSetRegionLock(stream, offset, length, DarwinUnlock, "unlock");
+            DarwinSetRegionLock(stream, offset, length, DarwinUnlockFunction, "unlock");
             return;
         }
 
@@ -203,33 +190,20 @@ internal static class XPScriptFileIO
         }
     }
 
-    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, short lockType, string operation)
+    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, int function, string operation)
     {
         var handle = stream.SafeFileHandle;
         var addedRef = false;
-        nint descriptorMemory = 0;
+        var originalPosition = stream.Position;
         try
         {
             handle.DangerousAddRef(ref addedRef);
-            var rawHandle = handle.DangerousGetHandle();
-            var rawValue = rawHandle.ToInt64();
+            var rawValue = handle.DangerousGetHandle().ToInt64();
             if (rawValue < int.MinValue || rawValue > int.MaxValue)
                 throw new XPScriptRuntimeException(70, "macOS file descriptor is outside the supported integer range.");
 
-            var descriptor = new DarwinFlock
-            {
-                Start = offset,
-                Length = length,
-                ProcessId = 0,
-                Type = lockType,
-                Whence = DarwinSeekSet
-            };
-
-            descriptorMemory = System.Runtime.InteropServices.Marshal.AllocHGlobal(
-                System.Runtime.InteropServices.Marshal.SizeOf<DarwinFlock>());
-            System.Runtime.InteropServices.Marshal.StructureToPtr(descriptor, descriptorMemory, false);
-
-            if (DarwinFcntl((int)rawValue, DarwinFSetLock, descriptorMemory) == 0)
+            stream.Seek(offset, SeekOrigin.Begin);
+            if (DarwinLockf((int)rawValue, function, length) == 0)
                 return;
 
             var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
@@ -244,15 +218,21 @@ internal static class XPScriptFileIO
             if (error == DarwinEBadF)
             {
                 throw new XPScriptRuntimeException(70,
-                    "Unable to " + operation + " macOS file region because the file descriptor does not have the required access. errno=" +
+                    "Unable to " + operation + " macOS file region because the file descriptor does not have the required write access. errno=" +
                     error.ToString(CultureInfo.InvariantCulture));
             }
 
-            if (error == DarwinEInvalid)
+            if (error == DarwinEInvalid || error == DarwinEOpNotSupported)
             {
                 throw new XPScriptRuntimeException(5,
-                    "macOS rejected the byte-range " + operation + " request. The filesystem may not support POSIX record locking or the range is invalid. errno=" +
+                    "macOS rejected the byte-range " + operation + " request because the filesystem or file type does not support advisory record locking. errno=" +
                     error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (error == DarwinENoLock)
+            {
+                throw new XPScriptRuntimeException(70,
+                    "macOS could not allocate another record lock for the requested file region. errno=" + error.ToString(CultureInfo.InvariantCulture));
             }
 
             throw new XPScriptRuntimeException(70,
@@ -262,9 +242,14 @@ internal static class XPScriptFileIO
         }
         finally
         {
-            if (descriptorMemory != 0)
-                System.Runtime.InteropServices.Marshal.FreeHGlobal(descriptorMemory);
-            if (addedRef) handle.DangerousRelease();
+            try
+            {
+                stream.Seek(originalPosition, SeekOrigin.Begin);
+            }
+            finally
+            {
+                if (addedRef) handle.DangerousRelease();
+            }
         }
     }
 
