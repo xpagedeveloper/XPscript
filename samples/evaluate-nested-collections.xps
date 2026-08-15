@@ -19,5 +19,5 @@ Sub Main()
     ' Returning the entire input List produces a detached normal XPScript List value,
     ' never the evaluator's internal read-only snapshot object.
     result = Evaluate("Return callvar", parameters)
-    Print "RETURNED-LIST-TYPE=" & TypeName(result)
+    Print "RETURNED-IS-LIST=" & CStr(IsList(result))
 End Sub
