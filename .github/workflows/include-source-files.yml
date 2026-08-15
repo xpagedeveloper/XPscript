@@ -8,6 +8,8 @@ on:
       - todo-include-filesystem-case-sensitivity
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/include-source/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-source-files.yml'
@@ -15,6 +17,8 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/include-source/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-source-files.yml'
