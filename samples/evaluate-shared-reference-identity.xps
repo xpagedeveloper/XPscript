@@ -1,0 +1,23 @@
+Sub Main()
+    Dim child List As Variant
+    Dim parent List As Variant
+    Dim result As Variant
+    Dim left As Variant
+    Dim right As Variant
+
+    child("value") = 1
+    parent("left") = child
+    parent("right") = child
+
+    result = Evaluate("Return callvar", parent)
+    left = result("left")
+    right = result("right")
+
+    If Not IsList(left) Then Error 9611, "Evaluate shared-reference left edge is not a List"
+    If Not IsList(right) Then Error 9612, "Evaluate shared-reference right edge is not a List"
+
+    left("value") = 2
+    If right("value") <> 2 Then Error 9613, "Evaluate duplicated a shared child List instead of preserving identity"
+
+    Print "SHARED-REFERENCE-IDENTITY=OK"
+End Sub
