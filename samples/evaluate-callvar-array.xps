@@ -2,6 +2,9 @@ Sub Main()
     Dim result As Variant
     Dim values As Variant
     Dim parameters List As Variant
+    Dim sharedChild List As Variant
+    Dim left As Variant
+    Dim right As Variant
 
     result = Evaluate("Return callvar(0) + callvar(1)", 10, 20)
     Print "TWO=" & CStr(result)
@@ -19,4 +22,26 @@ Sub Main()
 
     result = Evaluate("Return LBound(callvar) * 10 + UBound(callvar)", 100, 200, 300)
     Print "BOUNDS=" & CStr(result)
+
+    sharedChild("value") = 1
+    result = Evaluate("Return callvar", sharedChild, sharedChild)
+    left = result(0)
+    right = result(1)
+
+    If Not IsList(left) Then
+        Error 9621, "Evaluate multi-value shared-reference left edge is not a List"
+    End If
+    If Not IsList(right) Then
+        Error 9622, "Evaluate multi-value shared-reference right edge is not a List"
+    End If
+
+    left("value") = 2
+    If right("value") <> 2 Then
+        Error 9623, "Evaluate duplicated a shared child supplied through two callvar values"
+    End If
+    If sharedChild("value") <> 1 Then
+        Error 9624, "Evaluate shared-reference snapshot mutated caller-owned data"
+    End If
+
+    Print "MULTI-SHARED-REFERENCE-IDENTITY=OK"
 End Sub

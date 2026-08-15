@@ -67,3 +67,4 @@ jobs:
           if ($output -notcontains 'MANY=16') { throw 'Callvar array with more than five supplied values was incorrect.' }
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
           if ($output -notcontains 'BOUNDS=2') { throw 'Callvar LSArray bounds were incorrect.' }
+          if ($output -notcontains 'MULTI-SHARED-REFERENCE-IDENTITY=OK') { throw 'Shared child identity was not preserved across supplied callvar values.' }

@@ -39,7 +39,7 @@ Status:
 
 - [x] the generated callvar array is snapshotted before evaluated source begins execution
 - [x] nested caller-owned arrays and Lists are never shared directly with evaluated code
-- [ ] shared child references reachable from two different supplied values preserve identity inside the snapshot
+- [x] shared child references reachable from two different supplied values preserve identity inside the snapshot; verified by `samples/evaluate-callvar-array.xps`
 - [x] returned arrays/Lists remain detached through the existing return snapshot path
 
 ## Resource budgets
@@ -77,7 +77,7 @@ The multi-value callvar array has no separate fixed value-count limit. Its effec
 - [x] callvar array bounds regression
 - [ ] nested mutation isolation regression
 - [ ] aggregate budget regression
-- [ ] shared-reference identity regression across two array elements
+- [x] shared-reference identity regression across two array elements; `MULTI-SHARED-REFERENCE-IDENTITY=OK`
 - [ ] concurrent multi-value isolation regression
 - [>] Windows, Linux and macOS regression coverage
 
