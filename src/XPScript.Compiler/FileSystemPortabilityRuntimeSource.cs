@@ -8,12 +8,10 @@ internal static class XPScriptFileSystemRuntime
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
 
     private const int DarwinOpenReadWrite = 0x0002;
-    private const int DarwinOpenCreate = 0x0200;
     private const int DarwinOpenCloseOnExec = 0x01000000;
-    private const int DarwinDefaultCreateMode = 438; // 0666; process umask still applies.
 
     [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "open", SetLastError = true)]
-    private static extern int DarwinOpen(string path, int flags, int mode);
+    private static extern int DarwinOpenExisting(string path, int flags);
 
     public static string ResolvePath(object? value)
     {
@@ -59,10 +57,26 @@ internal static class XPScriptFileSystemRuntime
         // Darwin documents flock and lockf/fcntl record locks as interacting locking interfaces;
         // keeping that implicit flock on the same process causes an otherwise valid byte-range
         // lockf(F_TLOCK) to fail with EAGAIN. Binary/Random semantics already permit ReadWrite
-        // sharing and require explicit Lock/Unlock coordination, so open the Darwin descriptor
-        // directly and wrap it without asking FileStream to establish another FileShare lock.
-        var flags = DarwinOpenReadWrite | DarwinOpenCreate | DarwinOpenCloseOnExec;
-        var fd = DarwinOpen(path, flags, DarwinDefaultCreateMode);
+        // sharing and require explicit Lock/Unlock coordination, so use a native descriptor after
+        // any required creation has completed and its temporary managed FileStream is closed.
+        //
+        // Do not P/Invoke open(..., O_CREAT, mode) here: open is variadic when O_CREAT is present,
+        // and Darwin ARM64 vararg ABI handling can corrupt the mode argument. CreateNew is used only
+        // to bootstrap a missing file atomically; an existing file is never truncated or rewritten.
+        if (!File.Exists(path))
+        {
+            try
+            {
+                using var bootstrap = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+            }
+            catch (IOException) when (File.Exists(path))
+            {
+                // Another process won the create race. Continue with the existing file.
+            }
+        }
+
+        var flags = DarwinOpenReadWrite | DarwinOpenCloseOnExec;
+        var fd = DarwinOpenExisting(path, flags);
         if (fd < 0)
         {
             var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
