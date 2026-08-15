@@ -13,6 +13,24 @@ result = Evaluate(sourceText, callvar)
 
 `sourceText` is XPScript source text. `callvar` is the only explicit value bridge from the caller into the evaluator.
 
+### Evaluate limitations
+
+`Evaluate` is intentionally restricted. The limits are part of the public runtime contract and should be considered when deciding whether a workload belongs inside `Evaluate`:
+
+- only the supported side-effect-free Evaluate function subset is available; arbitrary XPScript runtime APIs are not automatically exposed,
+- `callvar` is the only caller-to-evaluator data bridge and is read-only inside the evaluator,
+- caller locals, module globals and static variables are not implicitly available,
+- arbitrary mutable object references are rejected instead of being shared into the evaluator,
+- arrays and Lists crossing the boundary are defensively snapshotted,
+- each input or return snapshot allows at most **64 nested collection levels**,
+- each snapshot allows at most **100,000 collection elements** in total,
+- each snapshot allows at most **16 MiB (16,777,216 bytes)** of estimated payload,
+- String values and List tags count against the payload budget using their UTF-8 byte length,
+- exceeding a snapshot limit raises XPScript error 5,
+- `Evaluate` is not an operating-system/process security sandbox and must not be treated as one for arbitrary hostile code.
+
+The detailed resource-budget rules are repeated under [Collection limits](#collection-limits), and the supported function surface is described under [Function availability](#function-availability).
+
 ## Return value
 
 The evaluated source returns a value only through an explicit `Return expression` statement.
@@ -81,11 +99,11 @@ Returned arrays and Lists are detached from evaluator-owned storage before contr
 
 To prevent unbounded memory and CPU use while copying `callvar`, each input or returned collection snapshot currently has these limits:
 
-- maximum nesting depth: 64
-- maximum collection elements: 100,000
-- maximum estimated payload: 16 MiB
+- maximum nesting depth: **64**
+- maximum collection elements: **100,000**
+- maximum estimated payload: **16 MiB / 16,777,216 bytes**
 
-String values and List tags count toward the payload budget using their UTF-8 byte length. Exceeding a limit raises XPScript error 5.
+The element budget is cumulative across nested arrays/Lists in one snapshot operation. String values and List tags count toward the payload budget using their UTF-8 byte length; scalar values use the runtime's conservative size estimate. Exceeding a limit raises XPScript error 5 before the evaluator is allowed to continue with an unbounded snapshot.
 
 These are runtime safety limits, not a guarantee that `Evaluate` is a complete security sandbox.
 
@@ -153,5 +171,8 @@ The documentation intentionally uses source fixtures that already exist under `s
 - [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps) — coercion/error semantics
 - [samples/evaluate-function-arity-errors.xps](../samples/evaluate-function-arity-errors.xps) — wrong-arity diagnostics
 - [samples/evaluate-collection-element-budget.xps](../samples/evaluate-collection-element-budget.xps) — element budget
+- [samples/evaluate-collection-element-boundary.xps](../samples/evaluate-collection-element-boundary.xps) — exact element-budget boundary
 - [samples/evaluate-collection-payload-budget.xps](../samples/evaluate-collection-payload-budget.xps) — payload budget
+- [samples/evaluate-collection-payload-boundary.xps](../samples/evaluate-collection-payload-boundary.xps) — exact payload-budget boundary
 - [samples/evaluate-diagnostic-sanitization.xps](../samples/evaluate-diagnostic-sanitization.xps) — secret-safe diagnostics
+- [samples/evaluate-diagnostic-edge-cases.xps](../samples/evaluate-diagnostic-edge-cases.xps) — diagnostic sanitization limits

@@ -5,13 +5,28 @@
 
 ## Arrays
 
+### Array limits
+
+The following limits are enforced by the current XPScript array runtime and apply to `Dim` array declarations and `ReDim` unless a more specific command rule overrides them:
+
+- arrays may have between **1 and 8 dimensions**,
+- each explicit lower bound must be at least **-32768**,
+- each explicit upper bound must be at most **32767**,
+- an upper bound cannot be lower than its corresponding lower bound,
+- the total allocated element count must fit the runtime's supported managed allocation/indexing capacity; excessively large dimensions fail rather than wrapping,
+- `ReDim` cannot change the number of dimensions of an already allocated array,
+- `ReDim Preserve` cannot change existing lower bounds,
+- `ReDim Preserve` may change only the upper bound of the **last dimension**; earlier dimensions must retain their upper bounds.
+
+`Option Base` affects the default lower bound only where a lower bound is omitted. It does not override the explicit bound limits above.
+
 ### Fixed arrays
 
 ```xpscript
 Dim matrix(1 To 2, 0 To 1) As Long
 ```
 
-XPScript supports explicit lower and upper bounds and multidimensional arrays.
+XPScript supports explicit lower and upper bounds and multidimensional arrays subject to the array limits above.
 
 ### Dynamic arrays
 
@@ -26,7 +41,7 @@ ReDim names(1 To 2)
 ReDim Preserve names(1 To 3)
 ```
 
-`Preserve` retains existing values subject to XPScript array resizing rules.
+`Preserve` retains existing values subject to the resizing restrictions documented under [Array limits](#array-limits).
 
 ### LBound and UBound
 
@@ -35,7 +50,7 @@ Print CStr(LBound(names))
 Print CStr(UBound(names))
 ```
 
-For multidimensional arrays, pass the dimension number.
+For multidimensional arrays, pass the dimension number. The requested dimension must be within the array's actual rank.
 
 ```xpscript
 LBound(matrix, 1)
@@ -44,11 +59,13 @@ UBound(matrix, 2)
 
 ### Array
 
-Creates an array value from arguments.
+Creates a zero-based dynamic Variant array from arguments.
 
 ```xpscript
 values = Array(10, 20, 30)
 ```
+
+The resulting array still uses the normal XPScript array runtime and allocation safeguards.
 
 ### Join
 
@@ -92,7 +109,7 @@ uniqueValues = ArrayUnique(values)
 
 ### ArraySlice
 
-Returns a selected range of values.
+Returns a selected range of values. The requested slice must be valid for the source array/helper semantics; invalid indexes/ranges are rejected rather than silently wrapping.
 
 ```xpscript
 slice = ArraySlice(values, 1, 4)
@@ -100,7 +117,7 @@ slice = ArraySlice(values, 1, 4)
 
 ### ArraySplice
 
-Removes a range from an array and optionally inserts replacement values. It returns the removed values.
+Removes a range from an array and optionally inserts replacement values. It returns the removed values. Index/count arguments must describe a valid supported range.
 
 ```xpscript
 removed = ArraySplice(values, 1, 2, "X", "Y")
@@ -119,6 +136,8 @@ Assign values by tag:
 ```xpscript
 users("admin") = "Alice"
 ```
+
+Lists do not use the fixed 1-to-8 dimensional array limit because they are keyed collections. Operations that snapshot a List for another subsystem, such as `Evaluate`, may impose their own independent resource budgets; see [Evaluate](evaluate.md).
 
 ### IsElement
 

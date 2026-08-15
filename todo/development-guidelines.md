@@ -17,6 +17,17 @@ These rules apply to future compiler, runtime, tooling, web and UI implementatio
 - For security-critical parsers/protocols, prefer well-tested framework/package implementations over hand-written byte parsing when an appropriate implementation exists.
 - If custom implementation is still required, document why an existing framework/NuGet option was unsuitable and add focused negative, fuzz/adversarial and boundary regression tests where applicable.
 
+## Documentation of limits and restrictions
+
+- Every public command, function, runtime object or compiler option with a fixed limit or important platform/security restriction must document that restriction close to the command in `docs/`.
+- Numeric limits must state the actual value and unit, for example bytes, MiB, element count, dimensions, nesting depth, file-handle range or timeout units.
+- Where a command has several related limits, include a clear `Limitations`/`Limits` subsection and repeat the most important limit directly under the affected command when practical.
+- Document what happens when the limit is exceeded, including the XPScript error code when it is part of the public contract.
+- Distinguish XPScript runtime limits from operating-system/framework limits and from application-level policy.
+- Platform restrictions such as Windows-only behavior must be documented as limitations rather than left implicit in implementation code.
+- Security/resource limits must not exist only in TODO files or source constants; user-facing documentation must be updated in the same feature work.
+- When a limit changes, update its regression/boundary test and documentation in the same pull request whenever practical.
+
 ## Web-specific rule
 
 - Kestrel mode must use ASP.NET Core/Kestrel rather than a custom HTTP server/parser.

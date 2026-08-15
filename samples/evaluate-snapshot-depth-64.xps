@@ -1,0 +1,133 @@
+Sub Main()
+    Dim result As Variant
+    Dim l0 List As Variant
+    Dim l1 List As Variant
+    Dim l2 List As Variant
+    Dim l3 List As Variant
+    Dim l4 List As Variant
+    Dim l5 List As Variant
+    Dim l6 List As Variant
+    Dim l7 List As Variant
+    Dim l8 List As Variant
+    Dim l9 List As Variant
+    Dim l10 List As Variant
+    Dim l11 List As Variant
+    Dim l12 List As Variant
+    Dim l13 List As Variant
+    Dim l14 List As Variant
+    Dim l15 List As Variant
+    Dim l16 List As Variant
+    Dim l17 List As Variant
+    Dim l18 List As Variant
+    Dim l19 List As Variant
+    Dim l20 List As Variant
+    Dim l21 List As Variant
+    Dim l22 List As Variant
+    Dim l23 List As Variant
+    Dim l24 List As Variant
+    Dim l25 List As Variant
+    Dim l26 List As Variant
+    Dim l27 List As Variant
+    Dim l28 List As Variant
+    Dim l29 List As Variant
+    Dim l30 List As Variant
+    Dim l31 List As Variant
+    Dim l32 List As Variant
+    Dim l33 List As Variant
+    Dim l34 List As Variant
+    Dim l35 List As Variant
+    Dim l36 List As Variant
+    Dim l37 List As Variant
+    Dim l38 List As Variant
+    Dim l39 List As Variant
+    Dim l40 List As Variant
+    Dim l41 List As Variant
+    Dim l42 List As Variant
+    Dim l43 List As Variant
+    Dim l44 List As Variant
+    Dim l45 List As Variant
+    Dim l46 List As Variant
+    Dim l47 List As Variant
+    Dim l48 List As Variant
+    Dim l49 List As Variant
+    Dim l50 List As Variant
+    Dim l51 List As Variant
+    Dim l52 List As Variant
+    Dim l53 List As Variant
+    Dim l54 List As Variant
+    Dim l55 List As Variant
+    Dim l56 List As Variant
+    Dim l57 List As Variant
+    Dim l58 List As Variant
+    Dim l59 List As Variant
+    Dim l60 List As Variant
+    Dim l61 List As Variant
+    Dim l62 List As Variant
+    Dim l63 List As Variant
+    l63("value") = "leaf"
+    l62("child") = l63
+    l61("child") = l62
+    l60("child") = l61
+    l59("child") = l60
+    l58("child") = l59
+    l57("child") = l58
+    l56("child") = l57
+    l55("child") = l56
+    l54("child") = l55
+    l53("child") = l54
+    l52("child") = l53
+    l51("child") = l52
+    l50("child") = l51
+    l49("child") = l50
+    l48("child") = l49
+    l47("child") = l48
+    l46("child") = l47
+    l45("child") = l46
+    l44("child") = l45
+    l43("child") = l44
+    l42("child") = l43
+    l41("child") = l42
+    l40("child") = l41
+    l39("child") = l40
+    l38("child") = l39
+    l37("child") = l38
+    l36("child") = l37
+    l35("child") = l36
+    l34("child") = l35
+    l33("child") = l34
+    l32("child") = l33
+    l31("child") = l32
+    l30("child") = l31
+    l29("child") = l30
+    l28("child") = l29
+    l27("child") = l28
+    l26("child") = l27
+    l25("child") = l26
+    l24("child") = l25
+    l23("child") = l24
+    l22("child") = l23
+    l21("child") = l22
+    l20("child") = l21
+    l19("child") = l20
+    l18("child") = l19
+    l17("child") = l18
+    l16("child") = l17
+    l15("child") = l16
+    l14("child") = l15
+    l13("child") = l14
+    l12("child") = l13
+    l11("child") = l12
+    l10("child") = l11
+    l9("child") = l10
+    l8("child") = l9
+    l7("child") = l8
+    l6("child") = l7
+    l5("child") = l6
+    l4("child") = l5
+    l3("child") = l4
+    l2("child") = l3
+    l1("child") = l2
+    l0("child") = l1
+    result = Evaluate("Return callvar", l0)
+    Print "DEPTH-64-ISLIST=" & CStr(IsList(result))
+End Sub
