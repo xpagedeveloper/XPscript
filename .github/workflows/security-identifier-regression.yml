@@ -1,0 +1,84 @@
+name: Security Compiler Identifier Regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
+      - 'samples/reserved-identifier-error.xps'
+      - 'samples/reserved-runtime-type-error.xps'
+      - 'samples/reserved-multiple-identifiers-error.xps'
+      - 'samples/reserved-module-multiple-identifiers-error.xps'
+      - '.github/workflows/security-identifier-regression.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
+      - 'samples/reserved-identifier-error.xps'
+      - 'samples/reserved-runtime-type-error.xps'
+      - 'samples/reserved-multiple-identifiers-error.xps'
+      - 'samples/reserved-module-multiple-identifiers-error.xps'
+      - '.github/workflows/security-identifier-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reserved-identifiers:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify reserved identifier diagnostics
+        shell: pwsh
+        run: |
+          $samples = @(
+            'reserved-identifier-error.xps',
+            'reserved-runtime-type-error.xps',
+            'reserved-multiple-identifiers-error.xps',
+            'reserved-module-multiple-identifiers-error.xps'
+          )
+
+          New-Item -ItemType Directory -Force -Path ./out | Out-Null
+
+          foreach ($sample in $samples) {
+            $source = Join-Path './samples' $sample
+            $output = Join-Path './out' ([IO.Path]::GetFileNameWithoutExtension($sample) + '.exe')
+            $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
+            $compilerExitCode = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+
+            if ($compilerExitCode -eq 0) {
+              throw "Expected reserved identifier sample '$sample' to fail compilation."
+            }
+
+            $result = $resultText | ConvertFrom-Json
+            if ($result.result -ne 'error' -or $result.errors.Count -lt 1) {
+              throw "Expected structured compiler error for '$sample'."
+            }
+
+            $diagnostics = $result.errors | ConvertTo-Json -Depth 8
+            if ($diagnostics -notmatch '(?i)reserved') {
+              throw "Expected reserved identifier diagnostic for '$sample'."
+            }
+          }
+
+          Write-Host 'SECURITY-RESERVED-IDENTIFIERS=OK'
