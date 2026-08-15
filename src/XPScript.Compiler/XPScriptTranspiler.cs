@@ -60,6 +60,7 @@ public sealed class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
@@ -96,6 +97,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
+        generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
 
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 

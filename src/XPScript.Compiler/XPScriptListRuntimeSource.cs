@@ -6,6 +6,7 @@ public static class XPScriptListRuntimeSource
 internal interface ILSList
 {
     bool ContainsTag(object? tag);
+    object? GetValue(object? tag);
     void Clear();
     IEnumerable<KeyValuePair<string, object?>> SnapshotEntries();
 }
@@ -34,6 +35,7 @@ internal sealed class LSList<T> : ILSList
     }
 
     public bool ContainsTag(object? tag) => _values.ContainsKey(NormalizeTag(tag));
+    public object? GetValue(object? tag) => this[tag];
 
     public void Erase(object? tag)
     {
