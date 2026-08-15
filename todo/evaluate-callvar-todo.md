@@ -63,13 +63,13 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 
 ## Function coverage inside Evaluate
 
-- [>] conversions: `CStr`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CByte`, `CBool`, `CDate`/`CDat`, `CVar`
-- [>] inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `IsNumeric`, `LBound`, `UBound`
-- [>] strings: `Len`, `Left`, `Right`, `Mid`, `LCase`, `UCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Instr`, `Replace`, `Space`, `String`, `Chr`, `Asc`
-- [>] math/number: `Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Val`, `Str`, `Bin`, `Hex`, `Oct`
-- [>] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`
+- [x] conversions: `CStr`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CByte`, `CBool`, `CDate`/`CDat`, `CVar`; full category regression: `samples/evaluate-broad-function-coverage.xps`
+- [>] inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `IsNumeric`, `LBound`, `UBound`; representative coverage exists, while final `IsEmpty`/`IsNull` behavior remains tied to the open Null/Nothing contract
+- [x] strings: `Len`, `Left`, `Right`, `Mid`, `LCase`, `UCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Instr`, `Replace`, `Space`, `String`, `Chr`, `Asc`; full category regression: `samples/evaluate-broad-function-coverage.xps`
+- [x] math/number: `Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Val`, `Str`, `Bin`, `Hex`, `Oct`; full category regression: `samples/evaluate-broad-function-coverage.xps`
+- [x] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`; full category regression: `samples/evaluate-broad-function-coverage.xps`
 - [x] representative String, math/number, Date and inspection functions are runtime-verified by `samples/evaluate-standard-functions.xps`
-- [ ] continue broadening standard XPScript function coverage where functions remain side-effect free and isolation-safe
+- [>] continue broadening inspection coverage after final XPScript Null/Nothing semantics are defined; all other currently exposed side-effect-free Evaluate function categories are permanently runtime-verified
 
 ## Coercion and diagnostics alignment
 
