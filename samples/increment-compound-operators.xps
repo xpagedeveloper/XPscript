@@ -121,12 +121,36 @@ Sub Main()
         Error 9915, "&= differs from long form"
     End If
 
+    text = "Hello"
+    text &= ""
+    If text <> "Hello" Then
+        Error 9926, "&= with an empty String failed"
+    End If
+
+    text = "value="
+    text &= 42
+    If text <> "value=42" Then
+        Error 9927, "&= scalar-to-String coercion failed"
+    End If
+
     text = "value="
     expectedText = "value="
     text += 42
     expectedText = expectedText + 42
     If text <> expectedText Then
         Error 9916, "String += differs from long form"
+    End If
+
+    text = "tokens: ++ -- += -= *= /= \= &="
+    If text <> "tokens: ++ -- += -= *= /= \= &=" Then
+        Error 9928, "operator tokens inside String literals were reinterpreted"
+    End If
+    ' This comment intentionally contains counter++ ++counter += -= *= /= \= &= and must be ignored.
+
+    counter = -5
+    counter = counter + +2
+    If counter <> -3 Then
+        Error 9929, "unary plus/minus behavior changed"
     End If
 
     counter = 10
