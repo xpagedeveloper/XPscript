@@ -280,6 +280,9 @@ internal sealed class ParameterPassingPostProcessor
 
         var dot = end - 1;
         var cursor = dot - 1;
+        while (cursor >= 0 && (output[cursor] == '!' || output[cursor] == '?')) cursor--;
+        if (cursor < 0) return "";
+
         int start;
         if (output[cursor] == ')')
         {
