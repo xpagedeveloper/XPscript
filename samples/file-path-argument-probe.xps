@@ -31,7 +31,9 @@ Sub Main()
     End If
 
     If operationName = "copy" Then
-        If Application.ArgCount < 3 Then Error 9202, "Copy requires a destination path."
+        If Application.ArgCount < 3 Then
+            Error 9202, "Copy requires a destination path."
+        End If
         destinationPath = Application.Args(2)
         FileCopy sourcePath, destinationPath
         Print "COPIED_LEN=" & CStr(FileLen(destinationPath))
@@ -40,7 +42,9 @@ Sub Main()
     End If
 
     If operationName = "move" Then
-        If Application.ArgCount < 3 Then Error 9203, "Move requires a destination path."
+        If Application.ArgCount < 3 Then
+            Error 9203, "Move requires a destination path."
+        End If
         destinationPath = Application.Args(2)
         On Error Resume Next
         Name sourcePath As destinationPath
