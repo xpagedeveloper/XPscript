@@ -6,6 +6,8 @@ on:
       - todo-include-dependency-discovery
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/include-dependencies/**'
       - 'todo/include-source-files-todo.md'
       - 'docs/include-source-files.md'
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/include-dependencies/**'
       - 'todo/include-source-files-todo.md'
       - 'docs/include-source-files.md'
