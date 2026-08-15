@@ -53,16 +53,18 @@ jobs:
           foreach ($item in $items) {
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $item.Source --runtime '${{ steps.rid.outputs.rid }}' -o $item.Output --framework-dependent
             if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($item.Source)" }
-            "$($item.Env)=$($item.Output)" >> $env:GITHUB_ENV
+            $absolute = (Resolve-Path -LiteralPath $item.Output).Path
+            "$($item.Env)=$absolute" >> $env:GITHUB_ENV
           }
       - name: Verify charset aliases and exact bytes
         shell: pwsh
         run: |
+          $charsetExe = $env:CHARSET_EXE
           $work = Join-Path $env:RUNNER_TEMP ('xps-charset-' + [guid]::NewGuid().ToString('N'))
           New-Item -ItemType Directory -Force $work | Out-Null
           Push-Location $work
           try {
-            $result = & (Resolve-Path $env:CHARSET_EXE)
+            $result = & $charsetExe
             if ($LASTEXITCODE -ne 0 -or $result -notcontains 'CHARSET_MATRIX=OK') { throw "Charset matrix failed.`n$result" }
             if ($result -notcontains 'UNSUPPORTED_CHARSET_ERR=5') { throw "Unsupported legacy charset did not produce error 5.`n$result" }
 
@@ -102,7 +104,7 @@ jobs:
             $stdout = Join-Path $root "$holderMode-$contenderMode.out"
             $stderr = Join-Path $root "$holderMode-$contenderMode.err"
             if ($holderMode -eq 'input') { Set-Content -LiteralPath $file -Value 'seed' -NoNewline }
-            $holder = Start-Process -FilePath (Resolve-Path $env:HOLDER_EXE) -ArgumentList @($holderMode,$file,$ready) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            $holder = Start-Process -FilePath $env:HOLDER_EXE -ArgumentList @($holderMode,$file,$ready) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
             try {
               $deadline = [DateTime]::UtcNow.AddSeconds(15)
               while (-not (Test-Path -LiteralPath $ready) -and [DateTime]::UtcNow -lt $deadline -and -not $holder.HasExited) { Start-Sleep -Milliseconds 50; $holder.Refresh() }
