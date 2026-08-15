@@ -41,16 +41,24 @@ internal sealed class FileSystemPortabilityPostProcessor
     public static object? Evaluate(object? sourceText) => Evaluate(sourceText, null);
 
     public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1) =>
-        Evaluate(sourceText, new object?[] { callvar0, callvar1 });
+        Evaluate(sourceText, PackCallvars(callvar0, callvar1));
 
     public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2) =>
-        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2 });
+        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2));
 
     public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3) =>
-        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2, callvar3 });
+        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2, callvar3));
 
     public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3, object? callvar4) =>
-        Evaluate(sourceText, new object?[] { callvar0, callvar1, callvar2, callvar3, callvar4 });
+        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2, callvar3, callvar4));
+
+    private static LSArray PackCallvars(params object?[] values)
+    {
+        var packed = new LSArray("Variant", true, new[] { 0 }, new[] { values.Length - 1 });
+        for (var i = 0; i < values.Length; i++)
+            packed.Set(values[i], new object?[] { i });
+        return packed;
+    }
 """,
             StringComparison.Ordinal);
 
@@ -79,6 +87,11 @@ internal sealed class FileSystemPortabilityPostProcessor
         const string newReadCallvar = """
         private object? ReadCallvar(IReadOnlyList<object?> args)
         {
+            if (_callvar is LSArray outerArray && outerArray.Rank == 1 && args.Count > 1)
+            {
+                var value = outerArray.Get(new object?[] { args[0] });
+                return XPScriptEvaluateCollectionRuntime.ReadIndexed(value, args.Skip(1).ToArray());
+            }
             if (_callvar is Array outer && outer.Rank == 1 && args.Count > 1)
             {
                 var value = outer.GetValue(XPScriptRuntime.CInt(args[0]));
