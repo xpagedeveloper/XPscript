@@ -1,0 +1,62 @@
+Option Declare
+
+Sub Main()
+    Dim sourcePath As String
+    Dim destinationPath As String
+    Dim operationName As String
+    Dim fileNumber As Integer
+    Dim errValue As Integer
+
+    If Application.ArgCount < 2 Then
+        Print "PATH_ARGUMENT_PROBE=ERROR: expected operation and source path arguments"
+        Exit Sub
+    End If
+
+    operationName = Application.Args(0)
+    sourcePath = Application.Args(1)
+
+    If operationName = "filelen" Then
+        Print "FILELEN=" & CStr(FileLen(sourcePath))
+        Print "PATH_ARGUMENT_PROBE=OK"
+        Exit Sub
+    End If
+
+    If operationName = "create" Then
+        fileNumber = FreeFile
+        Open sourcePath For Output As #fileNumber
+        Print #fileNumber, "portable"
+        Close #fileNumber
+        Print "CREATED_LEN=" & CStr(FileLen(sourcePath))
+        Print "PATH_ARGUMENT_PROBE=OK"
+        Exit Sub
+    End If
+
+    If operationName = "copy" Then
+        If Application.ArgCount < 3 Then
+            Print "PATH_ARGUMENT_PROBE=ERROR: copy requires a destination path"
+            Exit Sub
+        End If
+        destinationPath = Application.Args(2)
+        FileCopy sourcePath, destinationPath
+        Print "COPIED_LEN=" & CStr(FileLen(destinationPath))
+        Print "PATH_ARGUMENT_PROBE=OK"
+        Exit Sub
+    End If
+
+    If operationName = "move" Then
+        If Application.ArgCount < 3 Then
+            Print "PATH_ARGUMENT_PROBE=ERROR: move requires a destination path"
+            Exit Sub
+        End If
+        destinationPath = Application.Args(2)
+        On Error Resume Next
+        Name sourcePath As destinationPath
+        errValue = Err
+        On Error GoTo 0
+        Print "MOVE_ERR=" & CStr(errValue)
+        Print "PATH_ARGUMENT_PROBE=OK"
+        Exit Sub
+    End If
+
+    Print "PATH_ARGUMENT_PROBE=ERROR: unknown path probe operation"
+End Sub
