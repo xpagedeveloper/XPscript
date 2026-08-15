@@ -1,12 +1,16 @@
 Sub Main()
-    Print "PLATFORM=" & Platform()
+    Print "PLATFORM-FUNCTION=" & Platform()
+    Print "PLATFORM-BARE=" & Platform
 
-    If Platform() = "Windows" Then
-        Call Shell("cmd.exe /c echo XPScript-Windows")
-    ElseIf Platform() = "Linux" Then
-        Call Shell("/bin/sh -c \"echo XPScript-Linux\"")
-    ElseIf Platform() = "MacOS" Then
-        Call Shell("/bin/sh -c \"echo XPScript-MacOS\"")
+    Call Shell("\"samples/shell helpers åäö/args helper.ps1\" \"space value\" \"\" \"åäö 漢字\" \"a&b|c<>^%!\"")
+
+    If Platform = "Windows" Then
+        Call Shell("\"samples/shell helpers åäö/safe.cmd\" \"safe value\"")
+        Call Shell("cmd.exe /d /c echo DIRECT-WINDOWS")
+    ElseIf Platform = "Linux" Or Platform = "MacOS" Then
+        Call Shell("\"samples/shell helpers åäö/safe.sh\" \"safe value\"")
+        Call Shell("\"samples/shell helpers åäö/shebang-helper\" \"safe value\"")
+        Call Shell("/bin/sh -c \"echo DIRECT-UNIX\"")
     Else
         Print "Shell sample skipped for unsupported platform"
     End If
