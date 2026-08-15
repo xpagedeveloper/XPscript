@@ -190,13 +190,13 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
 
         if (!File.Exists(sourcePath))
         {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "Source file not found." }]), resultFormat);
+            WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]), resultFormat);
             return 2;
         }
 
         if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
         {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "XPScript source files must use the .xps extension." }]), resultFormat);
+            WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension." }]), resultFormat);
             return 2;
         }
 
@@ -277,6 +277,7 @@ static void WriteResult(CompileResult result, string format)
                 Console.WriteLine("errors:");
                 foreach (var error in result.Errors)
                 {
+                    if (!string.IsNullOrEmpty(error.File)) Console.WriteLine($"  file: {error.File}");
                     Console.WriteLine($"  line: {error.Line}");
                     Console.WriteLine($"  position: {error.Position}");
                     Console.WriteLine($"  description: {error.Description}");
