@@ -1,0 +1,34 @@
+Option Declare
+
+Sub Main()
+    Dim modeName As String
+    Dim pathName As String
+    Dim readyPath As String
+    Dim f As Integer
+    Dim ready As Integer
+
+    modeName = Application.Args(0)
+    pathName = Application.Args(1)
+    readyPath = Application.Args(2)
+    f = FreeFile
+
+    If modeName = "input" Then
+        Open pathName For Input As #f
+    ElseIf modeName = "output" Then
+        Open pathName For Output As #f
+        Print #f, "holder"
+    ElseIf modeName = "binary" Then
+        Open pathName For Binary As #f
+    Else
+        Error 9220, "Unknown holder mode."
+    End If
+
+    ready = FreeFile
+    Open readyPath For Output As #ready
+    Print #ready, "READY"
+    Close #ready
+
+    Sleep 5
+    Close #f
+    Print "FILE_SHARE_HOLDER=OK"
+End Sub
