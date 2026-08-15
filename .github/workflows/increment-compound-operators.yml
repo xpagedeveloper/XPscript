@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/XPScript.Compiler/IncrementCompoundAssignmentPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'src/XPScript.Compiler/IncrementOperatorSyntaxValidator.cs'
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'samples/increment-compound-operators.xps'
@@ -18,6 +20,8 @@ on:
     paths:
       - 'src/XPScript.Compiler/IncrementCompoundAssignmentPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'src/XPScript.Compiler/IncrementOperatorSyntaxValidator.cs'
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'samples/increment-compound-operators.xps'
@@ -72,36 +76,51 @@ jobs:
           if ($exit -ne 0) { throw "Operator regression failed with exit code $exit." }
           if ($result -notcontains 'INCREMENT-COMPOUND-OPERATORS=OK') { throw 'Operator regression did not report success.' }
 
-      - name: Verify invalid operator syntax fails closed
+      - name: Verify invalid operator syntax fails closed with source mapping
         shell: pwsh
         run: |
           $cases = @(
-            'increment-invalid-literal',
-            'increment-invalid-expression',
-            'increment-invalid-prefix',
-            'increment-invalid-value-expression',
-            'compound-invalid-string-numeric'
+            @{ Name = 'increment-invalid-literal'; Line = 2 },
+            @{ Name = 'increment-invalid-expression'; Line = 4 },
+            @{ Name = 'increment-invalid-prefix'; Line = 3 },
+            @{ Name = 'increment-invalid-value-expression'; Line = 5 },
+            @{ Name = 'compound-invalid-string-numeric'; Line = 4 }
           )
 
           foreach ($case in $cases) {
-            $source = "./samples/$case.xps"
-            $output = if ($IsWindows) { "./out/operators/$case.exe" } else { "./out/operators/$case" }
+            $name = $case.Name
+            $source = "./samples/$name.xps"
+            $output = if ($IsWindows) { "./out/operators/$name.exe" } else { "./out/operators/$name" }
             $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
             $compilerExitCode = $LASTEXITCODE
             $global:LASTEXITCODE = 0
 
             $resultText | ForEach-Object { Write-Host $_ }
-            if ($compilerExitCode -eq 0) { throw "$case unexpectedly compiled successfully." }
+            if ($compilerExitCode -eq 0) { throw "$name unexpectedly compiled successfully." }
 
             $jsonText = $resultText -join "`n"
             try {
               $result = $jsonText | ConvertFrom-Json
             }
             catch {
-              throw "$case did not return valid JSON compiler diagnostics."
+              throw "$name did not return valid JSON compiler diagnostics."
             }
 
             if ($result.result -ne 'error' -or $null -eq $result.errors -or $result.errors.Count -lt 1) {
-              throw "$case did not return a structured compiler error."
+              throw "$name did not return a structured compiler error."
+            }
+
+            $error = $result.errors[0]
+            if ($error.line -ne $case.Line) {
+              throw "$name mapped to line $($error.line), expected line $($case.Line)."
+            }
+            if ($error.position -lt 1) {
+              throw "$name did not return a valid source position."
+            }
+
+            $sourceLines = Get-Content -LiteralPath $source
+            $expectedCode = $sourceLines[$case.Line - 1].Trim()
+            if ([string]::IsNullOrWhiteSpace($error.code) -or $error.code.Trim() -ne $expectedCode) {
+              throw "$name mapped code '$($error.code)' but expected '$expectedCode'."
             }
           }
