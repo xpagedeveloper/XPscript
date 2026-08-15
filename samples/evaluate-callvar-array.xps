@@ -1,0 +1,19 @@
+Sub Main()
+    Dim result As Variant
+    Dim values As Variant
+    Dim parameters List As Variant
+
+    result = Evaluate("Return callvar(0) + callvar(1)", 10, 20)
+    Print "TWO=" & CStr(result)
+
+    result = Evaluate("Return callvar(0) + callvar(1) + callvar(2) + callvar(3) + callvar(4)", 1, 2, 3, 4, 5)
+    Print "FIVE=" & CStr(result)
+
+    values = Array(10, 20, 30)
+    parameters("price") = 7
+    result = Evaluate("Return callvar(0) + callvar(1)(1) + callvar(2)(""price"")", 5, values, parameters)
+    Print "MIXED=" & CStr(result)
+
+    result = Evaluate("Return UBound(callvar)", 100, 200, 300)
+    Print "UBOUND=" & CStr(result)
+End Sub
