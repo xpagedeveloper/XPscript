@@ -11,33 +11,35 @@ Status:
 
 ## Compiler targets
 
-- [>] support explicit `--runtime` / `--rid` target selection
-- [>] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
-- [>] default target follows the compiler host OS + architecture when no RID is supplied
-- [>] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
-- [ ] verify self-contained single-file output on every target OS
-- [ ] verify framework-dependent output on every target OS
-- [ ] verify executable permissions on Linux/macOS
+- [x] support explicit `--runtime` / `--rid` target selection
+- [x] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
+- [x] default target follows the compiler host OS + architecture when no RID is supplied
+- [x] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
+- [x] verify self-contained single-file output on every target OS
+- [x] verify framework-dependent output on every target OS
+- [x] verify executable permissions on Linux/macOS
 
 ## Platform function
 
-- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Runtime Verification`
-- [>] support both `Platform()` and bare `Platform` expression forms
+- [x] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Target Platform Shell`
+- [x] support both `Platform()` and bare `Platform` expression forms
 - [x] document platform branching examples; source: `docs/cross-platform-runtime.md`
 
 ## Shell
 
-- [>] route `Shell()` through a cross-platform runtime; basic execution is runtime-verified on Windows/Linux/macOS by `Cross Platform Runtime Verification`
-- [>] Windows: direct executables
-- [>] Windows: `.cmd` / `.bat` through `cmd.exe`
-- [>] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
-- [>] Linux/macOS: direct executable binaries and executable/shebang scripts
-- [>] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
-- [>] Linux/macOS: `.ps1` through `pwsh`
-- [>] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
-- [ ] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on every OS
-- [ ] define whether an explicit shell-execution mode is needed for users who intentionally want pipes/redirection/globbing
-- [ ] security review command/path injection behavior
+- [x] route `Shell()` through a cross-platform runtime
+- [x] Windows: direct executables
+- [x] Windows: `.cmd` / `.bat` through `cmd.exe`
+- [x] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
+- [x] Linux/macOS: direct executable binaries and executable/shebang scripts
+- [x] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
+- [x] Linux/macOS: `.ps1` through `pwsh`
+- [x] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
+- [x] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on every OS
+- [x] define whether an explicit shell-execution mode is needed for users who intentionally want pipes/redirection/globbing; explicit `cmd.exe` or `/bin/sh` invocation is required rather than implicit shell parsing
+- [x] security review command/path injection behavior; structured arguments, absolute-path/PATH resolution and restricted batch metacharacters are verified
+
+`Cross Platform Target Platform Shell` verifies host-default and explicit RID selection, default output naming, framework-dependent and self-contained single-file output, Unix executable mode, `Platform()` plus bare `Platform`, and Shell routing/argument/security behavior on Windows, Ubuntu and macOS. The Windows batch path uses `cmd.exe /d /c call` with validated structured arguments so batch files in paths containing spaces/Unicode remain callable without enabling unrestricted shell metacharacter interpretation.
 
 ## Native/external libraries
 
