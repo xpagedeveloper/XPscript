@@ -1,0 +1,2 @@
+#!/bin/sh
+printf 'SHEBANG=%s\n' "$1" > ./shell-shebang-result.txt
