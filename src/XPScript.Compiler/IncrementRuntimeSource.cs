@@ -5,10 +5,10 @@ internal static class IncrementRuntimeSource
     public const string Code = """
 internal static class XPScriptIncrementRuntime
 {
-    public static object Increment(object? value) => Apply(value, 1);
-    public static object Decrement(object? value) => Apply(value, -1);
+    public static dynamic Increment(object? value) => Apply(value, 1);
+    public static dynamic Decrement(object? value) => Apply(value, -1);
 
-    private static object Apply(object? value, int delta)
+    private static dynamic Apply(object? value, int delta)
     {
         try
         {
