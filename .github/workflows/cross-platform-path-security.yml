@@ -7,7 +7,6 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
       - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/file-path-security-negatives.xps'
-      - 'todo/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-path-security.yml'
   workflow_dispatch:
 

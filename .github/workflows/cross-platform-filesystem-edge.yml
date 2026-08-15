@@ -8,7 +8,6 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/file-path-argument-probe.xps'
       - 'samples/file-case-preservation.xps'
-      - 'todo/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-filesystem-edge.yml'
   workflow_dispatch:
 

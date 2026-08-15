@@ -122,23 +122,23 @@ ReferenceNative "managed/runtimes/osx-arm64/native/libhelper.dylib" Runtime "osx
 
 File I/O must use the target operating system's real filesystem semantics rather than assuming Windows behavior.
 
-- [>] `ChDrive` is explicitly Windows-only and returns a clear runtime error elsewhere
-- [>] general path operations use .NET `Path`, `File`, `Directory`, and `FileStream` APIs rather than hard-coded Windows separators
-- [>] core `Open` and Charset-aware `Open` now share `XPScriptFileSystemRuntime.ResolvePath`, which uses target-OS `Path.GetFullPath` semantics and rejects empty/invalid paths
-- [>] `FileLen`, `FileDateTime`, `GetFileAttr`, `SetFileAttr`, `FileCopy`, `Kill`, `Name`, `MkDir`, `RmDir`, `ChDir` and `Dir` are routed through the same portability runtime
-- [>] path resolution intentionally does not rewrite separators, force path-case normalization or resolve symlinks/reparse points; those remain target-filesystem semantics
-- [>] runtime contains symlink/reparse-point detection support for portability/security review without silently dereferencing paths itself
-- [>] source/destination identity checks are case-insensitive on Windows and ordinal on Unix-like targets
-- [>] `Dir` leaves case matching to the target filesystem/runtime instead of imposing Windows-style case-insensitivity on Unix
-- [>] Windows UNC/drive/long-path syntax is passed to `Path.GetFullPath`/filesystem APIs without hand-written path rewriting; real Windows validation remains required
-- [>] Linux/macOS absolute paths, mount points and symlink traversal are left to target OS filesystem semantics; real OS validation remains required
-- [>] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names when attributes are read
-- [>] `SetFileAttr Hidden` on Unix does not silently rename a file; it reports that hidden files require a leading-dot name and `Name` must be used explicitly
+- [x] `ChDrive` is explicitly Windows-only and returns a clear runtime error elsewhere; verified by `Cross Platform File IO Platform Semantics`
+- [x] general path operations use .NET `Path`, `File`, `Directory`, and `FileStream` APIs rather than hard-coded Windows separators; runtime-verified by the File IO/path suites
+- [x] core `Open` and Charset-aware `Open` share `XPScriptFileSystemRuntime.ResolvePath`, which uses target-OS `Path.GetFullPath` semantics and rejects empty/invalid paths
+- [x] `FileLen`, `FileDateTime`, `GetFileAttr`, `SetFileAttr`, `FileCopy`, `Kill`, `Name`, `MkDir`, `RmDir`, `ChDir` and `Dir` are routed through the portability runtime and exercised by the cross-platform File IO suites
+- [x] path resolution does not rewrite separators, force path-case normalization or silently resolve symlinks/reparse points; real target-filesystem semantics are retained
+- [x] runtime symlink/reparse-point detection and refusal behavior is verified by `Cross Platform Path Security`
+- [x] source/destination identity checks are case-insensitive on Windows and ordinal on Unix-like targets; Windows case-only identity is verified by `Cross Platform Path Security`
+- [x] `Dir` leaves case matching to the target filesystem/runtime; case preservation is verified on Windows/Linux/macOS by `Cross Platform Filesystem Edge Cases`
+- [>] Windows drive-qualified and >260-character long paths are runtime-verified; UNC path execution remains to be verified on a real Windows share fixture
+- [x] Linux/macOS absolute paths, mount points and symlink behavior are exercised on real hosted filesystems by the path-security and filesystem-edge gates
+- [x] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names; runtime-verified by `Cross Platform File IO Platform Semantics`
+- [x] `SetFileAttr Hidden` on Unix does not silently rename a file and reports the leading-dot/`Name` requirement; runtime-verified by `Cross Platform File IO Platform Semantics`
 - [x] `FileCopy` preserves Unix executable permission bits; runtime-verified on Linux and macOS by `Cross Platform File IO Portability`
-- [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; real Linux/macOS validation remains required
-- [x] `Name` same-filesystem move/rename runtime-verified on Windows/Linux/macOS and remains a real filesystem operation without copy+delete fallback
-- [ ] runtime-verify cross-filesystem `Name` failure/behavior separately on supported OSes
-- [>] `Kill` uses native target filesystem delete behavior and adds an explanatory diagnostic when Windows/open-handle delete semantics prevent removal
+- [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; preservation is runtime-verified, but direct executable-bit inspection remains source-reviewed rather than separately probed
+- [x] `Name` same-filesystem move/rename is runtime-verified on Windows/Linux/macOS
+- [x] cross-filesystem `Name` behavior is runtime-probed on Linux/macOS where a second filesystem is exposed; the gate verifies coherent host behavior without data loss and reports when no second filesystem is available
+- [x] `Kill` target behavior, symlink refusal and delete-while-open semantics are runtime-verified across Windows/Linux/macOS
 - [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency where the target runtime supports byte-range locking
 - [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
 - [>] Windows/Linux `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics. .NET 10 does not support `FileStream.Lock/Unlock` on macOS, so XPScript returns explicit runtime error 5 instead of weakening range-lock semantics
@@ -151,20 +151,20 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] verify macOS Lock limitation returns explicit XPScript error 5; source: `samples/file-lock-platform-support.xps`
 - [ ] implement safe macOS byte-range locking with semantics compatible with .NET file sharing before claiming native `Lock` / `Unlock` support on macOS
 - [x] document that path separators differ (`\\` vs `/`) and recommend portable path construction; source: `docs/cross-platform-runtime.md`
-- [ ] runtime-verify Windows drive letters, UNC paths and long paths
-- [ ] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems
+- [>] runtime-verify Windows drive letters, UNC paths and long paths: drive-qualified and long-path cases are verified; UNC remains open
+- [x] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems; `Cross Platform Filesystem Edge Cases`
 - [x] runtime-verify Unix executable-bit preservation on Linux/macOS
-- [ ] runtime-verify broader Unix permission/ownership semantics on Linux/macOS
-- [ ] runtime-verify hidden-file behavior on Windows/Linux/macOS
+- [x] runtime-verify broader Unix permission/ownership semantics on Linux/macOS; a 0754 source mode and UID are preserved through `FileCopy`
+- [x] runtime-verify hidden-file behavior on Windows/Linux/macOS; `Cross Platform File IO Platform Semantics`
 - [x] runtime-verify same-filesystem `Name` behavior on Windows/Linux/macOS
 - [x] runtime-verify delete-while-open behavior on Windows/Linux/macOS
 - [x] runtime-verify charset/BOM handling on Windows/Linux/macOS
-- [>] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) so byte/text behavior does not vary by OS
+- [x] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) and exact byte identity is runtime-verified across Windows/Linux/macOS
 - [x] verify exact Latin-1 byte identity on Windows/Linux/macOS
 - [x] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`; exact CRLF on Windows and LF on Linux/macOS runtime-verified
-- [>] Binary/Random string byte conversion now uses the same defined Latin-1 legacy encoding; numeric `BinaryWriter`/`BinaryReader` representations remain deterministic .NET little-endian representations
+- [>] Binary/Random string byte conversion uses the same defined Latin-1 legacy encoding; numeric `BinaryWriter`/`BinaryReader` representations remain deterministic .NET little-endian representations
 - [x] source: `samples/file-io-portability.xps` runtime-verified on Windows/Linux/macOS
-- [>] compiler temporary files already use isolated `Path.GetTempPath()` + GUID directories per compiler invocation
+- [x] compiler temporary files use isolated `Path.GetTempPath()` + GUID directories per compiler invocation; verified by the completed compiler temp/build isolation suite
 
 ## Quality gates
 
@@ -173,11 +173,13 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
 - [x] run native library loader tests on each OS and architecture; `Cross Platform Native Loader Compatibility` uses matching real runners for all six supported RIDs
 - [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
-- [ ] run path/permission/symlink/file-sharing negative tests
-- [ ] run security tests for Shell, external libraries and file paths
+- [x] run path/permission/symlink/file-sharing negative tests; covered by `Cross Platform Path Security`, File IO platform semantics and filesystem-edge gates
+- [>] run security tests for Shell, external libraries and file paths: Shell and external-library path controls are verified; final File I/O/UNC/macOS-lock coverage remains open
 
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
 
 `Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes the matching native system-library call plus loader-diagnostic fixture on Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
 
 `Cross Platform Managed References` builds a real net10.0 fixture assembly, compiles the same XPScript source in framework-dependent and self-contained modes on Windows/Ubuntu/macOS, verifies matching RID-native deployment and non-matching RID filtering, and executes both generated artifacts successfully. `Reference` remains a build/deployment directive and does not implicitly expose CLR type/member interop.
+
+`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security` and `Cross Platform Filesystem Edge Cases` jointly verify target-specific drive/hidden/case behavior, real symlink/reparse-point refusal, same-path protection, long Windows drive-qualified paths, Unix mode/ownership preservation and cross-filesystem `Name` behavior on the hosted Windows/Linux/macOS filesystems.
