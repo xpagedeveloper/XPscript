@@ -53,7 +53,10 @@ internal sealed class VariantIndexPreprocessor
 
             var rewritten = original;
             foreach (var name in activeNames.OrderByDescending(name => name.Length))
+            {
+                rewritten = RewriteWrite(rewritten, name);
                 rewritten = RewriteReads(rewritten, name);
+            }
             lines[i] = rewritten;
         }
 
@@ -64,6 +67,31 @@ internal sealed class VariantIndexPreprocessor
     {
         foreach (Match match in VariantDeclaration.Matches(code))
             names.Add(match.Groups["name"].Value);
+    }
+
+    private static string RewriteWrite(string line, string name)
+    {
+        var indent = Regex.Match(line, @"^\s*").Value;
+        var pattern = new Regex($@"^\s*{Regex.Escape(name)}\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var match = pattern.Match(line);
+        if (!match.Success) return line;
+
+        var open = line.IndexOf('(', match.Index);
+        var close = FindMatchingParen(line, open);
+        if (close < 0) return line;
+
+        var equals = close + 1;
+        while (equals < line.Length && char.IsWhiteSpace(line[equals])) equals++;
+        if (equals >= line.Length || line[equals] != '=' || (equals + 1 < line.Length && line[equals + 1] == '='))
+            return line;
+
+        var args = line[(open + 1)..close].Trim();
+        var rhs = line[(equals + 1)..].Trim();
+        if (rhs.Length == 0) return line;
+
+        return args.Length == 0
+            ? $"{indent}Call LSDynamicIndexRuntime.Set({name}, {rhs})"
+            : $"{indent}Call LSDynamicIndexRuntime.Set({name}, {rhs}, {args})";
     }
 
     private static string RewriteReads(string line, string name)

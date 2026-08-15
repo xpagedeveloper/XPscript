@@ -7,6 +7,7 @@ internal interface ILSList
 {
     bool ContainsTag(object? tag);
     object? GetValue(object? tag);
+    void SetValue(object? tag, object? value);
     void Clear();
     IEnumerable<KeyValuePair<string, object?>> SnapshotEntries();
 }
@@ -36,6 +37,7 @@ internal sealed class LSList<T> : ILSList
 
     public bool ContainsTag(object? tag) => _values.ContainsKey(NormalizeTag(tag));
     public object? GetValue(object? tag) => this[tag];
+    public void SetValue(object? tag, object? value) => this[tag] = Coerce(value);
 
     public void Erase(object? tag)
     {
@@ -66,6 +68,22 @@ internal sealed class LSList<T> : ILSList
             if (_values.TryGetValue(tag, out var value))
                 yield return new KeyValuePair<string, object?>(tag, value);
         }
+    }
+
+    private static T Coerce(object? value)
+    {
+        if (typeof(T) == typeof(object)) return (T)value!;
+        if (typeof(T) == typeof(string)) return (T)(object)XPScriptRuntime.CStr(value);
+        if (typeof(T) == typeof(int)) return (T)(object)XPScriptRuntime.CInt(value);
+        if (typeof(T) == typeof(long)) return (T)(object)XPScriptRuntime.CLng(value);
+        if (typeof(T) == typeof(double)) return (T)(object)XPScriptRuntime.CDbl(value);
+        if (typeof(T) == typeof(float)) return (T)(object)XPScriptRuntime.CSng(value);
+        if (typeof(T) == typeof(bool)) return (T)(object)XPScriptRuntime.CBool(value);
+        if (typeof(T) == typeof(byte)) return (T)(object)XPScriptRuntime.CByte(value);
+        if (typeof(T) == typeof(decimal)) return (T)(object)XPScriptRuntime.CCur(value);
+        if (typeof(T) == typeof(DateTime)) return (T)(object)XPScriptRuntime.CDat(value);
+        if (value is T typed) return typed;
+        throw new InvalidCastException("Value cannot be assigned to this XPScript List element type.");
     }
 
     private static string NormalizeTag(object? tag) =>
