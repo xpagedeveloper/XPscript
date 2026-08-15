@@ -9,6 +9,9 @@ internal static class LSOperatorArrayRuntime
 
     public static void SetCompareNoCase(bool value) => _compareNoCase = value;
 
+    public static LSArray CreateArray(params object?[] items) =>
+        FromValues(items, "Variant", 0);
+
     public static dynamic? LogicalNot(object? value)
     {
         if (value is null) return null;
