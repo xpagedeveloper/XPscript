@@ -9,6 +9,8 @@ internal sealed class TypeCoercionPreprocessor
 
     public string Transform(string source)
     {
+        source = new IncrementCompoundAssignmentPreprocessor().Transform(source);
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var output = new string[lines.Length];

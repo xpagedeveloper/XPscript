@@ -1,0 +1,6 @@
+Sub Main()
+    Dim a As Integer
+    Dim b As Integer
+    a = 1
+    b = a++
+End Sub

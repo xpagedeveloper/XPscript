@@ -200,6 +200,54 @@ Pattern forms include `*`, `?`, `#` and character classes.
 
 ## Arithmetic and logical operators
 
+### Postfix increment and decrement
+
+`++` and `--` are standalone mutation statements for numeric variables.
+
+```xpscript
+Dim counter As Integer
+counter = 10
+counter++
+' 11
+counter--
+' 10
+```
+
+`counter++` is equivalent to `counter = counter + 1`. `counter--` is equivalent to `counter = counter - 1`. Supported numeric values include `Byte`, `Integer`, `Long`, `Single`, `Double`, `Currency` and a `Variant` whose runtime value is numeric. A non-numeric target fails with XPScript type-mismatch error 13. Numeric overflow uses error 6 where the target type has a bounded range.
+
+The current syntax is postfix and statement-only. Prefix forms such as `++counter` and value-producing expressions such as `value = counter++` are not part of the language contract.
+
+### Compound assignment
+
+The following compound assignments use the same operation and assignment semantics as their long forms:
+
+```xpscript
+counter += 5
+counter -= 3
+counter *= 2
+counter /= 4
+counter \= 4
+
+Dim text As String
+text = "Hello"
+text &= " world"
+```
+
+They are equivalent to:
+
+```xpscript
+counter = counter + 5
+counter = counter - 3
+counter = counter * 2
+counter = counter / 4
+counter = counter \ 4
+text = text & " world"
+```
+
+`+=` keeps XPScript's forgiving `+` coercion rules, including supported String/scalar behavior. `&=` uses explicit String concatenation. `-=`, `*=`, `/=` and `\=` require numeric operation semantics. Division by zero follows the corresponding long-form XPScript error behavior. The right-hand expression is evaluated once.
+
+The current implementation accepts simple assignable variable targets. Indexed/property targets are reserved for a later extension that can guarantee single evaluation of the target expression.
+
 ### Exponentiation
 
 ```xpscript
@@ -244,6 +292,7 @@ A trailing `_` continues a statement on the next physical source line.
 ## Samples
 
 - [samples/operators-arrays.xps](../samples/operators-arrays.xps)
+- [samples/increment-compound-operators.xps](../samples/increment-compound-operators.xps)
 - [samples/lists-classes.xps](../samples/lists-classes.xps)
 - [samples/module-arrays.xps](../samples/module-arrays.xps)
 - [samples/evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps)

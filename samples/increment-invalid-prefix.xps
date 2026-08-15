@@ -1,0 +1,4 @@
+Sub Main()
+    Dim a As Integer
+    ++a
+End Sub

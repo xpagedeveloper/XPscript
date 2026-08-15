@@ -1,0 +1,211 @@
+' (c) xpagedeveloper.com 2026
+' Regression coverage for postfix increment/decrement and compound assignment.
+
+Function CountedValue() As Integer
+    Static calls As Integer
+    calls = calls + 1
+    If calls > 1 Then
+        Error 9899, "compound RHS was evaluated more than once"
+    End If
+    CountedValue = 5
+End Function
+
+Sub Main()
+    Dim counter As Integer
+    Dim expectedValue As Integer
+    Dim byteValue As Byte
+    Dim longValue As Long
+    Dim expectedLong As Long
+    Dim singleValue As Single
+    Dim doubleValue As Double
+    Dim currencyValue As Currency
+    Dim variantValue As Variant
+    Dim text As String
+    Dim expectedText As String
+    Dim zero As Integer
+    Dim badText As String
+    Dim boolValue As Boolean
+    Dim dateValue As Date
+    Dim objectValue As Object
+    Dim capturedErr As Integer
+
+    counter = 10
+    expectedValue = 10
+    counter++
+    expectedValue = expectedValue + 1
+    If counter <> expectedValue Then
+        Error 9901, "Integer ++ differs from long form"
+    End If
+    counter--
+    expectedValue = expectedValue - 1
+    If counter <> expectedValue Then
+        Error 9902, "Integer -- differs from long form"
+    End If
+
+    byteValue = 10
+    byteValue++
+    If byteValue <> 11 Then
+        Error 9903, "Byte ++ failed"
+    End If
+
+    longValue = 100
+    longValue--
+    If longValue <> 99 Then
+        Error 9904, "Long -- failed"
+    End If
+
+    singleValue = CSng(1.5)
+    singleValue++
+    If singleValue <> CSng(2.5) Then
+        Error 9905, "Single ++ failed"
+    End If
+
+    doubleValue = 2.5
+    doubleValue--
+    If doubleValue <> 1.5 Then
+        Error 9906, "Double -- failed"
+    End If
+
+    currencyValue = 10
+    currencyValue++
+    If currencyValue <> 11 Then
+        Error 9907, "Currency ++ failed"
+    End If
+
+    variantValue = 20
+    variantValue++
+    If CInt(variantValue) <> 21 Then
+        Error 9908, "numeric Variant ++ failed"
+    End If
+    variantValue--
+    If CInt(variantValue) <> 20 Then
+        Error 9909, "numeric Variant -- failed"
+    End If
+
+    counter = 10
+    expectedValue = 10
+    counter += 5
+    expectedValue = expectedValue + 5
+    If counter <> expectedValue Then
+        Error 9910, "+= differs from long form"
+    End If
+    counter -= 3
+    expectedValue = expectedValue - 3
+    If counter <> expectedValue Then
+        Error 9911, "-= differs from long form"
+    End If
+    counter *= 2
+    expectedValue = expectedValue * 2
+    If counter <> expectedValue Then
+        Error 9912, "*= differs from long form"
+    End If
+    counter /= 4
+    expectedValue = expectedValue / 4
+    If counter <> expectedValue Then
+        Error 9913, "/= differs from long form"
+    End If
+
+    longValue = 10
+    expectedLong = 10
+    longValue \= 4
+    expectedLong = expectedLong \ 4
+    If longValue <> expectedLong Then
+        Error 9914, "\= differs from long form"
+    End If
+
+    text = "Hello"
+    expectedText = "Hello"
+    text &= " world"
+    expectedText = expectedText & " world"
+    If text <> expectedText Then
+        Error 9915, "&= differs from long form"
+    End If
+
+    text = "value="
+    expectedText = "value="
+    text += 42
+    expectedText = expectedText + 42
+    If text <> expectedText Then
+        Error 9916, "String += differs from long form"
+    End If
+
+    counter = 10
+    counter += CountedValue()
+    If counter <> 15 Then
+        Error 9917, "compound RHS exactly-once result failed"
+    End If
+
+    byteValue = 255
+    On Error Resume Next
+    byteValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 6 Then
+        Error 9918, "Byte ++ overflow must use error 6"
+    End If
+
+    badText = "not numeric"
+    On Error Resume Next
+    badText++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9919, "String ++ must use type mismatch error 13"
+    End If
+
+    boolValue = True
+    On Error Resume Next
+    boolValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9920, "Boolean ++ must use type mismatch error 13"
+    End If
+
+    dateValue = CDate("2026-08-15")
+    On Error Resume Next
+    dateValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9921, "Date ++ must use type mismatch error 13"
+    End If
+
+    On Error Resume Next
+    objectValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9922, "Object ++ must use type mismatch error 13"
+    End If
+
+    variantValue = "not numeric"
+    On Error Resume Next
+    variantValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9923, "non-numeric Variant ++ must use type mismatch error 13"
+    End If
+
+    counter = 10
+    zero = 0
+    On Error Resume Next
+    counter /= zero
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 11 Then
+        Error 9924, "/= division by zero must use error 11"
+    End If
+
+    longValue = 10
+    On Error Resume Next
+    longValue \= zero
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 11 Then
+        Error 9925, "\= division by zero must use error 11"
+    End If
+
+    Print "INCREMENT-COMPOUND-OPERATORS=OK"
+End Sub
