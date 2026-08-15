@@ -8,7 +8,9 @@ on:
       - 'samples/file-lock-holder.xps'
       - 'samples/file-lock-contender.xps'
       - 'samples/file-io-extensions.xps'
+      - 'todo/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-runtime-verification.yml'
+      - '.github/workflows/macos-fcntl-abi-probe.yml'
   workflow_dispatch:
 
 permissions:
@@ -70,15 +72,8 @@ jobs:
           Remove-Item -Force -ErrorAction SilentlyContinue ./xpscript-latin1.txt, ./xpscript-lock-test.bin
           $result = & $env:EXTENSIONS
           if ($LASTEXITCODE -ne 0) { throw "file-io-extensions fixture exited with $LASTEXITCODE.`n$result" }
-          foreach ($expected in @('FILEINPUT=ÅÄÖ','LATIN1REST=-é','BINARYINPUT=ÅÄÖ')) {
+          foreach ($expected in @('FILEINPUT=ÅÄÖ','LATIN1REST=-é','BINARYINPUT=ÅÄÖ','LOCK=OK','UNLOCK=OK')) {
             if ($result -notcontains $expected) { throw "Missing expected output '$expected'.`n$result" }
-          }
-          if ($env:RUNNER_OS -eq 'macOS') {
-            if ($result -notcontains 'MACOS_LOCK_ERR=5') { throw "macOS Lock must fail explicitly with XPScript error 5.`n$result" }
-          } else {
-            foreach ($expected in @('LOCK=OK','UNLOCK=OK')) {
-              if ($result -notcontains $expected) { throw "Missing expected output '$expected'.`n$result" }
-            }
           }
           if ($env:RUNNER_OS -eq 'Windows') {
             if (-not ($result | Where-Object { $_ -like 'CHDRIVE=C:\*' })) { throw "Windows ChDrive result missing.`n$result" }
@@ -87,7 +82,6 @@ jobs:
           }
 
       - name: Verify cross-process byte-range Lock and Unlock
-        if: runner.os != 'macOS'
         shell: pwsh
         run: |
           Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin, ./xps-lock-ready.flag
