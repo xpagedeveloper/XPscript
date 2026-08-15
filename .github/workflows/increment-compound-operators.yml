@@ -1,6 +1,18 @@
 name: Increment Compound Operators
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/IncrementCompoundAssignmentPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/increment-compound-operators.xps'
+      - 'samples/increment-invalid-*.xps'
+      - 'samples/compound-invalid-string-numeric.xps'
+      - 'todo/increment-decrement-operators-todo.md'
+      - '.github/workflows/increment-compound-operators.yml'
   pull_request:
     branches: [main]
     paths:
@@ -9,6 +21,8 @@ on:
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'samples/increment-compound-operators.xps'
+      - 'samples/increment-invalid-*.xps'
+      - 'samples/compound-invalid-string-numeric.xps'
       - 'todo/increment-decrement-operators-todo.md'
       - '.github/workflows/increment-compound-operators.yml'
   workflow_dispatch:
@@ -18,7 +32,11 @@ permissions:
 
 jobs:
   increment-compound-operators:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -37,7 +55,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/operators | Out-Null
-          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/increment-compound-operators.xps -o ./out/operators/increment-compound-operators --framework-dependent --result-format json
+          $exe = if ($IsWindows) { './out/operators/increment-compound-operators.exe' } else { './out/operators/increment-compound-operators' }
+          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/increment-compound-operators.xps -o $exe --framework-dependent --result-format json
           $exit = $LASTEXITCODE
           $compile | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw 'Operator regression compilation failed.' }
@@ -45,9 +64,44 @@ jobs:
       - name: Run operator regression
         shell: pwsh
         run: |
-          chmod +x ./out/operators/increment-compound-operators
-          $result = & ./out/operators/increment-compound-operators 2>&1
+          $exe = if ($IsWindows) { './out/operators/increment-compound-operators.exe' } else { './out/operators/increment-compound-operators' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $result = & $exe 2>&1
           $exit = $LASTEXITCODE
           $result | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw "Operator regression failed with exit code $exit." }
           if ($result -notcontains 'INCREMENT-COMPOUND-OPERATORS=OK') { throw 'Operator regression did not report success.' }
+
+      - name: Verify invalid operator syntax fails closed
+        shell: pwsh
+        run: |
+          $cases = @(
+            'increment-invalid-literal',
+            'increment-invalid-expression',
+            'increment-invalid-prefix',
+            'increment-invalid-value-expression',
+            'compound-invalid-string-numeric'
+          )
+
+          foreach ($case in $cases) {
+            $source = "./samples/$case.xps"
+            $output = if ($IsWindows) { "./out/operators/$case.exe" } else { "./out/operators/$case" }
+            $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
+            $compilerExitCode = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+
+            $resultText | ForEach-Object { Write-Host $_ }
+            if ($compilerExitCode -eq 0) { throw "$case unexpectedly compiled successfully." }
+
+            $jsonText = $resultText -join "`n"
+            try {
+              $result = $jsonText | ConvertFrom-Json
+            }
+            catch {
+              throw "$case did not return valid JSON compiler diagnostics."
+            }
+
+            if ($result.result -ne 'error' -or $null -eq $result.errors -or $result.errors.Count -lt 1) {
+              throw "$case did not return a structured compiler error."
+            }
+          }
