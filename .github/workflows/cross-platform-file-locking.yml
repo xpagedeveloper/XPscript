@@ -1,0 +1,104 @@
+name: Cross Platform File Locking
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
+      - 'samples/file-lock-holder.xps'
+      - 'samples/file-lock-contender.xps'
+      - 'samples/file-lock-platform-support.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+      - '.github/workflows/cross-platform-file-locking.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  byte-range-locking:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Resolve runner RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $extension = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "extension=$extension" >> $env:GITHUB_OUTPUT
+      - name: Compile lock fixtures
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
+          $contender = "./out/file-lock-contender${{ steps.rid.outputs.extension }}"
+          $support = "./out/file-lock-platform-support${{ steps.rid.outputs.extension }}"
+          foreach ($item in @(
+            @{ Source='./samples/file-lock-holder.xps'; Output=$holder },
+            @{ Source='./samples/file-lock-contender.xps'; Output=$contender },
+            @{ Source='./samples/file-lock-platform-support.xps'; Output=$support }
+          )) {
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $item.Source --runtime '${{ steps.rid.outputs.rid }}' -o $item.Output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($item.Source)" }
+          }
+          "HOLDER_EXE=$((Resolve-Path -LiteralPath $holder).Path)" >> $env:GITHUB_ENV
+          "CONTENDER_EXE=$((Resolve-Path -LiteralPath $contender).Path)" >> $env:GITHUB_ENV
+          "SUPPORT_EXE=$((Resolve-Path -LiteralPath $support).Path)" >> $env:GITHUB_ENV
+      - name: Verify single-process Lock and Unlock support
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-platform.bin
+          $result = & $env:SUPPORT_EXE
+          if ($LASTEXITCODE -ne 0) { throw "Lock support fixture exited with $LASTEXITCODE.`n$result" }
+          if ($result -notcontains 'LOCK_SUPPORTED') { throw "Expected native byte-range Lock/Unlock support.`n$result" }
+      - name: Verify cross-process lock conflict and release
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin, ./xps-lock-ready.flag
+          $process = Start-Process -FilePath $env:HOLDER_EXE -RedirectStandardOutput ./holder.out -RedirectStandardError ./holder.err -PassThru
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 150; $i++) {
+              if (Test-Path ./xps-lock-ready.flag) { $ready = $true; break }
+              if ($process.HasExited) {
+                $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
+                $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+                throw "Holder exited before ready marker.`n$holderResult`n$holderError"
+              }
+              Start-Sleep -Milliseconds 100
+            }
+            if (-not $ready) { throw 'Timed out waiting for holder lock ready marker.' }
+
+            $contenderResult = & $env:CONTENDER_EXE
+            if ($LASTEXITCODE -ne 0) { throw "Lock contender exited with $LASTEXITCODE.`n$contenderResult" }
+            if (-not ($contenderResult | Where-Object { $_ -like 'LOCK_FAILED Err=70*' })) { throw "Overlapping lock was not rejected with XPScript error 70.`n$contenderResult" }
+
+            $process.WaitForExit()
+            $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
+            $holderError = Get-Content ./holder.err -ErrorAction SilentlyContinue
+            if ($holderResult -notcontains 'LOCKED' -or $holderResult -notcontains 'UNLOCKED') { throw "Holder did not complete lock/unlock cycle.`n$holderResult`n$holderError" }
+
+            $afterRelease = & $env:SUPPORT_EXE
+            if ($LASTEXITCODE -ne 0 -or $afterRelease -notcontains 'LOCK_SUPPORTED') { throw "Lock could not be reacquired after holder release.`n$afterRelease" }
+          } finally {
+            if (-not $process.HasExited) { $process.Kill($true) }
+            $process.Dispose()
+          }
+      - name: Cleanup
+        if: always()
+        shell: pwsh
+        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./xps-lock-platform.bin, ./holder.out, ./holder.err
