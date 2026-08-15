@@ -14,13 +14,13 @@ f = FreeFile()
 
 ### FreeFile/Open limits
 
-The current file runtime exposes file numbers **1 through 255**. `FreeFile()` searches that range and fails when no free file number remains. A file number that is already open cannot be opened again and maps to XPScript error 55 (`File already open`).
+`FreeFile()` allocates available XPScript file numbers from **1 through 255** and fails when no free number remains in that allocation range. A file number that is already open cannot be opened again and maps to XPScript error 55 (`File already open`).
 
-These limits are XPScript file-handle limits; they are separate from the operating system's process-wide descriptor/handle limits.
+The active `Open` runtime does not currently enforce 1..255 as a hard validity range for explicitly supplied integer file numbers. Use `FreeFile()` for normal and portable allocation instead of depending on numbers outside its 1..255 allocation range. XPScript file numbers are separate from the operating system's process-wide descriptor/handle limits.
 
 ## Open
 
-`Open` uses an XPScript file number in the supported **1..255** range. Use `FreeFile()` rather than hard-coding a number when practical.
+`Open` accepts an XPScript integer file number. Use `FreeFile()` rather than hard-coding a number when practical. `FreeFile()` returns numbers from 1..255, but `Open` itself does not currently reject an otherwise available integer solely because it is outside that range.
 
 ### Input
 
