@@ -84,8 +84,8 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.host.outputs.rid }}' -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent compilation failed.' }
           if ($env:RUNNER_OS -ne 'Windows') {
-            & /usr/bin/test -x $exe
-            if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent Unix output is not executable.' }
+            $mode = [System.IO.File]::GetUnixFileMode((Resolve-Path -LiteralPath $exe).Path)
+            if (($mode -band [System.IO.UnixFileMode]::UserExecute) -eq 0) { throw "Framework-dependent Unix output is not user-executable. Mode=$mode" }
           }
 
       - name: Verify self-contained single-file executable
@@ -96,8 +96,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Self-contained compilation failed.' }
           if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Self-contained single-file output missing.' }
           if ($env:RUNNER_OS -ne 'Windows') {
-            & /usr/bin/test -x $exe
-            if ($LASTEXITCODE -ne 0) { throw 'Self-contained Unix output is not executable.' }
+            $mode = [System.IO.File]::GetUnixFileMode((Resolve-Path -LiteralPath $exe).Path)
+            if (($mode -band [System.IO.UnixFileMode]::UserExecute) -eq 0) { throw "Self-contained Unix output is not user-executable. Mode=$mode" }
           }
           $siblings = @(Get-ChildItem -LiteralPath ./out -File | Where-Object { $_.BaseName -eq 'platform-self-contained' })
           if ($siblings.Count -ne 1) { throw "Expected one self-contained application file, got $($siblings.Count)." }
