@@ -75,6 +75,29 @@ internal static class XPScriptEvaluateCollectionRuntime
         return SnapshotCore(value, visited, new SnapshotBudget(), 0, forReturn: true);
     }
 
+    public static LSArray PackArguments(
+        IReadOnlyList<object?> values,
+        IReadOnlyList<bool> byVal)
+    {
+        if (values.Count != byVal.Count)
+            throw new XPScriptRuntimeException(5, "Evaluate argument metadata is inconsistent.");
+        if (values.Count == 0)
+            throw new XPScriptRuntimeException(5, "Evaluate argument array cannot be empty.");
+
+        var budget = new SnapshotBudget();
+        budget.AddElements(values.Count);
+        var visited = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
+        var packed = new LSArray("Variant", true, new[] { 0 }, new[] { values.Count - 1 });
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = byVal[i]
+                ? SnapshotCore(values[i], visited, budget, 1, forReturn: false)
+                : values[i];
+            packed.Set(value, new object?[] { i });
+        }
+        return packed;
+    }
+
     public static object? ReadIndexed(object? value, IReadOnlyList<object?> args)
     {
         if (value is ListSnapshot list)
