@@ -1,0 +1,152 @@
+name: Cross Platform Target Platform Shell
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-target-platform-shell.yml'
+      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/CompilerOutputPublisher.cs'
+      - 'samples/platform-shell.xps'
+      - 'samples/shell helpers åäö/**'
+      - 'todo/cross-platform-runtime-todo.md'
+
+permissions:
+  contents: read
+
+jobs:
+  target-platform-shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Resolve host contract
+        id: host
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $platform = 'Windows'; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $platform = 'Linux'; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $platform = 'MacOS'; $extension = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "platform=$platform" >> $env:GITHUB_OUTPUT
+          "extension=$extension" >> $env:GITHUB_OUTPUT
+
+      - name: Verify CLI RID contract and default output naming
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          @'
+          Sub Main()
+              Print "TARGET=OK"
+          End Sub
+          '@ | Set-Content -LiteralPath ./out/default-target.xps -Encoding utf8
+
+          $help = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- --help
+          if ($help -notmatch 'win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64') { throw 'Supported RID list is missing from CLI help.' }
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/default-target.xps --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Default host-target compilation failed.' }
+          $defaultOutput = "./out/default-target${{ steps.host.outputs.extension }}"
+          if (-not (Test-Path -LiteralPath $defaultOutput -PathType Leaf)) { throw "Default output naming mismatch: $defaultOutput" }
+
+          $ridOutput = "./out/rid-alias${{ steps.host.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/default-target.xps --rid '${{ steps.host.outputs.rid }}' -o $ridOutput --framework-dependent
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $ridOutput -PathType Leaf)) { throw '--rid target selection failed.' }
+
+          $runtimeOutput = "./out/runtime-alias${{ steps.host.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/default-target.xps --runtime '${{ steps.host.outputs.rid }}' -o $runtimeOutput --framework-dependent
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $runtimeOutput -PathType Leaf)) { throw '--runtime target selection failed.' }
+
+      - name: Verify framework-dependent executable
+        shell: pwsh
+        run: |
+          $exe = "./out/platform-framework${{ steps.host.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.host.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            & /usr/bin/test -x $exe
+            if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent Unix output is not executable.' }
+          }
+
+      - name: Verify self-contained single-file executable
+        shell: pwsh
+        run: |
+          $exe = "./out/platform-self-contained${{ steps.host.outputs.extension }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.host.outputs.rid }}' -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Self-contained compilation failed.' }
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Self-contained single-file output missing.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            & /usr/bin/test -x $exe
+            if ($LASTEXITCODE -ne 0) { throw 'Self-contained Unix output is not executable.' }
+          }
+          $siblings = @(Get-ChildItem -LiteralPath ./out -File | Where-Object { $_.BaseName -eq 'platform-self-contained' })
+          if ($siblings.Count -ne 1) { throw "Expected one self-contained application file, got $($siblings.Count)." }
+
+      - name: Prepare Unix Shell helpers
+        if: runner.os != 'Windows'
+        shell: pwsh
+        run: |
+          chmod +x './samples/shell helpers åäö/shebang-helper'
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to mark shebang helper executable.' }
+
+      - name: Verify Platform forms and structured Shell arguments
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-args-result.json, ./shell-cmd-result.txt, ./shell-sh-result.txt, ./shell-shebang-result.txt
+          $exe = "./out/platform-framework${{ steps.host.outputs.extension }}"
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Platform/Shell sample exited with $LASTEXITCODE.`n$result" }
+          if ($result -notcontains 'PLATFORM-FUNCTION=${{ steps.host.outputs.platform }}') { throw "Unexpected Platform() result.`n$result" }
+          if ($result -notcontains 'PLATFORM-BARE=${{ steps.host.outputs.platform }}') { throw "Unexpected bare Platform result.`n$result" }
+
+          $required = @('./shell-args-result.json')
+          if ($env:RUNNER_OS -eq 'Windows') { $required += './shell-cmd-result.txt' }
+          else { $required += './shell-sh-result.txt'; $required += './shell-shebang-result.txt' }
+          for ($i = 0; $i -lt 200; $i++) {
+            $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
+            if ($missing.Count -eq 0) { break }
+            Start-Sleep -Milliseconds 50
+          }
+          foreach ($path in $required) { if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Shell helper did not create $path" } }
+
+          $payload = Get-Content -LiteralPath ./shell-args-result.json -Raw | ConvertFrom-Json
+          if ($payload.count -ne 4) { throw "Shell argument count mismatch: $($payload.count)" }
+          if ($payload.values[0] -ne 'space value') { throw 'Quoted space argument was not preserved.' }
+          if ($payload.values[1] -ne '') { throw 'Empty quoted Shell argument was not preserved.' }
+          if ($payload.values[2] -ne 'åäö 漢字') { throw 'Unicode Shell argument was not preserved.' }
+          if ($payload.values[3] -ne 'a&b|c<>^%!') { throw 'Shell metacharacters were unexpectedly interpreted for structured PowerShell execution.' }
+
+          if ($env:RUNNER_OS -eq 'Windows') {
+            if ((Get-Content -LiteralPath ./shell-cmd-result.txt -Raw).Trim() -ne 'CMD=safe value') { throw '.cmd routing failed.' }
+          } else {
+            if ((Get-Content -LiteralPath ./shell-sh-result.txt -Raw).Trim() -ne 'SH=safe value') { throw '.sh routing failed.' }
+            if ((Get-Content -LiteralPath ./shell-shebang-result.txt -Raw).Trim() -ne 'SHEBANG=safe value') { throw 'Direct executable/shebang routing failed.' }
+          }
+
+      - name: Verify Shell security invariants
+        shell: pwsh
+        run: |
+          $runtime = Get-Content -LiteralPath ./src/XPScript.Compiler/CrossPlatformRuntimeSource.cs -Raw
+          foreach ($needle in @('UseShellExecute = false', 'info.ArgumentList.Add', 'Path.IsPathRooted(directory)', 'ValidateBatchArgument', "'&', '|', '<', '>', '^', '%', '!'")) {
+            if (-not $runtime.Contains($needle)) { throw "Missing Shell security invariant: $needle" }
+          }
