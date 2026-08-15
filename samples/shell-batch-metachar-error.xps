@@ -1,5 +1,6 @@
 Sub Main()
     ' Expected runtime error: .cmd/.bat arguments may not contain cmd.exe metacharacters.
-    ' Validation happens before cmd.exe is started, so the script does not need to exist.
-    Call Shell("not-used.cmd safe&whoami")
+    ' The local script exists so path validation succeeds, but unsafe arguments must be rejected
+    ' before cmd.exe starts it. The script would create shell-batch-unsafe-ran.txt if executed.
+    Call Shell(".\samples\shell-batch-sentinel.cmd safe&whoami")
 End Sub
