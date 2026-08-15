@@ -14,6 +14,7 @@ on:
       - 'samples/increment-invalid-*.xps'
       - 'samples/compound-invalid-string-numeric.xps'
       - 'todo/increment-decrement-operators-todo.md'
+      - 'todo/done/increment-decrement-operators-todo.md'
       - '.github/workflows/increment-compound-operators.yml'
   pull_request:
     branches: [main]
@@ -28,6 +29,7 @@ on:
       - 'samples/increment-invalid-*.xps'
       - 'samples/compound-invalid-string-numeric.xps'
       - 'todo/increment-decrement-operators-todo.md'
+      - 'todo/done/increment-decrement-operators-todo.md'
       - '.github/workflows/increment-compound-operators.yml'
   workflow_dispatch:
 
@@ -110,17 +112,17 @@ jobs:
               throw "$name did not return a structured compiler error."
             }
 
-            $error = $result.errors[0]
-            if ($error.line -ne $case.Line) {
-              throw "$name mapped to line $($error.line), expected line $($case.Line)."
+            $diagnostic = $result.errors[0]
+            if ($diagnostic.line -ne $case.Line) {
+              throw "$name mapped to line $($diagnostic.line), expected line $($case.Line)."
             }
-            if ($error.position -lt 1) {
+            if ($diagnostic.position -lt 1) {
               throw "$name did not return a valid source position."
             }
 
             $sourceLines = Get-Content -LiteralPath $source
             $expectedCode = $sourceLines[$case.Line - 1].Trim()
-            if ([string]::IsNullOrWhiteSpace($error.code) -or $error.code.Trim() -ne $expectedCode) {
-              throw "$name mapped code '$($error.code)' but expected '$expectedCode'."
+            if ([string]::IsNullOrWhiteSpace($diagnostic.code) -or $diagnostic.code.Trim() -ne $expectedCode) {
+              throw "$name mapped code '$($diagnostic.code)' but expected '$expectedCode'."
             }
           }
