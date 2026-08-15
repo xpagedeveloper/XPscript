@@ -7,6 +7,7 @@ internal sealed class ParameterPassingPostProcessor
 {
     private const string ByRefPrefix = "__xps_byref_";
     private const string ByValPrefix = "__xps_byval_";
+    private const string EvaluateByValMarker = "XPScriptEvaluateByValArgument";
 
     private sealed record ProcedureSignature(string Name, bool[] ByRef);
 
@@ -20,11 +21,11 @@ internal sealed class ParameterPassingPostProcessor
 
         var signatures = new Dictionary<string, ProcedureSignature>(StringComparer.OrdinalIgnoreCase);
         generated = MethodDeclaration.Replace(generated, match => RewriteDeclaration(match, signatures));
-        if (signatures.Count == 0) return generated;
 
         foreach (var signature in signatures.Values.OrderByDescending(x => x.Name.Length))
             generated = RewriteCalls(generated, signature);
-        return generated;
+
+        return RewriteEvaluateCalls(generated);
     }
 
     private static string RewriteDeclaration(Match match, IDictionary<string, ProcedureSignature> signatures)
@@ -113,6 +114,90 @@ internal sealed class ParameterPassingPostProcessor
         }
         return output.ToString();
     }
+
+    private static string RewriteEvaluateCalls(string generated)
+    {
+        const string target = "XPScriptEvaluateRuntime.Evaluate";
+        var output = new StringBuilder(generated.Length + 128);
+        var cursor = 0;
+        while (cursor < generated.Length)
+        {
+            var index = generated.IndexOf(target, cursor, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                output.Append(generated.AsSpan(cursor));
+                break;
+            }
+
+            output.Append(generated.AsSpan(cursor, index - cursor));
+            var open = index + target.Length;
+            while (open < generated.Length && char.IsWhiteSpace(generated[open])) open++;
+            if (open >= generated.Length || generated[open] != '(')
+            {
+                output.Append(target);
+                cursor = index + target.Length;
+                continue;
+            }
+
+            var close = FindMatchingParen(generated, open);
+            if (close < 0)
+            {
+                output.Append(target);
+                cursor = index + target.Length;
+                continue;
+            }
+
+            var args = SplitArguments(generated[(open + 1)..close]);
+            if (args.Count < 2)
+            {
+                output.Append(generated.AsSpan(index, close - index + 1));
+                cursor = close + 1;
+                continue;
+            }
+
+            var bindings = new List<string>();
+            for (var argIndex = 1; argIndex < args.Count; argIndex++)
+            {
+                var argument = args[argIndex].Trim();
+                if (TryUnwrapByVal(argument, out var byVal))
+                {
+                    bindings.Add($"XPScriptEvaluateArgument.ByVal({byVal})");
+                    continue;
+                }
+
+                if (IsAssignableArgument(argument))
+                {
+                    var setterName = "__xps_eval_value_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    bindings.Add($"XPScriptEvaluateArgument.ByRef({argument}, {setterName} => {argument} = (dynamic){setterName})");
+                }
+                else
+                {
+                    bindings.Add($"XPScriptEvaluateArgument.ByVal({argument})");
+                }
+            }
+
+            output.Append("XPScriptEvaluateRuntime.EvaluateArguments(");
+            output.Append(args[0].Trim());
+            if (bindings.Count > 0) output.Append(", ").Append(string.Join(", ", bindings));
+            output.Append(')');
+            cursor = close + 1;
+        }
+        return output.ToString();
+    }
+
+    private static bool TryUnwrapByVal(string argument, out string value)
+    {
+        value = "";
+        if (!argument.StartsWith(EvaluateByValMarker + "(", StringComparison.Ordinal) || !argument.EndsWith(')')) return false;
+        var open = EvaluateByValMarker.Length;
+        var close = FindMatchingParen(argument, open);
+        if (close != argument.Length - 1) return false;
+        value = argument[(open + 1)..close].Trim();
+        return true;
+    }
+
+    private static bool IsAssignableArgument(string value) =>
+        Regex.IsMatch(value, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$", RegexOptions.CultureInvariant);
 
     private static bool IsDeclarationOccurrence(string generated, int identifierStart)
     {
