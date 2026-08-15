@@ -1,0 +1,25 @@
+name: Documentation Reference
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'samples/**'
+      - 'tools/validate_docs.py'
+      - '.github/workflows/documentation-reference.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Validate command reference and local links
+        run: python tools/validate_docs.py
