@@ -1,0 +1,32 @@
+name: PR Workflow Scope
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scope-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Reject broad feature PR triggers
+        shell: python
+        run: |
+          from pathlib import Path
+          allowed = {'required-pr-gate.yml'}
+          offenders = []
+          for path in Path('.github/workflows').glob('*.yml'):
+              if path.name in allowed:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if '  pull_request:' in text and "- 'src/XPScript.Compiler/**'" in text:
+                  offenders.append(path.name)
+          if offenders:
+              raise SystemExit('Broad compiler PR path filters are not allowed: ' + ', '.join(sorted(offenders)))
+          print('PR-WORKFLOW-SCOPE=OK')
