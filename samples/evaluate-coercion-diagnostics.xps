@@ -1,5 +1,6 @@
 Sub Main()
     Dim result As Variant
+    Dim evaluateErr As Integer
 
     result = Evaluate("Return ""value="" + 42")
     If CStr(result) <> "value=42" Then
@@ -18,24 +19,27 @@ Sub Main()
 
     On Error Resume Next
     result = Evaluate("Return CInt(""not-a-number"")")
-    If Err <> 13 Then
-        Error 9104, "Evaluate type mismatch should use error 13, got " & CStr(Err)
+    evaluateErr = Err
+    On Error GoTo 0
+    If evaluateErr <> 13 Then
+        Error 9104, "Evaluate type mismatch should use error 13, got " & CStr(evaluateErr)
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return 10 \ 0")
-    If Err <> 11 Then
-        Error 9105, "Evaluate division by zero should use error 11, got " & CStr(Err)
+    evaluateErr = Err
+    On Error GoTo 0
+    If evaluateErr <> 11 Then
+        Error 9105, "Evaluate division by zero should use error 11, got " & CStr(evaluateErr)
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return CByte(300)")
-    If Err <> 6 Then
-        Error 9106, "Evaluate overflow should use error 6, got " & CStr(Err)
+    evaluateErr = Err
+    On Error GoTo 0
+    If evaluateErr <> 6 Then
+        Error 9106, "Evaluate overflow should use error 6, got " & CStr(evaluateErr)
     End If
 
-    On Error GoTo 0
     Print "Evaluate coercion/diagnostics semantics OK"
 End Sub
