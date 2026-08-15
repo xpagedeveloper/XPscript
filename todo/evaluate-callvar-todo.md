@@ -35,10 +35,10 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 
 ## Array callvar
 
-- [>] XPScript arrays preserve rank, bounds and element type in the Evaluate snapshot; one-dimensional zero-based arrays are runtime-verified, while explicit multidimensional/non-zero-lower-bound coverage remains open
-- [x] evaluated code can read indexed values through normal `callvar(index...)` syntax
-- [x] `LBound` and `UBound` are available inside Evaluate; sources: `samples/evaluate-array-helpers.xps`, `samples/evaluate-nested-collections.xps`
-- [ ] add explicit multidimensional and non-zero-lower-bound regression sources
+- [x] XPScript arrays preserve rank, bounds and element type in the Evaluate snapshot for both one-dimensional zero-based arrays and multidimensional arrays with non-zero lower bounds; source: `samples/evaluate-multidimensional-callvar.xps`
+- [x] evaluated code can read indexed values through normal `callvar(index...)` syntax, including multidimensional `callvar(i, j)` access
+- [x] `LBound` and `UBound` are available inside Evaluate and preserve dimension-specific bounds; sources: `samples/evaluate-array-helpers.xps`, `samples/evaluate-nested-collections.xps`, `samples/evaluate-multidimensional-callvar.xps`
+- [x] explicit multidimensional and non-zero-lower-bound regression source is permanently executed by `Evaluate Runtime Compatibility`
 
 ## List callvar
 
