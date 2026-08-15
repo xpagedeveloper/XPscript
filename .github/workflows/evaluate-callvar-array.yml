@@ -1,0 +1,64 @@
+name: Evaluate Callvar Array
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
+      - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
+      - 'samples/evaluate-callvar-array*.xps'
+      - 'todo/evaluate-multiple-callvar-todo.md'
+      - 'todo/done/evaluate-multiple-callvar-todo.md'
+      - '.github/workflows/evaluate-callvar-array.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
+      - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
+      - 'samples/evaluate-callvar-array*.xps'
+      - 'todo/evaluate-multiple-callvar-todo.md'
+      - 'todo/done/evaluate-multiple-callvar-todo.md'
+      - '.github/workflows/evaluate-callvar-array.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate-callvar-array:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile and run callvar-array sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/evaluate-callvar-array | Out-Null
+          $exe = if ($IsWindows) { './out/evaluate-callvar-array/evaluate.exe' } else { './out/evaluate-callvar-array/evaluate' }
+          & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-callvar-array.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Callvar-array sample failed to compile.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw 'Callvar-array sample failed at runtime.' }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'TWO=30') { throw 'Two-value callvar array result was incorrect.' }
+          if ($output -notcontains 'FIVE=15') { throw 'Five-value callvar array result was incorrect.' }
+          if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
+          if ($output -notcontains 'UBOUND=2') { throw 'Callvar array bounds were incorrect.' }
