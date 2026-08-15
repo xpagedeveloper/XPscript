@@ -8,7 +8,6 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
       - 'samples/file-io-platform-semantics.xps'
-      - 'todo/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
   workflow_dispatch:
 
