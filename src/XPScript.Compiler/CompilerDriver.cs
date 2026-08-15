@@ -41,10 +41,10 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "")]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "")]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
 
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
@@ -56,7 +56,7 @@ public sealed class CompilerDriver
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "")]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
         }
     }
 
@@ -305,16 +305,30 @@ public sealed class CompilerDriver
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
             var diagnosticSource = match.Groups["file"].Value.Trim();
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
-            result.Add(CreateDiagnostic(line, pos, Humanize(match.Groups["desc"].Value.Trim()), code, Mark(code, pos)));
+            result.Add(CreateDiagnostic(
+                line,
+                pos,
+                Humanize(match.Groups["desc"].Value.Trim()),
+                code,
+                Mark(code, pos),
+                DiagnosticFileName(diagnosticSource)));
         }
-        if (result.Count > 0) return result.GroupBy(x => (x.Line, x.Position, x.Description)).Select(x => x.First()).ToList();
+        if (result.Count > 0)
+            return result.GroupBy(x => (x.File, x.Line, x.Position, x.Description)).Select(x => x.First()).ToList();
 
         var generatedPattern = new Regex(@"Program\.cs\((?<line>\d+),(?<pos>\d+)\):\s*error\s+CS\d+:\s*(?<desc>.*?)(?:\s*\[|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
         foreach (Match match in generatedPattern.Matches(message))
         {
             result.Add(CreateDiagnostic(int.Parse(match.Groups["line"].Value), int.Parse(match.Groups["pos"].Value), Humanize(match.Groups["desc"].Value.Trim()), "", ""));
         }
-        if (result.Count == 0) result.Add(CreateDiagnostic(0, 0, Humanize(message.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Compilation failed."), "", ""));
+        if (result.Count == 0)
+            result.Add(CreateDiagnostic(
+                0,
+                0,
+                Humanize(message.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Compilation failed."),
+                "",
+                "",
+                DiagnosticFileName(sourcePath)));
         return result;
     }
 
@@ -414,6 +428,12 @@ public sealed class CompilerDriver
         catch { return "dependency"; }
     }
 
+    private static string DiagnosticFileName(string value)
+    {
+        try { return Path.GetFileName(value); }
+        catch { return ""; }
+    }
+
     private static string Humanize(string description)
     {
         var convert = Regex.Match(description, @"cannot convert from '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
@@ -430,8 +450,21 @@ public sealed class CompilerDriver
         "byte" or "System.Byte" => "Byte", "decimal" or "System.Decimal" => "Currency", _ => type
     };
 
-    private static CompileDiagnostic CreateDiagnostic(int line, int pos, string description, string code, string marked) => new()
-    { Line = line, Position = pos, Description = description, Code = code, MarkedCode = marked };
+    private static CompileDiagnostic CreateDiagnostic(
+        int line,
+        int pos,
+        string description,
+        string code,
+        string marked,
+        string file = "") => new()
+    {
+        File = file,
+        Line = line,
+        Position = pos,
+        Description = description,
+        Code = code,
+        MarkedCode = marked
+    };
 
     private static string Mark(string code, int position)
     {

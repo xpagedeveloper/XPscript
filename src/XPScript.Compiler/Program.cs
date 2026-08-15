@@ -10,11 +10,15 @@ XPScript Compiler
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscriptc <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...]
-  xpscriptc run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--] [script arguments...]
+  xpscriptc <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  xpscriptc run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
+
+Built-in source preprocessors:
+  identity
+  replace:FROM=TO
 
 Examples:
   xpscriptc hello.xps
@@ -23,14 +27,19 @@ Examples:
   xpscriptc hello.xps --runtime win-x64 -o Hello.exe --result-format json
   xpscriptc hello.xps --restricted
   xpscriptc hello.xps --source-root ./src --source-root ../shared-xps
+  xpscriptc hello.xps --preprocessor "replace:__MODE__=Production"
+  xpscriptc hello.xps --preprocessor "replace:__A__=__B__" --preprocessor "replace:__B__=Ready"
   xpscriptc run hello.xps
   xpscriptc run hello.xps --restricted
+  xpscriptc run hello.xps --preprocessor "replace:__MODE__=Development"
   xpscriptc run hello.xps first "second value"
   xpscriptc run hello.xps -- --runtime passed-to-script
 
 If --runtime is omitted, XPScript targets the current operating system and process architecture.
 --restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
 --source-root may be repeated and automatically enables restricted Include processing.
+--preprocessor may be repeated. Preprocessors run after the complete Include graph is expanded, in the exact order supplied.
+Repeated preprocessor specifications are allowed and run repeatedly in the declared order.
 The run command can execute only the current OS/architecture target. Its default working directory is the source script directory.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
@@ -47,6 +56,7 @@ var resultFormat = "text";
 var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
 var restricted = false;
 var sourceRoots = new List<string>();
+var sourcePreprocessors = new List<string>();
 
 try
 {
@@ -67,6 +77,8 @@ try
             restricted = true;
             sourceRoots.Add(Path.GetFullPath(args[++i]));
         }
+        else if (args[i] == "--preprocessor" && i + 1 < args.Length)
+            sourcePreprocessors.Add(args[++i]);
         else
             throw new ArgumentException($"Unknown argument: {args[i]}");
     }
@@ -81,6 +93,7 @@ try
     var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
     outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
+    using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
     using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
     var compiler = new CompilerDriver();
     var result = await compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
@@ -113,6 +126,7 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
         var parseRunOptions = true;
         var restricted = false;
         var sourceRoots = new List<string>();
+        var sourcePreprocessors = new List<string>();
 
         for (var i = 2; i < commandLineArgs.Length; i++)
         {
@@ -156,6 +170,14 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
                 continue;
             }
 
+            if (parseRunOptions && value == "--preprocessor")
+            {
+                if (i + 1 >= commandLineArgs.Length)
+                    throw new ArgumentException("--preprocessor requires a specification.");
+                sourcePreprocessors.Add(commandLineArgs[++i]);
+                continue;
+            }
+
             parseRunOptions = false;
             scriptArgs.Add(value);
         }
@@ -168,13 +190,13 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
 
         if (!File.Exists(sourcePath))
         {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "Source file not found." }]), resultFormat);
+            WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]), resultFormat);
             return 2;
         }
 
         if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
         {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "XPScript source files must use the .xps extension." }]), resultFormat);
+            WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension." }]), resultFormat);
             return 2;
         }
 
@@ -190,6 +212,7 @@ static async Task<int> RunScriptAsync(string[] commandLineArgs)
             (OperatingSystem.IsWindows() ? ".exe" : "");
         var executablePath = Path.Combine(tempRoot, executableName);
 
+        using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
         using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
         var compiler = new CompilerDriver();
         var compileResult = await compiler.CompileWithResultAsync(
@@ -254,6 +277,7 @@ static void WriteResult(CompileResult result, string format)
                 Console.WriteLine("errors:");
                 foreach (var error in result.Errors)
                 {
+                    if (!string.IsNullOrEmpty(error.File)) Console.WriteLine($"  file: {error.File}");
                     Console.WriteLine($"  line: {error.Line}");
                     Console.WriteLine($"  position: {error.Position}");
                     Console.WriteLine($"  description: {error.Description}");

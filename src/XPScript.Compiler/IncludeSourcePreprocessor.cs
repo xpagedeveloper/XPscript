@@ -29,7 +29,18 @@ internal sealed class IncludeSourcePreprocessor
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
         Expand(rootPath, rootSource, pathIdentity, included, stack, output, map);
-        return new Result(string.Join(Environment.NewLine, output), new SourceMap(map));
+
+        var expanded = new Result(string.Join(Environment.NewLine, output), new SourceMap(map));
+        var specifications = SourcePreprocessorConfigurationContext.Current;
+        if (specifications.Count == 0)
+            return expanded;
+
+        var transformed = new SourcePreprocessorPipeline().Transform(
+            expanded.Source,
+            expanded.Map,
+            rootPath,
+            specifications);
+        return new Result(transformed.Source, transformed.Map);
     }
 
     private void Expand(

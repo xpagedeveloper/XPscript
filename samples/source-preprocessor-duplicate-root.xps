@@ -1,0 +1,6 @@
+Include "source-preprocessor-duplicate-child.xps"
+Include "source-preprocessor-duplicate-child.xps"
+
+Sub Main()
+    Print DuplicatePreprocessorValue()
+End Sub

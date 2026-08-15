@@ -1,0 +1,3 @@
+Sub BadOperator()
+    __BAD_OPERATOR__
+End Sub
