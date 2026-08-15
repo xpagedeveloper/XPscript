@@ -1,10 +1,12 @@
 ' (c) xpagedeveloper.com 2026
 ' Regression coverage for postfix increment/decrement and compound assignment.
 
-Dim rhsCalls As Integer
-
 Function CountedValue() As Integer
-    rhsCalls = rhsCalls + 1
+    Static calls As Integer
+    calls = calls + 1
+    If calls > 1 Then
+        Error 9899, "compound RHS was evaluated more than once"
+    End If
     CountedValue = 5
 End Function
 
@@ -127,11 +129,10 @@ Sub Main()
         Error 9916, "String += differs from long form"
     End If
 
-    rhsCalls = 0
     counter = 10
     counter += CountedValue()
-    If counter <> 15 Or rhsCalls <> 1 Then
-        Error 9917, "compound RHS must be evaluated exactly once"
+    If counter <> 15 Then
+        Error 9917, "compound RHS exactly-once result failed"
     End If
 
     byteValue = 255
