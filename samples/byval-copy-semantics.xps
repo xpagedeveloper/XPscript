@@ -1,0 +1,42 @@
+' (c) xpagedeveloper.com 2026
+' Regression: ByVal scalar parameters are copies, and Evaluate input is isolated from caller-owned data.
+
+Sub ChangeInSub(ByVal value As Integer)
+    value = 99
+End Sub
+
+Function ChangeInFunction(ByVal value As Integer) As Integer
+    value = value + 10
+    ChangeInFunction = value
+End Function
+
+Sub Main()
+    Dim original As Integer
+    Dim result As Integer
+    Dim parameters List As Variant
+    Dim evaluated As Variant
+
+    original = 7
+    Call ChangeInSub(original)
+    If original <> 7 Then
+        Error 9641, "ByVal Sub parameter changed caller variable"
+    End If
+
+    result = ChangeInFunction(original)
+    If result <> 17 Then
+        Error 9642, "ByVal Function parameter produced wrong local result"
+    End If
+    If original <> 7 Then
+        Error 9643, "ByVal Function parameter changed caller variable"
+    End If
+
+    parameters("value") = 7
+    evaluated = Evaluate("callvar(\"value\") = 99 : Return callvar(\"value\")", parameters)
+    If parameters("value") <> 7 Then
+        Error 9644, "Evaluate changed caller-owned List input"
+    End If
+
+    Print "BYVAL-SUB=OK"
+    Print "BYVAL-FUNCTION=OK"
+    Print "EVALUATE-COPY=OK"
+End Sub
