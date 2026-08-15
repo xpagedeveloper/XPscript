@@ -13,7 +13,6 @@ on:
       - 'samples/shell-path-resolution.xps'
       - 'samples/shell-batch-metachar-error.xps'
       - 'samples/shell-batch-sentinel.cmd'
-      - 'todo/cross-platform-runtime-todo.md'
   workflow_dispatch:
 
 permissions:

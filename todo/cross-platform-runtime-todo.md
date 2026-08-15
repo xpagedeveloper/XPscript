@@ -93,18 +93,18 @@ Declare Function NativeVersion Lib "native/default/nativecore.dll" Alias "native
 
 Managed assemblies are different from native libraries and are handled by explicit compiler directives, never by `Declare ... Lib`.
 
-- [>] explicit external managed `.dll` references use `Reference "relative/path/Assembly.dll"`
-- [>] managed references are staged into the compiler's unique temporary build directory and emitted as generated MSBuild `<Reference>` items
-- [>] users cannot provide raw MSBuild/XML through the reference syntax
-- [>] managed reference paths must be relative to and remain inside the XPScript source directory
-- [>] referenced managed assemblies are marked `Private` so publish can carry the dependency with the generated application
-- [>] RID-specific native dependencies for managed assemblies use repeatable `ReferenceNative "path" Runtime "rid"` directives
-- [>] only `ReferenceNative` entries matching the selected compiler target RID are packaged
-- [>] managed/native reference paths are checked for missing files, traversal, file-name collisions and executable overwrite
-- [>] reference directives are replaced by blank source lines before transpilation so physical diagnostic line numbers remain stable
-- [ ] add a real managed test assembly plus RID-native fixtures when execution/build verification is re-enabled
-- [ ] verify managed reference deployment in both self-contained and framework-dependent publish modes
-- [ ] decide whether direct CLR type/member interop should be exposed as a separate language feature; assembly reference support alone does not implicitly expose arbitrary CLR APIs
+- [x] explicit external managed `.dll` references use `Reference "relative/path/Assembly.dll"`
+- [x] managed references are staged into the compiler's unique temporary build directory and emitted as generated MSBuild `<Reference>` items
+- [x] users cannot provide raw MSBuild/XML through the reference syntax
+- [x] managed reference paths must be relative to and remain inside the XPScript source directory
+- [x] referenced managed assemblies are marked `Private` so publish can carry the dependency with the generated application
+- [x] RID-specific native dependencies for managed assemblies use repeatable `ReferenceNative "path" Runtime "rid"` directives
+- [x] only `ReferenceNative` entries matching the selected compiler target RID are packaged
+- [x] managed/native reference paths are checked for missing files, traversal, file-name collisions and executable overwrite
+- [x] reference directives are replaced by blank source lines before transpilation so physical diagnostic line numbers remain stable
+- [x] real net10.0 managed test assembly plus target-RID native fixture are build/runtime-verified by `Cross Platform Managed References`
+- [x] managed reference deployment is verified in both self-contained and framework-dependent publish modes on Windows/Linux/macOS by `Cross Platform Managed References`
+- [x] direct CLR type/member interop is explicitly a separate future language feature; assembly reference support alone does not expose arbitrary CLR APIs
 
 Example:
 
@@ -179,3 +179,5 @@ File I/O must use the target operating system's real filesystem semantics rather
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
 
 `Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes the matching native system-library call plus loader-diagnostic fixture on Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
+
+`Cross Platform Managed References` builds a real net10.0 fixture assembly, compiles the same XPScript source in framework-dependent and self-contained modes on Windows/Ubuntu/macOS, verifies matching RID-native deployment and non-matching RID filtering, and executes both generated artifacts successfully. `Reference` remains a build/deployment directive and does not implicitly expose CLR type/member interop.
