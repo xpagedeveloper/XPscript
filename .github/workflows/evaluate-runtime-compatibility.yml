@@ -80,6 +80,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-standard-functions' @('STRING=abcef','MID=bcd','INSTR=6','REPLACE=a/b/c','MATH=13','NUMBERFORMAT=FF/1010','YEAR=2026','ISNUMERIC=True')
           Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
           Invoke-EvaluateSample 'evaluate-collection-element-budget' @('ELEMENT-BUDGET=OK')
+          Invoke-EvaluateSample 'evaluate-collection-element-boundary' @('ELEMENT-BOUNDARY=OK')
           Invoke-EvaluateSample 'evaluate-collection-payload-budget' @('PAYLOAD-BUDGET=OK')
           Invoke-EvaluateSample 'evaluate-diagnostic-sanitization' @('SANITIZED=Evaluate type mismatch.') @('TOP-SECRET-API-KEY-123456789')
           Invoke-EvaluateSample 'evaluate-diagnostic-edge-cases' @('EVALUATE-DIAGNOSTIC-EDGE=OK')
