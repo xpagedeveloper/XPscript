@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 REFERENCE = DOCS / "command-reference.md"
+ERROR_CODES = DOCS / "error-codes.md"
 
 errors: list[str] = []
 
@@ -38,6 +39,9 @@ for doc in sorted(DOCS.glob("*.md")):
     # Repository sample references should be clickable, not bare code-only paths.
     for match in re.finditer(r"`(samples/[^`]+)`", text):
         fail(f"{doc.relative_to(ROOT)}: sample reference must be clickable: {match.group(1)}")
+
+if not ERROR_CODES.exists():
+    fail("docs/error-codes.md is missing")
 
 if not REFERENCE.exists():
     fail("docs/command-reference.md is missing")
