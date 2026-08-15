@@ -12,6 +12,7 @@ on:
       - 'samples/platform-shell.xps'
       - 'samples/shell-path-resolution.xps'
       - 'samples/shell-batch-metachar-error.xps'
+      - 'samples/shell-batch-sentinel.cmd'
       - 'todo/cross-platform-runtime-todo.md'
   workflow_dispatch:
 
@@ -140,12 +141,16 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-batch-unsafe-ran.txt
           $exe = './out/shell-batch-metachar-error.exe'
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-batch-metachar-error.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'shell-batch-metachar-error.xps compilation failed.' }
           $output = & $exe 2>&1 | Out-String
-          if ($LASTEXITCODE -eq 0) { throw "Unsafe batch metacharacter command unexpectedly succeeded.`n$output" }
+          $childExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($childExitCode -eq 0) { throw "Unsafe batch metacharacter command unexpectedly succeeded.`n$output" }
           if ($output -notmatch 'command-shell metacharacters') { throw "Expected batch metacharacter diagnostic was not emitted.`n$output" }
+          if (Test-Path ./shell-batch-unsafe-ran.txt) { throw 'Unsafe batch sentinel script was executed.' }
 
       - name: Verify explicit shell mode remains explicit
         shell: pwsh
