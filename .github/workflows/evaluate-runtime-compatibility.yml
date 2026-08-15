@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/**'
       - 'samples/evaluate-*.xps'
       - 'tests/EvaluatePermissionMappingProbe/**'
+      - 'tests/EvaluateConcurrencyProbe/**'
       - 'docs/evaluate.md'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/runtime-reference-todo.md'
@@ -41,6 +42,15 @@ jobs:
           $result | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw 'Evaluate permission mapping probe failed.' }
           if ($result -notcontains 'EVALUATE-PERMISSION-PROBE=OK') { throw 'Evaluate permission mapping probe did not report success.' }
+
+      - name: Verify Evaluate concurrent isolation
+        shell: pwsh
+        run: |
+          $result = dotnet run --project ./tests/EvaluateConcurrencyProbe/EvaluateConcurrencyProbe.csproj -c Release
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Evaluate concurrency isolation probe failed.' }
+          if ($result -notcontains 'EVALUATE-CONCURRENCY-PROBE=OK') { throw 'Evaluate concurrency isolation probe did not report success.' }
 
       - name: Compile and run Evaluate regression corpus
         shell: pwsh
