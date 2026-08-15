@@ -66,32 +66,7 @@ XPScript `Declare ... Lib` must not assume that every platform uses a Windows DL
 - [x] calling-convention policy is defined: portable `Declare` uses the platform/runtime default unmanaged calling convention; APIs requiring non-default ABI conventions require a separate platform-specific declaration until an explicit validated calling-convention language feature exists
 - [x] when a native function signature differs by platform/architecture, use separate declarations with statically correct signatures and select them with `Platform()` rather than mutating parameter/return ABI from one declaration
 
-Example target syntax:
-
-```xpscript
-Declare Function NativeProcessId Lib "native-process" _
-    WindowsLib "kernel32.dll" WindowsAlias "GetCurrentProcessId" _
-    LinuxLib "libc.so.6" LinuxAlias "getpid" _
-    MacOSLib "libSystem.B.dylib" MacOSAlias "getpid" _
-    () As Integer
-```
-
-Architecture-specific application-local example:
-
-```xpscript
-Declare Function NativeVersion Lib "native/default/nativecore.dll" Alias "native_version" _
-    WindowsX64Lib "native/windows/x64/nativecore.dll" _
-    WindowsArm64Lib "native/windows/arm64/nativecore.dll" _
-    LinuxX64Lib "native/linux/x64/libnativecore.so" _
-    LinuxArm64Lib "native/linux/arm64/libnativecore.so" _
-    MacOSX64Lib "native/macos/x64/libnativecore.dylib" _
-    MacOSArm64Lib "native/macos/arm64/libnativecore.dylib" _
-    () As Integer
-```
-
 ### Managed .NET assemblies
-
-Managed assemblies are different from native libraries and are handled by explicit compiler directives, never by `Declare ... Lib`.
 
 - [x] explicit external managed `.dll` references use `Reference "relative/path/Assembly.dll"`
 - [x] managed references are staged into the compiler's unique temporary build directory and emitted as generated MSBuild `<Reference>` items
@@ -106,18 +81,6 @@ Managed assemblies are different from native libraries and are handled by explic
 - [x] managed reference deployment is verified in both self-contained and framework-dependent publish modes on Windows/Linux/macOS by `Cross Platform Managed References`
 - [x] direct CLR type/member interop is explicitly a separate future language feature; assembly reference support alone does not expose arbitrary CLR APIs
 
-Example:
-
-```xpscript
-Reference "managed/MyLibrary.dll"
-ReferenceNative "managed/runtimes/win-x64/native/helper.dll" Runtime "win-x64"
-ReferenceNative "managed/runtimes/win-arm64/native/helper.dll" Runtime "win-arm64"
-ReferenceNative "managed/runtimes/linux-x64/native/libhelper.so" Runtime "linux-x64"
-ReferenceNative "managed/runtimes/linux-arm64/native/libhelper.so" Runtime "linux-arm64"
-ReferenceNative "managed/runtimes/osx-x64/native/libhelper.dylib" Runtime "osx-x64"
-ReferenceNative "managed/runtimes/osx-arm64/native/libhelper.dylib" Runtime "osx-arm64"
-```
-
 ## File I/O portability
 
 File I/O must use the target operating system's real filesystem semantics rather than assuming Windows behavior.
@@ -130,7 +93,7 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] runtime symlink/reparse-point detection and refusal behavior is verified by `Cross Platform Path Security`
 - [x] source/destination identity checks are case-insensitive on Windows and ordinal on Unix-like targets; Windows case-only identity is verified by `Cross Platform Path Security`
 - [x] `Dir` leaves case matching to the target filesystem/runtime; case preservation is verified on Windows/Linux/macOS by `Cross Platform Filesystem Edge Cases`
-- [>] Windows drive-qualified and >260-character long paths are runtime-verified; UNC path execution remains to be verified on a real Windows share fixture
+- [x] Windows drive-qualified, >260-character long paths and real UNC share access are runtime-verified; `Cross Platform Charset UNC Sharing` creates a Windows SMB share and verifies create/FileLen through a `\\localhost\share\...` path
 - [x] Linux/macOS absolute paths, mount points and symlink behavior are exercised on real hosted filesystems by the path-security and filesystem-edge gates
 - [x] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names; runtime-verified by `Cross Platform File IO Platform Semantics`
 - [x] `SetFileAttr Hidden` on Unix does not silently rename a file and reports the leading-dot/`Name` requirement; runtime-verified by `Cross Platform File IO Platform Semantics`
@@ -139,19 +102,19 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] `Name` same-filesystem move/rename is runtime-verified on Windows/Linux/macOS
 - [x] cross-filesystem `Name` behavior is runtime-probed on Linux/macOS where a second filesystem is exposed; the gate verifies coherent host behavior without data loss and reports when no second filesystem is available
 - [x] `Kill` target behavior, symlink refusal and delete-while-open semantics are runtime-verified across Windows/Linux/macOS
-- [>] FileShare policy is centralized: Input permits shared read/write handles, Output/Append permits readers but only one writer, Binary/Random permits shared read/write handles so explicit `Lock`/`Unlock` controls byte/record concurrency where the target runtime supports byte-range locking
-- [>] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; source fixtures: `samples/file-lock-holder.xps`, `samples/file-lock-contender.xps`
+- [x] FileShare policy is centralized and cross-process verified by `Cross Platform Charset UNC Sharing`: Input permits shared access, Output/Append permits readers but only one Windows writer, and Binary/Random permits a second process to open the file so explicit locking can control concurrency
+- [x] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; cross-process Binary/Binary opening is verified on Windows/Linux/macOS
 - [>] Windows/Linux `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics. .NET 10 does not support `FileStream.Lock/Unlock` on macOS, so XPScript returns explicit runtime error 5 instead of weakening range-lock semantics
 - [x] delete-while-open semantics runtime-verified: Windows blocks deletion for the open XPScript handle while Linux/macOS permit Unix-style unlink; source: `samples/file-delete-open-semantics.xps`
-- [>] portable charset names have defined BOM behavior: `utf-8` is BOM-less, `utf-8-bom` writes a UTF-8 BOM, `utf-16`/`utf-16le` and `utf-16be` write BOMs, and explicit `*-nobom` aliases suppress them
-- [>] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to the defined XPScript Latin-1 legacy encoding instead of an OS default; unsupported named encodings produce a clear runtime diagnostic
+- [x] portable charset names and BOM behavior are exact-byte runtime-verified by `Cross Platform Charset UNC Sharing`: `utf-8` is BOM-less, `utf-8-bom` writes EF BB BF, UTF-16 LE/BE aliases use their defined BOMs, and explicit no-BOM aliases suppress them
+- [x] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to deterministic XPScript Latin-1; exact C5 byte identity and unsupported-charset error 5 are runtime-verified on Windows/Linux/macOS
 - [x] `samples/file-charset-bom.xps` runtime-verified on Windows/Linux/macOS for 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
 - [x] verify `Lock` / `Unlock` from a second process/handle on Windows; `Cross Platform Runtime Verification`
 - [x] verify `Lock` / `Unlock` from a second process/handle on Linux; `Cross Platform Runtime Verification`
 - [x] verify macOS Lock limitation returns explicit XPScript error 5; source: `samples/file-lock-platform-support.xps`
 - [ ] implement safe macOS byte-range locking with semantics compatible with .NET file sharing before claiming native `Lock` / `Unlock` support on macOS
 - [x] document that path separators differ (`\\` vs `/`) and recommend portable path construction; source: `docs/cross-platform-runtime.md`
-- [>] runtime-verify Windows drive letters, UNC paths and long paths: drive-qualified and long-path cases are verified; UNC remains open
+- [x] runtime-verify Windows drive letters, UNC paths and long paths; UNC uses a real temporary Windows SMB share in `Cross Platform Charset UNC Sharing`
 - [x] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems; `Cross Platform Filesystem Edge Cases`
 - [x] runtime-verify Unix executable-bit preservation on Linux/macOS
 - [x] runtime-verify broader Unix permission/ownership semantics on Linux/macOS; a 0754 source mode and UID are preserved through `FileCopy`
@@ -172,16 +135,24 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] execute the matching artifact on each target OS and architecture; `Cross Platform All RID Compile`
 - [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
 - [x] run native library loader tests on each OS and architecture; `Cross Platform Native Loader Compatibility` uses matching real runners for all six supported RIDs
-- [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
-- [x] run path/permission/symlink/file-sharing negative tests; covered by `Cross Platform Path Security`, File IO platform semantics and filesystem-edge gates
-- [>] run security tests for Shell, external libraries and file paths: Shell and external-library path controls are verified; final File I/O/UNC/macOS-lock coverage remains open
+- [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified, but native macOS range locking remains open
+- [x] run path/permission/symlink/file-sharing negative tests; covered by `Cross Platform Path Security`, File IO platform semantics, filesystem-edge and charset/UNC/FileShare gates
+- [>] run security tests for Shell, external libraries and file paths: Shell, external-library paths, File I/O paths and UNC are verified; native macOS range-lock support remains open
 
-`Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
+## Remaining work required before archive
 
-`Cross Platform All RID Compile` compiles the same portable `samples/platform-shell.xps` source for all six supported RIDs from one cross-targeting runner and separately executes the matching framework-dependent artifact on real Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
+Only items still marked `[>]` or `[ ]` block moving this TODO to `todo/done/`:
 
-`Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes the matching native system-library call plus loader-diagnostic fixture on Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
+- [>] add a dedicated runtime assertion for direct Unix executable-bit inspection if that behavior is intended as a public XPScript contract rather than only an implementation detail
+- [>] add exact Binary/Random string-byte regression coverage if that implementation detail is intended as a separately guaranteed public contract
+- [ ] implement and runtime-verify safe native macOS byte-range `Lock` / `Unlock` semantics without weakening existing Windows/Linux behavior
 
-`Cross Platform Managed References` builds a real net10.0 fixture assembly, compiles the same XPScript source in framework-dependent and self-contained modes on Windows/Ubuntu/macOS, verifies matching RID-native deployment and non-matching RID filtering, and executes both generated artifacts successfully. `Reference` remains a build/deployment directive and does not implicitly expose CLR type/member interop.
+`Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments on Windows, Ubuntu and macOS.
 
-`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security` and `Cross Platform Filesystem Edge Cases` jointly verify target-specific drive/hidden/case behavior, real symlink/reparse-point refusal, same-path protection, long Windows drive-qualified paths, Unix mode/ownership preservation and cross-filesystem `Name` behavior on the hosted Windows/Linux/macOS filesystems.
+`Cross Platform All RID Compile` compiles the same portable `samples/platform-shell.xps` source for all six supported RIDs and executes matching framework-dependent artifacts on real Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
+
+`Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes matching native system-library calls plus loader diagnostics on all six target OS/architecture combinations.
+
+`Cross Platform Managed References` builds a real net10.0 fixture assembly, verifies matching RID-native deployment and non-matching RID filtering, and executes generated artifacts successfully on Windows, Ubuntu and macOS.
+
+`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security`, `Cross Platform Filesystem Edge Cases`, `Cross Platform File IO Portability` and `Cross Platform Charset UNC Sharing` jointly verify target-specific drive/hidden/case behavior, symlink/reparse-point refusal, same-path protection, long Windows paths, real Windows UNC access, Unix mode/ownership preservation, charset/BOM exact bytes, cross-process FileShare behavior and filesystem rename/delete semantics.
