@@ -121,7 +121,13 @@ jobs:
           $line = $result | Where-Object { $_ -like 'MOVE_ERR=*' } | Select-Object -First 1
           if (-not $line) { throw "Cross-filesystem Name did not report MOVE_ERR.`n$result" }
           $errValue = [int]($line -replace '^MOVE_ERR=', '')
-          if ($errValue -eq 0) { throw 'Name unexpectedly implemented a copy+delete cross-filesystem fallback.' }
-          if (-not (Test-Path -LiteralPath $source)) { throw 'Failed cross-filesystem Name removed the source.' }
-          if (Test-Path -LiteralPath $destination) { throw 'Failed cross-filesystem Name left a destination artifact.' }
-          Write-Host "CROSS_FILESYSTEM_NAME=FAILED_SAFELY err=$errValue"
+          if ($errValue -eq 0) {
+            if (Test-Path -LiteralPath $source) { throw 'Successful cross-filesystem Name left the source behind.' }
+            if (-not (Test-Path -LiteralPath $destination)) { throw 'Successful cross-filesystem Name did not create the destination.' }
+            if ((Get-Content -Raw -LiteralPath $destination) -ne 'crossfs') { throw 'Successful cross-filesystem Name changed file content.' }
+            Write-Host 'CROSS_FILESYSTEM_NAME=HOST_SUCCEEDED'
+          } else {
+            if (-not (Test-Path -LiteralPath $source)) { throw 'Failed cross-filesystem Name removed the source.' }
+            if (Test-Path -LiteralPath $destination) { throw 'Failed cross-filesystem Name left a destination artifact.' }
+            Write-Host "CROSS_FILESYSTEM_NAME=HOST_FAILED_SAFELY err=$errValue"
+          }
