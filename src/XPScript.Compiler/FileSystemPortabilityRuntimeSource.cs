@@ -7,6 +7,14 @@ internal static class XPScriptFileSystemRuntime
 {
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
 
+    private const int DarwinOpenReadWrite = 0x0002;
+    private const int DarwinOpenCreate = 0x0200;
+    private const int DarwinOpenCloseOnExec = 0x01000000;
+    private const int DarwinDefaultCreateMode = 438; // 0666; process umask still applies.
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "open", SetLastError = true)]
+    private static extern int DarwinOpen(string path, int flags, int mode);
+
     public static string ResolvePath(object? value)
     {
         var path = XPScriptRuntime.CStr(value);
@@ -35,12 +43,43 @@ internal static class XPScriptFileSystemRuntime
         Share = FileShare.Read
     });
 
-    public static FileStream OpenBinaryStream(string path) => new(path, new FileStreamOptions
+    public static FileStream OpenBinaryStream(string path)
     {
-        Mode = FileMode.OpenOrCreate,
-        Access = FileAccess.ReadWrite,
-        Share = FileShare.ReadWrite
-    });
+        if (!OperatingSystem.IsMacOS())
+        {
+            return new FileStream(path, new FileStreamOptions
+            {
+                Mode = FileMode.OpenOrCreate,
+                Access = FileAccess.ReadWrite,
+                Share = FileShare.ReadWrite
+            });
+        }
+
+        // .NET implements Unix FileShare with a whole-file flock even for FileShare.ReadWrite.
+        // Darwin documents flock and lockf/fcntl record locks as interacting locking interfaces;
+        // keeping that implicit flock on the same process causes an otherwise valid byte-range
+        // lockf(F_TLOCK) to fail with EAGAIN. Binary/Random semantics already permit ReadWrite
+        // sharing and require explicit Lock/Unlock coordination, so open the Darwin descriptor
+        // directly and wrap it without asking FileStream to establish another FileShare lock.
+        var flags = DarwinOpenReadWrite | DarwinOpenCreate | DarwinOpenCloseOnExec;
+        var fd = DarwinOpen(path, flags, DarwinDefaultCreateMode);
+        if (fd < 0)
+        {
+            var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+            throw new IOException("Unable to open Binary/Random file on macOS. errno=" + error.ToString(CultureInfo.InvariantCulture));
+        }
+
+        var handle = new Microsoft.Win32.SafeHandles.SafeFileHandle(new IntPtr(fd), ownsHandle: true);
+        try
+        {
+            return new FileStream(handle, FileAccess.ReadWrite);
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
+    }
 
     public static string FileSharePolicy =>
         "Input=ReadWrite sharing; Output/Append=read sharing with one writer; Binary/Random=ReadWrite sharing with explicit Lock/Unlock coordination";
