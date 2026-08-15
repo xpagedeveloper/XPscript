@@ -11,7 +11,7 @@ Sub Main()
 
     values = Array(10, 20, 30)
     parameters("price") = 7
-    result = Evaluate("Return callvar(0) + callvar(1)(1) + callvar(2)(""price"")", 5, values, parameters)
+    result = Evaluate("Return callvar(0) + callvar(1, 1) + callvar(2, ""price"")", 5, values, parameters)
     Print "MIXED=" & CStr(result)
 
     result = Evaluate("Return UBound(callvar)", 100, 200, 300)
