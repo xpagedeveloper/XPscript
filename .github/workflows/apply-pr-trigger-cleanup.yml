@@ -7,7 +7,7 @@ on:
       - '.github/workflows/apply-pr-trigger-cleanup.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apply:
@@ -16,7 +16,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: workflow-pr-trigger-cleanup
-          fetch-depth: 0
 
       - name: Rewrite workflow PR triggers
         shell: python
@@ -105,6 +104,8 @@ jobs:
           changed = []
           for path in root.glob('*.yml'):
               name = path.name
+              if name == 'apply-pr-trigger-cleanup.yml':
+                  continue
               text = path.read_text(encoding='utf-8')
               original = text
 
@@ -121,22 +122,17 @@ jobs:
                   path.write_text(text, encoding='utf-8')
                   changed.append(str(path))
 
-          # Add a policy check that prevents broad compiler globs in future feature-specific PR workflows.
           policy = root / 'pr-workflow-scope.yml'
           policy.write_text("""name: PR Workflow Scope\n\non:\n  pull_request:\n    branches: [main]\n    paths:\n      - '.github/workflows/**'\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\njobs:\n  scope-audit:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - name: Reject broad feature PR triggers\n        shell: python\n        run: |\n          from pathlib import Path\n          allowed = {'required-pr-gate.yml'}\n          offenders = []\n          for path in Path('.github/workflows').glob('*.yml'):\n              if path.name in allowed:\n                  continue\n              text = path.read_text(encoding='utf-8')\n              if '  pull_request:' in text and \"- 'src/XPScript.Compiler/**'\" in text:\n                  offenders.append(path.name)\n          if offenders:\n              raise SystemExit('Broad compiler PR path filters are not allowed: ' + ', '.join(sorted(offenders)))\n          print('PR-WORKFLOW-SCOPE=OK')\n""", encoding='utf-8')
           changed.append(str(policy))
-
+          Path('workflow-cleanup-files.txt').write_text('\n'.join(changed) + '\n', encoding='utf-8')
           print('\n'.join(changed))
 
-      - name: Commit rewritten workflows
-        shell: bash
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows
-          if git diff --cached --quiet; then
-            echo 'No changes required.'
-            exit 0
-          fi
-          git commit -m 'Scope PR workflows to relevant checks'
-          git push origin HEAD:workflow-pr-trigger-cleanup
+      - name: Upload rewritten workflows
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoped-workflows
+          path: |
+            .github/workflows
+            workflow-cleanup-files.txt
+          if-no-files-found: error
