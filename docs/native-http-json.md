@@ -308,4 +308,4 @@ Do not place secrets such as authorization tokens in diagnostic output. Use requ
 - [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
 - [samples/json-resource-limits.xps](../samples/json-resource-limits.xps)
 
-`samples/json-http.xps` contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.
+[samples/json-http.xps](../samples/json-http.xps) contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.
