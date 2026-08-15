@@ -55,16 +55,40 @@ Sub Main()
         Error 9645, "ByVal Function parameter changed caller variable"
     End If
 
+    original = 7
+    evaluated = Evaluate("callvar = 55 : Return callvar", original)
+    If original <> 55 Then
+        Error 9646, "Default Evaluate scalar parameter did not update caller variable by reference"
+    End If
+
+    original = 7
+    evaluated = Evaluate("callvar = 66 : Return callvar", ByVal original)
+    If original <> 7 Then
+        Error 9647, "ByVal Evaluate scalar parameter changed caller variable"
+    End If
+    If CInt(evaluated) <> 66 Then
+        Error 9648, "ByVal Evaluate scalar local copy produced wrong value"
+    End If
+
     parameters("value") = 7
-    evaluated = Evaluate("Return callvar", parameters)
-    evaluated("value") = 99
+    evaluated = Evaluate("callvar(""value"") = 99 : Return callvar(""value"")", parameters)
+    If parameters("value") <> 99 Then
+        Error 9649, "Default Evaluate List parameter did not update caller variable by reference"
+    End If
+
+    parameters("value") = 7
+    evaluated = Evaluate("callvar(""value"") = 101 : Return callvar(""value"")", ByVal parameters)
     If parameters("value") <> 7 Then
-        Error 9646, "Evaluate returned value still shares caller-owned List input"
+        Error 9650, "ByVal Evaluate List parameter changed caller variable"
+    End If
+    If CInt(evaluated) <> 101 Then
+        Error 9651, "ByVal Evaluate List local copy produced wrong value"
     End If
 
     Print "BYREF-SUB=OK"
     Print "BYVAL-SUB=OK"
     Print "BYREF-FUNCTION=OK"
     Print "BYVAL-FUNCTION=OK"
-    Print "EVALUATE-COPY=OK"
+    Print "BYREF-EVALUATE=OK"
+    Print "BYVAL-EVALUATE=OK"
 End Sub
