@@ -41,5 +41,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-header-error.xps -o ./out/parameterless-procedure-header-error.exe --framework-dependent 2>&1
           $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
           if ($exitCode -eq 0) { throw "Malformed parameterless procedure header unexpectedly compiled.`n$output" }
           if (($output -join "`n") -notmatch 'Unsupported') { throw "Expected explicit compiler diagnostic for malformed header.`n$output" }
+          exit 0
