@@ -84,6 +84,13 @@ internal static class XPScriptEvaluateCollectionRuntime
             return list.Get(args[0]);
         }
 
+        if (value is ILSList runtimeList)
+        {
+            if (args.Count != 1)
+                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
+            return runtimeList.GetValue(args[0]);
+        }
+
         if (value is LSArray array)
         {
             if (args.Count != array.Rank)
@@ -97,6 +104,44 @@ internal static class XPScriptEvaluateCollectionRuntime
                 throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
             var indexes = args.Select(XPScriptRuntime.CInt).ToArray();
             return clrArray.GetValue(indexes);
+        }
+
+        throw new XPScriptRuntimeException(5, "callvar is not an indexed value.");
+    }
+
+    public static void WriteIndexed(object? value, IReadOnlyList<object?> args, object? newValue)
+    {
+        if (value is ListSnapshot list)
+        {
+            if (args.Count != 1)
+                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
+            list.Set(Convert.ToString(args[0], CultureInfo.CurrentCulture) ?? "", newValue);
+            return;
+        }
+
+        if (value is ILSList runtimeList)
+        {
+            if (args.Count != 1)
+                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
+            runtimeList.SetValue(args[0], newValue);
+            return;
+        }
+
+        if (value is LSArray array)
+        {
+            if (args.Count != array.Rank)
+                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
+            array.Set(newValue, args.ToArray());
+            return;
+        }
+
+        if (value is Array clrArray)
+        {
+            if (args.Count != clrArray.Rank)
+                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
+            var indexes = args.Select(XPScriptRuntime.CInt).ToArray();
+            clrArray.SetValue(newValue, indexes);
+            return;
         }
 
         throw new XPScriptRuntimeException(5, "callvar is not an indexed value.");
