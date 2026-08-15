@@ -1,38 +1,65 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class IncrementOperatorSyntaxValidator
 {
     private static readonly string[] CompoundOperators = ["+=", "-=", "*=", "/=", "\\=", "&="];
+    private static readonly HashSet<string> NumericTypes = new(StringComparer.OrdinalIgnoreCase)
+    { "Byte", "Integer", "Long", "Single", "Double", "Currency" };
 
     public void Validate(string source, string sourceName)
     {
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var inProcedure = false;
 
         for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             var original = lines[lineIndex];
-            var code = MaskStringsAndComment(original);
-            var trimmed = code.Trim();
-            if (trimmed.Length == 0)
+            var statement = StripComment(original).Trim();
+            if (statement.Length == 0)
                 continue;
 
-            ValidatePostfix(trimmed, code, original, sourceName, lineIndex + 1);
-            ValidateCompound(trimmed, code, original, sourceName, lineIndex + 1);
+            if (Regex.IsMatch(statement, @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property)\b", RegexOptions.IgnoreCase))
+            {
+                inProcedure = true;
+                variables.Clear();
+                continue;
+            }
+
+            if (Regex.IsMatch(statement, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase))
+            {
+                inProcedure = false;
+                variables.Clear();
+                continue;
+            }
+
+            if (inProcedure)
+            {
+                var declaration = Regex.Match(statement, @"^Dim\s+([A-Za-z_]\w*)\s*(?:\([^)]*\))?\s+As\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
+                if (declaration.Success)
+                    variables[declaration.Groups[1].Value] = NormalizeType(declaration.Groups[2].Value);
+            }
+
+            var masked = MaskStringsAndComment(original);
+            ValidatePostfix(statement, masked, original, sourceName, lineIndex + 1);
+            ValidateCompound(statement, masked, original, sourceName, lineIndex + 1, variables);
         }
     }
 
-    private static void ValidatePostfix(string trimmed, string code, string original, string sourceName, int line)
+    private static void ValidatePostfix(string statement, string masked, string original, string sourceName, int line)
     {
-        var plusIndex = code.IndexOf("++", StringComparison.Ordinal);
-        var minusIndex = code.IndexOf("--", StringComparison.Ordinal);
+        var plusIndex = masked.IndexOf("++", StringComparison.Ordinal);
+        var minusIndex = masked.IndexOf("--", StringComparison.Ordinal);
         var index = FirstOperatorIndex(plusIndex, minusIndex);
         if (index < 0)
             return;
 
-        var valid = System.Text.RegularExpressions.Regex.IsMatch(
-            trimmed,
+        var valid = Regex.IsMatch(
+            statement,
             @"^[A-Za-z_]\w*\s*(?:\+\+|--)$",
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+            RegexOptions.CultureInvariant);
 
         if (valid)
             return;
@@ -45,33 +72,71 @@ internal sealed class IncrementOperatorSyntaxValidator
             original);
     }
 
-    private static void ValidateCompound(string trimmed, string code, string original, string sourceName, int line)
+    private static void ValidateCompound(
+        string statement,
+        string masked,
+        string original,
+        string sourceName,
+        int line,
+        IReadOnlyDictionary<string, string> variables)
     {
         var operatorIndex = -1;
+        var detectedOperator = "";
         foreach (var op in CompoundOperators)
         {
-            var candidate = code.IndexOf(op, StringComparison.Ordinal);
+            var candidate = masked.IndexOf(op, StringComparison.Ordinal);
             if (candidate >= 0 && (operatorIndex < 0 || candidate < operatorIndex))
+            {
                 operatorIndex = candidate;
+                detectedOperator = op;
+            }
         }
 
         if (operatorIndex < 0)
             return;
 
-        var valid = System.Text.RegularExpressions.Regex.IsMatch(
-            trimmed,
-            @"^[A-Za-z_]\w*\s*(?:\+=|-=|\*=|/=|\\=|&=)\s*.+$",
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        var match = Regex.Match(
+            statement,
+            @"^(?<target>[A-Za-z_]\w*)\s*(?<operator>\+=|-=|\*=|/=|\\=|&=)\s*(?<rhs>.+)$",
+            RegexOptions.CultureInvariant);
 
-        if (valid)
+        if (!match.Success)
+        {
+            throw Diagnostic(
+                sourceName,
+                line,
+                operatorIndex + 1,
+                "Invalid compound-assignment syntax. The left-hand side must be an assignable variable and a right-hand expression is required.",
+                original);
+        }
+
+        var target = match.Groups["target"].Value;
+        var op = match.Groups["operator"].Value;
+        if (!string.Equals(op, detectedOperator, StringComparison.Ordinal))
             return;
 
-        throw Diagnostic(
-            sourceName,
-            line,
-            operatorIndex + 1,
-            "Invalid compound-assignment syntax. The left-hand side must be an assignable variable and a right-hand expression is required.",
-            original);
+        if (!variables.TryGetValue(target, out var targetType) || targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (op is "-=" or "*=" or "/=" or "\\=" && !NumericTypes.Contains(targetType))
+        {
+            throw Diagnostic(
+                sourceName,
+                line,
+                operatorIndex + 1,
+                $"Operator '{op}' requires a numeric assignable target; '{target}' is {targetType}.",
+                original);
+        }
+
+        if (op == "&=" && !targetType.Equals("String", StringComparison.OrdinalIgnoreCase))
+        {
+            throw Diagnostic(
+                sourceName,
+                line,
+                operatorIndex + 1,
+                $"Operator '&=' requires a String or Variant-compatible assignable target; '{target}' is {targetType}.",
+                original);
+        }
     }
 
     private static int FirstOperatorIndex(int first, int second)
@@ -81,11 +146,42 @@ internal sealed class IncrementOperatorSyntaxValidator
         return Math.Min(first, second);
     }
 
+    private static string NormalizeType(string type) => type.Trim() switch
+    {
+        var x when x.Equals("Int", StringComparison.OrdinalIgnoreCase) => "Integer",
+        var x when x.Equals("Bool", StringComparison.OrdinalIgnoreCase) => "Boolean",
+        _ => type.Trim()
+    };
+
     private static CompilerException Diagnostic(string sourceName, int line, int position, string message, string original)
     {
         return new CompilerException(
             $"{sourceName}({line},{position}): {message}" + Environment.NewLine +
             $"  {original.TrimEnd()}");
+    }
+
+    private static string StripComment(string line)
+    {
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                inString = !inString;
+            }
+            else if (!inString && line[i] == '\'')
+            {
+                return line[..i];
+            }
+        }
+
+        return line;
     }
 
     private static string MaskStringsAndComment(string line)
