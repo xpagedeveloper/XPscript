@@ -1,0 +1,100 @@
+name: Source Preprocessor Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/SourcePreprocessorPipeline.cs'
+      - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'samples/source-preprocessor-*.xps'
+      - 'docs/source-preprocessors.md'
+      - 'todo/source-preprocessor-pipeline-todo.md'
+      - 'todo/done/source-preprocessor-pipeline-todo.md'
+      - '.github/workflows/source-preprocessor-pipeline.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/SourcePreprocessorPipeline.cs'
+      - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'samples/source-preprocessor-*.xps'
+      - 'docs/source-preprocessors.md'
+      - 'todo/source-preprocessor-pipeline-todo.md'
+      - 'todo/done/source-preprocessor-pipeline-todo.md'
+      - '.github/workflows/source-preprocessor-pipeline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-preprocessor-pipeline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify ordered preprocessing after Include expansion
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/source-preprocessors | Out-Null
+          $exe = if ($IsWindows) { './out/source-preprocessors/ordered.exe' } else { './out/source-preprocessors/ordered' }
+          & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-pipeline.xps -o $exe --framework-dependent --preprocessor 'replace:__FIRST_STAGE__=__SECOND_STAGE__' --preprocessor 'replace:__SECOND_STAGE__=READY'
+          if ($LASTEXITCODE -ne 0) { throw 'Ordered preprocessor compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = & $exe 2>&1
+          if ($LASTEXITCODE -ne 0) { throw 'Ordered preprocessor program failed.' }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'READY') { throw 'Included source was not transformed by the full ordered chain.' }
+
+      - name: Verify reversing order changes the result
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/source-preprocessors/reversed.exe' } else { './out/source-preprocessors/reversed' }
+          & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-pipeline.xps -o $exe --framework-dependent --preprocessor 'replace:__SECOND_STAGE__=READY' --preprocessor 'replace:__FIRST_STAGE__=__SECOND_STAGE__'
+          if ($LASTEXITCODE -ne 0) { throw 'Reversed preprocessor compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = & $exe 2>&1
+          if ($LASTEXITCODE -ne 0) { throw 'Reversed preprocessor program failed.' }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains '__SECOND_STAGE__') { throw 'Preprocessor order was not preserved exactly.' }
+          if ($output -contains 'READY') { throw 'Reversing preprocessor order unexpectedly produced the forward result.' }
+
+      - name: Verify direct run uses the same pipeline
+        shell: pwsh
+        run: |
+          $output = & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/source-preprocessor-pipeline.xps --preprocessor 'replace:__FIRST_STAGE__=__SECOND_STAGE__' --preprocessor 'replace:__SECOND_STAGE__=READY' 2>&1
+          if ($LASTEXITCODE -ne 0) { throw 'Direct run with preprocessors failed.' }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'READY') { throw 'Direct run did not use the same preprocessor chain.' }
+
+      - name: Verify post-preprocessing diagnostics retain Include source mapping
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/source-preprocessors/error.exe' } else { './out/source-preprocessors/error' }
+          $resultText = & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-error-root.xps -o $exe --framework-dependent --result-format json --preprocessor 'replace:__BAD_OPERATOR__=1++'
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          $resultText | ForEach-Object { Write-Host $_ }
+          if ($compilerExitCode -eq 0) { throw 'Invalid transformed source unexpectedly compiled.' }
+          $result = ($resultText -join "`n") | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler diagnostics.' }
+          $diagnostic = $result.errors[0]
+          if ($diagnostic.line -ne 2) { throw "Mapped line was $($diagnostic.line), expected included-file line 2." }
+          if ($diagnostic.position -lt 1) { throw 'Mapped diagnostic position was invalid.' }
+          if ($diagnostic.code.Trim() -ne '__BAD_OPERATOR__') { throw "Mapped code '$($diagnostic.code)' did not point to the original included source line." }
