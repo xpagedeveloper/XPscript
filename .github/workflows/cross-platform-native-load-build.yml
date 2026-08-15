@@ -1,7 +1,20 @@
-# Manual compatibility gate for real native system-library loading on each available GitHub-hosted OS/architecture.
 name: Cross Platform Native Loader Compatibility
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-native-load-build.yml'
+      - 'src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/NativeDependencyPackager.cs'
+      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'tests/NativeTargetResolutionProbe/**'
+      - 'samples/platform-native-library.xps'
+      - 'samples/native-architecture-assets.xps'
+      - 'samples/native-loader-diagnostics.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+      - 'docs/platform-native.md'
   workflow_dispatch:
 
 permissions:
@@ -19,10 +32,19 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Restore compiler
-        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
       - name: Build compiler
-        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify all six target selection rules
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/NativeTargetResolutionProbe/NativeTargetResolutionProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Native target resolution probe failed.' }
+
       - name: Resolve runner RID
         id: rid
         shell: pwsh
@@ -31,20 +53,26 @@ jobs:
           $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
           $rid = "$os-$arch"
           "rid=$rid" >> $env:GITHUB_OUTPUT
-          "runner_os=$env:RUNNER_OS" >> $env:GITHUB_OUTPUT
+          "arch=$arch" >> $env:GITHUB_OUTPUT
           Write-Host "Testing native loader on $env:RUNNER_OS/$env:RUNNER_ARCH using RID $rid"
+
       - name: Compile native platform sample
         shell: pwsh
         run: |
-          $rid = '${{ steps.rid.outputs.rid }}'
+          New-Item -ItemType Directory -Force ./out | Out-Null
           $output = if ($env:RUNNER_OS -eq 'Windows') { './out/platform-native.exe' } else { './out/platform-native' }
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-native-library.xps --runtime $rid -o $output --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw "Native platform sample compilation failed for $rid." }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-native-library.xps --runtime '${{ steps.rid.outputs.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "Native platform sample compilation failed for ${{ steps.rid.outputs.rid }}." }
+
       - name: Execute and verify native system library load
         shell: pwsh
         run: |
           $output = if ($env:RUNNER_OS -eq 'Windows') { './out/platform-native.exe' } else { './out/platform-native' }
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $output }
+          if (-not (Test-Path $output)) { throw 'Native loader output missing.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            bash -c "test -x '$output'"
+            if ($LASTEXITCODE -ne 0) { throw 'Unix native loader output is not executable.' }
+          }
           $result = & $output
           if ($LASTEXITCODE -ne 0) { throw "Native platform sample exited with code $LASTEXITCODE.`n$result" }
           $expectedPlatform = if ($env:RUNNER_OS -eq 'Windows') { 'Windows' } elseif ($env:RUNNER_OS -eq 'Linux') { 'Linux' } else { 'MacOS' }
@@ -53,4 +81,16 @@ jobs:
           if (-not $pidLine) { throw "Native get-process-id call did not return a numeric PID.`n$result" }
           $pidValue = [int64]($pidLine -replace '^PID=', '')
           if ($pidValue -le 0) { throw "Native PID must be > 0.`n$result" }
-          Write-Host "Native loader verified: $pidLine"
+          Write-Host "Native loader verified on ${{ steps.rid.outputs.rid }}: $pidLine"
+
+      - name: Verify native loader diagnostics
+        shell: pwsh
+        run: |
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-loader-diagnostics.exe' } else { './out/native-loader-diagnostics' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-loader-diagnostics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native loader diagnostic fixture compilation failed.' }
+          $text = & $output 2>&1 | Out-String
+          $exit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exit -eq 0) { throw "Native loader diagnostic fixture unexpectedly succeeded.`n$text" }
+          if ($text -notmatch '(native|library|entry point|architecture)') { throw "Expected explicit native loader diagnostic was not emitted.`n$text" }
