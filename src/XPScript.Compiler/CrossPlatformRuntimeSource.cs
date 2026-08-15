@@ -211,11 +211,13 @@ internal static class XPCrossPlatformRuntime
         if (string.IsNullOrWhiteSpace(text)) return result;
         var current = new System.Text.StringBuilder();
         var inQuotes = false;
+        var tokenStarted = false;
         for (var i = 0; i < text.Length; i++)
         {
             var c = text[i];
             if (c == '"')
             {
+                tokenStarted = true;
                 if (i > 0 && text[i - 1] == '\\')
                 {
                     if (current.Length > 0) current.Length--;
@@ -226,17 +228,19 @@ internal static class XPCrossPlatformRuntime
             }
             if (!inQuotes && char.IsWhiteSpace(c))
             {
-                if (current.Length > 0)
+                if (tokenStarted)
                 {
                     result.Add(current.ToString());
                     current.Clear();
+                    tokenStarted = false;
                 }
                 continue;
             }
+            tokenStarted = true;
             current.Append(c);
         }
         if (inQuotes) throw new XPScriptRuntimeException(5, "Unterminated quoted Shell argument.");
-        if (current.Length > 0) result.Add(current.ToString());
+        if (tokenStarted) result.Add(current.ToString());
         return result;
     }
 
