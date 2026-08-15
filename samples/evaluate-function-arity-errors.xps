@@ -1,14 +1,31 @@
 Sub Main()
     Dim result As Variant
+    Dim evaluateErr As Integer
+    Dim evaluateMessage As String
 
     On Error Resume Next
     result = Evaluate("Return Left(""abc"")")
-    Print "LEFT_ERR=" & CStr(Err)
-    Print "LEFT_MSG=" & Error$()
-
+    evaluateErr = Err
+    evaluateMessage = Error$
     On Error GoTo 0
+    If evaluateErr <> 5 Then
+        Error 9501, "Evaluate Left wrong arity should use error 5, got " & CStr(evaluateErr)
+    End If
+    If evaluateMessage <> "Evaluate function Left expects 2 arguments, but received 1 argument." Then
+        Error 9502, "Unexpected Evaluate Left arity diagnostic: " & evaluateMessage
+    End If
+
     On Error Resume Next
     result = Evaluate("Return MadeUpFunction(1)")
-    Print "UNKNOWN_ERR=" & CStr(Err)
-    Print "UNKNOWN_MSG=" & Error$()
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
+        Error 9503, "Unknown Evaluate function should use error 5, got " & CStr(evaluateErr)
+    End If
+    If evaluateMessage <> "Function is not available inside Evaluate: MadeUpFunction" Then
+        Error 9504, "Unexpected unavailable-function diagnostic: " & evaluateMessage
+    End If
+
+    Print "EVALUATE-FUNCTION-ERRORS=OK"
 End Sub
