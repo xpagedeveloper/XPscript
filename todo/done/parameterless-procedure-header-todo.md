@@ -14,7 +14,7 @@ Regression discovered by the cross-platform filesystem portability gate while co
 - [x] module-level procedures, class methods, `Sub New` and `Sub Delete` use the same optional-empty-parentheses rule where applicable.
 - [x] entry-point discovery accepts `Sub Main` as well as `Sub Main()` through line-count-preserving canonicalization before downstream transpilation.
 - [x] declaration shorthand does not change call syntax; regression calls the canonicalized procedures/functions normally and existing overload resolution remains downstream of the normalized declaration form.
-- [ ] add a dedicated negative regression for malformed/non-empty parameter declarations to prove the canonicalizer never hides parameter syntax errors.
+- [x] dedicated negative regression proves malformed/non-empty parameter declarations are not hidden by the canonicalizer: `samples/parameterless-procedure-header-error.xps` is required to fail compilation with an explicit compiler diagnostic by the `Parameterless Procedure Header Compatibility` workflow.
 - [x] permanent positive regression coverage: `samples/parameterless-procedure-headers.xps`; manual gate: `Parameterless Procedure Header Compatibility`.
 
 The filesystem fixture remains `Sub Initialize`; the original compiler regression is not hidden by changing it to `Sub Initialize()`.
