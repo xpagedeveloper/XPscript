@@ -55,6 +55,7 @@ internal static class XPCrossPlatformRuntime
                 info.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
                 info.ArgumentList.Add("/d");
                 info.ArgumentList.Add("/c");
+                info.ArgumentList.Add("call");
                 info.ArgumentList.Add(fileName);
                 foreach (var argument in batchArguments) info.ArgumentList.Add(argument);
             }
