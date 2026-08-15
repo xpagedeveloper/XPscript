@@ -6,7 +6,7 @@ on:
     paths:
       - 'samples/if-layouts.xps'
       - 'docs/if-elseif-layouts.md'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - '.github/workflows/if-elseif-layout-verification.yml'
       - 'todo/if-elseif-layout-verification-todo.md'
       - 'todo/done/if-elseif-layout-verification-todo.md'
