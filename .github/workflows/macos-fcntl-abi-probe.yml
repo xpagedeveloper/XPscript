@@ -1,4 +1,4 @@
-name: macOS fcntl ABI Probe
+name: macOS Record Lock ABI Probe
 
 on:
   pull_request:
@@ -22,13 +22,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - name: Verify Darwin fcntl record-lock ABI
+      - name: Verify Darwin record-lock ABI and native lockf behavior
         shell: bash
         run: |
-          cat > "$RUNNER_TEMP/xps-fcntl-probe.c" <<'EOF'
+          cat > "$RUNNER_TEMP/xps-lock-probe.c" <<'EOF'
+          #include <errno.h>
           #include <fcntl.h>
           #include <stddef.h>
           #include <stdio.h>
+          #include <stdlib.h>
           #include <unistd.h>
 
           int main(void) {
@@ -41,12 +43,26 @@ jobs:
               printf("F_SETLK=%d\n", F_SETLK);
               printf("F_WRLCK=%d\n", F_WRLCK);
               printf("F_UNLCK=%d\n", F_UNLCK);
+              printf("F_TLOCK=%d\n", F_TLOCK);
+              printf("F_ULOCK=%d\n", F_ULOCK);
               printf("SEEK_SET=%d\n", SEEK_SET);
+
+              char path[] = "/tmp/xps-lockf-probe-XXXXXX";
+              int fd = mkstemp(path);
+              if (fd < 0) { perror("mkstemp"); return 10; }
+              unlink(path);
+              if (write(fd, "abcdef", 6) != 6) { perror("write"); close(fd); return 11; }
+              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-lock"); close(fd); return 12; }
+              if (lockf(fd, F_TLOCK, 3) != 0) { perror("lockf-lock"); close(fd); return 13; }
+              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-unlock"); close(fd); return 14; }
+              if (lockf(fd, F_ULOCK, 3) != 0) { perror("lockf-unlock"); close(fd); return 15; }
+              close(fd);
+              puts("LOCKF_DIRECT=OK");
               return 0;
           }
           EOF
-          clang -Wall -Wextra -Werror "$RUNNER_TEMP/xps-fcntl-probe.c" -o "$RUNNER_TEMP/xps-fcntl-probe"
-          output="$($RUNNER_TEMP/xps-fcntl-probe)"
+          clang -Wall -Wextra -Werror "$RUNNER_TEMP/xps-lock-probe.c" -o "$RUNNER_TEMP/xps-lock-probe"
+          output="$($RUNNER_TEMP/xps-lock-probe)"
           printf '%s\n' "$output"
           grep -qx 'SIZE=24' <<< "$output"
           grep -qx 'START=0' <<< "$output"
@@ -57,4 +73,7 @@ jobs:
           grep -qx 'F_SETLK=8' <<< "$output"
           grep -qx 'F_WRLCK=3' <<< "$output"
           grep -qx 'F_UNLCK=2' <<< "$output"
+          grep -qx 'F_TLOCK=2' <<< "$output"
+          grep -qx 'F_ULOCK=0' <<< "$output"
           grep -qx 'SEEK_SET=0' <<< "$output"
+          grep -qx 'LOCKF_DIRECT=OK' <<< "$output"
