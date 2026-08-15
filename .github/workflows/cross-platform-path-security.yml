@@ -1,0 +1,74 @@
+name: Cross Platform Path Security
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
+      - 'samples/file-path-security-negatives.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+      - '.github/workflows/cross-platform-path-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  path-security:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$os-$arch" >> $env:GITHUB_OUTPUT
+      - name: Prepare real filesystem link fixtures
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./edge-fixture/real-dir | Out-Null
+          Set-Content -LiteralPath ./edge-fixture/real-file.txt -Value 'real' -NoNewline
+          if ($env:RUNNER_OS -eq 'Windows') {
+            New-Item -ItemType SymbolicLink -Path ./edge-fixture/linked-file.txt -Target ./real-file.txt | Out-Null
+            New-Item -ItemType Junction -Path ./edge-fixture/linked-dir -Target (Resolve-Path ./edge-fixture/real-dir) | Out-Null
+          } else {
+            ln -s real-file.txt ./edge-fixture/linked-file.txt
+            ln -s real-dir ./edge-fixture/linked-dir
+          }
+      - name: Compile and verify negative path behavior
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-path-security-negatives.exe' } else { './out/file-path-security-negatives' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-path-security-negatives.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-path-security-negatives.xps compilation failed.' }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Path security fixture failed.`n$result" }
+          if ($result -notcontains 'PATH_SECURITY_NEGATIVES=OK') { throw "Missing success marker.`n$result" }
+          foreach ($key in 'FILECOPY_LINK_ERR','KILL_LINK_ERR','NAME_LINK_ERR','RMDIR_LINK_ERR','FILECOPY_SELF_ERR') {
+            $line = $result | Where-Object { $_ -like "$key=*" } | Select-Object -First 1
+            if (-not $line) { throw "Missing $key result.`n$result" }
+            $value = [int]($line -replace "^$key=", '')
+            if ($value -eq 0) { throw "$key unexpectedly succeeded.`n$result" }
+          }
+          if ($env:RUNNER_OS -eq 'Windows') {
+            if ($result -notcontains 'WINDOWS_CASE_IDENTITY_ERR=5') { throw "Windows case-insensitive source/destination identity was not enforced.`n$result" }
+          }
+      - name: Verify link targets were not modified
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath ./edge-fixture/real-file.txt)) { throw 'Real file target was removed or renamed.' }
+          if ((Get-Content -Raw -LiteralPath ./edge-fixture/real-file.txt) -ne 'real') { throw 'Real file target content changed.' }
+          if (-not (Test-Path -LiteralPath ./edge-fixture/real-dir)) { throw 'Real directory target was removed.' }
