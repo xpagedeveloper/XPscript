@@ -1,0 +1,63 @@
+Option Declare
+
+Sub Main()
+    Dim fileNumber As Integer
+    Dim found As String
+    Dim hiddenAttr As Integer
+    Dim driveErr As Integer
+
+    MkDir "xps-platform-semantics"
+    ChDir "xps-platform-semantics"
+
+    fileNumber = FreeFile
+    Open "CaseProbe.TXT" For Output As #fileNumber
+    Print #fileNumber, "case"
+    Close #fileNumber
+
+    found = Dir("caseprobe.txt")
+    If found = "" Then
+        Print "DIR_CASE_MATCH=FALSE"
+    Else
+        Print "DIR_CASE_MATCH=TRUE"
+    End If
+
+    fileNumber = FreeFile
+    Open ".hidden-probe" For Output As #fileNumber
+    Print #fileNumber, "hidden"
+    Close #fileNumber
+
+    hiddenAttr = GetFileAttr(".hidden-probe")
+    Print "DOT_HIDDEN_ATTR=" & CStr(hiddenAttr)
+
+    fileNumber = FreeFile
+    Open "normal-probe.txt" For Output As #fileNumber
+    Print #fileNumber, "normal"
+    Close #fileNumber
+
+    If Platform() <> "Windows" Then
+        On Error Resume Next
+        SetFileAttr "normal-probe.txt", 2
+        Print "UNIX_SET_HIDDEN_ERR=" & CStr(Err)
+        On Error GoTo 0
+
+        On Error Resume Next
+        ChDrive "C"
+        driveErr = Err
+        On Error GoTo 0
+        Print "CHDRIVE_NONWINDOWS_ERR=" & CStr(driveErr)
+    Else
+        SetFileAttr "normal-probe.txt", 2
+        hiddenAttr = GetFileAttr("normal-probe.txt")
+        Print "WINDOWS_HIDDEN_ATTR=" & CStr(hiddenAttr)
+        SetFileAttr "normal-probe.txt", 0
+        Print "CHDRIVE_WINDOWS=SUPPORTED"
+    End If
+
+    Kill "CaseProbe.TXT"
+    Kill ".hidden-probe"
+    Kill "normal-probe.txt"
+    ChDir ".."
+    RmDir "xps-platform-semantics"
+
+    Print "FILE_IO_PLATFORM_SEMANTICS=OK"
+End Sub
