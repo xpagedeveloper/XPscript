@@ -68,11 +68,13 @@ internal sealed class FileSystemPortabilityPostProcessor
             else
             {
                 var values = new object?[arguments.Length];
+                var byVal = new bool[arguments.Length];
                 for (var i = 0; i < arguments.Length; i++)
-                    values[i] = arguments[i].IsByRef
-                        ? arguments[i].Value
-                        : XPScriptEvaluateCollectionRuntime.Snapshot(arguments[i].Value);
-                callvar = PackCallvars(values);
+                {
+                    values[i] = arguments[i].Value;
+                    byVal[i] = !arguments[i].IsByRef;
+                }
+                callvar = XPScriptEvaluateCollectionRuntime.PackArguments(values, byVal);
             }
 
             var evaluator = new Evaluator(source, callvar);
@@ -220,47 +222,6 @@ internal sealed class FileSystemPortabilityPostProcessor
         }
 """;
         generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
-
-        generated = generated.Replace(
-            "public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;",
-            """
-    public static void WriteIndexed(object? value, IReadOnlyList<object?> args, object? newValue)
-    {
-        if (value is ListSnapshot list)
-        {
-            if (args.Count != 1)
-                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
-            list.Set(Convert.ToString(args[0], CultureInfo.CurrentCulture) ?? "", newValue);
-            return;
-        }
-        if (value is ILSList runtimeList)
-        {
-            if (args.Count != 1)
-                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
-            runtimeList.SetValue(args[0], newValue);
-            return;
-        }
-        if (value is LSArray array)
-        {
-            if (args.Count != array.Rank)
-                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
-            array.Set(newValue, args.ToArray());
-            return;
-        }
-        if (value is Array clrArray)
-        {
-            if (args.Count != clrArray.Rank)
-                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
-            var indexes = args.Select(XPScriptRuntime.CInt).ToArray();
-            clrArray.SetValue(newValue, indexes);
-            return;
-        }
-        throw new XPScriptRuntimeException(5, "callvar is not an indexed value.");
-    }
-
-    public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;
-""",
-            StringComparison.Ordinal);
 
         generated = generated.Replace(
             "if (Match(TokenKind.Plus)) value = Add(value, ParseMultiplicative());",
