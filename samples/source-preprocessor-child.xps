@@ -1,0 +1,3 @@
+Function PreprocessedValue() As String
+    PreprocessedValue = "__FIRST_STAGE__"
+End Function
