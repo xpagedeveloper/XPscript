@@ -16,69 +16,105 @@ Sub Main()
 
     counter = 10
     counter++
-    If counter <> 11 Then Error 9901, "Integer ++ failed"
+    If counter <> 11 Then
+        Error 9901, "Integer ++ failed"
+    End If
     counter--
-    If counter <> 10 Then Error 9902, "Integer -- failed"
+    If counter <> 10 Then
+        Error 9902, "Integer -- failed"
+    End If
 
     byteValue = 10
     byteValue++
-    If byteValue <> 11 Then Error 9903, "Byte ++ failed"
+    If byteValue <> 11 Then
+        Error 9903, "Byte ++ failed"
+    End If
 
     longValue = 100
     longValue--
-    If longValue <> 99 Then Error 9904, "Long -- failed"
+    If longValue <> 99 Then
+        Error 9904, "Long -- failed"
+    End If
 
     singleValue = 1.5
     singleValue++
-    If singleValue <> 2.5 Then Error 9905, "Single ++ failed"
+    If singleValue <> 2.5 Then
+        Error 9905, "Single ++ failed"
+    End If
 
     doubleValue = 2.5
     doubleValue--
-    If doubleValue <> 1.5 Then Error 9906, "Double -- failed"
+    If doubleValue <> 1.5 Then
+        Error 9906, "Double -- failed"
+    End If
 
     currencyValue = 10
     currencyValue++
-    If currencyValue <> 11 Then Error 9907, "Currency ++ failed"
+    If currencyValue <> 11 Then
+        Error 9907, "Currency ++ failed"
+    End If
 
     variantValue = 20
     variantValue++
-    If CInt(variantValue) <> 21 Then Error 9908, "numeric Variant ++ failed"
+    If CInt(variantValue) <> 21 Then
+        Error 9908, "numeric Variant ++ failed"
+    End If
     variantValue--
-    If CInt(variantValue) <> 20 Then Error 9909, "numeric Variant -- failed"
+    If CInt(variantValue) <> 20 Then
+        Error 9909, "numeric Variant -- failed"
+    End If
 
     counter = 10
     counter += 5
-    If counter <> 15 Then Error 9910, "+= failed"
+    If counter <> 15 Then
+        Error 9910, "+= failed"
+    End If
     counter -= 3
-    If counter <> 12 Then Error 9911, "-= failed"
+    If counter <> 12 Then
+        Error 9911, "-= failed"
+    End If
     counter *= 2
-    If counter <> 24 Then Error 9912, "*= failed"
+    If counter <> 24 Then
+        Error 9912, "*= failed"
+    End If
     counter /= 4
-    If counter <> 6 Then Error 9913, "/= failed"
+    If counter <> 6 Then
+        Error 9913, "/= failed"
+    End If
     counter \= 4
-    If counter <> 1 Then Error 9914, "\= failed"
+    If counter <> 1 Then
+        Error 9914, "\= failed"
+    End If
 
     text = "Hello"
     text &= " world"
-    If text <> "Hello world" Then Error 9915, "&= failed"
+    If text <> "Hello world" Then
+        Error 9915, "&= failed"
+    End If
 
     text = "value="
     text += 42
-    If text <> "value=42" Then Error 9916, "String += forgiving coercion failed"
+    If text <> "value=42" Then
+        Error 9916, "String += forgiving coercion failed"
+    End If
 
     byteValue = 255
     On Error Resume Next
     byteValue++
     capturedErr = Err
     On Error GoTo 0
-    If capturedErr <> 6 Then Error 9917, "Byte ++ overflow must use error 6"
+    If capturedErr <> 6 Then
+        Error 9917, "Byte ++ overflow must use error 6"
+    End If
 
     badText = "not numeric"
     On Error Resume Next
     badText++
     capturedErr = Err
     On Error GoTo 0
-    If capturedErr <> 13 Then Error 9918, "String ++ must use type mismatch error 13"
+    If capturedErr <> 13 Then
+        Error 9918, "String ++ must use type mismatch error 13"
+    End If
 
     counter = 10
     zero = 0
@@ -86,14 +122,18 @@ Sub Main()
     counter /= zero
     capturedErr = Err
     On Error GoTo 0
-    If capturedErr <> 11 Then Error 9919, "/= division by zero must use error 11"
+    If capturedErr <> 11 Then
+        Error 9919, "/= division by zero must use error 11"
+    End If
 
     counter = 10
     On Error Resume Next
     counter \= zero
     capturedErr = Err
     On Error GoTo 0
-    If capturedErr <> 11 Then Error 9920, "\= division by zero must use error 11"
+    If capturedErr <> 11 Then
+        Error 9920, "\= division by zero must use error 11"
+    End If
 
     Print "INCREMENT-COMPOUND-OPERATORS=OK"
 End Sub
