@@ -9,23 +9,23 @@ Sub Main()
     Dim result As Variant
 
     ' Outer generated callvar array contributes 2 elements.
-    ' 2 + 49999 + 49999 = 100000, exact maximum accepted budget.
-    ReDim leftAccepted(0 To 49998)
-    ReDim rightAccepted(0 To 49998)
-    leftAccepted(49998) = 10
-    rightAccepted(49998) = 20
+    ' 2 + 49998 + 50000 = 100000, exact maximum accepted budget.
+    ReDim leftAccepted(0 To 24998, 0 To 1)
+    ReDim rightAccepted(0 To 249, 0 To 199)
+    leftAccepted(24998, 1) = 10
+    rightAccepted(249, 199) = 20
 
-    result = Evaluate("Return callvar(0, 49998) + callvar(1, 49998)", leftAccepted, rightAccepted)
+    result = Evaluate("Return callvar(0, 24998, 1) + callvar(1, 249, 199)", leftAccepted, rightAccepted)
     If CInt(result) <> 30 Then
         Error 9631, "Evaluate aggregate element budget changed supplied array contents"
     End If
 
-    ' 2 + 49999 + 50000 = 100001, first value above the aggregate budget.
-    ReDim leftRejected(0 To 49998)
-    ReDim rightRejected(0 To 49999)
+    ' 2 + 49998 + 50001 = 100001, first value above the aggregate budget.
+    ReDim leftRejected(0 To 24998, 0 To 1)
+    ReDim rightRejected(0 To 2380, 0 To 20)
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return callvar(0, 0)", leftRejected, rightRejected)
+    result = Evaluate("Return callvar(0, 0, 0)", leftRejected, rightRejected)
     Error 9632, "Expected Evaluate to reject aggregate 100001 collection elements"
 
 ExpectedError:
