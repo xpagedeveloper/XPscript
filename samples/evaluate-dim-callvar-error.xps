@@ -1,0 +1,6 @@
+Sub Main()
+    Dim result As Variant
+
+    result = Evaluate("Dim callvar As Integer: Return callvar", 42)
+    Print "BAD-DIM-CALLVAR=" & CStr(result)
+End Sub
