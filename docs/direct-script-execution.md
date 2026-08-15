@@ -1,5 +1,7 @@
 # Direct XPScript execution
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 (c) xpagedeveloper.com 2026
 
 XPScript source files can be compiled and executed in one command without creating a permanent application file.

@@ -1,5 +1,7 @@
 # XPScript Core Language
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Options
 

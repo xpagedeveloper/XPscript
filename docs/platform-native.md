@@ -1,5 +1,7 @@
 # XPScript Platform, Shell and Native Libraries
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Platform
 

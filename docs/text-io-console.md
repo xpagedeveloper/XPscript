@@ -1,5 +1,7 @@
 # XPScript text file I/O, Base64 and console I/O
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 XPScript provides standalone text, binary and console I/O. File input and interactive console input are intentionally separate APIs.
 
 ## Charset

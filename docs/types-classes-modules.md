@@ -1,5 +1,7 @@
 # XPScript Types, Classes, Properties and Module State
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 This page documents features demonstrated by the Type, Class, property and module-level samples.
 
 ## Enum

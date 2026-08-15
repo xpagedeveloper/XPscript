@@ -1,5 +1,7 @@
 # XPScript HTTP and JSON runtime
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 XPScript provides standalone HTTP and JSON APIs implemented on .NET 10. The public API uses XPScript-native names and does not require any external application runtime.
 
 ## HttpClient

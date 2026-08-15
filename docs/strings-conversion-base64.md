@@ -1,5 +1,7 @@
 # XPScript Strings, Conversion, Inspection and Base64
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Conversion functions
 

@@ -1,5 +1,7 @@
 # XPScript Math Functions
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Abs
 

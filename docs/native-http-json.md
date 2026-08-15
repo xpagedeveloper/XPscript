@@ -1,5 +1,7 @@
 # XPScript Native HTTP and JSON
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## HttpClient
 

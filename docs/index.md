@@ -1,5 +1,8 @@
 # XPScript Documentation Index
 
+Start with the [Command Reference](command-reference.md) for compact syntax, parameter descriptions and clickable examples for XPScript commands. Use the topic pages below for detailed behavior and portability notes.
+
+
 
 ## Core language
 

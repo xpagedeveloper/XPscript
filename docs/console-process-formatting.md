@@ -1,5 +1,7 @@
 # XPScript Console, Process, Environment and Formatting
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Print
 

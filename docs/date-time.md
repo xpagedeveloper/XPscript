@@ -1,5 +1,7 @@
 # XPScript Date and Time
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 This page documents Date functionality demonstrated by the runtime regression samples and by reusable programs in `examples/`.
 
 ## Date values

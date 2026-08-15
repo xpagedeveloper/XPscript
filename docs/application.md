@@ -1,5 +1,7 @@
 # XPScript Application object
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 `Application` is a read-only runtime object that describes the currently running compiled XPScript program and exposes the command-line arguments supplied to it.
 
 The object is populated automatically before `Sub Main()` or `Sub Initialize()` is called.
