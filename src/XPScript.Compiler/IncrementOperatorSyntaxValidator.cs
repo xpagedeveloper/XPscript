@@ -82,13 +82,13 @@ internal sealed class IncrementOperatorSyntaxValidator
     {
         var operatorIndex = -1;
         var detectedOperator = "";
-        foreach (var op in CompoundOperators)
+        foreach (var candidateOperator in CompoundOperators)
         {
-            var candidate = masked.IndexOf(op, StringComparison.Ordinal);
+            var candidate = masked.IndexOf(candidateOperator, StringComparison.Ordinal);
             if (candidate >= 0 && (operatorIndex < 0 || candidate < operatorIndex))
             {
                 operatorIndex = candidate;
-                detectedOperator = op;
+                detectedOperator = candidateOperator;
             }
         }
 
@@ -111,24 +111,24 @@ internal sealed class IncrementOperatorSyntaxValidator
         }
 
         var target = match.Groups["target"].Value;
-        var op = match.Groups["operator"].Value;
-        if (!string.Equals(op, detectedOperator, StringComparison.Ordinal))
+        var selectedOperator = match.Groups["operator"].Value;
+        if (!string.Equals(selectedOperator, detectedOperator, StringComparison.Ordinal))
             return;
 
         if (!variables.TryGetValue(target, out var targetType) || targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase))
             return;
 
-        if (op is "-=" or "*=" or "/=" or "\\=" && !NumericTypes.Contains(targetType))
+        if ((selectedOperator is "-=" or "*=" or "/=" or "\\=") && !NumericTypes.Contains(targetType))
         {
             throw Diagnostic(
                 sourceName,
                 line,
                 operatorIndex + 1,
-                $"Operator '{op}' requires a numeric assignable target; '{target}' is {targetType}.",
+                $"Operator '{selectedOperator}' requires a numeric assignable target; '{target}' is {targetType}.",
                 original);
         }
 
-        if (op == "&=" && !targetType.Equals("String", StringComparison.OrdinalIgnoreCase))
+        if (selectedOperator == "&=" && !targetType.Equals("String", StringComparison.OrdinalIgnoreCase))
         {
             throw Diagnostic(
                 sourceName,
