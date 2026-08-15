@@ -32,7 +32,7 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/parameterless-procedure-headers.xps -o ./out/parameterless-procedure-headers.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Parameterless procedure header sample compilation failed.' }
           $output = & ./out/parameterless-procedure-headers.exe
-          foreach ($value in @('SUB=OK','FUNCTION=7','CLASS_FUNCTION=9','PROPERTY=11')) {
+          foreach ($value in @('INITIALIZE=OK','FUNCTION=HELLO','CLASS_FUNCTION=5','CLASS_SUB=6','MAIN=OK')) {
             if ($output -notcontains $value) { throw "Parameterless procedure output missing: $value`n$output" }
           }
       - name: Verify malformed parameterless procedure headers remain invalid
