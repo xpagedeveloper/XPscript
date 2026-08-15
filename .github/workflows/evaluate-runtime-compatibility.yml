@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/**'
       - 'samples/evaluate-*.xps'
+      - 'tests/EvaluatePermissionMappingProbe/**'
       - 'docs/evaluate.md'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/runtime-reference-todo.md'
@@ -31,6 +32,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
           if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify Evaluate permission mapping
+        shell: pwsh
+        run: |
+          $result = dotnet run --project ./tests/EvaluatePermissionMappingProbe/EvaluatePermissionMappingProbe.csproj -c Release
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Evaluate permission mapping probe failed.' }
+          if ($result -notcontains 'EVALUATE-PERMISSION-PROBE=OK') { throw 'Evaluate permission mapping probe did not report success.' }
 
       - name: Compile and run Evaluate regression corpus
         shell: pwsh
