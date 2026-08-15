@@ -12,7 +12,15 @@ Dim f As Integer
 f = FreeFile()
 ```
 
+### FreeFile/Open limits
+
+The current file runtime exposes file numbers **1 through 255**. `FreeFile()` searches that range and fails when no free file number remains. A file number that is already open cannot be opened again and maps to XPScript error 55 (`File already open`).
+
+These limits are XPScript file-handle limits; they are separate from the operating system's process-wide descriptor/handle limits.
+
 ## Open
+
+`Open` uses an XPScript file number in the supported **1..255** range. Use `FreeFile()` rather than hard-coding a number when practical.
 
 ### Input
 
@@ -44,6 +52,8 @@ Open "data.bin" For Binary As #f
 Open "records.bin" For Random As #f Len = 16
 ```
 
+Binary/Random sharing and explicit range locking are intentionally different from exclusive text-output handling; see [Lock / Unlock](#lock--unlock).
+
 ## Charset
 
 Text files may specify an explicit charset.
@@ -62,6 +72,8 @@ Supported explicit names demonstrated/defined by the portability layer include:
 - `utf-16be-nobom`
 - `latin1`, `latin-1`, `iso-8859-1`
 - `default`, `ansi` — XPScript's deterministic Latin-1 compatibility encoding
+
+Unsupported charset names fail with a controlled runtime error rather than falling back silently.
 
 ## Print #
 
@@ -87,6 +99,8 @@ Reads a fixed number of characters/bytes through the file-input API and is disti
 part = Input$(3, #f)
 ```
 
+The requested count must be valid for the current file state. Reading beyond the supported end-of-file semantics maps to XPScript error 62 where applicable.
+
 ## Put and Get
 
 Binary and Random modes support positional writes/reads.
@@ -96,7 +110,7 @@ Put #f, 1, value
 Get #f, 1, value
 ```
 
-For Random mode the position identifies a record; for Binary mode it identifies the binary file position according to the runtime's file semantics.
+For Random mode the position identifies a record; for Binary mode it identifies the binary file position according to the runtime's file semantics. Invalid positions/ranges are rejected instead of wrapping.
 
 ## Loc
 
@@ -112,6 +126,8 @@ Print CStr(Loc(f))
 Close #f
 ```
 
+Closing a handle releases its XPScript file number so `FreeFile()` can return it again.
+
 ## Lock / Unlock
 
 Locks a byte/record region on the underlying operating-system file handle.
@@ -122,6 +138,8 @@ Unlock #f, 1 To 3
 ```
 
 Binary/Random streams permit multiple read/write handles so explicit `Lock`/`Unlock` controls conflicting regions. Lock conflicts map to XPScript access error 70.
+
+Lock ranges must be valid, non-negative ranges according to the file mode's byte/record interpretation. Cross-process enforcement ultimately uses the target operating system's file-locking facilities, so filesystem/platform support still matters.
 
 The cross-process fixtures are intentionally split into:
 
@@ -183,7 +201,7 @@ Changes or reads the current working directory.
 
 ## ChDrive
 
-Changes drive on Windows. Cross-platform behavior remains explicitly platform-specific; non-Windows callers should not assume drive-letter semantics.
+Changes drive on Windows. **Limitation:** `ChDrive` is Windows-only because Unix targets do not have drive-letter semantics. Non-Windows callers receive the platform-specific unsupported behavior rather than an emulated drive change.
 
 ## Dir
 
