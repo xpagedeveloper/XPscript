@@ -173,7 +173,7 @@ Close #f
 
 Binary lock ranges are byte based and 1-based at the XPScript surface. Random ranges map to records. Sequential modes lock the file as a whole.
 
-General file/path operations use .NET filesystem APIs so Windows, Linux and macOS retain their native path and filesystem behavior. `ChDrive` is intentionally Windows-only. Cross-platform differences such as file locking, case sensitivity, permissions, open-file deletion, symlinks, newline handling and file sharing are tracked in `todo/cross-platform-runtime-todo.md` and must be verified independently on each OS.
+General file/path operations use .NET filesystem APIs so Windows, Linux and macOS retain their native path and filesystem behavior. `ChDrive` is intentionally Windows-only. Cross-platform differences such as file locking, case sensitivity, permissions, open-file deletion, symlinks, newline handling and file sharing are tracked in `todo/done/cross-platform-runtime-todo.md` and were verified independently on each OS.
 
 Text I/O supports `Charset` and the independent `Encoding "base64"` storage layer. See `docs/file-io-filesystem.md` and `docs/text-io-console.md`.
 
