@@ -8,23 +8,6 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
-    private const int DarwinFOFDSetLk = 90;
-    private const short DarwinFUnlck = 2;
-    private const short DarwinFWrlck = 3;
-    private const short DarwinSeekSet = 0;
-
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct DarwinFlock
-    {
-        public long Start;
-        public long Length;
-        public int Pid;
-        public short Type;
-        public short Whence;
-    }
-
-    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
-    private static extern int DarwinFcntl(int fd, int command, nint argument);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -137,10 +120,8 @@ internal static class XPScriptFileIO
     private static void LockRegion(FileStream stream, long offset, long length)
     {
         if (OperatingSystem.IsMacOS())
-        {
-            SetDarwinOFDLock(stream, offset, length, unlock: false);
-            return;
-        }
+            throw new XPScriptRuntimeException(5,
+                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
 
         try
         {
@@ -166,10 +147,8 @@ internal static class XPScriptFileIO
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
         if (OperatingSystem.IsMacOS())
-        {
-            SetDarwinOFDLock(stream, offset, length, unlock: true);
-            return;
-        }
+            throw new XPScriptRuntimeException(5,
+                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
 
         try
         {
@@ -192,55 +171,8 @@ internal static class XPScriptFileIO
         }
     }
 
-    private static void SetDarwinOFDLock(FileStream stream, long offset, long length, bool unlock)
-    {
-        var handle = stream.SafeFileHandle;
-        if (handle.IsInvalid || handle.IsClosed)
-            throw new XPScriptRuntimeException(70, "Unable to " + (unlock ? "unlock" : "lock") + " file region because the operating-system file handle is invalid.");
-
-        var request = new DarwinFlock
-        {
-            Start = offset,
-            Length = length,
-            Pid = 0,
-            Type = unlock ? DarwinFUnlck : DarwinFWrlck,
-            Whence = DarwinSeekSet
-        };
-
-        var size = System.Runtime.InteropServices.Marshal.SizeOf<DarwinFlock>();
-        var memory = System.Runtime.InteropServices.Marshal.AllocHGlobal(size);
-        try
-        {
-            System.Runtime.InteropServices.Marshal.StructureToPtr(request, memory, fDeleteOld: false);
-            var descriptor = handle.DangerousGetHandle().ToInt32();
-            var result = DarwinFcntl(descriptor, DarwinFOFDSetLk, memory);
-            GC.KeepAlive(stream);
-            if (result == 0) return;
-
-            var errno = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
-            if (errno == 22)
-                throw new XPScriptRuntimeException(5,
-                    "macOS open-file-description byte-range locking is not supported by this OS/filesystem for the requested file handle.");
-
-            throw new XPScriptRuntimeException(70,
-                "Unable to " + (unlock ? "unlock" : "lock") + " file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
-                " length " + length.ToString(CultureInfo.InvariantCulture) +
-                " on macOS using an open-file-description lock (errno " + errno.ToString(CultureInfo.InvariantCulture) + "). " +
-                (unlock
-                    ? "The current file handle may not own the requested lock."
-                    : "Another file handle or process may hold an overlapping byte-range lock."));
-        }
-        finally
-        {
-            System.Runtime.InteropServices.Marshal.FreeHGlobal(memory);
-        }
-    }
-
     private static object GetOpenState(int number)
     {
-        // CoreCompatibility lowers normal Input/Output/Append/Binary/Random Open
-        // statements to LSFileRuntime. Check that store first so Lock/Unlock share
-        // the exact FileStream used by Put/Get/Seek and normal file operations.
         var state = TryGetDictionaryState(typeof(LSFileRuntime), number);
         if (state is not null) return state;
 
