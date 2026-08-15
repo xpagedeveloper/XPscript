@@ -20,6 +20,7 @@ internal static class EvaluateConcurrencyProbeEntry
     {
         VerifyCallvarAndReturnIsolation();
         VerifyInvocationLocalBudgets();
+        VerifyConcurrentFailureIsolation();
         Console.WriteLine("EVALUATE-CONCURRENCY-ISOLATION=OK");
     }
 
@@ -78,6 +79,42 @@ internal static class EvaluateConcurrencyProbeEntry
                     throw new Exception("Concurrent Evaluate budget probe did not return an array snapshot.");
                 if (XPScriptRuntime.CInt(returnedArray.Get(299, 199)) != worker + 100)
                     throw new Exception("Concurrent Evaluate budget probe returned another invocation's value.");
+            }))
+            .ToArray();
+
+        start.Set();
+        Task.WaitAll(tasks);
+    }
+
+    private static void VerifyConcurrentFailureIsolation()
+    {
+        const int workerCount = 16;
+        using var start = new ManualResetEventSlim(false);
+        var secrets = Enumerable.Range(0, workerCount)
+            .Select(worker => "SECRET-CONCURRENT-EVALUATE-" + worker.ToString(CultureInfo.InvariantCulture))
+            .ToArray();
+
+        var tasks = Enumerable.Range(0, workerCount)
+            .Select(worker => Task.Run(() =>
+            {
+                start.Wait();
+                try
+                {
+                    _ = XPScriptEvaluateRuntime.Evaluate("Return CInt(callvar)", secrets[worker]);
+                    throw new Exception("Concurrent Evaluate negative probe unexpectedly succeeded.");
+                }
+                catch (XPScriptRuntimeException ex)
+                {
+                    if (ex.Number != 13)
+                        throw new Exception("Concurrent Evaluate negative probe expected error 13 but got " + ex.Number + ".");
+                    if (!string.Equals(ex.Message, "Evaluate type mismatch.", StringComparison.Ordinal))
+                        throw new Exception("Concurrent Evaluate negative probe returned an unstable diagnostic: " + ex.Message);
+                    foreach (var secret in secrets)
+                    {
+                        if (ex.Message.Contains(secret, StringComparison.Ordinal))
+                            throw new Exception("Concurrent Evaluate negative probe leaked callvar data across error contexts.");
+                    }
+                }
             }))
             .ToArray();
 
