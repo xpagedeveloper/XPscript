@@ -5,6 +5,7 @@ Sub Main()
     Dim pathName As String
     Dim f As Integer
     Dim openErr As Integer
+    Dim openErrorText As String
 
     modeName = Application.Args(0)
     pathName = Application.Args(1)
@@ -21,6 +22,7 @@ Sub Main()
         Error 9221, "Unknown contender mode."
     End If
     openErr = Err
+    openErrorText = Error$
     On Error GoTo 0
 
     If openErr = 0 Then
@@ -28,5 +30,6 @@ Sub Main()
     End If
 
     Print "OPEN_ERR=" & CStr(openErr)
+    Print "OPEN_ERROR=" & openErrorText
     Print "FILE_SHARE_CONTENDER=OK"
 End Sub
