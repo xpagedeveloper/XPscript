@@ -7,14 +7,18 @@ on:
       - todo-include-restricted-source-roots
       - todo-include-filesystem-case-sensitivity
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-source-files.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-source-files.yml'
