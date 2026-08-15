@@ -8,7 +8,7 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
-    private const int DarwinFSetLk = 8;
+    private const int DarwinFSetLk = 90;
     private const short DarwinFUnlock = 2;
     private const short DarwinFWriteLock = 3;
     private const short DarwinSeekSet = 0;
