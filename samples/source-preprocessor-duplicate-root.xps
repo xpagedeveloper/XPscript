@@ -1,0 +1,4 @@
+Include "source-preprocessor-duplicate-child.xps"
+Include "source-preprocessor-duplicate-child.xps"
+
+Print DuplicatePreprocessorValue()
