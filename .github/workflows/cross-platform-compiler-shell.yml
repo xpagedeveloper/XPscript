@@ -7,9 +7,11 @@ on:
       - '.github/workflows/cross-platform-compiler-shell.yml'
       - 'src/XPScript.Compiler/Program.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'
-      - 'src/XPScript.Compiler/PlatformRuntimeSource.cs'
-      - 'src/XPScript.Compiler/ShellRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
       - 'samples/platform-shell-arguments.xps'
+      - 'samples/platform-shell.xps'
+      - 'samples/shell-path-resolution.xps'
+      - 'samples/shell-batch-metachar-error.xps'
       - 'todo/cross-platform-runtime-todo.md'
   workflow_dispatch:
 
@@ -122,6 +124,28 @@ jobs:
               if ($LASTEXITCODE -ne 0) { throw 'Default Unix output is not executable.' }
             }
           } finally { Pop-Location }
+
+      - name: Verify absolute PATH-only Shell resolution
+        shell: pwsh
+        run: |
+          $exe = "./out/shell-path${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-path-resolution.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'shell-path-resolution.xps compilation failed.' }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Shell PATH-resolution fixture failed.`n$result" }
+          if ($env:RUNNER_OS -eq 'Windows' -and $result -notcontains 'SHELL-PATH=WINDOWS-OK') { throw "Windows Shell PATH check failed.`n$result" }
+          if ($env:RUNNER_OS -ne 'Windows' -and $result -notcontains 'SHELL-PATH=UNIX-OK') { throw "Unix Shell PATH check failed.`n$result" }
+
+      - name: Verify Windows batch metacharacters are rejected
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = './out/shell-batch-metachar-error.exe'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-batch-metachar-error.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'shell-batch-metachar-error.xps compilation failed.' }
+          $output = & $exe 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0) { throw "Unsafe batch metacharacter command unexpectedly succeeded.`n$output" }
+          if ($output -notmatch 'command-shell metacharacters') { throw "Expected batch metacharacter diagnostic was not emitted.`n$output" }
 
       - name: Verify explicit shell mode remains explicit
         shell: pwsh
