@@ -1,0 +1,21 @@
+Sub Main()
+    Dim cyclic List As Variant
+    Dim result As Variant
+
+    cyclic("name") = "root"
+    cyclic("self") = cyclic
+
+    result = Evaluate("Return callvar", cyclic)
+
+    If Not IsList(result) Then
+        Error 9601, "Evaluate did not return the cyclic List as a List"
+    End If
+    If Not IsList(result("self")) Then
+        Error 9602, "Evaluate did not preserve the self-referencing List edge"
+    End If
+    If result("name") <> "root" Then
+        Error 9603, "Evaluate cyclic List snapshot lost scalar content"
+    End If
+
+    Print "CYCLIC-LIST-SNAPSHOT=OK"
+End Sub
