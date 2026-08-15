@@ -1,6 +1,7 @@
 # XPScript Math Functions
 
-This page documents math functions represented by the runtime/reference samples, including `samples/compatibility.xps` and `samples/evaluate-standard-functions.xps`.
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Abs
 
@@ -140,7 +141,7 @@ The samples also demonstrate:
 - `Mod`
 - `^` exponentiation
 
-For logical/bitwise operators see `docs/arrays-lists-operators.md`.
+For logical/bitwise operators see [docs/arrays-lists-operators.md](arrays-lists-operators.md).
 
 ## Conversion errors
 
@@ -148,7 +149,7 @@ Math functions use normal XPScript numeric coercion. Values that cannot be conve
 
 ## Samples
 
-- `samples/compatibility.xps`
-- `samples/evaluate-standard-functions.xps`
-- `samples/evaluate-coercion-diagnostics.xps`
-- arithmetic sections in `samples/operators-arrays.xps`
+- [samples/compatibility.xps](../samples/compatibility.xps)
+- [samples/evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps)
+- [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps)
+- arithmetic sections in [samples/operators-arrays.xps](../samples/operators-arrays.xps)

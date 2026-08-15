@@ -1,6 +1,7 @@
 # XPScript Native HTTP and JSON
 
-This page documents the current XPScript-native HTTP and JSON API demonstrated by `samples/native-http-json.xps`.
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## HttpClient
 
@@ -261,9 +262,9 @@ Do not place secrets such as authorization tokens in diagnostic output. Use requ
 
 ## Samples
 
-- `samples/native-http-json.xps`
-- `samples/native-http-header-validation.xps`
-- `samples/native-http-resource-limits.xps`
-- `samples/json-resource-limits.xps`
+- [samples/native-http-json.xps](../samples/native-http-json.xps)
+- [samples/native-http-header-validation.xps](../samples/native-http-header-validation.xps)
+- [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
+- [samples/json-resource-limits.xps](../samples/json-resource-limits.xps)
 
 ` samples/json-http.xps ` contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.

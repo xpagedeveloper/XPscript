@@ -1,5 +1,7 @@
 # Include source files
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 (c) xpagedeveloper.com 2026
 
 XPScript source files can include other `.xps` source files into the same compilation unit.

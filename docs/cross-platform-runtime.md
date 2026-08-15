@@ -1,5 +1,7 @@
 # Cross-platform runtime
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 (c) xpagedeveloper.com 2026
 
 XPScript supports Windows, Linux and macOS runtime targets through explicit runtime identifiers and host-default target selection.

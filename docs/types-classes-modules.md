@@ -1,5 +1,7 @@
 # XPScript Types, Classes, Properties and Module State
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 This page documents features demonstrated by the Type, Class, property and module-level samples.
 
 ## Enum
@@ -136,7 +138,7 @@ Used for object/reference-style property assignment where applicable.
 
 Parameterized Property Get/Let/Set forms are supported by the indexed-property lowering layer.
 
-The positive sample demonstrates parameterized access while `samples/indexed-properties-error.xps` demonstrates type diagnostics.
+The positive sample demonstrates parameterized access while [samples/indexed-properties-error.xps](../samples/indexed-properties-error.xps) demonstrates type diagnostics.
 
 ## Module-level variables
 
@@ -168,17 +170,17 @@ Module-level class references support `Set`, `New`, aliases, `Nothing`, member a
 
 ## Samples
 
-- `samples/language-extensions.xps`
-- `samples/lists-classes.xps`
-- `samples/indexed-properties.xps`
-- `samples/indexed-properties-error.xps`
-- `samples/module-globals.xps`
-- `samples/module-arrays.xps`
-- `samples/module-type-values.xps`
-- `samples/module-object-references.xps`
-- `samples/type-value-copy.xps`
-- `samples/type-array-members.xps`
-- `samples/type-array-option-base.xps`
-- `samples/type-nested-value-copy.xps`
-- `samples/module-nested-type-value-copy.xps`
-- `samples/type-cycle-error.xps`
+- [samples/language-extensions.xps](../samples/language-extensions.xps)
+- [samples/lists-classes.xps](../samples/lists-classes.xps)
+- [samples/indexed-properties.xps](../samples/indexed-properties.xps)
+- [samples/indexed-properties-error.xps](../samples/indexed-properties-error.xps)
+- [samples/module-globals.xps](../samples/module-globals.xps)
+- [samples/module-arrays.xps](../samples/module-arrays.xps)
+- [samples/module-type-values.xps](../samples/module-type-values.xps)
+- [samples/module-object-references.xps](../samples/module-object-references.xps)
+- [samples/type-value-copy.xps](../samples/type-value-copy.xps)
+- [samples/type-array-members.xps](../samples/type-array-members.xps)
+- [samples/type-array-option-base.xps](../samples/type-array-option-base.xps)
+- [samples/type-nested-value-copy.xps](../samples/type-nested-value-copy.xps)
+- [samples/module-nested-type-value-copy.xps](../samples/module-nested-type-value-copy.xps)
+- [samples/type-cycle-error.xps](../samples/type-cycle-error.xps)

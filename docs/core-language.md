@@ -1,6 +1,7 @@
 # XPScript Core Language
 
-This page documents the core language features demonstrated by the working source fixtures in `samples/`, especially `core-language.xps`, `functions.xps`, `hello.xps`, `language-extensions.xps`, `module-globals.xps` and the error-handling samples.
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 
 ## Options
 
@@ -94,7 +95,7 @@ Function Counter() As Long
 End Function
 ```
 
-A `Static Function` has its own static procedure semantics as demonstrated in `samples/core-language.xps`.
+A `Static Function` has its own static procedure semantics as demonstrated in [samples/core-language.xps](../samples/core-language.xps).
 
 ## If / ElseIf / Else
 
@@ -210,9 +211,9 @@ Disables the active error handler.
 
 See:
 
-- `samples/core-language.xps`
-- `samples/erl-physical-source-line.xps`
-- `samples/nested-resume-targets.xps`
+- [samples/core-language.xps](../samples/core-language.xps)
+- [samples/erl-physical-source-line.xps](../samples/erl-physical-source-line.xps)
+- [samples/nested-resume-targets.xps](../samples/nested-resume-targets.xps)
 
 ## With
 
@@ -233,16 +234,16 @@ Native functions can be declared with `Declare Function` or `Declare Sub`.
 Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
 ```
 
-For portable native declarations, see `docs/platform-native.md`.
+For portable native declarations, see [docs/platform-native.md](platform-native.md).
 
 ## Samples
 
-- `samples/hello.xps`
-- `samples/functions.xps`
-- `samples/core-language.xps`
-- `samples/language-extensions.xps`
-- `samples/compiler-errors.xps`
-- `samples/reserved-identifier-error.xps`
-- `samples/reserved-runtime-type-error.xps`
-- `samples/erl-physical-source-line.xps`
-- `samples/nested-resume-targets.xps`
+- [samples/hello.xps](../samples/hello.xps)
+- [samples/functions.xps](../samples/functions.xps)
+- [samples/core-language.xps](../samples/core-language.xps)
+- [samples/language-extensions.xps](../samples/language-extensions.xps)
+- [samples/compiler-errors.xps](../samples/compiler-errors.xps)
+- [samples/reserved-identifier-error.xps](../samples/reserved-identifier-error.xps)
+- [samples/reserved-runtime-type-error.xps](../samples/reserved-runtime-type-error.xps)
+- [samples/erl-physical-source-line.xps](../samples/erl-physical-source-line.xps)
+- [samples/nested-resume-targets.xps](../samples/nested-resume-targets.xps)

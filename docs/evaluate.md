@@ -1,5 +1,7 @@
 # XPScript Evaluate
 
+> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
+
 `Evaluate` executes XPScript source supplied as text inside an isolated evaluator scope.
 
 ## Syntax
@@ -140,16 +142,16 @@ Recommended practices:
 
 The documentation intentionally uses source fixtures that already exist under `samples/`:
 
-- `samples/evaluate-xpscript.xps` — basic evaluation and explicit Return
-- `samples/evaluate-callvar.xps` — scalar/array/List input through callvar
-- `samples/evaluate-array-helpers.xps` — TypeName, LBound and UBound
-- `samples/evaluate-standard-functions.xps` — supported side-effect-free functions
-- `samples/evaluate-nested-collections.xps` — nested List/array snapshots
-- `samples/evaluate-no-return.xps` — no-Return behavior
-- `samples/evaluate-callvar-readonly-error.xps` — read-only callvar enforcement
-- `samples/evaluate-scope-error.xps` — caller-scope isolation
-- `samples/evaluate-coercion-diagnostics.xps` — coercion/error semantics
-- `samples/evaluate-function-arity-errors.xps` — wrong-arity diagnostics
-- `samples/evaluate-collection-element-budget.xps` — element budget
-- `samples/evaluate-collection-payload-budget.xps` — payload budget
-- `samples/evaluate-diagnostic-sanitization.xps` — secret-safe diagnostics
+- [samples/evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) — basic evaluation and explicit Return
+- [samples/evaluate-callvar.xps](../samples/evaluate-callvar.xps) — scalar/array/List input through callvar
+- [samples/evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) — TypeName, LBound and UBound
+- [samples/evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) — supported side-effect-free functions
+- [samples/evaluate-nested-collections.xps](../samples/evaluate-nested-collections.xps) — nested List/array snapshots
+- [samples/evaluate-no-return.xps](../samples/evaluate-no-return.xps) — no-Return behavior
+- [samples/evaluate-callvar-readonly-error.xps](../samples/evaluate-callvar-readonly-error.xps) — read-only callvar enforcement
+- [samples/evaluate-scope-error.xps](../samples/evaluate-scope-error.xps) — caller-scope isolation
+- [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps) — coercion/error semantics
+- [samples/evaluate-function-arity-errors.xps](../samples/evaluate-function-arity-errors.xps) — wrong-arity diagnostics
+- [samples/evaluate-collection-element-budget.xps](../samples/evaluate-collection-element-budget.xps) — element budget
+- [samples/evaluate-collection-payload-budget.xps](../samples/evaluate-collection-payload-budget.xps) — payload budget
+- [samples/evaluate-diagnostic-sanitization.xps](../samples/evaluate-diagnostic-sanitization.xps) — secret-safe diagnostics

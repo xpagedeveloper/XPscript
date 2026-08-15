@@ -12,10 +12,10 @@ Runtime-owned type names are also reserved so user code cannot replace compiler/
 
 Relevant negative samples:
 
-- `samples/reserved-identifier-error.xps`
-- `samples/reserved-runtime-type-error.xps`
-- `samples/reserved-multiple-identifiers-error.xps`
-- `samples/reserved-module-multiple-identifiers-error.xps`
+- [samples/reserved-identifier-error.xps](../samples/reserved-identifier-error.xps)
+- [samples/reserved-runtime-type-error.xps](../samples/reserved-runtime-type-error.xps)
+- [samples/reserved-multiple-identifiers-error.xps](../samples/reserved-multiple-identifiers-error.xps)
+- [samples/reserved-module-multiple-identifiers-error.xps](../samples/reserved-module-multiple-identifiers-error.xps)
 
 ## Compiler temporary files
 
@@ -43,10 +43,10 @@ Native libraries execute unmanaged code with the same operating-system privilege
 
 See:
 
-- `docs/platform-native.md`
-- `samples/platform-native-library.xps`
-- `samples/native-architecture-assets.xps`
-- `samples/native-dependency-packaging.xps`
+- [docs/platform-native.md](platform-native.md)
+- [samples/platform-native-library.xps](../samples/platform-native-library.xps)
+- [samples/native-architecture-assets.xps](../samples/native-architecture-assets.xps)
+- [samples/native-dependency-packaging.xps](../samples/native-dependency-packaging.xps)
 
 ## Shell and process execution
 
@@ -62,8 +62,8 @@ If command text is influenced by an untrusted user, validate against an allowlis
 
 See:
 
-- `samples/platform-shell.xps`
-- `samples/shell-batch-metachar-error.xps`
+- [samples/platform-shell.xps](../samples/platform-shell.xps)
+- [samples/shell-batch-metachar-error.xps](../samples/shell-batch-metachar-error.xps)
 
 ## File I/O
 
@@ -77,10 +77,10 @@ Cross-platform behavior follows the underlying OS/.NET filesystem semantics wher
 
 See:
 
-- `docs/file-io-filesystem.md`
-- `samples/filesystem-portability-semantics.xps`
-- `samples/file-lock-holder.xps`
-- `samples/file-lock-contender.xps`
+- [docs/file-io-filesystem.md](file-io-filesystem.md)
+- [samples/filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps)
+- [samples/file-lock-holder.xps](../samples/file-lock-holder.xps)
+- [samples/file-lock-contender.xps](../samples/file-lock-contender.xps)
 
 ## Evaluate
 
@@ -99,7 +99,7 @@ These controls reduce accidental state leakage and resource abuse. They do **not
 
 Use process/container isolation if arbitrary hostile users must execute programmable code.
 
-See `docs/evaluate.md`.
+See [docs/evaluate.md](evaluate.md).
 
 ## HTTP
 
@@ -117,10 +117,10 @@ A syntactically valid HTTP URL can still target loopback, private networks or cl
 
 See:
 
-- `docs/native-http-json.md`
-- `samples/native-http-json.xps`
-- `samples/native-http-header-validation.xps`
-- `samples/native-http-resource-limits.xps`
+- [docs/native-http-json.md](native-http-json.md)
+- [samples/native-http-json.xps](../samples/native-http-json.xps)
+- [samples/native-http-header-validation.xps](../samples/native-http-header-validation.xps)
+- [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
 
 ## JSON
 
@@ -152,7 +152,7 @@ No separate general `CreateObject`/ActiveX factory is currently part of the pref
 
 Treat `GetObject` as a powerful local-code/integration boundary. Do not pass untrusted moniker strings or ProgIDs to it. For higher-risk deployments, restrict or remove COM registrations/permissions at the Windows account and system level.
 
-The legacy `samples/runtime-sax.xps` contains disabled compatibility coverage for `GetObject` and should not be interpreted as a recommendation to use COM in new cross-platform applications.
+The legacy [samples/runtime-sax.xps](../samples/runtime-sax.xps) contains disabled compatibility coverage for `GetObject` and should not be interpreted as a recommendation to use COM in new cross-platform applications.
 
 ## Secrets and diagnostics
 
