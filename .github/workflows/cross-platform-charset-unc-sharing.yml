@@ -11,7 +11,7 @@ on:
       - 'samples/file-share-holder.xps'
       - 'samples/file-share-contender.xps'
       - 'samples/file-path-argument-probe.xps'
-      - 'todo/cross-platform-runtime-todo.md'
+      - 'todo/done/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-charset-unc-sharing.yml'
   workflow_dispatch:
 
