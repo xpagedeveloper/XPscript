@@ -6,7 +6,7 @@ XPScript supports Windows, Linux and macOS runtime targets through explicit runt
 
 ## Platform branching
 
-Use `Platform()` when application behavior must differ by operating system.
+Use `Platform()` when application behavior must differ by operating system. Bare `Platform` is also supported as an expression and returns the same value as `Platform()`.
 
 ```xpscript
 Sub Main()
@@ -34,13 +34,19 @@ Prefer paths supplied by configuration, command-line arguments or runtime APIs. 
 
 ## Shell
 
-`Shell()` is routed through the cross-platform runtime.
+`Shell()` is routed through the cross-platform runtime with `UseShellExecute = false`. Program/script arguments are tokenized and then passed through `ProcessStartInfo.ArgumentList`, so quoted values containing spaces, Unicode text, empty quoted values and ordinary special characters can be passed as structured arguments without an unnecessary second shell parse.
 
-Windows supports direct executables, `.cmd` and `.bat` through `cmd.exe`, and PowerShell scripts through `pwsh.exe` when available with Windows PowerShell as fallback.
+Windows supports direct executables, `.cmd` and `.bat` through `cmd.exe`, and PowerShell scripts through `pwsh.exe` when available with Windows PowerShell as fallback. Batch-file arguments are deliberately more restrictive because `cmd.exe` is itself a command interpreter: command metacharacters such as `&`, `|`, `<`, `>`, `^`, `%` and `!` are rejected in structured batch arguments rather than being reinterpreted.
 
-Linux and macOS support direct executable files and scripts, `.sh` and `.bash` through `/bin/sh`, and PowerShell scripts through `pwsh` when installed.
+Linux and macOS support direct executable files and executable/shebang scripts, `.sh` and `.bash` through `/bin/sh`, and PowerShell scripts through `pwsh` when installed.
 
-Do not build shell commands from untrusted input. Prefer direct executable invocation and argument passing rather than shell parsing when possible.
+### Pipes, redirection and globbing
+
+XPScript does **not** provide an implicit "shell expression" mode inside `Shell()`. A value such as `program | other-program` is not automatically sent to a command interpreter. This is intentional: structured process execution is the safe default and avoids command-injection surprises.
+
+When shell syntax is genuinely required, invoke the desired command interpreter explicitly and pass the shell command as its argument, for example `cmd.exe /d /c ...` on Windows or `/bin/sh -c ...` on Unix-like systems. Code doing this is responsible for shell quoting and must not concatenate untrusted input into the command string.
+
+For untrusted or externally supplied values, prefer a directly executable program or a PowerShell/script file with structured arguments. `Shell()` resolves program names only from absolute `PATH` entries and explicit paths are normalized before execution.
 
 ## File locking
 
