@@ -1,0 +1,32 @@
+' (c) xpagedeveloper.com 2026
+' Regression: exactly 100000 snapshot elements are accepted; 100001 are rejected.
+
+Sub Main()
+    Dim accepted() As Variant
+    Dim rejected() As Variant
+    Dim result As Variant
+
+    ' 1000 x 100 = 100000 elements: exact maximum accepted budget.
+    ReDim accepted(0 To 999, 0 To 99)
+    accepted(999, 99) = 42
+    result = Evaluate("Return callvar(999, 99)", accepted)
+    If CInt(result) <> 42 Then
+        Error 9501, "Evaluate exact element budget changed array contents"
+    End If
+
+    ' 11 x 9091 = 100001 elements: first value above the element budget.
+    ReDim rejected(0 To 10, 0 To 9090)
+
+    On Error GoTo ExpectedError
+    result = Evaluate("Return LBound(callvar)", rejected)
+    Error 9502, "Expected Evaluate to reject 100001 collection elements"
+
+ExpectedError:
+    If Err <> 5 Then
+        Error 9503, "Expected XPScript error 5 but got " & CStr(Err)
+    End If
+    If Instr(Error$, "maximum element budget of 100000") = 0 Then
+        Error 9504, "Expected exact Evaluate element-budget diagnostic"
+    End If
+    Print "ELEMENT-BOUNDARY=OK"
+End Sub
