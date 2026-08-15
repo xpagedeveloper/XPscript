@@ -133,16 +133,8 @@ internal sealed class ParameterPassingPostProcessor
                 continue;
             }
 
-            var receiver = FindMemberReceiver(generated, start, out var receiverStart);
-            var callTarget = identifier;
-            if (receiver.Length > 0)
-            {
-                var emittedReceiverLength = start - receiverStart;
-                if (output.Length >= emittedReceiverLength)
-                    output.Length -= emittedReceiverLength;
-                callTarget = receiver + identifier;
-            }
-
+            var receiver = TakeTrailingMemberReceiver(output);
+            var callTarget = receiver.Length == 0 ? identifier : receiver + identifier;
             output.Append(BuildTemporaryByRefCall(callTarget, args, signature));
             i = close + 1;
         }
@@ -278,35 +270,31 @@ internal sealed class ParameterPassingPostProcessor
         return true;
     }
 
-    private static string FindMemberReceiver(string generated, int identifierStart, out int receiverStart)
+    private static string TakeTrailingMemberReceiver(StringBuilder output)
     {
-        receiverStart = identifierStart;
-        if (identifierStart < 2 || generated[identifierStart - 1] != '.') return "";
+        if (output.Length < 2 || output[^1] != '.') return "";
 
-        var cursor = identifierStart - 2;
-        if (generated[cursor] == ')')
+        var dot = output.Length - 1;
+        var cursor = dot - 1;
+        int start;
+        if (output[cursor] == ')')
         {
-            var open = FindMatchingOpenParen(generated, cursor);
-            if (open >= 0)
-            {
-                receiverStart = open;
-                return generated[open..identifierStart];
-            }
+            start = FindMatchingOpenParen(output, cursor);
+            if (start < 0) return "";
+        }
+        else
+        {
+            if (!IsIdentifierPart(output[cursor])) return "";
+            while (cursor >= 0 && (IsIdentifierPart(output[cursor]) || output[cursor] == '.')) cursor--;
+            start = cursor + 1;
         }
 
-        if (!IsIdentifierPart(generated[cursor])) return "";
-        while (cursor >= 0 && (IsIdentifierPart(generated[cursor]) || generated[cursor] == '.')) cursor--;
-        receiverStart = cursor + 1;
-        var receiver = generated[receiverStart..identifierStart];
-        if (!Regex.IsMatch(receiver, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.$", RegexOptions.CultureInvariant))
-        {
-            receiverStart = identifierStart;
-            return "";
-        }
+        var receiver = output.ToString(start, dot - start + 1);
+        output.Length = start;
         return receiver;
     }
 
-    private static int FindMatchingOpenParen(string value, int closeIndex)
+    private static int FindMatchingOpenParen(StringBuilder value, int closeIndex)
     {
         var depth = 0;
         for (var i = closeIndex; i >= 0; i--)
