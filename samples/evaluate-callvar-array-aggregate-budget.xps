@@ -1,5 +1,5 @@
 ' (c) xpagedeveloper.com 2026
-' Regression: all supplied Evaluate values share one aggregate input snapshot budget.
+' Regression: all ByVal supplied Evaluate values share one aggregate input snapshot budget.
 
 Sub Main()
     Dim leftAccepted() As Variant
@@ -15,7 +15,7 @@ Sub Main()
     leftAccepted(24998, 1) = 10
     rightAccepted(249, 199) = 20
 
-    result = Evaluate("Return callvar(0, 24998, 1) + callvar(1, 249, 199)", leftAccepted, rightAccepted)
+    result = Evaluate("Return callvar(0, 24998, 1) + callvar(1, 249, 199)", ByVal leftAccepted, ByVal rightAccepted)
     If CInt(result) <> 30 Then
         Error 9631, "Evaluate aggregate element budget changed supplied array contents"
     End If
@@ -25,7 +25,7 @@ Sub Main()
     ReDim rightRejected(0 To 2380, 0 To 20)
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return callvar(0, 0, 0)", leftRejected, rightRejected)
+    result = Evaluate("Return callvar(0, 0, 0)", ByVal leftRejected, ByVal rightRejected)
     Error 9632, "Expected Evaluate to reject aggregate 100001 collection elements"
 
 ExpectedError:
