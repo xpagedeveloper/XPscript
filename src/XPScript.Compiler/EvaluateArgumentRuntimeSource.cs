@@ -17,8 +17,8 @@ internal sealed class XPScriptEvaluateArgument
     public bool IsByRef { get; }
     public object? Value { get; }
 
-    public static XPScriptEvaluateArgument ByRef<T>(T value, Action<T> setter) =>
-        new(true, value, incoming => setter(Coerce<T>(incoming)));
+    public static XPScriptEvaluateArgument ByRef(object? value, Action<object?> setter) =>
+        new(true, value, incoming => setter(CoerceLike(incoming, value)));
 
     public static XPScriptEvaluateArgument ByVal(object? value) =>
         new(false, value, null);
@@ -29,23 +29,22 @@ internal sealed class XPScriptEvaluateArgument
             _setter!(value);
     }
 
-    private static T Coerce<T>(object? value)
+    private static object? CoerceLike(object? value, object? original)
     {
-        var target = typeof(T);
-        object? converted = target == typeof(string) ? XPScriptRuntime.CStr(value)
-            : target == typeof(byte) ? XPScriptRuntime.CByte(value)
-            : target == typeof(int) ? XPScriptRuntime.CInt(value)
-            : target == typeof(long) ? XPScriptRuntime.CLng(value)
-            : target == typeof(float) ? XPScriptRuntime.CSng(value)
-            : target == typeof(double) ? XPScriptRuntime.CDbl(value)
-            : target == typeof(decimal) ? XPScriptRuntime.CCur(value)
-            : target == typeof(bool) ? XPScriptRuntime.CBool(value)
-            : target == typeof(DateTime) ? XPScriptRuntime.CDat(value)
-            : value;
-
-        if (converted is T typed) return typed;
-        if (converted is null) return default!;
-        return (T)converted;
+        if (original is null) return value;
+        return original switch
+        {
+            string => XPScriptRuntime.CStr(value),
+            byte => XPScriptRuntime.CByte(value),
+            int => XPScriptRuntime.CInt(value),
+            long => XPScriptRuntime.CLng(value),
+            float => XPScriptRuntime.CSng(value),
+            double => XPScriptRuntime.CDbl(value),
+            decimal => XPScriptRuntime.CCur(value),
+            bool => XPScriptRuntime.CBool(value),
+            DateTime => XPScriptRuntime.CDat(value),
+            _ => value
+        };
     }
 }
 """;
