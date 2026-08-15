@@ -1,0 +1,3 @@
+Function DuplicatePreprocessorValue() As String
+    DuplicatePreprocessorValue = "__ONCE__"
+End Function
