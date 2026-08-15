@@ -1,0 +1,57 @@
+name: Cross Platform All RID Compile
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-all-rid-compile.yml'
+      - 'src/XPScript.Compiler/**'
+      - 'samples/platform-shell.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-portable-source:
+    strategy:
+      fail-fast: false
+      matrix:
+        rid:
+          - win-x64
+          - win-arm64
+          - linux-x64
+          - linux-arm64
+          - osx-x64
+          - osx-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile same portable source for ${{ matrix.rid }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $rid = '${{ matrix.rid }}'
+          $extension = if ($rid.StartsWith('win-')) { '.exe' } else { '' }
+          $output = "./out/platform-shell-$rid$extension"
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --rid $rid -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "Compilation failed for $rid." }
+          if (-not (Test-Path $output)) { throw "Expected output missing for $rid: $output" }
+
+          $length = (Get-Item $output).Length
+          if ($length -le 0) { throw "Generated output is empty for $rid." }
+          Write-Host "Compiled ./samples/platform-shell.xps for $rid -> $output ($length bytes)"
