@@ -65,14 +65,18 @@ internal static class EvaluateConcurrencyProbeEntry
         var tasks = Enumerable.Range(0, workerCount)
             .Select(worker => Task.Run(() =>
             {
-                // 300 x 200 = 60000 elements per invocation. Each snapshot is below the
-                // 100000 element limit, while all four concurrent snapshots total 240000.
+                // 300 x 200 = 60000 elements per invocation. Both the input snapshot and
+                // returned detached snapshot are individually below the 100000-element limit.
+                // Four concurrent invocations therefore exercise 240000 input elements and
+                // 240000 return elements without relying on any shared/static budget state.
                 var input = new LSArray("Variant", true, [0, 0], [299, 199]);
                 input.Set(worker + 100, 299, 199);
                 start.Wait();
 
-                var result = XPScriptEvaluateRuntime.Evaluate("Return callvar(299, 199)", input);
-                if (XPScriptRuntime.CInt(result) != worker + 100)
+                var result = XPScriptEvaluateRuntime.Evaluate("Return callvar", input);
+                if (result is not LSArray returnedArray)
+                    throw new Exception("Concurrent Evaluate budget probe did not return an array snapshot.");
+                if (XPScriptRuntime.CInt(returnedArray.Get(299, 199)) != worker + 100)
                     throw new Exception("Concurrent Evaluate budget probe returned another invocation's value.");
             }))
             .ToArray();
