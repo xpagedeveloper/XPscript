@@ -1,0 +1,55 @@
+Public ModuleSecret As String
+
+Function ModuleGlobalIsolated() As Boolean
+    Dim result As Variant
+    On Error GoTo ExpectedError
+    result = Evaluate("Return ModuleSecret")
+    ModuleGlobalIsolated = False
+    Exit Function
+
+ExpectedError:
+    If Err <> 5 Then
+        ModuleGlobalIsolated = False
+        Exit Function
+    End If
+    If Instr(Error$, "MODULE-SECRET-VALUE") > 0 Then
+        ModuleGlobalIsolated = False
+        Exit Function
+    End If
+    ModuleGlobalIsolated = True
+End Function
+
+Function StaticLocalIsolated() As Boolean
+    Static StaticSecret As String
+    Dim result As Variant
+
+    StaticSecret = "STATIC-SECRET-VALUE"
+    On Error GoTo ExpectedError
+    result = Evaluate("Return StaticSecret")
+    StaticLocalIsolated = False
+    Exit Function
+
+ExpectedError:
+    If Err <> 5 Then
+        StaticLocalIsolated = False
+        Exit Function
+    End If
+    If Instr(Error$, "STATIC-SECRET-VALUE") > 0 Then
+        StaticLocalIsolated = False
+        Exit Function
+    End If
+    StaticLocalIsolated = True
+End Function
+
+Sub Main()
+    ModuleSecret = "MODULE-SECRET-VALUE"
+
+    If Not ModuleGlobalIsolated() Then
+        Error 9501, "Evaluate unexpectedly accessed or exposed a module global"
+    End If
+    If Not StaticLocalIsolated() Then
+        Error 9502, "Evaluate unexpectedly accessed or exposed a Static local"
+    End If
+
+    Print "GLOBAL-STATIC-ISOLATION=OK"
+End Sub
