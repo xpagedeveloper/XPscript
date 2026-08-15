@@ -61,18 +61,17 @@ internal static class EvaluateConcurrencyProbeEntry
     private static void VerifyInvocationLocalBudgets()
     {
         const int workerCount = 4;
-        const int elementsPerWorker = 60_000;
         using var start = new ManualResetEventSlim(false);
         var tasks = Enumerable.Range(0, workerCount)
             .Select(worker => Task.Run(() =>
             {
-                var input = new LSArray("Variant", true, [0], [elementsPerWorker - 1]);
-                input.Set(worker + 100, elementsPerWorker - 1);
+                // 300 x 200 = 60000 elements per invocation. Each snapshot is below the
+                // 100000 element limit, while all four concurrent snapshots total 240000.
+                var input = new LSArray("Variant", true, [0, 0], [299, 199]);
+                input.Set(worker + 100, 299, 199);
                 start.Wait();
 
-                var result = XPScriptEvaluateRuntime.Evaluate(
-                    "Return callvar(" + (elementsPerWorker - 1).ToString(CultureInfo.InvariantCulture) + ")",
-                    input);
+                var result = XPScriptEvaluateRuntime.Evaluate("Return callvar(299, 199)", input);
                 if (XPScriptRuntime.CInt(result) != worker + 100)
                     throw new Exception("Concurrent Evaluate budget probe returned another invocation's value.");
             }))
