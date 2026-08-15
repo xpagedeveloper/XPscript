@@ -9,52 +9,55 @@ Status:
 - `[>]` implemented/in progress, awaiting verification
 - `[ ]` not implemented
 
+Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes the Evaluate regression corpus plus isolation-negative fixtures on GitHub Actions.
+
 ## Evaluate ownership and cleanup
 
-- [>] `Evaluate` is implemented only by `XPScriptEvaluateRuntime`; the obsolete `System.Data.DataTable.Compute` evaluator has been physically removed from `ExtendedCompatibilityRuntimeSource.cs`
-- [>] generated calls are expected to be owned by `XPScriptEvaluatePreprocessor` before extended compatibility rewriting
-- [>] obsolete evaluator-specific terminology has been removed from the legacy runtime implementation
-- [ ] runtime/build verification after execution is re-enabled
+- [x] `Evaluate` is implemented only by `XPScriptEvaluateRuntime`; the obsolete `System.Data.DataTable.Compute` evaluator has been physically removed from `ExtendedCompatibilityRuntimeSource.cs`
+- [x] generated calls are owned by `XPScriptEvaluatePreprocessor` before extended compatibility rewriting
+- [x] obsolete evaluator-specific terminology has been removed from the legacy runtime implementation
+- [x] compiler build and generated-program runtime verification through `Evaluate Runtime Compatibility`
 
 ## Evaluate signature and input bridge
 
-- [>] extend `Evaluate` with an optional second argument named `callvar`
-- [>] supported surface: `Evaluate(sourceText)` and `Evaluate(sourceText, callvar)`
-- [>] `callvar` is the only explicit caller-provided variable bridge into the isolated Evaluate scope
-- [>] `callvar` is restricted/read-only inside Evaluate so evaluated code cannot overwrite the caller's variable
-- [>] evaluated code has no implicit access to caller locals, module globals, statics, compiler internals or unrelated variables
-- [>] mutable XPScript arrays and Lists are defensive-copied before evaluation
-- [>] nested mutable arrays/Lists reachable from callvar are recursively snapshotted; arbitrary mutable object types are rejected instead of being shared into Evaluate
+- [x] extend `Evaluate` with an optional second argument named `callvar`
+- [x] supported surface: `Evaluate(sourceText)` and `Evaluate(sourceText, callvar)`
+- [x] `callvar` is the only explicit caller-provided variable bridge into the isolated Evaluate scope
+- [x] `callvar` is restricted/read-only inside Evaluate so evaluated code cannot overwrite the caller's variable; runtime-negative: `samples/evaluate-callvar-readonly-error.xps`
+- [x] evaluated code has no implicit access to caller locals; runtime-negative: `samples/evaluate-scope-error.xps`
+- [>] module globals, statics, compiler internals and unrelated state are not bridged by the evaluator implementation; dedicated adversarial coverage remains to be added
+- [x] mutable XPScript arrays and Lists are defensive-copied before evaluation for the verified scalar/array/List and nested-collection paths
+- [>] nested mutable arrays/Lists reachable from callvar are recursively snapshotted; arbitrary mutable object types are rejected instead of being shared into Evaluate, but object-rejection coverage remains to be added to the permanent gate
 
 ## Scalar callvar
 
-- [>] scalar and Variant-contained scalar values are exposed as `callvar` with their runtime type preserved where possible
+- [x] scalar and Variant-contained scalar values are exposed as `callvar` with their runtime type preserved where possible; source: `samples/evaluate-callvar.xps`
 
 ## Array callvar
 
-- [>] XPScript arrays preserve rank, bounds and element type in the Evaluate snapshot
-- [>] evaluated code can read indexed values through normal `callvar(index...)` syntax
-- [>] `LBound` and `UBound` are available inside Evaluate
-- [ ] add explicit multidimensional and non-zero-lower-bound regression sources when test execution is re-enabled
+- [>] XPScript arrays preserve rank, bounds and element type in the Evaluate snapshot; one-dimensional zero-based arrays are runtime-verified, while explicit multidimensional/non-zero-lower-bound coverage remains open
+- [x] evaluated code can read indexed values through normal `callvar(index...)` syntax
+- [x] `LBound` and `UBound` are available inside Evaluate; sources: `samples/evaluate-array-helpers.xps`, `samples/evaluate-nested-collections.xps`
+- [ ] add explicit multidimensional and non-zero-lower-bound regression sources
 
 ## List callvar
 
-- [>] List input is defined as a named-parameter transport using `callvar("tag")`
-- [>] List input is copied into an evaluator-private read-only snapshot rather than sharing the caller's `LSList<T>` instance
-- [>] List snapshotting uses the type-neutral `ILSList.SnapshotEntries()` contract rather than reflection
-- [>] List values are recursively snapshotted, including nested XPScript arrays and nested Lists
-- [>] cyclic/shared collection graphs use reference-identity tracking so snapshots do not recurse indefinitely and shared references remain internally consistent
-- [>] source: `samples/evaluate-nested-collections.xps`
-- [ ] runtime verification of nested list/array combinations when execution is re-enabled
+- [x] List input is defined as a named-parameter transport using `callvar("tag")`; source: `samples/evaluate-callvar.xps`
+- [x] List input is copied into an evaluator-private read-only snapshot rather than sharing the caller's `LSList<T>` instance for the verified List path
+- [x] List snapshotting uses the type-neutral `ILSList.SnapshotEntries()` contract rather than reflection
+- [x] List values are recursively snapshotted, including nested XPScript arrays and nested Lists; source: `samples/evaluate-nested-collections.xps`
+- [>] cyclic/shared collection graphs use reference-identity tracking so snapshots do not recurse indefinitely and shared references remain internally consistent; explicit cyclic/shared-identity runtime coverage remains open
+- [x] returning the nested List fixture produces a normal value recognized by XPScript `IsList`
+- [x] runtime verification of nested List/array combinations through `Evaluate Runtime Compatibility`
 
 ## Return semantics
 
-- [>] `Return expression` immediately ends evaluation and becomes the return value from `Evaluate`
-- [>] returned arrays are detached/snapshotted before leaving evaluator scope
-- [>] returned List snapshots are converted back into detached normal `LSList<object?>` XPScript List values; the internal read-only snapshot type never escapes Evaluate
-- [>] nested arrays/Lists in returned collections are recursively detached
-- [>] `data = Evaluate(...)` receives the value from `Return`
-- [>] reaching the end without `Return` now yields `Nothing`/Empty (`null` internally) rather than the last expression value
+- [x] `Return expression` immediately ends evaluation and becomes the return value from `Evaluate`; source: `samples/evaluate-xpscript.xps`
+- [x] returned arrays are detached/snapshotted before leaving evaluator scope for the verified array paths
+- [x] returned List snapshots are converted back into detached normal XPScript List values; the internal read-only snapshot type never escapes Evaluate
+- [x] nested arrays/Lists in returned collections are recursively detached for the verified nested-collection path
+- [x] `data = Evaluate(...)` receives the value from `Return`
+- [x] reaching the end without `Return` yields `Nothing`/Empty (`null` internally) rather than the last expression value; source: `samples/evaluate-no-return.xps`
 - [ ] distinguish `Return Nothing`, `Return Null`, and no `Return` after final XPScript Null/Nothing semantics are implemented
 
 ## Function coverage inside Evaluate
@@ -64,58 +67,56 @@ Status:
 - [>] strings: `Len`, `Left`, `Right`, `Mid`, `LCase`, `UCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Instr`, `Replace`, `Space`, `String`, `Chr`, `Asc`
 - [>] math/number: `Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Val`, `Str`, `Bin`, `Hex`, `Oct`
 - [>] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`
-- [>] source: `samples/evaluate-standard-functions.xps`
+- [x] representative String, math/number, Date and inspection functions are runtime-verified by `samples/evaluate-standard-functions.xps`
 - [ ] continue broadening standard XPScript function coverage where functions remain side-effect free and isolation-safe
 
 ## Coercion and diagnostics alignment
 
-- [>] dynamic `+` uses shared `XPScriptCoercion.AddVariant` instead of evaluator-only coercion logic
-- [>] String + scalar concatenation and scalar + numeric-String addition follow the shared forgiving XPScript coercion path
-- [>] comparison operators route through the main `LSCoreCompare.Rel` semantics, including numeric and Date comparison behavior
-- [>] evaluator exceptions are normalized through the same runtime error mapping used by normal XPScript execution
-- [>] conversion/type mismatch maps to XPScript error 13
-- [>] divide-by-zero maps to XPScript error 11
-- [>] overflow maps to XPScript error 6
-- [>] permission/access failures map to XPScript error 70
-- [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context
-- [>] source: `samples/evaluate-coercion-diagnostics.xps`
-- [>] known Evaluate functions now distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
-- [>] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
-- [>] unknown function names continue to report `Function is not available inside Evaluate` rather than an arity error
-- [ ] verify coercion/error/arity parity against equivalent normal XPScript expressions when execution is re-enabled
+- [x] dynamic `+` uses shared `XPScriptCoercion.AddVariant` for the verified String + scalar and scalar + numeric-String cases
+- [x] String + scalar concatenation and scalar + numeric-String addition follow the shared forgiving XPScript coercion path; source: `samples/evaluate-coercion-diagnostics.xps`
+- [x] comparison operators route through the main `LSCoreCompare.Rel` semantics for the verified Date comparison path
+- [x] evaluator exceptions are normalized through the runtime error mapping for verified conversion and divide-by-zero paths
+- [x] conversion/type mismatch maps to XPScript error 13
+- [x] divide-by-zero maps to XPScript error 11
+- [>] overflow maps to XPScript error 6; dedicated runtime assertion remains open
+- [>] permission/access failures map to XPScript error 70; dedicated runtime assertion remains open
+- [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context; representative arity/unknown-function failures are verified
+- [x] known Evaluate functions distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
+- [x] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
+- [x] unknown function names report `Function is not available inside Evaluate` rather than an arity error
+- [ ] add broader parity checks against equivalent normal XPScript expressions for remaining coercion/error categories
 
 ## Isolation and security
 
-- [>] no shared static callvar dictionary; every invocation owns its evaluator instance
-- [>] `Dim callvar` is rejected
-- [>] assignment to `callvar` is rejected
-- [>] caller variables remain inaccessible unless explicitly passed
-- [>] arrays/Lists are defensive-copied before execution
-- [>] arbitrary mutable objects are rejected rather than bridged by reference
-- [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work
-- [>] collection snapshots enforce a total budget of 100000 collection elements per input/return snapshot operation
-- [>] collection snapshots enforce a 16 MiB estimated payload budget; strings and List tags are charged by UTF-8 byte count and scalar values by bounded type-size estimates
-- [>] XPScript and CLR array element counts are checked before allocating the snapshot array
-- [>] List entries are budgeted incrementally before copying and are not first materialized into an unbounded temporary array
-- [>] budget violations produce controlled XPScript error 5 diagnostics instead of continuing snapshot allocation
-- [>] negative sources: `samples/evaluate-collection-element-budget.xps`, `samples/evaluate-collection-payload-budget.xps`
-- [ ] runtime-verify exact budget boundary behavior when execution is re-enabled
+- [x] no shared static callvar dictionary; every verified invocation owns its evaluator instance
+- [>] `Dim callvar` is rejected by the evaluator; dedicated runtime fixture remains to be added
+- [x] assignment to `callvar` is rejected; source: `samples/evaluate-callvar-readonly-error.xps`
+- [x] caller local variables remain inaccessible unless explicitly passed; source: `samples/evaluate-scope-error.xps`
+- [x] arrays/Lists are defensive-copied before execution for the verified callvar/nested collection paths
+- [>] arbitrary mutable objects are rejected rather than bridged by reference; dedicated runtime fixture remains open
+- [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work; exact nesting-boundary runtime coverage remains open
+- [x] collection snapshots enforce a total budget of 100000 collection elements by rejecting an over-budget fixture with controlled XPScript error 5
+- [x] collection snapshots enforce a 16 MiB estimated payload budget by rejecting an over-budget fixture with controlled XPScript error 5
+- [>] XPScript and CLR array element counts are checked before allocating the snapshot array; exact in-boundary/out-of-boundary pair remains open
+- [>] List entries are budgeted incrementally before copying and are not first materialized into an unbounded temporary array; dedicated stress verification remains open
+- [x] budget violations produce controlled XPScript error 5 diagnostics instead of continuing snapshot allocation; sources: `samples/evaluate-collection-element-budget.xps`, `samples/evaluate-collection-payload-budget.xps`
+- [ ] runtime-verify exact budget boundary behavior (maximum accepted value and first rejected value)
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
 - [ ] add concurrent-thread isolation tests
-- [>] all exceptions crossing the Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`, including existing `XPScriptRuntimeException` instances
-- [>] type/conversion, overflow, divide-by-zero, access and subscript/List errors use stable descriptions that do not echo input values
-- [>] only allowlisted structural parser/API diagnostics retain detail; other error-5 messages collapse to a generic safe Evaluate description
-- [>] invalid numeric-literal diagnostics no longer echo the literal text
-- [>] retained structural diagnostics are length-limited to prevent oversized error responses
-- [>] source: `samples/evaluate-diagnostic-sanitization.xps`
-- [ ] runtime-verify that secret callvar payloads never appear in Error$, logs or structured error output when execution is re-enabled
+- [x] exceptions crossing the verified Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`
+- [x] type/conversion diagnostics use stable descriptions that do not echo secret input values for the verified sanitization path
+- [>] only allowlisted structural parser/API diagnostics retain detail; broader adversarial coverage remains open
+- [>] invalid numeric-literal diagnostics no longer echo the literal text; dedicated runtime fixture remains open
+- [>] retained structural diagnostics are length-limited; explicit oversized-diagnostic runtime fixture remains open
+- [x] secret callvar payload is absent from `Error$` in `samples/evaluate-diagnostic-sanitization.xps`
+- [ ] verify secret callvar payloads are also absent from process logs and compiler structured error output in a dedicated adversarial gate
 
 ## Memory and lifetime
 
 - [>] evaluator instance owns callvar snapshot; references become collectible after Evaluate returns/fails
-- [>] returned arrays and Lists are detached from evaluator-owned storage
-- [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation
-- [>] input and return snapshot budgets are invocation-local and are not stored in static/global state
+- [x] returned arrays and Lists are detached from evaluator-owned storage for the verified collection paths
+- [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation; lifetime/stress coverage remains open
+- [>] input and return snapshot budgets are invocation-local and are not stored in static/global state; concurrent verification remains open
 - [ ] deterministic disposal rules if disposable/native-resource objects are ever allowed through callvar
 - [ ] ensure no future evaluator cache stores arbitrary callvar data
 
@@ -124,8 +125,8 @@ Status:
 - [>] `Evaluate(sourceText)` and `Evaluate(sourceText, callvar)` documented in `docs/evaluate.md`
 - [>] documentation examples intentionally reuse existing source fixtures under `samples/` rather than introducing unverified duplicate example programs
 - [>] scalar, array, List, error, security and budget samples are linked directly from `docs/evaluate.md`
-- [>] source regression coverage exists under `samples/`
-- [ ] negative concurrency/isolation tests when execution is re-enabled
+- [x] source regression coverage is executable under the permanent `Evaluate Runtime Compatibility` workflow
+- [ ] add negative concurrency/isolation tests
 
 ## Contract summary
 

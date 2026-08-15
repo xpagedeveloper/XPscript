@@ -28,6 +28,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             }
             if (line.TrimStart().StartsWith("'", StringComparison.Ordinal)) { output.Add(line); continue; }
 
+            line = Regex.Replace(line, @"(?<![\w.])Array\s*\(", "LSOperatorArrayRuntime.CreateArray(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayAppend\s*\(", "LSOperatorArrayRuntime.ArrayAppend(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayGetIndex\s*\(", "LSOperatorArrayRuntime.ArrayGetIndex(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayUnique\s*\(", "LSOperatorArrayRuntime.ArrayUnique(", RegexOptions.IgnoreCase);

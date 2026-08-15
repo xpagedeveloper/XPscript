@@ -21,13 +21,14 @@ Sub Main()
     If Err <> 13 Then
         Error 9104, "Evaluate type mismatch should use error 13, got " & CStr(Err)
     End If
-    Err = 0
 
+    On Error GoTo 0
+    On Error Resume Next
     result = Evaluate("Return 10 \ 0")
     If Err <> 11 Then
         Error 9105, "Evaluate division by zero should use error 11, got " & CStr(Err)
     End If
-    Err = 0
 
+    On Error GoTo 0
     Print "Evaluate coercion/diagnostics semantics OK"
 End Sub

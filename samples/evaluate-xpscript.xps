@@ -2,7 +2,7 @@ Sub Main()
     Dim result As Variant
     Dim expressionResult As Variant
 
-    expressionResult = Evaluate("1 + 2 * 3")
+    expressionResult = Evaluate("Return 1 + 2 * 3")
     Print "EXPRESSION=" & CStr(expressionResult)
 
     result = Evaluate("Dim a As Integer: a = 10: Dim b As Integer: b = 5: Return (a * b) + 2")

@@ -1,0 +1,98 @@
+name: Evaluate Runtime Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/evaluate-*.xps'
+      - 'docs/evaluate.md'
+      - 'todo/evaluate-callvar-todo.md'
+      - 'todo/runtime-reference-todo.md'
+      - '.github/workflows/evaluate-runtime-compatibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile and run Evaluate regression corpus
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/evaluate | Out-Null
+
+          function Invoke-EvaluateSample {
+            param(
+              [Parameter(Mandatory=$true)][string]$Name,
+              [string[]]$Expected = @()
+            )
+
+            $source = "./samples/$Name.xps"
+            $output = "./out/evaluate/$Name"
+            $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
+            $compileExit = $LASTEXITCODE
+            $compile | ForEach-Object { Write-Host $_ }
+            if ($compileExit -ne 0) { throw "Evaluate sample compilation failed: $Name" }
+
+            chmod +x $output
+            $result = & $output 2>&1
+            $runExit = $LASTEXITCODE
+            $result | ForEach-Object { Write-Host "[$Name] $_" }
+            if ($runExit -ne 0) { throw "Evaluate sample failed: $Name exit=$runExit" }
+
+            foreach ($value in $Expected) {
+              if ($result -notcontains $value) { throw "Evaluate sample $Name missing expected output: $value" }
+            }
+          }
+
+          Invoke-EvaluateSample 'evaluate-xpscript' @('EXPRESSION=7','STATEMENTS=52','STRING=HELLO WORLD','LOGICAL=True')
+          Invoke-EvaluateSample 'evaluate-callvar' @('SCALAR=42','ARRAY=60','LIST=502')
+          Invoke-EvaluateSample 'evaluate-array-helpers'
+          Invoke-EvaluateSample 'evaluate-nested-collections' @('BOUNDS=2','RETURNED-IS-LIST=True')
+          Invoke-EvaluateSample 'evaluate-no-return'
+          Invoke-EvaluateSample 'evaluate-standard-functions' @('STRING=abcef','MID=bcd','INSTR=6','REPLACE=a/b/c','MATH=13','NUMBERFORMAT=FF/1010','YEAR=2026','ISNUMERIC=True')
+          Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
+          Invoke-EvaluateSample 'evaluate-collection-element-budget' @('ELEMENT-BUDGET=OK')
+          Invoke-EvaluateSample 'evaluate-collection-payload-budget' @('PAYLOAD-BUDGET=OK')
+          Invoke-EvaluateSample 'evaluate-diagnostic-sanitization'
+          Invoke-EvaluateSample 'evaluate-function-arity-errors'
+
+      - name: Verify Evaluate isolation negatives fail safely
+        shell: pwsh
+        run: |
+          function Assert-EvaluateRuntimeFailure {
+            param([Parameter(Mandatory=$true)][string]$Name)
+
+            $source = "./samples/$Name.xps"
+            $output = "./out/evaluate/$Name"
+            $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
+            $compileExit = $LASTEXITCODE
+            $compile | ForEach-Object { Write-Host $_ }
+            if ($compileExit -ne 0) { throw "Isolation-negative sample must compile before runtime rejection: $Name" }
+
+            chmod +x $output
+            $result = & $output 2>&1
+            $runExit = $LASTEXITCODE
+            $result | ForEach-Object { Write-Host "[$Name] $_" }
+            if ($runExit -eq 0) { throw "Evaluate isolation-negative sample unexpectedly succeeded: $Name" }
+          }
+
+          Assert-EvaluateRuntimeFailure 'evaluate-callvar-readonly-error'
+          Assert-EvaluateRuntimeFailure 'evaluate-scope-error'
+          exit 0
