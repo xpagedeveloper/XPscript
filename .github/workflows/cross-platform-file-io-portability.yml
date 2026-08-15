@@ -1,6 +1,20 @@
 name: Cross Platform File IO Portability
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
+      - 'samples/file-io-portability.xps'
+      - 'samples/file-charset-bom.xps'
+      - 'samples/filesystem-portability-semantics.xps'
+      - 'samples/file-delete-open-semantics.xps'
+      - 'samples/file-portability-observable.xps'
+      - 'samples/file-binary-random-latin1.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+      - '.github/workflows/cross-platform-file-io-portability.yml'
   workflow_dispatch:
 
 permissions:
@@ -47,6 +61,23 @@ jobs:
           if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
           $result = & $exe
           if ($LASTEXITCODE -ne 0 -or $result -notcontains 'CHARSET_BOM_OK') { throw "Charset/BOM regression failed.`n$result" }
+      - name: Verify Binary and Random string bytes
+        shell: pwsh
+        run: |
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-binary-random-latin1.exe' } else { './out/file-binary-random-latin1' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-binary-random-latin1.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-binary-random-latin1.xps compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0 -or $result -notcontains 'BINARY_RANDOM_LATIN1=OK') { throw "Binary/Random Latin-1 round-trip failed.`n$result" }
+          $binary = [IO.File]::ReadAllBytes((Resolve-Path './xps-binary-latin1.bin'))
+          if ($binary.Length -ne 3 -or $binary[0] -ne 0xC5 -or $binary[1] -ne 0xC4 -or $binary[2] -ne 0xD6) {
+            throw "Binary string bytes are not exact Latin-1: $([BitConverter]::ToString($binary))"
+          }
+          $random = [IO.File]::ReadAllBytes((Resolve-Path './xps-random-latin1.bin'))
+          if ($random.Length -lt 5 -or $random[0] -ne 0x03 -or $random[1] -ne 0x00 -or $random[2] -ne 0xC5 -or $random[3] -ne 0xC4 -or $random[4] -ne 0xD6) {
+            throw "Random string bytes are not length-prefixed exact Latin-1: $([BitConverter]::ToString($random))"
+          }
       - name: Verify copy and same-filesystem rename
         shell: pwsh
         run: |
@@ -109,8 +140,17 @@ jobs:
                   raise SystemExit('Executable source fixture was not executable.')
               if not (dst_mode & 0o111):
                   raise SystemExit('FileCopy did not preserve Unix executable permission bits.')
+      - name: Verify .NET Unix executable-bit inspection
+        if: runner.os != 'Windows'
+        shell: pwsh
+        run: |
+          $sourceMode = [IO.File]::GetUnixFileMode((Resolve-Path './xps-exec-source.sh'))
+          $copyMode = [IO.File]::GetUnixFileMode((Resolve-Path './xps-exec-copy.sh'))
+          $executeMask = [IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute
+          if (($sourceMode -band $executeMask) -eq 0) { throw "File.GetUnixFileMode did not report executable source bits: $sourceMode" }
+          if (($copyMode -band $executeMask) -eq 0) { throw "File.GetUnixFileMode did not report executable copied-file bits: $copyMode" }
       - name: Cleanup observable files
         if: always()
         shell: pwsh
         run: |
-          Remove-Item -Force -ErrorAction SilentlyContinue ./xps-portability-latin1.txt, ./xps-portability-newline.txt, ./xps-exec-source.sh, ./xps-exec-copy.sh, ./xps-delete-open.bin
+          Remove-Item -Force -ErrorAction SilentlyContinue ./xps-portability-latin1.txt, ./xps-portability-newline.txt, ./xps-exec-source.sh, ./xps-exec-copy.sh, ./xps-delete-open.bin, ./xps-binary-latin1.bin, ./xps-random-latin1.bin
