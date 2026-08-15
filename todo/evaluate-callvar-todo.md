@@ -85,7 +85,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] known Evaluate functions distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
 - [x] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
 - [x] unknown function names report `Function is not available inside Evaluate` rather than an arity error
-- [ ] add broader parity checks against equivalent normal XPScript expressions for remaining coercion/error categories
+- [x] broader parity against equivalent normal XPScript expressions is verified for forgiving Variant `+`, String concatenation, integer division, Mod, Date comparison, type mismatch, divide-by-zero and overflow; runtime fixture: `samples/evaluate-normal-expression-parity.xps`
 
 ## Isolation and security
 

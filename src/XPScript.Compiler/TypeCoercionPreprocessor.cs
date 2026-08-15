@@ -24,11 +24,11 @@ internal sealed class TypeCoercionPreprocessor
             if (dim.Success) variables[dim.Groups[1].Value] = dim.Groups[2].Value;
 
             var assign = Regex.Match(trimmed, @"^(?:Let\s+)?([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (assign.Success && variables.TryGetValue(assign.Groups[1].Value, out var targetType) && NumericTypes.Contains(targetType))
+            if (assign.Success && variables.TryGetValue(assign.Groups[1].Value, out var targetType))
             {
                 var rhs = assign.Groups[2].Value.Trim();
                 var plus = FindTopLevelPlus(rhs);
-                if (plus > 0)
+                if (plus > 0 && (NumericTypes.Contains(targetType) || targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase)))
                 {
                     var left = rhs[..plus].Trim();
                     var right = rhs[(plus + 1)..].Trim();
@@ -40,7 +40,8 @@ internal sealed class TypeCoercionPreprocessor
                         "single" => "AddSingle",
                         "double" => "AddDouble",
                         "currency" => "AddCurrency",
-                        _ => "AddDouble"
+                        "variant" => "AddVariant",
+                        _ => "AddVariant"
                     };
                     var indent = line[..(line.Length - line.TrimStart().Length)];
                     output[i] = $"{indent}{assign.Groups[1].Value} = XPScriptCoercion.{method}({left}, {right})";
