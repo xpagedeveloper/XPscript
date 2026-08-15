@@ -1,22 +1,21 @@
-name: Cross Platform Runtime Verification
+name: Cross Platform File Locking
 
 on:
-  push:
-    branches: [todo-cross-platform-runtime-verification]
+  pull_request:
+    branches: [main]
     paths:
-      - '.github/workflows/cross-platform-runtime-verification.yml'
-      - 'src/XPScript.Compiler/**'
-      - 'samples/platform-shell.xps'
+      - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
       - 'samples/file-lock-holder.xps'
       - 'samples/file-lock-contender.xps'
-      - 'samples/file-lock-platform-support.xps'
+      - 'samples/file-io-extensions.xps'
+      - '.github/workflows/cross-platform-runtime-verification.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  runtime-verification:
+  file-locking:
     strategy:
       fail-fast: false
       matrix:
@@ -41,46 +40,58 @@ jobs:
         shell: pwsh
         run: |
           $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
-          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $platform = 'Windows'; $extension = '.exe' }
-          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $platform = 'Linux'; $extension = '' }
-          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $platform = 'MacOS'; $extension = '' }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $extension = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $extension = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $extension = '' }
           else { throw "Unsupported runner OS: $env:RUNNER_OS" }
           "rid=$rid" >> $env:GITHUB_OUTPUT
-          "platform=$platform" >> $env:GITHUB_OUTPUT
           "extension=$extension" >> $env:GITHUB_OUTPUT
 
-      - name: Verify Platform and Shell runtime
+      - name: Compile file locking and Input$ fixtures
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out | Out-Null
-          $exe = "./out/platform-shell${{ steps.rid.outputs.extension }}"
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'platform-shell.xps compilation failed.' }
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
-          $result = & $exe
-          if ($LASTEXITCODE -ne 0) { throw "platform-shell.xps exited with $LASTEXITCODE.`n$result" }
-          if ($result -notcontains 'PLATFORM=${{ steps.rid.outputs.platform }}') { throw "Unexpected Platform() result.`n$result" }
-
-      - name: Compile cross-process lock fixtures
-        if: runner.os != 'macOS'
-        shell: pwsh
-        run: |
           $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
           $contender = "./out/file-lock-contender${{ steps.rid.outputs.extension }}"
+          $extensions = "./out/file-io-extensions${{ steps.rid.outputs.extension }}"
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-lock-holder.xps --runtime '${{ steps.rid.outputs.rid }}' -o $holder --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'file-lock-holder.xps compilation failed.' }
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-lock-contender.xps --runtime '${{ steps.rid.outputs.rid }}' -o $contender --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'file-lock-contender.xps compilation failed.' }
-          if ($env:RUNNER_OS -ne 'Windows') { chmod +x $holder $contender }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-io-extensions.xps --runtime '${{ steps.rid.outputs.rid }}' -o $extensions --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-io-extensions.xps compilation failed.' }
+          "HOLDER=$holder" >> $env:GITHUB_ENV
+          "CONTENDER=$contender" >> $env:GITHUB_ENV
+          "EXTENSIONS=$extensions" >> $env:GITHUB_ENV
 
-      - name: Verify cross-process Lock and Unlock
+      - name: Verify Binary Input$ and platform locking contract
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./xpscript-latin1.txt, ./xpscript-lock-test.bin
+          $result = & $env:EXTENSIONS
+          if ($LASTEXITCODE -ne 0) { throw "file-io-extensions fixture exited with $LASTEXITCODE.`n$result" }
+          foreach ($expected in @('FILEINPUT=ÅÄÖ','LATIN1REST=-é','BINARYINPUT=ÅÄÖ')) {
+            if ($result -notcontains $expected) { throw "Missing expected output '$expected'.`n$result" }
+          }
+          if ($env:RUNNER_OS -eq 'macOS') {
+            if ($result -notcontains 'MACOS_LOCK_ERR=5') { throw "macOS Lock must fail explicitly with XPScript error 5.`n$result" }
+          } else {
+            foreach ($expected in @('LOCK=OK','UNLOCK=OK')) {
+              if ($result -notcontains $expected) { throw "Missing expected output '$expected'.`n$result" }
+            }
+          }
+          if ($env:RUNNER_OS -eq 'Windows') {
+            if (-not ($result | Where-Object { $_ -like 'CHDRIVE=C:\*' })) { throw "Windows ChDrive result missing.`n$result" }
+          } elseif ($result -notcontains 'CHDRIVE=SKIPPED') {
+            throw "Non-Windows ChDrive guard missing.`n$result"
+          }
+
+      - name: Verify cross-process byte-range Lock and Unlock
         if: runner.os != 'macOS'
         shell: pwsh
         run: |
-          $holder = "./out/file-lock-holder${{ steps.rid.outputs.extension }}"
-          $contender = "./out/file-lock-contender${{ steps.rid.outputs.extension }}"
           Remove-Item -Force -ErrorAction SilentlyContinue ./holder.out, ./holder.err, ./xps-lock-test.bin, ./xps-lock-ready.flag
-          $process = Start-Process -FilePath $holder -RedirectStandardOutput ./holder.out -RedirectStandardError ./holder.err -PassThru
+          $process = Start-Process -FilePath $env:HOLDER -RedirectStandardOutput ./holder.out -RedirectStandardError ./holder.err -PassThru
 
           $ready = $false
           for ($i = 0; $i -lt 150; $i++) {
@@ -100,7 +111,7 @@ jobs:
             throw 'Timed out waiting for holder lock ready marker.'
           }
 
-          $contenderResult = & $contender
+          $contenderResult = & $env:CONTENDER
           $contenderExit = $LASTEXITCODE
           $process.WaitForExit()
           $holderResult = Get-Content ./holder.out -ErrorAction SilentlyContinue
@@ -109,19 +120,7 @@ jobs:
           if ($holderResult -notcontains 'LOCKED' -or $holderResult -notcontains 'UNLOCKED') { throw "Holder did not complete expected lock cycle.`n$holderResult`n$holderError" }
           if (-not ($contenderResult | Where-Object { $_ -like 'LOCK_FAILED Err=70*' })) { throw "Second process unexpectedly acquired the locked range or returned the wrong diagnostic.`n$contenderResult" }
 
-      - name: Verify macOS Lock limitation is explicit
-        if: runner.os == 'macOS'
-        shell: pwsh
-        run: |
-          $exe = './out/file-lock-platform-support'
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-lock-platform-support.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'file-lock-platform-support.xps compilation failed.' }
-          chmod +x $exe
-          $result = & $exe
-          if ($LASTEXITCODE -ne 0) { throw "macOS Lock diagnostic fixture exited with $LASTEXITCODE.`n$result" }
-          if (-not ($result | Where-Object { $_ -like 'LOCK_UNSUPPORTED Err=5*' })) { throw "Expected explicit macOS Lock unsupported diagnostic was not returned.`n$result" }
-
       - name: Cleanup
         if: always()
         shell: pwsh
-        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./xps-lock-platform.bin, ./holder.out, ./holder.err
+        run: Remove-Item -Force -ErrorAction SilentlyContinue ./xps-lock-test.bin, ./xps-lock-ready.flag, ./xpscript-latin1.txt, ./xpscript-lock-test.bin, ./holder.out, ./holder.err

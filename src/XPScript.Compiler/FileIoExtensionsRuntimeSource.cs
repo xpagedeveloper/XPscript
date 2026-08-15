@@ -39,7 +39,7 @@ internal static class XPScriptFileIO
             if (read <= 0) throw new EndOfStreamException("Input$ requested more characters than remain in the file.");
             readTotal += read;
         }
-        return Encoding.Default.GetString(bytes);
+        return XPScriptFileSystemRuntime.LegacyEncoding.GetString(bytes);
     }
 
     public static void LockFile(object? fileNumberValue)
@@ -119,6 +119,10 @@ internal static class XPScriptFileIO
 
     private static void LockRegion(FileStream stream, long offset, long length)
     {
+        if (OperatingSystem.IsMacOS())
+            throw new XPScriptRuntimeException(5,
+                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
+
         try
         {
             stream.Lock(offset, length);
@@ -142,6 +146,10 @@ internal static class XPScriptFileIO
 
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
+        if (OperatingSystem.IsMacOS())
+            throw new XPScriptRuntimeException(5,
+                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
+
         try
         {
             stream.Unlock(offset, length);
@@ -165,9 +173,6 @@ internal static class XPScriptFileIO
 
     private static object GetOpenState(int number)
     {
-        // CoreCompatibility lowers normal Input/Output/Append/Binary/Random Open
-        // statements to LSFileRuntime. Check that store first so Lock/Unlock share
-        // the exact FileStream used by Put/Get/Seek and normal file operations.
         var state = TryGetDictionaryState(typeof(LSFileRuntime), number);
         if (state is not null) return state;
 

@@ -5,6 +5,7 @@ Sub Main()
     Dim part As String
     Dim line As String
     Dim lockPayload As String
+    Dim lockErr As Integer
 
     If Command = "hold-lock" Then
         f = FreeFile
@@ -16,11 +17,11 @@ Sub Main()
         Sleep 4
         Unlock #f, 1 To 3
         Close #f
-        Kill "xpscript-lock-test.bin"
+        Print "LOCKRELEASED"
         Exit Sub
     End If
 
-    ' Explicit Latin-1 round trip.
+    ' Explicit Latin-1 text round trip.
     f = FreeFile
     Open "xpscript-latin1.txt" For Output As #f Charset "latin1"
     Print #f, "ÅÄÖ-é"
@@ -34,17 +35,35 @@ Sub Main()
     Print "LATIN1REST=" & line
     Close #f
 
-    ' Lock/Unlock operate on the underlying OS file handle.
+    ' Binary Input$ must use the same defined XPScript Latin-1 byte mapping.
     f = FreeFile
     Open "xpscript-latin1.txt" For Binary As #f
-    Lock #f, 1 To 3
-    Print "LOCK=OK"
-    Unlock #f, 1 To 3
-    Print "UNLOCK=OK"
+    part = Input$(3, #f)
+    Print "BINARYINPUT=" & part
     Close #f
 
-    ChDrive "C"
-    Print "CHDRIVE=" & Left(CurDir, 3)
+    f = FreeFile
+    Open "xpscript-latin1.txt" For Binary As #f
+    If Platform = "MacOS" Then
+        On Error Resume Next
+        Lock #f, 1 To 3
+        lockErr = Err
+        On Error GoTo 0
+        Print "MACOS_LOCK_ERR=" & CStr(lockErr)
+    Else
+        Lock #f, 1 To 3
+        Print "LOCK=OK"
+        Unlock #f, 1 To 3
+        Print "UNLOCK=OK"
+    End If
+    Close #f
+
+    If Platform = "Windows" Then
+        ChDrive "C"
+        Print "CHDRIVE=" & Left(CurDir, 3)
+    Else
+        Print "CHDRIVE=SKIPPED"
+    End If
 
     Kill "xpscript-latin1.txt"
 End Sub
