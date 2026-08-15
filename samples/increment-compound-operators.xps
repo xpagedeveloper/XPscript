@@ -141,6 +141,18 @@ Sub Main()
         Error 9916, "String += differs from long form"
     End If
 
+    text = "tokens: ++ -- += -= *= /= \= &="
+    If text <> "tokens: ++ -- += -= *= /= \= &=" Then
+        Error 9928, "operator tokens inside String literals were reinterpreted"
+    End If
+    ' This comment intentionally contains counter++ ++counter += -= *= /= \= &= and must be ignored.
+
+    counter = -5
+    counter = counter + +2
+    If counter <> -3 Then
+        Error 9929, "unary plus/minus behavior changed"
+    End If
+
     counter = 10
     counter += CountedValue()
     If counter <> 15 Then
