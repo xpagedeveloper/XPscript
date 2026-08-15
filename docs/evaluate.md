@@ -9,9 +9,22 @@
 ```xpscript
 result = Evaluate(sourceText)
 result = Evaluate(sourceText, callvar)
+result = Evaluate(sourceText, value1, value2, ...)
 ```
 
 `sourceText` is XPScript source text. `callvar` is the only explicit value bridge from the caller into the evaluator.
+
+With exactly one supplied value, existing behavior is unchanged and `callvar` is that value directly.
+
+With two or more supplied values, XPScript packs the values into one zero-based `callvar` array in caller argument order. There is no separate fixed value-count limit. The effective limit is determined by the normal Evaluate snapshot budgets: nesting depth 64, 100,000 total collection elements and 16 MiB estimated payload.
+
+Example:
+
+```xpscript
+result = Evaluate("Return callvar(0) + callvar(7)", 1, 2, 3, 4, 5, 6, 7, 8)
+```
+
+Inside that Evaluate call, `LBound(callvar)` is 0 and `UBound(callvar)` is 7.
 
 ### Evaluate limitations
 
@@ -28,8 +41,6 @@ result = Evaluate(sourceText, callvar)
 - String values and List tags count against the payload budget using their UTF-8 byte length,
 - exceeding a snapshot limit raises XPScript error 5,
 - `Evaluate` is not an operating-system/process security sandbox and must not be treated as one for arbitrary hostile code.
-
-The detailed resource-budget rules are repeated under [Collection limits](#collection-limits), and the supported function surface is described under [Function availability](#function-availability).
 
 ## Return value
 
@@ -57,6 +68,17 @@ Print CStr(result)
 ```
 
 `callvar` is read-only inside the evaluator. Evaluated source cannot assign to it or declare another local named `callvar`.
+
+## Passing multiple values with callvar
+
+When two or more values are supplied directly to Evaluate, they become a zero-based `callvar` array:
+
+```xpscript
+Dim result As Variant
+result = Evaluate("Return callvar(0) + callvar(1) + callvar(2)", 10, 20, 30)
+```
+
+The same snapshot budget applies to the complete generated array and all nested values. The number of supplied values is therefore limited by the array snapshot budgets rather than by a fixed argument count.
 
 ## Passing positional values with an array
 
@@ -89,7 +111,7 @@ Lists are copied into an evaluator-private read-only snapshot. Nested Lists and 
 
 ## Isolation model
 
-The evaluator does not implicitly inherit the caller's local variables, module globals or static variables. Only the optional `callvar` value is transferred into the evaluator.
+The evaluator does not implicitly inherit the caller's local variables, module globals or static variables. Only explicit callvar input is transferred into the evaluator.
 
 Mutable arrays and Lists passed through `callvar` are defensively copied. Arbitrary mutable object references are rejected rather than shared by reference.
 
@@ -103,7 +125,7 @@ To prevent unbounded memory and CPU use while copying `callvar`, each input or r
 - maximum collection elements: **100,000**
 - maximum estimated payload: **16 MiB / 16,777,216 bytes**
 
-The element budget is cumulative across nested arrays/Lists in one snapshot operation. String values and List tags count toward the payload budget using their UTF-8 byte length; scalar values use the runtime's conservative size estimate. Exceeding a limit raises XPScript error 5 before the evaluator is allowed to continue with an unbounded snapshot.
+The element budget is cumulative across the complete generated multi-value callvar array and all nested arrays/Lists in one snapshot operation. String values and List tags count toward the payload budget using their UTF-8 byte length; scalar values use the runtime's conservative size estimate. Exceeding a limit raises XPScript error 5 before the evaluator is allowed to continue with an unbounded snapshot.
 
 These are runtime safety limits, not a guarantee that `Evaluate` is a complete security sandbox.
 
@@ -124,13 +146,7 @@ Do not depend on an error message containing a secret or input value for trouble
 
 ## Function availability
 
-`Evaluate` supports a deliberately bounded subset of side-effect-free XPScript functions. Current groups include:
-
-- conversions such as `CStr`, `CInt`, `CLng`, `CDbl`, `CDate`
-- inspection such as `TypeName`, `DataType`, `IsArray`, `IsDate`, `LBound`, `UBound`
-- string functions such as `Len`, `Left`, `Right`, `Mid`, `Instr`, `Replace`, `Trim`
-- math functions such as `Abs`, `Round`, `Sqr`, `Sin`, `Cos`, `Log`
-- date functions such as `Year`, `Month`, `DateAdd`, `DateDiff`, `DatePart`
+`Evaluate` supports a deliberately bounded subset of side-effect-free XPScript functions. Current groups include conversions, inspection, string, math and date functions.
 
 A known function called with the wrong number of arguments reports an argument-count diagnostic. A function that is not exposed inside `Evaluate` reports that it is unavailable.
 
@@ -145,34 +161,3 @@ For explicit concatenation, prefer `&` when string concatenation is the intended
 Use `Evaluate` for controlled expressions or small pieces of XPScript source whose origin and purpose are understood by the host application.
 
 `Evaluate` is **not** intended to be a security boundary for arbitrary hostile code. Snapshot isolation, resource budgets and diagnostic sanitization reduce several risks, but they do not replace process isolation or operating-system sandboxing.
-
-Recommended practices:
-
-1. Prefer application-defined expression templates over arbitrary user-authored source.
-2. Pass only the minimum required values through `callvar`.
-3. Do not pass credentials unless the evaluated expression genuinely needs them.
-4. Prefer a List with explicitly named parameters for complex input.
-5. Treat evaluator errors as diagnostics, not as a channel for returning data.
-6. Keep resource limits enabled.
-7. If untrusted users must execute programmable code, run that workload in a separately isolated process/container with OS-level restrictions.
-
-## Samples used by this documentation
-
-The documentation intentionally uses source fixtures that already exist under `samples/`:
-
-- [samples/evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) — basic evaluation and explicit Return
-- [samples/evaluate-callvar.xps](../samples/evaluate-callvar.xps) — scalar/array/List input through callvar
-- [samples/evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) — TypeName, LBound and UBound
-- [samples/evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) — supported side-effect-free functions
-- [samples/evaluate-nested-collections.xps](../samples/evaluate-nested-collections.xps) — nested List/array snapshots
-- [samples/evaluate-no-return.xps](../samples/evaluate-no-return.xps) — no-Return behavior
-- [samples/evaluate-callvar-readonly-error.xps](../samples/evaluate-callvar-readonly-error.xps) — read-only callvar enforcement
-- [samples/evaluate-scope-error.xps](../samples/evaluate-scope-error.xps) — caller-scope isolation
-- [samples/evaluate-coercion-diagnostics.xps](../samples/evaluate-coercion-diagnostics.xps) — coercion/error semantics
-- [samples/evaluate-function-arity-errors.xps](../samples/evaluate-function-arity-errors.xps) — wrong-arity diagnostics
-- [samples/evaluate-collection-element-budget.xps](../samples/evaluate-collection-element-budget.xps) — element budget
-- [samples/evaluate-collection-element-boundary.xps](../samples/evaluate-collection-element-boundary.xps) — exact element-budget boundary
-- [samples/evaluate-collection-payload-budget.xps](../samples/evaluate-collection-payload-budget.xps) — payload budget
-- [samples/evaluate-collection-payload-boundary.xps](../samples/evaluate-collection-payload-boundary.xps) — exact payload-budget boundary
-- [samples/evaluate-diagnostic-sanitization.xps](../samples/evaluate-diagnostic-sanitization.xps) — secret-safe diagnostics
-- [samples/evaluate-diagnostic-edge-cases.xps](../samples/evaluate-diagnostic-edge-cases.xps) — diagnostic sanitization limits
