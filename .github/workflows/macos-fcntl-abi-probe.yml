@@ -1,0 +1,60 @@
+name: macOS fcntl ABI Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
+      - '.github/workflows/macos-fcntl-abi-probe.yml'
+      - '.github/workflows/cross-platform-runtime-verification.yml'
+      - 'todo/cross-platform-runtime-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify Darwin fcntl record-lock ABI
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/xps-fcntl-probe.c" <<'EOF'
+          #include <fcntl.h>
+          #include <stddef.h>
+          #include <stdio.h>
+          #include <unistd.h>
+
+          int main(void) {
+              printf("SIZE=%zu\n", sizeof(struct flock));
+              printf("START=%zu\n", offsetof(struct flock, l_start));
+              printf("LEN=%zu\n", offsetof(struct flock, l_len));
+              printf("PID=%zu\n", offsetof(struct flock, l_pid));
+              printf("TYPE=%zu\n", offsetof(struct flock, l_type));
+              printf("WHENCE=%zu\n", offsetof(struct flock, l_whence));
+              printf("F_SETLK=%d\n", F_SETLK);
+              printf("F_WRLCK=%d\n", F_WRLCK);
+              printf("F_UNLCK=%d\n", F_UNLCK);
+              printf("SEEK_SET=%d\n", SEEK_SET);
+              return 0;
+          }
+          EOF
+          clang -Wall -Wextra -Werror "$RUNNER_TEMP/xps-fcntl-probe.c" -o "$RUNNER_TEMP/xps-fcntl-probe"
+          output="$($RUNNER_TEMP/xps-fcntl-probe)"
+          printf '%s\n' "$output"
+          grep -qx 'SIZE=24' <<< "$output"
+          grep -qx 'START=0' <<< "$output"
+          grep -qx 'LEN=8' <<< "$output"
+          grep -qx 'PID=16' <<< "$output"
+          grep -qx 'TYPE=20' <<< "$output"
+          grep -qx 'WHENCE=22' <<< "$output"
+          grep -qx 'F_SETLK=8' <<< "$output"
+          grep -qx 'F_WRLCK=3' <<< "$output"
+          grep -qx 'F_UNLCK=2' <<< "$output"
+          grep -qx 'SEEK_SET=0' <<< "$output"
