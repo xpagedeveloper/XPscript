@@ -96,11 +96,11 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] arbitrary mutable objects are rejected rather than bridged by reference; runtime fixture: `samples/evaluate-object-callvar-rejection.xps`
 - [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work; exact nesting-boundary runtime coverage remains open
 - [x] collection snapshots enforce a total budget of 100000 collection elements by rejecting an over-budget fixture with controlled XPScript error 5
-- [x] collection snapshots enforce a 16 MiB estimated payload budget by rejecting an over-budget fixture with controlled XPScript error 5
+- [x] collection snapshots enforce a 16 MiB estimated payload budget by rejecting an over-budget fixture with controlled XPScript error 5; exact boundary source: `samples/evaluate-collection-payload-boundary.xps`
 - [>] XPScript array element counts are checked before allocating the snapshot array and the exact 100000/100001 in-boundary/out-of-boundary pair is verified by `samples/evaluate-collection-element-boundary.xps`; equivalent exact CLR-array boundary coverage remains open
 - [>] List entries are budgeted incrementally before copying and are not first materialized into an unbounded temporary array; dedicated stress verification remains open
 - [x] budget violations produce controlled XPScript error 5 diagnostics instead of continuing snapshot allocation; sources: `samples/evaluate-collection-element-budget.xps`, `samples/evaluate-collection-payload-budget.xps`
-- [>] exact element-budget boundary behavior is runtime-verified at 100000 accepted / 100001 rejected; exact 16 MiB payload maximum/first-rejected boundary remains open
+- [x] exact budget boundary behavior is runtime-verified: 100000 elements accepted / 100001 rejected and 16777216 payload bytes accepted / 16777217 rejected; sources: `samples/evaluate-collection-element-boundary.xps`, `samples/evaluate-collection-payload-boundary.xps`
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
 - [ ] add concurrent-thread isolation tests
 - [x] exceptions crossing the verified Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`
