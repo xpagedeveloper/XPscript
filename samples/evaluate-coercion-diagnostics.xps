@@ -30,5 +30,12 @@ Sub Main()
     End If
 
     On Error GoTo 0
+    On Error Resume Next
+    result = Evaluate("Return CByte(300)")
+    If Err <> 6 Then
+        Error 9106, "Evaluate overflow should use error 6, got " & CStr(Err)
+    End If
+
+    On Error GoTo 0
     Print "Evaluate coercion/diagnostics semantics OK"
 End Sub
