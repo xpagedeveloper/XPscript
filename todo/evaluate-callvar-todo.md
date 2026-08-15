@@ -89,7 +89,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 ## Isolation and security
 
 - [x] no shared static callvar dictionary; every verified invocation owns its evaluator instance
-- [>] `Dim callvar` is rejected by the evaluator; dedicated runtime fixture remains to be added
+- [x] `Dim callvar` is rejected by the evaluator; runtime-negative: `samples/evaluate-dim-callvar-error.xps`
 - [x] assignment to `callvar` is rejected; source: `samples/evaluate-callvar-readonly-error.xps`
 - [x] caller local variables remain inaccessible unless explicitly passed; source: `samples/evaluate-scope-error.xps`
 - [x] arrays/Lists are defensive-copied before execution for the verified callvar/nested collection paths
