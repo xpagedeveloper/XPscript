@@ -168,7 +168,7 @@ internal sealed class ParameterPassingPostProcessor
                 if (IsAssignableArgument(argument))
                 {
                     var setterName = "__xps_eval_value_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    bindings.Add($"XPScriptEvaluateArgument.ByRef({argument}, {setterName} => {argument} = (dynamic){setterName})");
+                    bindings.Add($"XPScriptEvaluateArgument.ByRef({argument}, {setterName} => {argument} = {setterName})");
                 }
                 else
                 {
