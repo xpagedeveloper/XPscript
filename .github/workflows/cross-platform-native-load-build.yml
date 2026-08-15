@@ -13,7 +13,6 @@ on:
       - 'samples/platform-native-library.xps'
       - 'samples/native-architecture-assets.xps'
       - 'samples/native-loader-diagnostics.xps'
-      - 'todo/cross-platform-runtime-todo.md'
       - 'docs/platform-native.md'
   workflow_dispatch:
 
