@@ -73,6 +73,18 @@ Parameterless native functions are unaffected.
 
 See the negative regression source `samples/native-byref-error.xps`.
 
+### Calling convention policy
+
+The portable `Declare` surface uses the platform/runtime default unmanaged calling convention. XPScript does not pretend that a non-default convention is portable across operating systems. A native API that requires a non-default calling convention must use a separate platform-specific declaration rather than silently changing ABI rules based on the selected library name.
+
+If a future XPScript calling-convention keyword is added, it must be explicit and compile-time validated for the selected target RID. Until then, APIs that cannot be represented safely by the default convention are intentionally outside the single portable declaration surface.
+
+### Platform-specific signature differences
+
+`WindowsLib`/`LinuxLib`/`MacOSLib` and their architecture-specific forms select **library and exported entry-point identity only**. They do not change parameter or return types.
+
+If the native signature itself differs by platform or architecture, define separate `Declare` statements with the correct signatures and branch at the XPScript level with `Platform()` (and, where necessary, architecture-specific application structure). This keeps every emitted P/Invoke signature statically correct instead of trying to mutate an ABI signature at runtime.
+
 ## OS-specific libraries
 
 One declaration can choose different native libraries for each operating system.
@@ -159,7 +171,7 @@ Generated wrappers translate common loader failures into clearer XPScript runtim
 - entry point not found
 - bad image / wrong architecture
 
-The diagnostics include the library and entry-point identity without requiring callers to understand raw P/Invoke exception types.
+The diagnostics include the library and entry-point identity without requiring callers to understand raw P/Invoke exception types. Application-local errors explain that the packaged file is searched beside the generated application, while bare system names remain operating-system-loader resolved.
 
 Native libraries execute unmanaged code with the same OS privileges as the XPScript process. Incorrect signatures can still crash the process; only trusted libraries with verified declarations should be used.
 
