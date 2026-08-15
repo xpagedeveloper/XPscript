@@ -133,12 +133,13 @@ internal sealed class ParameterPassingPostProcessor
                 continue;
             }
 
-            var receiver = FindSimpleMemberReceiver(generated, start);
+            var receiver = FindMemberReceiver(generated, start, out var receiverStart);
             var callTarget = identifier;
             if (receiver.Length > 0)
             {
-                if (output.Length >= receiver.Length)
-                    output.Length -= receiver.Length;
+                var emittedReceiverLength = start - receiverStart;
+                if (output.Length >= emittedReceiverLength)
+                    output.Length -= emittedReceiverLength;
                 callTarget = receiver + identifier;
             }
 
@@ -277,15 +278,43 @@ internal sealed class ParameterPassingPostProcessor
         return true;
     }
 
-    private static string FindSimpleMemberReceiver(string generated, int identifierStart)
+    private static string FindMemberReceiver(string generated, int identifierStart, out int receiverStart)
     {
+        receiverStart = identifierStart;
         if (identifierStart < 2 || generated[identifierStart - 1] != '.') return "";
+
         var cursor = identifierStart - 2;
+        if (generated[cursor] == ')')
+        {
+            var open = FindMatchingOpenParen(generated, cursor);
+            if (open >= 0)
+            {
+                receiverStart = open;
+                return generated[open..identifierStart];
+            }
+        }
+
+        if (!IsIdentifierPart(generated[cursor])) return "";
         while (cursor >= 0 && (IsIdentifierPart(generated[cursor]) || generated[cursor] == '.')) cursor--;
-        var receiver = generated[(cursor + 1)..identifierStart];
-        return Regex.IsMatch(receiver, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.$", RegexOptions.CultureInvariant)
-            ? receiver
-            : "";
+        receiverStart = cursor + 1;
+        var receiver = generated[receiverStart..identifierStart];
+        if (!Regex.IsMatch(receiver, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.$", RegexOptions.CultureInvariant))
+        {
+            receiverStart = identifierStart;
+            return "";
+        }
+        return receiver;
+    }
+
+    private static int FindMatchingOpenParen(string value, int closeIndex)
+    {
+        var depth = 0;
+        for (var i = closeIndex; i >= 0; i--)
+        {
+            if (value[i] == ')') depth++;
+            else if (value[i] == '(' && --depth == 0) return i;
+        }
+        return -1;
     }
 
     private static bool IsDirectRefArgument(string value) =>
