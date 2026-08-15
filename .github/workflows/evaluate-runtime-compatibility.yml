@@ -95,5 +95,6 @@ jobs:
           }
 
           Assert-EvaluateRuntimeFailure 'evaluate-callvar-readonly-error'
+          Assert-EvaluateRuntimeFailure 'evaluate-dim-callvar-error'
           Assert-EvaluateRuntimeFailure 'evaluate-scope-error'
           exit 0
