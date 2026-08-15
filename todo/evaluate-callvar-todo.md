@@ -25,7 +25,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] `callvar` is the only explicit caller-provided variable bridge into the isolated Evaluate scope
 - [x] `callvar` is restricted/read-only inside Evaluate so evaluated code cannot overwrite the caller's variable; runtime-negative: `samples/evaluate-callvar-readonly-error.xps`
 - [x] evaluated code has no implicit access to caller locals; runtime-negative: `samples/evaluate-scope-error.xps`
-- [>] module globals, statics, compiler internals and unrelated state are not bridged by the evaluator implementation; dedicated adversarial coverage remains to be added
+- [x] module globals and Static caller locals are not bridged into Evaluate; compiler internals and unrelated state have no evaluator bridge by construction; runtime fixture: `samples/evaluate-global-static-isolation.xps`
 - [x] mutable XPScript arrays and Lists are defensive-copied before evaluation for the verified scalar/array/List and nested-collection paths
 - [x] nested mutable arrays/Lists reachable from callvar are recursively snapshotted and arbitrary mutable object types are rejected instead of being shared into Evaluate; runtime coverage: `samples/evaluate-nested-collections.xps`, `samples/evaluate-object-callvar-rejection.xps`
 
