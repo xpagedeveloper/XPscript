@@ -16,6 +16,19 @@ internal static class LSDynamicIndexRuntime
 
         return LSArrayRuntime.Get(value, indices);
     }
+
+    public static void Set(object? value, object? newValue, params object?[] indices)
+    {
+        if (value is ILSList list)
+        {
+            if (indices.Length != 1)
+                throw new IndexOutOfRangeException("List access requires exactly one tag.");
+            list.SetValue(indices[0], newValue);
+            return;
+        }
+
+        LSArrayRuntime.Set(value, newValue, indices);
+    }
 }
 """;
 }
