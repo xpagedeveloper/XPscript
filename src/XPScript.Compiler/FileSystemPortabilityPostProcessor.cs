@@ -40,17 +40,14 @@ internal sealed class FileSystemPortabilityPostProcessor
             """
     public static object? Evaluate(object? sourceText) => Evaluate(sourceText, null);
 
-    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1) =>
-        Evaluate(sourceText, PackCallvars(callvar0, callvar1));
-
-    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2) =>
-        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2));
-
-    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3) =>
-        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2, callvar3));
-
-    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, object? callvar2, object? callvar3, object? callvar4) =>
-        Evaluate(sourceText, PackCallvars(callvar0, callvar1, callvar2, callvar3, callvar4));
+    public static object? Evaluate(object? sourceText, object? callvar0, object? callvar1, params object?[] additionalCallvars)
+    {
+        var values = new object?[additionalCallvars.Length + 2];
+        values[0] = callvar0;
+        values[1] = callvar1;
+        Array.Copy(additionalCallvars, 0, values, 2, additionalCallvars.Length);
+        return Evaluate(sourceText, PackCallvars(values));
+    }
 
     private static LSArray PackCallvars(params object?[] values)
     {
