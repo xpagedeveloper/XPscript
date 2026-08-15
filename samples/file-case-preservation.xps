@@ -1,0 +1,21 @@
+Option Declare
+
+Sub Main()
+    Dim fileNumber As Integer
+    Dim found As String
+
+    MkDir "xps-case-preservation"
+    fileNumber = FreeFile
+    Open "xps-case-preservation/MiXeD-Case-Name.TXT" For Output As #fileNumber
+    Print #fileNumber, "case"
+    Close #fileNumber
+
+    found = Dir("xps-case-preservation/*")
+    If found <> "MiXeD-Case-Name.TXT" Then
+        Error 9210, "Filesystem enumeration did not preserve the stored file name casing."
+    End If
+
+    Kill "xps-case-preservation/MiXeD-Case-Name.TXT"
+    RmDir "xps-case-preservation"
+    Print "CASE_PRESERVATION=OK"
+End Sub
