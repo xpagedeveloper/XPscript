@@ -1,0 +1,10 @@
+Sub Main()
+    On Error GoTo Handler
+
+    If True Then Error 9711, "single-line error statement"
+    Print "ERROR-IF-BAD"
+    Exit Sub
+
+Handler:
+    If Err = 9711 Then Print "ERROR-IF=OK" Else Print "ERROR-IF-BAD"
+End Sub
