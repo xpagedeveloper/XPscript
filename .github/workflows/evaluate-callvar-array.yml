@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
       - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptEvaluatePreprocessor.cs'
       - 'samples/evaluate-callvar-array*.xps'
       - 'todo/evaluate-multiple-callvar-todo.md'
       - 'todo/done/evaluate-multiple-callvar-todo.md'
@@ -17,6 +18,7 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
       - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptEvaluatePreprocessor.cs'
       - 'samples/evaluate-callvar-array*.xps'
       - 'todo/evaluate-multiple-callvar-todo.md'
       - 'todo/done/evaluate-multiple-callvar-todo.md'
@@ -64,3 +66,33 @@ jobs:
           if ($output -notcontains 'FIVE=15') { throw 'Five-value callvar array result was incorrect.' }
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
           if ($output -notcontains 'BOUNDS=2') { throw 'Callvar LSArray bounds were incorrect.' }
+
+      - name: Reject more than five supplied values
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/evaluate-callvar-array | Out-Null
+          $outputPath = if ($IsWindows) { './out/evaluate-callvar-array/too-many.exe' } else { './out/evaluate-callvar-array/too-many' }
+          $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-callvar-too-many-error.xps -o $outputPath --framework-dependent --result-format json
+          $compilerExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+
+          if ($compilerExitCode -eq 0) {
+            throw 'Expected Evaluate call with six supplied values to fail compilation.'
+          }
+
+          $result = $resultText | ConvertFrom-Json
+          if ($result.result -ne 'error' -or $result.errors.Count -lt 1) {
+            throw 'Expected structured compiler error for Evaluate argument limit.'
+          }
+
+          $diagnostics = $result.errors | ConvertTo-Json -Depth 8
+          Write-Host $diagnostics
+          if ($diagnostics -notmatch '(?i)zero through five supplied values') {
+            throw 'Expected supported Evaluate value-count range in diagnostic.'
+          }
+          if ($diagnostics -notmatch '(?i)received 6 supplied values') {
+            throw 'Expected actual Evaluate supplied-value count in diagnostic.'
+          }
+          if ($diagnostics -notmatch '(?i)source line 3') {
+            throw 'Expected source-mapped line 3 in Evaluate argument-limit diagnostic.'
+          }
