@@ -16,11 +16,11 @@ Sub Main()
         Sleep 4
         Unlock #f, 1 To 3
         Close #f
-        Kill "xpscript-lock-test.bin"
+        Print "LOCKRELEASED"
         Exit Sub
     End If
 
-    ' Explicit Latin-1 round trip.
+    ' Explicit Latin-1 text round trip.
     f = FreeFile
     Open "xpscript-latin1.txt" For Output As #f Charset "latin1"
     Print #f, "ÅÄÖ-é"
@@ -34,6 +34,13 @@ Sub Main()
     Print "LATIN1REST=" & line
     Close #f
 
+    ' Binary Input$ must use the same defined XPScript Latin-1 byte mapping.
+    f = FreeFile
+    Open "xpscript-latin1.txt" For Binary As #f
+    part = Input$(3, #f)
+    Print "BINARYINPUT=" & part
+    Close #f
+
     ' Lock/Unlock operate on the underlying OS file handle.
     f = FreeFile
     Open "xpscript-latin1.txt" For Binary As #f
@@ -43,8 +50,12 @@ Sub Main()
     Print "UNLOCK=OK"
     Close #f
 
-    ChDrive "C"
-    Print "CHDRIVE=" & Left(CurDir, 3)
+    If Platform = "Windows" Then
+        ChDrive "C"
+        Print "CHDRIVE=" & Left(CurDir, 3)
+    Else
+        Print "CHDRIVE=SKIPPED"
+    End If
 
     Kill "xpscript-latin1.txt"
 End Sub
