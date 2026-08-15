@@ -43,28 +43,28 @@ Status:
 
 XPScript `Declare ... Lib` must not assume that every platform uses a Windows DLL.
 
-- [>] allow platform-specific native library selection on one declaration using `WindowsLib`, `LinuxLib`, and `MacOSLib`
-- [>] allow platform-specific exported function names using `WindowsAlias`, `LinuxAlias`, and `MacOSAlias`
-- [>] selection is made from the compiler target RID, not the compiler host OS
-- [>] multiline `Declare` statements using `_` are accepted by the platform-selection preprocessor
-- [>] application-local native library paths are copied beside generated output; system library names remain OS-resolved
-- [>] local native paths are constrained to the XPScript source tree and checked for missing files, output collisions and executable overwrite
-- [>] absolute application-local native paths are rejected; project-local dependencies must use relative paths
-- [>] application-local file names are validated against target RID: `.dll` on Windows, `.so`/versioned `.so.N` on Linux, `.dylib` on macOS
-- [>] architecture-specific native libraries supported with `WindowsX64Lib`, `WindowsArm64Lib`, `LinuxX64Lib`, `LinuxArm64Lib`, `MacOSX64Lib`, `MacOSArm64Lib`
-- [>] architecture-specific entry points supported with matching `*X64Alias` and `*Arm64Alias` keywords
-- [>] native target resolution order is exact RID -> OS-specific value -> base `Lib`/`Alias`; source: `samples/native-architecture-assets.xps`
-- [>] if an OS/architecture-specific library or alias is omitted, resolution falls back through OS-specific then base `Lib`/`Alias`
-- [>] generated native calls are wrapped so missing library, missing entry point and wrong binary architecture produce explicit XPScript runtime diagnostics; source: `samples/native-loader-diagnostics.xps`
-- [>] missing-library diagnostics state that application-local libraries are searched beside the generated application while bare system names remain OS-loader resolved
+- [x] allow platform-specific native library selection on one declaration using `WindowsLib`, `LinuxLib`, and `MacOSLib`
+- [x] allow platform-specific exported function names using `WindowsAlias`, `LinuxAlias`, and `MacOSAlias`
+- [x] selection is made from the compiler target RID, not the compiler host OS
+- [x] multiline `Declare` statements using `_` are accepted by the platform-selection preprocessor
+- [x] application-local native library paths are copied beside generated output; system library names remain OS-resolved
+- [x] local native paths are constrained to the XPScript source tree and checked for missing files, output collisions and executable overwrite
+- [x] absolute application-local native paths are rejected; project-local dependencies must use relative paths
+- [x] application-local file names are validated against target RID: `.dll` on Windows, `.so`/versioned `.so.N` on Linux, `.dylib` on macOS
+- [x] architecture-specific native libraries supported with `WindowsX64Lib`, `WindowsArm64Lib`, `LinuxX64Lib`, `LinuxArm64Lib`, `MacOSX64Lib`, `MacOSArm64Lib`
+- [x] architecture-specific entry points supported with matching `*X64Alias` and `*Arm64Alias` keywords
+- [x] native target resolution order is exact RID -> OS-specific value -> base `Lib`/`Alias`; verified for all six RIDs by `NativeTargetResolutionProbe`
+- [x] if an OS/architecture-specific library or alias is omitted, resolution falls back through OS-specific then base `Lib`/`Alias`; verified by `NativeTargetResolutionProbe`
+- [x] generated native calls are wrapped so missing library, missing entry point and wrong binary architecture produce explicit XPScript runtime diagnostics; source: `samples/native-loader-diagnostics.xps`
+- [x] missing-library diagnostics state that application-local libraries are searched beside the generated application while bare system names remain OS-loader resolved
 - [x] validate `.dll` P/Invoke on Windows x64; `kernel32.dll` / `GetCurrentProcessId` verified by `Cross Platform Native Loader Compatibility`
-- [ ] validate `.dll` P/Invoke on Windows ARM64 on a real ARM64 runner
+- [x] validate `.dll` P/Invoke on Windows ARM64 on a real `windows-11-arm` runner
 - [x] validate `.so` P/Invoke on Linux x64; `libc.so.6` / `getpid` verified by `Cross Platform Native Loader Compatibility`
-- [ ] validate `.so` P/Invoke on Linux ARM64 on a real ARM64 runner
-- [ ] validate `.dylib` P/Invoke on macOS x64 on a real x64 runner
+- [x] validate `.so` P/Invoke on Linux ARM64 on a real `ubuntu-24.04-arm` runner
+- [x] validate `.dylib` P/Invoke on macOS x64 on a real `macos-15-intel` runner
 - [x] validate `.dylib` P/Invoke on macOS ARM64; `libSystem.B.dylib` / `getpid` verified by `Cross Platform Native Loader Compatibility`
-- [ ] define platform-specific calling-convention support where required
-- [ ] define behavior when the native function signature itself differs by platform; likely require separate declarations plus `Platform()` branching
+- [x] calling-convention policy is defined: portable `Declare` uses the platform/runtime default unmanaged calling convention; APIs requiring non-default ABI conventions require a separate platform-specific declaration until an explicit validated calling-convention language feature exists
+- [x] when a native function signature differs by platform/architecture, use separate declarations with statically correct signatures and select them with `Platform()` rather than mutating parameter/return ABI from one declaration
 
 Example target syntax:
 
@@ -171,9 +171,11 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [ ] compile the same portable `.xps` source for all supported RIDs
 - [ ] execute the matching artifact on each target OS and architecture
 - [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
-- [ ] run native library loader tests on each OS and architecture
+- [x] run native library loader tests on each OS and architecture; `Cross Platform Native Loader Compatibility` uses matching real runners for all six supported RIDs
 - [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
 - [ ] run path/permission/symlink/file-sharing negative tests
 - [ ] run security tests for Shell, external libraries and file paths
 
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
+
+`Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes the matching native system-library call plus loader-diagnostic fixture on Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
