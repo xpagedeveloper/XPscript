@@ -80,7 +80,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] conversion/type mismatch maps to XPScript error 13
 - [x] divide-by-zero maps to XPScript error 11
 - [x] overflow maps to XPScript error 6; runtime assertion: `samples/evaluate-coercion-diagnostics.xps`
-- [>] permission/access failures map to XPScript error 70; dedicated runtime assertion remains open
+- [x] permission/access failures map to XPScript error 70 and sanitize the underlying exception text; dedicated generated-runtime assertion: `tests/EvaluatePermissionMappingProbe`
 - [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context; representative arity/unknown-function failures are verified
 - [x] known Evaluate functions distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
 - [x] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
