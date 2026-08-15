@@ -45,8 +45,8 @@ Sub Main()
         Error 9806, "Evaluate parity failed for Mod"
     End If
 
-    direct = #2026-08-12# < #2026-08-13#
-    evaluated = Evaluate("Return #2026-08-12# < #2026-08-13#")
+    direct = CDate("2026-08-12") < CDate("2026-08-13")
+    evaluated = Evaluate("Return CDate(""2026-08-12"") < CDate(""2026-08-13"")")
     If CBool(direct) <> CBool(evaluated) Then
         Error 9807, "Evaluate parity failed for Date comparison"
     End If
