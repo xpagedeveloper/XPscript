@@ -6,13 +6,11 @@ Goal: allow an `.xps` source file to be executed directly without requiring the 
 
 Status:
 - `[x]` implemented and verified
-- `[ ]` intentionally not implemented yet
 
 ## Required behavior
 
 - [x] Add a command/runtime mode that executes an `.xps` script directly with `xpscriptc run script.xps`.
 - [x] Support an execution path where source is compiled to a temporary executable and started automatically.
-- [ ] If a true hosted/direct execution mode is added later, keep its externally visible behavior compatible with the temporary-executable mode.
 - [x] Default working directory is the directory containing the `.xps` script, not the compiler executable directory and not the caller's current directory.
 - [x] Relative file paths used by the script resolve relative to the script file by default.
 - [x] `Application.ExecutablePath` and executable-related runtime values have documented semantics for direct/temporary execution in `docs/direct-script-execution.md`.
@@ -25,6 +23,8 @@ Status:
 - [x] Relative paths, absolute paths, paths containing spaces and non-ASCII characters are supported through normal `Path.GetFullPath` semantics and runtime-verified with Unicode paths.
 - [x] Works on Windows, Linux and macOS using the existing target/runtime selection rules. Direct execution rejects a foreign RID because it cannot execute that artifact on the current host.
 - [x] Clear compiler diagnostics are returned when direct execution cannot compile the script, and setup/start failures return a non-zero CLI result.
+
+Future compatibility note: if a true hosted/direct execution engine is added later, its externally visible behavior should remain compatible with the temporary-executable mode. That is a future implementation constraint, not an outstanding requirement for the current direct-execution feature.
 
 ## CLI behavior
 

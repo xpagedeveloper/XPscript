@@ -8,7 +8,7 @@ Goal: allow one or more configurable source preprocessors to run in a determinis
 
 1. Load the root `.xps` source file.
 2. Resolve and expand all `Include` directives recursively.
-3. Deduplicate included files by canonical physical path and reject/report include cycles according to `todo/include-source-files-todo.md`.
+3. Deduplicate included files by canonical physical path and reject/report include cycles according to `todo/done/include-source-files-todo.md`.
 4. Build one complete logical source graph / combined compilation source while retaining source-map metadata back to original files and physical line numbers.
 5. Run the configured source preprocessors in the exact configured order.
 6. Pass the final preprocessed source to the normal XPScript parser/transpiler/compiler pipeline.
@@ -36,7 +36,7 @@ Goal: allow one or more configurable source preprocessors to run in a determinis
 ## Execution modes
 
 - [ ] use the exact same Include -> preprocessor chain -> compile pipeline for normal compilation
-- [ ] use the same pipeline for direct `.xps` execution / temporary-exe execution described in `todo/direct-script-execution-todo.md`
+- [ ] use the same pipeline for direct `.xps` execution / temporary-exe execution described in `todo/done/direct-script-execution-todo.md`
 - [ ] ensure publish/cross-platform compilation uses the same preprocessing semantics
 
 ## Safety and isolation
