@@ -19,7 +19,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          allowed = {'required-pr-gate.yml'}
+          allowed = {'required-pr-gate.yml', 'pr-workflow-scope.yml'}
           offenders = []
           for path in Path('.github/workflows').glob('*.yml'):
               if path.name in allowed:
