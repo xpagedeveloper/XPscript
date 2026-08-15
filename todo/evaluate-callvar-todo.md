@@ -103,7 +103,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] budget violations produce controlled XPScript error 5 diagnostics instead of continuing snapshot allocation; sources: `samples/evaluate-collection-element-budget.xps`, `samples/evaluate-collection-payload-budget.xps`
 - [x] exact budget boundary behavior is runtime-verified: 100000 elements accepted / 100001 rejected and 16777216 payload bytes accepted / 16777217 rejected; sources: `samples/evaluate-collection-element-boundary.xps`, `samples/evaluate-collection-payload-boundary.xps`
 - [ ] ensure nested Evaluate invocations receive independent snapshots when nested Evaluate syntax is added
-- [ ] add concurrent-thread isolation tests
+- [x] concurrent-thread isolation is verified across independent List callvars, detached return Lists and simultaneous collection snapshots; generated-runtime probe: `tests/EvaluateConcurrencyProbe`
 - [x] exceptions crossing the verified Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`
 - [x] type/conversion diagnostics use stable descriptions that do not echo secret input values for the verified sanitization path
 - [>] only allowlisted structural parser/API diagnostics retain detail; broader adversarial coverage remains open
@@ -117,7 +117,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [>] evaluator instance owns callvar snapshot; references become collectible after Evaluate returns/fails
 - [x] returned arrays and Lists are detached from evaluator-owned storage for the verified collection paths
 - [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation; lifetime/stress coverage remains open
-- [>] input and return snapshot budgets are invocation-local and are not stored in static/global state; concurrent verification remains open
+- [x] input and return snapshot budgets are invocation-local and are not stored in static/global state; concurrent generated-runtime verification uses four simultaneous 60000-element input and return snapshots in `tests/EvaluateConcurrencyProbe`
 - [ ] deterministic disposal rules if disposable/native-resource objects are ever allowed through callvar
 - [ ] ensure no future evaluator cache stores arbitrary callvar data
 
