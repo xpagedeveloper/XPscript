@@ -1,0 +1,65 @@
+name: Configure Main Protection
+
+on:
+  workflow_dispatch:
+    inputs:
+      remove_legacy_blockupdate:
+        description: Remove legacy disabled blockupdate ruleset after validation
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    name: Configure Main Protection
+    runs-on: ubuntu-latest
+    environment: repository-administration
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Require administration token
+        shell: pwsh
+        env:
+          MAIN_PROTECTION_TOKEN: ${{ secrets.MAIN_PROTECTION_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:MAIN_PROTECTION_TOKEN)) {
+            throw 'Repository secret MAIN_PROTECTION_TOKEN is required. Use a fine-grained token with Administration: write for this repository.'
+          }
+
+      - name: Configure main ruleset
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.MAIN_PROTECTION_TOKEN }}
+        run: |
+          $args = @(
+            '-Owner', '${{ github.repository_owner }}',
+            '-Repository', '${{ github.event.repository.name }}',
+            '-Token', $env:GITHUB_TOKEN
+          )
+
+          if ('${{ inputs.remove_legacy_blockupdate }}' -eq 'true') {
+            $args += '-RemoveLegacyBlockUpdate'
+          }
+
+          & ./tools/configure-main-ruleset.ps1 @args
+
+      - name: Verify active ruleset
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.MAIN_PROTECTION_TOKEN }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $uri = 'https://api.github.com/repos/${{ github.repository }}/rulesets'
+          $rulesets = Invoke-RestMethod -Headers $headers -Uri $uri -Method Get
+          $main = $rulesets | Where-Object { $_.name -eq 'main-protection' -and $_.enforcement -eq 'active' }
+          if (-not $main) {
+            throw 'Active main-protection ruleset was not found after configuration.'
+          }
+          Write-Host "MAIN-PROTECTION-RULESET=ACTIVE ID=$($main.id)"
