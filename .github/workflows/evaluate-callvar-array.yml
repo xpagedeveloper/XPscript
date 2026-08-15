@@ -56,8 +56,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Callvar-array sample failed to compile.' }
           if (-not $IsWindows) { chmod +x $exe }
           $output = @(& $exe 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw 'Callvar-array sample failed at runtime.' }
+          $runtimeExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
           $output | ForEach-Object { Write-Host $_ }
+          if ($runtimeExitCode -ne 0) { throw "Callvar-array sample failed at runtime with exit code $runtimeExitCode." }
           if ($output -notcontains 'TWO=30') { throw 'Two-value callvar array result was incorrect.' }
           if ($output -notcontains 'FIVE=15') { throw 'Five-value callvar array result was incorrect.' }
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
