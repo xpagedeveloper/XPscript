@@ -8,6 +8,7 @@ on:
       - 'samples/evaluate-*.xps'
       - 'tests/EvaluatePermissionMappingProbe/**'
       - 'tests/EvaluateConcurrencyProbe/**'
+      - 'tests/EvaluateClrArrayBudgetProbe/**'
       - 'docs/evaluate.md'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/runtime-reference-todo.md'
@@ -51,6 +52,15 @@ jobs:
           $result | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw 'Evaluate concurrency isolation probe failed.' }
           if ($result -notcontains 'EVALUATE-CONCURRENCY-PROBE=OK') { throw 'Evaluate concurrency isolation probe did not report success.' }
+
+      - name: Verify Evaluate CLR array budget boundary
+        shell: pwsh
+        run: |
+          $result = dotnet run --project ./tests/EvaluateClrArrayBudgetProbe/EvaluateClrArrayBudgetProbe.csproj -c Release
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Evaluate CLR array budget probe failed.' }
+          if ($result -notcontains 'EVALUATE-CLR-ARRAY-BUDGET-PROBE=OK') { throw 'Evaluate CLR array budget probe did not report success.' }
 
       - name: Compile and run Evaluate regression corpus
         shell: pwsh
