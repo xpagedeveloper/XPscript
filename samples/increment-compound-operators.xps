@@ -10,16 +10,16 @@ End Function
 
 Sub Main()
     Dim counter As Integer
-    Dim reference As Integer
+    Dim expectedValue As Integer
     Dim byteValue As Byte
     Dim longValue As Long
-    Dim longReference As Long
+    Dim expectedLong As Long
     Dim singleValue As Single
     Dim doubleValue As Double
     Dim currencyValue As Currency
     Dim variantValue As Variant
     Dim text As String
-    Dim referenceText As String
+    Dim expectedText As String
     Dim zero As Integer
     Dim badText As String
     Dim boolValue As Boolean
@@ -28,15 +28,15 @@ Sub Main()
     Dim capturedErr As Integer
 
     counter = 10
-    reference = 10
+    expectedValue = 10
     counter++
-    reference = reference + 1
-    If counter <> reference Then
+    expectedValue = expectedValue + 1
+    If counter <> expectedValue Then
         Error 9901, "Integer ++ differs from long form"
     End If
     counter--
-    reference = reference - 1
-    If counter <> reference Then
+    expectedValue = expectedValue - 1
+    If counter <> expectedValue Then
         Error 9902, "Integer -- differs from long form"
     End If
 
@@ -81,49 +81,49 @@ Sub Main()
     End If
 
     counter = 10
-    reference = 10
+    expectedValue = 10
     counter += 5
-    reference = reference + 5
-    If counter <> reference Then
+    expectedValue = expectedValue + 5
+    If counter <> expectedValue Then
         Error 9910, "+= differs from long form"
     End If
     counter -= 3
-    reference = reference - 3
-    If counter <> reference Then
+    expectedValue = expectedValue - 3
+    If counter <> expectedValue Then
         Error 9911, "-= differs from long form"
     End If
     counter *= 2
-    reference = reference * 2
-    If counter <> reference Then
+    expectedValue = expectedValue * 2
+    If counter <> expectedValue Then
         Error 9912, "*= differs from long form"
     End If
     counter /= 4
-    reference = reference / 4
-    If counter <> reference Then
+    expectedValue = expectedValue / 4
+    If counter <> expectedValue Then
         Error 9913, "/= differs from long form"
     End If
 
     longValue = 10
-    longReference = 10
+    expectedLong = 10
     longValue \= 4
-    longReference = longReference \ 4
-    If longValue <> longReference Then
+    expectedLong = expectedLong \ 4
+    If longValue <> expectedLong Then
         Error 9914, "\= differs from long form"
     End If
 
     text = "Hello"
-    referenceText = "Hello"
+    expectedText = "Hello"
     text &= " world"
-    referenceText = referenceText & " world"
-    If text <> referenceText Then
+    expectedText = expectedText & " world"
+    If text <> expectedText Then
         Error 9915, "&= differs from long form"
     End If
 
     text = "value="
-    referenceText = "value="
+    expectedText = "value="
     text += 42
-    referenceText = referenceText + 42
-    If text <> referenceText Then
+    expectedText = expectedText + 42
+    If text <> expectedText Then
         Error 9916, "String += differs from long form"
     End If
 
