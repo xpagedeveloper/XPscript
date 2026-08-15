@@ -1,0 +1,45 @@
+Option Declare
+
+Sub Main()
+    Dim errValue As Integer
+
+    On Error Resume Next
+    FileCopy "edge-fixture/linked-file.txt", "edge-fixture/copied-from-link.txt"
+    errValue = Err
+    On Error GoTo 0
+    Print "FILECOPY_LINK_ERR=" & CStr(errValue)
+
+    On Error Resume Next
+    Kill "edge-fixture/linked-file.txt"
+    errValue = Err
+    On Error GoTo 0
+    Print "KILL_LINK_ERR=" & CStr(errValue)
+
+    On Error Resume Next
+    Name "edge-fixture/linked-file.txt" As "edge-fixture/renamed-link.txt"
+    errValue = Err
+    On Error GoTo 0
+    Print "NAME_LINK_ERR=" & CStr(errValue)
+
+    On Error Resume Next
+    RmDir "edge-fixture/linked-dir"
+    errValue = Err
+    On Error GoTo 0
+    Print "RMDIR_LINK_ERR=" & CStr(errValue)
+
+    On Error Resume Next
+    FileCopy "edge-fixture/real-file.txt", "edge-fixture/real-file.txt"
+    errValue = Err
+    On Error GoTo 0
+    Print "FILECOPY_SELF_ERR=" & CStr(errValue)
+
+    If Platform() = "Windows" Then
+        On Error Resume Next
+        FileCopy "edge-fixture/real-file.txt", "edge-fixture/REAL-FILE.TXT"
+        errValue = Err
+        On Error GoTo 0
+        Print "WINDOWS_CASE_IDENTITY_ERR=" & CStr(errValue)
+    End If
+
+    Print "PATH_SECURITY_NEGATIVES=OK"
+End Sub
