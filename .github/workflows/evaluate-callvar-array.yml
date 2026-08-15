@@ -63,4 +63,4 @@ jobs:
           if ($output -notcontains 'TWO=30') { throw 'Two-value callvar array result was incorrect.' }
           if ($output -notcontains 'FIVE=15') { throw 'Five-value callvar array result was incorrect.' }
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
-          if ($output -notcontains 'UBOUND=2') { throw 'Callvar array bounds were incorrect.' }
+          if ($output -notcontains 'THIRD=300') { throw 'Callvar array indexing was incorrect.' }
