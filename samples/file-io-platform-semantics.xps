@@ -50,7 +50,6 @@ Sub Main()
         hiddenAttr = GetFileAttr("normal-probe.txt")
         Print "WINDOWS_HIDDEN_ATTR=" & CStr(hiddenAttr)
         SetFileAttr "normal-probe.txt", 0
-        Print "CHDRIVE_WINDOWS=SUPPORTED"
     End If
 
     Kill "CaseProbe.TXT"
@@ -58,6 +57,11 @@ Sub Main()
     Kill "normal-probe.txt"
     ChDir ".."
     RmDir "xps-platform-semantics"
+
+    If Platform() = "Windows" Then
+        ChDrive "C"
+        Print "CHDRIVE_WINDOWS=SUPPORTED"
+    End If
 
     Print "FILE_IO_PLATFORM_SEMANTICS=OK"
 End Sub
