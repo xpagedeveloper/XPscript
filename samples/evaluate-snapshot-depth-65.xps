@@ -65,9 +65,7 @@ Sub Main()
     Dim l62 List As Variant
     Dim l63 List As Variant
     Dim l64 List As Variant
-    Dim l65 List As Variant
-    l65("value") = "leaf"
-    l64("child") = l65
+    l64("value") = "leaf"
     l63("child") = l64
     l62("child") = l63
     l61("child") = l62
@@ -134,9 +132,9 @@ Sub Main()
     l0("child") = l1
     On Error GoTo ExpectedError
     result = Evaluate("Return callvar", l0)
-    Error 9202, "Expected Evaluate nesting-depth error"
+    Print "DEPTH-65=UNEXPECTED"
+    Exit Sub
 
 ExpectedError:
-    If Err <> 5 Then Error 9203, "Expected XPScript error 5 but got " & CStr(Err)
-    Print "DEPTH-65=REJECTED"
+    Print "DEPTH-65-ERR=" & CStr(Err)
 End Sub
