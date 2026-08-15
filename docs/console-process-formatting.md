@@ -146,6 +146,8 @@ text = FormatPercent(0.125, 1)
 
 `Error(number)` or `Error$(number)` returns the standard description for an error number. Without an argument, `Error$` represents the active error description.
 
+See the [XPScript Error Codes](error-codes.md) reference for every public numeric runtime error code and its meaning.
+
 ## Console and file input are separate
 
 These are different operations:
