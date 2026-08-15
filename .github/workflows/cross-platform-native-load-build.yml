@@ -90,7 +90,6 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-loader-diagnostics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $output --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Native loader diagnostic fixture compilation failed.' }
           $text = & $output 2>&1 | Out-String
-          $exit = $LASTEXITCODE
-          $global:LASTEXITCODE = 0
-          if ($exit -eq 0) { throw "Native loader diagnostic fixture unexpectedly succeeded.`n$text" }
-          if ($text -notmatch '(native|library|entry point|architecture)') { throw "Expected explicit native loader diagnostic was not emitted.`n$text" }
+          if ($LASTEXITCODE -ne 0) { throw "Handled native loader diagnostic fixture should exit normally.`n$text" }
+          if ($text -notmatch '(?i)(native|library).*(not found|load|missing)') { throw "Expected explicit native loader diagnostic was not emitted.`n$text" }
+          if ($text -notmatch '(?i)(beside|system|loader|application)') { throw "Expected native library search-location guidance was not emitted.`n$text" }
