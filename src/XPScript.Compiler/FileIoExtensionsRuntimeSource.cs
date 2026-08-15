@@ -31,8 +31,11 @@ internal static class XPScriptFileIO
         public short Whence;
     }
 
+    // fcntl is variadic in C. Passing the third argument as an explicit unmanaged pointer
+    // preserves the Darwin vararg ABI instead of asking the marshaller to treat it as a
+    // fixed ref-struct parameter.
     [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
-    private static extern int DarwinFcntl(int fd, int command, ref DarwinFlock descriptor);
+    private static extern int DarwinFcntl(int fd, int command, nint argument);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -204,6 +207,7 @@ internal static class XPScriptFileIO
     {
         var handle = stream.SafeFileHandle;
         var addedRef = false;
+        nint descriptorMemory = 0;
         try
         {
             handle.DangerousAddRef(ref addedRef);
@@ -221,7 +225,11 @@ internal static class XPScriptFileIO
                 Whence = DarwinSeekSet
             };
 
-            if (DarwinFcntl((int)rawValue, DarwinFSetLock, ref descriptor) == 0)
+            descriptorMemory = System.Runtime.InteropServices.Marshal.AllocHGlobal(
+                System.Runtime.InteropServices.Marshal.SizeOf<DarwinFlock>());
+            System.Runtime.InteropServices.Marshal.StructureToPtr(descriptor, descriptorMemory, false);
+
+            if (DarwinFcntl((int)rawValue, DarwinFSetLock, descriptorMemory) == 0)
                 return;
 
             var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
@@ -254,6 +262,8 @@ internal static class XPScriptFileIO
         }
         finally
         {
+            if (descriptorMemory != 0)
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(descriptorMemory);
             if (addedRef) handle.DangerousRelease();
         }
     }
