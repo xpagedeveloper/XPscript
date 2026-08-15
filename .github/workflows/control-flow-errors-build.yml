@@ -1,6 +1,16 @@
 name: Control Flow and Error Handling Compatibility
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/if-layouts.xps'
+      - 'samples/statement-layout-audit.xps'
+      - 'samples/statement-separator-colon.xps'
+      - 'samples/erl-physical-source-line.xps'
+      - 'samples/nested-resume-targets.xps'
+      - '.github/workflows/control-flow-errors-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,10 +34,12 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/if-layouts.xps -o ./out/if-layouts.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'If layout sample compilation failed.' }
           $output = & ./out/if-layouts.exe
-          foreach ($value in @('SINGLE=OK','SINGLE_ELSE=OK','STRING_ELSE=OK','BLOCK=OK','SPLIT_THEN=OK','SPLIT_ELSEIF=OK','INLINE_ELSEIF=OK','DATE_SINGLE=OK')) {
+          foreach ($value in @('SINGLE=OK','SINGLE_ELSE=OK','ONE_LINE_IF=OK','ONE_LINE_ELSEIF=OK','ONE_LINE_ELSE=OK','STRING_ELSE=OK','BLOCK=OK','MULTILINE_ELSEIF=OK','SPLIT_THEN=OK','SPLIT_ELSEIF=OK','INLINE_ELSEIF=OK','MIXED_ELSEIF=OK','DATE_SINGLE=OK')) {
             if ($output -notcontains $value) { throw "If layout output missing: $value`n$output" }
           }
-          if ($output -contains 'SINGLE_TRUE_BAD' -or $output -contains 'ELSEIF_BAD' -or $output -contains 'INLINE_ELSEIF_BAD') { throw "Unexpected If branch output:`n$output" }
+          foreach ($bad in @('SINGLE_TRUE_BAD','ONE_LINE_BAD','MULTILINE_BAD','ELSEIF_BAD','INLINE_ELSEIF_BAD','MIXED_BAD')) {
+            if ($output -contains $bad) { throw "Unexpected If branch output: $bad`n$output" }
+          }
       - name: Verify statement layout continuations and compound conditions
         shell: pwsh
         run: |
