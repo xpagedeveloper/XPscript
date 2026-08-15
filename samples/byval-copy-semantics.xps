@@ -31,9 +31,10 @@ Sub Main()
     End If
 
     parameters("value") = 7
-    evaluated = Evaluate("callvar(\"value\") = 99 : Return callvar(\"value\")", parameters)
+    evaluated = Evaluate("Return callvar", parameters)
+    evaluated("value") = 99
     If parameters("value") <> 7 Then
-        Error 9644, "Evaluate changed caller-owned List input"
+        Error 9644, "Evaluate returned value still shares caller-owned List input"
     End If
 
     Print "BYVAL-SUB=OK"
