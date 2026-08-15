@@ -24,7 +24,7 @@ Sub Main()
     Print "BOUNDS=" & CStr(result)
 
     sharedChild("value") = 1
-    result = Evaluate("Return callvar", sharedChild, sharedChild)
+    result = Evaluate("Return callvar", ByVal sharedChild, ByVal sharedChild)
     left = result(0)
     right = result(1)
 
