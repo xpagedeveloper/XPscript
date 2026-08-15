@@ -40,19 +40,28 @@ jobs:
           function Invoke-EvaluateSample {
             param(
               [Parameter(Mandatory=$true)][string]$Name,
-              [string[]]$Expected = @()
+              [string[]]$Expected = @(),
+              [string[]]$Forbidden = @()
             )
 
             $source = "./samples/$Name.xps"
             $output = "./out/evaluate/$Name"
             $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
             $compileExit = $LASTEXITCODE
+            $compileText = $compile -join "`n"
+            foreach ($value in $Forbidden) {
+              if ($compileText.Contains($value, [StringComparison]::Ordinal)) { throw "Evaluate sample $Name leaked forbidden data in compiler structured output." }
+            }
             $compile | ForEach-Object { Write-Host $_ }
             if ($compileExit -ne 0) { throw "Evaluate sample compilation failed: $Name" }
 
             chmod +x $output
             $result = & $output 2>&1
             $runExit = $LASTEXITCODE
+            $resultText = $result -join "`n"
+            foreach ($value in $Forbidden) {
+              if ($resultText.Contains($value, [StringComparison]::Ordinal)) { throw "Evaluate sample $Name leaked forbidden data in process output." }
+            }
             $result | ForEach-Object { Write-Host "[$Name] $_" }
             if ($runExit -ne 0) { throw "Evaluate sample failed: $Name exit=$runExit" }
 
@@ -71,7 +80,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
           Invoke-EvaluateSample 'evaluate-collection-element-budget' @('ELEMENT-BUDGET=OK')
           Invoke-EvaluateSample 'evaluate-collection-payload-budget' @('PAYLOAD-BUDGET=OK')
-          Invoke-EvaluateSample 'evaluate-diagnostic-sanitization'
+          Invoke-EvaluateSample 'evaluate-diagnostic-sanitization' @('SANITIZED=Evaluate type mismatch.') @('TOP-SECRET-API-KEY-123456789')
           Invoke-EvaluateSample 'evaluate-function-arity-errors'
 
       - name: Verify Evaluate isolation negatives fail safely
