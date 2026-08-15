@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
-      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/file-io-portability.xps'
       - 'samples/file-charset-bom.xps'
       - 'samples/filesystem-portability-semantics.xps'

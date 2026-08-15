@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/XPScript.Compiler/TextIoCompatibilityRuntimeSource.cs'
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
-      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/file-charset-matrix.xps'
       - 'samples/file-share-holder.xps'
       - 'samples/file-share-contender.xps'

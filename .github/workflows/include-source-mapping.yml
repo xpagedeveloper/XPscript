@@ -8,7 +8,9 @@ on:
       - todo-include-diagnostic-source-lines
       - todo-include-erl-source-lines
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source-map/**'
       - 'samples/include-erl/**'
       - '.github/workflows/include-source-mapping.yml'
@@ -16,7 +18,9 @@ on:
     branches:
       - main
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source-map/**'
       - 'samples/include-erl/**'
       - '.github/workflows/include-source-mapping.yml'

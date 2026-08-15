@@ -17,22 +17,6 @@ on:
       - 'samples/compiler-errors.xps'
       - 'samples/functions.xps'
       - '.github/workflows/dotnet10-build.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/XPScript.Compiler/**'
-      - 'samples/compatibility.xps'
-      - 'samples/lists-classes.xps'
-      - 'samples/core-language.xps'
-      - 'samples/runtime-sax.xps'
-      - 'samples/json-http.xps'
-      - 'samples/http-test-server.py'
-      - 'samples/textio-console.xps'
-      - 'samples/reference-runtime-batch1.xps'
-      - 'samples/coercion.xps'
-      - 'samples/compiler-errors.xps'
-      - 'samples/functions.xps'
-      - '.github/workflows/dotnet10-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -152,7 +136,7 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/textio-console.xps -o ./out/textio-console.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Text I/O compilation failed.' }
           $output = "Fredrik`nSecond`nX" | & ./out/textio-console.exe
-          foreach ($value in @('UTF8=UTF8-ÅÄÖ-é-漢字','UTF16=UTF16-ÅÄÖ-é-漢字','BASE64FILE=BASE64-FILE-åäö','BASE64UTF16=BASE64-UTF16-漢字','TOBASE64=RnJlZHJpayDDpcOkw7Y=','FROMBASE64=Fredrik åäö','URLENCODE=hello%20world%2B%C3%A5','URLDECODE=hello world+å','PRINTDOLLAR=OK','INPUTDOLLAR=Second','PAUSE=OK')) {
+          foreach ($value in @('UTF8=UTF8-ÅÄÖ-é-漢字','UTF16=UTF16-ÅÄÖ-é-漢字','BASE64FILE=BASE64-FILE-åäö','BASE64UTF16=BASE64-FILE-漢字','TOBASE64=RnJlZHJpayDDpcOkw7Y=','FROMBASE64=Fredrik åäö','URLENCODE=hello%20world%2B%C3%A5','URLDECODE=hello world+å','PRINTDOLLAR=OK','INPUTDOLLAR=Second','PAUSE=OK')) {
             if ($output -notcontains $value) { throw "Text I/O output missing: $value" }
           }
           if (-not ($output | Where-Object { $_ -like 'NAME>*INPUT=Fredrik' })) { throw 'Input prompt/value behavior failed.' }

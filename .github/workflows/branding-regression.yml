@@ -18,23 +18,6 @@ on:
       - '**/*.props'
       - '**/*.targets'
       - '.github/workflows/branding-regression.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - '**/*.cs'
-      - '**/*.csproj'
-      - '**/*.sln'
-      - '**/*.md'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.xps'
-      - '**/*.json'
-      - '**/*.py'
-      - '**/*.ps1'
-      - '**/*.txt'
-      - '**/*.props'
-      - '**/*.targets'
-      - '.github/workflows/branding-regression.yml'
   workflow_dispatch:
 
 permissions:

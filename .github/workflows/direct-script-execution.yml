@@ -4,7 +4,9 @@ on:
   push:
     branches: [todo-direct-script-execution]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/Direct*.cs'
       - 'samples/direct-run.xps'
       - 'samples/direct-run-runtime-error.xps'
       - 'samples/direct-run-concurrent.xps'
@@ -13,7 +15,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/Direct*.cs'
       - 'samples/direct-run.xps'
       - 'samples/direct-run-runtime-error.xps'
       - 'samples/direct-run-concurrent.xps'

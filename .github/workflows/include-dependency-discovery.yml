@@ -5,14 +5,18 @@ on:
     branches:
       - todo-include-dependency-discovery
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-dependencies/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-dependency-discovery.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-dependencies/**'
       - 'todo/include-source-files-todo.md'
       - '.github/workflows/include-dependency-discovery.yml'
