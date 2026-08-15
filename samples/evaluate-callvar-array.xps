@@ -14,6 +14,6 @@ Sub Main()
     result = Evaluate("Return callvar(0) + callvar(1, 1) + callvar(2, ""price"")", 5, values, parameters)
     Print "MIXED=" & CStr(result)
 
-    result = Evaluate("Return UBound(callvar)", 100, 200, 300)
-    Print "UBOUND=" & CStr(result)
+    result = Evaluate("Return callvar(2)", 100, 200, 300)
+    Print "THIRD=" & CStr(result)
 End Sub
