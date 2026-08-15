@@ -1,0 +1,65 @@
+name: Cross Platform File IO Platform Semantics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
+      - 'samples/file-io-platform-semantics.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+      - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  platform-semantics:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$os-$arch" >> $env:GITHUB_OUTPUT
+      - name: Compile and verify filesystem semantics
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-io-platform-semantics.exe' } else { './out/file-io-platform-semantics' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-io-platform-semantics.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-io-platform-semantics.xps compilation failed.' }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Platform semantics fixture failed.`n$result" }
+          if ($result -notcontains 'FILE_IO_PLATFORM_SEMANTICS=OK') { throw "Missing success marker.`n$result" }
+
+          if ($env:RUNNER_OS -eq 'Windows') {
+            if ($result -notcontains 'CHDRIVE_WINDOWS=SUPPORTED') { throw "Windows ChDrive was not verified.`n$result" }
+            $hidden = $result | Where-Object { $_ -like 'WINDOWS_HIDDEN_ATTR=*' } | Select-Object -First 1
+            if (-not $hidden) { throw "Windows hidden attribute was not observed.`n$result" }
+            $value = [int]($hidden -replace '^WINDOWS_HIDDEN_ATTR=', '')
+            if (($value -band 2) -eq 0) { throw "Windows hidden attribute bit was not set.`n$result" }
+            if ($result -notcontains 'DIR_CASE_MATCH=TRUE') { throw "Windows filesystem should match case-insensitively on the hosted runner.`n$result" }
+          } else {
+            if ($result -notcontains 'CHDRIVE_NONWINDOWS_ERR=5') { throw "Non-Windows ChDrive must raise XPScript error 5.`n$result" }
+            if ($result -notcontains 'UNIX_SET_HIDDEN_ERR=5') { throw "Unix SetFileAttr Hidden must require an explicit dot-name rename.`n$result" }
+            $dotHidden = $result | Where-Object { $_ -like 'DOT_HIDDEN_ATTR=*' } | Select-Object -First 1
+            if (-not $dotHidden) { throw "Unix dot-hidden attributes were not reported.`n$result" }
+            $value = [int]($dotHidden -replace '^DOT_HIDDEN_ATTR=', '')
+            if (($value -band 2) -eq 0) { throw "Unix leading-dot file did not synthesize the Hidden bit.`n$result" }
+            if ($env:RUNNER_OS -eq 'Linux' -and $result -notcontains 'DIR_CASE_MATCH=FALSE') { throw "Linux hosted filesystem should preserve case-sensitive Dir matching.`n$result" }
+          }
