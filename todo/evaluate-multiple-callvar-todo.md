@@ -13,23 +13,24 @@ Status:
 
 - [x] keep existing `Evaluate(sourceText)` behavior backward compatible
 - [x] keep existing `Evaluate(sourceText, callvar)` behavior backward compatible
-- [ ] support `Evaluate(sourceText, callvar1, callvar2)`
-- [ ] support `Evaluate(sourceText, callvar1, callvar2, callvar3)`
-- [ ] support `Evaluate(sourceText, callvar1, callvar2, callvar3, callvar4)`
-- [ ] support `Evaluate(sourceText, callvar1, callvar2, callvar3, callvar4, callvar5)`
+- [ ] support `Evaluate(sourceText, callvar, callvar2)`
+- [ ] support `Evaluate(sourceText, callvar, callvar2, callvar3)`
+- [ ] support `Evaluate(sourceText, callvar, callvar2, callvar3, callvar4)`
+- [ ] support `Evaluate(sourceText, callvar, callvar2, callvar3, callvar4, callvar5)`
 - [ ] reject more than five callvar arguments with a clear source-mapped compiler diagnostic
 
 ## Names visible inside Evaluate
 
-- [ ] `callvar1`, `callvar2`, `callvar3`, `callvar4` and `callvar5` always exist inside Evaluate
+- [ ] the first supplied slot is named exactly `callvar`; there is no public `callvar1` identifier
+- [ ] additional slots are named `callvar2`, `callvar3`, `callvar4` and `callvar5`
+- [ ] `callvar`, `callvar2`, `callvar3`, `callvar4` and `callvar5` always exist inside Evaluate
 - [ ] an omitted callvar argument has the XPScript value `Null`
-- [ ] if no callvar arguments are supplied, `callvar1` through `callvar5` are all `Null`
-- [ ] with one supplied value, `callvar1` contains that value and `callvar2` through `callvar5` are `Null`
-- [ ] keep `callvar` as a backward-compatible alias for `callvar1`
-- [ ] all numbered callvars and the `callvar` alias are read-only root values inside Evaluate
-- [ ] reject `Dim callvar`, `Dim callvar1`, `Dim callvar2`, `Dim callvar3`, `Dim callvar4` and `Dim callvar5` inside Evaluate
+- [ ] if no callvar arguments are supplied, `callvar` and `callvar2` through `callvar5` are all `Null`
+- [ ] with one supplied value, `callvar` contains that value and `callvar2` through `callvar5` are `Null`
+- [ ] all callvar slots are read-only root values inside Evaluate
+- [ ] reject `Dim callvar`, `Dim callvar2`, `Dim callvar3`, `Dim callvar4` and `Dim callvar5` inside Evaluate
 - [ ] reject assignments that attempt to replace any callvar root value
-- [ ] `IsNull(callvarN)` returns True for an omitted parameter once final XPScript Null semantics are active
+- [ ] `IsNull(callvarN)` returns True for an omitted numbered parameter once final XPScript Null semantics are active; the first slot is tested as `IsNull(callvar)`
 
 ## Supported values
 
@@ -71,23 +72,24 @@ Status:
 ## Runtime and compiler implementation
 
 - [ ] extend `XPScriptEvaluatePreprocessor` parsing/lowering for source text plus zero through five callvar arguments
-- [ ] extend `XPScriptEvaluateRuntime` invocation state to expose five stable callvar slots
+- [ ] extend `XPScriptEvaluateRuntime` invocation state to expose five stable callvar slots named `callvar`, `callvar2`, `callvar3`, `callvar4`, `callvar5`
 - [ ] initialize omitted slots to XPScript `Null`
-- [ ] preserve `callvar` as an alias for slot 1 rather than creating a separate snapshot/value
+- [ ] do not create a separate `callvar1` alias; slot 1 is `callvar`
 - [ ] avoid static/global storage for callvar values
 - [ ] reuse existing collection snapshot/runtime contracts instead of reflection-based bridges
 - [ ] evaluate each caller argument exactly once and preserve left-to-right argument evaluation order
 
 ## Permanent regression coverage
 
-- [ ] no-callvar regression: `callvar1` through `callvar5` are Null
-- [ ] one-callvar regression: existing `callvar` and `callvar1` expose the same value, slots 2 through 5 are Null
-- [ ] two-callvar regression using `callvar1` and `callvar2`
-- [ ] five-callvar regression reading all five values
+- [ ] no-callvar regression: `callvar` and `callvar2` through `callvar5` are Null
+- [ ] one-callvar regression: existing `callvar` exposes the first value and slots 2 through 5 are Null
+- [ ] two-callvar regression using `callvar` and `callvar2`
+- [ ] five-callvar regression reading `callvar`, `callvar2`, `callvar3`, `callvar4`, `callvar5`
+- [ ] negative regression proving `callvar1` is not a public Evaluate identifier
 - [ ] mixed scalar + Array + List regression
 - [ ] omitted trailing arguments are Null and safe to test with `IsNull`
-- [ ] read-only negative regression for each numbered callvar root
-- [ ] `Dim callvarN` negative regression
+- [ ] read-only negative regression for each callvar root
+- [ ] `Dim callvar` / `Dim callvarN` negative regression
 - [ ] aggregate budget regression across multiple callvars
 - [ ] shared-reference identity regression where the same child collection is supplied through two different callvar slots
 - [ ] concurrent multi-callvar isolation regression
@@ -96,17 +98,19 @@ Status:
 ## Documentation
 
 - [ ] update `docs/evaluate.md` with the zero-to-five callvar syntax
-- [ ] document that all five numbered slots always exist and omitted values are `Null`
-- [ ] document that `callvar` is an alias for `callvar1`
+- [ ] document that the first slot is `callvar`, followed by `callvar2` through `callvar5`; `callvar1` does not exist
+- [ ] document that all five slots always exist and omitted values are `Null`
 - [ ] document that input budgets are shared across all callvar parameters in one invocation
 
 ## Example contract
 
 ```xpscript
-result = Evaluate("Return callvar1 + callvar2", firstValue, secondValue)
+result = Evaluate("Return callvar + callvar2", firstValue, secondValue)
 
 result = Evaluate("Return IsNull(callvar5)", firstValue)
 
 result = Evaluate("Return callvar", firstValue)
-' callvar is the backward-compatible alias for callvar1
+' The first slot is named callvar. The second slot is callvar2, then callvar3 through callvar5.
 ```
+
+`callvar`, `callvar2`, `callvar3`, `callvar4` and `callvar5` are the restricted input channels and `Return` is the explicit output channel. `callvar1` is intentionally not part of the language. Evaluate never implicitly shares the caller's variable namespace.
