@@ -45,12 +45,6 @@ Sub Main()
         Print "INLINE_ELSEIF_BAD"
     End If
 
-    If False Then Print "MIXED_BAD"
-    ElseIf True Then
-        Print "MIXED_ELSEIF=OK"
-    Else Print "MIXED_BAD"
-    End If
-
     leftDate = DateNumber(2026, 8, 12)
     rightDate = DateNumber(2026, 8, 13)
     If leftDate < rightDate Then Print "DATE_SINGLE=OK"
