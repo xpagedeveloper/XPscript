@@ -57,9 +57,24 @@ internal sealed class IncrementCompoundAssignmentPreprocessor
 
     private static (string Code, string Comment) SplitComment(string line)
     {
-        // This preprocessor runs after string literals have been protected, so an apostrophe
-        // here is a real XPScript comment delimiter rather than String data.
-        var index = line.IndexOf('\'');
-        return index < 0 ? (line, "") : (line[..index], line[index..]);
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    i++;
+                    continue;
+                }
+                inString = !inString;
+                continue;
+            }
+
+            if (!inString && line[i] == '\'')
+                return (line[..i], line[i..]);
+        }
+
+        return (line, "");
     }
 }
