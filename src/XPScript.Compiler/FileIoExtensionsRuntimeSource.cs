@@ -9,6 +9,31 @@ internal static class XPScriptFileIO
     private const System.Reflection.BindingFlags InstanceAny = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     private const long WholeFileLockLength = long.MaxValue / 2;
 
+    // Darwin's struct flock layout differs from Linux: off_t start/len, pid_t, type, whence.
+    // Values and field offsets are permanently verified by the macOS fcntl ABI Probe workflow
+    // on both ARM64 and x64 hosted macOS runners.
+    private const int DarwinFSetLock = 8;
+    private const short DarwinWriteLock = 3;
+    private const short DarwinUnlock = 2;
+    private const short DarwinSeekSet = 0;
+    private const int DarwinEAccess = 13;
+    private const int DarwinEAgain = 35;
+    private const int DarwinEBadF = 9;
+    private const int DarwinEInvalid = 22;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct DarwinFlock
+    {
+        public long Start;
+        public long Length;
+        public int ProcessId;
+        public short Type;
+        public short Whence;
+    }
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int DarwinFcntl(int fd, int command, ref DarwinFlock descriptor);
+
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
         var count = XPScriptRuntime.CInt(countValue);
@@ -120,8 +145,10 @@ internal static class XPScriptFileIO
     private static void LockRegion(FileStream stream, long offset, long length)
     {
         if (OperatingSystem.IsMacOS())
-            throw new XPScriptRuntimeException(5,
-                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinWriteLock, "lock");
+            return;
+        }
 
         try
         {
@@ -147,8 +174,10 @@ internal static class XPScriptFileIO
     private static void UnlockRegion(FileStream stream, long offset, long length)
     {
         if (OperatingSystem.IsMacOS())
-            throw new XPScriptRuntimeException(5,
-                "Byte-range Lock/Unlock is not supported on macOS. XPScript does not emulate weaker process-local locking because it would not preserve cross-process range-lock semantics.");
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinUnlock, "unlock");
+            return;
+        }
 
         try
         {
@@ -168,6 +197,64 @@ internal static class XPScriptFileIO
                 "Unable to unlock file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
                 " length " + length.ToString(CultureInfo.InvariantCulture) +
                 ". The current handle may not own the requested lock. " + ex.Message);
+        }
+    }
+
+    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, short lockType, string operation)
+    {
+        var handle = stream.SafeFileHandle;
+        var addedRef = false;
+        try
+        {
+            handle.DangerousAddRef(ref addedRef);
+            var rawHandle = handle.DangerousGetHandle();
+            var rawValue = rawHandle.ToInt64();
+            if (rawValue < int.MinValue || rawValue > int.MaxValue)
+                throw new XPScriptRuntimeException(70, "macOS file descriptor is outside the supported integer range.");
+
+            var descriptor = new DarwinFlock
+            {
+                Start = offset,
+                Length = length,
+                ProcessId = 0,
+                Type = lockType,
+                Whence = DarwinSeekSet
+            };
+
+            if (DarwinFcntl((int)rawValue, DarwinFSetLock, ref descriptor) == 0)
+                return;
+
+            var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+            if (error == DarwinEAccess || error == DarwinEAgain)
+            {
+                throw new XPScriptRuntimeException(70,
+                    "Unable to " + operation + " macOS file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                    " length " + length.ToString(CultureInfo.InvariantCulture) +
+                    ". Another process may hold an overlapping lock. errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (error == DarwinEBadF)
+            {
+                throw new XPScriptRuntimeException(70,
+                    "Unable to " + operation + " macOS file region because the file descriptor does not have the required access. errno=" +
+                    error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (error == DarwinEInvalid)
+            {
+                throw new XPScriptRuntimeException(5,
+                    "macOS rejected the byte-range " + operation + " request. The filesystem may not support POSIX record locking or the range is invalid. errno=" +
+                    error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            throw new XPScriptRuntimeException(70,
+                "Unable to " + operation + " macOS file region offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                " length " + length.ToString(CultureInfo.InvariantCulture) +
+                ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+        }
+        finally
+        {
+            if (addedRef) handle.DangerousRelease();
         }
     }
 
