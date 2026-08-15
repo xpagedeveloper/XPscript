@@ -60,7 +60,6 @@ public sealed class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
-        protectedSource = new InlineErrorStatementPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
