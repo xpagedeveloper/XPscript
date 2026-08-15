@@ -133,13 +133,22 @@ internal sealed class ParameterPassingPostProcessor
                 continue;
             }
 
-            output.Append(BuildTemporaryByRefCall(identifier, args, signature));
+            var receiver = FindSimpleMemberReceiver(generated, start);
+            var callTarget = identifier;
+            if (receiver.Length > 0)
+            {
+                if (output.Length >= receiver.Length)
+                    output.Length -= receiver.Length;
+                callTarget = receiver + identifier;
+            }
+
+            output.Append(BuildTemporaryByRefCall(callTarget, args, signature));
             i = close + 1;
         }
         return output.ToString();
     }
 
-    private static string BuildTemporaryByRefCall(string identifier, IReadOnlyList<string> sourceArgs, ProcedureSignature signature)
+    private static string BuildTemporaryByRefCall(string callTarget, IReadOnlyList<string> sourceArgs, ProcedureSignature signature)
     {
         var callArgs = new string[sourceArgs.Count];
         var declarations = new List<string>();
@@ -173,13 +182,13 @@ internal sealed class ParameterPassingPostProcessor
 
         if (signature.ReturnsVoid)
         {
-            body.Append(identifier).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
+            body.Append(callTarget).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
             foreach (var writeBack in writeBacks) body.Append(writeBack).Append(' ');
             body.Append("})");
         }
         else
         {
-            body.Append("var __xps_byref_result = ").Append(identifier).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
+            body.Append("var __xps_byref_result = ").Append(callTarget).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
             foreach (var writeBack in writeBacks) body.Append(writeBack).Append(' ');
             body.Append("return __xps_byref_result; })");
         }
@@ -266,6 +275,17 @@ internal sealed class ParameterPassingPostProcessor
         if (close != argument.Length - 1) return false;
         value = argument[(open + 1)..close].Trim();
         return true;
+    }
+
+    private static string FindSimpleMemberReceiver(string generated, int identifierStart)
+    {
+        if (identifierStart < 2 || generated[identifierStart - 1] != '.') return "";
+        var cursor = identifierStart - 2;
+        while (cursor >= 0 && (IsIdentifierPart(generated[cursor]) || generated[cursor] == '.')) cursor--;
+        var receiver = generated[(cursor + 1)..identifierStart];
+        return Regex.IsMatch(receiver, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.$", RegexOptions.CultureInvariant)
+            ? receiver
+            : "";
     }
 
     private static bool IsDirectRefArgument(string value) =>
