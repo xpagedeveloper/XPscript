@@ -14,6 +14,8 @@ def fail(message: str) -> None:
     errors.append(message)
 
 
+# The command reference is the canonical compact contract for syntax, parameters,
+# descriptions and examples. Topic pages may stay narrative and link back to it.
 # Validate all local Markdown links in docs. Ignore web URLs and anchors.
 link_re = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 for doc in sorted(DOCS.glob("*.md")):
