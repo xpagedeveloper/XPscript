@@ -133,6 +133,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-shared-reference-identity' @('SHARED-REFERENCE-IDENTITY=OK')
           Invoke-EvaluateSample 'evaluate-no-return'
           Invoke-EvaluateSample 'evaluate-standard-functions' @('STRING=abcef','MID=bcd','INSTR=6','REPLACE=a/b/c','MATH=13','NUMBERFORMAT=FF/1010','YEAR=2026','ISNUMERIC=True')
+          Invoke-EvaluateSample 'evaluate-broad-function-coverage' @('EVALUATE-BROAD-FUNCTION-COVERAGE=OK')
           Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
           Invoke-EvaluateSample 'evaluate-collection-element-budget' @('ELEMENT-BUDGET=OK')
           Invoke-EvaluateSample 'evaluate-collection-element-boundary' @('ELEMENT-BOUNDARY=OK')
