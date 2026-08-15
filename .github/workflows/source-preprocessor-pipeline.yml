@@ -73,7 +73,7 @@ jobs:
           & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-duplicate-root.xps -o $exe --framework-dependent --preprocessor 'replace:__ONCE__=__ONCE____ONCE__'
           if ($LASTEXITCODE -ne 0) { throw 'Duplicate Include regression compilation failed. Included source may have been duplicated.' }
           if (-not $IsWindows) { chmod +x $exe }
-          $output = & $exe 2>&1
+          $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw 'Duplicate Include regression program failed.' }
           $output | ForEach-Object { Write-Host $_ }
           if ($output.Count -ne 1 -or $output[0] -ne '__ONCE____ONCE__') { throw 'Included source was not deduplicated and preprocessed exactly once.' }
