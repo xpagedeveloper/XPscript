@@ -1,0 +1,26 @@
+' (c) xpagedeveloper.com 2026
+' Regression: List snapshots budget entries incrementally and reject the first entry above 100000.
+
+Sub Main()
+    Dim items List As Variant
+    Dim result As Variant
+    Dim i As Integer
+
+    For i = 0 To 100000
+        items(CStr(i)) = i
+    Next
+
+    On Error GoTo ExpectedError
+    result = Evaluate("Return 1", items)
+    Error 9621, "Expected Evaluate to reject List with 100001 elements"
+
+ExpectedError:
+    If Err <> 5 Then
+        Error 9622, "Expected XPScript error 5 but got " & CStr(Err)
+    End If
+    If Instr(Error$, "maximum element budget of 100000") = 0 Then
+        Error 9623, "Expected exact Evaluate List element-budget diagnostic"
+    End If
+
+    Print "LIST-ELEMENT-BUDGET-STRESS=OK"
+End Sub
