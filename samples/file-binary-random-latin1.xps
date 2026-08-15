@@ -1,0 +1,36 @@
+Option Declare
+
+Sub Main()
+    Dim f As Integer
+    Dim payload As String
+    Dim binaryRead As String
+    Dim randomRead As String
+
+    payload = "ÅÄÖ"
+
+    f = FreeFile
+    Open "xps-binary-latin1.bin" For Binary As #f
+    Put #f, 1, payload
+    Close #f
+
+    binaryRead = "   "
+    f = FreeFile
+    Open "xps-binary-latin1.bin" For Binary As #f
+    Get #f, 1, binaryRead
+    Close #f
+    Print "BINARY_READ=" & binaryRead
+
+    f = FreeFile
+    Open "xps-random-latin1.bin" For Random As #f Len = 16
+    Put #f, 1, payload
+    Close #f
+
+    randomRead = ""
+    f = FreeFile
+    Open "xps-random-latin1.bin" For Random As #f Len = 16
+    Get #f, 1, randomRead
+    Close #f
+    Print "RANDOM_READ=" & randomRead
+
+    Print "BINARY_RANDOM_LATIN1=OK"
+End Sub

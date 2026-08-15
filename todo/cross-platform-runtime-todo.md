@@ -98,7 +98,7 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] Unix hidden-file convention is recognized by synthesizing `FileAttributes.Hidden` for leading-dot names; runtime-verified by `Cross Platform File IO Platform Semantics`
 - [x] `SetFileAttr Hidden` on Unix does not silently rename a file and reports the leading-dot/`Name` requirement; runtime-verified by `Cross Platform File IO Platform Semantics`
 - [x] `FileCopy` preserves Unix executable permission bits; runtime-verified on Linux and macOS by `Cross Platform File IO Portability`
-- [>] runtime can inspect Unix executable bits through `File.GetUnixFileMode`; preservation is runtime-verified, but direct executable-bit inspection remains source-reviewed rather than separately probed
+- [x] runtime inspection of Unix executable bits through `File.GetUnixFileMode` is explicitly verified on Linux and macOS by `Cross Platform File IO Portability` for both the executable source fixture and its `FileCopy` result
 - [x] `Name` same-filesystem move/rename is runtime-verified on Windows/Linux/macOS
 - [x] cross-filesystem `Name` behavior is runtime-probed on Linux/macOS where a second filesystem is exposed; the gate verifies coherent host behavior without data loss and reports when no second filesystem is available
 - [x] `Kill` target behavior, symlink refusal and delete-while-open semantics are runtime-verified across Windows/Linux/macOS
@@ -125,7 +125,7 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] implicit `Encoding.Default` usage in generated file runtimes is replaced with a defined XPScript legacy encoding (`Encoding.Latin1`) and exact byte identity is runtime-verified across Windows/Linux/macOS
 - [x] verify exact Latin-1 byte identity on Windows/Linux/macOS
 - [x] newline generation uses target runtime `Environment.NewLine`/`TextWriter.WriteLine`; exact CRLF on Windows and LF on Linux/macOS runtime-verified
-- [>] Binary/Random string byte conversion uses the same defined Latin-1 legacy encoding; numeric `BinaryWriter`/`BinaryReader` representations remain deterministic .NET little-endian representations
+- [x] Binary/Random string byte conversion uses the same defined Latin-1 legacy encoding; `samples/file-binary-random-latin1.xps` plus `Cross Platform File IO Portability` verify Binary bytes `C5 C4 D6` and Random little-endian length prefix `03 00` followed by the same payload on Windows/Linux/macOS
 - [x] source: `samples/file-io-portability.xps` runtime-verified on Windows/Linux/macOS
 - [x] compiler temporary files use isolated `Path.GetTempPath()` + GUID directories per compiler invocation; verified by the completed compiler temp/build isolation suite
 
@@ -141,10 +141,8 @@ File I/O must use the target operating system's real filesystem semantics rather
 
 ## Remaining work required before archive
 
-Only items still marked `[>]` or `[ ]` block moving this TODO to `todo/done/`:
+Only one substantive item remains before this TODO can move to `todo/done/`:
 
-- [>] add a dedicated runtime assertion for direct Unix executable-bit inspection if that behavior is intended as a public XPScript contract rather than only an implementation detail
-- [>] add exact Binary/Random string-byte regression coverage if that implementation detail is intended as a separately guaranteed public contract
 - [ ] implement and runtime-verify safe native macOS byte-range `Lock` / `Unlock` semantics without weakening existing Windows/Linux behavior
 
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments on Windows, Ubuntu and macOS.
@@ -155,4 +153,4 @@ Only items still marked `[>]` or `[ ]` block moving this TODO to `todo/done/`:
 
 `Cross Platform Managed References` builds a real net10.0 fixture assembly, verifies matching RID-native deployment and non-matching RID filtering, and executes generated artifacts successfully on Windows, Ubuntu and macOS.
 
-`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security`, `Cross Platform Filesystem Edge Cases`, `Cross Platform File IO Portability` and `Cross Platform Charset UNC Sharing` jointly verify target-specific drive/hidden/case behavior, symlink/reparse-point refusal, same-path protection, long Windows paths, real Windows UNC access, Unix mode/ownership preservation, charset/BOM exact bytes, cross-process FileShare behavior and filesystem rename/delete semantics.
+`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security`, `Cross Platform Filesystem Edge Cases`, `Cross Platform File IO Portability` and `Cross Platform Charset UNC Sharing` jointly verify target-specific drive/hidden/case behavior, symlink/reparse-point refusal, same-path protection, long Windows paths, real Windows UNC access, Unix mode/ownership preservation and direct `File.GetUnixFileMode` inspection, charset/BOM exact bytes, Binary/Random exact Latin-1 byte formats, cross-process FileShare behavior and filesystem rename/delete semantics.
