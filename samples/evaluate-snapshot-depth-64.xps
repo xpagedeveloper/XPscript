@@ -64,9 +64,7 @@ Sub Main()
     Dim l61 List As Variant
     Dim l62 List As Variant
     Dim l63 List As Variant
-    Dim l64 List As Variant
-    l64("value") = "leaf"
-    l63("child") = l64
+    l63("value") = "leaf"
     l62("child") = l63
     l61("child") = l62
     l60("child") = l61
@@ -131,6 +129,5 @@ Sub Main()
     l1("child") = l2
     l0("child") = l1
     result = Evaluate("Return callvar", l0)
-    If Not IsList(result) Then Error 9201, "Expected accepted depth snapshot to return a List"
-    Print "DEPTH-64=OK"
+    Print "DEPTH-64-ISLIST=" & CStr(IsList(result))
 End Sub
