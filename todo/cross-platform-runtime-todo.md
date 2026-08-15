@@ -168,8 +168,8 @@ File I/O must use the target operating system's real filesystem semantics rather
 
 ## Quality gates
 
-- [ ] compile the same portable `.xps` source for all supported RIDs
-- [ ] execute the matching artifact on each target OS and architecture
+- [x] compile the same portable `.xps` source for all supported RIDs; `Cross Platform All RID Compile`
+- [x] execute the matching artifact on each target OS and architecture; `Cross Platform All RID Compile`
 - [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
 - [x] run native library loader tests on each OS and architecture; `Cross Platform Native Loader Compatibility` uses matching real runners for all six supported RIDs
 - [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
@@ -177,6 +177,8 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] run security tests for Shell, external libraries and file paths: Shell and external-library path controls are verified; final File I/O/UNC/macOS-lock coverage remains open
 
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
+
+`Cross Platform All RID Compile` compiles the same portable `samples/platform-shell.xps` source for all six supported RIDs from one cross-targeting runner and separately executes the matching framework-dependent artifact on real Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
 
 `Cross Platform Native Loader Compatibility` verifies exact-RID/OS/base native target selection for all six supported RIDs and executes the matching native system-library call plus loader-diagnostic fixture on Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS x64 and macOS ARM64 hosted runners.
 
