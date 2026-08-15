@@ -5,6 +5,9 @@ Sub Main()
 
     If True Then Print "SINGLE=OK"
     If False Then Print "SINGLE_TRUE_BAD" Else Print "SINGLE_ELSE=OK"
+    If False Then Print "ONE_LINE_BAD" ElseIf True Then Print "ONE_LINE_ELSEIF=OK" Else Print "ONE_LINE_BAD" End If
+    If True Then Print "ONE_LINE_IF=OK" ElseIf False Then Print "ONE_LINE_BAD" Else Print "ONE_LINE_BAD" End If
+    If False Then Print "ONE_LINE_BAD" ElseIf False Then Print "ONE_LINE_BAD" Else Print "ONE_LINE_ELSE=OK" End If
 
     textValue = "Else"
     If textValue = "Else" Then Print "STRING_ELSE=OK"
