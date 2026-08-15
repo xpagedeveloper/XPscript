@@ -49,6 +49,52 @@ internal sealed class FileSystemPortabilityPostProcessor
         return Evaluate(sourceText, PackCallvars(values));
     }
 
+    public static object? EvaluateArguments(object? sourceText, params XPScriptEvaluateArgument[] arguments)
+    {
+        var source = XPScriptRuntime.CStr(sourceText);
+        if (string.IsNullOrWhiteSpace(source)) return null;
+        try
+        {
+            if (arguments.Length == 0)
+                return new Evaluator(source, null).Run();
+
+            object? callvar;
+            if (arguments.Length == 1)
+            {
+                callvar = arguments[0].IsByRef
+                    ? arguments[0].Value
+                    : XPScriptEvaluateCollectionRuntime.Snapshot(arguments[0].Value);
+            }
+            else
+            {
+                var values = new object?[arguments.Length];
+                for (var i = 0; i < arguments.Length; i++)
+                    values[i] = arguments[i].IsByRef
+                        ? arguments[i].Value
+                        : XPScriptEvaluateCollectionRuntime.Snapshot(arguments[i].Value);
+                callvar = PackCallvars(values);
+            }
+
+            var evaluator = new Evaluator(source, callvar);
+            var result = evaluator.Run();
+            if (arguments.Length == 1)
+            {
+                arguments[0].WriteBack(evaluator.CurrentCallvar);
+            }
+            else if (evaluator.CurrentCallvar is LSArray packed && packed.IsAllocated)
+            {
+                for (var i = 0; i < arguments.Length; i++)
+                    arguments[i].WriteBack(packed.Get(new object?[] { i }));
+            }
+            return result;
+        }
+        catch (XPScriptRuntimeException) { throw; }
+        catch (Exception ex)
+        {
+            throw new XPScriptRuntimeException(5, "Evaluate failed: " + ex.Message);
+        }
+    }
+
     private static LSArray PackCallvars(params object?[] values)
     {
         var packed = new LSArray("Variant", true, new[] { 0 }, new[] { values.Length - 1 });
@@ -67,6 +113,65 @@ internal sealed class FileSystemPortabilityPostProcessor
             "return Snapshot(ParseExpression());",
             "return XPScriptEvaluateCollectionRuntime.SnapshotReturn(ParseExpression());",
             StringComparison.Ordinal);
+        generated = generated.Replace(
+            "private readonly object? _callvar;",
+            "private object? _callvar;\n        public object? CurrentCallvar => _callvar;",
+            StringComparison.Ordinal);
+
+        const string oldAssignment = """
+                if (Check(TokenKind.Identifier) && Peek(1).Kind == TokenKind.Equal)
+                {
+                    var name = Advance().Text;
+                    Advance();
+                    if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                        throw Error("callvar is read-only inside Evaluate.");
+                    if (!_variables.ContainsKey(name))
+                        throw Error("Assignment requires a local variable declared with Dim: " + name);
+                    _variables[name] = ParseExpression();
+                    SkipStatementTail();
+                    continue;
+                }
+""";
+
+        const string newAssignment = """
+                if (Check(TokenKind.Identifier)
+                    && Current.Text.Equals("callvar", StringComparison.OrdinalIgnoreCase)
+                    && Peek(1).Kind == TokenKind.LeftParen)
+                {
+                    var savedPosition = _position;
+                    Advance();
+                    Advance();
+                    var indexes = new List<object?>();
+                    if (!Check(TokenKind.RightParen))
+                        do { indexes.Add(ParseExpression()); } while (Match(TokenKind.Comma));
+                    Consume(TokenKind.RightParen, "Expected ')' after callvar indexes.");
+                    if (Match(TokenKind.Equal))
+                    {
+                        WriteCallvar(indexes, ParseExpression());
+                        SkipStatementTail();
+                        continue;
+                    }
+                    _position = savedPosition;
+                }
+
+                if (Check(TokenKind.Identifier) && Peek(1).Kind == TokenKind.Equal)
+                {
+                    var name = Advance().Text;
+                    Advance();
+                    if (name.Equals("callvar", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _callvar = ParseExpression();
+                        SkipStatementTail();
+                        continue;
+                    }
+                    if (!_variables.ContainsKey(name))
+                        throw Error("Assignment requires a local variable declared with Dim: " + name);
+                    _variables[name] = ParseExpression();
+                    SkipStatementTail();
+                    continue;
+                }
+""";
+        generated = generated.Replace(oldAssignment, newAssignment, StringComparison.Ordinal);
 
         const string oldReadCallvar = """
         private object? ReadCallvar(IReadOnlyList<object?> args)
@@ -96,8 +201,66 @@ internal sealed class FileSystemPortabilityPostProcessor
             }
             return XPScriptEvaluateCollectionRuntime.ReadIndexed(_callvar, args);
         }
+
+        private void WriteCallvar(IReadOnlyList<object?> args, object? value)
+        {
+            if (_callvar is LSArray outerArray && outerArray.Rank == 1 && args.Count > 1)
+            {
+                var nested = outerArray.Get(new object?[] { args[0] });
+                XPScriptEvaluateCollectionRuntime.WriteIndexed(nested, args.Skip(1).ToArray(), value);
+                return;
+            }
+            if (_callvar is Array outer && outer.Rank == 1 && args.Count > 1)
+            {
+                var nested = outer.GetValue(XPScriptRuntime.CInt(args[0]));
+                XPScriptEvaluateCollectionRuntime.WriteIndexed(nested, args.Skip(1).ToArray(), value);
+                return;
+            }
+            XPScriptEvaluateCollectionRuntime.WriteIndexed(_callvar, args, value);
+        }
 """;
         generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
+
+        generated = generated.Replace(
+            "public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;",
+            """
+    public static void WriteIndexed(object? value, IReadOnlyList<object?> args, object? newValue)
+    {
+        if (value is ListSnapshot list)
+        {
+            if (args.Count != 1)
+                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
+            list.Set(Convert.ToString(args[0], CultureInfo.CurrentCulture) ?? "", newValue);
+            return;
+        }
+        if (value is ILSList runtimeList)
+        {
+            if (args.Count != 1)
+                throw new XPScriptRuntimeException(5, "Evaluate List callvar requires exactly one tag.");
+            runtimeList.SetValue(args[0], newValue);
+            return;
+        }
+        if (value is LSArray array)
+        {
+            if (args.Count != array.Rank)
+                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
+            array.Set(newValue, args.ToArray());
+            return;
+        }
+        if (value is Array clrArray)
+        {
+            if (args.Count != clrArray.Rank)
+                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
+            var indexes = args.Select(XPScriptRuntime.CInt).ToArray();
+            clrArray.SetValue(newValue, indexes);
+            return;
+        }
+        throw new XPScriptRuntimeException(5, "callvar is not an indexed value.");
+    }
+
+    public static bool IsListValue(object? value) => value is ListSnapshot or ILSList;
+""",
+            StringComparison.Ordinal);
 
         generated = generated.Replace(
             "if (Match(TokenKind.Plus)) value = Add(value, ParseMultiplicative());",
