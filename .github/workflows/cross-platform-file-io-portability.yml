@@ -69,7 +69,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'file-binary-random-latin1.xps compilation failed.' }
           if ($env:RUNNER_OS -ne 'Windows') { chmod +x $exe }
           $result = & $exe
-          if ($LASTEXITCODE -ne 0 -or $result -notcontains 'BINARY_RANDOM_LATIN1=OK') { throw "Binary/Random Latin-1 round-trip failed.`n$result" }
+          if ($LASTEXITCODE -ne 0 -or $result -notcontains 'BINARY_RANDOM_LATIN1=OK') { throw "Binary/Random Latin-1 fixture failed.`n$result" }
+          if ($result -notcontains 'BINARY_READ=ÅÄÖ') { throw "Binary Latin-1 round-trip mismatch.`n$result" }
+          if ($result -notcontains 'RANDOM_READ=ÅÄÖ') { throw "Random Latin-1 round-trip mismatch.`n$result" }
           $binary = [IO.File]::ReadAllBytes((Resolve-Path './xps-binary-latin1.bin'))
           if ($binary.Length -ne 3 -or $binary[0] -ne 0xC5 -or $binary[1] -ne 0xC4 -or $binary[2] -ne 0xD6) {
             throw "Binary string bytes are not exact Latin-1: $([BitConverter]::ToString($binary))"
