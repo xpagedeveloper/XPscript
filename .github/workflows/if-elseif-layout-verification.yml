@@ -1,0 +1,46 @@
+name: If ElseIf Layout Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'samples/if-layouts.xps'
+      - 'src/XPScript.Compiler/**'
+      - '.github/workflows/if-elseif-layout-verification.yml'
+      - 'todo/if-elseif-layout-verification-todo.md'
+      - 'todo/done/if-elseif-layout-verification-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+      - name: Compile and run If layouts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/if-layouts.xps -o ./out/if-layouts --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'If layout sample compilation failed.' }
+          chmod +x ./out/if-layouts
+          $output = & ./out/if-layouts
+          if ($LASTEXITCODE -ne 0) { throw "If layout sample failed at runtime.`n$output" }
+          foreach ($value in @('SINGLE=OK','SINGLE_ELSE=OK','ONE_LINE_IF=OK','ONE_LINE_ELSEIF=OK','ONE_LINE_ELSE=OK','STRING_ELSE=OK','BLOCK=OK','MULTILINE_ELSEIF=OK','SPLIT_THEN=OK','SPLIT_ELSEIF=OK','INLINE_ELSEIF=OK','MIXED_ELSEIF=OK','DATE_SINGLE=OK')) {
+            if ($output -notcontains $value) { throw "If layout output missing: $value`n$output" }
+          }
+          foreach ($bad in @('SINGLE_TRUE_BAD','ONE_LINE_BAD','MULTILINE_BAD','ELSEIF_BAD','INLINE_ELSEIF_BAD','MIXED_BAD')) {
+            if ($output -contains $bad) { throw "Unexpected If branch output: $bad`n$output" }
+          }
