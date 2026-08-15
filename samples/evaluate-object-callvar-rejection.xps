@@ -11,12 +11,12 @@ Sub Main()
     probe.Value = 42
 
     On Error Resume Next
-    result = Evaluate("Return 1", probe)
+    result = Evaluate("Return 1", ByVal probe)
     evaluateErr = Err
     On Error GoTo 0
 
     If evaluateErr <> 5 Then
-        Error 9301, "Expected Evaluate object callvar rejection to use error 5, got " & CStr(evaluateErr)
+        Error 9301, "Expected Evaluate ByVal object callvar rejection to use error 5, got " & CStr(evaluateErr)
     End If
 
     Print "OBJECT-CALLVAR-REJECTED=OK"
