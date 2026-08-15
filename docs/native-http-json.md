@@ -11,6 +11,19 @@ Create an HTTP client with:
 Dim http As New HttpClient
 ```
 
+### HttpClient limitations
+
+The native HTTP client is deliberately bounded:
+
+- request bodies are limited to **8 MiB** of UTF-8 data,
+- response bodies are limited to **8 MiB**,
+- automatic redirects are disabled,
+- only absolute `http://` and `https://` URLs are accepted,
+- timeout must be finite and greater than zero,
+- header names/values are validated and CR/LF/NUL injection is rejected.
+
+These are runtime safety constraints and apply independently of application-specific authorization or endpoint policy.
+
 ### Timeout
 
 Timeout is configured in seconds and must be a finite value greater than zero.
@@ -18,6 +31,8 @@ Timeout is configured in seconds and must be a finite value greater than zero.
 ```xpscript
 http.Timeout = 30
 ```
+
+Values less than or equal to zero, NaN or infinity are rejected with a controlled runtime error.
 
 ### SetHeader
 
@@ -46,21 +61,31 @@ Clears configured request headers.
 Set response = http.Get("https://example.com/api")
 ```
 
+**Limitations:** URL must be absolute `http`/`https`; response body is capped at **8 MiB**; redirects are returned to the caller instead of followed automatically.
+
 ### Post
 
 Sends a request body with POST.
+
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
 
 ### Put
 
 Sends a request body with PUT.
 
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
+
 ### Patch
 
 Sends a request body with PATCH.
 
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
+
 ### Delete
 
 Sends a DELETE request.
+
+**Limitations:** URL must be absolute `http`/`https`; response body is capped at **8 MiB**; redirects are not followed automatically.
 
 Network calls are side-effecting operations. Tests should use a controlled endpoint rather than relying on a public service.
 
@@ -118,6 +143,8 @@ Parses JSON text.
 Set document = JsonDocument.Parse("{""name"":""Alice""}")
 ```
 
+**Limitations:** parser input is capped at **8 MiB UTF-8**, nesting at **64 levels**, total JSON nodes at **100,000**, and the estimated in-memory JSON payload at **16 MiB**.
+
 ### Stringify
 
 Serializes the document back to JSON text.
@@ -125,6 +152,8 @@ Serializes the document back to JSON text.
 ```xpscript
 Print document.Stringify()
 ```
+
+**Limitation:** serialized JSON output is capped at **16 MiB UTF-8**.
 
 ## JsonObject
 
@@ -141,7 +170,7 @@ Call obj.Set("name", "Fredrik")
 Call obj.Set("enabled", True)
 ```
 
-If a mutation would exceed the JSON resource budget, the previous value is restored and the operation fails.
+**Limitations:** the resulting object must remain within the JSON limits of **64 nesting levels**, **100,000 nodes** and **16 MiB estimated payload**. If a mutation would exceed the JSON resource budget, the previous value is restored and the operation fails.
 
 ### Get
 
@@ -184,11 +213,15 @@ Call arr.Add("one")
 Call arr.Add("two")
 ```
 
+**Limitations:** after the mutation the full JSON value must remain within **64 nesting levels**, **100,000 nodes** and **16 MiB estimated payload**.
+
 ### Get
 
 ```xpscript
 Print CStr(arr.Get(1))
 ```
+
+The index must be within the current array bounds.
 
 ### Set
 
@@ -203,6 +236,8 @@ Call arr.Set(1, "TWO")
 ```xpscript
 Call arr.RemoveAt(0)
 ```
+
+The index must reference an existing element.
 
 ### Count
 
@@ -234,6 +269,8 @@ Serializes a supported JSON object/value.
 Print JsonStringify(obj)
 ```
 
+**Limitation:** serialized output is subject to the **16 MiB UTF-8** JSON output limit.
+
 ## JsonEncode
 
 Encodes a supported runtime JSON value as JSON text.
@@ -241,6 +278,8 @@ Encodes a supported runtime JSON value as JSON text.
 ```xpscript
 Print JsonEncode(arr)
 ```
+
+**Limitation:** encoded JSON output is subject to the **16 MiB UTF-8** output limit and the source value must satisfy the JSON resource budget.
 
 ## JsonDecode
 
@@ -250,9 +289,11 @@ Parses JSON text and returns a JSON document/value object.
 Set document = JsonDecode("{""ok"":true}")
 ```
 
+**Limitations:** same parser constraints as `JsonDocument.Parse`: **8 MiB UTF-8 input**, **64 nesting levels**, **100,000 nodes** and **16 MiB estimated payload**.
+
 ## JsonParse
 
-Alternative parsing helper provided by the native JSON compatibility surface.
+Alternative parsing helper provided by the native JSON compatibility surface. It uses the same JSON parser limits as `JsonDocument.Parse`.
 
 ## Error handling
 
@@ -267,4 +308,4 @@ Do not place secrets such as authorization tokens in diagnostic output. Use requ
 - [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
 - [samples/json-resource-limits.xps](../samples/json-resource-limits.xps)
 
-` samples/json-http.xps ` contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.
+`samples/json-http.xps` contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.
