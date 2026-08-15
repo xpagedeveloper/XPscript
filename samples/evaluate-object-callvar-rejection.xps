@@ -1,0 +1,20 @@
+Class EvaluateObjectProbe
+    Public Value As Long
+End Class
+
+Sub Main()
+    Dim probe As EvaluateObjectProbe
+    Dim result As Variant
+
+    Set probe = New EvaluateObjectProbe()
+    probe.Value = 42
+
+    On Error Resume Next
+    result = Evaluate("Return 1", probe)
+    If Err <> 5 Then
+        Error 9301, "Expected Evaluate object callvar rejection to use error 5, got " & CStr(Err)
+    End If
+
+    On Error GoTo 0
+    Print "OBJECT-CALLVAR-REJECTED=OK"
+End Sub
