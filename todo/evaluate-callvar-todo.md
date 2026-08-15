@@ -94,7 +94,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] caller local variables remain inaccessible unless explicitly passed; source: `samples/evaluate-scope-error.xps`
 - [x] arrays/Lists are defensive-copied before execution for the verified callvar/nested collection paths
 - [x] arbitrary mutable objects are rejected rather than bridged by reference; runtime fixture: `samples/evaluate-object-callvar-rejection.xps`
-- [>] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work; exact nesting-boundary runtime coverage remains open
+- [x] collection nesting is capped at 64 levels to prevent unbounded recursive snapshot work; exact runtime boundary: `samples/evaluate-snapshot-depth-64.xps` accepted and `samples/evaluate-snapshot-depth-65.xps` rejected with XPScript error 5
 - [x] collection snapshots enforce a total budget of 100000 collection elements by rejecting an over-budget fixture with controlled XPScript error 5
 - [x] collection snapshots enforce a 16 MiB estimated payload budget by rejecting an over-budget fixture with controlled XPScript error 5; exact boundary source: `samples/evaluate-collection-payload-boundary.xps`
 - [>] XPScript array element counts are checked before allocating the snapshot array and the exact 100000/100001 in-boundary/out-of-boundary pair is verified by `samples/evaluate-collection-element-boundary.xps`; equivalent exact CLR-array boundary coverage remains open
