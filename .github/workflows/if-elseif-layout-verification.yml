@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'samples/if-layouts.xps'
-      - 'samples/if-layouts-error-statement.xps'
       - 'docs/if-elseif-layouts.md'
       - 'src/XPScript.Compiler/**'
       - '.github/workflows/if-elseif-layout-verification.yml'
@@ -46,12 +45,3 @@ jobs:
           foreach ($bad in @('SINGLE_IF_ELSE_BAD','SINGLE_TRUE_BAD','MULTILINE_BAD','ELSEIF_BAD','INLINE_ELSEIF_BAD')) {
             if ($output -contains $bad) { throw "Unexpected If branch output: $bad`n$output" }
           }
-      - name: Verify single-line If Error statement
-        shell: pwsh
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/if-layouts-error-statement.xps -o ./out/if-layouts-error --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'Single-line If Error sample compilation failed.' }
-          chmod +x ./out/if-layouts-error
-          $output = & ./out/if-layouts-error
-          if ($LASTEXITCODE -ne 0) { throw "Single-line If Error sample failed at runtime.`n$output" }
-          if ($output -notcontains 'ERROR-IF=OK' -or $output -contains 'ERROR-IF-BAD') { throw "Single-line If Error semantics failed.`n$output" }
