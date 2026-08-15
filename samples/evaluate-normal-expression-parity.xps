@@ -1,0 +1,99 @@
+' (c) xpagedeveloper.com 2026
+' Regression: Evaluate must match equivalent normal XPScript expressions and error codes.
+
+Sub Main()
+    Dim direct As Variant
+    Dim evaluated As Variant
+    Dim directErr As Integer
+    Dim evaluateErr As Integer
+    Dim divisor As Integer
+    Dim overflowValue As Integer
+
+    direct = "value=" + 42
+    evaluated = Evaluate("Return ""value="" + 42")
+    If CStr(direct) <> CStr(evaluated) Then
+        Error 9801, "Evaluate parity failed for String + Integer"
+    End If
+
+    direct = 10 + "20"
+    evaluated = Evaluate("Return 10 + ""20""")
+    If CDbl(direct) <> CDbl(evaluated) Then
+        Error 9802, "Evaluate parity failed for numeric + numeric String"
+    End If
+
+    direct = "20" + 10
+    evaluated = Evaluate("Return ""20"" + 10")
+    If CDbl(direct) <> CDbl(evaluated) Then
+        Error 9803, "Evaluate parity failed for numeric String + numeric"
+    End If
+
+    direct = "value=" & 42
+    evaluated = Evaluate("Return ""value="" & 42")
+    If CStr(direct) <> CStr(evaluated) Then
+        Error 9804, "Evaluate parity failed for String concatenation"
+    End If
+
+    direct = 17 \ 5
+    evaluated = Evaluate("Return 17 \ 5")
+    If CLng(direct) <> CLng(evaluated) Then
+        Error 9805, "Evaluate parity failed for integer division"
+    End If
+
+    direct = 17 Mod 5
+    evaluated = Evaluate("Return 17 Mod 5")
+    If CLng(direct) <> CLng(evaluated) Then
+        Error 9806, "Evaluate parity failed for Mod"
+    End If
+
+    direct = #2026-08-12# < #2026-08-13#
+    evaluated = Evaluate("Return #2026-08-12# < #2026-08-13#")
+    If CBool(direct) <> CBool(evaluated) Then
+        Error 9807, "Evaluate parity failed for Date comparison"
+    End If
+
+    On Error Resume Next
+    direct = CInt("not-a-number")
+    directErr = Err
+    On Error GoTo 0
+
+    On Error Resume Next
+    evaluated = Evaluate("Return CInt(""not-a-number"")")
+    evaluateErr = Err
+    On Error GoTo 0
+
+    If directErr <> 13 Or evaluateErr <> directErr Then
+        Error 9808, "Evaluate parity failed for type mismatch error mapping"
+    End If
+
+    divisor = 0
+    On Error Resume Next
+    direct = 10 \ divisor
+    directErr = Err
+    On Error GoTo 0
+
+    On Error Resume Next
+    evaluated = Evaluate("Return 10 \ 0")
+    evaluateErr = Err
+    On Error GoTo 0
+
+    If directErr <> 11 Or evaluateErr <> directErr Then
+        Error 9809, "Evaluate parity failed for divide-by-zero error mapping"
+    End If
+
+    overflowValue = 300
+    On Error Resume Next
+    direct = CByte(overflowValue)
+    directErr = Err
+    On Error GoTo 0
+
+    On Error Resume Next
+    evaluated = Evaluate("Return CByte(300)")
+    evaluateErr = Err
+    On Error GoTo 0
+
+    If directErr <> 6 Or evaluateErr <> directErr Then
+        Error 9810, "Evaluate parity failed for overflow error mapping"
+    End If
+
+    Print "EVALUATE-NORMAL-PARITY=OK"
+End Sub
