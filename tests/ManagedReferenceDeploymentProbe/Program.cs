@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using XPScript.Compiler;
 
-var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 var fixtureProject = Path.Combine(repoRoot, "tests", "ManagedReferenceFixture", "ManagedReferenceFixture.csproj");
 var probeRoot = Path.Combine(repoRoot, ".managed-reference-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
