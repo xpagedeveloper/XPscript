@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScriptEvaluate*.cs'
+      - 'src/XPScript.Compiler/Evaluate*.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/evaluate-*.xps'
       - 'tests/EvaluatePermissionMappingProbe/**'
       - 'tests/EvaluateConcurrencyProbe/**'
