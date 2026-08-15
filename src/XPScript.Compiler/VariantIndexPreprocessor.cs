@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -9,25 +8,62 @@ internal sealed class VariantIndexPreprocessor
         @"\b(?<name>[A-Za-z_]\w*)\s+As\s+Variant\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    private static readonly Regex ProcedureStart = new(
+        @"^\s*(?:(?:Public|Private)\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ProcedureEnd = new(
+        @"^\s*End\s+(?:Sub|Function|Property)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     public string Transform(string source)
     {
-        var names = VariantDeclaration.Matches(source)
-            .Select(match => match.Groups["name"].Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(name => name.Length)
-            .ToArray();
-
-        if (names.Length == 0) return source;
-
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var moduleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var activeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inProcedure = false;
+
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i];
-            foreach (var name in names)
-                line = RewriteReads(line, name);
-            lines[i] = line;
+            var original = lines[i];
+            var code = StripComment(original).Trim();
+
+            if (ProcedureEnd.IsMatch(code))
+            {
+                inProcedure = false;
+                activeNames = new HashSet<string>(moduleNames, StringComparer.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (ProcedureStart.IsMatch(code))
+            {
+                inProcedure = true;
+                activeNames = new HashSet<string>(moduleNames, StringComparer.OrdinalIgnoreCase);
+                AddDeclaredVariants(code, activeNames);
+                continue;
+            }
+
+            if (Regex.IsMatch(code, @"^(?:Dim|Static)\b", RegexOptions.IgnoreCase))
+            {
+                AddDeclaredVariants(code, inProcedure ? activeNames : moduleNames);
+                if (!inProcedure)
+                    activeNames = new HashSet<string>(moduleNames, StringComparer.OrdinalIgnoreCase);
+                continue;
+            }
+
+            var rewritten = original;
+            foreach (var name in activeNames.OrderByDescending(name => name.Length))
+                rewritten = RewriteReads(rewritten, name);
+            lines[i] = rewritten;
         }
+
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static void AddDeclaredVariants(string code, ISet<string> names)
+    {
+        foreach (Match match in VariantDeclaration.Matches(code))
+            names.Add(match.Groups["name"].Value);
     }
 
     private static string RewriteReads(string line, string name)
@@ -79,5 +115,23 @@ internal sealed class VariantIndexPreprocessor
             else if (c == ')' && --depth == 0) return i;
         }
         return -1;
+    }
+
+    private static string StripComment(string line)
+    {
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+            }
+            else if (!inString && line[i] == '\'')
+            {
+                return line[..i];
+            }
+        }
+        return line;
     }
 }
