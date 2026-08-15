@@ -109,7 +109,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [>] invalid numeric-literal diagnostics no longer echo the literal text; dedicated runtime fixture remains open
 - [>] retained structural diagnostics are length-limited; explicit oversized-diagnostic runtime fixture remains open
 - [x] secret callvar payload is absent from `Error$` in `samples/evaluate-diagnostic-sanitization.xps`
-- [ ] verify secret callvar payloads are also absent from process logs and compiler structured error output in a dedicated adversarial gate
+- [x] secret callvar payload is also rejected from compiler structured output and generated-process stdout/stderr before either stream is written to CI logs; permanent gate: `Evaluate Runtime Compatibility`
 
 ## Memory and lifetime
 
