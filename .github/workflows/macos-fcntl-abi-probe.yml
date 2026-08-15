@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
       - '.github/workflows/macos-fcntl-abi-probe.yml'
       - '.github/workflows/cross-platform-runtime-verification.yml'
       - 'todo/cross-platform-runtime-todo.md'
@@ -31,6 +32,7 @@ jobs:
           #include <stddef.h>
           #include <stdio.h>
           #include <stdlib.h>
+          #include <sys/wait.h>
           #include <unistd.h>
 
           int main(void) {
@@ -45,17 +47,41 @@ jobs:
               printf("F_UNLCK=%d\n", F_UNLCK);
               printf("F_TLOCK=%d\n", F_TLOCK);
               printf("F_ULOCK=%d\n", F_ULOCK);
+              printf("O_RDWR=%d\n", O_RDWR);
+              printf("O_CREAT=%d\n", O_CREAT);
+              printf("O_CLOEXEC=%d\n", O_CLOEXEC);
               printf("SEEK_SET=%d\n", SEEK_SET);
+
+              char sharedPath[] = "/tmp/xps-open-probe-XXXXXX";
+              int seed = mkstemp(sharedPath);
+              if (seed < 0) { perror("mkstemp-shared"); return 9; }
+              close(seed);
+              int shared = open(sharedPath, O_RDWR | O_CREAT | O_CLOEXEC, 0666);
+              if (shared < 0) { perror("open-parent"); unlink(sharedPath); return 10; }
+              pid_t child = fork();
+              if (child < 0) { perror("fork"); close(shared); unlink(sharedPath); return 11; }
+              if (child == 0) {
+                  int second = open(sharedPath, O_RDWR | O_CREAT | O_CLOEXEC, 0666);
+                  if (second < 0) { perror("open-child"); _exit(12); }
+                  close(second);
+                  _exit(0);
+              }
+              int childStatus = 0;
+              if (waitpid(child, &childStatus, 0) < 0) { perror("waitpid"); close(shared); unlink(sharedPath); return 13; }
+              close(shared);
+              unlink(sharedPath);
+              if (!WIFEXITED(childStatus) || WEXITSTATUS(childStatus) != 0) return 14;
+              puts("OPEN_SHARED_DIRECT=OK");
 
               char path[] = "/tmp/xps-lockf-probe-XXXXXX";
               int fd = mkstemp(path);
-              if (fd < 0) { perror("mkstemp"); return 10; }
+              if (fd < 0) { perror("mkstemp"); return 20; }
               unlink(path);
-              if (write(fd, "abcdef", 6) != 6) { perror("write"); close(fd); return 11; }
-              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-lock"); close(fd); return 12; }
-              if (lockf(fd, F_TLOCK, 3) != 0) { perror("lockf-lock"); close(fd); return 13; }
-              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-unlock"); close(fd); return 14; }
-              if (lockf(fd, F_ULOCK, 3) != 0) { perror("lockf-unlock"); close(fd); return 15; }
+              if (write(fd, "abcdef", 6) != 6) { perror("write"); close(fd); return 21; }
+              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-lock"); close(fd); return 22; }
+              if (lockf(fd, F_TLOCK, 3) != 0) { perror("lockf-lock"); close(fd); return 23; }
+              if (lseek(fd, 0, SEEK_SET) < 0) { perror("lseek-unlock"); close(fd); return 24; }
+              if (lockf(fd, F_ULOCK, 3) != 0) { perror("lockf-unlock"); close(fd); return 25; }
               close(fd);
               puts("LOCKF_DIRECT=OK");
               return 0;
@@ -75,5 +101,9 @@ jobs:
           grep -qx 'F_UNLCK=2' <<< "$output"
           grep -qx 'F_TLOCK=2' <<< "$output"
           grep -qx 'F_ULOCK=0' <<< "$output"
+          grep -qx 'O_RDWR=2' <<< "$output"
+          grep -qx 'O_CREAT=512' <<< "$output"
+          grep -qx 'O_CLOEXEC=16777216' <<< "$output"
           grep -qx 'SEEK_SET=0' <<< "$output"
+          grep -qx 'OPEN_SHARED_DIRECT=OK' <<< "$output"
           grep -qx 'LOCKF_DIRECT=OK' <<< "$output"
