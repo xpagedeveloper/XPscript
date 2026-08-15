@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/ParameterPassingPreprocessor.cs'
+      - 'src/XPScript.Compiler/ParameterPassingPostProcessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
@@ -14,6 +17,9 @@ on:
   push:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/ParameterPassingPreprocessor.cs'
+      - 'src/XPScript.Compiler/ParameterPassingPostProcessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
@@ -45,19 +51,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
           if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
-      - name: Verify ByVal and Evaluate copies
+      - name: Verify ByRef, ByVal and Evaluate copies
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/byval-copy | Out-Null
           $exe = if ($IsWindows) { './out/byval-copy/byval-copy.exe' } else { './out/byval-copy/byval-copy' }
           & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/byval-copy-semantics.xps -o $exe --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'ByVal copy semantics sample failed to compile.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Parameter passing semantics sample failed to compile.' }
           if (-not $IsWindows) { chmod +x $exe }
           $output = @(& $exe 2>&1)
           $runtimeExitCode = $LASTEXITCODE
           $global:LASTEXITCODE = 0
           $output | ForEach-Object { Write-Host $_ }
-          if ($runtimeExitCode -ne 0) { throw "ByVal copy semantics sample failed at runtime with exit code $runtimeExitCode." }
-          foreach ($marker in 'BYVAL-SUB=OK','BYVAL-FUNCTION=OK','EVALUATE-COPY=OK') {
-            if ($output -notcontains $marker) { throw "Missing ByVal regression marker: $marker" }
+          if ($runtimeExitCode -ne 0) { throw "Parameter passing semantics sample failed at runtime with exit code $runtimeExitCode." }
+          foreach ($marker in 'BYREF-SUB=OK','BYVAL-SUB=OK','BYREF-FUNCTION=OK','BYVAL-FUNCTION=OK','EVALUATE-COPY=OK') {
+            if ($output -notcontains $marker) { throw "Missing parameter-passing regression marker: $marker" }
           }
