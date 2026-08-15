@@ -1,0 +1,6 @@
+Include "source-preprocessor-child.xps"
+Include "source-preprocessor-child.xps"
+
+Sub Main()
+    Print PreprocessedValue()
+End Sub
