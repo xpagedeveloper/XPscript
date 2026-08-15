@@ -1,0 +1,56 @@
+name: Link Command Reference
+
+on:
+  push:
+    branches:
+      - docs-command-reference-standard
+    paths:
+      - '.github/workflows/tmp-link-command-reference.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  link-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: docs-command-reference-standard
+      - name: Add command reference navigation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          docs = Path('docs')
+          index = docs / 'index.md'
+          text = index.read_text(encoding='utf-8')
+          intro = '\nStart with the [Command Reference](command-reference.md) for compact syntax, parameter descriptions and clickable examples for XPScript commands. Use the topic pages below for detailed behavior and portability notes.\n'
+          if '[Command Reference](command-reference.md)' not in text:
+              lines = text.splitlines()
+              lines.insert(1, intro)
+              index.write_text('\n'.join(lines).rstrip() + '\n', encoding='utf-8')
+
+          skip = {'index.md', 'command-reference.md', 'branch-cleanup.md', 'security.md', 'include-source-mapping.md'}
+          note = '> For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).'
+          for path in sorted(docs.glob('*.md')):
+              if path.name in skip:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if note in text:
+                  continue
+              lines = text.splitlines()
+              if not lines or not lines[0].startswith('# '):
+                  continue
+              lines.insert(1, '')
+              lines.insert(2, note)
+              path.write_text('\n'.join(lines).rstrip() + '\n', encoding='utf-8')
+      - name: Remove one-shot workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-link-command-reference.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs .github/workflows/tmp-link-command-reference.yml
+          git commit -m "Link documentation to command reference"
+          git push origin HEAD:docs-command-reference-standard
