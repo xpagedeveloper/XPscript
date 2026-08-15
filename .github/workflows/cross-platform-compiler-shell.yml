@@ -1,0 +1,134 @@
+name: Cross Platform Compiler Shell
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/cross-platform-compiler-shell.yml'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/PlatformRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ShellRuntimeSource.cs'
+      - 'samples/platform-shell-arguments.xps'
+      - 'todo/cross-platform-runtime-todo.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compiler-shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler and resolve target
+        id: target
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $platform = 'Windows'; $ext = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $platform = 'Linux'; $ext = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $platform = 'MacOS'; $ext = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "platform=$platform" >> $env:GITHUB_OUTPUT
+          "ext=$ext" >> $env:GITHUB_OUTPUT
+
+      - name: Verify advertised RID set
+        shell: pwsh
+        run: |
+          $help = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- --help | Out-String
+          foreach ($rid in @('win-x64','win-arm64','linux-x64','linux-arm64','osx-x64','osx-arm64')) {
+            if ($help -notmatch [regex]::Escape($rid)) { throw "Compiler help does not advertise $rid" }
+          }
+
+      - name: Create Shell argument helper
+        shell: pwsh
+        run: |
+          @'
+          param([string]$A0,[string]$A1,[string]$A2,[string]$A3)
+          @(
+            "A0=$A0"
+            "A1=$A1"
+            "A2LEN=$($A2.Length)"
+            "A3=$A3"
+          ) | Set-Content -Encoding utf8 ./shell-args-output.txt
+          '@ | Set-Content -Encoding utf8 ./shell-args-helper.ps1
+
+      - name: Verify framework-dependent explicit RID and Platform/Shell
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-args-output.txt
+          $exe = "./out/framework${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --rid '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent compilation failed.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            bash -c "test -x '$exe'"
+            if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent Unix output is not executable.' }
+          }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Framework-dependent artifact failed.`n$result" }
+          if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Platform() mismatch.`n$result" }
+          if ($result -notcontains 'PLATFORM-BARE=${{ steps.target.outputs.platform }}') { throw "Bare Platform mismatch.`n$result" }
+          for ($i = 0; $i -lt 100 -and -not (Test-Path ./shell-args-output.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path ./shell-args-output.txt)) { throw 'Shell helper did not produce output.' }
+          $argsOut = Get-Content ./shell-args-output.txt
+          if ($argsOut -notcontains 'A0=space value') { throw "Space argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A1=åäö 漢字') { throw "Unicode argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A2LEN=0') { throw "Empty argument was not preserved.`n$argsOut" }
+          if ($argsOut -notcontains 'A3=safe-special_+,.=@-') { throw "Special-character argument was corrupted.`n$argsOut" }
+
+      - name: Verify self-contained single-file output
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-args-output.txt
+          $exe = "./out/selfcontained${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell-arguments.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Self-contained compilation failed.' }
+          if (-not (Test-Path $exe)) { throw 'Self-contained output missing.' }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            bash -c "test -x '$exe'"
+            if ($LASTEXITCODE -ne 0) { throw 'Self-contained Unix output is not executable.' }
+          }
+          $result = & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Self-contained artifact failed.`n$result" }
+          if ($result -notcontains 'PLATFORM-CALL=${{ steps.target.outputs.platform }}') { throw "Self-contained Platform mismatch.`n$result" }
+
+      - name: Verify default RID and default output extension
+        shell: pwsh
+        run: |
+          $dir = Join-Path (Get-Location) 'out/default'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item ./samples/platform-shell-arguments.xps (Join-Path $dir 'default-target.xps')
+          Push-Location $dir
+          try {
+            dotnet run --project ../../src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./default-target.xps --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw 'Default-target compilation failed.' }
+            $expected = "./default-target${{ steps.target.outputs.ext }}"
+            if (-not (Test-Path $expected)) { throw "Default output name/extension mismatch: expected $expected" }
+            if ($env:RUNNER_OS -ne 'Windows') {
+              bash -c "test -x '$expected'"
+              if ($LASTEXITCODE -ne 0) { throw 'Default Unix output is not executable.' }
+            }
+          } finally { Pop-Location }
+
+      - name: Verify explicit shell mode remains explicit
+        shell: pwsh
+        run: |
+          # XPScript intentionally has no separate implicit shell-evaluation mode.
+          # Users who need pipes/redirection/globbing explicitly invoke cmd.exe, sh, or pwsh.
+          $source = Get-Content ./samples/platform-shell.xps -Raw
+          if ($source -notmatch 'cmd\.exe /c' -or $source -notmatch '/bin/sh -c') {
+            throw 'Explicit shell invocation examples are missing.'
+          }
