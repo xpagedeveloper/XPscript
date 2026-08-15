@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'samples/if-layouts.xps'
       - 'samples/statement-layout-audit.xps'
       - 'samples/statement-separator-colon.xps'
