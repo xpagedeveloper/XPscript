@@ -1,0 +1,49 @@
+name: Required PR Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: required-pr-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  required-pr-gate:
+    name: Required PR Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore compiler
+        run: dotnet restore ./XPScriptCompiler.slnx
+
+      - name: Build compiler
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Compile portable smoke program
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/required-gate | Out-Null
+          $output = './out/required-gate/evaluate-xpscript'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-xpscript.xps -o $output --framework-dependent --result-format json
+          if ($LASTEXITCODE -ne 0) { throw 'Required PR Gate smoke compilation failed.' }
+          chmod +x $output
+          $result = & $output 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Required PR Gate smoke runtime failed with exit code $exit." }
+          foreach ($expected in @('EXPRESSION=7','STATEMENTS=52','STRING=HELLO WORLD','LOGICAL=True')) {
+            if ($result -notcontains $expected) { throw "Required PR Gate smoke output missing: $expected" }
+          }
+
+      - name: Report stable gate
+        run: echo 'REQUIRED-PR-GATE=OK'
