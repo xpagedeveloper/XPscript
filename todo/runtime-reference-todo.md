@@ -57,7 +57,7 @@ Status:
   - [x] split `If condition` / `Then` and `ElseIf condition` / `Then` forms while preserving physical source line count
   - [x] fully multiline block form with `If`, `Then`, body and `End If` on separate lines
   - [x] Date/comparison lowering and other preprocessors preserve single-line `If ... Then ...` syntax instead of producing `Unsupported statement` diagnostics; original regression discovered by `examples/date-comparisons.xps` testing
-- [x] audit all documented control-flow/declaration statement layouts for the same line-shape assumption; source: `samples/statement-layout-audit.xps`; detailed checklist: `todo/statement-layout-audit-todo.md`; permanent manual gate: `Control Flow and Error Handling Compatibility`:
+- [x] audit all documented control-flow/declaration statement layouts for the same line-shape assumption; source: `samples/statement-layout-audit.xps`; detailed checklist: `todo/done/statement-layout-audit-todo.md`; permanent manual gate: `Control Flow and Error Handling Compatibility`:
   - [x] verify `_` line continuation remains accepted for long expressions, argument lists, procedure headers and control-flow expressions
   - [x] verify `ElseIf` / `Else` supported layouts and nested single-line/block combinations
   - [x] verify `Select Case`, `Case`, `With`, `For/Next`, `ForAll`, `Do/Loop`, `While/Wend`, procedure/property/class headers and native declarations do not produce false `Unsupported statement` errors for documented/valid multiline layouts
@@ -129,10 +129,10 @@ Status:
 - [x] file `Input$(count, #fileNumber)` distinct from interactive input; verified by `File IO Extensions Compatibility`
 - [x] OS `Lock` / `Unlock` with Binary byte ranges, Random record ranges and sequential whole-file semantics; verified from a second operating-system file handle
 - [x] standard filesystem operations
-- [x] `ChDrive` on Windows; cross-platform non-Windows semantics remain tracked under section 14
+- [x] `ChDrive` on Windows; non-Windows behavior is explicit and cross-platform verified under section 14
 - [x] explicit Latin-1 regression source; verified by `samples/file-io-extensions.xps`
 
-File input and interactive input are distinct APIs. `Lock/Unlock` is regression-tested from a second operating-system file handle on Windows; cross-platform lock portability remains tracked under section 14.
+File input and interactive input are distinct APIs. `Lock/Unlock` is regression-tested from a second operating-system process/handle on Windows, Linux and macOS; detailed completed portability evidence is archived under section 14's checklist.
 
 ## 10. Formatting, process and console
 
@@ -165,27 +165,27 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 ## 14. Cross-platform compiler and runtime
 
-- [>] publish-target support for Windows, Linux and macOS has been added but is not yet runtime-verified
-- [>] compiler runtime targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
-- [>] default target follows the compiler host OS and x64/arm64 process architecture
-- [>] `Platform()` returns stable runtime names including `Windows`, `Linux`, `MacOS`
-- [>] platform-specific branching using `Platform()`
-- [>] cross-platform `Shell()` implementation
-- [>] Windows: `.exe`, `.cmd`, `.bat`, `.ps1` and commands
-- [>] Linux/macOS: binaries, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` through `pwsh`
-- [>] argument handling uses `ProcessStartInfo.ArgumentList` where possible to avoid unintended shell re-parsing
-- [>] clear runtime errors for unsupported/unexecutable targets
-- [>] target-selected native library declarations with `WindowsLib`, `LinuxLib`, `MacOSLib`
-- [>] target-selected native entry points with `WindowsAlias`, `LinuxAlias`, `MacOSAlias`
-- [>] multiline platform-specific `Declare` statements with `_`; source: `samples/platform-native-library.xps`
-- [>] application-local native `.dll`, `.so`, `.dylib` paths are validated and copied beside generated output; system-library names remain OS-resolved; path escape, missing-file, output-name collision and executable-overwrite checks are implemented; source: `samples/native-dependency-packaging.xps`
-- [>] architecture-specific native assets and aliases are selected by exact target RID for x64/arm64, with OS/base fallback; source: `samples/native-architecture-assets.xps`
-- [>] managed .NET assembly references are separate from native `Declare`: `Reference "path.dll"` stages a project-local managed assembly and repeatable `ReferenceNative "path" Runtime "rid"` packages RID-specific native dependencies; detailed syntax/security rules: `todo/cross-platform-runtime-todo.md`
-- [x] validate native-library search paths and loading behavior on Windows, Linux and macOS; verified with real system-library calls by `Cross Platform Native Loader Compatibility` on `win-x64`, `linux-x64` and `osx-arm64`; remaining architecture-specific coverage is tracked in `todo/cross-platform-runtime-todo.md`
-- [-] validate file-I/O portability across Windows, Linux and macOS: text round-trip, charset/BOM, Latin-1 byte identity, newline behavior, FileCopy executable bits, same-filesystem rename and delete-open semantics are runtime-verified; case sensitivity, roots/drives/UNC/long paths, symlinks, broader permissions, cross-filesystem rename, file sharing and locking remain open in `todo/cross-platform-runtime-todo.md`
-- [ ] validate OS file locks and region locks separately on Windows, Linux and macOS
-- [ ] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
-- [ ] detailed portability checklist: `todo/cross-platform-runtime-todo.md`
+- [x] publish-target support for Windows, Linux and macOS is runtime-verified
+- [x] compiler runtime targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
+- [x] default target follows the compiler host OS and x64/arm64 process architecture
+- [x] `Platform()` returns stable runtime names including `Windows`, `Linux`, `MacOS`
+- [x] platform-specific branching using `Platform()`
+- [x] cross-platform `Shell()` implementation
+- [x] Windows: `.exe`, `.cmd`, `.bat`, `.ps1` and commands
+- [x] Linux/macOS: binaries, executable/shebang scripts, `.sh`/`.bash`, and `.ps1` through `pwsh`
+- [x] argument handling uses `ProcessStartInfo.ArgumentList` where possible to avoid unintended shell re-parsing
+- [x] clear runtime errors for unsupported/unexecutable targets
+- [x] target-selected native library declarations with `WindowsLib`, `LinuxLib`, `MacOSLib`
+- [x] target-selected native entry points with `WindowsAlias`, `LinuxAlias`, `MacOSAlias`
+- [x] multiline platform-specific `Declare` statements with `_`; source: `samples/platform-native-library.xps`
+- [x] application-local native `.dll`, `.so`, `.dylib` paths are validated and copied beside generated output; system-library names remain OS-resolved; path escape, missing-file, output-name collision and executable-overwrite checks are implemented; source: `samples/native-dependency-packaging.xps`
+- [x] architecture-specific native assets and aliases are selected by exact target RID for x64/arm64, with OS/base fallback; source: `samples/native-architecture-assets.xps`
+- [x] managed .NET assembly references are separate from native `Declare`: `Reference "path.dll"` stages a project-local managed assembly and repeatable `ReferenceNative "path" Runtime "rid"` packages RID-specific native dependencies; detailed syntax/security rules: `todo/done/cross-platform-runtime-todo.md`
+- [x] validate native-library search paths and loading behavior on Windows, Linux and macOS; verified with real system-library calls by `Cross Platform Native Loader Compatibility` across all six supported RIDs; detailed evidence: `todo/done/cross-platform-runtime-todo.md`
+- [x] validate file-I/O portability across Windows, Linux and macOS including text round-trip, charset/BOM, Latin-1 byte identity, newline behavior, executable-bit preservation, roots/drives/UNC/long paths, symlinks, broader permissions, cross-filesystem behavior, sharing, rename/delete semantics and locking; detailed evidence: `todo/done/cross-platform-runtime-todo.md`
+- [x] validate OS file locks and byte/record range locks separately on Windows, Linux and macOS, including cross-process overlap conflicts
+- [x] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
+- [x] detailed portability checklist completed and archived: `todo/done/cross-platform-runtime-todo.md`
 
 ## 15. Evaluate
 
