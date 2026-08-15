@@ -5,6 +5,8 @@ on:
     branches: [todo-direct-script-execution]
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/direct-run.xps'
       - 'samples/direct-run-runtime-error.xps'
       - 'samples/direct-run-concurrent.xps'
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/**'
+      - '!src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - '!src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/direct-run.xps'
       - 'samples/direct-run-runtime-error.xps'
       - 'samples/direct-run-concurrent.xps'
