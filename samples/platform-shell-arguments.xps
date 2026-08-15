@@ -5,9 +5,9 @@ Sub Main()
     Print "PLATFORM-BARE=" & Platform
 
     If Platform() = "Windows" Then
-        Call Shell(".\\shell-args-helper.cmd \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
+        Call Shell(".\\shell-args-helper.ps1 \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
     ElseIf Platform() = "Linux" Or Platform() = "MacOS" Then
-        Call Shell("./shell-args-helper.sh \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
+        Call Shell("./shell-args-helper.ps1 \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
     Else
         Print "SHELL-ARGS=SKIPPED"
     End If
