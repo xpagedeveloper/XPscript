@@ -127,7 +127,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] documentation examples intentionally reuse existing source fixtures under `samples/` rather than introducing unverified duplicate example programs
 - [x] scalar, array, List, error, security and budget samples are linked directly from `docs/evaluate.md`
 - [x] source regression coverage is executable under the permanent `Evaluate Runtime Compatibility` workflow
-- [ ] add negative concurrency/isolation tests
+- [x] negative concurrency/isolation is verified with simultaneous failing Evaluate conversions using unique callvar secrets; generated-runtime probe: `tests/EvaluateConcurrencyProbe`
 
 ## Contract summary
 
