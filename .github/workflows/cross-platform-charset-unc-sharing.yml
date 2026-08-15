@@ -11,7 +11,7 @@ on:
       - 'samples/file-share-holder.xps'
       - 'samples/file-share-contender.xps'
       - 'samples/file-path-argument-probe.xps'
-      - 'todo/cross-platform-runtime-todo.md'
+      - 'todo/done/cross-platform-runtime-todo.md'
       - '.github/workflows/cross-platform-charset-unc-sharing.yml'
   workflow_dispatch:
 
@@ -114,8 +114,8 @@ jobs:
               $line = $result | Where-Object { $_ -like 'OPEN_ERR=*' } | Select-Object -First 1
               if (-not $line) { throw "Missing OPEN_ERR result.`n$result" }
               $errValue = [int]($line -replace '^OPEN_ERR=', '')
-              if ($env:RUNNER_OS -eq 'Windows' -and $mustFailOnWindows -and $errValue -eq 0) { throw "$holderMode/$contenderMode should be blocked by Windows FileShare policy." }
-              if (-not $mustFailOnWindows -and $errValue -ne 0) { throw "$holderMode/$contenderMode unexpectedly failed with error $errValue." }
+              if ($env:RUNNER_OS -eq 'Windows' -and $mustFailOnWindows -and $errValue -eq 0) { throw "$holderMode/$contenderMode should be blocked by Windows FileShare policy.`n$result" }
+              if (-not $mustFailOnWindows -and $errValue -ne 0) { throw "$holderMode/$contenderMode unexpectedly failed with error $errValue.`n$result" }
               Write-Host "FILE_SHARE_SCENARIO=$holderMode/$contenderMode err=$errValue"
             } finally {
               if (-not $holder.HasExited) { $holder.WaitForExit(10000) | Out-Null }

@@ -7,7 +7,7 @@ on:
       - '.github/workflows/cross-platform-all-rid-compile.yml'
       - 'src/XPScript.Compiler/**'
       - 'samples/platform-shell.xps'
-      - 'todo/cross-platform-runtime-todo.md'
+      - 'todo/done/cross-platform-runtime-todo.md'
   workflow_dispatch:
 
 permissions:

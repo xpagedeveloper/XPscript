@@ -5,7 +5,6 @@ Sub Main()
     Dim part As String
     Dim line As String
     Dim lockPayload As String
-    Dim lockErr As Integer
 
     If Command = "hold-lock" Then
         f = FreeFile
@@ -44,18 +43,10 @@ Sub Main()
 
     f = FreeFile
     Open "xpscript-latin1.txt" For Binary As #f
-    If Platform = "MacOS" Then
-        On Error Resume Next
-        Lock #f, 1 To 3
-        lockErr = Err
-        On Error GoTo 0
-        Print "MACOS_LOCK_ERR=" & CStr(lockErr)
-    Else
-        Lock #f, 1 To 3
-        Print "LOCK=OK"
-        Unlock #f, 1 To 3
-        Print "UNLOCK=OK"
-    End If
+    Lock #f, 1 To 3
+    Print "LOCK=OK"
+    Unlock #f, 1 To 3
+    Print "UNLOCK=OK"
     Close #f
 
     If Platform = "Windows" Then

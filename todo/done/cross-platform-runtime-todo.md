@@ -104,15 +104,15 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] `Kill` target behavior, symlink refusal and delete-while-open semantics are runtime-verified across Windows/Linux/macOS
 - [x] FileShare policy is centralized and cross-process verified by `Cross Platform Charset UNC Sharing`: Input permits shared access, Output/Append permits readers but only one Windows writer, and Binary/Random permits a second process to open the file so explicit locking can control concurrency
 - [x] Binary/Random no longer rely on exclusive write-open semantics that would prevent a second process from reaching `Lock`; cross-process Binary/Binary opening is verified on Windows/Linux/macOS
-- [>] Windows/Linux `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics. .NET 10 does not support `FileStream.Lock/Unlock` on macOS, so XPScript returns explicit runtime error 5 instead of weakening range-lock semantics
+- [x] Windows/Linux `Lock` / `Unlock` use OS-backed `FileStream.Lock/Unlock`; macOS uses native `lockf` byte-range locks on Binary/Random descriptors opened without .NET's implicit Unix `flock`. Lock conflicts and ownership/permission failures are normalized to explicit XPScript error 70 diagnostics. Normal Lock/Unlock and overlapping cross-process range-lock behavior are runtime-verified on Windows/Linux/macOS by `Cross Platform File Locking`
 - [x] delete-while-open semantics runtime-verified: Windows blocks deletion for the open XPScript handle while Linux/macOS permit Unix-style unlink; source: `samples/file-delete-open-semantics.xps`
 - [x] portable charset names and BOM behavior are exact-byte runtime-verified by `Cross Platform Charset UNC Sharing`: `utf-8` is BOM-less, `utf-8-bom` writes EF BB BF, UTF-16 LE/BE aliases use their defined BOMs, and explicit no-BOM aliases suppress them
 - [x] `latin1`, `latin-1`, `iso-8859-1`, `default` and `ansi` resolve to deterministic XPScript Latin-1; exact C5 byte identity and unsupported-charset error 5 are runtime-verified on Windows/Linux/macOS
 - [x] `samples/file-charset-bom.xps` runtime-verified on Windows/Linux/macOS for 3-byte UTF-8 BOM and 2-byte UTF-16LE BOM size deltas
-- [x] verify `Lock` / `Unlock` from a second process/handle on Windows; `Cross Platform Runtime Verification`
-- [x] verify `Lock` / `Unlock` from a second process/handle on Linux; `Cross Platform Runtime Verification`
-- [x] verify macOS Lock limitation returns explicit XPScript error 5; source: `samples/file-lock-platform-support.xps`
-- [ ] implement safe macOS byte-range locking with semantics compatible with .NET file sharing before claiming native `Lock` / `Unlock` support on macOS
+- [x] verify `Lock` / `Unlock` from a second process/handle on Windows; `Cross Platform File Locking`
+- [x] verify `Lock` / `Unlock` from a second process/handle on Linux; `Cross Platform File Locking`
+- [x] verify `Lock` / `Unlock` from a second process/handle on macOS; `Cross Platform File Locking`
+- [x] implement safe macOS byte-range locking with Binary/Random FileShare semantics compatible with explicit `Lock` / `Unlock`; verified together with cross-process Binary/Binary opening by `Cross Platform Charset UNC Sharing` and overlapping range conflicts by `Cross Platform File Locking`
 - [x] document that path separators differ (`\\` vs `/`) and recommend portable path construction; source: `docs/cross-platform-runtime.md`
 - [x] runtime-verify Windows drive letters, UNC paths and long paths; UNC uses a real temporary Windows SMB share in `Cross Platform Charset UNC Sharing`
 - [x] runtime-verify case sensitivity/case preservation on representative Windows/Linux/macOS filesystems; `Cross Platform Filesystem Edge Cases`
@@ -135,15 +135,15 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [x] execute the matching artifact on each target OS and architecture; `Cross Platform All RID Compile`
 - [x] run basic Platform/Shell tests on Windows, Linux and macOS; `Cross Platform Runtime Verification`
 - [x] run native library loader tests on each OS and architecture; `Cross Platform Native Loader Compatibility` uses matching real runners for all six supported RIDs
-- [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified, but native macOS range locking remains open
+- [x] run file I/O and cross-process locking tests on each OS; Windows/Linux/macOS normal Lock/Unlock and overlapping cross-process range locking are verified by `Cross Platform File Locking`
 - [x] run path/permission/symlink/file-sharing negative tests; covered by `Cross Platform Path Security`, File IO platform semantics, filesystem-edge and charset/UNC/FileShare gates
-- [>] run security tests for Shell, external libraries and file paths: Shell, external-library paths, File I/O paths and UNC are verified; native macOS range-lock support remains open
+- [x] run security tests for Shell, external libraries and file paths: Shell, external-library paths, File I/O paths, UNC, Binary/Random FileShare and native macOS range locking are verified by the applicable cross-platform gates
 
-## Remaining work required before archive
+## Archive status
 
-Only one substantive item remains before this TODO can move to `todo/done/`:
-
-- [ ] implement and runtime-verify safe native macOS byte-range `Lock` / `Unlock` semantics without weakening existing Windows/Linux behavior
+- [x] safe native macOS byte-range `Lock` / `Unlock` semantics implemented and runtime-verified without weakening existing Windows/Linux behavior
+- [x] Binary/Random cross-process opening remains runtime-verified on Windows/Linux/macOS
+- [x] all substantive cross-platform runtime checklist items are complete
 
 `Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments on Windows, Ubuntu and macOS.
 
@@ -153,4 +153,4 @@ Only one substantive item remains before this TODO can move to `todo/done/`:
 
 `Cross Platform Managed References` builds a real net10.0 fixture assembly, verifies matching RID-native deployment and non-matching RID filtering, and executes generated artifacts successfully on Windows, Ubuntu and macOS.
 
-`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security`, `Cross Platform Filesystem Edge Cases`, `Cross Platform File IO Portability` and `Cross Platform Charset UNC Sharing` jointly verify target-specific drive/hidden/case behavior, symlink/reparse-point refusal, same-path protection, long Windows paths, real Windows UNC access, Unix mode/ownership preservation and direct `File.GetUnixFileMode` inspection, charset/BOM exact bytes, Binary/Random exact Latin-1 byte formats, cross-process FileShare behavior and filesystem rename/delete semantics.
+`Cross Platform File IO Platform Semantics`, `Cross Platform Path Security`, `Cross Platform Filesystem Edge Cases`, `Cross Platform File IO Portability`, `Cross Platform Charset UNC Sharing` and `Cross Platform File Locking` jointly verify target-specific drive/hidden/case behavior, symlink/reparse-point refusal, same-path protection, long Windows paths, real Windows UNC access, Unix mode/ownership preservation and direct `File.GetUnixFileMode` inspection, charset/BOM exact bytes, Binary/Random exact Latin-1 byte formats, cross-process FileShare behavior, native macOS byte-range locking and filesystem rename/delete semantics.
