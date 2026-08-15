@@ -1,0 +1,40 @@
+' (c) xpagedeveloper.com 2026
+' Regression: all supplied Evaluate values share one aggregate input snapshot budget.
+
+Sub Main()
+    Dim leftAccepted() As Variant
+    Dim rightAccepted() As Variant
+    Dim leftRejected() As Variant
+    Dim rightRejected() As Variant
+    Dim result As Variant
+
+    ' Outer generated callvar array contributes 2 elements.
+    ' 2 + 49999 + 49999 = 100000, exact maximum accepted budget.
+    ReDim leftAccepted(0 To 49998)
+    ReDim rightAccepted(0 To 49998)
+    leftAccepted(49998) = 10
+    rightAccepted(49998) = 20
+
+    result = Evaluate("Return callvar(0, 49998) + callvar(1, 49998)", leftAccepted, rightAccepted)
+    If CInt(result) <> 30 Then
+        Error 9631, "Evaluate aggregate element budget changed supplied array contents"
+    End If
+
+    ' 2 + 49999 + 50000 = 100001, first value above the aggregate budget.
+    ReDim leftRejected(0 To 49998)
+    ReDim rightRejected(0 To 49999)
+
+    On Error GoTo ExpectedError
+    result = Evaluate("Return callvar(0, 0)", leftRejected, rightRejected)
+    Error 9632, "Expected Evaluate to reject aggregate 100001 collection elements"
+
+ExpectedError:
+    If Err <> 5 Then
+        Error 9633, "Expected XPScript error 5 but got " & CStr(Err)
+    End If
+    If Instr(Error$, "maximum element budget of 100000") = 0 Then
+        Error 9634, "Expected exact Evaluate aggregate element-budget diagnostic"
+    End If
+
+    Print "MULTI-AGGREGATE-ELEMENT-BUDGET=OK"
+End Sub
