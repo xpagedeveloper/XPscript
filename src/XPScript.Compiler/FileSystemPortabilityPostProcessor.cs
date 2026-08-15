@@ -77,8 +77,15 @@ internal sealed class FileSystemPortabilityPostProcessor
 """;
 
         const string newReadCallvar = """
-        private object? ReadCallvar(IReadOnlyList<object?> args) =>
-            XPScriptEvaluateCollectionRuntime.ReadIndexed(_callvar, args);
+        private object? ReadCallvar(IReadOnlyList<object?> args)
+        {
+            if (_callvar is Array outer && outer.Rank == 1 && args.Count > 1)
+            {
+                var value = outer.GetValue(XPScriptRuntime.CInt(args[0]));
+                return XPScriptEvaluateCollectionRuntime.ReadIndexed(value, args.Skip(1).ToArray());
+            }
+            return XPScriptEvaluateCollectionRuntime.ReadIndexed(_callvar, args);
+        }
 """;
         generated = generated.Replace(oldReadCallvar, newReadCallvar, StringComparison.Ordinal);
 
