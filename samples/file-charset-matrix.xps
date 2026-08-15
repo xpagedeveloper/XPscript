@@ -1,0 +1,86 @@
+' Charset alias and deterministic byte-semantics fixture.
+Sub Main()
+    Dim f As Integer
+    Dim charsetErr As Integer
+
+    f = FreeFile
+    Open "charset-default.txt" For Output As #f Charset "default"
+    Print #f, "Å"
+    Close #f
+
+    f = FreeFile
+    Open "charset-ansi.txt" For Output As #f Charset "ansi"
+    Print #f, "Å"
+    Close #f
+
+    f = FreeFile
+    Open "charset-latin1.txt" For Output As #f Charset "latin1"
+    Print #f, "Å"
+    Close #f
+
+    f = FreeFile
+    Open "charset-latin-dash.txt" For Output As #f Charset "latin-1"
+    Print #f, "Å"
+    Close #f
+
+    f = FreeFile
+    Open "charset-iso.txt" For Output As #f Charset "iso-8859-1"
+    Print #f, "Å"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf8.txt" For Output As #f Charset "utf8"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf8-dash.txt" For Output As #f Charset "utf-8"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf8-bom.txt" For Output As #f Charset "utf8-bom"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf16.txt" For Output As #f Charset "utf16"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-unicode.txt" For Output As #f Charset "unicode"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf16le-nobom.txt" For Output As #f Charset "utf16le-nobom"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf16be.txt" For Output As #f Charset "utf-16be"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-utf16be-nobom.txt" For Output As #f Charset "utf16be-nobom"
+    Print #f, "ABC"
+    Close #f
+
+    f = FreeFile
+    Open "charset-ascii.txt" For Output As #f Charset "us-ascii"
+    Print #f, "ABC"
+    Close #f
+
+    On Error Resume Next
+    f = FreeFile
+    Open "charset-unsupported.txt" For Output As #f Charset "windows-1252"
+    charsetErr = Err
+    On Error GoTo 0
+    If charsetErr = 0 Then
+        Close #f
+    End If
+    Print "UNSUPPORTED_CHARSET_ERR=" & CStr(charsetErr)
+    Print "CHARSET_MATRIX=OK"
+End Sub
