@@ -1,27 +1,43 @@
 ' (c) xpagedeveloper.com 2026
 ' Regression coverage for postfix increment/decrement and compound assignment.
 
+Dim rhsCalls As Integer
+
+Function CountedValue() As Integer
+    rhsCalls = rhsCalls + 1
+    CountedValue = 5
+End Function
+
 Sub Main()
     Dim counter As Integer
+    Dim reference As Integer
     Dim byteValue As Byte
     Dim longValue As Long
+    Dim longReference As Long
     Dim singleValue As Single
     Dim doubleValue As Double
     Dim currencyValue As Currency
     Dim variantValue As Variant
     Dim text As String
+    Dim referenceText As String
     Dim zero As Integer
     Dim badText As String
+    Dim boolValue As Boolean
+    Dim dateValue As Date
+    Dim objectValue As Object
     Dim capturedErr As Integer
 
     counter = 10
+    reference = 10
     counter++
-    If counter <> 11 Then
-        Error 9901, "Integer ++ failed"
+    reference = reference + 1
+    If counter <> reference Then
+        Error 9901, "Integer ++ differs from long form"
     End If
     counter--
-    If counter <> 10 Then
-        Error 9902, "Integer -- failed"
+    reference = reference - 1
+    If counter <> reference Then
+        Error 9902, "Integer -- differs from long form"
     End If
 
     byteValue = 10
@@ -65,39 +81,57 @@ Sub Main()
     End If
 
     counter = 10
+    reference = 10
     counter += 5
-    If counter <> 15 Then
-        Error 9910, "+= failed"
+    reference = reference + 5
+    If counter <> reference Then
+        Error 9910, "+= differs from long form"
     End If
     counter -= 3
-    If counter <> 12 Then
-        Error 9911, "-= failed"
+    reference = reference - 3
+    If counter <> reference Then
+        Error 9911, "-= differs from long form"
     End If
     counter *= 2
-    If counter <> 24 Then
-        Error 9912, "*= failed"
+    reference = reference * 2
+    If counter <> reference Then
+        Error 9912, "*= differs from long form"
     End If
     counter /= 4
-    If counter <> 6 Then
-        Error 9913, "/= failed"
+    reference = reference / 4
+    If counter <> reference Then
+        Error 9913, "/= differs from long form"
     End If
 
     longValue = 10
+    longReference = 10
     longValue \= 4
-    If longValue <> 2 Then
-        Error 9914, "\= failed"
+    longReference = longReference \ 4
+    If longValue <> longReference Then
+        Error 9914, "\= differs from long form"
     End If
 
     text = "Hello"
+    referenceText = "Hello"
     text &= " world"
-    If text <> "Hello world" Then
-        Error 9915, "&= failed"
+    referenceText = referenceText & " world"
+    If text <> referenceText Then
+        Error 9915, "&= differs from long form"
     End If
 
     text = "value="
+    referenceText = "value="
     text += 42
-    If text <> "value=42" Then
-        Error 9916, "String += forgiving coercion failed"
+    referenceText = referenceText + 42
+    If text <> referenceText Then
+        Error 9916, "String += differs from long form"
+    End If
+
+    rhsCalls = 0
+    counter = 10
+    counter += CountedValue()
+    If counter <> 15 Or rhsCalls <> 1 Then
+        Error 9917, "compound RHS must be evaluated exactly once"
     End If
 
     byteValue = 255
@@ -106,7 +140,7 @@ Sub Main()
     capturedErr = Err
     On Error GoTo 0
     If capturedErr <> 6 Then
-        Error 9917, "Byte ++ overflow must use error 6"
+        Error 9918, "Byte ++ overflow must use error 6"
     End If
 
     badText = "not numeric"
@@ -115,7 +149,42 @@ Sub Main()
     capturedErr = Err
     On Error GoTo 0
     If capturedErr <> 13 Then
-        Error 9918, "String ++ must use type mismatch error 13"
+        Error 9919, "String ++ must use type mismatch error 13"
+    End If
+
+    boolValue = True
+    On Error Resume Next
+    boolValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9920, "Boolean ++ must use type mismatch error 13"
+    End If
+
+    dateValue = CDate("2026-08-15")
+    On Error Resume Next
+    dateValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9921, "Date ++ must use type mismatch error 13"
+    End If
+
+    On Error Resume Next
+    objectValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9922, "Object ++ must use type mismatch error 13"
+    End If
+
+    variantValue = "not numeric"
+    On Error Resume Next
+    variantValue++
+    capturedErr = Err
+    On Error GoTo 0
+    If capturedErr <> 13 Then
+        Error 9923, "non-numeric Variant ++ must use type mismatch error 13"
     End If
 
     counter = 10
@@ -125,7 +194,7 @@ Sub Main()
     capturedErr = Err
     On Error GoTo 0
     If capturedErr <> 11 Then
-        Error 9919, "/= division by zero must use error 11"
+        Error 9924, "/= division by zero must use error 11"
     End If
 
     longValue = 10
@@ -134,7 +203,7 @@ Sub Main()
     capturedErr = Err
     On Error GoTo 0
     If capturedErr <> 11 Then
-        Error 9920, "\= division by zero must use error 11"
+        Error 9925, "\= division by zero must use error 11"
     End If
 
     Print "INCREMENT-COMPOUND-OPERATORS=OK"
