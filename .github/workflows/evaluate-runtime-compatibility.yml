@@ -142,6 +142,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-collection-payload-boundary' @('PAYLOAD-BOUNDARY=OK')
           Invoke-EvaluateSample 'evaluate-diagnostic-sanitization' @('SANITIZED=Evaluate type mismatch.') @('TOP-SECRET-API-KEY-123456789')
           Invoke-EvaluateSample 'evaluate-diagnostic-edge-cases' @('EVALUATE-DIAGNOSTIC-EDGE=OK')
+          Invoke-EvaluateSample 'evaluate-parser-error-mapping' @('EVALUATE-PARSER-ERROR-5=OK')
           Invoke-EvaluateSample 'evaluate-function-arity-errors'
 
       - name: Verify Evaluate isolation negatives fail safely

@@ -81,7 +81,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] divide-by-zero maps to XPScript error 11
 - [x] overflow maps to XPScript error 6; runtime assertion: `samples/evaluate-coercion-diagnostics.xps`
 - [x] permission/access failures map to XPScript error 70 and sanitize the underlying exception text; dedicated generated-runtime assertion: `tests/EvaluatePermissionMappingProbe`
-- [>] remaining evaluator/parser-specific failures map to XPScript error 5 with Evaluate context; representative arity/unknown-function failures are verified
+- [x] evaluator/parser-specific failures map to XPScript error 5 with Evaluate context across undeclared assignment, duplicate declaration, unsupported local type, malformed syntax/tokenization, scalar/List indexing errors and XPScript array rank errors; runtime source: `samples/evaluate-parser-error-mapping.xps`
 - [x] known Evaluate functions distinguish invalid argument count from unavailable function names through `XPScriptEvaluateFunctionArityRuntime`
 - [x] wrong-arity diagnostics report function name, accepted argument count/range and actual argument count; source: `samples/evaluate-function-arity-errors.xps`
 - [x] unknown function names report `Function is not available inside Evaluate` rather than an arity error

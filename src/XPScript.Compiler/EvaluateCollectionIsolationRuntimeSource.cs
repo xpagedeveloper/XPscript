@@ -85,7 +85,11 @@ internal static class XPScriptEvaluateCollectionRuntime
         }
 
         if (value is LSArray array)
+        {
+            if (args.Count != array.Rank)
+                throw new XPScriptRuntimeException(5, "Evaluate array callvar received the wrong number of indexes.");
             return array.Get(args.ToArray());
+        }
 
         if (value is Array clrArray)
         {
