@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/XPScript.Compiler/SourcePreprocessorPipeline.cs'
       - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/CompileResult.cs'
       - 'src/XPScript.Compiler/Program.cs'
       - 'samples/source-preprocessor-*.xps'
       - 'docs/source-preprocessors.md'
@@ -17,6 +19,8 @@ on:
     paths:
       - 'src/XPScript.Compiler/SourcePreprocessorPipeline.cs'
       - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+      - 'src/XPScript.Compiler/CompileResult.cs'
       - 'src/XPScript.Compiler/Program.cs'
       - 'samples/source-preprocessor-*.xps'
       - 'docs/source-preprocessors.md'
@@ -107,6 +111,7 @@ jobs:
           $result = ($resultText -join "`n") | ConvertFrom-Json
           if ($result.result -ne 'error' -or $result.errors.Count -lt 1) { throw 'Expected structured compiler diagnostics.' }
           $diagnostic = $result.errors[0]
+          if ($diagnostic.file -ne 'source-preprocessor-error-child.xps') { throw "Mapped file '$($diagnostic.file)' did not identify the included source file." }
           if ($diagnostic.line -ne 2) { throw "Mapped line was $($diagnostic.line), expected included-file line 2." }
           if ($diagnostic.position -lt 1) { throw 'Mapped diagnostic position was invalid.' }
           if ($diagnostic.code.Trim() -ne '__BAD_OPERATOR__') { throw "Mapped code '$($diagnostic.code)' did not point to the original included source line." }
