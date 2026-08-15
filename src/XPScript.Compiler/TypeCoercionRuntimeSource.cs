@@ -72,5 +72,5 @@ internal static class XPScriptCoercion
         return double.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 }
-""";
+""" + IncrementRuntimeSource.Code;
 }
