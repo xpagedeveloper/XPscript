@@ -39,6 +39,10 @@ public sealed class CompileResult
 
 public sealed class CompileDiagnostic
 {
+    [JsonPropertyName("file")]
+    [XmlElement("file")]
+    public string File { get; set; } = "";
+
     [JsonPropertyName("line")]
     [XmlElement("line")]
     public int Line { get; set; }
