@@ -10,6 +10,7 @@ on:
       - 'tests/EvaluateConcurrencyProbe/**'
       - 'tests/EvaluateClrArrayBudgetProbe/**'
       - 'tests/EvaluateLifetimeProbe/**'
+      - 'tests/EvaluateDiagnosticSanitizationProbe/**'
       - 'docs/evaluate.md'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/runtime-reference-todo.md'
@@ -71,6 +72,15 @@ jobs:
           $result | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw 'Evaluate lifetime isolation probe failed.' }
           if ($result -notcontains 'EVALUATE-LIFETIME-PROBE=OK') { throw 'Evaluate lifetime isolation probe did not report success.' }
+
+      - name: Verify Evaluate diagnostic sanitization
+        shell: pwsh
+        run: |
+          $result = dotnet run --project ./tests/EvaluateDiagnosticSanitizationProbe/EvaluateDiagnosticSanitizationProbe.csproj -c Release
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Evaluate diagnostic sanitization probe failed.' }
+          if ($result -notcontains 'EVALUATE-DIAGNOSTIC-SANITIZATION-PROBE=OK') { throw 'Evaluate diagnostic sanitization probe did not report success.' }
 
       - name: Compile and run Evaluate regression corpus
         shell: pwsh

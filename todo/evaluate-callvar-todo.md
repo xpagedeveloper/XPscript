@@ -106,7 +106,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] concurrent-thread isolation is verified across independent List callvars, detached return Lists and simultaneous collection snapshots; generated-runtime probe: `tests/EvaluateConcurrencyProbe`
 - [x] exceptions crossing the verified Evaluate boundary are routed through `XPScriptEvaluateSemanticsRuntime.Sanitize`
 - [x] type/conversion diagnostics use stable descriptions that do not echo secret input values for the verified sanitization path
-- [>] only allowlisted structural parser/API diagnostics retain detail; broader adversarial coverage remains open
+- [x] only allowlisted structural parser/API diagnostics retain detail; representative allowlisted families and adversarial non-allowlisted secret-bearing messages are permanently verified by `tests/EvaluateDiagnosticSanitizationProbe`
 - [x] invalid numeric-literal diagnostics do not echo the literal text; runtime fixture: `samples/evaluate-diagnostic-edge-cases.xps`
 - [x] retained structural diagnostics are length-limited to 512 characters plus ellipsis; runtime fixture: `samples/evaluate-diagnostic-edge-cases.xps`
 - [x] secret callvar payload is absent from `Error$` in `samples/evaluate-diagnostic-sanitization.xps`
