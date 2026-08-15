@@ -30,6 +30,27 @@ public sealed class SourcePreprocessorException : Exception
     public int Position { get; }
 }
 
+internal static class SourcePreprocessorConfigurationContext
+{
+    private static readonly AsyncLocal<IReadOnlyList<string>?> CurrentValue = new();
+
+    public static IReadOnlyList<string> Current => CurrentValue.Value ?? Array.Empty<string>();
+
+    public static IDisposable Push(IEnumerable<string>? specifications)
+    {
+        var previous = CurrentValue.Value;
+        CurrentValue.Value = specifications?.ToArray() ?? Array.Empty<string>();
+        return new Scope(() => CurrentValue.Value = previous);
+    }
+
+    private sealed class Scope(Action dispose) : IDisposable
+    {
+        private Action? _dispose = dispose;
+
+        public void Dispose() => Interlocked.Exchange(ref _dispose, null)?.Invoke();
+    }
+}
+
 internal sealed class SourcePreprocessorPipeline
 {
     internal sealed record Result(string Source, SourceMap Map);
