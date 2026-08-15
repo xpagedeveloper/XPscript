@@ -6,36 +6,50 @@ Directory.CreateDirectory(workspace);
 
 try
 {
-    var generated = new XPScriptTranspiler().Transpile("Sub Main()\nEnd Sub\n", "evaluate-clr-array-budget-probe.xps");
+    var source = """
+Sub Main()
+End Sub
+""";
+
+    var generated = new XPScriptTranspiler().Transpile(source, "evaluate-clr-array-budget-probe.xps");
     generated += """
 
 internal static class EvaluateClrArrayBudgetProbeEntry
 {
     public static void Main()
     {
-        var accepted = Array.CreateInstance(typeof(object), 100000);
-        accepted.SetValue(42, 99999);
-        var acceptedSnapshot = XPScriptEvaluateCollectionRuntime.Snapshot(accepted);
-        if (acceptedSnapshot is not Array acceptedArray)
-            throw new Exception("Evaluate CLR array snapshot did not return an array.");
-        if (acceptedArray.LongLength != 100000 || Convert.ToInt32(acceptedArray.GetValue(99999)) != 42)
-            throw new Exception("Evaluate CLR array exact-boundary snapshot changed length or data.");
+        VerifyExactBoundaryAccepted();
+        VerifyFirstOverBoundaryRejected();
+        Console.WriteLine("EVALUATE-CLR-ARRAY-BUDGET=OK");
+    }
 
-        var rejected = Array.CreateInstance(typeof(object), 100001);
+    private static void VerifyExactBoundaryAccepted()
+    {
+        // Exactly 100000 elements with a non-zero CLR lower bound.
+        var accepted = Array.CreateInstance(typeof(object), [100000], [-500]);
+        accepted.SetValue(20, -500);
+        accepted.SetValue(22, 99499);
+
+        var result = XPScriptEvaluateRuntime.Evaluate("Return callvar(-500) + callvar(99499)", accepted);
+        if (XPScriptRuntime.CInt(result) != 42)
+            throw new Exception("Evaluate changed CLR array bounds or contents at the exact 100000-element boundary.");
+    }
+
+    private static void VerifyFirstOverBoundaryRejected()
+    {
+        var rejected = new object?[100001];
         try
         {
-            _ = XPScriptEvaluateCollectionRuntime.Snapshot(rejected);
-            throw new Exception("Evaluate accepted a CLR array above the 100000-element budget.");
+            _ = XPScriptEvaluateRuntime.Evaluate("Return callvar(0)", rejected);
+            throw new Exception("Evaluate unexpectedly accepted a 100001-element CLR array.");
         }
         catch (XPScriptRuntimeException ex)
         {
             if (ex.Number != 5)
-                throw new Exception("Evaluate CLR array over-budget expected error 5 but got " + ex.Number + ".");
+                throw new Exception("Evaluate CLR array boundary expected error 5 but got " + ex.Number + ".");
             if (!ex.Message.Contains("maximum element budget of 100000", StringComparison.Ordinal))
-                throw new Exception("Evaluate CLR array over-budget returned an unexpected diagnostic: " + ex.Message);
+                throw new Exception("Evaluate CLR array boundary returned an unexpected diagnostic: " + ex.Message);
         }
-
-        Console.WriteLine("EVALUATE-CLR-ARRAY-BUDGET=OK");
     }
 }
 """;
