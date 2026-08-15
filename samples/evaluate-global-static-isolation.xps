@@ -44,8 +44,12 @@ End Function
 Sub Main()
     ModuleSecret = "MODULE-SECRET-VALUE"
 
-    If Not ModuleGlobalIsolated() Then Error 9501, "Evaluate unexpectedly accessed or exposed a module global"
-    If Not StaticLocalIsolated() Then Error 9502, "Evaluate unexpectedly accessed or exposed a Static local"
+    If Not ModuleGlobalIsolated() Then
+        Error 9501, "Evaluate unexpectedly accessed or exposed a module global"
+    End If
+    If Not StaticLocalIsolated() Then
+        Error 9502, "Evaluate unexpectedly accessed or exposed a Static local"
+    End If
 
     Print "GLOBAL-STATIC-ISOLATION=OK"
 End Sub
