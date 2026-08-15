@@ -46,7 +46,8 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] List input is copied into an evaluator-private read-only snapshot rather than sharing the caller's `LSList<T>` instance for the verified List path
 - [x] List snapshotting uses the type-neutral `ILSList.SnapshotEntries()` contract rather than reflection
 - [x] List values are recursively snapshotted, including nested XPScript arrays and nested Lists; source: `samples/evaluate-nested-collections.xps`
-- [>] cyclic/shared collection graphs use reference-identity tracking so snapshots do not recurse indefinitely and shared references remain internally consistent; explicit cyclic/shared-identity runtime coverage remains open
+- [x] cyclic collection graphs use reference-identity tracking so snapshots terminate without unbounded recursion and self-referencing List edges remain valid; runtime source: `samples/evaluate-cyclic-list-snapshot.xps`
+- [ ] add explicit shared-reference identity coverage where the same child collection is reachable through multiple distinct parent edges
 - [x] returning the nested List fixture produces a normal value recognized by XPScript `IsList`
 - [x] runtime verification of nested List/array combinations through `Evaluate Runtime Compatibility`
 
