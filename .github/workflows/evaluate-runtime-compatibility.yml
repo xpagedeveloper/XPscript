@@ -79,6 +79,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-snapshot-depth-64' @('DEPTH-64-ISLIST=True')
           Invoke-EvaluateSample 'evaluate-snapshot-depth-65' @('DEPTH-65-ERR=5')
           Invoke-EvaluateSample 'evaluate-global-static-isolation' @('GLOBAL-STATIC-ISOLATION=OK') @('MODULE-SECRET-VALUE','STATIC-SECRET-VALUE')
+          Invoke-EvaluateSample 'evaluate-cyclic-list-snapshot' @('CYCLIC-LIST-SNAPSHOT=OK')
           Invoke-EvaluateSample 'evaluate-no-return'
           Invoke-EvaluateSample 'evaluate-standard-functions' @('STRING=abcef','MID=bcd','INSTR=6','REPLACE=a/b/c','MATH=13','NUMBERFORMAT=FF/1010','YEAR=2026','ISNUMERIC=True')
           Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
