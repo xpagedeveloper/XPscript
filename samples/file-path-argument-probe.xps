@@ -8,7 +8,8 @@ Sub Main()
     Dim errValue As Integer
 
     If Application.ArgCount < 2 Then
-        Error 9201, "Expected operation and source path arguments."
+        Print "PATH_ARGUMENT_PROBE=ERROR: expected operation and source path arguments"
+        Exit Sub
     End If
 
     operationName = Application.Args(0)
@@ -32,7 +33,8 @@ Sub Main()
 
     If operationName = "copy" Then
         If Application.ArgCount < 3 Then
-            Error 9202, "Copy requires a destination path."
+            Print "PATH_ARGUMENT_PROBE=ERROR: copy requires a destination path"
+            Exit Sub
         End If
         destinationPath = Application.Args(2)
         FileCopy sourcePath, destinationPath
@@ -43,7 +45,8 @@ Sub Main()
 
     If operationName = "move" Then
         If Application.ArgCount < 3 Then
-            Error 9203, "Move requires a destination path."
+            Print "PATH_ARGUMENT_PROBE=ERROR: move requires a destination path"
+            Exit Sub
         End If
         destinationPath = Application.Args(2)
         On Error Resume Next
@@ -55,5 +58,5 @@ Sub Main()
         Exit Sub
     End If
 
-    Error 9204, "Unknown path probe operation."
+    Print "PATH_ARGUMENT_PROBE=ERROR: unknown path probe operation"
 End Sub
