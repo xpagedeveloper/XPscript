@@ -86,6 +86,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-coercion-diagnostics' @('Evaluate coercion/diagnostics semantics OK')
           Invoke-EvaluateSample 'evaluate-collection-element-budget' @('ELEMENT-BUDGET=OK')
           Invoke-EvaluateSample 'evaluate-collection-element-boundary' @('ELEMENT-BOUNDARY=OK')
+          Invoke-EvaluateSample 'evaluate-list-element-budget-stress' @('LIST-ELEMENT-BUDGET-STRESS=OK')
           Invoke-EvaluateSample 'evaluate-collection-payload-budget' @('PAYLOAD-BUDGET=OK')
           Invoke-EvaluateSample 'evaluate-collection-payload-boundary' @('PAYLOAD-BOUNDARY=OK')
           Invoke-EvaluateSample 'evaluate-diagnostic-sanitization' @('SANITIZED=Evaluate type mismatch.') @('TOP-SECRET-API-KEY-123456789')
