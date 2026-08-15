@@ -5,98 +5,118 @@ Sub Main()
     Dim result As Variant
     Dim parameters List As Variant
     Dim values(1 To 2, 1 To 2) As Integer
+    Dim evaluateErr As Integer
+    Dim evaluateMessage As String
 
     On Error Resume Next
     result = Evaluate("x = 1: Return x")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9801, "Undeclared Evaluate assignment should map to error 5"
     End If
-    If Instr(Error$, "Assignment requires a local variable declared with Dim:") <> 1 Then
+    If Instr(evaluateMessage, "Assignment requires a local variable declared with Dim:") <> 1 Then
         Error 9802, "Unexpected undeclared-assignment Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Dim x: Dim x: Return x")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9803, "Duplicate Evaluate Dim should map to error 5"
     End If
-    If Instr(Error$, "Variable already declared in Evaluate scope:") <> 1 Then
+    If Instr(evaluateMessage, "Variable already declared in Evaluate scope:") <> 1 Then
         Error 9804, "Unexpected duplicate-Dim Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Dim x As Banana: Return x")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9805, "Unsupported Evaluate local type should map to error 5"
     End If
-    If Instr(Error$, "Unsupported Evaluate local type:") <> 1 Then
+    If Instr(evaluateMessage, "Unsupported Evaluate local type:") <> 1 Then
         Error 9806, "Unexpected unsupported-local-type Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return (1 + 2")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9807, "Malformed Evaluate parentheses should map to error 5"
     End If
-    If Instr(Error$, "Expected ')' after expression.") <> 1 Then
+    If Instr(evaluateMessage, "Expected ')' after expression.") <> 1 Then
         Error 9808, "Unexpected malformed-parentheses Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return 1 @ 2")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9809, "Unsupported Evaluate character should map to error 5"
     End If
-    If Instr(Error$, "Unsupported character in Evaluate source:") <> 1 Then
+    If Instr(evaluateMessage, "Unsupported character in Evaluate source:") <> 1 Then
         Error 9810, "Unexpected unsupported-character Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return #2026-01-01")
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9811, "Unterminated Evaluate date should map to error 5"
     End If
-    If Instr(Error$, "Unterminated date literal in Evaluate.") <> 1 Then
+    If Instr(evaluateMessage, "Unterminated date literal in Evaluate.") <> 1 Then
         Error 9812, "Unexpected unterminated-date Evaluate diagnostic"
     End If
 
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return callvar(0)", 42)
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9813, "Indexing scalar callvar should map to error 5"
     End If
-    If Instr(Error$, "callvar is not an indexed value.") <> 1 Then
+    If Instr(evaluateMessage, "callvar is not an indexed value.") <> 1 Then
         Error 9814, "Unexpected scalar-callvar indexing diagnostic"
     End If
 
     parameters("a") = 1
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return callvar(""a"", ""b"")", parameters)
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9815, "List callvar with multiple tags should map to error 5"
     End If
-    If Instr(Error$, "Evaluate List callvar requires exactly one tag.") <> 1 Then
+    If Instr(evaluateMessage, "Evaluate List callvar requires exactly one tag.") <> 1 Then
         Error 9816, "Unexpected List callvar arity diagnostic"
     End If
 
     values(1, 1) = 1
-    On Error GoTo 0
     On Error Resume Next
     result = Evaluate("Return callvar(1)", values)
-    If Err <> 5 Then
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
         Error 9817, "Array callvar with wrong rank should map to error 5"
     End If
-    If Instr(Error$, "Evaluate array callvar received the wrong number of indexes.") <> 1 Then
+    If Instr(evaluateMessage, "Evaluate array callvar received the wrong number of indexes.") <> 1 Then
         Error 9818, "Unexpected array callvar rank diagnostic"
     End If
 
-    On Error GoTo 0
     Print "EVALUATE-PARSER-ERROR-5=OK"
 End Sub
