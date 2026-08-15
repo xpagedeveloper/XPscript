@@ -1,0 +1,155 @@
+Option Declare
+
+Sub Main()
+    Dim value As Variant
+
+    ' Conversions
+    value = Evaluate("Return CStr(42)")
+    If CStr(value) <> "42" Then
+        Error 9801, "Evaluate CStr failed"
+    End If
+    value = Evaluate("Return CInt(42)")
+    If CInt(value) <> 42 Then
+        Error 9802, "Evaluate CInt failed"
+    End If
+    value = Evaluate("Return CLng(42)")
+    If CLng(value) <> 42 Then
+        Error 9803, "Evaluate CLng failed"
+    End If
+    value = Evaluate("Return CDbl(42)")
+    If CDbl(value) <> 42 Then
+        Error 9804, "Evaluate CDbl failed"
+    End If
+    value = Evaluate("Return CSng(42)")
+    If CSng(value) <> 42 Then
+        Error 9805, "Evaluate CSng failed"
+    End If
+    value = Evaluate("Return CCur(42)")
+    If CCur(value) <> 42 Then
+        Error 9806, "Evaluate CCur failed"
+    End If
+    value = Evaluate("Return CByte(42)")
+    If CByte(value) <> 42 Then
+        Error 9807, "Evaluate CByte failed"
+    End If
+    value = Evaluate("Return CBool(1)")
+    If Not CBool(value) Then
+        Error 9808, "Evaluate CBool failed"
+    End If
+    value = Evaluate("Return Year(CDate(#2026-08-12#))")
+    If CInt(value) <> 2026 Then
+        Error 9809, "Evaluate CDate failed"
+    End If
+    value = Evaluate("Return Year(CDat(#2027-01-02#))")
+    If CInt(value) <> 2027 Then
+        Error 9810, "Evaluate CDat failed"
+    End If
+    value = Evaluate("Return CVar(42)")
+    If CInt(value) <> 42 Then
+        Error 9811, "Evaluate CVar failed"
+    End If
+
+    ' Strings
+    value = Evaluate("Return Len(\"abcdef\")")
+    If CInt(value) <> 6 Then
+        Error 9820, "Evaluate Len failed"
+    End If
+    value = Evaluate("Return Left(\"abcdef\", 2) & Right(\"abcdef\", 2) & Mid(\"abcdef\", 3, 2)")
+    If CStr(value) <> "abefcd" Then
+        Error 9821, "Evaluate Left/Right/Mid failed"
+    End If
+    value = Evaluate("Return LCase(\"AbC\") & UCase(\"xYz\")")
+    If CStr(value) <> "abcXYZ" Then
+        Error 9822, "Evaluate LCase/UCase failed"
+    End If
+    value = Evaluate("Return Trim(\"  a  \") & \"|\" & LTrim(\"  b\") & \"|\" & RTrim(\"c  \")")
+    If CStr(value) <> "a|b|c" Then
+        Error 9823, "Evaluate Trim family failed"
+    End If
+    value = Evaluate("Return FullTrim(\"  alpha   beta  \")")
+    If CStr(value) <> "alpha beta" Then
+        Error 9824, "Evaluate FullTrim failed"
+    End If
+    value = Evaluate("Return StrReverse(\"abc\")")
+    If CStr(value) <> "cba" Then
+        Error 9825, "Evaluate StrReverse failed"
+    End If
+    value = Evaluate("Return Instr(1, \"AlphaBeta\", \"Beta\")")
+    If CInt(value) <> 6 Then
+        Error 9826, "Evaluate Instr failed"
+    End If
+    value = Evaluate("Return Replace(\"a-b-c\", \"-\", \"/\")")
+    If CStr(value) <> "a/b/c" Then
+        Error 9827, "Evaluate Replace failed"
+    End If
+    value = Evaluate("Return Space(3) & String(2, \"x\")")
+    If CStr(value) <> "   xx" Then
+        Error 9828, "Evaluate Space/String failed"
+    End If
+    value = Evaluate("Return Chr(65) & CStr(Asc(\"A\"))")
+    If CStr(value) <> "A65" Then
+        Error 9829, "Evaluate Chr/Asc failed"
+    End If
+
+    ' Math and numeric formatting
+    value = Evaluate("Return Abs(-4) + Int(2.9) + Fix(3.9) + Round(2.4) + Sqr(81) + Sgn(-2)")
+    If CInt(value) <> 19 Then
+        Error 9840, "Evaluate basic math functions failed"
+    End If
+    value = Evaluate("Return Sin(0) + Cos(0) + Tan(0) + ATn(0) + ATn2(0, 1) + ASin(0) + ACos(1) + Log(1)")
+    If CDbl(value) <> 1 Then
+        Error 9841, "Evaluate trigonometric functions failed"
+    End If
+    value = Evaluate("Return Exp(0) + Fraction(1.25)")
+    If CDbl(value) <> 1.25 Then
+        Error 9842, "Evaluate Exp/Fraction failed"
+    End If
+    value = Evaluate("Return Val(\"42\")")
+    If CInt(value) <> 42 Then
+        Error 9843, "Evaluate Val failed"
+    End If
+    value = Evaluate("Return Trim(Str(42)) & \"/\" & Bin(10) & \"/\" & Hex(255) & \"/\" & Oct(8)")
+    If CStr(value) <> "42/1010/FF/10" Then
+        Error 9844, "Evaluate Str/Bin/Hex/Oct failed"
+    End If
+
+    ' Date and time
+    value = Evaluate("Return CStr(Year(#2026-08-12 13:14:15#)) & \"/\" & CStr(Month(#2026-08-12 13:14:15#)) & \"/\" & CStr(Day(#2026-08-12 13:14:15#))")
+    If CStr(value) <> "2026/8/12" Then
+        Error 9860, "Evaluate Year/Month/Day failed"
+    End If
+    value = Evaluate("Return CStr(Hour(#2026-08-12 13:14:15#)) & \"/\" & CStr(Minute(#2026-08-12 13:14:15#)) & \"/\" & CStr(Second(#2026-08-12 13:14:15#))")
+    If CStr(value) <> "13/14/15" Then
+        Error 9861, "Evaluate Hour/Minute/Second failed"
+    End If
+    value = Evaluate("Return Year(DateValue(#2026-08-12 13:14:15#))")
+    If CInt(value) <> 2026 Then
+        Error 9862, "Evaluate DateValue failed"
+    End If
+    value = Evaluate("Return Hour(TimeValue(#2026-08-12 13:14:15#))")
+    If CInt(value) <> 13 Then
+        Error 9863, "Evaluate TimeValue failed"
+    End If
+    value = Evaluate("Return Year(DateNumber(2026, 8, 12))")
+    If CInt(value) <> 2026 Then
+        Error 9864, "Evaluate DateNumber failed"
+    End If
+    value = Evaluate("Return Hour(TimeNumber(13, 14, 15))")
+    If CInt(value) <> 13 Then
+        Error 9865, "Evaluate TimeNumber failed"
+    End If
+    value = Evaluate("Return Day(DateAdd(\"d\", 5, #2026-08-12#))")
+    If CInt(value) <> 17 Then
+        Error 9866, "Evaluate DateAdd failed"
+    End If
+    value = Evaluate("Return DateDiff(\"d\", #2026-08-12#, #2026-08-17#)")
+    If CInt(value) <> 5 Then
+        Error 9867, "Evaluate DateDiff failed"
+    End If
+    value = Evaluate("Return DatePart(\"yyyy\", #2026-08-12#)")
+    If CInt(value) <> 2026 Then
+        Error 9868, "Evaluate DatePart failed"
+    End If
+
+    Print "EVALUATE-BROAD-FUNCTION-COVERAGE=OK"
+End Sub
