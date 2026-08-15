@@ -8,7 +8,7 @@ on:
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
       - '.github/workflows/macos-fcntl-abi-probe.yml'
       - '.github/workflows/cross-platform-runtime-verification.yml'
-      - 'todo/cross-platform-runtime-todo.md'
+      - 'todo/done/cross-platform-runtime-todo.md'
   workflow_dispatch:
 
 permissions:
