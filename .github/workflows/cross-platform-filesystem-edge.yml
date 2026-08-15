@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
-      - 'src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs'
       - 'samples/file-path-argument-probe.xps'
       - 'samples/file-case-preservation.xps'
       - '.github/workflows/cross-platform-filesystem-edge.yml'
