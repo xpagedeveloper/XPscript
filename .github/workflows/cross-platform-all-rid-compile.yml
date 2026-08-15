@@ -50,7 +50,7 @@ jobs:
 
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/platform-shell.xps --rid $rid -o $output --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw "Compilation failed for $rid." }
-          if (-not (Test-Path $output)) { throw "Expected output missing for $rid: $output" }
+          if (-not (Test-Path $output)) { throw "Expected output missing for ${rid}: $output" }
 
           $length = (Get-Item $output).Length
           if ($length -le 0) { throw "Generated output is empty for $rid." }
