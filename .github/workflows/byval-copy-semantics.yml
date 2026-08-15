@@ -7,6 +7,8 @@ on:
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/ParameterPassingPreprocessor.cs'
       - 'src/XPScript.Compiler/ParameterPassingPostProcessor.cs'
+      - 'src/XPScript.Compiler/EvaluateByValSyntaxPreprocessor.cs'
+      - 'src/XPScript.Compiler/EvaluateArgumentRuntimeSource.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
@@ -20,6 +22,8 @@ on:
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/ParameterPassingPreprocessor.cs'
       - 'src/XPScript.Compiler/ParameterPassingPostProcessor.cs'
+      - 'src/XPScript.Compiler/EvaluateByValSyntaxPreprocessor.cs'
+      - 'src/XPScript.Compiler/EvaluateArgumentRuntimeSource.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
@@ -51,7 +55,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
           if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
-      - name: Verify ByRef, ByVal and Evaluate copies
+      - name: Verify default ByRef and explicit ByVal semantics
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/byval-copy | Out-Null
@@ -64,6 +68,6 @@ jobs:
           $global:LASTEXITCODE = 0
           $output | ForEach-Object { Write-Host $_ }
           if ($runtimeExitCode -ne 0) { throw "Parameter passing semantics sample failed at runtime with exit code $runtimeExitCode." }
-          foreach ($marker in 'BYREF-SUB=OK','BYVAL-SUB=OK','BYREF-FUNCTION=OK','BYVAL-FUNCTION=OK','EVALUATE-COPY=OK') {
+          foreach ($marker in 'BYREF-SUB=OK','BYVAL-SUB=OK','BYREF-FUNCTION=OK','BYVAL-FUNCTION=OK','BYREF-EVALUATE=OK','BYVAL-EVALUATE=OK') {
             if ($output -notcontains $marker) { throw "Missing parameter-passing regression marker: $marker" }
           }
