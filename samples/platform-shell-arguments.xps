@@ -1,0 +1,14 @@
+Option Declare
+
+Sub Main()
+    Print "PLATFORM-CALL=" & Platform()
+    Print "PLATFORM-BARE=" & Platform
+
+    If Platform() = "Windows" Then
+        Call Shell(".\\shell-args-helper.ps1 \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
+    ElseIf Platform() = "Linux" Or Platform() = "MacOS" Then
+        Call Shell("./shell-args-helper.ps1 \"space value\" \"åäö 漢字\" \"\" \"safe-special_+,.=@-\"")
+    Else
+        Print "SHELL-ARGS=SKIPPED"
+    End If
+End Sub

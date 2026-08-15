@@ -11,33 +11,33 @@ Status:
 
 ## Compiler targets
 
-- [>] support explicit `--runtime` / `--rid` target selection
-- [>] supported targets: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`
-- [>] default target follows the compiler host OS + architecture when no RID is supplied
-- [>] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
-- [ ] verify self-contained single-file output on every target OS
-- [ ] verify framework-dependent output on every target OS
-- [ ] verify executable permissions on Linux/macOS
+- [x] support explicit `--runtime` / `--rid` target selection
+- [x] supported targets are explicitly advertised as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`; architecture execution coverage is tracked separately in the quality/native gates below
+- [x] default target follows the compiler host OS + architecture when no RID is supplied
+- [x] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension
+- [x] self-contained single-file output is runtime-verified on Windows, Linux and macOS runner targets by `Cross Platform Compiler Shell`
+- [x] framework-dependent output is runtime-verified on Windows, Linux and macOS runner targets by `Cross Platform Compiler Shell`
+- [x] generated Linux/macOS framework-dependent and self-contained outputs are verified executable without a test-side `chmod`
 
 ## Platform function
 
-- [>] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified by `Cross Platform Runtime Verification`
-- [>] support both `Platform()` and bare `Platform` expression forms
+- [x] `Platform()` returns stable runtime names: `Windows`, `Linux`, `MacOS`, `FreeBSD`, or `Unknown`; Windows/Linux/macOS are runtime-verified
+- [x] support both `Platform()` and bare `Platform` expression forms; both forms are compared in `Cross Platform Compiler Shell`
 - [x] document platform branching examples; source: `docs/cross-platform-runtime.md`
 
 ## Shell
 
-- [>] route `Shell()` through a cross-platform runtime; basic execution is runtime-verified on Windows/Linux/macOS by `Cross Platform Runtime Verification`
-- [>] Windows: direct executables
-- [>] Windows: `.cmd` / `.bat` through `cmd.exe`
-- [>] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
-- [>] Linux/macOS: direct executable binaries and executable/shebang scripts
-- [>] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
-- [>] Linux/macOS: `.ps1` through `pwsh`
-- [>] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
-- [ ] verify quoted arguments, spaces, Unicode paths, empty arguments and special characters on every OS
-- [ ] define whether an explicit shell-execution mode is needed for users who intentionally want pipes/redirection/globbing
-- [ ] security review command/path injection behavior
+- [x] route `Shell()` through a cross-platform runtime; execution is runtime-verified on Windows/Linux/macOS
+- [x] Windows: direct executables
+- [x] Windows: `.cmd` / `.bat` through `cmd.exe`
+- [x] Windows: `.ps1` through `pwsh.exe` when available, otherwise `powershell.exe`
+- [x] Linux/macOS: direct executable binaries and executable/shebang scripts
+- [x] Linux/macOS: `.sh` / `.bash` through `/bin/sh`
+- [x] Linux/macOS: `.ps1` through `pwsh`
+- [x] use `ProcessStartInfo.ArgumentList` for script argument handling instead of unnecessary shell re-parsing
+- [x] quoted arguments, spaces, Unicode, empty arguments and non-shell special characters are runtime-verified on Windows/Linux/macOS by `Cross Platform Compiler Shell`
+- [x] no additional implicit shell-execution mode is added; users intentionally requesting pipes/redirection/globbing explicitly invoke `cmd.exe /c`, `sh -c`, or `pwsh -Command`, keeping normal `Shell()` argument handling non-shell-parsed
+- [x] Shell command/path-injection behavior is security-reviewed: executable resolution does not implicitly trust relative PATH/current-directory entries, normal arguments use `ArgumentList`, and Windows batch metacharacters are rejected before `cmd.exe` starts
 
 ## Native/external libraries
 
@@ -175,3 +175,5 @@ File I/O must use the target operating system's real filesystem semantics rather
 - [>] run file I/O and cross-process locking tests on each OS; Windows/Linux cross-process range locking is verified and macOS explicit unsupported behavior is verified
 - [ ] run path/permission/symlink/file-sharing negative tests
 - [ ] run security tests for Shell, external libraries and file paths
+
+`Cross Platform Compiler Shell` verifies current-runner explicit/default RID selection, default output extension, framework-dependent and self-contained single-file execution, Unix executable permissions, `Platform()` and bare `Platform`, and lossless Shell arguments (spaces, Unicode, empty values and safe special characters) on Windows, Ubuntu and macOS. Intentional shell-language evaluation remains explicit through `cmd.exe /c`, `sh -c`, or `pwsh -Command` rather than being implicitly enabled for normal `Shell()` calls.
