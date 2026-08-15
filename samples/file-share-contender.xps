@@ -1,0 +1,32 @@
+Option Declare
+
+Sub Main()
+    Dim modeName As String
+    Dim pathName As String
+    Dim f As Integer
+    Dim openErr As Integer
+
+    modeName = Application.Args(0)
+    pathName = Application.Args(1)
+    f = FreeFile
+
+    On Error Resume Next
+    If modeName = "input" Then
+        Open pathName For Input As #f
+    ElseIf modeName = "output" Then
+        Open pathName For Output As #f
+    ElseIf modeName = "binary" Then
+        Open pathName For Binary As #f
+    Else
+        Error 9221, "Unknown contender mode."
+    End If
+    openErr = Err
+    On Error GoTo 0
+
+    If openErr = 0 Then
+        Close #f
+    End If
+
+    Print "OPEN_ERR=" & CStr(openErr)
+    Print "FILE_SHARE_CONTENDER=OK"
+End Sub
