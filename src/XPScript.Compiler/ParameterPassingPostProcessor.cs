@@ -9,7 +9,7 @@ internal sealed class ParameterPassingPostProcessor
     private const string ByValPrefix = "__xps_byval_";
     private const string EvaluateByValMarker = "XPScriptEvaluateByValArgument";
 
-    private sealed record ProcedureSignature(string Name, bool[] ByRef);
+    private sealed record ProcedureSignature(string Name, bool[] ByRef, bool ReturnsVoid);
 
     private static readonly Regex MethodDeclaration = new(
         @"^(?<indent>\s*)(?<prefix>(?:public|private|internal)\s+(?:static\s+)?[^\r\n(]+?\s+)(?<name>[A-Za-z_]\w*)\((?<params>[^\r\n()]*)\)(?<tail>\s*)$",
@@ -25,7 +25,8 @@ internal sealed class ParameterPassingPostProcessor
         foreach (var signature in signatures.Values.OrderByDescending(x => x.Name.Length))
             generated = RewriteCalls(generated, signature);
 
-        return RewriteEvaluateCalls(generated);
+        generated = RewriteEvaluateCalls(generated);
+        return generated + "\n\n" + ByRefCallRuntimeSource + "\n";
     }
 
     private static string RewriteDeclaration(Match match, IDictionary<string, ProcedureSignature> signatures)
@@ -47,8 +48,10 @@ internal sealed class ParameterPassingPostProcessor
         }
 
         var name = match.Groups["name"].Value;
-        signatures[name] = new ProcedureSignature(name, byRef);
-        return match.Groups["indent"].Value + match.Groups["prefix"].Value + name + "(" + string.Join(", ", rawParameters.Select(x => x.Trim())) + ")" + match.Groups["tail"].Value;
+        var prefix = match.Groups["prefix"].Value;
+        var returnsVoid = Regex.IsMatch(prefix, @"\bvoid\s+$", RegexOptions.CultureInvariant);
+        signatures[name] = new ProcedureSignature(name, byRef, returnsVoid);
+        return match.Groups["indent"].Value + prefix + name + "(" + string.Join(", ", rawParameters.Select(x => x.Trim())) + ")" + match.Groups["tail"].Value;
     }
 
     private static string RewriteCalls(string generated, ProcedureSignature signature)
@@ -96,7 +99,24 @@ internal sealed class ParameterPassingPostProcessor
 
             var rawArgs = generated[(afterName + 1)..close];
             var args = SplitArguments(rawArgs);
-            if (args.Count == signature.ByRef.Length)
+            if (args.Count != signature.ByRef.Length)
+            {
+                output.Append(generated, start, close - start + 1);
+                i = close + 1;
+                continue;
+            }
+
+            var needsTemporaryScope = false;
+            for (var argIndex = 0; argIndex < args.Count; argIndex++)
+            {
+                if (signature.ByRef[argIndex] && !IsDirectRefArgument(args[argIndex].Trim()))
+                {
+                    needsTemporaryScope = true;
+                    break;
+                }
+            }
+
+            if (!needsTemporaryScope)
             {
                 for (var argIndex = 0; argIndex < args.Count; argIndex++)
                 {
@@ -105,14 +125,66 @@ internal sealed class ParameterPassingPostProcessor
                     if (!trimmed.StartsWith("ref ", StringComparison.Ordinal))
                         args[argIndex] = "ref " + args[argIndex].Trim();
                 }
+
+                output.Append(identifier);
+                output.Append(generated, i, afterName - i);
+                output.Append('(').Append(string.Join(", ", args.Select(x => x.Trim()))).Append(')');
+                i = close + 1;
+                continue;
             }
 
-            output.Append(identifier);
-            output.Append(generated, i, afterName - i);
-            output.Append('(').Append(string.Join(", ", args.Select(x => x.Trim()))).Append(')');
+            output.Append(BuildTemporaryByRefCall(identifier, args, signature));
             i = close + 1;
         }
         return output.ToString();
+    }
+
+    private static string BuildTemporaryByRefCall(string identifier, IReadOnlyList<string> sourceArgs, ProcedureSignature signature)
+    {
+        var callArgs = new string[sourceArgs.Count];
+        var declarations = new List<string>();
+        var writeBacks = new List<string>();
+
+        for (var argIndex = 0; argIndex < sourceArgs.Count; argIndex++)
+        {
+            var argument = sourceArgs[argIndex].Trim();
+            if (!signature.ByRef[argIndex])
+            {
+                callArgs[argIndex] = argument;
+                continue;
+            }
+
+            if (IsDirectRefArgument(argument))
+            {
+                callArgs[argIndex] = "ref " + argument;
+                continue;
+            }
+
+            var tempName = "__xps_byref_temp_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            declarations.Add("var " + tempName + " = " + argument + ";");
+            callArgs[argIndex] = "ref " + tempName;
+            if (IsAssignableArgument(argument))
+                writeBacks.Add(argument + " = " + tempName + ";");
+        }
+
+        var body = new StringBuilder();
+        body.Append("XPScriptByRefCallRuntime.Invoke(() => { ");
+        foreach (var declaration in declarations) body.Append(declaration).Append(' ');
+
+        if (signature.ReturnsVoid)
+        {
+            body.Append(identifier).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
+            foreach (var writeBack in writeBacks) body.Append(writeBack).Append(' ');
+            body.Append("})");
+        }
+        else
+        {
+            body.Append("var __xps_byref_result = ").Append(identifier).Append('(').Append(string.Join(", ", callArgs)).Append("); ");
+            foreach (var writeBack in writeBacks) body.Append(writeBack).Append(' ');
+            body.Append("return __xps_byref_result; })");
+        }
+
+        return body.ToString();
     }
 
     private static string RewriteEvaluateCalls(string generated)
@@ -195,6 +267,9 @@ internal sealed class ParameterPassingPostProcessor
         value = argument[(open + 1)..close].Trim();
         return true;
     }
+
+    private static bool IsDirectRefArgument(string value) =>
+        Regex.IsMatch(value, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
 
     private static bool IsAssignableArgument(string value) =>
         Regex.IsMatch(value, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$", RegexOptions.CultureInvariant);
@@ -327,4 +402,12 @@ internal sealed class ParameterPassingPostProcessor
 
     private static bool IsIdentifierStart(char c) => char.IsLetter(c) || c == '_';
     private static bool IsIdentifierPart(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+    private const string ByRefCallRuntimeSource = """
+internal static class XPScriptByRefCallRuntime
+{
+    public static T Invoke<T>(Func<T> action) => action();
+    public static void Invoke(Action action) => action();
+}
+""";
 }
