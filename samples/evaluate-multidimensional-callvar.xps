@@ -1,0 +1,21 @@
+Sub Main()
+    Dim matrix(2 To 3, 5 To 6) As Long
+    Dim result As Variant
+
+    matrix(2, 5) = 10
+    matrix(2, 6) = 20
+    matrix(3, 5) = 30
+    matrix(3, 6) = 40
+
+    result = Evaluate("Return LBound(callvar, 1) * 1000 + UBound(callvar, 1) * 100 + LBound(callvar, 2) * 10 + UBound(callvar, 2)", matrix)
+    Print "BOUNDS=" & CStr(result)
+
+    result = Evaluate("Return callvar(2, 5) + callvar(3, 6)", matrix)
+    Print "VALUES=" & CStr(result)
+
+    If matrix(2, 5) <> 10 Or matrix(3, 6) <> 40 Then
+        Error 9201, "Evaluate modified caller multidimensional array"
+    End If
+
+    Print "MULTIDIM-CALLVAR=OK"
+End Sub

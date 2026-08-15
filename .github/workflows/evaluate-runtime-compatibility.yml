@@ -64,6 +64,7 @@ jobs:
           Invoke-EvaluateSample 'evaluate-xpscript' @('EXPRESSION=7','STATEMENTS=52','STRING=HELLO WORLD','LOGICAL=True')
           Invoke-EvaluateSample 'evaluate-callvar' @('SCALAR=42','ARRAY=60','LIST=502')
           Invoke-EvaluateSample 'evaluate-array-helpers'
+          Invoke-EvaluateSample 'evaluate-multidimensional-callvar' @('BOUNDS=2356','VALUES=50','MULTIDIM-CALLVAR=OK')
           Invoke-EvaluateSample 'evaluate-nested-collections' @('BOUNDS=2','RETURNED-IS-LIST=True')
           Invoke-EvaluateSample 'evaluate-no-return'
           Invoke-EvaluateSample 'evaluate-standard-functions' @('STRING=abcef','MID=bcd','INSTR=6','REPLACE=a/b/c','MATH=13','NUMBERFORMAT=FF/1010','YEAR=2026','ISNUMERIC=True')
