@@ -1,0 +1,53 @@
+name: Increment Compound Operators
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/IncrementCompoundAssignmentPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/increment-compound-operators.xps'
+      - 'todo/increment-decrement-operators-todo.md'
+      - '.github/workflows/increment-compound-operators.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  increment-compound-operators:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile operator regression
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/operators | Out-Null
+          $compile = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/increment-compound-operators.xps -o ./out/operators/increment-compound-operators --framework-dependent --result-format json
+          $exit = $LASTEXITCODE
+          $compile | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Operator regression compilation failed.' }
+
+      - name: Run operator regression
+        shell: pwsh
+        run: |
+          chmod +x ./out/operators/increment-compound-operators
+          $result = & ./out/operators/increment-compound-operators 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Operator regression failed with exit code $exit." }
+          if ($result -notcontains 'INCREMENT-COMPOUND-OPERATORS=OK') { throw 'Operator regression did not report success.' }
