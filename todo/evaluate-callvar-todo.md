@@ -114,12 +114,12 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 
 ## Memory and lifetime
 
-- [>] evaluator instance owns callvar snapshot; references become collectible after Evaluate returns/fails
+- [x] evaluator instance owns its callvar snapshot and caller-owned List references become collectible after both successful and failing Evaluate calls; generated-runtime probe: `tests/EvaluateLifetimeProbe`
 - [x] returned arrays and Lists are detached from evaluator-owned storage for the verified collection paths
-- [>] snapshot traversal tracks object identity only for the lifetime of one Evaluate snapshot operation; lifetime/stress coverage remains open
+- [x] snapshot traversal object-identity state is invocation-local and no mutable/static retention state exists in the Evaluate collection runtime; generated-runtime probe: `tests/EvaluateLifetimeProbe`
 - [x] input and return snapshot budgets are invocation-local and are not stored in static/global state; concurrent generated-runtime verification uses four simultaneous 60000-element input and return snapshots in `tests/EvaluateConcurrencyProbe`
 - [ ] deterministic disposal rules if disposable/native-resource objects are ever allowed through callvar
-- [ ] ensure no future evaluator cache stores arbitrary callvar data
+- [x] evaluator/runtime classes are permanently checked for non-constant static fields so no arbitrary callvar cache can be introduced silently; generated-runtime probe: `tests/EvaluateLifetimeProbe`
 
 ## Documentation and examples
 
