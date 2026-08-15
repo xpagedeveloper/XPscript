@@ -49,10 +49,22 @@ jobs:
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
           if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
 
-      - name: Verify ordered preprocessing after Include expansion
+      - name: Verify one preprocessor sees nested included source
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/source-preprocessors | Out-Null
+          $exe = if ($IsWindows) { './out/source-preprocessors/single.exe' } else { './out/source-preprocessors/single' }
+          & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-pipeline.xps -o $exe --framework-dependent --preprocessor 'replace:__FIRST_STAGE__=SINGLE'
+          if ($LASTEXITCODE -ne 0) { throw 'Single preprocessor compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = & $exe 2>&1
+          if ($LASTEXITCODE -ne 0) { throw 'Single preprocessor program failed.' }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'SINGLE') { throw 'Nested included source was not visible to the preprocessor.' }
+
+      - name: Verify ordered preprocessing after Include expansion
+        shell: pwsh
+        run: |
           $exe = if ($IsWindows) { './out/source-preprocessors/ordered.exe' } else { './out/source-preprocessors/ordered' }
           & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/source-preprocessor-pipeline.xps -o $exe --framework-dependent --preprocessor 'replace:__FIRST_STAGE__=__SECOND_STAGE__' --preprocessor 'replace:__SECOND_STAGE__=READY'
           if ($LASTEXITCODE -ne 0) { throw 'Ordered preprocessor compilation failed.' }
