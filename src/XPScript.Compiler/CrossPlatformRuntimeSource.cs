@@ -14,6 +14,90 @@ internal static class XPCrossPlatformRuntime
         return "Unknown";
     }
 
+    public static bool FileExists(object? path) => File.Exists(XPScriptRuntime.CStr(path));
+
+    public static bool DirExists(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+
+    public static string StrTemplate(object? template, object? values)
+    {
+        var text = XPScriptRuntime.CStr(template);
+        var output = new System.Text.StringBuilder(text.Length);
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var current = text[i];
+
+            if (current == '\\' && i + 1 < text.Length && (text[i + 1] == '{' || text[i + 1] == '}'))
+            {
+                output.Append(text[i + 1]);
+                i++;
+                continue;
+            }
+
+            if (current != '{')
+            {
+                output.Append(current);
+                continue;
+            }
+
+            var close = text.IndexOf('}', i + 1);
+            if (close < 0)
+            {
+                output.Append(current);
+                continue;
+            }
+
+            var token = text[(i + 1)..close];
+            if (token.Length == 0 || !token.All(char.IsDigit))
+            {
+                output.Append(text, i, close - i + 1);
+                i = close;
+                continue;
+            }
+
+            if (!int.TryParse(token, out var index))
+                throw new XPScriptRuntimeException(9, "StrTemplate placeholder index is invalid.");
+
+            output.Append(XPScriptRuntime.CStr(GetTemplateValue(values, index)));
+            i = close;
+        }
+
+        return output.ToString();
+    }
+
+    private static object? GetTemplateValue(object? values, int index)
+    {
+        try
+        {
+            if (values is LSArray array)
+            {
+                if (!array.IsAllocated || array.Rank != 1)
+                    throw new XPScriptRuntimeException(5, "StrTemplate values must be a one-dimensional allocated array or list.");
+                return array.Get(index);
+            }
+
+            if (values is System.Array clrArray)
+            {
+                if (clrArray.Rank != 1)
+                    throw new XPScriptRuntimeException(5, "StrTemplate values must be a one-dimensional array or list.");
+                return clrArray.GetValue(index);
+            }
+
+            if (values is System.Collections.IList list)
+                return list[index];
+        }
+        catch (XPScriptRuntimeException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw new XPScriptRuntimeException(9, "StrTemplate placeholder index is outside the supplied values array.");
+        }
+
+        throw new XPScriptRuntimeException(13, "StrTemplate values must be an array or list.");
+    }
+
     public static int Shell(object? command, object? windowStyle = null)
     {
         var raw = XPScriptRuntime.CStr(command).Trim();
