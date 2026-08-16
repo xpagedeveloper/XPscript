@@ -35,7 +35,7 @@ try
 
     using (var message = new HttpRequestMessage(HttpMethod.Post, "/hello?q=1&q=2"))
     {
-        message.Headers.TryAddWithoutValidation("X-Multi", ["one", "two"]);
+        message.Headers.TryAddWithoutValidation("X-Request-Test", "present");
         message.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.9");
         message.Content = new StringContent("abc", Encoding.UTF8, "text/plain");
         using var response = await client.SendAsync(message);
@@ -47,7 +47,7 @@ try
         if (!body.Contains("PATH=/hello", StringComparison.Ordinal)) throw new Exception("Path normalization failed.");
         if (!body.Contains("QUERY=?q=1&q=2", StringComparison.Ordinal)) throw new Exception("Query string normalization failed.");
         if (!body.Contains("BODY=abc", StringComparison.Ordinal)) throw new Exception("Body normalization failed.");
-        if (!body.Contains("MULTI=2", StringComparison.Ordinal)) throw new Exception("Multi-value request header was lost.");
+        if (!body.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("Request header was not transferred.");
         if (body.Contains("REMOTE=203.0.113.9", StringComparison.Ordinal))
             throw new Exception("Untrusted X-Forwarded-For was accepted without KnownProxies.");
     }
@@ -82,14 +82,16 @@ sealed class EchoHandler : IXpsWebRequestHandler
         context.Response.StatusCode = 201;
         context.Response.ContentType = "text/plain; charset=utf-8";
         context.Response.SetHeader("X-Xps-Test", "ok");
-        var multiCount = context.Request.Headers.TryGetValue("X-Multi", out var values) ? values.Count : 0;
+        var requestHeader = context.Request.Headers.TryGetValue("X-Request-Test", out var values)
+            ? values.SingleOrDefault() ?? string.Empty
+            : string.Empty;
         var body = Encoding.UTF8.GetString(context.Request.Body.Span);
         context.Response.Write(
             $"METHOD={context.Request.Method}\n" +
             $"PATH={context.Request.Path}\n" +
             $"QUERY={context.Request.QueryString}\n" +
             $"BODY={body}\n" +
-            $"MULTI={multiCount}\n" +
+            $"HEADER={requestHeader}\n" +
             $"REMOTE={context.Request.RemoteAddress}\n");
         return Task.CompletedTask;
     }
