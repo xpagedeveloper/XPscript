@@ -1,0 +1,216 @@
+name: Implement Structured ShellArgs
+
+on:
+  push:
+    branches: [todo-security-structured-shellargs]
+    paths:
+      - '.github/workflows/implement-structured-shellargs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-security-structured-shellargs
+          fetch-depth: 0
+      - name: Patch structured process API
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runtimePath = 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+          $runtime = Get-Content $runtimePath -Raw
+          $runtime = $runtime.Replace('var start = BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);', 'var start = BuildStartInfo(parsed.FileName, ParseArguments(parsed.Arguments), windowStyle);')
+          $needle = @'
+    private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, string arguments, object? windowStyle)
+'@
+          $shellArgs = @'
+    public static int ShellArgs(object? executable, object? arguments, object? windowStyle = null)
+    {
+        var fileName = XPScriptRuntime.CStr(executable).Trim();
+        if (fileName.Length == 0)
+            throw new XPScriptRuntimeException(5, "ShellArgs requires a program name.");
+
+        var structuredArguments = ToStructuredArguments(arguments);
+        try
+        {
+            var start = BuildStartInfo(fileName, structuredArguments, windowStyle);
+            _ = System.Diagnostics.Process.Start(start)
+                ?? throw new FileNotFoundException("Could not start the requested program.");
+            return 33;
+        }
+        catch (Exception ex)
+        {
+            throw LSExtendedErrorRuntime.Normalize(ex);
+        }
+    }
+
+    private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, IReadOnlyList<string> arguments, object? windowStyle)
+'@
+          if (-not $runtime.Contains($needle)) { throw 'BuildStartInfo signature anchor not found.' }
+          $runtime = $runtime.Replace($needle, $shellArgs)
+          $runtime = $runtime.Replace('var batchArguments = ParseArguments(arguments);', 'var batchArguments = arguments;')
+          $runtime = $runtime.Replace(@'
+    private static void AddArguments(System.Diagnostics.ProcessStartInfo info, string rawArguments)
+    {
+        foreach (var argument in ParseArguments(rawArguments))
+            info.ArgumentList.Add(argument);
+    }
+'@, @'
+    private static void AddArguments(System.Diagnostics.ProcessStartInfo info, IReadOnlyList<string> arguments)
+    {
+        foreach (var argument in arguments)
+            info.ArgumentList.Add(argument);
+    }
+'@)
+          $resolveAnchor = @'
+    private static string ResolveRequestedProgram(string fileName)
+'@
+          $structuredHelper = @'
+    private static IReadOnlyList<string> ToStructuredArguments(object? arguments)
+    {
+        if (arguments is null) return [];
+        if (arguments is string)
+            throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list, not a command string.");
+        if (arguments is not System.Collections.IEnumerable enumerable)
+            throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list.");
+
+        var result = new List<string>();
+        foreach (var value in enumerable)
+        {
+            if (result.Count >= 4096)
+                throw new XPScriptRuntimeException(5, "ShellArgs accepts at most 4096 arguments.");
+            result.Add(XPScriptRuntime.CStr(value));
+        }
+        return result;
+    }
+
+    private static string ResolveRequestedProgram(string fileName)
+'@
+          if (-not $runtime.Contains($resolveAnchor)) { throw 'ResolveRequestedProgram anchor not found.' }
+          $runtime = $runtime.Replace($resolveAnchor, $structuredHelper)
+          Set-Content $runtimePath $runtime -Encoding utf8NoBOM
+
+          $prePath = 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
+          $pre = Get-Content $prePath -Raw
+          $preAnchor = @'
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])Shell\s*\(",
+            "XPCrossPlatformRuntime.Shell(",
+            RegexOptions.IgnoreCase);
+'@
+          $preReplacement = @'
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])ShellArgs\s*\(",
+            "XPCrossPlatformRuntime.ShellArgs(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])Shell\s*\(",
+            "XPCrossPlatformRuntime.Shell(",
+            RegexOptions.IgnoreCase);
+'@
+          if (-not $pre.Contains($preAnchor)) { throw 'Shell preprocessor anchor not found.' }
+          $pre = $pre.Replace($preAnchor, $preReplacement)
+          Set-Content $prePath $pre -Encoding utf8NoBOM
+
+          @'
+Option Declare
+
+Sub Main()
+    Dim args(7) As String
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-File"
+    args(3) = "./shell-args-helper.ps1"
+    args(4) = "space value"
+    args(5) = "åäö 漢字"
+    args(6) = ""
+    args(7) = "meta & | < > ^ % !"
+
+    Call ShellArgs("pwsh", args)
+    Print "SHELLARGS=STARTED"
+End Sub
+'@ | Set-Content 'samples/shell-structured-arguments.xps' -Encoding utf8NoBOM
+
+          $workflowPath = '.github/workflows/cross-platform-compiler-shell.yml'
+          $workflow = Get-Content $workflowPath -Raw
+          $workflow = $workflow.Replace("      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'", "      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'`n      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'")
+          $workflow = $workflow.Replace("      - 'samples/platform-shell-arguments.xps'", "      - 'samples/platform-shell-arguments.xps'`n      - 'samples/shell-structured-arguments.xps'")
+          $stepAnchor = @'
+      - name: Verify self-contained single-file output
+'@
+          $structuredStep = @'
+      - name: Verify structured ShellArgs preserves argument boundaries
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-args-output.txt
+          $exe = "./out/shellargs${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-structured-arguments.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'shell-structured-arguments.xps compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $result = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Structured ShellArgs fixture failed.`n$result" }
+          if ($result -notcontains 'SHELLARGS=STARTED') { throw "Structured ShellArgs fixture did not start.`n$result" }
+          for ($i = 0; $i -lt 100 -and -not (Test-Path ./shell-args-output.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path ./shell-args-output.txt)) { throw 'Structured ShellArgs helper did not produce output.' }
+          $argsOut = Get-Content ./shell-args-output.txt
+          if ($argsOut -notcontains 'A0=space value') { throw "ShellArgs space argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A1=åäö 漢字') { throw "ShellArgs Unicode argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A2LEN=0') { throw "ShellArgs empty argument was not preserved.`n$argsOut" }
+          if ($argsOut -notcontains 'A3=meta & | < > ^ % !') { throw "ShellArgs metacharacter argument was corrupted or shell-parsed.`n$argsOut" }
+
+      - name: Verify self-contained single-file output
+'@
+          if (-not $workflow.Contains($stepAnchor)) { throw 'Shell workflow step anchor not found.' }
+          $workflow = $workflow.Replace($stepAnchor, $structuredStep)
+          Set-Content $workflowPath $workflow -Encoding utf8NoBOM
+
+          $docsPath = 'docs/platform-native.md'
+          $docs = Get-Content $docsPath -Raw
+          $docsAnchor = '## Declare Function / Declare Sub'
+          $docsSection = @'
+## ShellArgs
+
+`ShellArgs(program, arguments [, windowStyle])` is the structured process API. `arguments` must be an array or list. Each element is passed directly through `ProcessStartInfo.ArgumentList`, so XPScript does not join the values into a command string or re-parse them.
+
+```xpscript
+Dim args(2) As String
+args(0) = "--name"
+args(1) = "value with spaces"
+args(2) = "literal & | characters"
+Call ShellArgs("myprogram", args)
+```
+
+Use an interpreter explicitly when running a script, for example `ShellArgs("pwsh", args)` with `-File` as one of the argument elements. This keeps the interpreter boundary explicit. Bare executable resolution uses absolute PATH entries only, matching the hardened `Shell()` resolution policy.
+
+## Declare Function / Declare Sub
+'@
+          if (-not $docs.Contains($docsAnchor)) { throw 'Platform docs anchor not found.' }
+          $docs = $docs.Replace($docsAnchor, $docsSection)
+          Set-Content $docsPath $docs -Encoding utf8NoBOM
+
+          $todoPath = 'todo/security-review-todo.md'
+          $todo = Get-Content $todoPath -Raw
+          $oldTodo = '- [ ] consider an additional structured process API accepting executable and argument array separately'
+          $newTodo = '- [x] `ShellArgs(program, arguments [, windowStyle])` provides a structured process API; array/list elements are passed directly through `ProcessStartInfo.ArgumentList` without command-string parsing, verified on Windows, Ubuntu and macOS by `Cross Platform Compiler Shell`'
+          if (-not $todo.Contains($oldTodo)) { throw 'Structured process TODO anchor not found.' }
+          $todo = $todo.Replace($oldTodo, $newTodo)
+          Set-Content $todoPath $todo -Encoding utf8NoBOM
+
+          Remove-Item '.github/workflows/implement-structured-shellargs.yml' -Force
+
+      - name: Commit implementation
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add structured ShellArgs process API'
+          git push origin HEAD:todo-security-structured-shellargs
