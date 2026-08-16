@@ -247,7 +247,7 @@ Design direction: managed memory is reclaimed by .NET GC after the last strong r
 - [ ] Implement only after the existing compiler/language/runtime backlog is complete and stable.
 - [ ] Complete the architecture/security review before production implementation.
 - [ ] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
-- [ ] Detailed architecture, object model, runtime compilation/cache, routing, FastCGI and security checklist: `todo/web-runtime-server-todo.md`.
+- [ ] Detailed architecture, object model, runtime compilation/cache, routing, CGI, FastCGI and security checklist: `todo/web-runtime-server-todo.md`.
 - [ ] Follow dependency-reuse rules in `todo/development-guidelines.md`; prefer ASP.NET Core/.NET and vetted maintained NuGet packages over custom low-level protocol/parser implementations where suitable.
 - [ ] This section must be completed before the cross-platform UI extension work begins.
 
