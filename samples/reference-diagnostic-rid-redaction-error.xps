@@ -1,0 +1,6 @@
+' (c) xpagedeveloper.com 2026
+' Must fail without echoing the unsupported runtime identifier token.
+ReferenceNative "native-helper.dll" Runtime "DO_NOT_ECHO_SECRET_RID"
+
+Sub Main()
+End Sub
