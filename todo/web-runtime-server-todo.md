@@ -95,8 +95,10 @@ Response
 
 - [ ] `--root` defines the only default document/source root for the site.
 - [ ] `/foo.xps` maps to `<root>/foo.xps` when allowed.
+- [ ] `/foo` maps to `<root>/foo.xps‘ when allowed
 - [ ] `/folder/` maps to `<root>/folder/index.xps` by default.
 - [ ] `/` maps to `<root>/index.xps`.
+- [ ] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
 - [ ] Make the default document name configurable later, while keeping `index.xps` as the standard default.
 - [ ] Define behavior for `/folder` versus `/folder/` and redirects consistently.
 - [ ] Return 404 when the resolved XPScript file does not exist.
@@ -114,6 +116,8 @@ Response
 - [ ] Define and test symlink/reparse-point behavior so a file below the apparent root cannot resolve outside the allowed root unless explicitly configured.
 - [ ] Never concatenate untrusted URL paths directly into filesystem paths.
 - [ ] Do not allow request-controlled compiler output paths.
+- [ ] Add .net [] security and rules webb rules like [Anonymous] [Authenticated] [Post] and similar before a function for routing
+- [ ] Create a user session object that be populated with rules so we can add a rule to a user and Auto check against the tules with [rule:test] user needs that rule to run the function [rule:!test] user can not have the rule
 
 ---
 

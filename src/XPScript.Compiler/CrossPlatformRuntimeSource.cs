@@ -48,11 +48,16 @@ internal static class XPCrossPlatformRuntime
         {
             if (extension is ".cmd" or ".bat")
             {
+                ValidateBatchFileName(fileName);
+                var batchArguments = ParseArguments(arguments);
+                foreach (var argument in batchArguments) ValidateBatchArgument(argument);
+
                 info.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
                 info.ArgumentList.Add("/d");
                 info.ArgumentList.Add("/s");
                 info.ArgumentList.Add("/c");
-                info.ArgumentList.Add(BuildWindowsBatchCommand(fileName, ParseArguments(arguments)));
+                info.ArgumentList.Add(fileName);
+                foreach (var argument in batchArguments) info.ArgumentList.Add(argument);
             }
             else if (extension == ".ps1")
             {
@@ -256,23 +261,9 @@ internal static class XPCrossPlatformRuntime
         return space < 0 ? (command, "") : (command[..space], command[(space + 1)..].TrimStart());
     }
 
-    private static string BuildWindowsBatchCommand(string fileName, IReadOnlyList<string> arguments)
-    {
-        ValidateBatchFileName(fileName);
-        var command = new System.Text.StringBuilder();
-        command.Append('"').Append(fileName).Append('"');
-
-        foreach (var argument in arguments)
-        {
-            ValidateBatchArgument(argument);
-            command.Append(' ').Append('"').Append(argument).Append('"');
-        }
-        return command.ToString();
-    }
-
     private static void ValidateBatchFileName(string value)
     {
-        if (value.IndexOfAny(['\r', '\n', '\0', '"']) >= 0)
+        if (value.IndexOfAny(['\r', '\n', '\0', '"', '&', '|', '<', '>', '^', '%', '!']) >= 0)
             throw new XPScriptRuntimeException(5, "Batch script path contains unsupported command-shell characters.");
     }
 

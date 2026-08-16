@@ -11,8 +11,12 @@ on:
       - 'samples/platform-shell-arguments.xps'
       - 'samples/platform-shell.xps'
       - 'samples/shell-path-resolution.xps'
+      - 'samples/shell-relative-path-error.xps'
+      - 'samples/shell-windows-resolution.xps'
+      - 'samples/xps-shell-pathext.cmd'
       - 'samples/shell-batch-metachar-error.xps'
       - 'samples/shell-batch-sentinel.cmd'
+      - 'todo/security-review-todo.md'
   workflow_dispatch:
 
 permissions:
@@ -45,6 +49,29 @@ jobs:
           "rid=$rid" >> $env:GITHUB_OUTPUT
           "platform=$platform" >> $env:GITHUB_OUTPUT
           "ext=$ext" >> $env:GITHUB_OUTPUT
+
+      - name: Verify Shell implementation safety invariants
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          $runtime = Get-Content ./src/XPScript.Compiler/CrossPlatformRuntimeSource.cs -Raw
+          $required = @(
+            'UseShellExecute = false',
+            'ArgumentList.Add',
+            'Path.Combine(Environment.SystemDirectory, "cmd.exe")',
+            'if (!Path.IsPathRooted(directory)) continue;',
+            'ResolveFromAbsolutePath("pwsh"',
+            'ValidateBatchArgument(argument)'
+          )
+          foreach ($token in $required) {
+            if (-not $runtime.Contains($token, [StringComparison]::Ordinal)) {
+              throw "Shell runtime safety invariant missing: $token"
+            }
+          }
+          if ($runtime -match 'GetEnvironmentVariable\("COMSPEC"\)') {
+            throw 'Shell runtime must not trust COMSPEC for Windows batch execution.'
+          }
+          Write-Host 'SHELL-STATIC-SAFETY=OK'
 
       - name: Verify advertised RID set
         shell: pwsh
@@ -136,6 +163,70 @@ jobs:
           if ($env:RUNNER_OS -eq 'Windows' -and $result -notcontains 'SHELL-PATH=WINDOWS-OK') { throw "Windows Shell PATH check failed.`n$result" }
           if ($env:RUNNER_OS -ne 'Windows' -and $result -notcontains 'SHELL-PATH=UNIX-OK') { throw "Unix Shell PATH check failed.`n$result" }
 
+      - name: Verify relative PATH entries are ignored
+        shell: pwsh
+        run: |
+          $exe = "./out/shell-relative-path${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-relative-path-error.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'shell-relative-path-error.xps compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+
+          $probe = if ($IsWindows) { './xps-relative-shell-probe.cmd' } else { './xps-relative-shell-probe' }
+          if ($IsWindows) {
+            "@echo off`r`necho RELATIVE-PROBE-RAN>shell-relative-probe-ran.txt`r`n" | Set-Content -Encoding ascii $probe
+          } else {
+            "#!/bin/sh`necho RELATIVE-PROBE-RAN > shell-relative-probe-ran.txt`n" | Set-Content -Encoding utf8NoBOM $probe
+            chmod +x $probe
+          }
+          Remove-Item ./shell-relative-probe-ran.txt -Force -ErrorAction SilentlyContinue
+
+          $oldPath = $env:PATH
+          try {
+            $env:PATH = ".$([IO.Path]::PathSeparator)$oldPath"
+            $output = & $exe 2>&1 | Out-String
+            $childExit = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+          } finally {
+            $env:PATH = $oldPath
+          }
+          if ($childExit -eq 0) { throw "Relative PATH executable unexpectedly ran.`n$output" }
+          if ($output -match 'RELATIVE-PATH-UNEXPECTED') { throw "Relative PATH fixture reached success path.`n$output" }
+          if (Test-Path ./shell-relative-probe-ran.txt) { throw 'Relative PATH probe was executed.' }
+
+      - name: Verify Windows system cmd and validated PATHEXT resolution
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = './out/shell-windows-resolution.exe'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-windows-resolution.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'shell-windows-resolution.xps compilation failed.' }
+
+          $bin = Join-Path (Get-Location) 'out/shell-resolution-bin'
+          New-Item -ItemType Directory -Force $bin | Out-Null
+          Copy-Item ./samples/xps-shell-pathext.cmd (Join-Path $bin 'xps-shell-pathext.cmd') -Force
+          Remove-Item ./shell-windows-resolution.txt -Force -ErrorAction SilentlyContinue
+
+          $oldPath = $env:PATH
+          $oldPathExt = $env:PATHEXT
+          $oldComspec = $env:COMSPEC
+          try {
+            $env:PATH = "$bin$([IO.Path]::PathSeparator)$oldPath"
+            $env:PATHEXT = '.BAD/EXT;.CMD;.EXE'
+            $env:COMSPEC = 'Z:\definitely-missing\cmd.exe'
+            $output = @(& $exe 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Windows Shell resolution fixture failed.`n$output" }
+          } finally {
+            $env:PATH = $oldPath
+            $env:PATHEXT = $oldPathExt
+            $env:COMSPEC = $oldComspec
+          }
+          if ($output -notcontains 'SHELL-WINDOWS-RESOLUTION=STARTED') { throw "Windows Shell fixture did not start.`n$output" }
+          for ($i = 0; $i -lt 100 -and -not (Test-Path ./shell-windows-resolution.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path ./shell-windows-resolution.txt)) { throw 'System cmd/PATHEXT helper did not execute.' }
+          if ((Get-Content ./shell-windows-resolution.txt -Raw).Trim() -ne 'SHELL-WINDOWS-RESOLUTION=OK') {
+            throw 'System cmd/PATHEXT helper returned unexpected content.'
+          }
+
       - name: Verify Windows batch metacharacters are rejected
         if: runner.os == 'Windows'
         shell: pwsh
@@ -154,8 +245,6 @@ jobs:
       - name: Verify explicit shell mode remains explicit
         shell: pwsh
         run: |
-          # XPScript intentionally has no separate implicit shell-evaluation mode.
-          # Users who need pipes/redirection/globbing explicitly invoke cmd.exe, sh, or pwsh.
           $source = Get-Content ./samples/platform-shell.xps -Raw
           if ($source -notmatch 'cmd\.exe /c' -or $source -notmatch '/bin/sh -c') {
             throw 'Explicit shell invocation examples are missing.'

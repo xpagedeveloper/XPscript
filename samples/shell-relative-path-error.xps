@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Call Shell("xps-relative-shell-probe")
+    Print "RELATIVE-PATH-UNEXPECTED"
+End Sub
