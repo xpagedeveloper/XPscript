@@ -1,0 +1,71 @@
+name: Native Scalar ABI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'samples/native-scalar-abi.xps'
+      - '.github/workflows/native-scalar-abi.yml'
+      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-scalar-abi:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            rid: win-x64
+          - runner: windows-11-arm
+            rid: win-arm64
+          - runner: ubuntu-latest
+            rid: linux-x64
+          - runner: ubuntu-24.04-arm
+            rid: linux-arm64
+          - runner: macos-15-intel
+            rid: osx-x64
+          - runner: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify runner matches requested RID
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          $actual = "$os-$arch"
+          if ($actual -ne '${{ matrix.rid }}') { throw "Runner architecture mismatch: expected ${{ matrix.rid }}, actual $actual" }
+
+      - name: Compile scalar ABI sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-scalar-abi.exe' } else { './out/native-scalar-abi' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-scalar-abi.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native scalar ABI sample compilation failed for ${{ matrix.rid }}.' }
+          "NATIVE_ABI_EXE=$output" >> $env:GITHUB_ENV
+
+      - name: Execute scalar ABI sample
+        shell: pwsh
+        run: |
+          if (-not $IsWindows) { chmod +x $env:NATIVE_ABI_EXE }
+          $result = @(& $env:NATIVE_ABI_EXE 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native scalar ABI sample exited with code $LASTEXITCODE.`n$result" }
+          if ($result -notcontains 'NATIVE_SCALAR_ABI=OK') { throw "Native scalar ABI success marker missing.`n$result" }
