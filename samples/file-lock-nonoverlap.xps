@@ -1,0 +1,20 @@
+' Cross-process locking fixture: acquires a non-overlapping byte range while holder owns 1..64.
+Sub Main()
+    Dim f As Integer
+    f = FreeFile
+
+    Open "xps-lock-test.bin" For Binary As #f
+    On Error GoTo LockFailed
+
+    Lock #f, 65 To 128
+    Print "NONOVERLAP=OK"
+    Unlock #f, 65 To 128
+    Close #f
+    Exit Sub
+
+LockFailed:
+    Print "NONOVERLAP_FAILED Err=" & CStr(Err) & " Error=" & Error$
+    On Error GoTo 0
+    Close #f
+    Error 9701, "Non-overlapping byte-range lock failed"
+End Sub

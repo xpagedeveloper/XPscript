@@ -1,0 +1,20 @@
+' Cross-process locking fixture: reacquires 1..64 after the holder has unlocked and exited.
+Sub Main()
+    Dim f As Integer
+    f = FreeFile
+
+    Open "xps-lock-test.bin" For Binary As #f
+    On Error GoTo LockFailed
+
+    Lock #f, 1 To 64
+    Print "REACQUIRE=OK"
+    Unlock #f, 1 To 64
+    Close #f
+    Exit Sub
+
+LockFailed:
+    Print "REACQUIRE_FAILED Err=" & CStr(Err) & " Error=" & Error$
+    On Error GoTo 0
+    Close #f
+    Error 9702, "Released byte-range lock could not be reacquired"
+End Sub

@@ -14,6 +14,8 @@ internal static class XPScriptFileIO
     // verified by the macOS Record Lock ABI Probe on ARM64 and x64 runners.
     private const int DarwinUnlockFunction = 0;
     private const int DarwinTryLockFunction = 2;
+    private const int DarwinSeekSet = 0;
+    private const int DarwinSeekCurrent = 1;
     private const int DarwinEAccess = 13;
     private const int DarwinEAgain = 35;
     private const int DarwinEBadF = 9;
@@ -23,6 +25,9 @@ internal static class XPScriptFileIO
 
     [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lockf", SetLastError = true)]
     private static extern int DarwinLockf(int fd, int function, long size);
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lseek", SetLastError = true)]
+    private static extern long DarwinSeek(int fd, long offset, int whence);
 
     public static string InputChars(object? countValue, object? fileNumberValue)
     {
@@ -194,7 +199,7 @@ internal static class XPScriptFileIO
     {
         var handle = stream.SafeFileHandle;
         var addedRef = false;
-        var originalPosition = stream.Position;
+        long nativePosition = -1;
         try
         {
             handle.DangerousAddRef(ref addedRef);
@@ -202,8 +207,23 @@ internal static class XPScriptFileIO
             if (rawValue < int.MinValue || rawValue > int.MaxValue)
                 throw new XPScriptRuntimeException(70, "macOS file descriptor is outside the supported integer range.");
 
-            stream.Seek(offset, SeekOrigin.Begin);
-            if (DarwinLockf((int)rawValue, function, length) == 0)
+            var fd = (int)rawValue;
+            nativePosition = DarwinSeek(fd, 0, DarwinSeekCurrent);
+            if (nativePosition < 0)
+            {
+                var seekError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new XPScriptRuntimeException(70, "Unable to read macOS file descriptor position before " + operation + ". errno=" + seekError.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinSeek(fd, offset, DarwinSeekSet) < 0)
+            {
+                var seekError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new XPScriptRuntimeException(70,
+                    "Unable to position macOS file descriptor for " + operation + " at offset " + offset.ToString(CultureInfo.InvariantCulture) +
+                    ". errno=" + seekError.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinLockf(fd, function, length) == 0)
                 return;
 
             var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
@@ -244,7 +264,12 @@ internal static class XPScriptFileIO
         {
             try
             {
-                stream.Seek(originalPosition, SeekOrigin.Begin);
+                if (addedRef && nativePosition >= 0)
+                {
+                    var rawValue = handle.DangerousGetHandle().ToInt64();
+                    if (rawValue >= int.MinValue && rawValue <= int.MaxValue)
+                        DarwinSeek((int)rawValue, nativePosition, DarwinSeekSet);
+                }
             }
             finally
             {
