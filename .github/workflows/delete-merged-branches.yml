@@ -1,6 +1,9 @@
 name: Delete Merged Branches
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
   pull_request:
     types: [closed]
@@ -14,6 +17,7 @@ permissions:
 jobs:
   cleanup:
     if: >-
+      github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main')
