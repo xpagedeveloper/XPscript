@@ -20,6 +20,24 @@ internal sealed class CrossPlatformPreprocessor
 
         source = Regex.Replace(
             source,
+            @"(?<![\w.])FileExists\s*\(",
+            "XPCrossPlatformRuntime.FileExists(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])DirExists\s*\(",
+            "XPCrossPlatformRuntime.DirExists(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])StrTemplate\s*\(",
+            "XPCrossPlatformRuntime.StrTemplate(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
             @"(?<![\w.])ShellArgs\s*\(",
             "XPCrossPlatformRuntime.ShellArgs(",
             RegexOptions.IgnoreCase);
