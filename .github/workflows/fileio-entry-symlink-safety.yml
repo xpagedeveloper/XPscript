@@ -45,10 +45,10 @@ jobs:
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue ./toctou-fixture
           New-Item -ItemType Directory -Force ./toctou-fixture | Out-Null
           New-Item -ItemType Directory -Force ./toctou-fixture/rmdir-target | Out-Null
-          Set-Content -NoNewline ./toctou-fixture/kill-target.txt 'KILL_TARGET_SAFE'
-          Set-Content -NoNewline ./toctou-fixture/name-source-target.txt 'NAME_SOURCE_TARGET_SAFE'
-          Set-Content -NoNewline ./toctou-fixture/name-destination-target.txt 'NAME_DEST_TARGET_SAFE'
-          Set-Content -NoNewline ./toctou-fixture/rmdir-target/keep.txt 'RMDIR_TARGET_SAFE'
+          Set-Content -NoNewline -Path ./toctou-fixture/kill-target.txt -Value 'KILL_TARGET_SAFE'
+          Set-Content -NoNewline -Path ./toctou-fixture/name-source-target.txt -Value 'NAME_SOURCE_TARGET_SAFE'
+          Set-Content -NoNewline -Path ./toctou-fixture/name-destination-target.txt -Value 'NAME_DEST_TARGET_SAFE'
+          Set-Content -NoNewline -Path ./toctou-fixture/rmdir-target/keep.txt -Value 'RMDIR_TARGET_SAFE'
 
           $killTarget = (Resolve-Path ./toctou-fixture/kill-target.txt).Path
           $nameSourceTarget = (Resolve-Path ./toctou-fixture/name-source-target.txt).Path
