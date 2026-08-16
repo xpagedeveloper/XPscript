@@ -1,0 +1,57 @@
+name: COM GetObject Runtime
+
+on:
+  pull_request:
+    paths:
+      - 'src/XPScript.Compiler/ExtendedCompatibilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ExtendedCompatibilityTranspiler.cs'
+      - 'samples/com-getobject-runtime.xps'
+      - 'samples/com-getobject-invalid.xps'
+      - '.github/workflows/com-getobject-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  com-getobject-runtime:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile and execute COM GetObject activation sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/com | Out-Null
+          $exe = './out/com/com-getobject-runtime.exe'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/com-getobject-runtime.xps --runtime win-x64 -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'COM GetObject runtime sample compilation failed.' }
+          $result = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "COM GetObject activation sample failed.`n$($result -join [Environment]::NewLine)" }
+          if ($result -notcontains 'COM_GETOBJECT=OK') { throw "COM GetObject success marker missing.`n$($result -join [Environment]::NewLine)" }
+
+      - name: Verify COM activation failures are sanitized
+        shell: pwsh
+        run: |
+          $exe = './out/com/com-getobject-invalid.exe'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/com-getobject-invalid.xps --runtime win-x64 -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'COM GetObject invalid sample compilation failed.' }
+
+          $result = @(& $exe 2>&1)
+          $exitCode = $LASTEXITCODE
+          $text = $result -join [Environment]::NewLine
+          if ($exitCode -eq 0 -or $result -contains 'SHOULD_NOT_REACH') { throw "Invalid COM activation unexpectedly succeeded.`n$text" }
+          if ($text -notmatch 'COM GetObject activation failed') { throw "Sanitized COM activation diagnostic missing.`n$text" }
+          if ($text -match 'XPScript\.Secret\.Invalid\.ProgID') { throw "COM activation diagnostic leaked the supplied ProgID.`n$text" }
+          exit 0
