@@ -170,7 +170,15 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
             catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { break; }
             catch (SocketException) when (cancellationToken.IsCancellationRequested) { break; }
 
-            await _connections.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _connections.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                client.Dispose();
+                throw;
+            }
             _ = HandleClientAsync(client, cancellationToken);
         }
     }
@@ -186,6 +194,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         catch (XpsFastCgiProtocolException) { }
         catch (IOException) { }
         catch (SocketException) { }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally { _connections.Release(); }
     }
 
@@ -238,10 +247,22 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         string full;
         try { full = Path.GetFullPath(value); }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { throw new XpsFastCgiProtocolException("Invalid SCRIPT_FILENAME.", ex); }
+
         var root = Path.GetFullPath(_serverInfo.RootPath);
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         var prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
-        if (!full.Equals(root, comparison) && !full.StartsWith(prefix, comparison)) throw new XpsFastCgiProtocolException("SCRIPT_FILENAME escapes the configured site root.");
+        if (!full.Equals(root, comparison) && !full.StartsWith(prefix, comparison))
+            throw new XpsFastCgiProtocolException("SCRIPT_FILENAME escapes the configured site root.");
+
+        try
+        {
+            var relative = Path.GetRelativePath(root, full);
+            _ = new XpsWebServer(_serverInfo).MapPath(relative);
+        }
+        catch (XpsWebPathException ex)
+        {
+            throw new XpsFastCgiProtocolException("SCRIPT_FILENAME resolves outside the configured site root.", ex);
+        }
     }
 
     private IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractHeaders(IReadOnlyDictionary<string, string> parameters)
