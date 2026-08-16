@@ -89,8 +89,16 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-return-nothing-error.xps -o $program --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Evaluate Return Nothing negative sample must compile.' }
 
-          $output = & $program 2>&1
-          $exit = $LASTEXITCODE
+          $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+          try {
+            $PSNativeCommandUseErrorActionPreference = $false
+            $output = & $program 2>&1
+            $exit = $LASTEXITCODE
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+          }
+
           $output | ForEach-Object { Write-Host $_ }
           if ($exit -eq 0) { throw 'Evaluate Return Nothing unexpectedly succeeded.' }
           $text = $output -join "`n"
