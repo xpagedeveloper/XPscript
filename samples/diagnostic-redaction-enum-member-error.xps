@@ -1,0 +1,3 @@
+Enum SecretEnum
+    DO_NOT_ECHO_ENUM = "DO_NOT_ECHO_ENUM_SECRET"
+End Enum
