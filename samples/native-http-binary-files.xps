@@ -1,0 +1,32 @@
+Option Declare
+
+Sub Main()
+    Dim client As New HttpClient
+    Dim response As HttpResponse
+    Dim firstFile As Variant
+    Dim secondFile As Variant
+
+    Set response = client.Get("http://127.0.0.1:18080/binary")
+    Print "SINGLE_FILENAME=" & response.FileName
+    Print "SINGLE_LENGTH=" & CStr(response.BodyLength)
+    Print "SINGLE_FILECOUNT=" & CStr(response.FileCount)
+    Call response.SaveBodyToFile("native-http-single.bin")
+
+    Set response = client.Get("http://127.0.0.1:18080/multipart-files")
+    Print "MULTI_COUNT=" & CStr(response.Files.Count)
+
+    firstFile = response.Files.Get(0)
+    secondFile = response.Files.Get(1)
+
+    Print "MULTI_FIRST_NAME=" & firstFile.FileName
+    Print "MULTI_FIRST_FIELD=" & firstFile.Name
+    Print "MULTI_FIRST_LENGTH=" & CStr(firstFile.Length)
+    Print "MULTI_SECOND_NAME=" & secondFile.FileName
+    Print "MULTI_SECOND_FIELD=" & secondFile.Name
+    Print "MULTI_SECOND_LENGTH=" & CStr(secondFile.Length)
+
+    Call firstFile.SaveToFile("native-http-first.bin")
+    Call secondFile.SaveToFile("native-http-second.bin")
+
+    Print "HTTP_BINARY_FILES=OK"
+End Sub
