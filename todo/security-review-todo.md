@@ -85,19 +85,20 @@ Status:
 
 ## File I/O
 
-- [>] standard file APIs use OS/.NET path resolution rather than hard-coded Windows separators
-- [>] FileShare behavior is centralized
-- [>] Binary/Random region coordination uses explicit `Lock`/`Unlock`
-- [>] lock conflicts are normalized into XPScript errors
-- [>] standard File I/O diagnostics no longer echo full resolved paths or raw underlying exception messages in the newly hardened paths
-- [>] `FileCopy` and `Name` refuse an existing destination that is a symbolic link/reparse-point target
-- [>] `Kill` refuses a symbolic-link/reparse-point file target instead of deleting through filesystem indirection
-- [>] `Name` refuses a symbolic-link/reparse-point source as well as a linked destination
-- [>] `RmDir` refuses a symbolic-link/reparse-point directory target
-- [>] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
+- [x] standard file APIs use OS/.NET path resolution rather than hard-coded Windows separators
+- [x] FileShare behavior is centralized
+- [x] Binary/Random region coordination uses explicit `Lock`/`Unlock`
+- [x] lock conflicts are normalized into XPScript errors
+- [x] standard File I/O diagnostics no longer echo full resolved paths or raw underlying exception messages in the newly hardened paths
+- [x] `FileCopy` and `Name` refuse an existing destination that is a symbolic link/reparse-point target
+- [x] `Kill` refuses a symbolic-link/reparse-point file target instead of deleting through filesystem indirection
+- [x] `Name` refuses a symbolic-link/reparse-point source as well as a linked destination
+- [x] `RmDir` refuses a symbolic-link/reparse-point directory target
+- [x] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
 - [x] TOCTOU behavior between symlink/attribute/existence checks and final directory-entry operations reviewed; `Kill`, `Name` and `RmDir` do not follow a replaced symlink entry to modify its target, verified by `File IO Entry Symlink Safety` on Windows, Ubuntu and macOS
 - [x] Windows versus Unix delete-while-open behavior is verified on Windows, Ubuntu and macOS
 - [x] cross-process byte-range locks are verified on Windows, Ubuntu and macOS, including overlap conflict, non-overlap coexistence and reacquisition after release
+- [x] complete File I/O security matrix is verified by `File IO Security Closeout` on Windows, Ubuntu and macOS
 
 ## Evaluate
 
