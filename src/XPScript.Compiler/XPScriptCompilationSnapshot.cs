@@ -20,15 +20,18 @@ public static class XPScriptCompilationSnapshotBuilder
         string allowedSourceRoot,
         string runtimeIdentifier,
         string configurationIdentity = "default",
+        long maxDependencyBytes = long.MaxValue,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeIdentifier);
         ArgumentNullException.ThrowIfNull(configurationIdentity);
+        if (maxDependencyBytes < 1) throw new ArgumentOutOfRangeException(nameof(maxDependencyBytes));
 
         var fullSourcePath = Path.GetFullPath(sourcePath);
         var fullRoot = Path.GetFullPath(allowedSourceRoot);
+        EnsureBoundedFile(fullSourcePath, maxDependencyBytes);
         var rootSource = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<string> dependencyPaths;
@@ -43,6 +46,7 @@ public static class XPScriptCompilationSnapshotBuilder
         foreach (var path in dependencyPaths.Distinct(comparer).OrderBy(path => path, comparer))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            EnsureBoundedFile(path, maxDependencyBytes);
             await using var stream = new FileStream(
                 path,
                 FileMode.Open,
@@ -69,5 +73,13 @@ public static class XPScriptCompilationSnapshotBuilder
 
         var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identityText.ToString())));
         return new XPScriptCompilationSnapshot(identity, compilerIdentity, runtimeIdentifier, configurationIdentity, dependencies);
+    }
+
+    private static void EnsureBoundedFile(string path, long maxDependencyBytes)
+    {
+        var info = new FileInfo(path);
+        if (!info.Exists) throw new FileNotFoundException("XPScript source dependency was not found.", path);
+        if (info.Length > maxDependencyBytes)
+            throw new CompilerException($"XPScript source dependency exceeds the configured {maxDependencyBytes} byte limit: {Path.GetFileName(path)}");
     }
 }
