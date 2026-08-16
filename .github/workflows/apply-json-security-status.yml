@@ -1,0 +1,51 @@
+name: Apply JSON Security Status
+
+on:
+  push:
+    branches:
+      - todo-security-verification-reconcile
+    paths:
+      - '.github/workflows/apply-json-security-status.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: todo-security-verification-reconcile
+      - name: Mark verified JSON security items
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('todo/security-review-todo.md')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+            '- [>] parser input is limited to 8 MiB UTF-8': '- [x] parser input is limited to 8 MiB UTF-8',
+            '- [>] parse/serialization nesting is limited to 64 levels': '- [x] parse/serialization nesting is limited to 64 levels',
+            '- [>] JSON graph size is limited to 100000 nodes': '- [x] JSON graph size is limited to 100000 nodes',
+            '- [>] estimated JSON payload is limited to 16 MiB': '- [x] estimated JSON payload is limited to 16 MiB',
+            '- [>] serialized JSON output is limited to 16 MiB UTF-8': '- [x] serialized JSON output is limited to 16 MiB UTF-8',
+            '- [>] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations': '- [x] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations',
+            '- [>] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion': '- [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion',
+            '- [>] malformed JSON diagnostics do not echo the complete JSON source payload': '- [x] malformed JSON diagnostics do not echo the complete JSON source payload',
+            '- [>] regression source: `samples/json-resource-limits.xps`': '- [x] regression source: `samples/json-resource-limits.xps`',
+            '- [ ] build/runtime verification of parse/depth/node/payload/numeric limits': '- [x] build/runtime verification of parse/depth/node/payload/numeric limits on Windows, Ubuntu and macOS',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Missing expected line: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+      - name: Commit reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add todo/security-review-todo.md
+          git commit -m 'Mark verified JSON security limits complete'
+          git push origin HEAD:todo-security-verification-reconcile
