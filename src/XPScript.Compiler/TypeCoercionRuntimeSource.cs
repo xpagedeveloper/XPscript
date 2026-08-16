@@ -17,6 +17,19 @@ internal static class XPScriptNullRuntime
 
     public static int DataType(object? value) => IsNull(value) ? 1 : XPScriptRuntime.DataType(value);
     public static string TypeName(object? value) => IsNull(value) ? "NULL" : XPScriptRuntime.TypeName(value);
+
+    public static bool ConditionValue(object? value)
+    {
+        if (IsNull(value) || IsEmpty(value)) return false;
+        try
+        {
+            return Convert.ToBoolean(value, System.Globalization.CultureInfo.CurrentCulture);
+        }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new InvalidCastException($"Unable to use {TypeName(value)} as a Boolean condition.", ex);
+        }
+    }
 }
 
 internal static class XPScriptCoercion
