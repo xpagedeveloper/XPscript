@@ -1,0 +1,25 @@
+Private ModuleValue As Variant
+
+Sub CheckStatic()
+    Static StoredValue As Variant
+
+    If IsEmpty(StoredValue) Then
+        Print "STATIC_FIRST_TYPE=" & TypeName(StoredValue)
+        Print "STATIC_FIRST_DT=" & CStr(DataType(StoredValue))
+        Print "STATIC_FIRST_ISEMPTY=" & CStr(IsEmpty(StoredValue))
+        Print "STATIC_FIRST_ISNULL=" & CStr(IsNull(StoredValue))
+        StoredValue = 73
+    Else
+        Print "STATIC_RETAINED=" & CStr(StoredValue)
+    End If
+End Sub
+
+Sub Initialize()
+    Print "GLOBAL_TYPE=" & TypeName(ModuleValue)
+    Print "GLOBAL_DT=" & CStr(DataType(ModuleValue))
+    Print "GLOBAL_ISEMPTY=" & CStr(IsEmpty(ModuleValue))
+    Print "GLOBAL_ISNULL=" & CStr(IsNull(ModuleValue))
+
+    Call CheckStatic()
+    Call CheckStatic()
+End Sub
