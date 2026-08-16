@@ -142,11 +142,11 @@ Sub Main()
     If CInt(value) <> 17 Then
         Error 9866, "Evaluate DateAdd failed"
     End If
-    value = Evaluate("Return DateDiff(\"d\", #2026-08-12#, #2026-08-17#)")
+    value = Evaluate(|Return DateDiff("d", #2026-08-12#, #2026-08-17#)|)
     If CInt(value) <> 5 Then
         Error 9867, "Evaluate DateDiff failed"
     End If
-    value = Evaluate("Return DatePart(\"yyyy\", #2026-08-12#)")
+    value = Evaluate(|Return DatePart("yyyy", #2026-08-12#)|)
     If CInt(value) <> 2026 Then
         Error 9868, "Evaluate DatePart failed"
     End If
