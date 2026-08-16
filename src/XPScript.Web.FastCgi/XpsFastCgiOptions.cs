@@ -22,8 +22,8 @@ public sealed class XpsFastCgiOptions
         if (MaxConcurrentConnections is < 1 or > 100_000) throw new ArgumentOutOfRangeException(nameof(MaxConcurrentConnections));
         if (MaxParamsBytes is < 1024 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxParamsBytes));
         if (MaxParamCount is < 1 or > 100_000) throw new ArgumentOutOfRangeException(nameof(MaxParamCount));
-        if (MaxParamNameBytes is < 1 or > MaxParamsBytes) throw new ArgumentOutOfRangeException(nameof(MaxParamNameBytes));
-        if (MaxParamValueBytes is < 1 or > MaxParamsBytes) throw new ArgumentOutOfRangeException(nameof(MaxParamValueBytes));
+        if (MaxParamNameBytes < 1 || MaxParamNameBytes > MaxParamsBytes) throw new ArgumentOutOfRangeException(nameof(MaxParamNameBytes));
+        if (MaxParamValueBytes < 1 || MaxParamValueBytes > MaxParamsBytes) throw new ArgumentOutOfRangeException(nameof(MaxParamValueBytes));
         if (MaxRequestBodyBytes is < 0 or > 256 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxRequestBodyBytes));
         if (MaxHeaderCount is < 1 or > 10_000) throw new ArgumentOutOfRangeException(nameof(MaxHeaderCount));
         if (MaxHeaderValueBytes is < 1 or > 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxHeaderValueBytes));
