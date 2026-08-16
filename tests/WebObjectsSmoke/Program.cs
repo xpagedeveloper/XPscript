@@ -62,6 +62,22 @@ End Sub
 
 try
 {
+    await using (var probe = await new XpsWebCompiler().CompileAsync(scriptPath, root))
+    {
+        var probeRequest = new XpsWebRequest(
+            "GET", "/", "", "name=probe", new Dictionary<string, IReadOnlyList<string>>(),
+            null, 0, ReadOnlyMemory<byte>.Empty, "localhost", "http", "127.0.0.1", "HTTP/1.1",
+            new Dictionary<string, string>());
+        var probeResponse = new XpsWebResponse();
+        var probeContext = new XpsWebContext(
+            probeRequest,
+            probeResponse,
+            new XpsServerInfo("web-objects-probe", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+            new XpsWebPrincipal(false),
+            new SmokeApplicationState());
+        await probe.InvokeAsync("Index", probeContext);
+    }
+
     await using var dispatcher = new XpsWebDispatcher(root, new XpsWebCompilationCacheOptions
     {
         MaxEntries = 8,
