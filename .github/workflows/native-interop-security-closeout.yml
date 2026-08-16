@@ -95,8 +95,15 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force ./out/native-interop-closeout | Out-Null
           $out = if ($IsWindows) { './out/native-interop-closeout/byref.exe' } else { './out/native-interop-closeout/byref' }
-          $text = @(& dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-byref-error.xps -o $out --framework-dependent --result-format text 2>&1)
-          $exit = $LASTEXITCODE
+          $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+          $PSNativeCommandUseErrorActionPreference = $false
+          try {
+            $text = @(& dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-byref-error.xps -o $out --framework-dependent --result-format text 2>&1)
+            $exit = $LASTEXITCODE
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+          }
           $text | ForEach-Object { Write-Host $_ }
           if ($exit -eq 0) { throw 'Unsafe native ByRef sample compiled successfully.' }
           $joined = $text -join "`n"
