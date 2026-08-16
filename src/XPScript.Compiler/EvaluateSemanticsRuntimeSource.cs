@@ -30,9 +30,31 @@ internal static class XPScriptEvaluateSemanticsRuntime
         if (number == 70) return "Evaluate access or permission denied.";
         if (number == 9) return "Evaluate subscript or List tag was not found.";
 
-        // Preserve only diagnostic families that describe syntax/API shape rather than
-        // runtime values. Identifiers and function names are source-code metadata, not
-        // callvar payloads. All other error-5 text is intentionally generalized.
+        // Source identifiers, function names, type names and unsupported source tokens
+        // are attacker-controlled source text. Do not reflect them across the Evaluate
+        // diagnostic boundary even when they are not callvar payloads.
+        if (number == 5 && StartsWithAny(text,
+            "Unknown identifier in Evaluate scope: ",
+            "Assignment requires a local variable declared with Dim: ",
+            "Variable already declared in Evaluate scope: "))
+            return "Evaluate source contains an invalid identifier.";
+
+        if (number == 5 && StartsWithAny(text,
+            "Evaluate function ",
+            "Function is not available inside Evaluate: "))
+            return "Evaluate source contains an unavailable function.";
+
+        if (number == 5 && text.StartsWith("Unsupported Evaluate local type: ", StringComparison.Ordinal))
+            return "Evaluate source contains an unsupported local type.";
+
+        if (number == 5 && text.StartsWith("Evaluate callvar contains an unsupported mutable object type: ", StringComparison.Ordinal))
+            return "Evaluate callvar contains an unsupported mutable object.";
+
+        if (number == 5 && text.StartsWith("Unsupported character in Evaluate source: ", StringComparison.Ordinal))
+            return "Evaluate source contains an unsupported character.";
+
+        // Preserve only structural diagnostics that do not contain source-controlled
+        // identifiers, tokens, values or underlying runtime exception text.
         if (number == 5 && IsSafeStructuralDiagnostic(text))
             return Limit(text, 512);
 
@@ -40,16 +62,13 @@ internal static class XPScriptEvaluateSemanticsRuntime
         return "Evaluate failed with XPScript error " + number.ToString(CultureInfo.InvariantCulture) + ".";
     }
 
+    private static bool StartsWithAny(string text, params string[] prefixes) =>
+        prefixes.Any(prefix => text.StartsWith(prefix, StringComparison.Ordinal));
+
     private static bool IsSafeStructuralDiagnostic(string text)
     {
         string[] prefixes =
         [
-            "Evaluate function ",
-            "Function is not available inside Evaluate: ",
-            "Unknown identifier in Evaluate scope: ",
-            "Assignment requires a local variable declared with Dim: ",
-            "Variable already declared in Evaluate scope: ",
-            "Unsupported Evaluate local type: ",
             "Expected ",
             "callvar is read-only inside Evaluate.",
             "callvar is reserved and cannot be declared inside Evaluate.",
@@ -57,8 +76,6 @@ internal static class XPScriptEvaluateSemanticsRuntime
             "Evaluate List callvar requires exactly one tag.",
             "Evaluate array callvar received the wrong number of indexes.",
             "Evaluate collection snapshot exceeds the maximum ",
-            "Evaluate callvar contains an unsupported mutable object type: ",
-            "Unsupported character in Evaluate source: ",
             "Unterminated string literal in Evaluate.",
             "Unterminated date literal in Evaluate.",
             "Unsupported Evaluate comparison operator."
