@@ -13,8 +13,14 @@ internal static class EvaluateDiagnosticSanitizationProbeEntry
 {
     public static void Main()
     {
-        VerifyRetained("Unknown identifier in Evaluate scope: variableName");
-        VerifyRetained("Evaluate function Len expects 1 argument but got 2.");
+        VerifyMapped(
+            "Unknown identifier in Evaluate scope: TOP-SECRET-IDENTIFIER",
+            "Evaluate source contains an invalid identifier.",
+            "TOP-SECRET-IDENTIFIER");
+        VerifyMapped(
+            "Evaluate function TOP-SECRET-FUNCTION expects 1 argument but got 2.",
+            "Evaluate source contains an unavailable function.",
+            "TOP-SECRET-FUNCTION");
         VerifyRetained("callvar is read-only inside Evaluate.");
         VerifyRetained("Evaluate collection snapshot exceeds the maximum element budget of 100000.");
 
@@ -34,6 +40,19 @@ internal static class EvaluateDiagnosticSanitizationProbeEntry
             throw new Exception("Evaluate structural diagnostic changed error number to " + runtime.Number + ".");
         if (!string.Equals(runtime.Message, message, StringComparison.Ordinal))
             throw new Exception("Evaluate unexpectedly collapsed an allowlisted structural diagnostic: " + runtime.Message);
+    }
+
+    private static void VerifyMapped(string message, string expected, string forbidden)
+    {
+        var sanitized = XPScriptEvaluateSemanticsRuntime.Sanitize(new XPScriptRuntimeException(5, message));
+        if (sanitized is not XPScriptRuntimeException runtime)
+            throw new Exception("Evaluate mapped diagnostic did not remain an XPScript runtime error.");
+        if (runtime.Number != 5)
+            throw new Exception("Evaluate mapped diagnostic changed error number to " + runtime.Number + ".");
+        if (!string.Equals(runtime.Message, expected, StringComparison.Ordinal))
+            throw new Exception("Evaluate mapped diagnostic did not use the expected stable description: " + runtime.Message);
+        if (runtime.Message.Contains(forbidden, StringComparison.Ordinal))
+            throw new Exception("Evaluate mapped diagnostic leaked source-controlled detail.");
     }
 
     private static void VerifyCollapsed(string secretMessage)
