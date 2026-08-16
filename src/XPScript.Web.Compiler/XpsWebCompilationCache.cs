@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using XPScript.Compiler;
 
 namespace XPScript.Web.Compiler;
 
@@ -7,6 +7,8 @@ public sealed class XpsWebCompilationCacheOptions
     public int MaxEntries { get; init; } = 128;
     public long MaxSourceBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTtl { get; init; } = TimeSpan.FromMinutes(20);
+    public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(2);
+    public string ConfigurationIdentity { get; init; } = "default";
 
     internal void Validate()
     {
@@ -16,6 +18,10 @@ public sealed class XpsWebCompilationCacheOptions
             throw new ArgumentOutOfRangeException(nameof(MaxSourceBytes), "MaxSourceBytes must be between 1 byte and 64 MiB.");
         if (IdleTtl < TimeSpan.FromSeconds(1) || IdleTtl > TimeSpan.FromDays(1))
             throw new ArgumentOutOfRangeException(nameof(IdleTtl), "IdleTtl must be between 1 second and 1 day.");
+        if (FailureBackoff < TimeSpan.FromMilliseconds(100) || FailureBackoff > TimeSpan.FromMinutes(5))
+            throw new ArgumentOutOfRangeException(nameof(FailureBackoff), "FailureBackoff must be between 100 ms and 5 minutes.");
+        if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)
+            throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));
     }
 }
 
@@ -23,10 +29,13 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
 {
     private sealed class Entry
     {
-        public required string Path { get; init; }
-        public required string Fingerprint { get; init; }
+        public required string Key { get; init; }
+        public required string SourcePath { get; init; }
+        public required string SiteRoot { get; init; }
+        public required string Identity { get; init; }
         public required Lazy<Task<XpsCompiledWebUnit>> Compilation { get; init; }
         public DateTimeOffset LastAccessUtc { get; set; }
+        public DateTimeOffset? FailureUntilUtc { get; set; }
         public int ActiveLeases { get; set; }
         public bool Retired { get; set; }
         public bool DisposeStarted { get; set; }
@@ -51,13 +60,29 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         get { lock (_gate) return _entries.Count; }
     }
 
-    public async Task<XpsCompiledWebUnitLease> AcquireAsync(string sourcePath, CancellationToken cancellationToken = default)
+    public Task<XpsCompiledWebUnitLease> AcquireAsync(string sourcePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        var fullPath = Path.GetFullPath(sourcePath);
+        var siteRoot = Path.GetDirectoryName(fullPath)
+            ?? throw new XpsWebCompilationException("Unable to determine web source root.");
+        return AcquireAsync(fullPath, siteRoot, cancellationToken);
+    }
+
+    public async Task<XpsCompiledWebUnitLease> AcquireAsync(
+        string sourcePath,
+        string siteRoot,
+        CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(siteRoot);
 
         var fullPath = Path.GetFullPath(sourcePath);
-        var fingerprint = await ComputeFingerprintAsync(fullPath, cancellationToken).ConfigureAwait(false);
+        var fullSiteRoot = Path.GetFullPath(siteRoot);
+        var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+        var snapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
+        var key = fullSiteRoot + "\0" + fullPath;
         Entry entry;
         List<Entry> retired;
 
@@ -67,9 +92,10 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             var now = DateTimeOffset.UtcNow;
             retired = RetireExpiredLocked(now);
 
-            if (_entries.TryGetValue(fullPath, out var existing) &&
+            if (_entries.TryGetValue(key, out var existing) &&
                 !existing.Retired &&
-                string.Equals(existing.Fingerprint, fingerprint, StringComparison.Ordinal))
+                string.Equals(existing.Identity, snapshot.Identity, StringComparison.Ordinal) &&
+                !(existing.FailureUntilUtc is not null && existing.FailureUntilUtc <= now))
             {
                 entry = existing;
             }
@@ -77,20 +103,22 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             {
                 if (existing is not null)
                 {
-                    _entries.Remove(fullPath);
+                    _entries.Remove(key);
                     RetireLocked(existing, retired);
                 }
 
                 entry = new Entry
                 {
-                    Path = fullPath,
-                    Fingerprint = fingerprint,
+                    Key = key,
+                    SourcePath = fullPath,
+                    SiteRoot = fullSiteRoot,
+                    Identity = snapshot.Identity,
                     LastAccessUtc = now,
                     Compilation = new Lazy<Task<XpsCompiledWebUnit>>(
-                        () => _compiler.CompileAsync(fullPath, CancellationToken.None),
+                        () => CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot),
                         LazyThreadSafetyMode.ExecutionAndPublication)
                 };
-                _entries.Add(fullPath, entry);
+                _entries.Add(key, entry);
             }
 
             entry.LastAccessUtc = now;
@@ -107,27 +135,52 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
         catch
         {
-            await ReleaseAfterFailureAsync(entry).ConfigureAwait(false);
+            await ReleaseAfterAcquireFailureAsync(entry).ConfigureAwait(false);
             throw;
         }
     }
 
-    private async Task<string> ComputeFingerprintAsync(string fullPath, CancellationToken cancellationToken)
+    private async Task<XPScriptCompilationSnapshot> CreateSnapshotAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        CancellationToken cancellationToken)
     {
-        var info = new FileInfo(fullPath);
-        if (!info.Exists) throw new FileNotFoundException("Web source file was not found.", fullPath);
-        if (info.Length > _options.MaxSourceBytes)
-            throw new XpsWebCompilationException($"Web source exceeds the configured {_options.MaxSourceBytes} byte limit.");
+        try
+        {
+            return await XPScriptCompilationSnapshotBuilder.CreateAsync(
+                fullPath,
+                fullSiteRoot,
+                runtimeIdentifier,
+                _options.ConfigurationIdentity,
+                _options.MaxSourceBytes,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (CompilerException ex)
+        {
+            throw new XpsWebCompilationException("Unable to build a safe web compilation identity: " + ex.Message, ex);
+        }
+    }
 
-        await using var stream = new FileStream(
-            fullPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 64 * 1024,
-            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
-        return Convert.ToHexString(hash);
+    private async Task<XpsCompiledWebUnit> CompileAndVerifyAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot)
+    {
+        var unit = await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, CancellationToken.None).ConfigureAwait(false);
+            if (!string.Equals(expectedSnapshot.Identity, actualSnapshot.Identity, StringComparison.Ordinal))
+                throw new XpsWebCompilationException("Web source changed while compilation was in progress. Retry the request.");
+            return unit;
+        }
+        catch
+        {
+            await unit.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     private List<Entry> RetireExpiredLocked(DateTimeOffset now)
@@ -151,7 +204,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                 .OrderBy(x => x.LastAccessUtc)
                 .FirstOrDefault();
             if (victim is null) break;
-            _entries.Remove(victim.Path);
+            _entries.Remove(victim.Key);
             RetireLocked(victim, retired);
         }
     }
@@ -182,16 +235,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         if (dispose is not null) await DisposeEntryAsync(dispose).ConfigureAwait(false);
     }
 
-    private async Task ReleaseAfterFailureAsync(Entry entry)
+    private async Task ReleaseAfterAcquireFailureAsync(Entry entry)
     {
         Entry? dispose = null;
         lock (_gate)
         {
-            if (_entries.TryGetValue(entry.Path, out var current) && ReferenceEquals(current, entry))
-                _entries.Remove(entry.Path);
-            entry.Retired = true;
             if (entry.ActiveLeases > 0) entry.ActiveLeases--;
-            if (entry.ActiveLeases == 0 && !entry.DisposeStarted)
+            if (entry.Compilation.IsValueCreated && entry.Compilation.Value.IsFaulted && !entry.Retired)
+                entry.FailureUntilUtc ??= DateTimeOffset.UtcNow + _options.FailureBackoff;
+            if (entry.Retired && entry.ActiveLeases == 0 && !entry.DisposeStarted)
             {
                 entry.DisposeStarted = true;
                 dispose = entry;
