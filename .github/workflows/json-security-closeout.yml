@@ -1,0 +1,119 @@
+name: JSON Security Closeout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/NativeJsonRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'samples/native-json-regression.xps'
+      - 'samples/json-resource-limits.xps'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/json-security-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  json-security:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify JSON security invariants
+        shell: pwsh
+        run: |
+          $source = Get-Content -Raw ./src/XPScript.Compiler/NativeJsonRuntimeSource.cs
+          foreach ($fragment in @(
+            'MaxParseBytes = 8 * 1024 * 1024',
+            'MaxDepth = 64',
+            'MaxNodes = 100_000',
+            'MaxEstimatedPayloadBytes = 16L * 1024 * 1024',
+            'nodes = checked(nodes + 1)',
+            'payload = checked(payload + Encoding.UTF8.GetByteCount(item.Key))',
+            'payload = checked(payload + Encoding.UTF8.GetByteCount(text))',
+            'catch (OverflowException)',
+            'JSON value exceeds the supported resource budget.',
+            'double.IsNaN(d) || double.IsInfinity(d)',
+            'JSON numeric value is outside the supported finite range.',
+            'float.IsNaN(value) || float.IsInfinity(value)',
+            'double.IsNaN(value) || double.IsInfinity(value)'
+          )) {
+            if (-not $source.Contains($fragment)) { throw "Missing JSON security invariant: $fragment" }
+          }
+
+      - name: Verify native JSON API
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/json-security | Out-Null
+          $exe = if ($IsWindows) { './out/json-security/native-json-regression.exe' } else { './out/json-security/native-json-regression' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-json-regression.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native JSON sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          $exit = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Native JSON regression failed.`n$output" }
+          foreach ($required in @(
+            'DOCUMENT={"name":"Alice","active":true}',
+            'OBJCOUNT=2',
+            'OBJNAME=Fredrik',
+            'ARRAYCOUNT=2',
+            'ELEMENTTYPE=Number',
+            'ELEMENTVALUE=123',
+            'DECODE={"ok":true}'
+          )) {
+            if ($output -notcontains $required) { throw "Missing Native JSON marker: $required`n$output" }
+          }
+
+      - name: Verify JSON limits, rollback and finite numbers
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/json-security/json-resource-limits.exe' } else { './out/json-security/json-resource-limits' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/json-resource-limits.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'JSON resource-limit sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          $exit = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "JSON resource-limit regression failed.`n$output" }
+          foreach ($required in @(
+            'PARSE_SIZE_ERR=5',
+            'DEPTH_ERR=5',
+            'NODE_COUNT_ERR=5',
+            'OBJECT_PAYLOAD_ERR=5',
+            'OBJECT_ROLLBACK=safe',
+            'ARRAY_ADD_PAYLOAD_ERR=5',
+            'ARRAY_ADD_COUNT=1',
+            'ARRAY_SET_PAYLOAD_ERR=5',
+            'ARRAY_SET_VALUE=safe',
+            'STRINGIFY_SIZE_ERR=5',
+            'NONFINITE_ERR=5',
+            'PARSED_NONFINITE_ERR=5',
+            'MALFORMED_ERR=5',
+            'MALFORMED_TEXT=Invalid JSON input.',
+            'JSON_RESOURCE_LIMITS=OK'
+          )) {
+            if ($output -notcontains $required) { throw "Missing JSON security marker: $required`n$output" }
+          }
+          if (($output -join "`n") -match 'DO_NOT_ECHO') {
+            throw "Malformed JSON diagnostic leaked source payload.`n$output"
+          }
