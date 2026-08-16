@@ -6,19 +6,23 @@ on:
     paths:
       - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
       - 'samples/evaluate-null-empty-semantics.xps'
       - 'samples/evaluate-return-nothing-error.xps'
+      - 'samples/evaluate-callvar-null-empty.xps'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/null-empty-nothing-semantics.md'
       - '.github/workflows/evaluate-null-empty-semantics.yml'
   push:
     branches:
-      - todo-evaluate-null-empty-nothing-parity
+      - 'todo-evaluate-*'
     paths:
       - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
       - 'samples/evaluate-null-empty-semantics.xps'
       - 'samples/evaluate-return-nothing-error.xps'
+      - 'samples/evaluate-callvar-null-empty.xps'
       - 'todo/evaluate-callvar-todo.md'
       - 'todo/null-empty-nothing-semantics.md'
       - '.github/workflows/evaluate-null-empty-semantics.yml'
@@ -78,6 +82,38 @@ jobs:
             'INNER_NULL_ISNULL=True'
           )) {
             if ($output -notcontains $value) { throw "Evaluate Null/Empty output missing: $value" }
+          }
+
+      - name: Verify Evaluate callvar Null and Empty snapshots
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/evaluate-null/callvar$extension"
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-callvar-null-empty.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Evaluate callvar Null/Empty sample compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Evaluate callvar Null/Empty sample exited with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'SCALAR_EMPTY_TYPE=EMPTY',
+            'SCALAR_EMPTY_DT=0',
+            'SCALAR_EMPTY_ISEMPTY=True',
+            'SCALAR_EMPTY_ISNULL=False',
+            'SCALAR_NULL_TYPE=NULL',
+            'SCALAR_NULL_DT=1',
+            'SCALAR_NULL_ISEMPTY=False',
+            'SCALAR_NULL_ISNULL=True',
+            'ARRAY_EMPTY=True',
+            'ARRAY_NULL=True',
+            'ARRAY_NULL_TYPE=NULL',
+            'LIST_EMPTY=True',
+            'LIST_NULL=True',
+            'LIST_NULL_DT=1'
+          )) {
+            if ($output -notcontains $value) { throw "Evaluate callvar Null/Empty output missing: $value" }
           }
 
       - name: Verify Evaluate Return Nothing rejection
