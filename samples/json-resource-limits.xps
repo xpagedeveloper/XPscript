@@ -5,7 +5,6 @@ Sub Main()
     Dim document As JsonDocument
     Dim obj As JsonObject
     Dim arr As JsonArray
-    Dim i As Integer
     Dim beforeCount As Integer
     Dim beforeValue As Variant
     Dim nonFinite As Double
@@ -72,7 +71,7 @@ Sub Main()
     On Error GoTo 0
 
     ' Non-finite floating point values are not valid JSON numbers.
-    nonFinite = 1 / 0
+    nonFinite = CDbl("NaN")
     Set obj = New JsonObject
     On Error Resume Next
     Call obj.Set("number", nonFinite)
