@@ -53,7 +53,7 @@ Status:
 - [x] Object NOTHING remains an object-reference state through `LSRef<T>` rather than being reported as Variant NULL.
 - [x] `TypeName(EMPTY)` returns `EMPTY`.
 - [x] `TypeName(NULL)` returns `NULL`.
-- [ ] Review `IsNumeric`, `IsScalar`, `IsObject`, `CVar` and related inspection/conversion helpers for NULL and EMPTY edge cases.
+- [x] `IsNumeric`, `IsScalar`, `IsObject`, `IsDate`, `IsArray` and `CVar` preserve the NULL/EMPTY distinction for the verified edge cases; cross-platform source: `samples/null-empty-inspection-helpers.xps`.
 
 ## Coercion and operators
 
@@ -88,6 +88,7 @@ Status:
 ## Regression gate
 
 - [x] Normal-runtime fixture covers initialization, NULL assignment, inspection and Variant `+` propagation: `samples/null-empty-semantics.xps`.
+- [x] Inspection/conversion helper fixture covers `IsNumeric`, `IsScalar`, `IsObject`, `IsDate`, `IsArray` and `CVar` for EMPTY and NULL: `samples/null-empty-inspection-helpers.xps`.
 - [x] Module-global and Static Variant EMPTY initialization and Static persistence are covered by `samples/variant-global-static-empty.xps`.
 - [x] Object-reference NOTHING, alias and Delete behavior are covered by `.github/workflows/null-empty-semantics.yml` using `samples/module-object-references.xps`.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
