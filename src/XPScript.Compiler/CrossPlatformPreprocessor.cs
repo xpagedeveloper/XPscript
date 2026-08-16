@@ -20,6 +20,12 @@ internal sealed class CrossPlatformPreprocessor
 
         source = Regex.Replace(
             source,
+            @"(?<![\w.])ShellArgs\s*\(",
+            "XPCrossPlatformRuntime.ShellArgs(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
             @"(?<![\w.])Shell\s*\(",
             "XPCrossPlatformRuntime.Shell(",
             RegexOptions.IgnoreCase);
