@@ -106,12 +106,13 @@ Status:
 - [x] `callvar` is the explicit input bridge; normal parameters use ByRef semantics and explicit `ByVal` creates an isolated copy
 - [x] multi-value Evaluate packs supplied values into a zero-based `callvar` array
 - [x] explicit `ByVal` arrays/Lists are recursively snapshotted and returned collections are detached
-- [>] arbitrary unsupported mutable object references are rejected in the isolated ByVal snapshot path
+- [x] arbitrary unsupported mutable object references are rejected in the isolated ByVal snapshot path; verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
 - [x] snapshot depth, element count and estimated payload are bounded for ByVal inputs
 - [x] diagnostics crossing the Evaluate boundary are sanitized so callvar values are not echoed
 - [x] `Evaluate` documentation states that it is not a complete hostile-code sandbox
 - [x] concurrent-thread and multi-value invocation isolation is permanently regression-tested
-- [ ] nested-Evaluate independent snapshot test if nested Evaluate syntax is introduced
+- [x] nested `Evaluate` is not currently exposed inside the Evaluate runtime; attempted nested evaluation is rejected with bounded error 5 without caller mutation or value leakage, verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
+- [x] complete Evaluate security boundary is verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
 
 ## HTTP
 
