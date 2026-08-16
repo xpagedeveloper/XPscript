@@ -23,6 +23,17 @@ public sealed class XPScriptTranspiler
         }
     }
 
+    public string TranspileRestricted(
+        string source,
+        string sourceName,
+        string runtimeIdentifier,
+        IEnumerable<string> allowedSourceRoots)
+    {
+        ArgumentNullException.ThrowIfNull(allowedSourceRoots);
+        using var scope = IncludeSecurityContext.Push(allowedSourceRoots);
+        return Transpile(source, sourceName, runtimeIdentifier);
+    }
+
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         source = new MultilineStringPreprocessor().Transform(source, sourceName);

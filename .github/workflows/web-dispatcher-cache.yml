@@ -1,0 +1,50 @@
+name: Web Dispatcher Cache
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Web.Runtime/XpsWebPathResolver.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebPrincipal.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'src/XPScript.Web.Runtime/IXpsWebRequestHandler.cs'
+      - 'tests/WebDispatcherSmoke/**'
+      - '.github/workflows/web-dispatcher-cache.yml'
+      - 'XPScriptCompiler.slnx'
+  push:
+    branches: ['todo-web-runtime-dispatch-cache']
+    paths:
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'tests/WebDispatcherSmoke/**'
+      - '.github/workflows/web-dispatcher-cache.yml'
+      - 'XPScriptCompiler.slnx'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore solution
+        run: dotnet restore ./XPScriptCompiler.slnx
+
+      - name: Build solution
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Run dispatcher and cache regression
+        run: dotnet run --project ./tests/WebDispatcherSmoke/WebDispatcherSmoke.csproj -c Release

@@ -13,11 +13,26 @@ public sealed class XpsWebCompiler
         @"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b",
         RegexOptions.CultureInvariant);
 
-    public async Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
+    public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var fullSourcePath = Path.GetFullPath(sourcePath);
+        var defaultRoot = Path.GetDirectoryName(fullSourcePath)
+            ?? throw new XpsWebCompilationException("Unable to determine web source root.");
+        return CompileAsync(fullSourcePath, defaultRoot, cancellationToken);
+    }
+
+    public async Task<XpsCompiledWebUnit> CompileAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var fullSourceRoot = Path.GetFullPath(allowedSourceRoot);
         if (!File.Exists(fullSourcePath)) throw new FileNotFoundException("Web source file was not found.", fullSourcePath);
+        if (!Directory.Exists(fullSourceRoot)) throw new DirectoryNotFoundException("Web source root was not found.");
         if (!Path.GetExtension(fullSourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
             throw new XpsWebCompilationException("Web source files must use the .xps extension.");
 
@@ -30,10 +45,11 @@ public sealed class XpsWebCompiler
         string generated;
         try
         {
-            generated = new XPScriptTranspiler().Transpile(
+            generated = new XPScriptTranspiler().TranspileRestricted(
                 compilerSource,
                 fullSourcePath,
-                CompilerDriver.CurrentRuntimeIdentifier());
+                CompilerDriver.CurrentRuntimeIdentifier(),
+                [fullSourceRoot]);
         }
         catch (CompilerException ex)
         {
