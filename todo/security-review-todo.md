@@ -2,11 +2,11 @@
 
 (c) xpagedeveloper.com 2026
 
-This checklist tracks static security hardening separately from runtime verification. Items remain `[>]` until build/runtime verification is explicitly re-enabled.
+This checklist tracks static security hardening separately from runtime verification.
 
 Status:
-- `[x]` implemented and verified
-- `[>]` implemented/reviewed, awaiting verification
+- `[x]` implemented and verified by a permanent build/runtime/compiler regression
+- `[>]` implemented/reviewed, awaiting complete verification
 - `[ ]` not implemented/reviewed
 
 ## Compiler-generated identifiers
@@ -16,26 +16,26 @@ Status:
 - [>] all names in comma-separated `Dim`, `Static`, module `Public` and module `Private` declarations are validated, not only the first name
 - [>] commas inside array dimensions do not split declaration items
 - [>] regression sources: `samples/reserved-identifier-error.xps`, `samples/reserved-runtime-type-error.xps`, `samples/reserved-multiple-identifiers-error.xps`, `samples/reserved-module-multiple-identifiers-error.xps`
-- [ ] build/diagnostic verification when execution is re-enabled
+- [ ] build/diagnostic verification of the complete reserved-identifier matrix
 
 ## Compiler temporary workspace
 
-- [>] every compile invocation uses a GUID-named workspace under the XPScript temp root
-- [>] generated project/source/publish directories are invocation-local
-- [>] cleanup is attempted in `finally`
-- [>] compiler-owned cleanup refuses a symlink/reparse-point workspace root and does not recursively follow linked descendants
-- [>] Unix compiler temp directories are hardened to user-only directory mode where supported
-- [>] Unix generated/staged temp files are hardened to user-only read/write mode where supported
-- [>] Windows invocation/staging directories remove inherited ACLs and grant the current Windows account full control; child files inherit that ACL
-- [>] final executable/dependency publication is staged beside the destination and committed with executable last
-- [>] staged publication keeps backups and rolls back the whole output set on a publication failure on a best-effort basis
-- [>] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are invocation-local for generated builds
-- [>] inherited MSBuild path redirection variables are removed from generated build processes
-- [>] `dotnet` is resolved to an absolute host path rather than relying on a relative/current-directory PATH hit
-- [ ] verify Windows ACL behavior for local/domain/service accounts
-- [ ] verify 10+ concurrent compiles cannot share or overwrite temporary files
-- [ ] verify crash/kill leaves no reusable trusted workspace state
-- [>] detailed checklist: `todo/compiler-temp-isolation-todo.md`
+- [x] every compile invocation uses a GUID-named workspace under the XPScript temp root
+- [x] generated project/source/publish directories are invocation-local
+- [x] cleanup is attempted in `finally`
+- [x] compiler-owned cleanup refuses a symlink/reparse-point workspace root and does not recursively follow linked descendants
+- [x] Unix compiler temp directories are hardened to user-only directory mode where supported
+- [x] Unix generated/staged temp files are hardened to user-only read/write mode where supported
+- [x] Windows invocation/staging directories remove inherited ACLs and grant the current Windows security principal full control through its SID; child files inherit that ACL
+- [x] final executable/dependency publication is staged beside the destination and committed with executable last
+- [x] staged publication keeps backups and rolls back the whole output set on a publication failure on a best-effort basis
+- [x] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are invocation-local for generated builds
+- [x] inherited MSBuild path redirection variables are removed from generated build processes
+- [x] `dotnet` is resolved to an absolute host path rather than relying on a relative/current-directory PATH hit
+- [x] Windows ACL behavior is verified using the current SID so local/domain/service account naming does not affect the grant model
+- [x] 10+ concurrent compiles cannot share or overwrite compiler-owned temporary state
+- [x] crash/kill does not create reusable trusted workspace state for later compiler invocations
+- [x] detailed checklist: `todo/done/compiler-temp-isolation-todo.md`
 
 ## Project-local managed/native dependencies
 
@@ -53,17 +53,17 @@ Status:
 
 ## Output publication
 
-- [>] explicitly supplied existing regular output files may be replaced; this is the compiler overwrite/upgrade policy
-- [>] source-controlled managed/native dependency metadata cannot choose arbitrary final output paths; dependency output is reduced to validated file names beside the requested executable
-- [>] executable plus native dependencies are staged before final publication
-- [>] output path is normalized and an existing directory target is rejected
-- [>] output path may not overwrite the `.xps` source file
-- [>] output directory components and existing output targets may not be symbolic links/junctions/reparse points
-- [>] output/dependency targets may not replace the currently running process image or the loaded XPScript compiler assembly
-- [>] protected compiler/runtime target checks are repeated again at final commit time
-- [>] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
-- [>] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
-- [ ] runtime verification of forced rollback/failure and protected-target cases
+- [x] explicitly supplied existing regular output files may be replaced; this is the compiler overwrite/upgrade policy
+- [x] source-controlled managed/native dependency metadata cannot choose arbitrary final output paths; dependency output is reduced to validated file names beside the requested executable
+- [x] executable plus native dependencies are staged before final publication
+- [x] output path is normalized and an existing directory target is rejected
+- [x] output path may not overwrite the `.xps` source file
+- [x] output directory components and existing output targets may not be symbolic links/junctions/reparse points
+- [x] output/dependency targets may not replace the currently running process image or the loaded XPScript compiler assembly
+- [x] protected compiler/runtime target checks are repeated again at final commit time
+- [x] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
+- [x] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
+- [x] forced rollback/failure and protected-target behavior is verified on Windows, Ubuntu and macOS by `Compiler Output Safety`
 
 ## Shell / process execution
 
@@ -74,13 +74,13 @@ Status:
 - [>] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
 - [>] bare executable/script names are resolved by XPScript through absolute PATH entries before `ProcessStartInfo` is created
 - [>] current-directory lookup and relative PATH entries are not used implicitly for bare executable names
-- [>] Windows extension probing is limited to validated `PATHEXT` suffixes (with safe defaults)
+- [>] Windows extension probing is limited to validated `PATHEXT` suffixes with safe defaults
 - [>] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
 - [>] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
 - [>] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
 - [>] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
 - [ ] consider an additional structured process API accepting executable and argument array separately
-- [ ] build/runtime verification of quoting and path behavior when execution is re-enabled
+- [ ] build/runtime verification of the complete quoting and path behavior matrix
 
 ## File I/O
 
@@ -95,52 +95,57 @@ Status:
 - [>] `RmDir` refuses a symbolic-link/reparse-point directory target
 - [>] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
 - [ ] review TOCTOU behavior between symlink/attribute/existence checks and the final filesystem operation
-- [ ] verify Windows versus Unix delete-while-open behavior
-- [ ] verify cross-process region locks on every target OS
+- [x] Windows versus Unix delete-while-open behavior is verified on Windows, Ubuntu and macOS
+- [x] cross-process byte-range locks are verified on Windows, Ubuntu and macOS, including overlap conflict, non-overlap coexistence and reacquisition after release
 
 ## Evaluate
 
-- [>] caller scope is not implicitly exposed
-- [>] `callvar` is the only explicit input bridge and is read-only
-- [>] arrays/Lists are recursively snapshotted and returned collections detached
-- [>] arbitrary mutable object references are rejected
-- [>] snapshot depth, element count and estimated payload are bounded
-- [>] diagnostics crossing the Evaluate boundary are sanitized so callvar values are not echoed
-- [>] `Evaluate` documentation states that it is not a complete hostile-code sandbox
-- [ ] concurrent-thread isolation test
+- [x] caller scope is not implicitly exposed
+- [x] `callvar` is the explicit input bridge; normal parameters use ByRef semantics and explicit `ByVal` creates an isolated copy
+- [x] multi-value Evaluate packs supplied values into a zero-based `callvar` array
+- [x] explicit `ByVal` arrays/Lists are recursively snapshotted and returned collections are detached
+- [>] arbitrary unsupported mutable object references are rejected in the isolated ByVal snapshot path
+- [x] snapshot depth, element count and estimated payload are bounded for ByVal inputs
+- [x] diagnostics crossing the Evaluate boundary are sanitized so callvar values are not echoed
+- [x] `Evaluate` documentation states that it is not a complete hostile-code sandbox
+- [x] concurrent-thread and multi-value invocation isolation is permanently regression-tested
 - [ ] nested-Evaluate independent snapshot test if nested Evaluate syntax is introduced
 
 ## HTTP
 
-- [>] `SetHeader` validates header names as HTTP token characters before storing them
-- [>] `SetHeader` rejects CR, LF, NUL and other prohibited control characters in header values before request construction
-- [>] `RemoveHeader` applies the same header-name validation
-- [>] URLs are restricted to absolute `http://` and `https://` schemes
-- [>] invalid URL/network/timeout diagnostics do not echo the complete request URL or underlying exception message
-- [>] invalid `Content-Type` is converted to a bounded XPScript error instead of leaking parser exception text
-- [>] automatic redirects are disabled; 3xx responses are returned to the caller so credentials/custom headers are not silently forwarded across origins
-- [>] request bodies are limited to 8 MiB UTF-8
-- [>] response bodies are limited to 8 MiB and read with `ResponseHeadersRead`; oversized declared or streamed bodies are rejected
-- [>] Timeout rejects zero, negative, NaN and Infinity values
-- [>] HttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
-- [>] loopback/private-network access remains intentionally available because this is a general-purpose HTTP API; SSRF host/network allowlists are an application boundary
-- [>] regression sources: `samples/native-http-header-validation.xps`, `samples/native-http-resource-limits.xps`
-- [ ] verify redirects/body limits/timeout/disposal against controlled endpoints when execution is re-enabled
+- [x] `SetHeader` validates header names as HTTP token characters before storing them
+- [x] `SetHeader` rejects CR, LF, NUL and other prohibited control characters in header values before request construction
+- [x] `RemoveHeader` applies the same header-name validation
+- [x] URLs are restricted to absolute `http://` and `https://` schemes
+- [x] invalid URL/network/timeout diagnostics do not echo the complete request URL or underlying exception message
+- [x] invalid `Content-Type` is converted to a bounded XPScript error instead of leaking parser exception text
+- [x] automatic redirects are disabled; 3xx responses are returned to the caller so credentials/custom headers are not silently forwarded across origins
+- [x] request bodies are limited to 8 MiB UTF-8
+- [x] response bodies are limited to 64 MiB and read with `ResponseHeadersRead`; oversized declared or streamed bodies are rejected
+- [x] default timeout is 30 seconds and Timeout rejects zero, negative, NaN and Infinity values
+- [x] timeout is enforced per request and may be changed between requests
+- [x] HttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
+- [x] raw response bytes can be saved without text conversion
+- [x] multipart responses expose all parts through `Parts`, including per-part content type, text body, file metadata and binary-safe save support
+- [x] `Files` exposes a filtered file-only multipart view and UTF-8 `filename*=` metadata is decoded
+- [x] loopback/private-network access remains intentionally available because this is a general-purpose HTTP API; SSRF host/network allowlists are an application boundary
+- [x] controlled-endpoint regression verifies redirects, request/response limits, timeout, disposal, binary responses and mixed text/file multipart responses on Windows, Ubuntu and macOS
+- [x] regression sources include `samples/native-http-header-validation.xps`, `samples/native-http-resource-limits.xps` and `samples/native-http-binary-files.xps`
 
 ## JSON
 
-- [>] parser input is limited to 8 MiB UTF-8
-- [>] parse/serialization nesting is limited to 64 levels
-- [>] JSON graph size is limited to 100000 nodes
-- [>] estimated JSON payload is limited to 16 MiB
-- [>] serialized JSON output is limited to 16 MiB UTF-8
-- [>] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
+- [x] parser input is limited to 8 MiB UTF-8
+- [x] parse/serialization nesting is limited to 64 levels
+- [x] JSON graph size is limited to 100000 nodes
+- [x] estimated JSON payload is limited to 16 MiB
+- [x] serialized JSON output is limited to 16 MiB UTF-8
+- [x] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
 - [>] budget arithmetic overflow is normalized to a bounded XPScript error
-- [>] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
+- [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
 - [>] parsed numeric conversion refuses non-finite Double results
-- [>] malformed JSON diagnostics do not echo the complete JSON source payload
-- [>] regression source: `samples/json-resource-limits.xps`
-- [ ] build/runtime verification of parse/depth/node/payload/numeric limits when execution is re-enabled
+- [x] malformed JSON diagnostics do not echo the complete JSON source payload
+- [x] regression source: `samples/json-resource-limits.xps`
+- [x] build/runtime verification of parse/depth/node/payload/numeric limits on Windows, Ubuntu and macOS
 
 ## Native interop
 
@@ -168,7 +173,7 @@ Status:
 - [>] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
 - [>] legacy disabled coverage exists in `samples/runtime-sax.xps`
 - [>] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text
-- [ ] runtime verification on Windows when execution is re-enabled
+- [ ] runtime verification on Windows
 
 ## Diagnostics
 
@@ -190,12 +195,12 @@ Status:
 
 ## Documentation
 
-- [>] `docs/evaluate.md` documents Evaluate isolation and non-sandbox boundary
+- [x] `docs/evaluate.md` documents Evaluate ByRef/ByVal isolation semantics and the non-sandbox boundary
 - [>] `docs/platform-native.md` documents native/process platform behavior, native ABI constraints and application-local resolver policy
-- [>] `docs/native-http-json.md` documents redirect policy and HTTP/JSON resource budgets
+- [x] native HTTP documentation covers redirect policy, resource budgets, binary responses and multipart parts
 - [>] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
 - [>] security documentation is linked from `docs/index.md` and README
 
 ## Verification gate
 
-No item in this file becomes `[x]` until the corresponding static change has been built and its positive/negative runtime or compiler regression has passed after execution is explicitly re-enabled.
+No item in this file becomes `[x]` until the corresponding static change has been built and its positive/negative runtime or compiler regression has passed on the relevant supported platform matrix.
