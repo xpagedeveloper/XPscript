@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'samples/null-empty-semantics.xps'
+      - 'samples/module-object-references.xps'
       - '.github/workflows/null-empty-semantics.yml'
 
 permissions:
@@ -56,4 +57,28 @@ jobs:
             'NULL_PROPAGATES=True'
           )) {
             if ($output -notcontains $value) { throw "Null/Empty output missing: $value" }
+          }
+
+      - name: Compile and verify object Nothing semantics
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/module-object-references$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/module-object-references.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Object Nothing regression compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Object Nothing regression exited with code $LASTEXITCODE." }
+
+          foreach ($value in @(
+            'NAME=Fredrik',
+            'NOTHING1=False',
+            'SAME=True',
+            'ALIAS=Fredrik',
+            'NOTHING2=True',
+            'ALIASSTILL=Fredrik',
+            'DELETEDPRIMARY=True',
+            'DELETEDALIAS=True'
+          )) {
+            if ($output -notcontains $value) { throw "Object Nothing output missing: $value" }
           }
