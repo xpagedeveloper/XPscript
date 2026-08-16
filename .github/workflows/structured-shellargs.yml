@@ -1,0 +1,89 @@
+name: Structured ShellArgs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
+      - 'samples/shell-structured-arguments.xps'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/structured-shellargs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structured-shellargs:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler and resolve target
+        id: target
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $ext = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $ext = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $ext = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "ext=$ext" >> $env:GITHUB_OUTPUT
+
+      - name: Verify structured API implementation invariants
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          $runtime = Get-Content ./src/XPScript.Compiler/CrossPlatformRuntimeSource.cs -Raw
+          $preprocessor = Get-Content ./src/XPScript.Compiler/CrossPlatformPreprocessor.cs -Raw
+          foreach ($token in @('public static int ShellArgs', 'IReadOnlyList<string> arguments', 'info.ArgumentList.Add(argument);')) {
+            if (-not $runtime.Contains($token, [StringComparison]::Ordinal)) { throw "ShellArgs invariant missing: $token" }
+          }
+          if (-not $preprocessor.Contains('XPCrossPlatformRuntime.ShellArgs(', [StringComparison]::Ordinal)) {
+            throw 'ShellArgs preprocessor mapping is missing.'
+          }
+
+      - name: Create argument helper
+        shell: pwsh
+        run: |
+          @'
+          param([string]$A0,[string]$A1,[string]$A2,[string]$A3)
+          @(
+            "A0=$A0"
+            "A1=$A1"
+            "A2LEN=$($A2.Length)"
+            "A3=$A3"
+          ) | Set-Content -Encoding utf8 ./shell-args-output.txt
+          '@ | Set-Content -Encoding utf8 ./shell-args-helper.ps1
+
+      - name: Verify structured arguments remain literal
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          Remove-Item -Force -ErrorAction SilentlyContinue ./shell-args-output.txt
+          $exe = "./out/shellargs${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/shell-structured-arguments.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'ShellArgs sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $result = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "ShellArgs sample failed.`n$result" }
+          if ($result -notcontains 'SHELLARGS=STARTED') { throw "ShellArgs sample did not reach success marker.`n$result" }
+
+          for ($i = 0; $i -lt 100 -and -not (Test-Path ./shell-args-output.txt); $i++) { Start-Sleep -Milliseconds 100 }
+          if (-not (Test-Path ./shell-args-output.txt)) { throw 'ShellArgs helper did not produce output.' }
+          $argsOut = Get-Content ./shell-args-output.txt
+          if ($argsOut -notcontains 'A0=space value') { throw "Space argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A1=åäö 漢字') { throw "Unicode argument was corrupted.`n$argsOut" }
+          if ($argsOut -notcontains 'A2LEN=0') { throw "Empty argument was not preserved.`n$argsOut" }
+          if ($argsOut -notcontains 'A3=meta & | < > ^ % !') { throw "Metacharacters were altered or interpreted.`n$argsOut" }
