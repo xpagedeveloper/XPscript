@@ -6,6 +6,7 @@ Sub Main()
     Dim probe As EvaluateObjectProbe
     Dim result As Variant
     Dim evaluateErr As Integer
+    Dim evaluateText As String
 
     Set probe = New EvaluateObjectProbe()
     probe.Value = 42
@@ -13,11 +14,17 @@ Sub Main()
     On Error Resume Next
     result = Evaluate("Return 1", ByVal probe)
     evaluateErr = Err
+    evaluateText = Error$
     On Error GoTo 0
 
     If evaluateErr <> 5 Then
         Error 9301, "Expected Evaluate ByVal object callvar rejection to use error 5, got " & CStr(evaluateErr)
     End If
 
+    If InStr(1, evaluateText, "EvaluateObjectProbe") > 0 Then
+        Error 9302, "Evaluate ByVal object rejection leaked the internal object type."
+    End If
+
     Print "OBJECT-CALLVAR-REJECTED=OK"
+    Print "OBJECT-CALLVAR-DIAGNOSTIC-REDACTED=OK"
 End Sub
