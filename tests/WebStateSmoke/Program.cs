@@ -75,6 +75,30 @@ var secureResponse = new XpsWebResponse();
 var secureSession = secureStore.Bind(Request(scheme: "https"), secureResponse);
 AssertSessionCookie(secureResponse, secureSession.Id, secure: true);
 
+var capacityStore = new XpsSessionStore(new XpsSessionOptions
+{
+    MaxSessions = 1,
+    MaxEntriesPerSession = 4,
+    MaxValueBytes = 64,
+    MaxBytesPerSession = 128
+});
+var capacityFirst = capacityStore.Bind(Request(), new XpsWebResponse());
+capacityFirst.Set("keep", "alive");
+var capacityId = capacityFirst.Id;
+try
+{
+    _ = capacityStore.Bind(Request(), new XpsWebResponse());
+    throw new Exception("Full session store accepted a new session by evicting an active session.");
+}
+catch (InvalidOperationException)
+{
+}
+var capacityExisting = capacityStore.Bind(
+    Request(cookies: new Dictionary<string, string> { ["XPSID"] = capacityId }),
+    new XpsWebResponse());
+if (!Equals(capacityExisting.Get("keep"), "alive"))
+    throw new Exception("Active session was lost when session capacity was reached.");
+
 var root = Path.Combine(Path.GetTempPath(), "xps-web-state-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 var script = Path.Combine(root, "index.xps");
