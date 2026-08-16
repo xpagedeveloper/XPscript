@@ -1,5 +1,5 @@
 ' (c) xpagedeveloper.com 2026
-' Regression: malformed numeric input must not be echoed and retained structural diagnostics are length-limited.
+' Regression: malformed input and source-controlled identifiers must not be echoed.
 
 Sub Main()
     Dim result As Variant
@@ -29,16 +29,28 @@ Sub Main()
     evaluateMessage = Error$
     On Error GoTo 0
     If evaluateErr <> 5 Then
-        Error 9403, "Oversized structural diagnostic should use error 5, got " & CStr(evaluateErr)
+        Error 9403, "Unknown identifier should use error 5, got " & CStr(evaluateErr)
     End If
-    If Len(evaluateMessage) <> 515 Then
-        Error 9404, "Evaluate structural diagnostic must be exactly 515 characters, got " & CStr(Len(evaluateMessage))
+    If evaluateMessage <> "Evaluate source contains an invalid identifier." Then
+        Error 9404, "Expected generic unknown-identifier diagnostic"
     End If
-    If Right$(evaluateMessage, 3) <> "..." Then
-        Error 9405, "Evaluate structural diagnostic must end with ellipsis"
+    If Instr(evaluateMessage, longName) > 0 Then
+        Error 9405, "Evaluate identifier leaked into diagnostic"
     End If
-    If Instr(evaluateMessage, "Unknown identifier in Evaluate scope: ") <> 1 Then
-        Error 9406, "Expected retained structural unknown-identifier diagnostic"
+
+    On Error Resume Next
+    result = Evaluate("Return SecretFunctionName123(1)")
+    evaluateErr = Err
+    evaluateMessage = Error$
+    On Error GoTo 0
+    If evaluateErr <> 5 Then
+        Error 9406, "Unavailable function should use error 5, got " & CStr(evaluateErr)
+    End If
+    If evaluateMessage <> "Evaluate source contains an unavailable function." Then
+        Error 9407, "Expected generic unavailable-function diagnostic"
+    End If
+    If Instr(evaluateMessage, "SecretFunctionName123") > 0 Then
+        Error 9408, "Evaluate function name leaked into diagnostic"
     End If
 
     Print "EVALUATE-DIAGNOSTIC-EDGE=OK"
