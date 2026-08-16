@@ -66,6 +66,8 @@ jobs:
           $exitCode = $LASTEXITCODE
           $global:LASTEXITCODE = 0
           if ($exitCode -eq 0) { throw "Unterminated multiline string unexpectedly compiled.`n$output" }
-          if ($output -notmatch 'multiline-string-unterminated\.xps\(5\).*Unterminated multiline string literal') {
+          if ($output -notmatch 'file:\s+multiline-string-unterminated\.xps' -or
+              $output -notmatch 'line:\s+5' -or
+              $output -notmatch 'description:\s+Unterminated multiline string literal') {
             throw "Expected opening-line diagnostic was not emitted.`n$output"
           }
