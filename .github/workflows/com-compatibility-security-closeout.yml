@@ -1,0 +1,88 @@
+name: COM Compatibility Security Closeout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ExtendedCompatibilityRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ExtendedCompatibilityTranspiler.cs'
+      - 'samples/com-getobject-runtime.xps'
+      - 'samples/com-getobject-invalid.xps'
+      - 'samples/com-getobject-platform-error.xps'
+      - 'samples/runtime-sax.xps'
+      - 'docs/security.md'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/com-getobject-runtime.yml'
+      - '.github/workflows/com-compatibility-security-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-and-boundary:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify COM compatibility inventory and trust boundary
+        shell: pwsh
+        run: |
+          $runtime = Get-Content -Raw ./src/XPScript.Compiler/ExtendedCompatibilityRuntimeSource.cs
+          $transpiler = Get-Content -Raw ./src/XPScript.Compiler/ExtendedCompatibilityTranspiler.cs
+          $security = Get-Content -Raw ./docs/security.md
+          $legacy = Get-Content -Raw ./samples/runtime-sax.xps
+
+          foreach ($fragment in @(
+            'public static object? GetObject(object? pathname = null, object? className = null)',
+            'OperatingSystem.IsWindows()',
+            'Marshal.BindToMoniker(path)',
+            'Type.GetTypeFromProgID(progId, throwOnError: true)',
+            'Activator.CreateInstance(type)',
+            'COM GetObject activation failed.'
+          )) {
+            if (-not $runtime.Contains($fragment)) { throw "Missing COM runtime invariant: $fragment" }
+          }
+          if (-not $transpiler.Contains('"GetObject"')) { throw 'GetObject is missing from the standalone compatibility function inventory.' }
+          if ($transpiler -match '"CreateObject"') { throw 'Unexpected general CreateObject compatibility function found.' }
+          foreach ($fragment in @('Windows-only', 'COM moniker binding', 'ProgID', 'powerful local-code/integration boundary')) {
+            if (-not $security.Contains($fragment)) { throw "Missing COM security documentation: $fragment" }
+          }
+          if (-not $legacy.Contains('GetObject')) { throw 'Legacy disabled GetObject coverage is missing.' }
+
+      - name: Verify non-Windows GetObject rejection
+        if: runner.os != 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/com-closeout | Out-Null
+          $exe = './out/com-closeout/com-platform-error'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/com-getobject-platform-error.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'COM platform regression sample compilation failed.' }
+          $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+          $PSNativeCommandUseErrorActionPreference = $false
+          try {
+            $result = @(& $exe 2>&1)
+            $exitCode = $LASTEXITCODE
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+          }
+          $text = $result -join [Environment]::NewLine
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exitCode -eq 0 -or $result -contains 'SHOULD_NOT_REACH') { throw 'GetObject unexpectedly executed on a non-Windows platform.' }
+          if ($text -notmatch 'available only on Windows') { throw "Windows-only diagnostic missing.`n$text" }
+          if ($text -match 'XPScript\.Platform\.Probe') { throw 'Platform diagnostic leaked the supplied ProgID.' }
+          $global:LASTEXITCODE = 0
