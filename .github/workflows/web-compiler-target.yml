@@ -1,0 +1,47 @@
+name: Web Compiler Target
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/**'
+      - 'tests/WebCompilerSmoke/**'
+      - '.github/workflows/web-compiler-target.yml'
+      - 'XPScriptCompiler.slnx'
+  push:
+    branches: ['todo-web-runtime-compiler-target']
+    paths:
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/**'
+      - 'tests/WebCompilerSmoke/**'
+      - '.github/workflows/web-compiler-target.yml'
+      - 'XPScriptCompiler.slnx'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore solution
+        run: dotnet restore ./XPScriptCompiler.slnx
+
+      - name: Build solution
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Compile and invoke loadable web routes
+        run: dotnet run --project ./tests/WebCompilerSmoke/WebCompilerSmoke.csproj -c Release
