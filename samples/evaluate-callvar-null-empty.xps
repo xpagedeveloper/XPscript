@@ -1,0 +1,29 @@
+Sub Initialize
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim values As Variant
+    Dim parameters List As Variant
+
+    nullValue = Null
+
+    Print "SCALAR_EMPTY_TYPE=" & CStr(Evaluate("Return TypeName(callvar)", emptyValue))
+    Print "SCALAR_EMPTY_DT=" & CStr(Evaluate("Return DataType(callvar)", emptyValue))
+    Print "SCALAR_EMPTY_ISEMPTY=" & CStr(Evaluate("Return IsEmpty(callvar)", emptyValue))
+    Print "SCALAR_EMPTY_ISNULL=" & CStr(Evaluate("Return IsNull(callvar)", emptyValue))
+
+    Print "SCALAR_NULL_TYPE=" & CStr(Evaluate("Return TypeName(callvar)", nullValue))
+    Print "SCALAR_NULL_DT=" & CStr(Evaluate("Return DataType(callvar)", nullValue))
+    Print "SCALAR_NULL_ISEMPTY=" & CStr(Evaluate("Return IsEmpty(callvar)", nullValue))
+    Print "SCALAR_NULL_ISNULL=" & CStr(Evaluate("Return IsNull(callvar)", nullValue))
+
+    values = Array(emptyValue, nullValue)
+    Print "ARRAY_EMPTY=" & CStr(Evaluate("Return IsEmpty(callvar(0))", values))
+    Print "ARRAY_NULL=" & CStr(Evaluate("Return IsNull(callvar(1))", values))
+    Print "ARRAY_NULL_TYPE=" & CStr(Evaluate("Return TypeName(callvar(1))", values))
+
+    parameters("empty") = emptyValue
+    parameters("null") = nullValue
+    Print "LIST_EMPTY=" & CStr(Evaluate("Return IsEmpty(callvar(""empty""))", parameters))
+    Print "LIST_NULL=" & CStr(Evaluate("Return IsNull(callvar(""null""))", parameters))
+    Print "LIST_NULL_DT=" & CStr(Evaluate("Return DataType(callvar(""null""))", parameters))
+End Sub

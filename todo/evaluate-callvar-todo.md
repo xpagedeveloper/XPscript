@@ -9,7 +9,7 @@ Status:
 - `[>]` implemented/in progress, awaiting verification
 - `[ ]` not implemented
 
-Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes the Evaluate regression corpus plus isolation-negative fixtures on GitHub Actions.
+Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes the Evaluate regression corpus plus isolation-negative fixtures on GitHub Actions. Focused EMPTY/NULL/NOTHING parity is additionally verified on Windows, Ubuntu and macOS by `Evaluate Null Empty Semantics`.
 
 ## Evaluate ownership and cleanup
 
@@ -28,10 +28,12 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] module globals and Static caller locals are not bridged into Evaluate; compiler internals and unrelated state have no evaluator bridge by construction; runtime fixture: `samples/evaluate-global-static-isolation.xps`
 - [x] mutable XPScript arrays and Lists are defensive-copied before evaluation for the verified scalar/array/List and nested-collection paths
 - [x] nested mutable arrays/Lists reachable from callvar are recursively snapshotted and arbitrary mutable object types are rejected instead of being shared into Evaluate; runtime coverage: `samples/evaluate-nested-collections.xps`, `samples/evaluate-object-callvar-rejection.xps`
+- [x] Variant EMPTY and NULL preserve their distinct runtime semantics across scalar, Array and List callvar snapshot paths; source: `samples/evaluate-callvar-null-empty.xps`
 
 ## Scalar callvar
 
 - [x] scalar and Variant-contained scalar values are exposed as `callvar` with their runtime type preserved where possible; source: `samples/evaluate-callvar.xps`
+- [x] scalar Variant EMPTY remains EMPTY and scalar Variant NULL remains NULL inside Evaluate; source: `samples/evaluate-callvar-null-empty.xps`
 
 ## Array callvar
 
@@ -39,6 +41,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] evaluated code can read indexed values through normal `callvar(index...)` syntax, including multidimensional `callvar(i, j)` access
 - [x] `LBound` and `UBound` are available inside Evaluate and preserve dimension-specific bounds; sources: `samples/evaluate-array-helpers.xps`, `samples/evaluate-nested-collections.xps`, `samples/evaluate-multidimensional-callvar.xps`
 - [x] explicit multidimensional and non-zero-lower-bound regression source is permanently executed by `Evaluate Runtime Compatibility`
+- [x] Array elements containing Variant EMPTY and NULL preserve their distinct values through the snapshot; source: `samples/evaluate-callvar-null-empty.xps`
 
 ## List callvar
 
@@ -50,6 +53,7 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] shared-reference identity is preserved when the same child collection is reachable through multiple distinct parent edges; runtime source: `samples/evaluate-shared-reference-identity.xps`
 - [x] returning the nested List fixture produces a normal value recognized by XPScript `IsList`
 - [x] runtime verification of nested List/array combinations through `Evaluate Runtime Compatibility`
+- [x] List values containing Variant EMPTY and NULL preserve their distinct values through the snapshot; source: `samples/evaluate-callvar-null-empty.xps`
 
 ## Return semantics
 
@@ -58,23 +62,24 @@ Permanent runtime gate: `Evaluate Runtime Compatibility` compiles and executes t
 - [x] returned List snapshots are converted back into detached normal XPScript List values; the internal read-only snapshot type never escapes Evaluate
 - [x] nested arrays/Lists in returned collections are recursively detached for the verified nested-collection path
 - [x] `data = Evaluate(...)` receives the value from `Return`
-- [x] reaching the end without `Return` yields `Nothing`/Empty (`null` internally) rather than the last expression value; source: `samples/evaluate-no-return.xps`
-- [ ] distinguish `Return Nothing`, `Return Null`, and no `Return` after final XPScript Null/Nothing semantics are implemented
+- [x] reaching the end without `Return` yields Variant EMPTY rather than the last expression value; sources: `samples/evaluate-no-return.xps`, `samples/evaluate-null-empty-semantics.xps`
+- [x] `Return Null` yields Variant NULL while `Return Nothing` is rejected in Evaluate value context with bounded XPScript error 5; source: `samples/evaluate-null-empty-semantics.xps`, `samples/evaluate-return-nothing-error.xps`
 
 ## Function coverage inside Evaluate
 
 - [x] conversions: `CStr`, `CInt`, `CLng`, `CDbl`, `CSng`, `CCur`, `CByte`, `CBool`, `CDate`/`CDat`, `CVar`; full category regression: `samples/evaluate-broad-function-coverage.xps`
-- [>] inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `IsNumeric`, `LBound`, `UBound`; representative coverage exists, while final `IsEmpty`/`IsNull` behavior remains tied to the open Null/Nothing contract
+- [x] inspection: `TypeName`, `DataType`, `IsArray`, `IsDate`, `IsEmpty`, `IsNull`, `IsObject`, `IsScalar`, `IsNumeric`, `LBound`, `UBound`; representative coverage plus explicit EMPTY/NULL parity coverage exists in `samples/evaluate-standard-functions.xps`, `samples/evaluate-null-empty-semantics.xps` and `samples/evaluate-callvar-null-empty.xps`
 - [x] strings: `Len`, `Left`, `Right`, `Mid`, `LCase`, `UCase`, `Trim`, `LTrim`, `RTrim`, `FullTrim`, `StrReverse`, `Instr`, `Replace`, `Space`, `String`, `Chr`, `Asc`; full category regression: `samples/evaluate-broad-function-coverage.xps`
 - [x] math/number: `Abs`, `Int`, `Fix`, `Round`, `Sqr`, `Sgn`, `Sin`, `Cos`, `Tan`, `ATn`, `ATn2`, `ASin`, `ACos`, `Exp`, `Log`, `Fraction`, `Val`, `Str`, `Bin`, `Hex`, `Oct`; full category regression: `samples/evaluate-broad-function-coverage.xps`
 - [x] date/time: `Year`, `Month`, `Day`, `Hour`, `Minute`, `Second`, `DateValue`, `TimeValue`, `DateNumber`, `TimeNumber`, `DateAdd`, `DateDiff`, `DatePart`; full category regression: `samples/evaluate-broad-function-coverage.xps`
 - [x] representative String, math/number, Date and inspection functions are runtime-verified by `samples/evaluate-standard-functions.xps`
-- [>] continue broadening inspection coverage after final XPScript Null/Nothing semantics are defined; all other currently exposed side-effect-free Evaluate function categories are permanently runtime-verified
+- [x] all currently exposed side-effect-free Evaluate function categories have permanent runtime coverage, including final EMPTY/NULL inspection behavior
 
 ## Coercion and diagnostics alignment
 
-- [x] dynamic `+` uses shared `XPScriptCoercion.AddVariant` for the verified String + scalar and scalar + numeric-String cases
+- [x] dynamic `+` uses shared `XPScriptCoercion.AddVariant` for the verified String + scalar, scalar + numeric-String and NULL-propagation cases
 - [x] String + scalar concatenation and scalar + numeric-String addition follow the shared forgiving XPScript coercion path; source: `samples/evaluate-coercion-diagnostics.xps`
+- [x] NULL propagation through Variant `+` matches the shared runtime coercion path; source: `samples/evaluate-null-empty-semantics.xps`
 - [x] comparison operators route through the main `LSCoreCompare.Rel` semantics for the verified Date comparison path
 - [x] evaluator exceptions are normalized through the runtime error mapping for verified conversion and divide-by-zero paths
 - [x] conversion/type mismatch maps to XPScript error 13
