@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -111,7 +112,7 @@ public static class XpsKestrelAdapter
             http.Request.ContentType,
             http.Request.ContentLength,
             body,
-            http.Request.Host.Value,
+            http.Request.Host.Value ?? string.Empty,
             http.Request.Scheme,
             http.Connection.RemoteIpAddress?.ToString(),
             http.Request.Protocol,
