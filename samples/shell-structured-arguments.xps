@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim args(7) As String
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-File"
+    args(3) = "./shell-args-helper.ps1"
+    args(4) = "space value"
+    args(5) = "åäö 漢字"
+    args(6) = ""
+    args(7) = "meta & | < > ^ % !"
+
+    Call ShellArgs("pwsh", args)
+    Print "SHELLARGS=STARTED"
+End Sub
