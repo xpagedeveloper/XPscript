@@ -37,9 +37,9 @@ public sealed class XpsWebServer
         return canonical;
     }
 
-    public static string HtmlEncode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
+    public string HtmlEncode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 
-    public static string UrlEncode(string? value) => WebUtility.UrlEncode(value ?? string.Empty);
+    public string UrlEncode(string? value) => WebUtility.UrlEncode(value ?? string.Empty);
 
     private static string CanonicalizeExistingSegments(string path)
     {
