@@ -7,7 +7,7 @@ Sub Main()
     Dim result As Variant
 
     accepted = String(16777216, "A")
-    result = Evaluate("Return Len(callvar)", accepted)
+    result = Evaluate("Return Len(callvar)", ByVal accepted)
     If CInt(result) <> 16777216 Then
         Error 9601, "Evaluate exact payload budget changed the accepted String"
     End If
@@ -15,7 +15,7 @@ Sub Main()
     rejected = String(16777217, "A")
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return Len(callvar)", rejected)
+    result = Evaluate("Return Len(callvar)", ByVal rejected)
     Error 9602, "Expected Evaluate to reject payload above 16 MiB"
 
 ExpectedError:
