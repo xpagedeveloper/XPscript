@@ -16,6 +16,16 @@ var sentinelFile = Path.Combine(sentinelRoot, "keep.txt");
 Directory.CreateDirectory(sentinelRoot);
 await File.WriteAllTextAsync(sentinelFile, "KEEP-ME");
 
+// Simulate a compiler process that was killed after creating its invocation workspace.
+// The directory deliberately has the exact 32-hex GUID shape used by real workspaces.
+// A later compile must never treat this stale state as trusted or reusable.
+var staleWorkspace = Path.Combine(compilerTempRoot, Guid.NewGuid().ToString("N"));
+var staleMarker = Path.Combine(staleWorkspace, "stale-marker.txt");
+var staleProgram = Path.Combine(staleWorkspace, "Program.cs");
+Directory.CreateDirectory(staleWorkspace);
+await File.WriteAllTextAsync(staleMarker, "STALE-WORKSPACE-MUST-NOT-BE-TOUCHED");
+await File.WriteAllTextAsync(staleProgram, "throw new Exception(\"STALE WORKSPACE REUSED\");");
+
 try
 {
     var sourcePath = Path.Combine(probeRoot, "workspace-probe.xps");
@@ -29,9 +39,11 @@ End Sub
 
     var first = await RunAndObserveAsync(sourcePath, Path.Combine(probeRoot, "first-output.exe"));
     AssertSentinelUnchanged();
+    AssertStaleWorkspaceUnchanged(first);
 
     var second = await RunAndObserveAsync(sourcePath, Path.Combine(probeRoot, "second-output.exe"));
     AssertSentinelUnchanged();
+    AssertStaleWorkspaceUnchanged(second);
 
     if (first.Equals(second, StringComparison.OrdinalIgnoreCase))
         throw new Exception("Two compiler invocations reused the same temporary workspace: " + first);
@@ -39,12 +51,14 @@ End Sub
     Console.WriteLine("COMPILER-WORKSPACE-FIRST=" + Path.GetFileName(first));
     Console.WriteLine("COMPILER-WORKSPACE-SECOND=" + Path.GetFileName(second));
     Console.WriteLine("COMPILER-CLEANUP-OWNERSHIP=OK");
+    Console.WriteLine("COMPILER-STALE-WORKSPACE-NONREUSE=OK");
     Console.WriteLine("COMPILER-GUID-WORKSPACE=OK");
 }
 finally
 {
     try { Directory.Delete(probeRoot, recursive: true); } catch { }
     try { Directory.Delete(sentinelRoot, recursive: true); } catch { }
+    try { Directory.Delete(staleWorkspace, recursive: true); } catch { }
 }
 
 void AssertSentinelUnchanged()
@@ -55,6 +69,18 @@ void AssertSentinelUnchanged()
         throw new Exception("Compiler cleanup removed a sentinel file from an unrelated sibling directory.");
     if (File.ReadAllText(sentinelFile) != "KEEP-ME")
         throw new Exception("Compiler cleanup modified a sentinel file in an unrelated sibling directory.");
+}
+
+void AssertStaleWorkspaceUnchanged(string observedWorkspace)
+{
+    if (observedWorkspace.Equals(staleWorkspace, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        throw new Exception("Compiler reused a stale GUID workspace left by a previous crashed invocation.");
+    if (!Directory.Exists(staleWorkspace))
+        throw new Exception("Compiler cleanup removed a stale workspace owned by another invocation.");
+    if (!File.Exists(staleMarker) || File.ReadAllText(staleMarker) != "STALE-WORKSPACE-MUST-NOT-BE-TOUCHED")
+        throw new Exception("Compiler modified the stale workspace marker.");
+    if (!File.Exists(staleProgram) || File.ReadAllText(staleProgram) != "throw new Exception(\"STALE WORKSPACE REUSED\");")
+        throw new Exception("Compiler modified generated source in a stale workspace.");
 }
 
 async Task<string> RunAndObserveAsync(string sourcePath, string outputPath)
