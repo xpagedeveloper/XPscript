@@ -55,7 +55,7 @@ $ruleset = @{
                 dismiss_stale_reviews_on_push = $true
                 require_code_owner_review = $false
                 require_last_push_approval = $false
-                required_approving_review_count = 0
+                required_approving_review_count = 1
                 required_review_thread_resolution = $true
             }
         },
@@ -119,10 +119,30 @@ foreach ($requiredType in @("deletion", "non_fast_forward", "pull_request", "req
     }
 }
 
+$pullRequestRule = $finalDetails.rules | Where-Object { $_.type -eq "pull_request" } | Select-Object -First 1
+if ($null -eq $pullRequestRule) {
+    throw "The applied ruleset does not contain a pull request rule."
+}
+if ($pullRequestRule.parameters.required_approving_review_count -lt 1) {
+    throw "The applied ruleset does not require at least one approving review."
+}
+if (-not $pullRequestRule.parameters.required_review_thread_resolution) {
+    throw "The applied ruleset does not require review thread resolution."
+}
+if (-not $pullRequestRule.parameters.dismiss_stale_reviews_on_push) {
+    throw "The applied ruleset does not dismiss stale reviews after new pushes."
+}
+
 $statusRule = $finalDetails.rules | Where-Object { $_.type -eq "required_status_checks" } | Select-Object -First 1
 $contexts = @($statusRule.parameters.required_status_checks | ForEach-Object { $_.context })
 if ($contexts -notcontains "Required PR Gate") {
     throw "The applied ruleset does not require 'Required PR Gate'."
+}
+if (-not $statusRule.parameters.strict_required_status_checks_policy) {
+    throw "The applied ruleset does not require branches to be up to date before merge."
+}
+if (@($finalDetails.bypass_actors).Count -ne 0) {
+    throw "The applied ruleset unexpectedly contains bypass actors."
 }
 
 $legacy = $finalRulesets | Where-Object { $_.name -eq $legacyRulesetName } | Select-Object -First 1
@@ -130,6 +150,10 @@ if ($null -ne $legacy) {
     if ($RemoveLegacyBlockUpdate) {
         Write-Host "Deleting legacy ruleset '$legacyRulesetName' id=$($legacy.id)."
         Invoke-RestMethod -Method Delete -Uri "$apiBase/rulesets/$($legacy.id)" -Headers $headers
+        $remaining = Invoke-RestMethod -Method Get -Uri "$apiBase/rulesets" -Headers $headers
+        if ($remaining | Where-Object { $_.name -eq $legacyRulesetName }) {
+            throw "Legacy ruleset '$legacyRulesetName' still exists after deletion."
+        }
     }
     else {
         $legacyDetails = Invoke-RestMethod -Method Get -Uri "$apiBase/rulesets/$($legacy.id)" -Headers $headers
