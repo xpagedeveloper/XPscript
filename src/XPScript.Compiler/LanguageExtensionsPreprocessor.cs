@@ -56,7 +56,7 @@ internal sealed class LanguageExtensionsPreprocessor
 
             var member = Regex.Match(line, @"^([A-Za-z_]\w*)(?:\s*=\s*([+-]?\d+))?\s*$", RegexOptions.IgnoreCase);
             if (!member.Success)
-                throw new CompilerException("Unsupported Enum member declaration: " + line);
+                throw new CompilerException("Unsupported Enum member declaration.");
 
             if (member.Groups[2].Success)
                 nextValue = long.Parse(member.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
@@ -161,7 +161,7 @@ internal sealed class LanguageExtensionsPreprocessor
 
             var field = Regex.Match(line, @"^([A-Za-z_]\w*)\s*(\([^)]*\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (!field.Success)
-                throw new CompilerException("Unsupported Type member declaration: " + line);
+                throw new CompilerException("Unsupported Type member declaration.");
             if (field.Groups[2].Success)
                 throw new CompilerException("Array members inside Type are not supported yet.");
             lines[i] = indent + "Public " + field.Groups[1].Value + " As " + field.Groups[3].Value;

@@ -1,0 +1,3 @@
+Type SecretType
+    DO_NOT_ECHO_TYPE = "DO_NOT_ECHO_TYPE_SECRET"
+End Type

@@ -1,0 +1,52 @@
+name: Batch Diagnostic Redaction
+
+on:
+  pull_request:
+    paths:
+      - 'src/XPScript.Compiler/LanguageExtensionsPreprocessor.cs'
+      - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
+      - 'samples/diagnostic-redaction-enum-member-error.xps'
+      - 'samples/diagnostic-redaction-type-member-error.xps'
+      - 'samples/diagnostic-redaction-native-byref-error.xps'
+      - '.github/workflows/batch-diagnostic-redaction.yml'
+
+jobs:
+  diagnostic-redaction:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify batched text and JSON redaction
+        shell: pwsh
+        run: |
+          $compiler = 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+          $cases = @(
+            @{ Sample='samples/diagnostic-redaction-enum-member-error.xps'; Forbidden='DO_NOT_ECHO_ENUM'; Expected='Unsupported Enum member declaration' },
+            @{ Sample='samples/diagnostic-redaction-type-member-error.xps'; Forbidden='DO_NOT_ECHO_TYPE'; Expected='Unsupported Type member declaration' },
+            @{ Sample='samples/diagnostic-redaction-native-byref-error.xps'; Forbidden='DO_NOT_ECHO_NATIVE'; Expected='explicitly ByVal' }
+          )
+          foreach ($case in $cases) {
+            $text = & dotnet $compiler $case.Sample --result-format text 2>&1 | Out-String
+            $textExit = $LASTEXITCODE
+            if ($textExit -eq 0) { throw "Expected compile failure for $($case.Sample)." }
+            if ($text -match [regex]::Escape($case.Forbidden)) { throw "Source token leaked in text diagnostic for $($case.Sample)." }
+            if ($text -notmatch [regex]::Escape($case.Expected)) { throw "Expected diagnostic missing for $($case.Sample)." }
+
+            $json = & dotnet $compiler $case.Sample --result-format json 2>&1 | Out-String
+            $jsonExit = $LASTEXITCODE
+            if ($jsonExit -eq 0) { throw "Expected JSON compile failure for $($case.Sample)." }
+            if ($json -match [regex]::Escape($case.Forbidden)) { throw "Source token leaked in JSON diagnostic for $($case.Sample)." }
+            if ($json -notmatch [regex]::Escape($case.Expected)) { throw "Expected JSON diagnostic missing for $($case.Sample)." }
+            $global:LASTEXITCODE = 0
+          }
