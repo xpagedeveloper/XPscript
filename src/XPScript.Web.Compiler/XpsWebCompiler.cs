@@ -112,7 +112,7 @@ public sealed class XpsWebCompiler
     private static string EnsureCompilerEntryPoint(string source) =>
         MainOrInitialize.IsMatch(source)
             ? source
-            : source + Environment.NewLine + Environment.NewLine + "Private Sub Main()" + Environment.NewLine + "End Sub" + Environment.NewLine;
+            : source + Environment.NewLine + Environment.NewLine + "Public Sub Main()" + Environment.NewLine + "End Sub" + Environment.NewLine;
 
     private static void ValidateRoutesExist(string generated, IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
     {
