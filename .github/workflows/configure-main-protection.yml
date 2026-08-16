@@ -75,11 +75,13 @@ jobs:
           $statusRule = $details.rules | Where-Object { $_.type -eq 'required_status_checks' } | Select-Object -First 1
           if ($pullRequestRule.parameters.required_approving_review_count -lt 1) { throw 'main-protection does not require an approving review.' }
           if (-not $pullRequestRule.parameters.required_review_thread_resolution) { throw 'main-protection does not require review thread resolution.' }
+          if (-not $pullRequestRule.parameters.dismiss_stale_reviews_on_push) { throw 'main-protection does not dismiss stale approvals after new pushes.' }
           if (-not $statusRule.parameters.strict_required_status_checks_policy) { throw 'main-protection status checks are not strict.' }
           $contexts = @($statusRule.parameters.required_status_checks | ForEach-Object { $_.context })
           if ($contexts -notcontains 'Required PR Gate') { throw 'main-protection does not require Required PR Gate.' }
           if (@($details.bypass_actors).Count -ne 0) { throw 'main-protection unexpectedly contains bypass actors.' }
 
+          $removeLegacy = '${{ github.event_name }}' -eq 'push' -or '${{ inputs.remove_legacy_blockupdate }}' -eq 'true'
           $legacy = $rulesets | Where-Object { $_.name -eq 'blockupdate' } | Select-Object -First 1
           if ($removeLegacy -and $legacy) { throw 'Legacy blockupdate ruleset still exists after requested cleanup.' }
           Write-Host "MAIN-PROTECTION-RULESET=ACTIVE ID=$($main.id)"
