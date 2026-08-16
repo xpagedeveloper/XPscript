@@ -76,10 +76,35 @@ internal sealed class TypeCoercionPreprocessor
             if (!match.Success) continue;
             var condition = match.Groups["condition"].Value.Trim();
             if (condition.StartsWith("XPScriptNullRuntime.ConditionValue(", StringComparison.Ordinal)) return line;
+
+            // Comparisons already produce Boolean values. More importantly, compound
+            // comparison conditions must remain visible to the later operator pass so
+            // expressions such as "a = b Or c = d" can be lowered with the correct
+            // precedence before any NULL/EMPTY coercion wrapper is considered.
+            if (ContainsComparisonOperator(condition)) return line;
+
             return match.Groups["prefix"].Value + "XPScriptNullRuntime.ConditionValue(" + condition + ")" + match.Groups["suffix"].Value;
         }
 
         return line;
+    }
+
+    private static bool ContainsComparisonOperator(string value)
+    {
+        var inString = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c is '=' or '<' or '>') return true;
+        }
+        return false;
     }
 
     private static string RewriteNullSemantics(string line)
