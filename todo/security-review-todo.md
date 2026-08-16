@@ -67,20 +67,20 @@ Status:
 
 ## Shell / process execution
 
-- [>] normal executables and PowerShell script arguments are passed with `ProcessStartInfo.ArgumentList` where possible
-- [>] `UseShellExecute` is disabled
-- [>] Windows `.cmd`/`.bat` execution uses the system-directory `cmd.exe`, not `COMSPEC`
-- [>] `.cmd`/`.bat` arguments reject embedded quotes/control characters and command-shell metacharacters including `&`, `|`, `<`, `>`, `^`, `%`, `!`
-- [>] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
-- [>] bare executable/script names are resolved by XPScript through absolute PATH entries before `ProcessStartInfo` is created
-- [>] current-directory lookup and relative PATH entries are not used implicitly for bare executable names
-- [>] Windows extension probing is limited to validated `PATHEXT` suffixes with safe defaults
-- [>] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
-- [>] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
-- [>] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
-- [>] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
+- [x] normal executables and PowerShell script arguments are passed with `ProcessStartInfo.ArgumentList` where possible
+- [x] `UseShellExecute` is disabled
+- [x] Windows `.cmd`/`.bat` execution uses the system-directory `cmd.exe`, not `COMSPEC`
+- [x] `.cmd`/`.bat` arguments reject embedded quotes/control characters and command-shell metacharacters including `&`, `|`, `<`, `>`, `^`, `%`, `!`
+- [x] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
+- [x] bare executable/script names are resolved by XPScript through absolute PATH entries before `ProcessStartInfo` is created
+- [x] current-directory lookup and relative PATH entries are not used implicitly for bare executable names
+- [x] Windows extension probing is limited to validated `PATHEXT` suffixes with safe defaults
+- [x] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
+- [x] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
+- [x] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
+- [x] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
 - [ ] consider an additional structured process API accepting executable and argument array separately
-- [ ] build/runtime verification of the complete quoting and path behavior matrix
+- [x] build/runtime verification of the complete quoting and path behavior matrix on Windows, Ubuntu and macOS by `Cross Platform Compiler Shell`
 
 ## File I/O
 
