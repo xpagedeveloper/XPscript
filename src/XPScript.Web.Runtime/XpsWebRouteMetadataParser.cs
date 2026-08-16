@@ -24,7 +24,7 @@ public sealed class XpsWebRouteMetadataParser
         foreach (var raw in lines)
         {
             var trimmed = raw.Trim();
-            if (trimmed.StartsWith('[', StringComparison.Ordinal) && trimmed.EndsWith(']', StringComparison.Ordinal))
+            if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
             {
                 pending.Add(trimmed[1..^1].Trim());
                 output.AppendLine();
