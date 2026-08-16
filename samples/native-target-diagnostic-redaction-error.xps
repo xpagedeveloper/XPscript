@@ -1,0 +1,8 @@
+' (c) xpagedeveloper.com 2026
+' Must fail without exposing the selected runtime identifier in the diagnostic.
+Declare Function MissingTargetLibrary Lib "fallback" _
+    WindowsLib " " LinuxLib " " MacOSLib " " _
+    () As Integer
+
+Sub Main()
+End Sub
