@@ -1,0 +1,71 @@
+name: Multiline String Literals
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/MultilineStringPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'samples/multiline-string-literals.xps'
+      - 'samples/multiline-string-unterminated.xps'
+      - 'docs/multiline-strings.md'
+      - '.github/workflows/multiline-string-literals.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  multiline-strings:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler and resolve target
+        id: target
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          if ($env:RUNNER_OS -eq 'Windows') { $rid = "win-$arch"; $ext = '.exe' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $rid = "linux-$arch"; $ext = '' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $rid = "osx-$arch"; $ext = '' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$rid" >> $env:GITHUB_OUTPUT
+          "ext=$ext" >> $env:GITHUB_OUTPUT
+
+      - name: Verify pipe and brace multiline assignments
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = "./out/multiline${{ steps.target.outputs.ext }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/multiline-string-literals.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Multiline string sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Multiline string sample failed.`n$output" }
+          if ($output -notcontains 'PIPE=first line<LF>second "quoted" line<LF>third | pipe') { throw "Pipe multiline literal mismatch.`n$output" }
+          if ($output -notcontains 'BRACE=alpha<LF>beta "quoted" line<LF>gamma } brace') { throw "Brace multiline literal mismatch.`n$output" }
+          if ($output -notcontains 'SINGLE-PIPE=single "pipe" value') { throw "Single-line pipe literal mismatch.`n$output" }
+          if ($output -notcontains 'SINGLE-BRACE=single "brace" value') { throw "Single-line brace literal mismatch.`n$output" }
+          if ($output -notcontains 'MULTILINE-STRING=OK') { throw "Success marker missing.`n$output" }
+
+      - name: Verify unterminated literal diagnostic
+        shell: pwsh
+        run: |
+          $exe = "./out/multiline-error${{ steps.target.outputs.ext }}"
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/multiline-string-unterminated.xps --runtime '${{ steps.target.outputs.rid }}' -o $exe --framework-dependent 2>&1 | Out-String
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -eq 0) { throw "Unterminated multiline string unexpectedly compiled.`n$output" }
+          if ($output -notmatch 'multiline-string-unterminated\.xps\(5\).*Unterminated multiline string literal') {
+            throw "Expected opening-line diagnostic was not emitted.`n$output"
+          }
