@@ -6,6 +6,7 @@ Sub Main()
     Dim hugeBody As String
     Dim errCode As Integer
 
+    Print "DEFAULT_TIMEOUT=" & CStr(client.Timeout)
     client.Timeout = 5
 
     Set response = client.Get("http://127.0.0.1:18080/redirect")
