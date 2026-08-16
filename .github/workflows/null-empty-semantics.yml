@@ -1,0 +1,59 @@
+name: Null Empty Semantics
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - todo-evaluate-null-nothing-semantics
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/null-empty-semantics.xps'
+      - '.github/workflows/null-empty-semantics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and verify Null/Empty runtime semantics
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/null-empty-semantics$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/null-empty-semantics.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Null/Empty regression compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Null/Empty regression exited with code $LASTEXITCODE." }
+
+          foreach ($value in @(
+            'EMPTY_DT=0',
+            'EMPTY_TYPE=EMPTY',
+            'EMPTY_ISEMPTY=True',
+            'EMPTY_ISNULL=False',
+            'NULL_DT=1',
+            'NULL_TYPE=NULL',
+            'NULL_ISEMPTY=False',
+            'NULL_ISNULL=True',
+            'NULL_PROPAGATES=True'
+          )) {
+            if ($output -notcontains $value) { throw "Null/Empty output missing: $value" }
+          }
