@@ -1,6 +1,13 @@
 name: Native HTTP Compatibility
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/NativeHttpRuntimeSource.cs'
+      - 'samples/native-http-*.xps'
+      - 'tests/native_http_server.py'
+      - '.github/workflows/native-http-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -8,7 +15,11 @@ permissions:
 
 jobs:
   native-http:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -36,9 +47,14 @@ jobs:
       - name: Compile and verify Native HTTP API
         shell: pwsh
         run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-regression.xps -o ./out/native-http-regression.exe --framework-dependent
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($IsWindows) { './out/native-http-regression.exe' } else { './out/native-http-regression' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-regression.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Native HTTP sample compilation failed.' }
-          $output = & ./out/native-http-regression.exe
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native HTTP regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
           $required = @(
             'TIMEOUT=5',
             'GET=GET|alpha',
@@ -59,10 +75,36 @@ jobs:
           }
           $contentType = $output | Where-Object { $_ -like 'CONTENT_TYPE=text/plain*' }
           if (-not $contentType) { throw "Native HTTP content type missing.`n$output" }
-          $headerLine = $output | Where-Object { $_ -like 'HEADERS=*' }
+          $headerLine = $output | Where-Object { $_ -like 'HEADERS=*' } | Select-Object -First 1
           if (-not $headerLine) { throw "Native HTTP headers property missing.`n$output" }
           $count = [int](($headerLine -split '=',2)[1])
           if ($count -lt 2) { throw "Native HTTP response headers unexpectedly empty: $headerLine" }
+      - name: Verify HTTP redirect and resource safety
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/native-http-resource-limits.exe' } else { './out/native-http-resource-limits' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-resource-limits.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native HTTP resource-limit sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native HTTP resource-limit regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          $required = @(
+            'REDIRECT_STATUS=302',
+            'REDIRECT_BODY=redirect-not-followed',
+            'REQUEST_BODY_LIMIT_ERR=5',
+            'DECLARED_RESPONSE_LIMIT_ERR=5',
+            'STREAM_RESPONSE_LIMIT_ERR=5',
+            'TIMEOUT_ERR=5',
+            'DISPOSED_ERR=5',
+            'HTTP_RESOURCE_LIMITS=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Native HTTP resource-limit output missing: $value`n$output" }
+          }
+          if ($output -contains 'REDIRECT_BODY=redirect-followed') {
+            throw "Native HTTP followed a redirect unexpectedly.`n$output"
+          }
       - name: Stop local HTTP regression server
         if: always()
         shell: pwsh
