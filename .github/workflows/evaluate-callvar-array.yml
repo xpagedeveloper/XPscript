@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptEvaluatePreprocessor.cs'
       - 'samples/evaluate-callvar-array*.xps'
+      - 'tests/EvaluateMultiValueConcurrencyProbe/**'
       - 'todo/evaluate-multiple-callvar-todo.md'
       - 'todo/done/evaluate-multiple-callvar-todo.md'
       - '.github/workflows/evaluate-callvar-array.yml'
@@ -20,6 +21,7 @@ on:
       - 'src/XPScript.Compiler/EvaluateCollectionIsolationRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptEvaluatePreprocessor.cs'
       - 'samples/evaluate-callvar-array*.xps'
+      - 'tests/EvaluateMultiValueConcurrencyProbe/**'
       - 'todo/evaluate-multiple-callvar-todo.md'
       - 'todo/done/evaluate-multiple-callvar-todo.md'
       - '.github/workflows/evaluate-callvar-array.yml'
@@ -68,6 +70,7 @@ jobs:
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
           if ($output -notcontains 'BOUNDS=2') { throw 'Callvar LSArray bounds were incorrect.' }
           if ($output -notcontains 'MULTI-SHARED-REFERENCE-IDENTITY=OK') { throw 'Shared child identity was not preserved across supplied callvar values.' }
+          if ($output -notcontains 'MULTI-NESTED-BYVAL-ISOLATION=OK') { throw 'Nested multi-value ByVal isolation regression did not report success.' }
 
       - name: Verify aggregate multi-value element budget
         shell: pwsh
@@ -83,3 +86,12 @@ jobs:
           $output | ForEach-Object { Write-Host $_ }
           if ($runtimeExitCode -ne 0) { throw "Aggregate callvar budget sample failed at runtime with exit code $runtimeExitCode." }
           if ($output -notcontains 'MULTI-AGGREGATE-ELEMENT-BUDGET=OK') { throw 'Aggregate multi-value element budget regression did not report success.' }
+
+      - name: Verify concurrent multi-value Evaluate isolation
+        shell: pwsh
+        run: |
+          $output = @(dotnet run --project ./tests/EvaluateMultiValueConcurrencyProbe/EvaluateMultiValueConcurrencyProbe.csproj -c Release)
+          $exit = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw 'Concurrent multi-value Evaluate probe failed.' }
+          if ($output -notcontains 'EVALUATE-MULTIVALUE-CONCURRENCY-PROBE=OK') { throw 'Concurrent multi-value Evaluate probe did not report success.' }

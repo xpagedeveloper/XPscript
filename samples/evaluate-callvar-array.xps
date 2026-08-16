@@ -3,6 +3,10 @@ Sub Main()
     Dim values As Variant
     Dim parameters List As Variant
     Dim sharedChild List As Variant
+    Dim nestedRoot List As Variant
+    Dim nestedChild List As Variant
+    Dim returnedRoot As Variant
+    Dim returnedChild As Variant
     Dim left As Variant
     Dim right As Variant
 
@@ -44,4 +48,21 @@ Sub Main()
     End If
 
     Print "MULTI-SHARED-REFERENCE-IDENTITY=OK"
+
+    nestedChild("value") = 10
+    nestedRoot("child") = nestedChild
+    result = Evaluate("Return callvar", ByVal nestedRoot, ByVal 1)
+    returnedRoot = result(0)
+    returnedChild = returnedRoot("child")
+
+    If Not IsList(returnedChild) Then
+        Error 9625, "Evaluate nested ByVal child is not a List"
+    End If
+
+    returnedChild("value") = 99
+    If nestedChild("value") <> 10 Then
+        Error 9626, "Evaluate nested ByVal mutation escaped to caller-owned data"
+    End If
+
+    Print "MULTI-NESTED-BYVAL-ISOLATION=OK"
 End Sub
