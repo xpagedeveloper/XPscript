@@ -79,7 +79,7 @@ Status:
 - [x] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
 - [x] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
 - [x] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
-- [ ] consider an additional structured process API accepting executable and argument array separately
+- [x] structured `ShellArgs(executable, arguments [, windowStyle])` accepts executable and argument array/list separately and passes each argument through `ProcessStartInfo.ArgumentList`; verified by `Structured ShellArgs` on Windows, Ubuntu and macOS
 - [x] build/runtime verification of the complete quoting and path behavior matrix on Windows, Ubuntu and macOS by `Cross Platform Compiler Shell`
 
 ## File I/O
