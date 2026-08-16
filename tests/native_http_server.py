@@ -3,7 +3,7 @@ import time
 
 HOST = '127.0.0.1'
 PORT = 18080
-MAX_BODY = 8 * 1024 * 1024
+MAX_BODY = 64 * 1024 * 1024
 
 
 class Handler(BaseHTTPRequestHandler):
