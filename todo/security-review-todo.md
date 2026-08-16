@@ -208,8 +208,7 @@ Status:
 - [x] native HTTP documentation covers redirect policy, resource budgets, binary responses and multipart parts
 - [x] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
 - [x] security documentation is linked from `docs/index.md` and README
-- [x] stale security/runtime status statements and HTTP binary/limit contradictions are rejected by `Security Documentation Closeout`
-- [x] complete security documentation matrix and local-reference validation pass on Windows, Ubuntu and macOS through `Security Documentation Closeout`
+- [x] complete security documentation coverage, link presence, stale-status detection and HTTP-limit consistency are verified by `Documentation Security Closeout`
 
 ## Verification gate
 
