@@ -128,3 +128,4 @@ jobs:
           if ($exitCode -eq 0 -or $result -contains 'NATIVE_TRANSITIVE=OK') {
             throw "Expected execution to fail after removing every trusted helper copy.`n$($result -join [Environment]::NewLine)"
           }
+          exit 0
