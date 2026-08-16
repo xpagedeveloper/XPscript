@@ -1,0 +1,29 @@
+Sub Main()
+    Dim value As Integer
+    Dim result As Variant
+    Dim nestedErr As Integer
+    Dim nestedText As String
+
+    value = 41
+
+    On Error Resume Next
+    result = Evaluate(|Return Evaluate("Return 99", ByVal callvar)|, ByVal value)
+    nestedErr = Err
+    nestedText = Error$
+    On Error GoTo 0
+
+    If nestedErr <> 5 Then
+        Error 9311, "Expected nested Evaluate to remain unavailable with error 5, got " & CStr(nestedErr)
+    End If
+
+    If value <> 41 Then
+        Error 9312, "Rejected nested Evaluate changed the caller value."
+    End If
+
+    If InStr(1, nestedText, "41") > 0 Or InStr(1, nestedText, "99") > 0 Then
+        Error 9313, "Nested Evaluate rejection leaked supplied values."
+    End If
+
+    Print "NESTED-EVALUATE-UNAVAILABLE=OK"
+    Print "NESTED-EVALUATE-CALLER-UNCHANGED=OK"
+End Sub
