@@ -5,8 +5,6 @@ Sub Main()
     Dim document As JsonDocument
     Dim obj As JsonObject
     Dim arr As JsonArray
-    Dim beforeCount As Integer
-    Dim beforeValue As Variant
     Dim nonFinite As Double
 
     ' Parser input > 8 MiB UTF-8 must fail with bounded error 5.
@@ -45,20 +43,18 @@ Sub Main()
     ' JsonArray.Add must roll back a rejected over-budget append.
     Set arr = New JsonArray
     Call arr.Add("safe")
-    beforeCount = arr.Count
     On Error Resume Next
     Call arr.Add(huge)
     Print "ARRAY_ADD_PAYLOAD_ERR=" & CStr(Err)
     On Error GoTo 0
-    Print "ARRAY_ADD_ROLLBACK=" & CStr(arr.Count = beforeCount)
+    Print "ARRAY_ADD_COUNT=" & CStr(arr.Count)
 
     ' JsonArray.Set must restore the previous element after a rejected mutation.
-    beforeValue = arr.Get(0)
     On Error Resume Next
     Call arr.Set(0, huge)
     Print "ARRAY_SET_PAYLOAD_ERR=" & CStr(Err)
     On Error GoTo 0
-    Print "ARRAY_SET_ROLLBACK=" & CStr(arr.Get(0) = beforeValue)
+    Print "ARRAY_SET_VALUE=" & CStr(arr.Get(0))
 
     ' Estimated payload can remain within 16 MiB while JSON syntax pushes the
     ' serialized UTF-8 output over 16 MiB. Stringify must still reject it.
