@@ -13,7 +13,11 @@ set_target_properties(xps_native_transitive PROPERTIES OUTPUT_NAME "xps_native_t
 
 if(APPLE)
   set_target_properties(xps_native_helper PROPERTIES INSTALL_NAME_DIR "@rpath")
-  set_target_properties(xps_native_transitive PROPERTIES BUILD_RPATH "@loader_path")
+  set_target_properties(xps_native_transitive PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "@loader_path")
 elseif(UNIX)
-  set_target_properties(xps_native_transitive PROPERTIES BUILD_RPATH "$ORIGIN")
+  set_target_properties(xps_native_transitive PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN")
 endif()
