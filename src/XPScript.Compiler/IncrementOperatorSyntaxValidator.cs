@@ -155,9 +155,10 @@ internal sealed class IncrementOperatorSyntaxValidator
 
     private static CompilerException Diagnostic(string sourceName, int line, int position, string message, string original)
     {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
         return new CompilerException(
             $"{sourceName}({line},{position}): {message}" + Environment.NewLine +
-            $"  {original.TrimEnd()}");
+            $"  {safeSource}");
     }
 
     private static string StripComment(string line)
