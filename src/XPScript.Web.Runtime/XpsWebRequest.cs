@@ -57,11 +57,16 @@ public sealed class XpsWebRequest
     public IReadOnlyList<string> Query(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
         GetValues(ParseUrlEncoded(QueryString, maxQueryChars, maxFields, "query string"), name);
 
+    public string QueryFirst(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
+        Query(name, maxQueryChars, maxFields).FirstOrDefault() ?? string.Empty;
+
     public IReadOnlyList<string> Header(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return Headers.TryGetValue(name, out var values) ? values : Array.Empty<string>();
     }
+
+    public string HeaderFirst(string name) => Header(name).FirstOrDefault() ?? string.Empty;
 
     public string? Cookie(string name)
     {
@@ -91,6 +96,9 @@ public sealed class XpsWebRequest
         return GetValues(ParseUrlEncoded(text, maxBytes, maxFields, "form body"), name);
     }
 
+    public string FormFirst(string name, int maxBytes = 1_048_576, int maxFields = 256) =>
+        Form(name, maxBytes, maxFields).FirstOrDefault() ?? string.Empty;
+
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ParseUrlEncoded(
         string raw,
         int maxChars,
@@ -99,7 +107,7 @@ public sealed class XpsWebRequest
     {
         if (maxChars < 0) throw new ArgumentOutOfRangeException(nameof(maxChars));
         if (maxFields is < 1 or > 100_000) throw new ArgumentOutOfRangeException(nameof(maxFields));
-        var value = raw.StartsWith('?', StringComparison.Ordinal) ? raw[1..] : raw;
+        var value = raw.StartsWith("?", StringComparison.Ordinal) ? raw[1..] : raw;
         if (value.Length > maxChars) throw new InvalidOperationException($"Request {displayName} exceeds the configured {maxChars} character limit.");
 
         var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
