@@ -109,3 +109,4 @@ jobs:
           $joined = $text -join "`n"
           if ($joined -notmatch 'explicitly ByVal') { throw "Native ByRef rejection was not diagnostic.`n$joined" }
           if ($joined -match 'DO_NOT_ECHO') { throw 'Native ABI diagnostic leaked source-controlled secret text.' }
+          $global:LASTEXITCODE = 0
