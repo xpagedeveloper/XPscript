@@ -76,8 +76,8 @@ async Task VerifyCollisionAndMissingFailuresAsync(string fixtureDll, string rid,
 {
     var root = NewCase("collisions");
     var source = Path.Combine(root, "test.xps");
-    await ExpectCompileFailureAsync(source, "Reference \"missing.dll\"\nSub Main()\nEnd Sub", rid, "not found");
-    await ExpectCompileFailureAsync(source, $"ReferenceNative \"missing-{nativeName}\" Runtime \"{rid}\"\nSub Main()\nEnd Sub", rid, "not found");
+    await ExpectCompileFailureAsync(source, "Reference \"missing.dll\"\nSub Main()\nEnd Sub", rid, "Managed Reference");
+    await ExpectCompileFailureAsync(source, $"ReferenceNative \"missing-{nativeName}\" Runtime \"{rid}\"\nSub Main()\nEnd Sub", rid, "ReferenceNative");
 
     Directory.CreateDirectory(Path.Combine(root, "a"));
     Directory.CreateDirectory(Path.Combine(root, "b"));
