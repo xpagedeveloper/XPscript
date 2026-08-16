@@ -8,6 +8,7 @@ Sub Main()
     Dim obj As JsonObject
     Dim arr As JsonArray
     Dim nonFinite As Double
+    Dim parsedValue As Variant
     Dim errCode As Integer
     Dim errText As String
 
@@ -84,6 +85,16 @@ Sub Main()
     errCode = Err
     On Error GoTo 0
     Print "NONFINITE_ERR=" & CStr(errCode)
+
+    ' A syntactically valid JSON exponent that overflows Double must also be
+    ' rejected when the parsed numeric value is materialized.
+    Set document = JsonDocument.Parse("{""number"":1e400}")
+    Set obj = document.Root.AsObject()
+    On Error Resume Next
+    parsedValue = obj.Get("number")
+    errCode = Err
+    On Error GoTo 0
+    Print "PARSED_NONFINITE_ERR=" & CStr(errCode)
 
     ' Malformed JSON diagnostics must remain bounded and must not echo payload.
     On Error Resume Next
