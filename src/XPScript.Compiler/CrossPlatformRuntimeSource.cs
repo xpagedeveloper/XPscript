@@ -260,13 +260,14 @@ internal static class XPCrossPlatformRuntime
     {
         ValidateBatchFileName(fileName);
         var command = new System.Text.StringBuilder();
-        command.Append('"').Append(fileName).Append('"');
+        command.Append('"').Append('"').Append(fileName).Append('"');
 
         foreach (var argument in arguments)
         {
             ValidateBatchArgument(argument);
             command.Append(' ').Append('"').Append(argument).Append('"');
         }
+        command.Append('"');
         return command.ToString();
     }
 
