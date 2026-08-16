@@ -55,10 +55,10 @@ jobs:
         shell: pwsh
         run: |
           $cases = @(
-            @{ Name = 'reserved-identifier-error.xps'; Line = 2 },
-            @{ Name = 'reserved-runtime-type-error.xps'; Line = 1 },
-            @{ Name = 'reserved-multiple-identifiers-error.xps'; Line = 4 },
-            @{ Name = 'reserved-module-multiple-identifiers-error.xps'; Line = 3 }
+            @{ Name = 'reserved-identifier-error.xps'; Line = 2; Forbidden = '__xp_state' },
+            @{ Name = 'reserved-runtime-type-error.xps'; Line = 1; Forbidden = 'XPScriptRuntime' },
+            @{ Name = 'reserved-multiple-identifiers-error.xps'; Line = 4; Forbidden = '__compilerState' },
+            @{ Name = 'reserved-module-multiple-identifiers-error.xps'; Line = 3; Forbidden = '__hiddenCompilerState' }
           )
 
           New-Item -ItemType Directory -Force -Path ./out | Out-Null
@@ -87,6 +87,9 @@ jobs:
             $diagnostics = $result.errors | ConvertTo-Json -Depth 8
             if ($diagnostics -notmatch '(?i)reserved') {
               throw "Expected reserved identifier diagnostic for '$sample'."
+            }
+            if ($diagnostic.description -match [regex]::Escape($case.Forbidden)) {
+              throw "Reserved identifier leaked into diagnostic description for '$sample'."
             }
             if ($diagnostic.line -ne $case.Line) {
               throw "$sample mapped to line $($diagnostic.line), expected $($case.Line)."
