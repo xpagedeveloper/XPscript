@@ -1,0 +1,25 @@
+Sub Initialize
+    Dim noReturn As Variant
+    Dim nullResult As Variant
+    Dim nullSum As Variant
+
+    noReturn = Evaluate("Dim x As Integer : x = 42")
+    nullResult = Evaluate("Return Null")
+    nullSum = Evaluate("Return Null + 1")
+
+    Print "NORETURN_TYPE=" & TypeName(noReturn)
+    Print "NORETURN_DT=" & CStr(DataType(noReturn))
+    Print "NORETURN_ISEMPTY=" & CStr(IsEmpty(noReturn))
+    Print "NORETURN_ISNULL=" & CStr(IsNull(noReturn))
+
+    Print "NULL_TYPE=" & TypeName(nullResult)
+    Print "NULL_DT=" & CStr(DataType(nullResult))
+    Print "NULL_ISEMPTY=" & CStr(IsEmpty(nullResult))
+    Print "NULL_ISNULL=" & CStr(IsNull(nullResult))
+    Print "NULL_PLUS_ISNULL=" & CStr(IsNull(nullSum))
+
+    Print "INNER_NULL_TYPE=" & CStr(Evaluate("Return TypeName(Null)"))
+    Print "INNER_NULL_DT=" & CStr(Evaluate("Return DataType(Null)"))
+    Print "INNER_NULL_ISEMPTY=" & CStr(Evaluate("Return IsEmpty(Null)"))
+    Print "INNER_NULL_ISNULL=" & CStr(Evaluate("Return IsNull(Null)"))
+End Sub
