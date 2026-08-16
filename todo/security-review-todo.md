@@ -49,7 +49,7 @@ Status:
 - [>] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
 - [>] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
 - [>] managed `Reference` staging uses the same handle-based validated regular-file copy path as native dependency staging
-- [ ] investigate OS-specific no-follow/open-reparse semantics to further reduce the small race between final metadata validation and opening a dependency handle
+- [x] OS-specific no-follow/open-reparse semantics are used for dependency staging: Unix opens with `O_NOFOLLOW`; Windows opens with `FILE_FLAG_OPEN_REPARSE_POINT` and rejects reparse-point handles; verified by Compiler Output Safety and Cross Platform Managed References on Windows, Ubuntu and macOS
 
 ## Output publication
 
