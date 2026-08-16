@@ -80,7 +80,7 @@ jobs:
               'DELETEDPRIMARY=True',
               'DELETEDALIAS=True'
             )) {
-              if ($output -notcontains $value) { throw "Object lifetime output missing at iteration $iteration: $value" }
+              if ($output -notcontains $value) { throw "Object lifetime output missing at iteration ${iteration}: $value" }
             }
           }
 
