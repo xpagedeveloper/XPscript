@@ -39,17 +39,18 @@ Status:
 
 ## Project-local managed/native dependencies
 
-- [>] `Reference` and `ReferenceNative` reject rooted paths
-- [>] lexical `..` escape outside the source directory is rejected
-- [>] application-local native declarations reject absolute/rooted paths before packaging
-- [>] missing dependencies, duplicate output names and executable overwrite collisions are rejected
-- [>] existing path components are checked for symlink/reparse-point resolution outside the source directory
-- [>] unresolved symbolic links/reparse points are rejected instead of trusted
-- [>] a dependency already located at its final output target is left in place instead of replacing its own source
-- [>] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
-- [>] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
-- [>] managed `Reference` staging uses the same handle-based validated regular-file copy path as native dependency staging
+- [x] `Reference` and `ReferenceNative` reject rooted paths
+- [x] lexical `..` escape outside the source directory is rejected
+- [x] application-local native declarations reject absolute/rooted paths before packaging
+- [x] missing dependencies, duplicate output names and executable overwrite collisions are rejected
+- [x] existing path components are checked for symlink/reparse-point resolution outside the source directory
+- [x] unresolved symbolic links/reparse points are rejected instead of trusted
+- [x] a dependency already located at its final output target is left in place instead of replacing its own source
+- [x] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
+- [x] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
+- [x] managed `Reference` staging uses the same handle-based validated regular-file copy path as native dependency staging
 - [x] OS-specific no-follow/open-reparse semantics are used for dependency staging: Unix opens with `O_NOFOLLOW`; Windows opens with `FILE_FLAG_OPEN_REPARSE_POINT` and rejects reparse-point handles; verified by Compiler Output Safety and Cross Platform Managed References on Windows, Ubuntu and macOS
+- [x] complete project-local dependency matrix is verified by `Cross Platform Managed References` on Windows, Ubuntu and macOS
 
 ## Output publication
 

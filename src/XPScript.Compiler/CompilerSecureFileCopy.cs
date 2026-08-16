@@ -15,6 +15,9 @@ internal static class CompilerSecureFileCopy
     private const uint FileAttributeReparsePoint = 0x00000400;
     private const int FileAttributeTagInfo = 9;
 
+    // Test seam used only by the cross-platform dependency security probe. Production code leaves this null.
+    internal static Action<string>? AfterSourceOpenedForTesting = null;
+
     public static void CopyValidatedRegularFile(string sourcePath, string destinationPath, string kind)
     {
         var source = Path.GetFullPath(sourcePath);
@@ -25,6 +28,7 @@ internal static class CompilerSecureFileCopy
         try
         {
             using var input = OpenReadWithoutFollowingLinks(source, kind);
+            AfterSourceOpenedForTesting?.Invoke(source);
 
             // Keep the path-based re-check as a defense-in-depth signal for a pathname that
             // changes after the handle was opened. The actual copy reads only from the already
