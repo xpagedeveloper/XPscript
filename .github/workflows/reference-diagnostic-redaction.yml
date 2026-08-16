@@ -1,0 +1,59 @@
+name: Reference Diagnostic Redaction
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ManagedAssemblyReferencePreprocessor.cs'
+      - 'samples/reference-diagnostic-path-redaction-error.xps'
+      - 'samples/reference-diagnostic-rid-redaction-error.xps'
+      - 'samples/reference-diagnostic-directive-redaction-error.xps'
+      - '.github/workflows/reference-diagnostic-redaction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-diagnostic-redaction:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+      - name: Verify reference diagnostic redaction
+        shell: pwsh
+        run: |
+          $cases = @(
+            @{ File='reference-diagnostic-path-redaction-error.xps'; Expected='Managed Reference must point to a .dll file.' },
+            @{ File='reference-diagnostic-rid-redaction-error.xps'; Expected='ReferenceNative uses an unsupported runtime identifier.' },
+            @{ File='reference-diagnostic-directive-redaction-error.xps'; Expected='Invalid managed reference directive.' }
+          )
+
+          foreach ($case in $cases) {
+            $source = "./samples/$($case.File)"
+            $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source --result-format json 2>&1
+            $exit = $LASTEXITCODE
+            $text = $output -join "`n"
+            $output | ForEach-Object { Write-Host $_ }
+
+            if ($exit -eq 0) { throw "Expected compilation failure for $($case.File)." }
+            if ($text.Contains('DO_NOT_ECHO', [StringComparison]::Ordinal)) {
+              throw "Reference diagnostic leaked source-controlled token for $($case.File)."
+            }
+            if (-not $text.Contains($case.Expected, [StringComparison]::Ordinal)) {
+              throw "Reference diagnostic missing expected stable message for $($case.File)."
+            }
+          }
