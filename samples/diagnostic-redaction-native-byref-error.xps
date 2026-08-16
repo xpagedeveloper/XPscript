@@ -1,0 +1,1 @@
+Declare Function UnsafeCall Lib "system" (ByRef DO_NOT_ECHO_NATIVE As Integer) As Integer
