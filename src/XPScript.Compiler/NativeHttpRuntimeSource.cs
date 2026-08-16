@@ -225,6 +225,7 @@ internal sealed class XPScriptHttpClient : IDisposable
 
 internal sealed class XPScriptHttpResponse
 {
+    private XPScriptHttpPartCollection? _parts;
     private XPScriptHttpFileCollection? _files;
 
     internal byte[] RawBodyBytes { get; init; } = [];
@@ -239,21 +240,40 @@ internal sealed class XPScriptHttpResponse
     public Dictionary<string, string> Headers { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public bool IsSuccess { get; init; }
     public string FileName => XPScriptHttpMultipart.SafeFileName(XPScriptHttpMultipart.GetDispositionParameter(ContentDisposition, "filename*", "filename"));
-    public XPScriptHttpFileCollection Files => _files ??= XPScriptHttpMultipart.ParseFiles(RawBodyBytes, ContentType, ContentDisposition);
+    public XPScriptHttpPartCollection Parts => _parts ??= XPScriptHttpMultipart.ParseParts(RawBodyBytes, ContentType, ContentDisposition);
+    public int PartCount => Parts.Count;
+    public XPScriptHttpPart GetPart(object? indexValue) => Parts.Get(indexValue);
+    public XPScriptHttpFileCollection Files => _files ??= new XPScriptHttpFileCollection(Parts.Items.Where(part => part.IsFile));
     public int FileCount => Files.Count;
-    public XPScriptHttpFile GetFile(object? indexValue) => Files.Get(indexValue);
+    public XPScriptHttpPart GetFile(object? indexValue) => Files.Get(indexValue);
 
     public void SaveBodyToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, RawBodyBytes);
 }
 
+internal sealed class XPScriptHttpPartCollection
+{
+    internal List<XPScriptHttpPart> Items { get; }
+
+    public XPScriptHttpPartCollection(IEnumerable<XPScriptHttpPart> parts) => Items = [.. parts];
+    public int Count => Items.Count;
+
+    public XPScriptHttpPart Get(object? indexValue)
+    {
+        var index = XPScriptRuntime.CInt(indexValue);
+        if (index < 0 || index >= Items.Count)
+            throw new XPScriptRuntimeException(9, "HTTP response part index is out of range.");
+        return Items[index];
+    }
+}
+
 internal sealed class XPScriptHttpFileCollection
 {
-    private readonly List<XPScriptHttpFile> _files;
+    private readonly List<XPScriptHttpPart> _files;
 
-    public XPScriptHttpFileCollection(IEnumerable<XPScriptHttpFile> files) => _files = [.. files];
+    public XPScriptHttpFileCollection(IEnumerable<XPScriptHttpPart> files) => _files = [.. files];
     public int Count => _files.Count;
 
-    public XPScriptHttpFile Get(object? indexValue)
+    public XPScriptHttpPart Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
         if (index < 0 || index >= _files.Count)
@@ -262,22 +282,27 @@ internal sealed class XPScriptHttpFileCollection
     }
 }
 
-internal sealed class XPScriptHttpFile
+internal sealed class XPScriptHttpPart
 {
     private readonly byte[] _data;
 
-    public XPScriptHttpFile(string name, string fileName, string contentType, byte[] data)
+    public XPScriptHttpPart(string name, string fileName, string contentType, Dictionary<string, string> headers, byte[] data)
     {
         Name = name;
         FileName = fileName;
-        ContentType = contentType;
+        ContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
+        Headers = headers;
         _data = data;
     }
 
     public string Name { get; }
     public string FileName { get; }
     public string ContentType { get; }
+    public Dictionary<string, string> Headers { get; }
     public long Length => _data.LongLength;
+    public bool IsFile => FileName.Length > 0;
+    public bool IsText => XPScriptHttpMultipart.IsTextContentType(ContentType);
+    public string Body => XPScriptHttpMultipart.DecodeText(_data, ContentType);
     public void SaveToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, _data);
 }
 
@@ -327,15 +352,17 @@ internal static class XPScriptHttpMultipart
 {
     private static readonly byte[] HeaderSeparator = [13, 10, 13, 10];
 
-    public static XPScriptHttpFileCollection ParseFiles(byte[] body, string contentType, string contentDisposition)
+    public static XPScriptHttpPartCollection ParseParts(byte[] body, string contentType, string contentDisposition)
     {
-        var files = new List<XPScriptHttpFile>();
+        var parts = new List<XPScriptHttpPart>();
         if (!contentType.StartsWith("multipart/", StringComparison.OrdinalIgnoreCase))
         {
             var fileName = SafeFileName(GetDispositionParameter(contentDisposition, "filename*", "filename"));
-            if (fileName.Length > 0)
-                files.Add(new XPScriptHttpFile("", fileName, contentType, [.. body]));
-            return new XPScriptHttpFileCollection(files);
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (contentType.Length > 0) headers["Content-Type"] = contentType;
+            if (contentDisposition.Length > 0) headers["Content-Disposition"] = contentDisposition;
+            parts.Add(new XPScriptHttpPart("", fileName, contentType, headers, [.. body]));
+            return new XPScriptHttpPartCollection(parts);
         }
 
         var boundary = GetMediaTypeParameter(contentType, "boundary");
@@ -370,19 +397,43 @@ internal static class XPScriptHttpMultipart
             headers.TryGetValue("Content-Disposition", out var disposition);
             headers.TryGetValue("Content-Type", out var partContentType);
             var fileName = SafeFileName(GetDispositionParameter(disposition ?? "", "filename*", "filename"));
-            if (fileName.Length > 0)
-            {
-                var name = GetDispositionParameter(disposition ?? "", "name");
-                var length = nextMarker - dataStart;
-                var data = new byte[length];
-                Buffer.BlockCopy(body, dataStart, data, 0, length);
-                files.Add(new XPScriptHttpFile(name, fileName, partContentType ?? "application/octet-stream", data));
-            }
+            var name = GetDispositionParameter(disposition ?? "", "name");
+            var length = nextMarker - dataStart;
+            var data = new byte[length];
+            Buffer.BlockCopy(body, dataStart, data, 0, length);
+            parts.Add(new XPScriptHttpPart(name, fileName, partContentType ?? "application/octet-stream", headers, data));
 
             cursor = nextMarker + 2;
         }
 
-        return new XPScriptHttpFileCollection(files);
+        return new XPScriptHttpPartCollection(parts);
+    }
+
+    public static bool IsTextContentType(string contentType)
+    {
+        var mediaType = contentType.Split(';', 2)[0].Trim();
+        return mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/xml", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/javascript", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string DecodeText(byte[] data, string contentType)
+    {
+        var charset = GetMediaTypeParameter(contentType, "charset");
+        var encoding = Encoding.UTF8;
+        if (charset.Length > 0)
+        {
+            try { encoding = Encoding.GetEncoding(charset); }
+            catch (ArgumentException)
+            {
+                throw new XPScriptRuntimeException(5, "HTTP multipart part specifies an unsupported text charset.");
+            }
+        }
+        return encoding.GetString(data);
     }
 
     public static string GetDispositionParameter(string value, params string[] names)
