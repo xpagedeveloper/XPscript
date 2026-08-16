@@ -45,12 +45,7 @@ internal sealed class SourceLineMarkerPreprocessor
                     var indent = Regex.Match(raw, @"^\s*").Value;
                     var expandedLine = i + 1;
                     var physicalLine = sourceMap?.Resolve(expandedLine, sourceName).Line ?? expandedLine;
-                    // Keep source-line bookkeeping outside the language statement error
-                    // wrapper. CoreCompatibilityTranspiler deliberately does not protect
-                    // lines beginning with If, so the following real source statement owns
-                    // the On Error Resume Next try/catch while this marker still executes
-                    // immediately before it.
-                    output.Add(indent + $"If True Then Call XPSourceLineRuntime.Set({physicalLine})");
+                    output.Add(indent + $"Call XPSourceLineRuntime.Set({physicalLine})");
                 }
 
                 output.Add(raw);
