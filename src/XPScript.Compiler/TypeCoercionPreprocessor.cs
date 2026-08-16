@@ -47,14 +47,39 @@ internal sealed class TypeCoercionPreprocessor
                         _ => "AddVariant"
                     };
                     var indent = line[..(line.Length - line.TrimStart().Length)];
-                    output[i] = RewriteNullSemantics($"{indent}{assign.Groups[1].Value} = XPScriptCoercion.{method}({left}, {right})");
+                    output[i] = RewriteNullSemantics(RewriteBooleanCondition($"{indent}{assign.Groups[1].Value} = XPScriptCoercion.{method}({left}, {right})"));
                     continue;
                 }
             }
 
-            output[i] = RewriteNullSemantics(line);
+            output[i] = RewriteNullSemantics(RewriteBooleanCondition(line));
         }
         return string.Join("\n", output);
+    }
+
+    private static string RewriteBooleanCondition(string line)
+    {
+        var patterns = new[]
+        {
+            @"^(?<prefix>\s*If\s+)(?<condition>.+?)(?<suffix>\s+Then\b.*)$",
+            @"^(?<prefix>\s*ElseIf\s+)(?<condition>.+?)(?<suffix>\s+Then\b.*)$",
+            @"^(?<prefix>\s*While\s+)(?<condition>.+?)(?<suffix>\s*)$",
+            @"^(?<prefix>\s*Do\s+While\s+)(?<condition>.+?)(?<suffix>\s*)$",
+            @"^(?<prefix>\s*Do\s+Until\s+)(?<condition>.+?)(?<suffix>\s*)$",
+            @"^(?<prefix>\s*Loop\s+While\s+)(?<condition>.+?)(?<suffix>\s*)$",
+            @"^(?<prefix>\s*Loop\s+Until\s+)(?<condition>.+?)(?<suffix>\s*)$"
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = Regex.Match(line, pattern, RegexOptions.IgnoreCase);
+            if (!match.Success) continue;
+            var condition = match.Groups["condition"].Value.Trim();
+            if (condition.StartsWith("XPScriptNullRuntime.ConditionValue(", StringComparison.Ordinal)) return line;
+            return match.Groups["prefix"].Value + "XPScriptNullRuntime.ConditionValue(" + condition + ")" + match.Groups["suffix"].Value;
+        }
+
+        return line;
     }
 
     private static string RewriteNullSemantics(string line)
