@@ -141,10 +141,26 @@ internal static class XPCrossPlatformRuntime
         if (arguments is null) return [];
         if (arguments is string)
             throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list, not a command string.");
+
+        var result = new List<string>();
+        if (arguments is LSArray array)
+        {
+            if (!array.IsAllocated || array.Rank != 1)
+                throw new XPScriptRuntimeException(5, "ShellArgs requires a one-dimensional allocated array or list.");
+            var lower = array.LBound();
+            var upper = array.UBound();
+            for (var index = lower; index <= upper; index++)
+            {
+                if (result.Count >= 4096)
+                    throw new XPScriptRuntimeException(5, "ShellArgs accepts at most 4096 arguments.");
+                result.Add(XPScriptRuntime.CStr(array.Get(index)));
+            }
+            return result;
+        }
+
         if (arguments is not System.Collections.IEnumerable enumerable)
             throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list.");
 
-        var result = new List<string>();
         foreach (var value in enumerable)
         {
             if (result.Count >= 4096)
