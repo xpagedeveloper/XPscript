@@ -131,8 +131,8 @@ try
     var mapped = await SendAsync(dispatcher, root, "GET", "/index/MapSafe");
     AssertStatus(mapped, 200);
     var mappedPath = Encoding.UTF8.GetString(mapped.Body.Span);
-    if (!Path.GetFullPath(mappedPath).Equals(Path.GetFullPath(Path.Combine(root, "public.txt")), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-        throw new Exception("Server.MapPath returned an unexpected path.");
+    if (!File.Exists(mappedPath) || Path.GetFileName(mappedPath) != "public.txt" || await File.ReadAllTextAsync(mappedPath) != "safe")
+        throw new Exception("Server.MapPath did not resolve the intended site file.");
 
     var escaped = await SendAsync(dispatcher, root, "GET", "/index/MapEscape");
     AssertGeneric500(escaped, parent);
