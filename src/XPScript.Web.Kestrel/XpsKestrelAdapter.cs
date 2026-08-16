@@ -13,8 +13,17 @@ public static class XpsKestrelAdapter
         XpsKestrelOptions options,
         XpsServerInfo serverInfo,
         IXpsWebRequestHandler handler,
+        Func<HttpContext, XpsWebPrincipal>? principalFactory = null,
+        XpsSessionStore? sessions = null) =>
+        Build(options, serverInfo, handler, new XpsApplicationState(), principalFactory, sessions);
+
+    public static WebApplication Build(
+        XpsKestrelOptions options,
+        XpsServerInfo serverInfo,
+        IXpsWebRequestHandler handler,
         IXpsApplicationState application,
-        Func<HttpContext, XpsWebPrincipal>? principalFactory = null)
+        Func<HttpContext, XpsWebPrincipal>? principalFactory = null,
+        XpsSessionStore? sessions = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serverInfo);
@@ -67,7 +76,8 @@ public static class XpsKestrelAdapter
                 var request = await CreateRequestAsync(http, options.MaxRequestBodySize);
                 var response = new XpsWebResponse();
                 var principal = principalFactory?.Invoke(http) ?? new XpsWebPrincipal(false);
-                var context = new XpsWebContext(request, response, serverInfo, principal, application);
+                var session = sessions?.Bind(request, response);
+                var context = new XpsWebContext(request, response, serverInfo, principal, application, session);
 
                 using (XpsWebContextAccessor.Push(context))
                     await handler.HandleAsync(context);

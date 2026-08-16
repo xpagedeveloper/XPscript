@@ -1,0 +1,36 @@
+name: Web State
+
+on:
+  push:
+    paths:
+      - '.github/workflows/web-state.yml'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Web.Kestrel/**'
+      - 'tests/WebStateSmoke/**'
+  pull_request:
+    paths:
+      - '.github/workflows/web-state.yml'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Web.Kestrel/**'
+      - 'tests/WebStateSmoke/**'
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore solution
+        run: dotnet restore ./XPScriptCompiler.slnx
+      - name: Build solution
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+      - name: Run Session and Application regression
+        run: dotnet run --project ./tests/WebStateSmoke/WebStateSmoke.csproj -c Release

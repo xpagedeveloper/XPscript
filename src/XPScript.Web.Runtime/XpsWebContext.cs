@@ -23,6 +23,7 @@ public interface IXpsSession
     void Set(string name, object? value);
     bool Remove(string name);
     void Clear();
+    string RotateId();
     void Abandon();
 }
 
