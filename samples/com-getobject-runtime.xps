@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    Dim obj As Variant
+    Set obj = GetObject("", "Scripting.Dictionary")
+    If Not IsObject(obj) Then
+        Error 5
+    End If
+    Print "COM_GETOBJECT=OK"
+End Sub
