@@ -1,27 +1,90 @@
-' JSON resource-limit regression sample.
-' Runtime verification remains pending while workflow execution is disabled.
+' JSON resource-limit and rollback regression sample.
 
 Sub Main()
     Dim huge As String
-    Dim obj As JsonObject
     Dim document As JsonDocument
+    Dim obj As JsonObject
+    Dim arr As JsonArray
+    Dim i As Integer
+    Dim beforeCount As Integer
+    Dim beforeValue As Variant
+    Dim nonFinite As Double
 
-    ' Parser input is limited to 8 MiB of UTF-8 text.
+    ' Parser input > 8 MiB UTF-8 must fail with bounded error 5.
     huge = "{""data"":""" & String(8388609, "A") & """}"
-
     On Error Resume Next
     Set document = JsonDocument.Parse(huge)
-    Print "Oversized parse Err=" & CStr(Err)
-    Print "Oversized parse Error$=" & Error$
+    Print "PARSE_SIZE_ERR=" & CStr(Err)
     On Error GoTo 0
 
-    ' In-memory JSON values are also guarded by node/depth/payload budgets.
-    Set obj = New JsonObject
-    huge = String(16777217, "B")
+    ' More than 64 nested containers must fail.
+    huge = String(65, "[") & "0" & String(65, "]")
+    On Error Resume Next
+    Set document = JsonDocument.Parse(huge)
+    Print "DEPTH_ERR=" & CStr(Err)
+    On Error GoTo 0
 
+    ' More than 100000 graph nodes must fail. Build a compact JSON array text
+    ' without repeatedly mutating a large in-memory JsonArray.
+    huge = Replace(String(100001, "x"), "x", "0,")
+    huge = "[" & Left(huge, Len(huge) - 1) & "]"
+    On Error Resume Next
+    Set document = JsonDocument.Parse(huge)
+    Print "NODE_COUNT_ERR=" & CStr(Err)
+    On Error GoTo 0
+
+    ' JsonObject.Set must reject an over-budget value and restore the old value.
+    Set obj = New JsonObject
+    Call obj.Set("payload", "safe")
+    huge = String(16777217, "B")
     On Error Resume Next
     Call obj.Set("payload", huge)
-    Print "Oversized mutation Err=" & CStr(Err)
-    Print "Oversized mutation Error$=" & Error$
+    Print "OBJECT_PAYLOAD_ERR=" & CStr(Err)
     On Error GoTo 0
+    Print "OBJECT_ROLLBACK=" & CStr(obj.Get("payload"))
+
+    ' JsonArray.Add must roll back a rejected over-budget append.
+    Set arr = New JsonArray
+    Call arr.Add("safe")
+    beforeCount = arr.Count
+    On Error Resume Next
+    Call arr.Add(huge)
+    Print "ARRAY_ADD_PAYLOAD_ERR=" & CStr(Err)
+    On Error GoTo 0
+    Print "ARRAY_ADD_ROLLBACK=" & CStr(arr.Count = beforeCount)
+
+    ' JsonArray.Set must restore the previous element after a rejected mutation.
+    beforeValue = arr.Get(0)
+    On Error Resume Next
+    Call arr.Set(0, huge)
+    Print "ARRAY_SET_PAYLOAD_ERR=" & CStr(Err)
+    On Error GoTo 0
+    Print "ARRAY_SET_ROLLBACK=" & CStr(arr.Get(0) = beforeValue)
+
+    ' Estimated payload can remain within 16 MiB while JSON syntax pushes the
+    ' serialized UTF-8 output over 16 MiB. Stringify must still reject it.
+    Set obj = New JsonObject
+    huge = String(16777210, "C")
+    Call obj.Set("x", huge)
+    On Error Resume Next
+    huge = obj.Stringify()
+    Print "STRINGIFY_SIZE_ERR=" & CStr(Err)
+    On Error GoTo 0
+
+    ' Non-finite floating point values are not valid JSON numbers.
+    nonFinite = 1 / 0
+    Set obj = New JsonObject
+    On Error Resume Next
+    Call obj.Set("number", nonFinite)
+    Print "NONFINITE_ERR=" & CStr(Err)
+    On Error GoTo 0
+
+    ' Malformed JSON diagnostics must remain bounded and must not echo payload.
+    On Error Resume Next
+    Set document = JsonDocument.Parse("{""secret"":""DO_NOT_ECHO""")
+    Print "MALFORMED_ERR=" & CStr(Err)
+    Print "MALFORMED_TEXT=" & Error$
+    On Error GoTo 0
+
+    Print "JSON_RESOURCE_LIMITS=OK"
 End Sub
