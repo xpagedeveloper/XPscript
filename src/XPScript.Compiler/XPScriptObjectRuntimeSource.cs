@@ -38,8 +38,14 @@ internal sealed class LSRef<T> where T : LSObjectBase
         if (value is null)
             return;
 
-        value.__Delete();
-        Value = null;
+        try
+        {
+            value.__Delete();
+        }
+        finally
+        {
+            Value = null;
+        }
     }
 
     public bool IsSameReference(LSRef<T>? other) =>
