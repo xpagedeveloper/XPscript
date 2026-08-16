@@ -46,6 +46,7 @@ jobs:
             $source = "./samples/$($case.File)"
             $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source --result-format json 2>&1
             $exit = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
             $text = $output -join "`n"
             $output | ForEach-Object { Write-Host $_ }
 
