@@ -831,7 +831,7 @@ internal sealed class CoreCompatibilityTranspiler
     {
         var t = StripComment(line).Trim();
         if (t.Length == 0) return false;
-        if (Regex.IsMatch(t, @"^(Dim|Static|If|ElseIf|Else|End\s+If|For|Next|ForAll|End\s+ForAll|While|Wend|Do|Loop|Exit\b)", RegexOptions.IgnoreCase)) return false;
+        if (Regex.IsMatch(t, @"^(?:(?:Dim|Static|If|ElseIf|Else|For|Next|ForAll|While|Wend|Do|Loop|Exit)\b|End\s+(?:If|ForAll)\b)", RegexOptions.IgnoreCase)) return false;
         if (t.Contains("LSCoreMarker.", StringComparison.Ordinal)) return false;
         return true;
     }
