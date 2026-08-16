@@ -26,7 +26,7 @@ internal sealed class NativeInteropSafetyPreprocessor
                 {
                     throw new CompilerException(
                         "Native Declare parameters must currently be explicitly ByVal. " +
-                        "Native ByRef/out marshalling is not implemented and is rejected to prevent an unsafe ABI mismatch: " + text);
+                        "Native ByRef/out marshalling is not implemented and is rejected to prevent an unsafe ABI mismatch.");
                 }
             }
         }
