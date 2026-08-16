@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text;
 using System.Text.RegularExpressions;
 using XPScript.Compiler;
 using XPScript.Web.Runtime;
@@ -68,7 +67,6 @@ public sealed class XpsWebCompiler
             psi.ArgumentList.Add("--nologo");
             psi.ArgumentList.Add("--no-restore");
 
-            // Restore is explicit so cancellation and diagnostics remain bounded to this owned workspace.
             await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
             await RunProcessAsync(psi, cancellationToken).ConfigureAwait(false);
 
@@ -145,7 +143,7 @@ public sealed class XpsWebCompiler
     <OutputType>Library</OutputType>
     <AssemblyName>XPScript.WebUnit</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
 </Project>
@@ -181,7 +179,14 @@ public sealed class XpsWebCompiler
     private static string RedactBuildOutput(string value, string workspace)
     {
         var redacted = value.Replace(workspace, "<web-build>", StringComparison.OrdinalIgnoreCase);
-        return redacted.Length <= 16_384 ? redacted : redacted[..16_384] + Environment.NewLine + "<diagnostics truncated>";
+        var lines = redacted.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var errors = lines.Where(line => line.Contains(": error ", StringComparison.OrdinalIgnoreCase)).Distinct().ToArray();
+        var prioritized = errors.Length == 0
+            ? redacted
+            : string.Join(Environment.NewLine, errors) + Environment.NewLine + Environment.NewLine + redacted;
+        return prioritized.Length <= 16_384
+            ? prioritized
+            : prioritized[..16_384] + Environment.NewLine + "<diagnostics truncated>";
     }
 }
 
