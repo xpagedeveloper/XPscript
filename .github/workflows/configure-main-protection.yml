@@ -1,12 +1,17 @@
 name: Configure Main Protection
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/configure-main-protection.yml'
+      - 'tools/configure-main-ruleset.ps1'
   workflow_dispatch:
     inputs:
       remove_legacy_blockupdate:
         description: Remove legacy disabled blockupdate ruleset after validation
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -37,10 +42,12 @@ jobs:
           $args = @(
             '-Owner', '${{ github.repository_owner }}',
             '-Repository', '${{ github.event.repository.name }}',
-            '-Token', $env:GITHUB_TOKEN
+            '-Token', $env:GITHUB_TOKEN,
+            '-Apply'
           )
 
-          if ('${{ inputs.remove_legacy_blockupdate }}' -eq 'true') {
+          $removeLegacy = '${{ github.event_name }}' -eq 'push' -or '${{ inputs.remove_legacy_blockupdate }}' -eq 'true'
+          if ($removeLegacy) {
             $args += '-RemoveLegacyBlockUpdate'
           }
 
@@ -54,12 +61,25 @@ jobs:
           $headers = @{
             Authorization = "Bearer $env:GITHUB_TOKEN"
             Accept = 'application/vnd.github+json'
-            'X-GitHub-Api-Version' = '2022-11-28'
+            'X-GitHub-Api-Version' = '2026-03-10'
           }
-          $uri = 'https://api.github.com/repos/${{ github.repository }}/rulesets'
-          $rulesets = Invoke-RestMethod -Headers $headers -Uri $uri -Method Get
-          $main = $rulesets | Where-Object { $_.name -eq 'main-protection' -and $_.enforcement -eq 'active' }
+          $apiBase = 'https://api.github.com/repos/${{ github.repository }}'
+          $rulesets = Invoke-RestMethod -Headers $headers -Uri "$apiBase/rulesets" -Method Get
+          $main = $rulesets | Where-Object { $_.name -eq 'main-protection' -and $_.enforcement -eq 'active' } | Select-Object -First 1
           if (-not $main) {
             throw 'Active main-protection ruleset was not found after configuration.'
           }
+
+          $details = Invoke-RestMethod -Headers $headers -Uri "$apiBase/rulesets/$($main.id)" -Method Get
+          $pullRequestRule = $details.rules | Where-Object { $_.type -eq 'pull_request' } | Select-Object -First 1
+          $statusRule = $details.rules | Where-Object { $_.type -eq 'required_status_checks' } | Select-Object -First 1
+          if ($pullRequestRule.parameters.required_approving_review_count -lt 1) { throw 'main-protection does not require an approving review.' }
+          if (-not $pullRequestRule.parameters.required_review_thread_resolution) { throw 'main-protection does not require review thread resolution.' }
+          if (-not $statusRule.parameters.strict_required_status_checks_policy) { throw 'main-protection status checks are not strict.' }
+          $contexts = @($statusRule.parameters.required_status_checks | ForEach-Object { $_.context })
+          if ($contexts -notcontains 'Required PR Gate') { throw 'main-protection does not require Required PR Gate.' }
+          if (@($details.bypass_actors).Count -ne 0) { throw 'main-protection unexpectedly contains bypass actors.' }
+
+          $legacy = $rulesets | Where-Object { $_.name -eq 'blockupdate' } | Select-Object -First 1
+          if ($removeLegacy -and $legacy) { throw 'Legacy blockupdate ruleset still exists after requested cleanup.' }
           Write-Host "MAIN-PROTECTION-RULESET=ACTIVE ID=$($main.id)"
