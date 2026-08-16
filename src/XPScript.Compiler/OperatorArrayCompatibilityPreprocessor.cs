@@ -97,7 +97,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         {
             var result = RewriteLogicalExpression(orParts[0]);
             for (var i = 1; i < orParts.Count; i++)
-                result = $"LSOperatorArrayRuntime.LogicalOr(({result}), ({RewriteLogicalExpression(orParts[i])}))";
+                result = $"(({result}) || ({RewriteLogicalExpression(orParts[i])}))";
             return result;
         }
 
@@ -106,7 +106,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         {
             var result = ParenthesizeComparison(andParts[0]);
             for (var i = 1; i < andParts.Count; i++)
-                result = $"LSOperatorArrayRuntime.LogicalAnd(({result}), ({ParenthesizeComparison(andParts[i])}))";
+                result = $"(({result}) && ({ParenthesizeComparison(andParts[i])}))";
             return result;
         }
         return expression.Trim();

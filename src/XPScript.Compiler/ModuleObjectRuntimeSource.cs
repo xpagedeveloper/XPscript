@@ -36,8 +36,14 @@ internal static class XPModuleObjectRuntime
         var cell = GetCell(name);
         var value = cell.Value;
         if (value is null) return;
-        value.__Delete();
-        cell.Value = null;
+        try
+        {
+            value.__Delete();
+        }
+        finally
+        {
+            cell.Value = null;
+        }
     }
 
     public static dynamic Value(string name)

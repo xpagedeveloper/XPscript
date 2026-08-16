@@ -108,7 +108,7 @@ internal static class XPCrossPlatformRuntime
         try
         {
             var start = BuildStartInfo(parsed.FileName, ParseArguments(parsed.Arguments), windowStyle);
-            _ = System.Diagnostics.Process.Start(start)
+            using var process = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program or script.");
             return 33;
         }
@@ -128,7 +128,7 @@ internal static class XPCrossPlatformRuntime
         try
         {
             var start = BuildStartInfo(fileName, structuredArguments, windowStyle);
-            _ = System.Diagnostics.Process.Start(start)
+            using var process = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program.");
             return 33;
         }
