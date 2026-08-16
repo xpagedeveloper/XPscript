@@ -1,0 +1,6 @@
+' (c) xpagedeveloper.com 2026
+' Must fail without echoing the invalid directive contents.
+Reference "DO_NOT_ECHO_SECRET_DIRECTIVE.dll" trailing-token
+
+Sub Main()
+End Sub

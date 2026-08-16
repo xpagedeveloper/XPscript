@@ -1,0 +1,6 @@
+' (c) xpagedeveloper.com 2026
+' Must fail without echoing the declared path token.
+Reference "DO_NOT_ECHO_REFERENCE_PATH.secret"
+
+Sub Main()
+End Sub
