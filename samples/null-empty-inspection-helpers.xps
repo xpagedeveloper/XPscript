@@ -1,0 +1,28 @@
+Sub Main()
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim emptyCopy As Variant
+    Dim nullCopy As Variant
+
+    nullValue = Null
+    emptyCopy = CVar(emptyValue)
+    nullCopy = CVar(nullValue)
+
+    Print "EMPTY_ISNUMERIC=" & CStr(IsNumeric(emptyValue))
+    Print "EMPTY_ISSCALAR=" & CStr(IsScalar(emptyValue))
+    Print "EMPTY_ISOBJECT=" & CStr(IsObject(emptyValue))
+    Print "EMPTY_ISDATE=" & CStr(IsDate(emptyValue))
+    Print "EMPTY_ISARRAY=" & CStr(IsArray(emptyValue))
+    Print "EMPTY_CVAR_TYPE=" & TypeName(emptyCopy)
+    Print "EMPTY_CVAR_ISEMPTY=" & CStr(IsEmpty(emptyCopy))
+    Print "EMPTY_CVAR_ISNULL=" & CStr(IsNull(emptyCopy))
+
+    Print "NULL_ISNUMERIC=" & CStr(IsNumeric(nullValue))
+    Print "NULL_ISSCALAR=" & CStr(IsScalar(nullValue))
+    Print "NULL_ISOBJECT=" & CStr(IsObject(nullValue))
+    Print "NULL_ISDATE=" & CStr(IsDate(nullValue))
+    Print "NULL_ISARRAY=" & CStr(IsArray(nullValue))
+    Print "NULL_CVAR_TYPE=" & TypeName(nullCopy)
+    Print "NULL_CVAR_ISEMPTY=" & CStr(IsEmpty(nullCopy))
+    Print "NULL_CVAR_ISNULL=" & CStr(IsNull(nullCopy))
+End Sub
