@@ -79,7 +79,7 @@ Status:
 - [x] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
 - [x] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
 - [x] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
-- [ ] consider an additional structured process API accepting executable and argument array separately
+- [x] `ShellArgs(program, arguments [, windowStyle])` provides a structured process API; XPScript arrays/lists are passed directly through `ProcessStartInfo.ArgumentList` without command-string parsing, verified on Windows, Ubuntu and macOS by `Structured ShellArgs`
 - [x] build/runtime verification of the complete quoting and path behavior matrix on Windows, Ubuntu and macOS by `Cross Platform Compiler Shell`
 
 ## File I/O
@@ -156,7 +156,7 @@ Status:
 - [>] application-local native declarations are marked internally during preprocessing and emitted with their normal portable filename only after secure wrapper generation
 - [>] application-local native libraries are resolved through `DllImportResolver` from exactly `AppContext.BaseDirectory` / executable directory
 - [>] application-local resolution does not search current working directory, PATH or arbitrary loader directories
-- [>] application-local library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
+- [>] application-local native library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
 - [>] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
 - [>] documentation states that native interop executes unmanaged code with process privileges
 - [>] negative ABI source: `samples/native-byref-error.xps`
