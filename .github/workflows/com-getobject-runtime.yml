@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/ExtendedCompatibilityTranspiler.cs'
       - 'samples/com-getobject-runtime.xps'
       - 'samples/com-getobject-invalid.xps'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/com-getobject-runtime.yml'
   workflow_dispatch:
 
