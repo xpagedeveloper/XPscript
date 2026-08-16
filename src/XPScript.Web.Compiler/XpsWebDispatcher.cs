@@ -45,7 +45,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
 
         try
         {
-            await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, cancellationToken).ConfigureAwait(false);
+            await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
             var unit = lease.Unit;
             var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
             if (routeName is null || !unit.Routes.TryGetValue(routeName, out var descriptor))
@@ -72,9 +72,10 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
         {
             WriteTerminalResponse(context.Response, 404, "Not Found");
         }
-        catch (Exception) when (!context.Response.Completed)
+        catch (Exception)
         {
-            WriteTerminalResponse(context.Response, 500, "Internal Server Error");
+            if (!context.Response.Completed)
+                WriteTerminalResponse(context.Response, 500, "Internal Server Error");
         }
     }
 
