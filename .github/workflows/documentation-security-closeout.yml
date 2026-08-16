@@ -5,7 +5,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/**'
-      - 'todo/security-review-todo.md'
+      - 'todo/done/security-review-todo.md'
       - '.github/workflows/documentation-security-closeout.yml'
   workflow_dispatch:
 
@@ -26,7 +26,7 @@ jobs:
           $http = Get-Content -Raw 'docs/native-http-json.md'
           $index = Get-Content -Raw 'docs/index.md'
           $readme = Get-Content -Raw 'README.md'
-          $todo = Get-Content -Raw 'todo/security-review-todo.md'
+          $todo = Get-Content -Raw 'todo/done/security-review-todo.md'
 
           $requiredPlatform = @(
             'explicitly `ByVal`',

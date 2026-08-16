@@ -3,6 +3,22 @@ namespace XPScript.Compiler;
 internal static class TypeCoercionRuntimeSource
 {
     public const string Code = """
+internal static class XPScriptNullRuntime
+{
+    private sealed class NullSentinel
+    {
+        public override string ToString() => "";
+    }
+
+    public static readonly object NullValue = new NullSentinel();
+
+    public static bool IsNull(object? value) => value is NullSentinel;
+    public static bool IsEmpty(object? value) => value is null;
+
+    public static int DataType(object? value) => IsNull(value) ? 1 : XPScriptRuntime.DataType(value);
+    public static string TypeName(object? value) => IsNull(value) ? "NULL" : XPScriptRuntime.TypeName(value);
+}
+
 internal static class XPScriptCoercion
 {
     public static byte AddByte(object? left, object? right) => checked((byte)AddDecimal(left, right));
@@ -18,6 +34,7 @@ internal static class XPScriptCoercion
     // otherwise it is concatenated. Null propagates for dynamic expressions.
     public static object? AddVariant(object? left, object? right)
     {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
         if (left is null || right is null) return null;
         if (left is string leftText) return leftText + XPScriptRuntime.CStr(right);
 
@@ -43,6 +60,7 @@ internal static class XPScriptCoercion
 
     private static decimal ToDecimal(object? value)
     {
+        if (XPScriptNullRuntime.IsNull(value)) throw new InvalidCastException("Unable to convert Null to a numeric value for addition.");
         if (value is null) return 0m;
         if (value is string text)
         {
@@ -56,6 +74,7 @@ internal static class XPScriptCoercion
 
     private static double ToDouble(object? value)
     {
+        if (XPScriptNullRuntime.IsNull(value)) throw new InvalidCastException("Unable to convert Null to a numeric value for addition.");
         if (value is null) return 0d;
         if (value is string text)
         {

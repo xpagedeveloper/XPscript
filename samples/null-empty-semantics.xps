@@ -1,0 +1,22 @@
+' XPScript Null and Empty normal-runtime regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim nullSum As Variant
+
+    nullValue = Null
+    nullSum = nullValue + 1
+
+    Print "EMPTY_DT=" & CStr(DataType(emptyValue))
+    Print "EMPTY_TYPE=" & TypeName(emptyValue)
+    Print "EMPTY_ISEMPTY=" & CStr(IsEmpty(emptyValue))
+    Print "EMPTY_ISNULL=" & CStr(IsNull(emptyValue))
+
+    Print "NULL_DT=" & CStr(DataType(nullValue))
+    Print "NULL_TYPE=" & TypeName(nullValue)
+    Print "NULL_ISEMPTY=" & CStr(IsEmpty(nullValue))
+    Print "NULL_ISNULL=" & CStr(IsNull(nullValue))
+    Print "NULL_PROPAGATES=" & CStr(IsNull(nullSum))
+End Sub
