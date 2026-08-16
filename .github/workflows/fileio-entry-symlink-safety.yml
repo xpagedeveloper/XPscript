@@ -49,10 +49,21 @@ jobs:
           Set-Content -NoNewline ./toctou-fixture/name-source-target.txt 'NAME_SOURCE_TARGET_SAFE'
           Set-Content -NoNewline ./toctou-fixture/name-destination-target.txt 'NAME_DEST_TARGET_SAFE'
           Set-Content -NoNewline ./toctou-fixture/rmdir-target/keep.txt 'RMDIR_TARGET_SAFE'
-          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/kill-link -Target ./kill-target.txt | Out-Null
-          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/name-source-link -Target ./name-source-target.txt | Out-Null
-          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/name-destination-link -Target ./name-destination-target.txt | Out-Null
-          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/rmdir-link -Target ./rmdir-target | Out-Null
+
+          $killTarget = (Resolve-Path ./toctou-fixture/kill-target.txt).Path
+          $nameSourceTarget = (Resolve-Path ./toctou-fixture/name-source-target.txt).Path
+          $nameDestinationTarget = (Resolve-Path ./toctou-fixture/name-destination-target.txt).Path
+          $rmdirTarget = (Resolve-Path ./toctou-fixture/rmdir-target).Path
+
+          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/kill-link -Target $killTarget | Out-Null
+          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/name-source-link -Target $nameSourceTarget | Out-Null
+          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/name-destination-link -Target $nameDestinationTarget | Out-Null
+          New-Item -ItemType SymbolicLink -Path ./toctou-fixture/rmdir-link -Target $rmdirTarget | Out-Null
+
+          if ((Get-Content -Raw $killTarget) -ne 'KILL_TARGET_SAFE') { throw 'Kill target fixture is invalid before runtime test.' }
+          if ((Get-Content -Raw $nameSourceTarget) -ne 'NAME_SOURCE_TARGET_SAFE') { throw 'Name source target fixture is invalid before runtime test.' }
+          if ((Get-Content -Raw $nameDestinationTarget) -ne 'NAME_DEST_TARGET_SAFE') { throw 'Name destination target fixture is invalid before runtime test.' }
+          if ((Get-Content -Raw (Join-Path $rmdirTarget 'keep.txt')) -ne 'RMDIR_TARGET_SAFE') { throw 'RmDir target fixture is invalid before runtime test.' }
 
       - name: Verify entry operations never affect symlink targets
         shell: pwsh
