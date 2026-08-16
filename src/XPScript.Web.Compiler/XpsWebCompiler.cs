@@ -14,6 +14,10 @@ public sealed class XpsWebCompiler
         @"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex ScriptClassMarker = new(
+        @"internal\s+static\s+class\s+Script\s*\{",
+        RegexOptions.CultureInvariant);
+
     public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
@@ -139,7 +143,6 @@ public sealed class XpsWebCompiler
 
     private static string InjectWebObjects(string generated)
     {
-        const string marker = "internal static class Script\n{";
         const string members = """
 internal static class Script
 {
@@ -147,9 +150,9 @@ internal static class Script
     private static XPScript.Web.Runtime.XpsWebResponse Response => XPScript.Web.Runtime.XpsWebRuntimeObjects.Response;
     private static XPScript.Web.Runtime.XpsWebServer Server => XPScript.Web.Runtime.XpsWebRuntimeObjects.Server;
 """;
-        var index = generated.IndexOf(marker, StringComparison.Ordinal);
-        if (index < 0) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
-        return generated[..index] + members + generated[(index + marker.Length)..];
+        var match = ScriptClassMarker.Match(generated);
+        if (!match.Success) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
+        return generated[..match.Index] + members + generated[(match.Index + match.Length)..];
     }
 
     private static string EnsureCompilerEntryPoint(string source) =>
