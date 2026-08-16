@@ -11,6 +11,8 @@ on:
       - 'samples/reserved-runtime-type-error.xps'
       - 'samples/reserved-multiple-identifiers-error.xps'
       - 'samples/reserved-module-multiple-identifiers-error.xps'
+      - 'samples/reserved-array-dimension-commas.xps'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/security-identifier-regression.yml'
   pull_request:
     branches: [main]
@@ -22,6 +24,8 @@ on:
       - 'samples/reserved-runtime-type-error.xps'
       - 'samples/reserved-multiple-identifiers-error.xps'
       - 'samples/reserved-module-multiple-identifiers-error.xps'
+      - 'samples/reserved-array-dimension-commas.xps'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/security-identifier-regression.yml'
   workflow_dispatch:
 
@@ -50,19 +54,20 @@ jobs:
       - name: Verify reserved identifier diagnostics
         shell: pwsh
         run: |
-          $samples = @(
-            'reserved-identifier-error.xps',
-            'reserved-runtime-type-error.xps',
-            'reserved-multiple-identifiers-error.xps',
-            'reserved-module-multiple-identifiers-error.xps'
+          $cases = @(
+            @{ Name = 'reserved-identifier-error.xps'; Line = 2 },
+            @{ Name = 'reserved-runtime-type-error.xps'; Line = 1 },
+            @{ Name = 'reserved-multiple-identifiers-error.xps'; Line = 4 },
+            @{ Name = 'reserved-module-multiple-identifiers-error.xps'; Line = 3 }
           )
 
           New-Item -ItemType Directory -Force -Path ./out | Out-Null
 
-          foreach ($sample in $samples) {
+          foreach ($case in $cases) {
+            $sample = $case.Name
             $source = Join-Path './samples' $sample
             $output = Join-Path './out' ([IO.Path]::GetFileNameWithoutExtension($sample) + '.exe')
-            $resultText = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json
+            $resultText = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $output --framework-dependent --result-format json)
             $compilerExitCode = $LASTEXITCODE
             $global:LASTEXITCODE = 0
 
@@ -70,15 +75,49 @@ jobs:
               throw "Expected reserved identifier sample '$sample' to fail compilation."
             }
 
-            $result = $resultText | ConvertFrom-Json
-            if ($result.result -ne 'error' -or $result.errors.Count -lt 1) {
+            $jsonText = $resultText -join "`n"
+            try { $result = $jsonText | ConvertFrom-Json }
+            catch { throw "Expected valid JSON compiler diagnostics for '$sample'." }
+
+            if ($result.result -ne 'error' -or $null -eq $result.errors -or $result.errors.Count -lt 1) {
               throw "Expected structured compiler error for '$sample'."
             }
 
+            $diagnostic = $result.errors[0]
             $diagnostics = $result.errors | ConvertTo-Json -Depth 8
             if ($diagnostics -notmatch '(?i)reserved') {
               throw "Expected reserved identifier diagnostic for '$sample'."
             }
+            if ($diagnostic.line -ne $case.Line) {
+              throw "$sample mapped to line $($diagnostic.line), expected $($case.Line)."
+            }
+            if ($diagnostic.position -lt 1) {
+              throw "$sample did not return a valid source position."
+            }
+
+            $sourceLines = Get-Content -LiteralPath $source
+            $expectedCode = $sourceLines[$case.Line - 1].Trim()
+            if ([string]::IsNullOrWhiteSpace($diagnostic.code) -or $diagnostic.code.Trim() -ne $expectedCode) {
+              throw "$sample mapped code '$($diagnostic.code)' but expected '$expectedCode'."
+            }
           }
 
           Write-Host 'SECURITY-RESERVED-IDENTIFIERS=OK'
+
+      - name: Verify commas inside array dimensions remain declaration-local
+        shell: pwsh
+        run: |
+          $source = './samples/reserved-array-dimension-commas.xps'
+          $exe = if ($IsWindows) { './out/reserved-array-dimension-commas.exe' } else { './out/reserved-array-dimension-commas' }
+          $resultText = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o $exe --framework-dependent --result-format json)
+          if ($LASTEXITCODE -ne 0) {
+            $resultText | ForEach-Object { Write-Host $_ }
+            throw 'Array-dimension comma regression failed to compile.'
+          }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Array-dimension comma regression failed at runtime.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'RESERVED-ARRAY-COMMAS=7') {
+            throw "Array-dimension comma regression returned unexpected output.`n$output"
+          }
