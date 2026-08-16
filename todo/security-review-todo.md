@@ -134,18 +134,18 @@ Status:
 
 ## JSON
 
-- [>] parser input is limited to 8 MiB UTF-8
-- [>] parse/serialization nesting is limited to 64 levels
-- [>] JSON graph size is limited to 100000 nodes
-- [>] estimated JSON payload is limited to 16 MiB
-- [>] serialized JSON output is limited to 16 MiB UTF-8
-- [>] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
+- [x] parser input is limited to 8 MiB UTF-8
+- [x] parse/serialization nesting is limited to 64 levels
+- [x] JSON graph size is limited to 100000 nodes
+- [x] estimated JSON payload is limited to 16 MiB
+- [x] serialized JSON output is limited to 16 MiB UTF-8
+- [x] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
 - [>] budget arithmetic overflow is normalized to a bounded XPScript error
-- [>] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
+- [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
 - [>] parsed numeric conversion refuses non-finite Double results
-- [>] malformed JSON diagnostics do not echo the complete JSON source payload
-- [>] regression source: `samples/json-resource-limits.xps`
-- [ ] build/runtime verification of parse/depth/node/payload/numeric limits
+- [x] malformed JSON diagnostics do not echo the complete JSON source payload
+- [x] regression source: `samples/json-resource-limits.xps`
+- [x] build/runtime verification of parse/depth/node/payload/numeric limits on Windows, Ubuntu and macOS
 
 ## Native interop
 
