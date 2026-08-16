@@ -12,12 +12,10 @@ html = |<div>
 Brace form:
 
 ```xpscript
-Dim json As String
-json = {
-{
-  "name": "XPScript"
-}
-}
+Dim text As String
+text = {first line
+second "quoted" line
+third line}
 ```
 
 The opening and closing delimiters are not part of the resulting string. Physical line breaks inside the literal are preserved as characters in the resulting string.
