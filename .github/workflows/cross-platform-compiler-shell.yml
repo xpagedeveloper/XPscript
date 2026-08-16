@@ -182,7 +182,7 @@ jobs:
 
           $oldPath = $env:PATH
           try {
-            $env:PATH = ".${([IO.Path]::PathSeparator)}$oldPath"
+            $env:PATH = ".$([IO.Path]::PathSeparator)$oldPath"
             $output = & $exe 2>&1 | Out-String
             $childExit = $LASTEXITCODE
             $global:LASTEXITCODE = 0
