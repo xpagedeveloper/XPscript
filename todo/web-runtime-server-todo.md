@@ -51,7 +51,7 @@ Exact public CLI syntax must be finalized during the architecture phase.
 The target runtime compilation model is:
 
 ```text
-HTTP / FastCGI request
+HTTP / FastCGI / CgI request
         ↓
 normalize + validate request
         ↓
@@ -184,6 +184,8 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
 - [ ] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
 
 ---
+## 5.1 cgi
+Inplement isimiar functions as for fast chi but for older CGI handling
 
 ## 6. XPScript web objects
 
