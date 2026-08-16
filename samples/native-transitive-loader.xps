@@ -1,0 +1,24 @@
+Option Declare
+
+ReferenceNative "native-transitive/xps_native_helper.dll" Runtime "win-x64"
+ReferenceNative "native-transitive/xps_native_helper.dll" Runtime "win-arm64"
+ReferenceNative "native-transitive/libxps_native_helper.so" Runtime "linux-x64"
+ReferenceNative "native-transitive/libxps_native_helper.so" Runtime "linux-arm64"
+ReferenceNative "native-transitive/libxps_native_helper.dylib" Runtime "osx-x64"
+ReferenceNative "native-transitive/libxps_native_helper.dylib" Runtime "osx-arm64"
+
+Declare Function NativeTransitiveValue Lib "native-transitive/xps_native_transitive.dll" Alias "xps_native_transitive_value" _
+    WindowsLib "native-transitive/xps_native_transitive.dll" _
+    LinuxLib "native-transitive/libxps_native_transitive.so" _
+    MacOSLib "native-transitive/libxps_native_transitive.dylib" _
+    () As Integer
+
+Sub Main()
+    Dim value As Integer
+    value = NativeTransitiveValue()
+    Print "TRANSITIVE_VALUE=" & CStr(value)
+    If value <> 4242 Then
+        Error 5
+    End If
+    Print "NATIVE_TRANSITIVE=OK"
+End Sub
