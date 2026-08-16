@@ -507,7 +507,13 @@ internal static class XPScriptRuntime
                 .GetEnumerator();
         }
 
-        if (DirEnumerator is null || !DirEnumerator.MoveNext()) return "";
+        if (DirEnumerator is null) return "";
+        if (!DirEnumerator.MoveNext())
+        {
+            DirEnumerator.Dispose();
+            DirEnumerator = null;
+            return "";
+        }
         return DirEnumerator.Current;
     }
 
