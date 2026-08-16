@@ -1,0 +1,15 @@
+Class RedactionProbe
+    Function Pick(ByVal value As Integer) As Integer
+        Pick = value
+    End Function
+
+    Function Pick(ByVal value As Double) As Integer
+        Pick = 2
+    End Function
+End Class
+
+Sub Main()
+    Dim probe As New RedactionProbe
+    Dim result As Integer
+    result = probe.Pick("DO_NOT_ECHO_CLASS_OVERLOAD")
+End Sub
