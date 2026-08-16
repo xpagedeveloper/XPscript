@@ -135,13 +135,13 @@ internal sealed class ReservedIdentifierPreprocessor
     private static void EnsureAllowed(string name, int line, bool typeDeclaration)
     {
         if (name.StartsWith("__", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException($"input.xps({line},1): Identifier '{name}' is reserved for XPScript compiler-generated state.");
+            throw new CompilerException($"input.xps({line},1): Identifier is reserved for XPScript compiler-generated state.");
 
         if (ReservedValueNames.Contains(name))
-            throw new CompilerException($"input.xps({line},1): Identifier '{name}' is reserved by the XPScript runtime.");
+            throw new CompilerException($"input.xps({line},1): Identifier is reserved by the XPScript runtime.");
 
         if (typeDeclaration && ReservedTypeNames.Contains(name))
-            throw new CompilerException($"input.xps({line},1): Type name '{name}' is reserved by the XPScript runtime.");
+            throw new CompilerException($"input.xps({line},1): Type name is reserved by the XPScript runtime.");
     }
 
     private static string StripComment(string line)
