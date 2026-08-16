@@ -160,7 +160,7 @@ Status:
 - [>] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
 - [>] documentation states that native interop executes unmanaged code with process privileges
 - [>] negative ABI source: `samples/native-byref-error.xps`
-- [ ] verify calling-convention behavior for supported scalar signatures on Windows/Linux/macOS
+- [x] supported `ByVal Integer` scalar parameter and Integer return ABI is verified on Windows x64/arm64, Linux x64/arm64 and macOS x64/arm64 by `Native Scalar ABI`
 - [ ] verify application-local loader behavior on Windows/Linux/macOS
 - [ ] review transitive native dependency search/preloading behavior for dependencies of the selected application-local library
 
