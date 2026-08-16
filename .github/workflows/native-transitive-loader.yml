@@ -6,6 +6,7 @@ on:
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
       - 'samples/native-transitive-loader.xps'
       - 'tests/NativeTransitiveFixture/**'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/native-transitive-loader.yml'
   workflow_dispatch:
 
