@@ -35,7 +35,7 @@ internal sealed class ManagedAssemblyReferencePreprocessor
                 var path = reference.Groups[1].Value.Trim();
                 if (path.Length == 0) throw Error(location, "Reference requires a managed .NET assembly path.");
                 if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                    throw Error(location, "Managed Reference must point to a .dll file: " + path);
+                    throw Error(location, "Managed Reference must point to a .dll file.");
                 var projectPath = NormalizeProjectPath(path, location.SourcePath, sourceName);
                 if (!managed.Any(x => x.DeclaredPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
                     managed.Add(new ManagedReference(projectPath, location.SourcePath, location.Line));
@@ -52,7 +52,7 @@ internal sealed class ManagedAssemblyReferencePreprocessor
                 var rid = nativeReference.Groups[2].Value.Trim().ToLowerInvariant();
                 if (path.Length == 0) throw Error(location, "ReferenceNative requires a native dependency path.");
                 if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
-                    throw Error(location, "ReferenceNative uses unsupported runtime identifier '" + rid + "'.");
+                    throw Error(location, "ReferenceNative uses an unsupported runtime identifier.");
                 var projectPath = NormalizeProjectPath(path, location.SourcePath, sourceName);
                 if (rid.Equals(_runtimeIdentifier, StringComparison.OrdinalIgnoreCase) &&
                     !native.Any(x => x.DeclaredPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
@@ -62,7 +62,7 @@ internal sealed class ManagedAssemblyReferencePreprocessor
             }
 
             if (Regex.IsMatch(code, @"^Reference(?:Native)?\b", RegexOptions.IgnoreCase))
-                throw Error(location, "Invalid managed reference directive: " + code);
+                throw Error(location, "Invalid managed reference directive.");
 
             output[i] = raw;
         }
