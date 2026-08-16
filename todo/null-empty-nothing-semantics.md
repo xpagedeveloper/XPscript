@@ -11,12 +11,17 @@ Compatibility direction follows the standalone language semantics:
 - `NOTHING` is the unbound value of an object reference.
 - These three states must not share one internal representation.
 
+Status:
+- `[x]` implemented and verified
+- `[>]` implemented/in progress, awaiting complete verification
+- `[ ]` not implemented
+
 ## Runtime representation
 
 - [ ] Add an internal singleton sentinel for Variant `EMPTY`.
-- [ ] Add an internal singleton sentinel for Variant `NULL`.
+- [>] Add an internal singleton sentinel for Variant `NULL`; implemented as a private runtime sentinel in `TypeCoercionRuntimeSource.cs`, awaiting the `Null Empty Semantics` cross-platform gate.
 - [ ] Keep CLR `null` for object-reference `NOTHING`.
-- [ ] Ensure sentinels cannot be confused with user objects or serialized as normal objects.
+- [>] Ensure the NULL sentinel cannot be confused with user objects; the sentinel type is private to `XPScriptNullRuntime`, serialization/API review remains open.
 
 ## Variable initialization
 
@@ -27,28 +32,28 @@ Compatibility direction follows the standalone language semantics:
 
 ## Literals and assignment
 
-- [ ] Compile `Null` to the Variant `NULL` sentinel.
+- [>] Compile `Null` to the Variant `NULL` sentinel in normal compiled expressions; string literals and comments are excluded from rewriting, awaiting cross-platform verification.
 - [ ] Compile `Nothing` only as the object-reference empty value.
 - [ ] Reject invalid assignment of `Nothing` to scalar/Variant value contexts where an object reference is required.
 - [ ] Permit `Null` only where Variant-compatible semantics apply.
 
 ## Inspection functions
 
-- [ ] `IsEmpty(EMPTY)` returns true and is false for `NULL` and `NOTHING` object references.
-- [ ] `IsNull(NULL)` returns true and is false for `EMPTY`.
-- [ ] `DataType(EMPTY)` returns 0.
-- [ ] `DataType(NULL)` returns 1.
+- [>] `IsEmpty(EMPTY)` returns true and is false for `NULL` in the normal runtime path; NOTHING object-reference parity remains open.
+- [>] `IsNull(NULL)` returns true and is false for `EMPTY` in the normal runtime path.
+- [>] `DataType(EMPTY)` returns 0 through the existing EMPTY representation.
+- [>] `DataType(NULL)` returns 1 through `XPScriptNullRuntime.DataType`.
 - [ ] `DataType(NOTHING/object reference)` follows object-reference semantics.
-- [ ] `TypeName(EMPTY)` returns `EMPTY`.
-- [ ] `TypeName(NULL)` returns `NULL`.
+- [>] `TypeName(EMPTY)` returns `EMPTY` through the existing EMPTY representation.
+- [>] `TypeName(NULL)` returns `NULL` through `XPScriptNullRuntime.TypeName`.
 - [ ] Review `IsNumeric`, `IsScalar`, `IsObject`, `CVar` and related inspection/conversion helpers.
 
 ## Coercion and operators
 
 - [ ] Convert `EMPTY` to zero in numeric operations.
 - [ ] Convert `EMPTY` to empty string in string operations.
-- [ ] Propagate `NULL` through compatible arithmetic/comparison/string expressions according to the language contract.
-- [ ] Ensure `NULL` is not silently converted to EMPTY, zero, empty string or NOTHING.
+- [>] Propagate `NULL` through forgiving Variant `+`; broader arithmetic/comparison/string propagation remains open.
+- [>] Ensure `NULL` is not silently converted to EMPTY, zero, empty string or NOTHING in the newly covered Variant `+` path; broader coercion review remains open.
 - [ ] Review Boolean conditions involving `NULL` and define bounded diagnostics where required.
 - [ ] Review array/List elements containing EMPTY or NULL.
 
@@ -75,9 +80,9 @@ Compatibility direction follows the standalone language semantics:
 
 ## Regression gate
 
-- [ ] Add focused normal-runtime fixture covering initialization, assignment, inspection and coercion.
+- [>] Add focused normal-runtime fixture covering initialization, NULL assignment, inspection and Variant `+` propagation: `samples/null-empty-semantics.xps`.
 - [ ] Add object-reference NOTHING fixture.
 - [ ] Add Evaluate fixture covering no-return, Return Null, callvar EMPTY/NULL and inspection parity.
 - [ ] Add array/List fixture containing EMPTY and NULL.
-- [ ] Run build/runtime checks on Windows, Ubuntu and macOS.
+- [>] Run build/runtime checks on Windows, Ubuntu and macOS through `.github/workflows/null-empty-semantics.yml`.
 - [ ] Only after the cross-platform gate passes, close the corresponding Evaluate and memory/lifetime items in `todo/runtime-reference-todo.md` and `todo/evaluate-callvar-todo.md`.
