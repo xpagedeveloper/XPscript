@@ -61,7 +61,7 @@ internal sealed class NativeLibraryPlatformPreprocessor
         var selectedAlias = SelectTargetValue(code, "Alias", baseAlias.Success ? baseAlias.Groups[1].Value : null);
 
         if (string.IsNullOrWhiteSpace(selectedLibrary))
-            throw new CompilerException("Declare requires a native library for target runtime '" + _runtimeIdentifier + "'.");
+            throw new CompilerException("Declare requires a native library for the selected target runtime.");
 
         var isApplicationLocal = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary);
         var loadLibrary = isApplicationLocal
