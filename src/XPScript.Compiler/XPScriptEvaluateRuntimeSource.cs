@@ -151,7 +151,7 @@ internal static class XPScriptEvaluateRuntime
         }
 
         private object? ParseConcat() { var value = ParseAdditive(); while (Match(TokenKind.Ampersand)) value = XPScriptRuntime.CStr(value) + XPScriptRuntime.CStr(ParseAdditive()); return value; }
-        private object? ParseAdditive() { var value = ParseMultiplicative(); while (true) { if (Match(TokenKind.Plus)) value = Add(value, ParseMultiplicative()); else if (Match(TokenKind.Minus)) value = Numeric(value) - Numeric(ParseMultiplicative()); else return value; } }
+        private object? ParseAdditive() { var value = ParseMultiplicative(); while (true) { if (Match(TokenKind.Plus)) value = XPScriptCoercion.AddVariant(value, ParseMultiplicative()); else if (Match(TokenKind.Minus)) value = Numeric(value) - Numeric(ParseMultiplicative()); else return value; } }
         private object? ParseMultiplicative() { var value = ParsePower(); while (true) { if (Match(TokenKind.Star)) value = Numeric(value) * Numeric(ParsePower()); else if (Match(TokenKind.Slash)) value = Numeric(value) / Numeric(ParsePower()); else if (Match(TokenKind.Backslash)) value = LSOperatorArrayRuntime.IntDiv(value, ParsePower()); else if (MatchKeyword("Mod")) value = XPScriptRuntime.CLng(value) % XPScriptRuntime.CLng(ParsePower()); else return value; } }
         private object? ParsePower() { var value = ParseUnary(); if (Match(TokenKind.Caret)) value = LSOperatorArrayRuntime.Pow(value, ParsePower()); return value; }
         private object? ParseUnary() { if (MatchKeyword("Not")) return LSOperatorArrayRuntime.LogicalNot(ParseUnary()); if (Match(TokenKind.Plus)) return Numeric(ParseUnary()); if (Match(TokenKind.Minus)) return -Numeric(ParseUnary()); return ParsePrimary(); }
@@ -163,8 +163,8 @@ internal static class XPScriptEvaluateRuntime
             if (Match(TokenKind.DateLiteral)) return XPScriptRuntime.CDate(Previous.Text);
             if (MatchKeyword("True")) return true;
             if (MatchKeyword("False")) return false;
-            if (MatchKeyword("Null")) return null;
-            if (MatchKeyword("Nothing")) return null;
+            if (MatchKeyword("Null")) return XPScriptNullRuntime.NullValue;
+            if (MatchKeyword("Nothing")) throw Error("Nothing is valid only for object references and is not a Variant value inside Evaluate.");
             if (Match(TokenKind.LeftParen)) { var value = ParseExpression(); Consume(TokenKind.RightParen, "Expected ')' after expression."); return value; }
 
             if (Match(TokenKind.Identifier))
@@ -213,12 +213,12 @@ internal static class XPScriptEvaluateRuntime
                 "cdate" or "cdat" when args.Count == 1 => XPScriptRuntime.CDate(Arg(0)),
                 "cvar" when args.Count == 1 => XPScriptRuntime.CVar(Arg(0)),
 
-                "typename" when args.Count == 1 => Arg(0) is LSArray ? "ARRAY" : XPScriptRuntime.TypeName(Arg(0)),
-                "datatype" when args.Count == 1 => Arg(0) is LSArray ? 8192 : XPScriptRuntime.DataType(Arg(0)),
+                "typename" when args.Count == 1 => Arg(0) is LSArray ? "ARRAY" : XPScriptNullRuntime.TypeName(Arg(0)),
+                "datatype" when args.Count == 1 => Arg(0) is LSArray ? 8192 : XPScriptNullRuntime.DataType(Arg(0)),
                 "isarray" when args.Count == 1 => Arg(0) is LSArray or Array,
                 "isdate" when args.Count == 1 => XPScriptRuntime.IsDate(Arg(0)),
-                "isempty" when args.Count == 1 => XPScriptRuntime.IsEmpty(Arg(0)),
-                "isnull" when args.Count == 1 => XPScriptRuntime.IsNull(Arg(0)),
+                "isempty" when args.Count == 1 => XPScriptNullRuntime.IsEmpty(Arg(0)),
+                "isnull" when args.Count == 1 => XPScriptNullRuntime.IsNull(Arg(0)),
                 "isobject" when args.Count == 1 => XPScriptRuntime.IsObject(Arg(0)),
                 "isscalar" when args.Count == 1 => Arg(0) is not LSArray && XPScriptRuntime.IsScalar(Arg(0)),
                 "isnumeric" when args.Count == 1 => XPScriptRuntime.IsNumeric(Arg(0)),
@@ -288,18 +288,6 @@ internal static class XPScriptEvaluateRuntime
 
                 _ => throw new XPScriptRuntimeException(5, "Function is not available inside Evaluate: " + name)
             };
-        }
-
-        private static object? Add(object? left, object? right)
-        {
-            if (left is null || right is null) return null;
-            if (left is string leftText) return leftText + XPScriptRuntime.CStr(right);
-            if (right is string rightText)
-            {
-                if (double.TryParse(rightText, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var parsed)) return Numeric(left) + parsed;
-                return XPScriptRuntime.CStr(left) + rightText;
-            }
-            return Numeric(left) + Numeric(right);
         }
 
         private static double Numeric(object? value) => XPScriptRuntime.CDbl(value);

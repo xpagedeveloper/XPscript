@@ -1,0 +1,108 @@
+name: Evaluate Null Empty Semantics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/evaluate-null-empty-semantics.xps'
+      - 'samples/evaluate-return-nothing-error.xps'
+      - 'todo/evaluate-callvar-todo.md'
+      - 'todo/null-empty-nothing-semantics.md'
+      - '.github/workflows/evaluate-null-empty-semantics.yml'
+  push:
+    branches:
+      - todo-evaluate-null-empty-nothing-parity
+    paths:
+      - 'src/XPScript.Compiler/XPScriptEvaluateRuntimeSource.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/evaluate-null-empty-semantics.xps'
+      - 'samples/evaluate-return-nothing-error.xps'
+      - 'todo/evaluate-callvar-todo.md'
+      - 'todo/null-empty-nothing-semantics.md'
+      - '.github/workflows/evaluate-null-empty-semantics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify Evaluate Null and Empty parity
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/evaluate-null | Out-Null
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/evaluate-null/parity$extension"
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-null-empty-semantics.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Evaluate Null/Empty parity sample compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Evaluate Null/Empty parity sample exited with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'NORETURN_TYPE=EMPTY',
+            'NORETURN_DT=0',
+            'NORETURN_ISEMPTY=True',
+            'NORETURN_ISNULL=False',
+            'NULL_TYPE=NULL',
+            'NULL_DT=1',
+            'NULL_ISEMPTY=False',
+            'NULL_ISNULL=True',
+            'NULL_PLUS_ISNULL=True',
+            'INNER_NULL_TYPE=NULL',
+            'INNER_NULL_DT=1',
+            'INNER_NULL_ISEMPTY=False',
+            'INNER_NULL_ISNULL=True'
+          )) {
+            if ($output -notcontains $value) { throw "Evaluate Null/Empty output missing: $value" }
+          }
+
+      - name: Verify Evaluate Return Nothing rejection
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/evaluate-null/nothing$extension"
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-return-nothing-error.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Evaluate Return Nothing negative sample must compile.' }
+
+          $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+          try {
+            $PSNativeCommandUseErrorActionPreference = $false
+            $output = & $program 2>&1
+            $exit = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+          }
+
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exit -eq 0) { throw 'Evaluate Return Nothing unexpectedly succeeded.' }
+          $text = $output -join "`n"
+          if (-not $text.Contains('Invalid procedure call in Evaluate', [StringComparison]::Ordinal)) {
+            throw 'Evaluate Return Nothing did not map to the bounded XPScript error 5 diagnostic.'
+          }

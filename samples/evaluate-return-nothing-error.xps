@@ -1,0 +1,5 @@
+Sub Initialize
+    Dim result As Variant
+    result = Evaluate("Return Nothing")
+    Print "UNEXPECTED=" & TypeName(result)
+End Sub
