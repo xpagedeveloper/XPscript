@@ -5,7 +5,7 @@ internal static class TypeCoercionRuntimeSource
     public const string Code = """
 internal static class XPScriptNullRuntime
 {
-    private sealed class NullSentinel
+    private readonly struct NullSentinel
     {
         public override string ToString() => "";
     }
