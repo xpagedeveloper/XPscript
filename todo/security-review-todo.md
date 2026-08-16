@@ -143,12 +143,13 @@ Status:
 - [x] estimated JSON payload is limited to 16 MiB
 - [x] serialized JSON output is limited to 16 MiB UTF-8
 - [x] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
-- [>] budget arithmetic overflow is normalized to a bounded XPScript error
+- [x] budget arithmetic overflow is normalized to a bounded XPScript error; verified by `JSON Security Closeout` on Windows, Ubuntu and macOS
 - [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
-- [>] parsed numeric conversion refuses non-finite Double results
+- [x] parsed numeric conversion refuses non-finite Double results; verified by the `1e400` regression in `JSON Security Closeout` on Windows, Ubuntu and macOS
 - [x] malformed JSON diagnostics do not echo the complete JSON source payload
 - [x] regression source: `samples/json-resource-limits.xps`
 - [x] build/runtime verification of parse/depth/node/payload/numeric limits on Windows, Ubuntu and macOS
+- [x] complete JSON security matrix is verified by `JSON Security Closeout` on Windows, Ubuntu and macOS
 
 ## Native interop
 
