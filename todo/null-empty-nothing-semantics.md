@@ -41,8 +41,8 @@ Status:
 
 - [x] Compile `Null` to the Variant `NULL` sentinel in normal compiled expressions; string literals and comments are excluded from rewriting and the behavior is cross-platform verified.
 - [x] `Set object = Nothing` clears the object reference through `LSRef<T>` semantics.
-- [ ] Reject invalid assignment of `Nothing` to scalar/Variant value contexts where an object reference is required.
-- [ ] Permit `Null` only where Variant-compatible semantics apply.
+- [x] Reject invalid `Nothing` value assignment outside object-reference `Set`; `Variant = Nothing` is rejected by `SourceTypeValidator` instead of silently becoming EMPTY. Cross-platform fixture: `samples/nothing-variant-assignment-error.xps`.
+- [x] Permit `Null` only for Variant-compatible direct assignments and parameters where the source type validator can resolve the target type; typed local and module-global scalar assignments are rejected with bounded XPScript diagnostics. Cross-platform fixtures: `samples/null-integer-assignment-error.xps`, `samples/null-module-global-assignment-error.xps`, `samples/null-variant-parameter.xps` and `samples/null-integer-parameter-error.xps`.
 
 ## Inspection functions
 
@@ -89,6 +89,8 @@ Status:
 
 - [x] Normal-runtime fixture covers initialization, NULL assignment, inspection and Variant `+` propagation: `samples/null-empty-semantics.xps`.
 - [x] Inspection/conversion helper fixture covers `IsNumeric`, `IsScalar`, `IsObject`, `IsDate`, `IsArray` and `CVar` for EMPTY and NULL: `samples/null-empty-inspection-helpers.xps`.
+- [x] Invalid assignment fixtures verify `Nothing` cannot be used as a value and typed scalar targets reject `Null` before generated C# compilation: `samples/nothing-variant-assignment-error.xps`, `samples/null-integer-assignment-error.xps`, `samples/null-module-global-assignment-error.xps`.
+- [x] Parameter fixtures verify `Null` is preserved for Variant parameters and rejected for typed scalar parameters: `samples/null-variant-parameter.xps` and `samples/null-integer-parameter-error.xps`.
 - [x] Module-global and Static Variant EMPTY initialization and Static persistence are covered by `samples/variant-global-static-empty.xps`.
 - [x] Object-reference NOTHING, alias and Delete behavior are covered by `.github/workflows/null-empty-semantics.yml` using `samples/module-object-references.xps`.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.

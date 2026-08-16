@@ -1,0 +1,5 @@
+Public moduleValue As Integer
+
+Sub Main()
+    moduleValue = Null
+End Sub

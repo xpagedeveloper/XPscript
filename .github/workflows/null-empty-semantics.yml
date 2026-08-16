@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptRuntimeSource.cs'
@@ -12,6 +13,11 @@ on:
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'samples/null-empty-semantics.xps'
       - 'samples/null-empty-inspection-helpers.xps'
+      - 'samples/nothing-variant-assignment-error.xps'
+      - 'samples/null-integer-assignment-error.xps'
+      - 'samples/null-module-global-assignment-error.xps'
+      - 'samples/null-variant-parameter.xps'
+      - 'samples/null-integer-parameter-error.xps'
       - 'samples/module-object-references.xps'
       - 'samples/variant-global-static-empty.xps'
       - 'todo/null-empty-nothing-semantics.md'
@@ -20,6 +26,7 @@ on:
     branches:
       - 'todo-*'
     paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptRuntimeSource.cs'
@@ -27,6 +34,11 @@ on:
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'samples/null-empty-semantics.xps'
       - 'samples/null-empty-inspection-helpers.xps'
+      - 'samples/nothing-variant-assignment-error.xps'
+      - 'samples/null-integer-assignment-error.xps'
+      - 'samples/null-module-global-assignment-error.xps'
+      - 'samples/null-variant-parameter.xps'
+      - 'samples/null-integer-parameter-error.xps'
       - 'samples/module-object-references.xps'
       - 'samples/variant-global-static-empty.xps'
       - 'todo/null-empty-nothing-semantics.md'
@@ -110,6 +122,56 @@ jobs:
             'NULL_CVAR_ISNULL=True'
           )) {
             if ($output -notcontains $value) { throw "Null/Empty inspection helper output missing: $value" }
+          }
+
+      - name: Compile and verify Null Variant parameter semantics
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/null-variant-parameter$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/null-variant-parameter.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Null Variant parameter regression compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Null Variant parameter regression exited with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'PARAM_TYPE=NULL',
+            'PARAM_ISNULL=True',
+            'PARAM_ISEMPTY=False'
+          )) {
+            if ($output -notcontains $value) { throw "Null Variant parameter output missing: $value" }
+          }
+
+      - name: Verify invalid Null and Nothing value assignments are rejected
+        shell: pwsh
+        run: |
+          $cases = @(
+            @{ File = './samples/nothing-variant-assignment-error.xps'; Expected = 'Nothing is valid only for object-reference assignment with Set.' },
+            @{ File = './samples/null-integer-assignment-error.xps'; Expected = 'Null can be assigned only to a Variant-compatible value, not Integer.' },
+            @{ File = './samples/null-module-global-assignment-error.xps'; Expected = 'Null can be assigned only to a Variant-compatible value, not Integer.' },
+            @{ File = './samples/null-integer-parameter-error.xps'; Expected = "Null can be passed only to a Variant-compatible parameter. Parameter 'value' of 'AcceptInteger' expects Integer." }
+          )
+
+          foreach ($case in $cases) {
+            $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+            try {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $case.File --framework-dependent 2>&1
+              $exit = $LASTEXITCODE
+              $global:LASTEXITCODE = 0
+            }
+            finally {
+              $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+            }
+
+            $output | ForEach-Object { Write-Host $_ }
+            if ($exit -eq 0) { throw "Negative assignment fixture unexpectedly compiled: $($case.File)" }
+            $text = $output -join "`n"
+            if (-not $text.Contains($case.Expected, [StringComparison]::Ordinal)) {
+              throw "Expected assignment diagnostic missing for $($case.File): $($case.Expected)"
+            }
           }
 
       - name: Compile and verify object Nothing semantics

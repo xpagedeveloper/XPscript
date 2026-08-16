@@ -1,0 +1,4 @@
+Sub Main()
+    Dim value As Variant
+    value = Nothing
+End Sub
