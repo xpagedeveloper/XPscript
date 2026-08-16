@@ -16,7 +16,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9801, "Undeclared Evaluate assignment should map to error 5"
     End If
-    If Instr(evaluateMessage, "Assignment requires a local variable declared with Dim:") <> 1 Then
+    If evaluateMessage <> "Evaluate source contains an invalid identifier." Then
         Error 9802, "Unexpected undeclared-assignment Evaluate diagnostic"
     End If
 
@@ -28,7 +28,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9803, "Duplicate Evaluate Dim should map to error 5"
     End If
-    If Instr(evaluateMessage, "Variable already declared in Evaluate scope:") <> 1 Then
+    If evaluateMessage <> "Evaluate source contains an invalid identifier." Then
         Error 9804, "Unexpected duplicate-Dim Evaluate diagnostic"
     End If
 
@@ -40,7 +40,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9805, "Unsupported Evaluate local type should map to error 5"
     End If
-    If Instr(evaluateMessage, "Unsupported Evaluate local type:") <> 1 Then
+    If evaluateMessage <> "Evaluate source contains an unsupported local type." Then
         Error 9806, "Unexpected unsupported-local-type Evaluate diagnostic"
     End If
 
@@ -64,7 +64,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9809, "Unsupported Evaluate character should map to error 5"
     End If
-    If Instr(evaluateMessage, "Unsupported character in Evaluate source:") <> 1 Then
+    If evaluateMessage <> "Evaluate source contains an unsupported character." Then
         Error 9810, "Unexpected unsupported-character Evaluate diagnostic"
     End If
 
