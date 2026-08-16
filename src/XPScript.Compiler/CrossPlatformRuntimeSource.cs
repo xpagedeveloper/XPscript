@@ -259,21 +259,20 @@ internal static class XPCrossPlatformRuntime
     private static string BuildWindowsBatchCommand(string fileName, IReadOnlyList<string> arguments)
     {
         ValidateBatchFileName(fileName);
-        var command = new System.Text.StringBuilder();
-        command.Append('"').Append('"').Append(fileName).Append('"');
+        var command = new System.Text.StringBuilder("call ");
+        command.Append('"').Append(fileName).Append('"');
 
         foreach (var argument in arguments)
         {
             ValidateBatchArgument(argument);
             command.Append(' ').Append('"').Append(argument).Append('"');
         }
-        command.Append('"');
         return command.ToString();
     }
 
     private static void ValidateBatchFileName(string value)
     {
-        if (value.IndexOfAny(['\r', '\n', '\0', '"']) >= 0)
+        if (value.IndexOfAny(['\r', '\n', '\0', '"', '&', '|', '<', '>', '^', '%', '!']) >= 0)
             throw new XPScriptRuntimeException(5, "Batch script path contains unsupported command-shell characters.");
     }
 
