@@ -21,13 +21,13 @@ Relevant negative samples:
 
 Each compile invocation uses a GUID-named temporary workspace under the XPScript compiler temp root. Generated source, project files and publish output are kept inside that invocation-local workspace and cleanup is attempted in a `finally` block.
 
-On Unix-like systems compiler directories are hardened to user-only directory permissions and generated/staged files to user-only read/write permissions where supported. On Windows the compiler removes inherited ACLs from its invocation/staging directories and grants the current Windows account full control; child files inherit that restricted ACL.
+On Unix-like systems compiler directories are hardened to user-only directory permissions and generated/staged files to user-only read/write permissions where supported. On Windows the compiler removes inherited ACLs from its invocation/staging directories and grants the current Windows security principal full control through its SID. Child files inherit that restricted ACL.
 
 Generated `dotnet publish` processes receive invocation-local `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES`. Common inherited MSBuild path-redirection variables are removed and the `dotnet` host is resolved to an absolute path rather than allowing a relative/current-directory PATH hit.
 
 Final executable/dependency publication is staged beside the requested destination. Existing regular output files may be replaced deliberately, but the compiler refuses to overwrite the `.xps` source itself, refuses destination paths traversing symlinks/junctions/reparse points, and refuses to replace an output target that is itself a link. Dependencies are committed before the executable and staged publication performs best-effort rollback if the batch fails.
 
-Further verification remains tracked in `todo/security-review-todo.md` and `todo/compiler-temp-isolation-todo.md`.
+Compiler workspace isolation, permissions, parallel invocation safety, process isolation and publication safety are permanently regression-tested on Windows, Ubuntu and macOS.
 
 ## Managed and native dependencies
 
@@ -37,7 +37,7 @@ Application-local native libraries are copied beside the generated executable on
 
 At runtime, application-local native declarations are bound through a generated `DllImportResolver` to exactly the executable directory. XPScript does not search the current directory, PATH or arbitrary library directories for those application-local declarations. A packaged application-local native file that is itself a symbolic link or reparse point is rejected before loading.
 
-Bare system-library names remain OS-loader-resolved. Transitive native dependencies required by an application-local library are still subject to the target operating system's native dependency-resolution rules and must be reviewed separately.
+Bare system-library names remain OS-loader-resolved. Transitive native dependencies required by an application-local library are still subject to the target operating system's native dependency-resolution rules and must be reviewed separately. The security regression suite verifies that executable-local transitive dependencies win over current-directory copies and that missing trusted dependencies do not fall back to current-directory libraries.
 
 Native libraries execute unmanaged code with the same operating-system privileges as the XPScript process. Only trusted native binaries should be referenced.
 
@@ -52,7 +52,7 @@ See:
 
 `Shell()` is a powerful API. Do not pass untrusted command strings directly to it.
 
-For ordinary executable and PowerShell-script execution, XPScript uses `ProcessStartInfo.ArgumentList` where practical and disables `UseShellExecute`. PowerShell discovery ignores relative PATH entries; Windows also prefers the standard PowerShell installation locations.
+For ordinary executable and PowerShell-script execution, XPScript uses `ProcessStartInfo.ArgumentList` where practical and disables `UseShellExecute`. PowerShell discovery ignores relative PATH entries. Windows also prefers the standard PowerShell installation locations.
 
 Windows `.cmd` and `.bat` files are different because they execute through `cmd.exe`. XPScript therefore rejects batch arguments containing command-interpreter metacharacters or embedded quotes/control characters, including `&`, `|`, `<`, `>`, `^`, `%` and `!`. `cmd.exe` itself is selected from the Windows system directory rather than from `COMSPEC`.
 
@@ -95,7 +95,7 @@ Current protections include:
 - nesting/element/payload budgets,
 - sanitized diagnostics that should not echo callvar values.
 
-These controls reduce accidental state leakage and resource abuse. They do **not** make Evaluate a complete hostile-code sandbox.
+These controls reduce accidental state leakage and resource abuse. They do not make Evaluate a complete hostile-code sandbox.
 
 Use process/container isolation if arbitrary hostile users must execute programmable code.
 
@@ -109,9 +109,11 @@ Header names are validated before storage. Header values reject CR, LF, NUL and 
 
 Automatic redirects are disabled. A 3xx response is returned to the XPScript caller rather than silently following `Location`, which prevents authorization/custom headers from being automatically forwarded to another origin.
 
-Request bodies are limited to 8 MiB UTF-8 and response bodies to 8 MiB. Response bodies are streamed and the limit is enforced both from declared `Content-Length` and while reading.
+Request bodies are limited to 8 MiB UTF-8 and response bodies to 64 MiB. Response bodies are read using `ResponseHeadersRead` and the limit is enforced both from declared `Content-Length` and while streaming.
 
 The HTTP runtime deliberately does not expose full invalid URLs or underlying request exception messages in hardened error paths because URLs may contain credentials, tokens or sensitive query parameters.
+
+Raw response bytes can be saved without text conversion. Multipart responses expose all parts, including binary-safe file parts and a filtered file-only view.
 
 A syntactically valid HTTP URL can still target loopback, private networks or cloud metadata services. Applications accepting user-controlled URLs must enforce their own host/network allowlist when SSRF is a concern.
 
@@ -121,6 +123,7 @@ See:
 - [samples/native-http-json.xps](../samples/native-http-json.xps)
 - [samples/native-http-header-validation.xps](../samples/native-http-header-validation.xps)
 - [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
+- [samples/native-http-binary-files.xps](../samples/native-http-binary-files.xps)
 
 ## JSON
 
@@ -140,7 +143,7 @@ Native parameters must currently be explicit `ByVal`. `ByRef` and omitted parame
 
 Application-local native declarations are resolved only from the executable directory as described above. System-library declarations continue to use the OS loader.
 
-These protections reduce accidental loader and declaration errors; they do not sandbox unmanaged code.
+These protections reduce accidental loader and declaration errors. They do not sandbox unmanaged code.
 
 ## COM/OLE compatibility
 
@@ -156,11 +159,13 @@ The legacy [samples/runtime-sax.xps](../samples/runtime-sax.xps) contains disabl
 
 ## Secrets and diagnostics
 
-Do not rely on error messages as a data-return channel.
+Diagnostics must remain useful without becoming a secret or source-payload disclosure channel.
 
-Evaluate diagnostics are explicitly sanitized. Native HTTP validation/network diagnostics are also designed not to echo URL/header payload values in hardened paths.
+Compiler diagnostics may retain semantic identifiers such as variable, function, parameter, member and declared type names when they are required to explain an error. Source string literal contents, complete sensitive paths, request URLs, header values, JSON payloads, compiler workspace paths and raw underlying exception messages are redacted or normalized in hardened paths.
 
-Other runtime/compiler diagnostics remain under review for absolute paths, source literals and other potentially sensitive values.
+Structured source diagnostics preserve source layout while masking characters inside string literals. Generated-build diagnostics replace invocation-local temporary roots with `<compiler-workspace>`, and unexpected compiler failures return `Compilation failed.` instead of raw exception text.
+
+See [docs/diagnostics-security.md](diagnostics-security.md) for the detailed diagnostic policy.
 
 ## Deployment guidance
 
@@ -176,4 +181,4 @@ For higher-risk workloads:
 
 ## Security review status
 
-Implementation hardening is tracked in `todo/security-review-todo.md`. Items remain `[>]` until build/runtime verification is explicitly re-enabled and the corresponding positive/negative regressions pass.
+The security checklist in `todo/security-review-todo.md` records verified boundaries. Permanent closeout workflows cover compiler identifiers and workspace isolation, dependency publication, Shell, File I/O, Evaluate, HTTP, JSON, native interop, COM compatibility and diagnostics on the relevant Windows, Ubuntu and macOS matrices.
