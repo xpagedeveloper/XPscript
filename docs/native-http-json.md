@@ -16,23 +16,23 @@ Dim http As New HttpClient
 The native HTTP client is deliberately bounded:
 
 - request bodies are limited to **8 MiB** of UTF-8 data,
-- response bodies are limited to **8 MiB**,
+- response bodies are limited to **64 MiB**,
 - automatic redirects are disabled,
 - only absolute `http://` and `https://` URLs are accepted,
-- timeout must be finite and greater than zero,
+- timeout defaults to **30 seconds** and must be finite and greater than zero,
 - header names/values are validated and CR/LF/NUL injection is rejected.
 
 These are runtime safety constraints and apply independently of application-specific authorization or endpoint policy.
 
 ### Timeout
 
-Timeout is configured in seconds and must be a finite value greater than zero.
+Timeout is configured in seconds. The default is **30 seconds** and the value must be finite and greater than zero.
 
 ```xpscript
 http.Timeout = 30
 ```
 
-Values less than or equal to zero, NaN or infinity are rejected with a controlled runtime error.
+The timeout may be changed between requests. Values less than or equal to zero, NaN or infinity are rejected with a controlled runtime error.
 
 ### SetHeader
 
@@ -61,31 +61,31 @@ Clears configured request headers.
 Set response = http.Get("https://example.com/api")
 ```
 
-**Limitations:** URL must be absolute `http`/`https`; response body is capped at **8 MiB**; redirects are returned to the caller instead of followed automatically.
+**Limitations:** URL must be absolute `http`/`https`; response body is capped at **64 MiB**; redirects are returned to the caller instead of followed automatically.
 
 ### Post
 
 Sends a request body with POST.
 
-**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **64 MiB**. The URL must be absolute `http`/`https`.
 
 ### Put
 
 Sends a request body with PUT.
 
-**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **64 MiB**. The URL must be absolute `http`/`https`.
 
 ### Patch
 
 Sends a request body with PATCH.
 
-**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **8 MiB**. The URL must be absolute `http`/`https`.
+**Limitations:** request body is capped at **8 MiB UTF-8** and response body at **64 MiB**. The URL must be absolute `http`/`https`.
 
 ### Delete
 
 Sends a DELETE request.
 
-**Limitations:** URL must be absolute `http`/`https`; response body is capped at **8 MiB**; redirects are not followed automatically.
+**Limitations:** URL must be absolute `http`/`https`; response body is capped at **64 MiB**; redirects are not followed automatically.
 
 Network calls are side-effecting operations. Tests should use a controlled endpoint rather than relying on a public service.
 
@@ -102,7 +102,7 @@ An application may inspect the returned `Location` header and explicitly issue a
 The native HTTP runtime applies fixed defensive limits:
 
 - request body: maximum **8 MiB** of UTF-8 payload,
-- response body: maximum **8 MiB**,
+- response body: maximum **64 MiB**,
 - response bodies are read using `ResponseHeadersRead` and checked while streaming,
 - a declared `Content-Length` larger than the response limit is rejected before buffering the body.
 
@@ -128,6 +128,8 @@ Set response = http.Get("https://example.com/api")
 Print CStr(response.StatusCode)
 Print response.Body
 ```
+
+`Body` is currently exposed as decoded text. Applications that need binary-safe streaming or direct file download should use a dedicated binary response API once that support is added instead of treating arbitrary binary payloads as text.
 
 ## HttpClient lifetime
 
