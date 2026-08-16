@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim pipeText As String
+    Dim braceText As String
+    Dim singlePipe As String
+    Dim singleBrace As String
+
+    pipeText = |first line
+second "quoted" line
+third || pipe|
+
+    braceText = {alpha
+beta "quoted" line
+gamma }} brace}
+
+    singlePipe = |single "pipe" value|
+    singleBrace = {single "brace" value}
+
+    Print "PIPE=" & Replace(Replace(pipeText, Chr(13), "<CR>"), Chr(10), "<LF>")
+    Print "BRACE=" & Replace(Replace(braceText, Chr(13), "<CR>"), Chr(10), "<LF>")
+    Print "SINGLE-PIPE=" & singlePipe
+    Print "SINGLE-BRACE=" & singleBrace
+    Print "MULTILINE-STRING=OK"
+End Sub

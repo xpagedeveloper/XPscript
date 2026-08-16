@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim value As String
+    value = |first line
+second line
+End Sub
