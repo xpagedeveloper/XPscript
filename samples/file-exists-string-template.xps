@@ -1,0 +1,33 @@
+Sub Main()
+    Dim arr(1) As String
+    arr(0) = "fredrik"
+    arr(1) = "52"
+
+    Dim text As String
+    text = StrTemplate("Hello {0}, you are {1} years old. Escaped: \{0\} and \}.", arr)
+    Print text
+
+    If FileExists("./utility-fixture/existing.txt") Then
+        Print "FILE_EXISTS=YES"
+    Else
+        Print "FILE_EXISTS=NO"
+    End If
+
+    If FileExists("./utility-fixture/missing.txt") Then
+        Print "MISSING_FILE=YES"
+    Else
+        Print "MISSING_FILE=NO"
+    End If
+
+    If DirExists("./utility-fixture/subdir") Then
+        Print "DIR_EXISTS=YES"
+    Else
+        Print "DIR_EXISTS=NO"
+    End If
+
+    If DirExists("./utility-fixture/missing-dir") Then
+        Print "MISSING_DIR=YES"
+    Else
+        Print "MISSING_DIR=NO"
+    End If
+End Sub
