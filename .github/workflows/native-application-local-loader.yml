@@ -6,6 +6,7 @@ on:
     paths:
       - 'tests/NativeLocalFixture/**'
       - 'samples/native-application-local.xps'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/native-application-local-loader.yml'
       - 'src/XPScript.Compiler/NativeDependencyPackager.cs'
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'

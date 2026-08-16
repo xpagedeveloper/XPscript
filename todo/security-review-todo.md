@@ -161,8 +161,8 @@ Status:
 - [>] documentation states that native interop executes unmanaged code with process privileges
 - [>] negative ABI source: `samples/native-byref-error.xps`
 - [x] supported `ByVal Integer` scalar parameter and Integer return ABI is verified on Windows x64/arm64, Linux x64/arm64 and macOS x64/arm64 by `Native Scalar ABI`
-- [ ] verify application-local loader behavior on Windows/Linux/macOS
-- [ ] review transitive native dependency search/preloading behavior for dependencies of the selected application-local library
+- [x] application-local loader behavior is verified on Windows, Ubuntu and macOS by `Native Application Local Loader`, including executable-directory resolution from a foreign working directory and rejection of linked application-local libraries
+- [x] transitive native dependency search/preloading behavior is reviewed and regression-tested by `Native Transitive Loader Security`; executable-local dependencies win over current-directory copies and missing trusted dependencies do not fall back to current-directory libraries on Windows, Ubuntu and macOS
 
 ## COM / compatibility APIs
 
