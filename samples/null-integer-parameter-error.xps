@@ -1,0 +1,6 @@
+Sub AcceptInteger(ByVal value As Integer)
+End Sub
+
+Sub Main()
+    Call AcceptInteger(Null)
+End Sub
