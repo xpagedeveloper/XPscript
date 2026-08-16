@@ -211,16 +211,16 @@ internal static class XPScriptFileIO
             nativePosition = DarwinSeek(fd, 0, DarwinSeekCurrent);
             if (nativePosition < 0)
             {
-                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
-                throw new XPScriptRuntimeException(70, "Unable to read macOS file descriptor position before " + operation + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+                var seekError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new XPScriptRuntimeException(70, "Unable to read macOS file descriptor position before " + operation + ". errno=" + seekError.ToString(CultureInfo.InvariantCulture));
             }
 
             if (DarwinSeek(fd, offset, DarwinSeekSet) < 0)
             {
-                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                var seekError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
                 throw new XPScriptRuntimeException(70,
                     "Unable to position macOS file descriptor for " + operation + " at offset " + offset.ToString(CultureInfo.InvariantCulture) +
-                    ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+                    ". errno=" + seekError.ToString(CultureInfo.InvariantCulture));
             }
 
             if (DarwinLockf(fd, function, length) == 0)
