@@ -1,0 +1,81 @@
+name: Documentation Security Closeout
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/documentation-security-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify security documentation coverage and consistency
+        shell: pwsh
+        run: |
+          $platform = Get-Content -Raw 'docs/platform-native.md'
+          $security = Get-Content -Raw 'docs/security.md'
+          $http = Get-Content -Raw 'docs/native-http-json.md'
+          $index = Get-Content -Raw 'docs/index.md'
+          $readme = Get-Content -Raw 'README.md'
+          $todo = Get-Content -Raw 'todo/security-review-todo.md'
+
+          $requiredPlatform = @(
+            'explicitly `ByVal`',
+            'DllImportResolver',
+            'AppContext.BaseDirectory',
+            'current working directory, PATH',
+            'transitive native dependencies',
+            'win-x64',
+            'linux-arm64',
+            'osx-arm64'
+          )
+          foreach ($needle in $requiredPlatform) {
+            if (-not $platform.Contains($needle)) { throw "platform-native.md is missing required security text: $needle" }
+          }
+
+          $requiredSecurity = @(
+            '## Compiler temporary files',
+            '## Managed and native dependencies',
+            '## Shell and process execution',
+            '## File I/O',
+            '## Evaluate',
+            '## HTTP',
+            '## JSON',
+            '## Native interop',
+            '## COM/OLE compatibility',
+            '## Secrets and diagnostics',
+            '<compiler-workspace>',
+            'Compilation failed.'
+          )
+          foreach ($needle in $requiredSecurity) {
+            if (-not $security.Contains($needle)) { throw "security.md is missing required boundary text: $needle" }
+          }
+
+          if (-not $security.Contains('response bodies to 64 MiB')) { throw 'security.md must document the 64 MiB HTTP response limit.' }
+          if (-not $http.Contains('response bodies are limited to **64 MiB**')) { throw 'native-http-json.md must document the 64 MiB HTTP response limit.' }
+
+          if (-not $index.Contains('[docs/security.md](security.md)')) { throw 'docs/index.md must link docs/security.md.' }
+          if (-not $readme.Contains('docs/security.md')) { throw 'README.md must link docs/security.md.' }
+
+          $stale = @(
+            'no-CI development branch',
+            'Runtime verification on each target OS remains pending',
+            'Other runtime/compiler diagnostics remain under review',
+            'Items remain `[>]` until build/runtime verification'
+          )
+          foreach ($needle in $stale) {
+            if ($readme.Contains($needle) -or $security.Contains($needle) -or $platform.Contains($needle)) {
+              throw "Stale documentation status remains: $needle"
+            }
+          }
+
+          if (-not $todo.Contains('## Documentation')) { throw 'Security TODO Documentation section is missing.' }
