@@ -1,23 +1,50 @@
-' Native HTTP resource-limit and redirect-policy sample.
-' Runtime verification remains pending while workflow execution is disabled.
-'
+Option Declare
+
 Sub Main()
-    Dim client As HttpClient
+    Dim client As New HttpClient
+    Dim response As HttpResponse
     Dim hugeBody As String
+    Dim errCode As Integer
 
-    Set client = New HttpClient()
-    client.Timeout = 30
+    Print "DEFAULT_TIMEOUT=" & CStr(client.Timeout)
+    client.Timeout = 5
 
-    ' Automatic redirects are disabled. A 3xx response is returned to the caller,
-    ' including its Location header, and must be followed explicitly if desired.
-    Print "HTTP redirect policy: caller-controlled"
+    Set response = client.Get("http://127.0.0.1:18080/redirect")
+    Print "REDIRECT_STATUS=" & CStr(response.StatusCode)
+    Print "REDIRECT_BODY=" & response.Body
 
-    ' Request bodies are limited to 8 MiB of UTF-8 payload.
     hugeBody = String(8388609, "A")
+    On Error Resume Next
+    Set response = client.Post("http://127.0.0.1:18080/post", hugeBody)
+    errCode = Err
+    On Error GoTo 0
+    Print "REQUEST_BODY_LIMIT_ERR=" & CStr(errCode)
 
     On Error Resume Next
-    Call client.Post("https://example.invalid/oversized", hugeBody)
-    Print "Oversized request Err=" & CStr(Err)
-    Print "Oversized request Error$=" & Error$
+    Set response = client.Get("http://127.0.0.1:18080/oversized-declared")
+    errCode = Err
     On Error GoTo 0
+    Print "DECLARED_RESPONSE_LIMIT_ERR=" & CStr(errCode)
+
+    On Error Resume Next
+    Set response = client.Get("http://127.0.0.1:18080/oversized-stream")
+    errCode = Err
+    On Error GoTo 0
+    Print "STREAM_RESPONSE_LIMIT_ERR=" & CStr(errCode)
+
+    client.Timeout = 1
+    On Error Resume Next
+    Set response = client.Get("http://127.0.0.1:18080/slow")
+    errCode = Err
+    On Error GoTo 0
+    Print "TIMEOUT_ERR=" & CStr(errCode)
+
+    Call client.Dispose()
+    On Error Resume Next
+    Set response = client.Get("http://127.0.0.1:18080/get")
+    errCode = Err
+    On Error GoTo 0
+    Print "DISPOSED_ERR=" & CStr(errCode)
+
+    Print "HTTP_RESOURCE_LIMITS=OK"
 End Sub
