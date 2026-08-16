@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class IncludeSourcePreprocessor
 {
-    internal sealed record Result(string Source, SourceMap Map);
+    internal sealed record Result(string Source, SourceMap Map, IReadOnlyList<string> Dependencies);
     private sealed record IncludeStackEntry(string Path, string Key);
 
     private static readonly Regex IncludePattern = new(
@@ -18,19 +18,20 @@ internal sealed class IncludeSourcePreprocessor
 
         var prepared = ExpandedSourceContext.Current;
         if (prepared is not null && prepared.Matches(rootSource, rootSourcePath))
-            return new Result(rootSource, prepared.Map);
+            return new Result(rootSource, prepared.Map, [Path.GetFullPath(rootSourcePath)]);
 
         var rootPath = Path.GetFullPath(rootSourcePath);
         IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
 
         var pathIdentity = new FileSystemPathIdentity();
         var included = new HashSet<string>(StringComparer.Ordinal);
+        var dependencies = new List<string>();
         var stack = new List<IncludeStackEntry>();
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
-        Expand(rootPath, rootSource, pathIdentity, included, stack, output, map);
+        Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map);
 
-        var expanded = new Result(string.Join(Environment.NewLine, output), new SourceMap(map));
+        var expanded = new Result(string.Join(Environment.NewLine, output), new SourceMap(map), dependencies.ToArray());
         var specifications = SourcePreprocessorConfigurationContext.Current;
         if (specifications.Count == 0)
             return expanded;
@@ -40,7 +41,7 @@ internal sealed class IncludeSourcePreprocessor
             expanded.Map,
             rootPath,
             specifications);
-        return new Result(transformed.Source, transformed.Map);
+        return new Result(transformed.Source, transformed.Map, expanded.Dependencies);
     }
 
     private void Expand(
@@ -48,6 +49,7 @@ internal sealed class IncludeSourcePreprocessor
         string source,
         FileSystemPathIdentity pathIdentity,
         HashSet<string> included,
+        List<string> dependencies,
         List<IncludeStackEntry> stack,
         List<string> output,
         List<SourceMap.Location> map)
@@ -63,6 +65,7 @@ internal sealed class IncludeSourcePreprocessor
         }
 
         if (!included.Add(sourceKey)) return;
+        dependencies.Add(sourcePath);
 
         stack.Add(new IncludeStackEntry(sourcePath, sourceKey));
         try
@@ -128,7 +131,7 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                Expand(includePath, includeSource, pathIdentity, included, stack, output, map);
+                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map);
             }
         }
         finally
