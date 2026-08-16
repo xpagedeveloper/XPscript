@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace XPScript.Web.Runtime;
 
@@ -51,6 +52,101 @@ public sealed class XpsWebRequest
     public string Protocol { get; }
     public IReadOnlyDictionary<string, string> Cookies { get; }
     public CancellationToken CancellationToken { get; }
+    public bool IsCancellationRequested => CancellationToken.IsCancellationRequested;
+
+    public IReadOnlyList<string> Query(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
+        GetValues(ParseUrlEncoded(QueryString, maxQueryChars, maxFields, "query string"), name);
+
+    public string QueryFirst(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
+        Query(name, maxQueryChars, maxFields).FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<string> Header(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return Headers.TryGetValue(name, out var values) ? values : Array.Empty<string>();
+    }
+
+    public string HeaderFirst(string name) => Header(name).FirstOrDefault() ?? string.Empty;
+
+    public string? Cookie(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return Cookies.TryGetValue(name, out var value) ? value : null;
+    }
+
+    public string BodyText(int maxBytes = 1_048_576)
+    {
+        if (maxBytes < 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        if (Body.Length > maxBytes) throw new InvalidOperationException($"Request body exceeds the configured {maxBytes} byte text limit.");
+        return new UTF8Encoding(false, true).GetString(Body.Span);
+    }
+
+    public byte[] BodyBytes(int maxBytes = 1_048_576)
+    {
+        if (maxBytes < 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        if (Body.Length > maxBytes) throw new InvalidOperationException($"Request body exceeds the configured {maxBytes} byte binary limit.");
+        return Body.ToArray();
+    }
+
+    public IReadOnlyList<string> Form(string name, int maxBytes = 1_048_576, int maxFields = 256)
+    {
+        if (ContentType is null || !ContentType.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
+            return Array.Empty<string>();
+        var text = BodyText(maxBytes);
+        return GetValues(ParseUrlEncoded(text, maxBytes, maxFields, "form body"), name);
+    }
+
+    public string FormFirst(string name, int maxBytes = 1_048_576, int maxFields = 256) =>
+        Form(name, maxBytes, maxFields).FirstOrDefault() ?? string.Empty;
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ParseUrlEncoded(
+        string raw,
+        int maxChars,
+        int maxFields,
+        string displayName)
+    {
+        if (maxChars < 0) throw new ArgumentOutOfRangeException(nameof(maxChars));
+        if (maxFields is < 1 or > 100_000) throw new ArgumentOutOfRangeException(nameof(maxFields));
+        var value = raw.StartsWith("?", StringComparison.Ordinal) ? raw[1..] : raw;
+        if (value.Length > maxChars) throw new InvalidOperationException($"Request {displayName} exceeds the configured {maxChars} character limit.");
+
+        var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (value.Length == 0) return new ReadOnlyDictionary<string, IReadOnlyList<string>>(new Dictionary<string, IReadOnlyList<string>>());
+
+        var fields = value.Split('&');
+        if (fields.Length > maxFields) throw new InvalidOperationException($"Request {displayName} exceeds the configured {maxFields} field limit.");
+        foreach (var field in fields)
+        {
+            var separator = field.IndexOf('=');
+            var rawName = separator >= 0 ? field[..separator] : field;
+            var rawValue = separator >= 0 ? field[(separator + 1)..] : string.Empty;
+            var name = DecodeUrlComponent(rawName);
+            var decodedValue = DecodeUrlComponent(rawValue);
+            if (!result.TryGetValue(name, out var values)) result[name] = values = [];
+            values.Add(decodedValue);
+        }
+
+        return new ReadOnlyDictionary<string, IReadOnlyList<string>>(
+            result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<string>)Array.AsReadOnly(pair.Value.ToArray()), StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string DecodeUrlComponent(string value)
+    {
+        try
+        {
+            return Uri.UnescapeDataString(value.Replace('+', ' '));
+        }
+        catch (UriFormatException ex)
+        {
+            throw new InvalidOperationException("Request contains malformed URL encoding.", ex);
+        }
+    }
+
+    private static IReadOnlyList<string> GetValues(IReadOnlyDictionary<string, IReadOnlyList<string>> values, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return values.TryGetValue(name, out var result) ? result : Array.Empty<string>();
+    }
 
     private static string NormalizeMethod(string method)
     {

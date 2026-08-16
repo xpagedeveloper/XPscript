@@ -1,7 +1,15 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text;
 
 namespace XPScript.Web.Runtime;
+
+public sealed record XpsCookieOptions(
+    string Path = "/",
+    bool HttpOnly = false,
+    bool Secure = false,
+    string SameSite = "Lax",
+    TimeSpan? MaxAge = null);
 
 public sealed class XpsWebResponse
 {
@@ -48,10 +56,38 @@ public sealed class XpsWebResponse
         _headers.Remove(name);
     }
 
+    public void SetCookie(string name, string value, XpsCookieOptions? options = null)
+    {
+        EnsureWritable();
+        ValidateCookieName(name);
+        ValidateCookieValue(value);
+        options ??= new XpsCookieOptions();
+        ValidateCookiePath(options.Path);
+        var sameSite = NormalizeSameSite(options.SameSite);
+        if (sameSite.Equals("None", StringComparison.OrdinalIgnoreCase) && !options.Secure)
+            throw new ArgumentException("SameSite=None cookies must also use Secure.", nameof(options));
+
+        var header = new StringBuilder()
+            .Append(name).Append('=').Append(value)
+            .Append("; Path=").Append(options.Path)
+            .Append("; SameSite=").Append(sameSite);
+        if (options.HttpOnly) header.Append("; HttpOnly");
+        if (options.Secure) header.Append("; Secure");
+        if (options.MaxAge is not null)
+        {
+            var seconds = checked((long)Math.Floor(options.MaxAge.Value.TotalSeconds));
+            header.Append("; Max-Age=").Append(seconds.ToString(CultureInfo.InvariantCulture));
+        }
+        AppendHeader("Set-Cookie", header.ToString());
+    }
+
+    public void DeleteCookie(string name, string path = "/", bool secure = false, string sameSite = "Lax") =>
+        SetCookie(name, string.Empty, new XpsCookieOptions(path, HttpOnly: false, Secure: secure, SameSite: sameSite, MaxAge: TimeSpan.Zero));
+
     public void Write(object? value)
     {
         EnsureWritable();
-        var text = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
         var bytes = Encoding.UTF8.GetBytes(text);
         _body.Write(bytes);
     }
@@ -116,5 +152,38 @@ public sealed class XpsWebResponse
         ArgumentNullException.ThrowIfNull(value);
         if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
             throw new ArgumentException("Header value contains a prohibited control character.", nameof(value));
+    }
+
+    private static void ValidateCookieName(string name)
+    {
+        ValidateHeaderName(name);
+        if (name.StartsWith("$", StringComparison.Ordinal))
+            throw new ArgumentException("Cookie name must not start with '$'.", nameof(name));
+    }
+
+    private static void ValidateCookieValue(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        foreach (var c in value)
+        {
+            if (c <= 0x20 || c >= 0x7f || c is '"' or ',' or ';' or '\\')
+                throw new ArgumentException("Cookie value contains a prohibited character. Encode the value before setting the cookie.", nameof(value));
+        }
+    }
+
+    private static void ValidateCookiePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal))
+            throw new ArgumentException("Cookie path must be an absolute HTTP path.", nameof(path));
+        if (path.IndexOfAny(['\r', '\n', '\0', ';']) >= 0)
+            throw new ArgumentException("Cookie path contains a prohibited character.", nameof(path));
+    }
+
+    private static string NormalizeSameSite(string value)
+    {
+        if (value.Equals("Strict", StringComparison.OrdinalIgnoreCase)) return "Strict";
+        if (value.Equals("Lax", StringComparison.OrdinalIgnoreCase)) return "Lax";
+        if (value.Equals("None", StringComparison.OrdinalIgnoreCase)) return "None";
+        throw new ArgumentException("SameSite must be Strict, Lax or None.", nameof(value));
     }
 }
