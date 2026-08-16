@@ -171,32 +171,35 @@ Status:
 
 ## COM / compatibility APIs
 
-- [>] standalone inventory found `GetObject(pathname, className)` as the retained COM/OLE activation entry point
-- [>] `GetObject` is explicitly Windows-only
-- [>] pathname mode uses COM moniker binding; ProgID mode resolves/activates the registered COM class
-- [>] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
-- [>] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
-- [>] legacy disabled coverage exists in `samples/runtime-sax.xps`
+- [x] standalone inventory found `GetObject(pathname, className)` as the retained COM/OLE activation entry point
+- [x] `GetObject` is explicitly Windows-only
+- [x] pathname mode uses COM moniker binding; ProgID mode resolves/activates the registered COM class
+- [x] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
+- [x] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
+- [x] legacy disabled coverage exists in `samples/runtime-sax.xps`
 - [x] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text; verified by `COM GetObject Runtime`
 - [x] runtime verification on Windows covers Variant-held COM objects, dot-method/property invocation and sanitized activation failures via `COM GetObject Runtime`
+- [x] complete COM compatibility security boundary is verified by `COM Compatibility Security Closeout` on Windows, Ubuntu and macOS plus `COM GetObject Runtime` on Windows
 
 ## Diagnostics
 
-- [>] Evaluate diagnostics have explicit secret sanitization
-- [>] native HTTP validation/network diagnostics do not echo URL/header payload values in hardened paths
-- [>] JSON parser/budget diagnostics do not echo JSON payloads
-- [>] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
-- [>] COM `GetObject` activation failures no longer echo underlying COM exception details
-- [>] File I/O portability diagnostics no longer include full resolved paths/raw filesystem exception messages in hardened paths
-- [>] failed generated builds no longer append generated C# source context to public compiler diagnostics
-- [>] invocation temp-root paths are replaced with `<compiler-workspace>` in generated-build diagnostics
-- [>] source absolute paths in generated-build diagnostics are reduced to source file names where recognized
-- [>] source-code lines attached to structured diagnostics preserve layout but mask characters inside string literals
-- [>] generic unexpected compiler exceptions return `Compilation failed.` instead of raw exception text through `CompileWithResultAsync`
-- [>] dependency-not-found compiler diagnostics expose only the dependency file name rather than the declared path
-- [ ] review remaining compiler/preprocessor diagnostics that deliberately include source tokens or identifiers
-- [>] native interop loader diagnostics no longer attach raw inner loader exceptions and no longer expose full OS-description text
-- [ ] add structured redaction helper if more runtime APIs need common secret-safe diagnostics
+- [x] Evaluate diagnostics have explicit secret sanitization
+- [x] native HTTP validation/network diagnostics do not echo URL/header payload values in hardened paths
+- [x] JSON parser/budget diagnostics do not echo JSON payloads
+- [x] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
+- [x] COM `GetObject` activation failures no longer echo underlying COM exception details
+- [x] File I/O portability diagnostics no longer include full resolved paths/raw filesystem exception messages in hardened paths
+- [x] failed generated builds no longer append generated C# source context to public compiler diagnostics
+- [x] invocation temp-root paths are replaced with `<compiler-workspace>` in generated-build diagnostics
+- [x] source absolute paths in generated-build diagnostics are reduced to source file names where recognized
+- [x] source-code lines attached to structured diagnostics preserve layout but mask characters inside string literals
+- [x] generic unexpected compiler exceptions return `Compilation failed.` instead of raw exception text through `CompileWithResultAsync`
+- [x] dependency-not-found compiler diagnostics expose only the dependency file name rather than the declared path
+- [x] remaining compiler/preprocessor diagnostics that deliberately include source tokens or identifiers are reviewed under `docs/diagnostics-security.md`; semantic identifiers may remain when useful, while payload-bearing string literals and secret-bearing values must be redacted
+- [x] native interop loader diagnostics no longer attach raw inner loader exceptions and no longer expose full OS-description text
+- [x] shared compiler string-literal redaction is provided by `CompilerDiagnosticRedaction.MaskStringLiterals`; runtime APIs retain subsystem-specific bounded redaction because their sensitive value shapes differ
+- [x] compiler workspace/path hardening no longer appends raw OS exception messages for permission, canonicalization, SID lookup or `icacls` failures
+- [x] complete diagnostics security policy and representative compiler redaction corpus are verified by `Diagnostics Security Closeout` on Windows, Ubuntu and macOS
 
 ## Documentation
 
