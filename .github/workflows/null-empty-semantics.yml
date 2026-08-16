@@ -2,14 +2,30 @@ name: Null Empty Semantics
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - todo-evaluate-null-nothing-semantics
+  pull_request:
+    branches: [main]
     paths:
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ModuleGlobalsPreprocessor.cs'
+      - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'samples/null-empty-semantics.xps'
       - 'samples/module-object-references.xps'
+      - 'samples/variant-global-static-empty.xps'
+      - 'todo/null-empty-nothing-semantics.md'
+      - '.github/workflows/null-empty-semantics.yml'
+  push:
+    branches:
+      - 'todo-*'
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ModuleGlobalsPreprocessor.cs'
+      - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
+      - 'samples/null-empty-semantics.xps'
+      - 'samples/module-object-references.xps'
+      - 'samples/variant-global-static-empty.xps'
+      - 'todo/null-empty-nothing-semantics.md'
       - '.github/workflows/null-empty-semantics.yml'
 
 permissions:
@@ -81,4 +97,30 @@ jobs:
             'DELETEDALIAS=True'
           )) {
             if ($output -notcontains $value) { throw "Object Nothing output missing: $value" }
+          }
+
+      - name: Compile and verify Variant global and Static EMPTY semantics
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/variant-global-static-empty$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/variant-global-static-empty.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Variant global/Static EMPTY regression compilation failed.' }
+
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Variant global/Static EMPTY regression exited with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'GLOBAL_TYPE=EMPTY',
+            'GLOBAL_DT=0',
+            'GLOBAL_ISEMPTY=True',
+            'GLOBAL_ISNULL=False',
+            'STATIC_FIRST_TYPE=EMPTY',
+            'STATIC_FIRST_DT=0',
+            'STATIC_FIRST_ISEMPTY=True',
+            'STATIC_FIRST_ISNULL=False',
+            'STATIC_RETAINED=73'
+          )) {
+            if ($output -notcontains $value) { throw "Variant global/Static output missing: $value" }
           }
