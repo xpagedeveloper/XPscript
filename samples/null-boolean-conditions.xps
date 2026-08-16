@@ -1,5 +1,6 @@
 Sub Main()
     Dim value As Variant
+    Dim emptyValue As Variant
     value = Null
 
     If value Then
@@ -8,7 +9,7 @@ Sub Main()
         Print "IF=NULL-FALSE"
     End If
 
-    If Empty Then
+    If emptyValue Then
         Print "IF=EMPTY-TRUE"
     Else
         Print "IF=EMPTY-FALSE"
