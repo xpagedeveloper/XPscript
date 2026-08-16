@@ -94,6 +94,6 @@ jobs:
           $output | ForEach-Object { Write-Host $_ }
           if ($exit -eq 0) { throw 'Evaluate Return Nothing unexpectedly succeeded.' }
           $text = $output -join "`n"
-          if (-not $text.Contains('Nothing is valid only for object references', [StringComparison]::Ordinal)) {
-            throw 'Evaluate Return Nothing did not produce the bounded object-reference diagnostic.'
+          if (-not $text.Contains('Invalid procedure call in Evaluate', [StringComparison]::Ordinal)) {
+            throw 'Evaluate Return Nothing did not map to the bounded XPScript error 5 diagnostic.'
           }
