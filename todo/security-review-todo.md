@@ -153,20 +153,21 @@ Status:
 
 ## Native interop
 
-- [>] target-specific native library selection is compile-target based
-- [>] application-local native file extensions are target validated
-- [>] loader failures are wrapped with XPScript diagnostics
-- [>] native parameters must be explicit `ByVal`; `ByRef` and omitted passing mode are rejected until target-correct ref/out marshalling is implemented
-- [>] application-local native declarations are marked internally during preprocessing and emitted with their normal portable filename only after secure wrapper generation
-- [>] application-local native libraries are resolved through `DllImportResolver` from exactly `AppContext.BaseDirectory` / executable directory
-- [>] application-local resolution does not search current working directory, PATH or arbitrary loader directories
-- [>] application-local library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
-- [>] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
-- [>] documentation states that native interop executes unmanaged code with process privileges
-- [>] negative ABI source: `samples/native-byref-error.xps`
+- [x] target-specific native library selection is compile-target based
+- [x] application-local native file extensions are target validated
+- [x] loader failures are wrapped with XPScript diagnostics
+- [x] native parameters must be explicit `ByVal`; `ByRef` and omitted passing mode are rejected until target-correct ref/out marshalling is implemented
+- [x] application-local native declarations are marked internally during preprocessing and emitted with their normal portable filename only after secure wrapper generation
+- [x] application-local native libraries are resolved through `DllImportResolver` from exactly `AppContext.BaseDirectory` / executable directory
+- [x] application-local resolution does not search current working directory, PATH or arbitrary loader directories
+- [x] application-local library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
+- [x] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
+- [x] documentation states that native interop executes unmanaged code with process privileges
+- [x] negative ABI source: `samples/native-byref-error.xps`
 - [x] supported `ByVal Integer` scalar parameter and Integer return ABI is verified on Windows x64/arm64, Linux x64/arm64 and macOS x64/arm64 by `Native Scalar ABI`
 - [x] application-local loader behavior is verified on Windows, Ubuntu and macOS by `Native Application Local Loader`, including executable-directory resolution from a foreign working directory and rejection of linked application-local libraries
 - [x] transitive native dependency search/preloading behavior is reviewed and regression-tested by `Native Transitive Loader Security`; executable-local dependencies win over current-directory copies and missing trusted dependencies do not fall back to current-directory libraries on Windows, Ubuntu and macOS
+- [x] complete native interop security matrix is verified by `Native Interop Security Closeout`, `Native Scalar ABI`, `Native Application Local Loader` and `Native Transitive Loader Security`
 
 ## COM / compatibility APIs
 
