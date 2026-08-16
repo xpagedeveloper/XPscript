@@ -5,6 +5,7 @@ Sub Main()
     Dim found As String
     Dim hiddenAttr As Integer
     Dim driveErr As Integer
+    Dim deleteOpenErr As Integer
 
     MkDir "xps-platform-semantics"
     ChDir "xps-platform-semantics"
@@ -33,6 +34,38 @@ Sub Main()
     Open "normal-probe.txt" For Output As #fileNumber
     Print #fileNumber, "normal"
     Close #fileNumber
+
+    fileNumber = FreeFile
+    Open "delete-open-probe.txt" For Output As #fileNumber
+    Print #fileNumber, "before-delete"
+
+    On Error Resume Next
+    Kill "delete-open-probe.txt"
+    deleteOpenErr = Err
+    On Error GoTo 0
+
+    If Platform() = "Windows" Then
+        If deleteOpenErr = 0 Then
+            Error 9711, "Windows unexpectedly deleted a file whose open handle does not allow delete sharing"
+        End If
+        If Dir("delete-open-probe.txt") = "" Then
+            Error 9712, "Windows delete-while-open failure removed the directory entry"
+        End If
+        Print "DELETE_OPEN_WINDOWS=BLOCKED"
+        Print "DELETE_OPEN_WINDOWS_ERR=" & CStr(deleteOpenErr)
+        Close #fileNumber
+        Kill "delete-open-probe.txt"
+    Else
+        If deleteOpenErr <> 0 Then
+            Error 9713, "Unix delete-while-open unexpectedly failed"
+        End If
+        If Dir("delete-open-probe.txt") <> "" Then
+            Error 9714, "Unix delete-while-open left the directory entry visible"
+        End If
+        Print #fileNumber, "after-unlink"
+        Print "DELETE_OPEN_UNIX=UNLINKED"
+        Close #fileNumber
+    End If
 
     If Platform() <> "Windows" Then
         On Error Resume Next
