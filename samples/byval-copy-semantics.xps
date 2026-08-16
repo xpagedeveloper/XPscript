@@ -1,0 +1,94 @@
+' (c) xpagedeveloper.com 2026
+' Regression: parameters are ByRef by default; explicit ByVal creates a copy.
+
+Sub ChangeByRefInSub(value As Integer)
+    value = 88
+End Sub
+
+Sub ChangeByValInSub(ByVal value As Integer)
+    value = 99
+End Sub
+
+Function ChangeByRefInFunction(value As Integer) As Integer
+    value = value + 20
+    ChangeByRefInFunction = value
+End Function
+
+Function ChangeByValInFunction(ByVal value As Integer) As Integer
+    value = value + 10
+    ChangeByValInFunction = value
+End Function
+
+Sub Main()
+    Dim original As Integer
+    Dim result As Integer
+    Dim parameters List As Variant
+    Dim evaluated As Variant
+
+    original = 7
+    Call ChangeByRefInSub(original)
+    If original <> 88 Then
+        Error 9640, "Default Sub parameter did not update caller variable by reference"
+    End If
+
+    original = 7
+    Call ChangeByValInSub(original)
+    If original <> 7 Then
+        Error 9641, "ByVal Sub parameter changed caller variable"
+    End If
+
+    original = 7
+    result = ChangeByRefInFunction(original)
+    If result <> 27 Then
+        Error 9642, "Default Function parameter produced wrong result"
+    End If
+    If original <> 27 Then
+        Error 9643, "Default Function parameter did not update caller variable by reference"
+    End If
+
+    original = 7
+    result = ChangeByValInFunction(original)
+    If result <> 17 Then
+        Error 9644, "ByVal Function parameter produced wrong local result"
+    End If
+    If original <> 7 Then
+        Error 9645, "ByVal Function parameter changed caller variable"
+    End If
+
+    original = 7
+    evaluated = Evaluate("callvar = 55 : Return callvar", original)
+    If original <> 55 Then
+        Error 9646, "Default Evaluate scalar parameter did not update caller variable by reference"
+    End If
+
+    original = 7
+    evaluated = Evaluate("callvar = 66 : Return callvar", ByVal original)
+    If original <> 7 Then
+        Error 9647, "ByVal Evaluate scalar parameter changed caller variable"
+    End If
+    If CInt(evaluated) <> 66 Then
+        Error 9648, "ByVal Evaluate scalar local copy produced wrong value"
+    End If
+
+    parameters("value") = 7
+    evaluated = Evaluate("callvar(""value"") = 99 : Return callvar(""value"")", parameters)
+    If parameters("value") <> 99 Then
+        Error 9649, "Default Evaluate List parameter did not update caller variable by reference"
+    End If
+
+    parameters("value") = 7
+    evaluated = Evaluate("callvar(""value"") = 101 : Return callvar(""value"")", ByVal parameters)
+    If parameters("value") <> 7 Then
+        Error 9650, "ByVal Evaluate List parameter changed caller variable"
+    End If
+    If CInt(evaluated) <> 101 Then
+        Error 9651, "ByVal Evaluate List local copy produced wrong value"
+    End If
+
+    Print "BYREF-SUB=OK"
+    Print "BYVAL-SUB=OK"
+    Print "BYREF-FUNCTION=OK"
+    Print "BYVAL-FUNCTION=OK"
+    Print "BYREF-EVALUATE=OK"
+    Print "BYVAL-EVALUATE=OK"
+End Sub

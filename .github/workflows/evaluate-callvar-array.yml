@@ -68,3 +68,18 @@ jobs:
           if ($output -notcontains 'MIXED=32') { throw 'Mixed scalar/Array/List callvar array result was incorrect.' }
           if ($output -notcontains 'BOUNDS=2') { throw 'Callvar LSArray bounds were incorrect.' }
           if ($output -notcontains 'MULTI-SHARED-REFERENCE-IDENTITY=OK') { throw 'Shared child identity was not preserved across supplied callvar values.' }
+
+      - name: Verify aggregate multi-value element budget
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/evaluate-callvar-array-budget | Out-Null
+          $exe = if ($IsWindows) { './out/evaluate-callvar-array-budget/evaluate-budget.exe' } else { './out/evaluate-callvar-array-budget/evaluate-budget' }
+          & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/evaluate-callvar-array-aggregate-budget.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Aggregate callvar budget sample failed to compile.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          $runtimeExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          $output | ForEach-Object { Write-Host $_ }
+          if ($runtimeExitCode -ne 0) { throw "Aggregate callvar budget sample failed at runtime with exit code $runtimeExitCode." }
+          if ($output -notcontains 'MULTI-AGGREGATE-ELEMENT-BUDGET=OK') { throw 'Aggregate multi-value element budget regression did not report success.' }

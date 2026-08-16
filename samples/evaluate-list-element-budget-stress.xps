@@ -11,7 +11,7 @@ Sub Main()
     Next
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return 1", items)
+    result = Evaluate("Return 1", ByVal items)
     Error 9621, "Expected Evaluate to reject List with 100001 elements"
 
 ExpectedError:

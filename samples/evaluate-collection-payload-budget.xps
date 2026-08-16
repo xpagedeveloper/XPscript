@@ -6,7 +6,7 @@ Sub Main()
     parameters("blob") = String(16777217, "x")
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return Len(callvar(""blob""))", parameters)
+    result = Evaluate("Return Len(callvar(""blob""))", ByVal parameters)
     Error 9111, "Expected Evaluate collection payload budget error"
 
 ExpectedError:

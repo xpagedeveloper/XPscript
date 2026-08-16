@@ -2,45 +2,118 @@
 
 > For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
 
-`Evaluate` executes XPScript source supplied as text inside an isolated evaluator scope.
+`Evaluate` executes XPScript source supplied as text. Values passed into `Evaluate` follow the same parameter-passing rule as Sub and Function parameters: parameters are ByRef by default, and explicit `ByVal` creates an isolated copy.
 
 ## Syntax
 
 ```xpscript
 result = Evaluate(sourceText)
-result = Evaluate(sourceText, callvar)
+result = Evaluate(sourceText, value)
+result = Evaluate(sourceText, ByVal value)
 result = Evaluate(sourceText, value1, value2, ...)
+result = Evaluate(sourceText, ByVal value1, ByVal value2, ...)
 ```
 
-`sourceText` is XPScript source text. `callvar` is the only explicit value bridge from the caller into the evaluator.
+`sourceText` is XPScript source text. `callvar` is the explicit value bridge from the caller into the evaluator.
 
-With exactly one supplied value, existing behavior is unchanged and `callvar` is that value directly.
+With exactly one supplied value, `callvar` is that value directly.
 
-With two or more supplied values, XPScript packs the values into one zero-based `callvar` array in caller argument order. There is no separate fixed value-count limit. The effective limit is determined by the normal Evaluate snapshot budgets: nesting depth 64, 100,000 total collection elements and 16 MiB estimated payload.
+With two or more supplied values, XPScript packs the values into one zero-based `callvar` array in caller argument order. There is no separate fixed value-count limit.
 
-Example:
+## Parameter passing
+
+A normal variable argument is ByRef. Changes made to `callvar` are written back to the caller variable.
 
 ```xpscript
-result = Evaluate("Return callvar(0) + callvar(7)", 1, 2, 3, 4, 5, 6, 7, 8)
+Dim number As Integer
+number = 10
+
+Call Evaluate("callvar = 20", number)
+' number is now 20
 ```
 
-Inside that Evaluate call, `LBound(callvar)` is 0 and `UBound(callvar)` is 7.
+Use `ByVal` when evaluated code must receive a copy:
 
-### Evaluate limitations
+```xpscript
+Dim number As Integer
+Dim result As Variant
+number = 10
 
-`Evaluate` is intentionally restricted. The limits are part of the public runtime contract and should be considered when deciding whether a workload belongs inside `Evaluate`:
+result = Evaluate("callvar = 20 : Return callvar", ByVal number)
+' number is still 10
+' result is 20
+```
 
-- only the supported side-effect-free Evaluate function subset is available; arbitrary XPScript runtime APIs are not automatically exposed,
-- `callvar` is the only caller-to-evaluator data bridge and is read-only inside the evaluator,
-- caller locals, module globals and static variables are not implicitly available,
-- arbitrary mutable object references are rejected instead of being shared into the evaluator,
-- arrays and Lists crossing the boundary are defensively snapshotted,
-- each input or return snapshot allows at most **64 nested collection levels**,
-- each snapshot allows at most **100,000 collection elements** in total,
-- each snapshot allows at most **16 MiB (16,777,216 bytes)** of estimated payload,
-- String values and List tags count against the payload budget using their UTF-8 byte length,
-- exceeding a snapshot limit raises XPScript error 5,
-- `Evaluate` is not an operating-system/process security sandbox and must not be treated as one for arbitrary hostile code.
+The same rule applies to Sub and Function parameters. A parameter without `ByVal` is ByRef. An explicit `ByVal` parameter receives a copy.
+
+For expressions that are not assignable caller variables, there is no caller location to write back to, so the value behaves as an input value.
+
+## Multiple values
+
+When two or more values are supplied, they become a zero-based `callvar` array:
+
+```xpscript
+Dim firstValue As Integer
+Dim secondValue As Integer
+Dim result As Variant
+
+firstValue = 10
+secondValue = 20
+result = Evaluate("Return callvar(0) + callvar(1)", firstValue, secondValue)
+```
+
+Inside this call, `LBound(callvar)` is 0 and `UBound(callvar)` is 1.
+
+Each supplied variable follows its own parameter mode. This allows mixed calls:
+
+```xpscript
+result = Evaluate(
+    "callvar(0) = 100 : callvar(1) = 200 : Return callvar(0) + callvar(1)",
+    firstValue,
+    ByVal secondValue)
+```
+
+Here `firstValue` is written back because it is ByRef. `secondValue` remains unchanged because it is ByVal.
+
+## Arrays and Lists
+
+Arrays and Lists passed ByRef can be changed by evaluated code and those changes are visible to the caller.
+
+```xpscript
+Dim parameters List As Variant
+parameters("price") = 100
+
+Call Evaluate("callvar(""price"") = 125", parameters)
+' parameters("price") is now 125
+```
+
+Use `ByVal` for an isolated collection snapshot:
+
+```xpscript
+Dim parameters List As Variant
+Dim result As Variant
+parameters("price") = 100
+
+result = Evaluate("callvar(""price"") = 125 : Return callvar(""price"")", ByVal parameters)
+' parameters("price") is still 100
+' result is 125
+```
+
+Nested Lists and arrays in a ByVal argument are copied recursively. Shared child references reachable through multiple ByVal arguments preserve shared identity inside the snapshot while remaining detached from caller-owned data.
+
+## ByVal snapshot limits
+
+ByVal collection snapshots are bounded to prevent unbounded memory and CPU use:
+
+- maximum nesting depth: **64**
+- maximum collection elements: **100,000**
+- maximum estimated payload: **16 MiB / 16,777,216 bytes**
+
+For a multi-value Evaluate call, all ByVal values share one aggregate input snapshot budget. The generated outer `callvar` array also counts toward the element budget. String values and List tags count toward the payload budget using their UTF-8 byte length. Scalar values use the runtime's conservative size estimate.
+
+There is no separate fixed argument-count limit. The effective limit for copied inputs is the normal Evaluate snapshot budget.
+
+Exceeding a ByVal snapshot limit raises XPScript error 5.
 
 ## Return value
 
@@ -54,80 +127,15 @@ Print CStr(result)
 
 If execution reaches the end without `Return`, `Evaluate` returns Nothing/Empty.
 
-## Passing one value with callvar
-
-Scalar values can be supplied directly:
-
-```xpscript
-Dim number As Integer
-Dim result As Variant
-
-number = 21
-result = Evaluate("Return callvar * 2", number)
-Print CStr(result)
-```
-
-`callvar` is read-only inside the evaluator. Evaluated source cannot assign to it or declare another local named `callvar`.
-
-## Passing multiple values with callvar
-
-When two or more values are supplied directly to Evaluate, they become a zero-based `callvar` array:
-
-```xpscript
-Dim result As Variant
-result = Evaluate("Return callvar(0) + callvar(1) + callvar(2)", 10, 20, 30)
-```
-
-The same snapshot budget applies to the complete generated array and all nested values. The number of supplied values is therefore limited by the array snapshot budgets rather than by a fixed argument count.
-
-## Passing positional values with an array
-
-```xpscript
-Dim values As Variant
-Dim result As Variant
-
-values = Array(10, 20, 30)
-result = Evaluate("Return callvar(0) + callvar(1) + callvar(2)", values)
-```
-
-XPScript arrays are copied before evaluation. Rank, bounds and element type are preserved where supported. Changes inside the evaluator cannot mutate the caller's array.
-
-## Passing named values with a List
-
-A List is the recommended way to supply several named parameters.
-
-```xpscript
-Dim parameters List As Variant
-Dim result As Variant
-
-parameters("price") = 125.5
-parameters("quantity") = 4
-
-result = Evaluate("Return callvar(""price"") * callvar(""quantity"")", parameters)
-Print CStr(result)
-```
-
-Lists are copied into an evaluator-private read-only snapshot. Nested Lists and arrays are copied recursively.
-
-## Isolation model
-
-The evaluator does not implicitly inherit the caller's local variables, module globals or static variables. Only explicit callvar input is transferred into the evaluator.
-
-Mutable arrays and Lists passed through `callvar` are defensively copied. Arbitrary mutable object references are rejected rather than shared by reference.
-
 Returned arrays and Lists are detached from evaluator-owned storage before control returns to the caller.
 
-## Collection limits
+## Scope and isolation
 
-To prevent unbounded memory and CPU use while copying `callvar`, each input or returned collection snapshot currently has these limits:
+The evaluator does not implicitly inherit caller locals, module globals or static variables. Only explicitly supplied values are available through `callvar`.
 
-- maximum nesting depth: **64**
-- maximum collection elements: **100,000**
-- maximum estimated payload: **16 MiB / 16,777,216 bytes**
+`ByVal` controls copying of supplied values. Default ByRef values intentionally retain caller write-back semantics.
 
-The element budget is cumulative across the complete generated multi-value callvar array and all nested arrays/Lists in one snapshot operation. String values and List tags count toward the payload budget using their UTF-8 byte length; scalar values use the runtime's conservative size estimate. Exceeding a limit raises XPScript error 5 before the evaluator is allowed to continue with an unbounded snapshot.
-
-These are runtime safety limits, not a guarantee that `Evaluate` is a complete security sandbox.
+Arbitrary mutable object types that are not supported by the Evaluate value contract remain rejected when a ByVal snapshot is requested.
 
 ## Diagnostics and secrets
 
@@ -160,4 +168,4 @@ For explicit concatenation, prefer `&` when string concatenation is the intended
 
 Use `Evaluate` for controlled expressions or small pieces of XPScript source whose origin and purpose are understood by the host application.
 
-`Evaluate` is **not** intended to be a security boundary for arbitrary hostile code. Snapshot isolation, resource budgets and diagnostic sanitization reduce several risks, but they do not replace process isolation or operating-system sandboxing.
+`Evaluate` is not an operating-system or process security sandbox. ByVal snapshot isolation, resource budgets and diagnostic sanitization reduce specific risks, but they do not replace process isolation or operating-system sandboxing.

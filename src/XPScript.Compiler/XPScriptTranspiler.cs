@@ -26,6 +26,7 @@ public sealed class XPScriptTranspiler
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         source = new EscapedQuotePreprocessor().Transform(source);
+        source = new EvaluateByValSyntaxPreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
         new ClassOverloadValidator().Validate(source, sourceName);
@@ -36,6 +37,7 @@ public sealed class XPScriptTranspiler
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new SourceLineContinuationPreprocessor().Transform(source);
+        source = new ParameterPassingPreprocessor().Transform(source);
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
@@ -71,6 +73,7 @@ public sealed class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = new ParameterPassingPostProcessor().Transform(generated);
         generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
         generated = moduleGlobals.Inject(generated);
 
@@ -83,6 +86,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ApplicationRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
+        generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";

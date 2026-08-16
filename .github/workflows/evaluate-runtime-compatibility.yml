@@ -168,7 +168,6 @@ jobs:
             if ($runExit -eq 0) { throw "Evaluate isolation-negative sample unexpectedly succeeded: $Name" }
           }
 
-          Assert-EvaluateRuntimeFailure 'evaluate-callvar-readonly-error'
           Assert-EvaluateRuntimeFailure 'evaluate-dim-callvar-error'
           Assert-EvaluateRuntimeFailure 'evaluate-scope-error'
           exit 0

@@ -6,7 +6,7 @@ Sub Main()
     ReDim huge(0 To 316, 0 To 316)
 
     On Error GoTo ExpectedError
-    result = Evaluate("Return LBound(callvar)", huge)
+    result = Evaluate("Return LBound(callvar)", ByVal huge)
     Error 9101, "Expected Evaluate collection element budget error"
 
 ExpectedError:
