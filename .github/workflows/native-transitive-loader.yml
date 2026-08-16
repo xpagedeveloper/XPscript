@@ -73,6 +73,7 @@ jobs:
           Copy-Item -LiteralPath $mainFile.FullName -Destination (Join-Path ./samples/native-transitive $main)
 
           "HELPER_NAME=$helper" >> $env:GITHUB_ENV
+          "TRUSTED_BUILD_SOURCE=$($helperFile.FullName)" >> $env:GITHUB_ENV
           "BAD_SOURCE=$($badFile.FullName)" >> $env:GITHUB_ENV
 
       - name: Compile XPScript transitive sample
@@ -109,6 +110,9 @@ jobs:
           $trusted = Join-Path $env:APP_DIR $env:HELPER_NAME
           if (-not (Test-Path -LiteralPath $trusted -PathType Leaf)) { throw "Packaged trusted helper is missing: $trusted" }
           Remove-Item -LiteralPath $trusted -Force
+          if (Test-Path -LiteralPath $env:TRUSTED_BUILD_SOURCE -PathType Leaf) {
+            Remove-Item -LiteralPath $env:TRUSTED_BUILD_SOURCE -Force
+          }
 
           Push-Location ./foreign-transitive-cwd
           try {
@@ -122,5 +126,5 @@ jobs:
             throw "SECURITY FAILURE: native transitive dependency was loaded from current working directory.`n$($result -join [Environment]::NewLine)"
           }
           if ($exitCode -eq 0 -or $result -contains 'NATIVE_TRANSITIVE=OK') {
-            throw "Expected execution to fail after removing the trusted executable-local helper.`n$($result -join [Environment]::NewLine)"
+            throw "Expected execution to fail after removing every trusted helper copy.`n$($result -join [Environment]::NewLine)"
           }
