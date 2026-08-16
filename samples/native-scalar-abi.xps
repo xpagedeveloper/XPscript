@@ -1,0 +1,20 @@
+Option Declare
+
+Declare Function NativeAbs Lib "native-abs" _
+    WindowsLib "msvcrt.dll" WindowsAlias "abs" _
+    LinuxLib "libc.so.6" LinuxAlias "abs" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "abs" _
+    (ByVal value As Integer) As Integer
+
+Sub Main()
+    If NativeAbs(-12345) <> 12345 Then
+        Error 5
+    End If
+    If NativeAbs(77) <> 77 Then
+        Error 5
+    End If
+    If NativeAbs(0) <> 0 Then
+        Error 5
+    End If
+    Print "NATIVE_SCALAR_ABI=OK"
+End Sub
