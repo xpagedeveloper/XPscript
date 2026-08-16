@@ -106,6 +106,58 @@ jobs:
           if ($output -contains 'REDIRECT_BODY=redirect-followed') {
             throw "Native HTTP followed a redirect unexpectedly.`n$output"
           }
+      - name: Verify binary and multipart response parts
+        shell: pwsh
+        run: |
+          Remove-Item ./native-http-single.bin, ./native-http-first.bin, ./native-http-second.bin -Force -ErrorAction SilentlyContinue
+          $exe = if ($IsWindows) { './out/native-http-binary-files.exe' } else { './out/native-http-binary-files' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-binary-files.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native HTTP multipart sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native HTTP multipart regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          $required = @(
+            'SINGLE_FILENAME=report.bin',
+            'SINGLE_LENGTH=20',
+            'SINGLE_PARTCOUNT=1',
+            'SINGLE_FILECOUNT=1',
+            'MULTI_PART_COUNT=3',
+            'MULTI_FILE_COUNT=2',
+            'META_NAME=metadata',
+            'META_TYPE=application/json; charset=utf-8',
+            'META_IS_TEXT=True',
+            'META_IS_FILE=False',
+            'META_BODY={"status":"ok","count":2}',
+            'MULTI_FIRST_NAME=first.bin',
+            'MULTI_FIRST_FIELD=first',
+            'MULTI_FIRST_TYPE=application/octet-stream',
+            'MULTI_FIRST_LENGTH=11',
+            'MULTI_SECOND_NAME=second-å.bin',
+            'MULTI_SECOND_FIELD=second',
+            'MULTI_SECOND_TYPE=application/octet-stream',
+            'MULTI_SECOND_LENGTH=11',
+            'HTTP_BINARY_FILES=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Native HTTP multipart output missing: $value`n$output" }
+          }
+
+          function Assert-Bytes([string]$Path, [byte[]]$Expected) {
+            if (-not (Test-Path $Path -PathType Leaf)) { throw "Expected binary file was not created: $Path" }
+            [byte[]]$actual = [System.IO.File]::ReadAllBytes((Resolve-Path $Path))
+            if ($actual.Length -ne $Expected.Length) { throw "Binary length mismatch for $Path. Expected $($Expected.Length), got $($actual.Length)." }
+            for ($i = 0; $i -lt $Expected.Length; $i++) {
+              if ($actual[$i] -ne $Expected[$i]) { throw "Binary byte mismatch for $Path at offset $i." }
+            }
+          }
+
+          [byte[]]$single = @(0,255,1,254,2,253,10,13,128,127) + [System.Text.Encoding]::ASCII.GetBytes('XPS-BINARY')
+          [byte[]]$first = @(0,1,2,250,251,252) + [System.Text.Encoding]::ASCII.GetBytes('FIRST')
+          [byte[]]$second = @(255,254,253,10,13) + [System.Text.Encoding]::ASCII.GetBytes('SECOND')
+          Assert-Bytes './native-http-single.bin' $single
+          Assert-Bytes './native-http-first.bin' $first
+          Assert-Bytes './native-http-second.bin' $second
       - name: Stop local HTTP regression server
         if: always()
         shell: pwsh
