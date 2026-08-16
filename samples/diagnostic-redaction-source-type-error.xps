@@ -1,0 +1,4 @@
+Sub Main()
+    Dim flag As Boolean
+    flag = "DO_NOT_ECHO_SOURCE_TYPE"
+End Sub

@@ -236,6 +236,6 @@ internal sealed class SourceTypeValidator
 
     private static void AddDiagnostic(List<string> diagnostics, string sourceName, int line, int position, string code, string description)
     {
-        diagnostics.Add($"{sourceName}({line},{position}): {description}{Environment.NewLine}  {code.TrimEnd()}");
+        diagnostics.Add($"{sourceName}({line},{position}): {description}{Environment.NewLine}  {CompilerDiagnosticRedaction.MaskStringLiterals(code).TrimEnd()}");
     }
 }
