@@ -1,0 +1,104 @@
+name: Native Interop Security Closeout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
+      - 'src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs'
+      - 'src/XPScript.Compiler/NativeInteropDiagnosticsPostProcessor.cs'
+      - 'samples/native-byref-error.xps'
+      - 'docs/platform-native.md'
+      - 'docs/security.md'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/native-interop-security-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-interop-security:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify native interop security invariants
+        shell: pwsh
+        run: |
+          $platform = Get-Content -Raw ./src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs
+          $safety = Get-Content -Raw ./src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs
+          $runtime = Get-Content -Raw ./src/XPScript.Compiler/NativeInteropRuntimeSource.cs
+          $security = Get-Content -Raw ./docs/security.md
+          $docs = Get-Content -Raw ./docs/platform-native.md
+
+          foreach ($fragment in @(
+            'WindowsX64Lib',
+            'WindowsArm64Lib',
+            'LinuxX64Lib',
+            'LinuxArm64Lib',
+            'MacOSX64Lib',
+            'MacOSArm64Lib',
+            'ApplicationLocalMarker',
+            'PortableFileName(selectedLibrary)'
+          )) {
+            if (-not $platform.Contains($fragment)) { throw "Missing target-selection invariant: $fragment" }
+          }
+
+          foreach ($fragment in @(
+            'Native Declare parameters must currently be explicitly ByVal.',
+            'Native ByRef/out marshalling is not implemented'
+          )) {
+            if (-not $safety.Contains($fragment)) { throw "Missing native ABI invariant: $fragment" }
+          }
+
+          foreach ($fragment in @(
+            'NativeLibrary.SetDllImportResolver',
+            'AppContext.BaseDirectory',
+            'Path.Combine(baseDirectory, normalizedName)',
+            'info.LinkTarget is not null',
+            'FileAttributes.ReparsePoint',
+            'LoadLibraryExW',
+            'LoadLibrarySearchDllLoadDir | LoadLibrarySearchDefaultDirs',
+            'NativeLibrary.Load(candidate, assembly, searchPath)',
+            'if (!marked)',
+            'return IntPtr.Zero;',
+            '_ = inner;'
+          )) {
+            if (-not $runtime.Contains($fragment)) { throw "Missing native loader invariant: $fragment" }
+          }
+
+          if ($runtime -match 'throw new InvalidOperationException\([^\)]*inner\.Message') {
+            throw 'Native loader diagnostics must not expose raw inner exception messages.'
+          }
+          if (-not $security.Contains('native')) { throw 'Security documentation must cover native interop.' }
+          if (-not $docs.Contains('ByVal')) { throw 'Platform-native documentation must cover ByVal ABI policy.' }
+
+      - name: Verify unsafe ByRef and omitted mode are rejected
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/native-interop-closeout | Out-Null
+          $out = if ($IsWindows) { './out/native-interop-closeout/byref.exe' } else { './out/native-interop-closeout/byref' }
+          $text = @(& dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-byref-error.xps -o $out --framework-dependent --result-format text 2>&1)
+          $exit = $LASTEXITCODE
+          $text | ForEach-Object { Write-Host $_ }
+          if ($exit -eq 0) { throw 'Unsafe native ByRef sample compiled successfully.' }
+          $joined = $text -join "`n"
+          if ($joined -notmatch 'explicitly ByVal') { throw "Native ByRef rejection was not diagnostic.`n$joined" }
+          if ($joined -match 'DO_NOT_ECHO') { throw 'Native ABI diagnostic leaked source-controlled secret text.' }
