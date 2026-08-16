@@ -45,6 +45,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     private readonly Dictionary<string, Entry> _entries;
     private readonly XpsWebCompiler _compiler;
     private readonly XpsWebCompilationCacheOptions _options;
+    private long _compilationStarts;
     private bool _disposed;
 
     public XpsWebCompilationCache(XpsWebCompiler compiler, XpsWebCompilationCacheOptions? options = null)
@@ -59,6 +60,8 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     {
         get { lock (_gate) return _entries.Count; }
     }
+
+    public long CompilationStarts => Interlocked.Read(ref _compilationStarts);
 
     public Task<XpsCompiledWebUnitLease> AcquireAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
@@ -115,7 +118,11 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                     Identity = snapshot.Identity,
                     LastAccessUtc = now,
                     Compilation = new Lazy<Task<XpsCompiledWebUnit>>(
-                        () => CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot),
+                        () =>
+                        {
+                            Interlocked.Increment(ref _compilationStarts);
+                            return CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot);
+                        },
                         LazyThreadSafetyMode.ExecutionAndPublication)
                 };
                 _entries.Add(key, entry);
