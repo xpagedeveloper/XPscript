@@ -2,6 +2,6 @@ Option Declare
 
 Sub Main()
     Dim obj As Variant
-    Set obj = GetObject("", "XPScript.Secret.Invalid.ProgID")
+    obj = GetObject("", "XPScript.Secret.Invalid.ProgID")
     Print "SHOULD_NOT_REACH"
 End Sub
