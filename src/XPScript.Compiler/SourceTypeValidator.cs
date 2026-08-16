@@ -17,7 +17,6 @@ internal sealed class SourceTypeValidator
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var procedures = CollectProcedures(lines);
         var moduleVariables = CollectModuleVariables(lines);
-        var classTypes = CollectClassTypes(lines);
         var variables = new Dictionary<string, (string Type, bool IsArray)>(StringComparer.OrdinalIgnoreCase);
         var diagnostics = new List<string>();
         var inProcedure = false;
@@ -78,18 +77,6 @@ internal sealed class SourceTypeValidator
                         var expected = procedure.Parameters[p];
                         var actual = InferType(args[p], variables);
                         if (actual is null) continue;
-
-                        if (actual.Value.Type.Equals("Nothing", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (!expected.IsArray &&
-                                (expected.Type.Equals("Object", StringComparison.OrdinalIgnoreCase) || classTypes.Contains(expected.Type)))
-                                continue;
-
-                            var pos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
-                            AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original,
-                                $"Nothing can be passed only to an Object-compatible parameter. Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)}.");
-                            continue;
-                        }
 
                         if (actual.Value.Type.Equals("Null", StringComparison.OrdinalIgnoreCase))
                         {
@@ -192,21 +179,6 @@ internal sealed class SourceTypeValidator
         return result;
     }
 
-    private static HashSet<string> CollectClassTypes(string[] lines)
-    {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var raw in lines)
-        {
-            var line = StripComment(raw).Trim();
-            var match = Regex.Match(
-                line,
-                @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)\b",
-                RegexOptions.IgnoreCase);
-            if (match.Success) result.Add(match.Groups[1].Value);
-        }
-        return result;
-    }
-
     private static Dictionary<string, Procedure> CollectProcedures(string[] lines)
     {
         var result = new Dictionary<string, Procedure>(StringComparer.OrdinalIgnoreCase);
@@ -262,7 +234,7 @@ internal sealed class SourceTypeValidator
         if (Regex.IsMatch(value, @"^[+-]?\d+$")) return ("Integer", false);
         if (Regex.IsMatch(value, @"^[+-]?(?:\d+\.\d*|\d*\.\d+)(?:[eE][+-]?\d+)?$")) return ("Double", false);
         if (Regex.IsMatch(value, @"^Null$", RegexOptions.IgnoreCase)) return ("Null", false);
-        if (Regex.IsMatch(value, @"^Nothing$", RegexOptions.IgnoreCase)) return ("Nothing", false);
+        if (Regex.IsMatch(value, @"^Nothing$", RegexOptions.IgnoreCase)) return ("Object", false);
         return null;
     }
 
