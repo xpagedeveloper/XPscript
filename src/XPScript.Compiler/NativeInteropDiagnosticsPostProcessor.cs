@@ -19,9 +19,12 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
     {
         var indent = match.Groups["indent"].Value;
         var markedLibrary = match.Groups["library"].Value;
-        var applicationLocal = markedLibrary.StartsWith(NativeLibraryPlatformPreprocessor.ApplicationLocalMarker, StringComparison.Ordinal);
+        var markerIndex = markedLibrary.IndexOf(
+            NativeLibraryPlatformPreprocessor.ApplicationLocalMarker,
+            StringComparison.Ordinal);
+        var applicationLocal = markerIndex >= 0;
         var library = applicationLocal
-            ? markedLibrary[NativeLibraryPlatformPreprocessor.ApplicationLocalMarker.Length..]
+            ? markedLibrary[(markerIndex + NativeLibraryPlatformPreprocessor.ApplicationLocalMarker.Length)..]
             : markedLibrary;
         var entry = match.Groups["entry"].Value;
         var charset = match.Groups["charset"].Value;

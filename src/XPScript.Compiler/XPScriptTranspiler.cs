@@ -105,7 +105,7 @@ public sealed class XPScriptTranspiler
 
         generated = generated.Replace(
             "XPScriptRuntime.SetArgs(args);",
-            $"XPScriptRuntime.SetArgs(args);\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            $"XPScriptRuntime.SetArgs(args);\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
             StringComparison.Ordinal);
 
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);

@@ -1,0 +1,14 @@
+Option Declare
+
+Declare Function NativeMagic Lib "native-local/xps_native_local.dll" Alias "xps_native_magic" _
+    WindowsLib "native-local/xps_native_local.dll" _
+    LinuxLib "native-local/libxps_native_local.so" _
+    MacOSLib "native-local/libxps_native_local.dylib" _
+    () As Integer
+
+Sub Main()
+    If NativeMagic() <> 4242 Then
+        Error 5
+    End If
+    Print "NATIVE_APP_LOCAL=OK"
+End Sub
