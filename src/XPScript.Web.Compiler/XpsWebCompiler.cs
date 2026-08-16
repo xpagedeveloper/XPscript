@@ -149,6 +149,8 @@ internal static class Script
     private static XPScript.Web.Runtime.XpsWebRequest Request => XPScript.Web.Runtime.XpsWebRuntimeObjects.Request;
     private static XPScript.Web.Runtime.XpsWebResponse Response => XPScript.Web.Runtime.XpsWebRuntimeObjects.Response;
     private static XPScript.Web.Runtime.XpsWebServer Server => XPScript.Web.Runtime.XpsWebRuntimeObjects.Server;
+    private static XPScript.Web.Runtime.IXpsSession Session => XPScript.Web.Runtime.XpsWebRuntimeObjects.Session;
+    private static XPScript.Web.Runtime.IXpsApplicationState Application => XPScript.Web.Runtime.XpsWebRuntimeObjects.Application;
 """;
         var match = ScriptClassMarker.Match(generated);
         if (!match.Success) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
