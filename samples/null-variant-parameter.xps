@@ -1,0 +1,9 @@
+Sub AcceptNull(ByVal value As Variant)
+    Print "PARAM_TYPE=" & TypeName(value)
+    Print "PARAM_ISNULL=" & CStr(IsNull(value))
+    Print "PARAM_ISEMPTY=" & CStr(IsEmpty(value))
+End Sub
+
+Sub Main()
+    Call AcceptNull(Null)
+End Sub
