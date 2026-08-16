@@ -8,10 +8,56 @@ internal static class XPScriptFileSystemRuntime
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
 
     private const int DarwinOpenReadWrite = 0x0002;
+    private const int DarwinOpenReadOnly = 0x0000;
+    private const int DarwinOpenNoFollow = 0x00000100;
     private const int DarwinOpenCloseOnExec = 0x01000000;
+    private const int LinuxOpenReadOnly = 0x0000;
+    private const int LinuxOpenNoFollow = 0x00020000;
+    private const int LinuxOpenCloseOnExec = 0x00080000;
+    private const uint WindowsGenericRead = 0x80000000;
+    private const uint WindowsFileShareRead = 0x00000001;
+    private const uint WindowsOpenExisting = 3;
+    private const uint WindowsFileAttributeNormal = 0x00000080;
+    private const uint WindowsFileFlagOpenReparsePoint = 0x00200000;
+    private const uint WindowsFileAttributeDirectory = 0x00000010;
+    private const uint WindowsFileAttributeReparsePoint = 0x00000400;
 
     [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "open", SetLastError = true)]
     private static extern int DarwinOpenExisting(string path, int flags);
+
+    [System.Runtime.InteropServices.DllImport("libc", EntryPoint = "open", SetLastError = true)]
+    private static extern int LinuxOpenExisting(string path, int flags);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(
+        string fileName,
+        uint desiredAccess,
+        uint shareMode,
+        IntPtr securityAttributes,
+        uint creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(
+        Microsoft.Win32.SafeHandles.SafeFileHandle file,
+        out WindowsByHandleFileInformation information);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct WindowsByHandleFileInformation
+    {
+        public uint FileAttributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
 
     public static string ResolvePath(object? value)
     {
@@ -138,18 +184,28 @@ internal static class XPScriptFileSystemRuntime
         var stage = Path.Combine(parent, ".xps-copy-" + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            // Revalidate immediately before opening the source. Once open, copying uses the
-            // handle rather than reopening the source pathname, reducing path-swap races.
-            RejectLinkedPath(source, "FileCopy", "source");
-            using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var output = new FileStream(stage, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                input.CopyTo(output);
-
-            if (!OperatingSystem.IsWindows())
+            // The security boundary is the open itself. Unix uses O_NOFOLLOW. Windows opens
+            // the reparse point rather than its target and validates the resulting handle.
+            // After this point both bytes and Unix mode are read from the already-open handle.
+            using (var input = OpenFileCopySource(source))
             {
-                try { File.SetUnixFileMode(stage, File.GetUnixFileMode(source)); }
-                catch (PlatformNotSupportedException) { }
-                catch (UnauthorizedAccessException) { }
+                UnixFileMode? unixMode = null;
+                if (!OperatingSystem.IsWindows())
+                {
+                    try { unixMode = File.GetUnixFileMode(input.SafeFileHandle); }
+                    catch (PlatformNotSupportedException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+
+                using (var output = new FileStream(stage, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    input.CopyTo(output);
+
+                if (unixMode.HasValue)
+                {
+                    try { File.SetUnixFileMode(stage, unixMode.Value); }
+                    catch (PlatformNotSupportedException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
             }
 
             // Revalidate the destination immediately before publication. Moving the staged
@@ -160,6 +216,59 @@ internal static class XPScriptFileSystemRuntime
         finally
         {
             try { if (File.Exists(stage)) File.Delete(stage); } catch { }
+        }
+    }
+
+    private static FileStream OpenFileCopySource(string source)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var handle = CreateFileW(
+                source,
+                WindowsGenericRead,
+                WindowsFileShareRead,
+                IntPtr.Zero,
+                WindowsOpenExisting,
+                WindowsFileAttributeNormal | WindowsFileFlagOpenReparsePoint,
+                IntPtr.Zero);
+            if (handle.IsInvalid)
+            {
+                handle.Dispose();
+                throw new IOException("Unable to safely open FileCopy source.");
+            }
+
+            try
+            {
+                if (!GetFileInformationByHandle(handle, out var information))
+                    throw new IOException("Unable to safely inspect FileCopy source handle.");
+                if ((information.FileAttributes & WindowsFileAttributeReparsePoint) != 0)
+                    throw new XPScriptRuntimeException(5, "FileCopy refuses a symbolic-link or reparse-point source.");
+                if ((information.FileAttributes & WindowsFileAttributeDirectory) != 0)
+                    throw new XPScriptRuntimeException(5, "FileCopy source must be a regular file.");
+                return new FileStream(handle, FileAccess.Read);
+            }
+            catch
+            {
+                handle.Dispose();
+                throw;
+            }
+        }
+
+        var fd = OperatingSystem.IsMacOS()
+            ? DarwinOpenExisting(source, DarwinOpenReadOnly | DarwinOpenNoFollow | DarwinOpenCloseOnExec)
+            : LinuxOpenExisting(source, LinuxOpenReadOnly | LinuxOpenNoFollow | LinuxOpenCloseOnExec);
+        if (fd < 0)
+            throw new XPScriptRuntimeException(5, "FileCopy source could not be safely opened without following symbolic links.");
+
+        var unixHandle = new Microsoft.Win32.SafeHandles.SafeFileHandle(new IntPtr(fd), ownsHandle: true);
+        try
+        {
+            return new FileStream(unixHandle, FileAccess.Read);
+        }
+        catch
+        {
+            unixHandle.Dispose();
+            throw;
         }
     }
 
