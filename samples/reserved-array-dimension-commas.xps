@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim matrix(1, 2) As Integer
+    matrix(1, 2) = 7
+    Print "RESERVED-ARRAY-COMMAS=" & CStr(matrix(1, 2))
+End Sub

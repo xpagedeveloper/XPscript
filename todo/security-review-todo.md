@@ -11,12 +11,12 @@ Status:
 
 ## Compiler-generated identifiers
 
-- [>] identifiers beginning with `__` are reserved before source rewrites
-- [>] runtime-owned type names are reserved against user type declarations
-- [>] all names in comma-separated `Dim`, `Static`, module `Public` and module `Private` declarations are validated, not only the first name
-- [>] commas inside array dimensions do not split declaration items
-- [>] regression sources: `samples/reserved-identifier-error.xps`, `samples/reserved-runtime-type-error.xps`, `samples/reserved-multiple-identifiers-error.xps`, `samples/reserved-module-multiple-identifiers-error.xps`
-- [ ] build/diagnostic verification of the complete reserved-identifier matrix
+- [x] identifiers beginning with `__` are reserved before source rewrites
+- [x] runtime-owned type names are reserved against user type declarations
+- [x] all names in comma-separated `Dim`, `Static`, module `Public` and module `Private` declarations are validated, not only the first name
+- [x] commas inside array dimensions do not split declaration items
+- [x] regression sources: `samples/reserved-identifier-error.xps`, `samples/reserved-runtime-type-error.xps`, `samples/reserved-multiple-identifiers-error.xps`, `samples/reserved-module-multiple-identifiers-error.xps`, `samples/reserved-array-dimension-commas.xps`
+- [x] build/diagnostic verification of the complete reserved-identifier matrix on Windows, Ubuntu and macOS
 
 ## Compiler temporary workspace
 
