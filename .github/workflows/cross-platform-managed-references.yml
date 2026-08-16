@@ -12,6 +12,7 @@ on:
       - 'src/XPScript.Compiler/CompilerOutputPublisher.cs'
       - 'tests/ManagedReferenceFixture/**'
       - 'tests/ManagedReferenceDeploymentProbe/**'
+      - 'todo/security-review-todo.md'
       - '.github/workflows/cross-platform-managed-references.yml'
 
 permissions:
