@@ -1,0 +1,45 @@
+name: Web Kestrel Transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Kestrel/**'
+      - 'tests/WebKestrelSmoke/**'
+      - '.github/workflows/web-kestrel.yml'
+      - 'XPScriptCompiler.slnx'
+  push:
+    branches: ['todo-web-runtime-kestrel']
+    paths:
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Kestrel/**'
+      - 'tests/WebKestrelSmoke/**'
+      - '.github/workflows/web-kestrel.yml'
+      - 'XPScriptCompiler.slnx'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore solution
+        run: dotnet restore ./XPScriptCompiler.slnx
+
+      - name: Build solution
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Run Kestrel loopback integration
+        run: dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
