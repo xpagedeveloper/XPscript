@@ -159,5 +159,5 @@ public static class XpsKestrelAdapter
         return value;
     }
 
-    private sealed class RequestBodyTooLargeException : Exception;
+    private sealed class RequestBodyTooLargeException : Exception { }
 }
