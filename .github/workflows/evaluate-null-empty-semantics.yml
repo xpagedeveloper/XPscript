@@ -94,6 +94,7 @@ jobs:
             $PSNativeCommandUseErrorActionPreference = $false
             $output = & $program 2>&1
             $exit = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
           }
           finally {
             $PSNativeCommandUseErrorActionPreference = $oldNativePreference
