@@ -88,9 +88,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_multipart_files(self):
         boundary = 'xpscript-boundary-2026'
+        metadata = b'{"status":"ok","count":2}'
         first = bytes([0, 1, 2, 250, 251, 252]) + b'FIRST'
         second = bytes([255, 254, 253, 10, 13]) + b'SECOND'
         chunks = [
+            f'--{boundary}\r\n'.encode('ascii'),
+            b'Content-Disposition: form-data; name="metadata"\r\n',
+            b'Content-Type: application/json; charset=utf-8\r\n\r\n',
+            metadata,
+            b'\r\n',
             f'--{boundary}\r\n'.encode('ascii'),
             b'Content-Disposition: form-data; name="first"; filename="first.bin"\r\n',
             b'Content-Type: application/octet-stream\r\n\r\n',
