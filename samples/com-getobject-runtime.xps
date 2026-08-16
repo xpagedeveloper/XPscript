@@ -6,5 +6,16 @@ Sub Main()
     If Not IsObject(obj) Then
         Error 5
     End If
+
+    obj.Add("alpha", 42)
+    If Not obj.Exists("alpha") Then
+        Error 5
+    End If
+    If obj.Count <> 1 Then
+        Error 5
+    End If
+
+    Print "COM_VALUE=" & CStr(obj.Item("alpha"))
+    Print "COM_COUNT=" & CStr(obj.Count)
     Print "COM_GETOBJECT=OK"
 End Sub
