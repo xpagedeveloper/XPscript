@@ -1,0 +1,4 @@
+Sub Main()
+    Dim value As Integer
+    value = Null
+End Sub
