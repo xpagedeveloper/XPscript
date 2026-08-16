@@ -27,10 +27,11 @@ try
     if (!text.Contains("QUERY=name=åäö", StringComparison.Ordinal)) throw new Exception("Split FastCGI PARAMS lost UTF-8/query data.");
     if (!text.Contains("LONG=140", StringComparison.Ordinal)) throw new Exception("Split four-byte PARAMS length was not decoded.");
 
-    await adapter.StartAsync();
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+    await adapter.StartAsync(timeout.Token);
     var endpoint = adapter.LocalEndpoint ?? throw new Exception("FastCGI listener did not expose a local endpoint.");
     using var client = new TcpClient();
-    await client.ConnectAsync(endpoint.Address, endpoint.Port);
+    await client.ConnectAsync(endpoint.Address, endpoint.Port, timeout.Token);
     await using var network = client.GetStream();
     var tcpRequest = BuildSplitParamsRequest(5, new Dictionary<string, string>
     {
@@ -39,10 +40,10 @@ try
         ["QUERY_STRING"] = "tcp=ok",
         ["SCRIPT_FILENAME"] = Path.Combine(root, "tcp.xps")
     }, 7);
-    await network.WriteAsync(tcpRequest);
-    await network.FlushAsync();
+    await network.WriteAsync(tcpRequest, timeout.Token);
+    await network.FlushAsync(timeout.Token);
     client.Client.Shutdown(SocketShutdown.Send);
-    var tcpResponse = await ReadAllAsync(network);
+    var tcpResponse = await ReadAllAsync(network, timeout.Token);
     var tcpText = ParseStdout(tcpResponse);
     if (!tcpText.Contains("QUERY=tcp=ok", StringComparison.Ordinal)) throw new Exception("FastCGI TCP listener did not process the request.");
     await adapter.StopAsync();
@@ -101,13 +102,13 @@ static void WriteRecord(Stream output, byte type, ushort requestId, byte[] conte
     output.Write(content);
 }
 
-static async Task<byte[]> ReadAllAsync(Stream input)
+static async Task<byte[]> ReadAllAsync(Stream input, CancellationToken cancellationToken)
 {
     using var output = new MemoryStream();
     var buffer = new byte[4096];
     while (true)
     {
-        var read = await input.ReadAsync(buffer);
+        var read = await input.ReadAsync(buffer, cancellationToken);
         if (read == 0) break;
         output.Write(buffer, 0, read);
     }
