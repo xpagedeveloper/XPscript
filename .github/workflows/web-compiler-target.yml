@@ -6,7 +6,9 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Compiler/**'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'tests/WebCompilerSmoke/**'
       - '.github/workflows/web-compiler-target.yml'
       - 'XPScriptCompiler.slnx'
@@ -15,7 +17,9 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Compiler/**'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'tests/WebCompilerSmoke/**'
       - '.github/workflows/web-compiler-target.yml'
       - 'XPScriptCompiler.slnx'
