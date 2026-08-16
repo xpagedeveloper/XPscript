@@ -204,10 +204,12 @@ Status:
 ## Documentation
 
 - [x] `docs/evaluate.md` documents Evaluate ByRef/ByVal isolation semantics and the non-sandbox boundary
-- [>] `docs/platform-native.md` documents native/process platform behavior, native ABI constraints and application-local resolver policy
+- [x] `docs/platform-native.md` documents native/process platform behavior, native ABI constraints and application-local resolver policy
 - [x] native HTTP documentation covers redirect policy, resource budgets, binary responses and multipart parts
-- [>] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
-- [>] security documentation is linked from `docs/index.md` and README
+- [x] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
+- [x] security documentation is linked from `docs/index.md` and README
+- [x] stale security/runtime status statements and HTTP binary/limit contradictions are rejected by `Security Documentation Closeout`
+- [x] complete security documentation matrix and local-reference validation pass on Windows, Ubuntu and macOS through `Security Documentation Closeout`
 
 ## Verification gate
 

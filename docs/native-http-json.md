@@ -2,7 +2,6 @@
 
 > For compact command syntax, parameters and examples, see the [Command Reference](command-reference.md).
 
-
 ## HttpClient
 
 Create an HTTP client with:
@@ -112,14 +111,20 @@ These limits are runtime protections, not application-level authorization rules.
 
 HTTP methods return `HttpResponse`.
 
-Available properties include:
+Available response properties include:
 
 - `StatusCode`
 - `StatusText`
 - `Body`
+- `BodyLength`
 - `ContentType`
 - `Headers`
 - `IsSuccess`
+- `FileName`
+- `PartCount`
+- `FileCount`
+- `Parts`
+- `Files`
 
 Example:
 
@@ -129,7 +134,49 @@ Print CStr(response.StatusCode)
 Print response.Body
 ```
 
-`Body` is currently exposed as decoded text. Applications that need binary-safe streaming or direct file download should use a dedicated binary response API once that support is added instead of treating arbitrary binary payloads as text.
+`Body` exposes decoded text when text access is appropriate. The response also retains raw response bytes so binary content can be saved without text conversion.
+
+### Binary response save
+
+Use `SaveBodyToFile(path)` to write the raw response body directly to a file.
+
+```xpscript
+Set response = http.Get("https://example.com/file.bin")
+Print CStr(response.BodyLength)
+Call response.SaveBodyToFile("file.bin")
+```
+
+This avoids corruption caused by converting arbitrary binary content through text encoding.
+
+### Multipart responses
+
+Multipart responses expose every parsed part through `Parts`. File parts are also exposed through the filtered `Files` collection.
+
+A part exposes metadata and content information such as:
+
+- `Name`
+- `FileName`
+- `ContentType`
+- `Length`
+- `IsText`
+- `IsFile`
+- `Body` for text content
+- `SaveToFile(path)` for binary-safe file output
+
+Example:
+
+```xpscript
+Set response = http.Get("https://example.com/multipart")
+Print CStr(response.Parts.Count)
+Print CStr(response.Files.Count)
+
+Dim firstFile As Variant
+firstFile = response.Files.Get(0)
+Print firstFile.FileName
+Call firstFile.SaveToFile("download.bin")
+```
+
+UTF-8 `filename*=` metadata is decoded by the multipart parser. Multipart resource usage remains inside the overall response-body limit.
 
 ## HttpClient lifetime
 
@@ -308,6 +355,7 @@ Do not place secrets such as authorization tokens in diagnostic output. Use requ
 - [samples/native-http-json.xps](../samples/native-http-json.xps)
 - [samples/native-http-header-validation.xps](../samples/native-http-header-validation.xps)
 - [samples/native-http-resource-limits.xps](../samples/native-http-resource-limits.xps)
+- [samples/native-http-binary-files.xps](../samples/native-http-binary-files.xps)
 - [samples/json-resource-limits.xps](../samples/json-resource-limits.xps)
 
 [samples/json-http.xps](../samples/json-http.xps) contains older compatibility-class coverage and should not be treated as the preferred API for new standalone XPScript programs.

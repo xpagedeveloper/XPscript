@@ -25,6 +25,7 @@ Start with:
 - `docs/native-http-json.md`
 - `docs/evaluate.md`
 - `docs/security.md` — security boundaries and powerful APIs
+- `docs/diagnostics-security.md` — diagnostic redaction and secret-safe error policy
 
 Negative samples intentionally demonstrate errors and are identified as such in the documentation. Older compatibility fixtures are not automatically presented as the preferred standalone XPScript API.
 
@@ -131,7 +132,7 @@ Declare Function NativeProcessId Lib "native-process" _
 
 Selection is based on the target RID passed to the compiler, not the operating system on which the compiler itself is running.
 
-Application-local native-library packaging and exact x64/arm64 asset selection are implemented on the no-CI development branch and documented in `docs/platform-native.md`. Runtime verification on each target OS remains pending while execution is disabled.
+Application-local native-library packaging, exact x64/arm64 asset selection, executable-directory resolution and native loader security are documented in `docs/platform-native.md` and permanently verified by the native security workflows on Windows, Ubuntu and macOS. Scalar ABI coverage also includes the supported x64/arm64 target matrix.
 
 ## Operators and coercion
 
@@ -205,7 +206,7 @@ Print response.Body
 
 Supported request methods are `Get`, `Post`, `Put`, `Patch` and `Delete`. Headers and timeout can be configured per client.
 
-Header names/values are validated before request construction; CR/LF header injection is rejected. Native HTTP URLs must be absolute `http://` or `https://` URLs. Application-level host/network allowlisting is still required when user-controlled URLs could create SSRF risk.
+Header names/values are validated before request construction. CR/LF header injection is rejected. Native HTTP URLs must be absolute `http://` or `https://` URLs. Application-level host/network allowlisting is still required when user-controlled URLs could create SSRF risk.
 
 ## JSON
 
@@ -253,7 +254,7 @@ Documentation should reuse these samples instead of creating duplicate example p
 
 XPScript source execution is code execution. APIs such as `Shell`, general file I/O, HTTP, native interop and compatibility COM/OLE surfaces use the privileges of the current process and are not automatically sandboxed.
 
-See `docs/security.md` for trust boundaries and deployment guidance. Static hardening work is tracked in `todo/security-review-todo.md`.
+See `docs/security.md` for trust boundaries and deployment guidance. Diagnostic redaction policy is documented in `docs/diagnostics-security.md`. Static hardening and permanent verification are tracked in `todo/security-review-todo.md`.
 
 ## Implementation status
 
