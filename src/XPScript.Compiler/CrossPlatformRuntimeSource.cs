@@ -23,7 +23,7 @@ internal static class XPCrossPlatformRuntime
         var parsed = SplitCommand(raw);
         try
         {
-            var start = BuildStartInfo(parsed.FileName, parsed.Arguments, windowStyle);
+            var start = BuildStartInfo(parsed.FileName, ParseArguments(parsed.Arguments), windowStyle);
             _ = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program or script.");
             return 33;
@@ -34,7 +34,27 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
-    private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, string arguments, object? windowStyle)
+    public static int ShellArgs(object? executable, object? arguments, object? windowStyle = null)
+    {
+        var fileName = XPScriptRuntime.CStr(executable).Trim();
+        if (fileName.Length == 0)
+            throw new XPScriptRuntimeException(5, "ShellArgs requires a program name.");
+
+        var structuredArguments = ToStructuredArguments(arguments);
+        try
+        {
+            var start = BuildStartInfo(fileName, structuredArguments, windowStyle);
+            _ = System.Diagnostics.Process.Start(start)
+                ?? throw new FileNotFoundException("Could not start the requested program.");
+            return 33;
+        }
+        catch (Exception ex)
+        {
+            throw LSExtendedErrorRuntime.Normalize(ex);
+        }
+    }
+
+    private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, IReadOnlyList<string> arguments, object? windowStyle)
     {
         fileName = ResolveRequestedProgram(fileName);
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
@@ -49,7 +69,7 @@ internal static class XPCrossPlatformRuntime
             if (extension is ".cmd" or ".bat")
             {
                 ValidateBatchFileName(fileName);
-                var batchArguments = ParseArguments(arguments);
+                var batchArguments = arguments;
                 foreach (var argument in batchArguments) ValidateBatchArgument(argument);
 
                 info.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
@@ -114,6 +134,40 @@ internal static class XPCrossPlatformRuntime
         }
 
         throw new PlatformNotSupportedException("Shell is not implemented for platform: " + Platform());
+    }
+
+    private static IReadOnlyList<string> ToStructuredArguments(object? arguments)
+    {
+        if (arguments is null) return [];
+        if (arguments is string)
+            throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list, not a command string.");
+
+        var result = new List<string>();
+        if (arguments is LSArray array)
+        {
+            if (!array.IsAllocated || array.Rank != 1)
+                throw new XPScriptRuntimeException(5, "ShellArgs requires a one-dimensional allocated array or list.");
+            var lower = array.LBound();
+            var upper = array.UBound();
+            for (var index = lower; index <= upper; index++)
+            {
+                if (result.Count >= 4096)
+                    throw new XPScriptRuntimeException(5, "ShellArgs accepts at most 4096 arguments.");
+                result.Add(XPScriptRuntime.CStr(array.Get(index)));
+            }
+            return result;
+        }
+
+        if (arguments is not System.Collections.IEnumerable enumerable)
+            throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list.");
+
+        foreach (var value in enumerable)
+        {
+            if (result.Count >= 4096)
+                throw new XPScriptRuntimeException(5, "ShellArgs accepts at most 4096 arguments.");
+            result.Add(XPScriptRuntime.CStr(value));
+        }
+        return result;
     }
 
     private static string ResolveRequestedProgram(string fileName)
@@ -204,9 +258,9 @@ internal static class XPCrossPlatformRuntime
             : extensions.Select(x => executableName + x).ToArray();
     }
 
-    private static void AddArguments(System.Diagnostics.ProcessStartInfo info, string rawArguments)
+    private static void AddArguments(System.Diagnostics.ProcessStartInfo info, IReadOnlyList<string> arguments)
     {
-        foreach (var argument in ParseArguments(rawArguments))
+        foreach (var argument in arguments)
             info.ArgumentList.Add(argument);
     }
 
