@@ -1,0 +1,5 @@
+Sub Main()
+    Dim value As String
+    value = "DO_NOT_ECHO_INCREMENT"
+    value -= "DO_NOT_ECHO_INCREMENT"
+End Sub
