@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Call Shell("xps-shell-pathext safe")
+    Print "SHELL-WINDOWS-RESOLUTION=STARTED"
+End Sub
