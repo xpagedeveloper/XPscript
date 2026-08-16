@@ -33,7 +33,7 @@ Status:
 ## Variable initialization
 
 - [x] Unassigned Variant locals use the EMPTY representation and are cross-platform verified by `samples/null-empty-semantics.xps`.
-- [ ] Verify Variant module globals and Static values use the same EMPTY inspection semantics.
+- [x] Variant module globals and Static values use the same EMPTY inspection semantics; cross-platform verified by `samples/variant-global-static-empty.xps` on Windows, Ubuntu and macOS.
 - [x] Keep typed scalar defaults unchanged: numeric zero, Boolean false, String empty string and the existing Date default.
 - [x] Class/object references initialize as empty `LSRef<T>` references with `IsNothing = true`.
 
@@ -88,6 +88,7 @@ Status:
 ## Regression gate
 
 - [x] Normal-runtime fixture covers initialization, NULL assignment, inspection and Variant `+` propagation: `samples/null-empty-semantics.xps`.
+- [x] Module-global and Static Variant EMPTY initialization and Static persistence are covered by `samples/variant-global-static-empty.xps`.
 - [x] Object-reference NOTHING, alias and Delete behavior are covered by `.github/workflows/null-empty-semantics.yml` using `samples/module-object-references.xps`.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
 - [x] Evaluate callvar fixture covers scalar, Array and List values containing EMPTY and NULL: `samples/evaluate-callvar-null-empty.xps`.
