@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptRuntimeSource.cs'
@@ -12,6 +13,9 @@ on:
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'samples/null-empty-semantics.xps'
       - 'samples/null-empty-inspection-helpers.xps'
+      - 'samples/nothing-variant-assignment-error.xps'
+      - 'samples/null-integer-assignment-error.xps'
+      - 'samples/null-module-global-assignment-error.xps'
       - 'samples/module-object-references.xps'
       - 'samples/variant-global-static-empty.xps'
       - 'todo/null-empty-nothing-semantics.md'
@@ -20,6 +24,7 @@ on:
     branches:
       - 'todo-*'
     paths:
+      - 'src/XPScript.Compiler/SourceTypeValidator.cs'
       - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptRuntimeSource.cs'
@@ -27,6 +32,9 @@ on:
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'samples/null-empty-semantics.xps'
       - 'samples/null-empty-inspection-helpers.xps'
+      - 'samples/nothing-variant-assignment-error.xps'
+      - 'samples/null-integer-assignment-error.xps'
+      - 'samples/null-module-global-assignment-error.xps'
       - 'samples/module-object-references.xps'
       - 'samples/variant-global-static-empty.xps'
       - 'todo/null-empty-nothing-semantics.md'
@@ -110,6 +118,35 @@ jobs:
             'NULL_CVAR_ISNULL=True'
           )) {
             if ($output -notcontains $value) { throw "Null/Empty inspection helper output missing: $value" }
+          }
+
+      - name: Verify invalid Null and Nothing value assignments are rejected
+        shell: pwsh
+        run: |
+          $cases = @(
+            @{ File = './samples/nothing-variant-assignment-error.xps'; Expected = 'Nothing is valid only for object-reference assignment with Set.' },
+            @{ File = './samples/null-integer-assignment-error.xps'; Expected = 'Null can be assigned only to a Variant-compatible value, not Integer.' },
+            @{ File = './samples/null-module-global-assignment-error.xps'; Expected = 'Null can be assigned only to a Variant-compatible value, not Integer.' }
+          )
+
+          foreach ($case in $cases) {
+            $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+            try {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $case.File --framework-dependent 2>&1
+              $exit = $LASTEXITCODE
+              $global:LASTEXITCODE = 0
+            }
+            finally {
+              $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+            }
+
+            $output | ForEach-Object { Write-Host $_ }
+            if ($exit -eq 0) { throw "Negative assignment fixture unexpectedly compiled: $($case.File)" }
+            $text = $output -join "`n"
+            if (-not $text.Contains($case.Expected, [StringComparison]::Ordinal)) {
+              throw "Expected assignment diagnostic missing for $($case.File): $($case.Expected)"
+            }
           }
 
       - name: Compile and verify object Nothing semantics
