@@ -1,15 +1,29 @@
+using System.Text;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
-var root = Path.Combine(Path.GetTempPath(), "xps-web-dispatcher-smoke-" + Guid.NewGuid().ToString("N"));
+var parent = Path.Combine(Path.GetTempPath(), "xps-web-dispatcher-smoke-" + Guid.NewGuid().ToString("N"));
+var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
 var indexPath = Path.Combine(root, "index.xps");
 var otherPath = Path.Combine(root, "other.xps");
+var sharedPath = Path.Combine(root, "shared.xps");
+var invalidPath = Path.Combine(root, "invalid.xps");
+var escapePath = Path.Combine(root, "escape.xps");
+var outsidePath = Path.Combine(parent, "outside.xps");
+
+await File.WriteAllTextAsync(sharedPath, """
+Sub SharedHelper()
+End Sub
+""");
 
 await File.WriteAllTextAsync(indexPath, """
+Include "shared.xps"
+
 [Anonymous]
 [Get]
 Sub Index()
+    Call SharedHelper()
 End Sub
 
 [Authenticated]
@@ -26,13 +40,28 @@ Sub Index()
 End Sub
 """);
 
+await File.WriteAllTextAsync(outsidePath, """
+Sub OutsideHelper()
+End Sub
+""");
+
+await File.WriteAllTextAsync(escapePath, """
+Include "../outside.xps"
+[Anonymous]
+[Get]
+Sub Index()
+End Sub
+""");
+
 try
 {
     var cacheOptions = new XpsWebCompilationCacheOptions
     {
-        MaxEntries = 2,
+        MaxEntries = 4,
         MaxSourceBytes = 1024 * 1024,
-        IdleTtl = TimeSpan.FromMinutes(5)
+        IdleTtl = TimeSpan.FromMinutes(5),
+        FailureBackoff = TimeSpan.FromSeconds(5),
+        ConfigurationIdentity = "dispatcher-smoke-v1"
     };
 
     await using var cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
@@ -46,24 +75,48 @@ try
     await AssertStatusAsync(dispatcher, root, "GET", "/index/NoSuchRoute", new XpsWebPrincipal(false), 404);
     await AssertStatusAsync(dispatcher, root, "GET", "/../secret.xps", new XpsWebPrincipal(false), 400);
 
+    var escapeResponse = await SendAsync(dispatcher, root, "GET", "/escape", new XpsWebPrincipal(false));
+    if (escapeResponse.StatusCode != 500) throw new Exception("Out-of-root Include did not fail closed.");
+    var escapeBody = Encoding.UTF8.GetString(escapeResponse.Body.Span);
+    if (!escapeBody.Equals("Internal Server Error", StringComparison.Ordinal) ||
+        escapeBody.Contains("outside.xps", StringComparison.OrdinalIgnoreCase) ||
+        escapeBody.Contains(parent, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Out-of-root Include leaked compiler or filesystem diagnostics.");
+
     XpsCompiledWebUnit? firstUnit;
-    await using (var first = await cache.AcquireAsync(indexPath))
+    await using (var first = await cache.AcquireAsync(indexPath, root))
     {
         firstUnit = first.Unit;
-        await using var second = await cache.AcquireAsync(indexPath);
+        await using var second = await cache.AcquireAsync(indexPath, root);
         if (!ReferenceEquals(first.Unit, second.Unit))
             throw new Exception("Unchanged source did not reuse the cached compiled unit.");
     }
 
-    var concurrent = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => cache.AcquireAsync(indexPath)));
+    var startsBeforeConcurrent = cache.CompilationStarts;
+    var concurrent = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => cache.AcquireAsync(indexPath, root)));
     try
     {
         if (concurrent.Any(x => !ReferenceEquals(x.Unit, concurrent[0].Unit)))
             throw new Exception("Concurrent cache acquisition did not use a single compiled unit.");
+        if (cache.CompilationStarts != startsBeforeConcurrent)
+            throw new Exception("Concurrent cache hits unexpectedly started another compilation.");
     }
     finally
     {
         foreach (var lease in concurrent) await lease.DisposeAsync();
+    }
+
+    await File.WriteAllTextAsync(sharedPath, """
+Sub SharedHelper()
+    Dim changed As Integer
+    changed = 1
+End Sub
+""");
+
+    await using (var includeChanged = await cache.AcquireAsync(indexPath, root))
+    {
+        if (ReferenceEquals(firstUnit, includeChanged.Unit))
+            throw new Exception("Include change did not invalidate the cached compiled unit.");
     }
 
     await File.WriteAllTextAsync(indexPath, """
@@ -78,19 +131,41 @@ Sub Changed()
 End Sub
 """);
 
-    await using (var changed = await cache.AcquireAsync(indexPath))
+    await using (var changed = await cache.AcquireAsync(indexPath, root))
     {
         if (ReferenceEquals(firstUnit, changed.Unit))
-            throw new Exception("Changed source did not invalidate the cached compiled unit.");
+            throw new Exception("Changed root source did not invalidate the cached compiled unit.");
         if (!changed.Unit.Routes.ContainsKey("Changed"))
             throw new Exception("Changed source route table was not compiled.");
     }
 
-    await using (var other = await cache.AcquireAsync(otherPath))
+    await using (var sameSourceDifferentSiteIdentity = await cache.AcquireAsync(indexPath, parent))
+    await using (var siteIdentity = await cache.AcquireAsync(indexPath, root))
+    {
+        if (ReferenceEquals(sameSourceDifferentSiteIdentity.Unit, siteIdentity.Unit))
+            throw new Exception("Different site roots shared a compiled cache unit.");
+    }
+
+    await using (var other = await cache.AcquireAsync(otherPath, root))
     {
         if (!other.Unit.Routes.ContainsKey("Index")) throw new Exception("Second cached unit failed to compile.");
     }
     if (cache.Count > cacheOptions.MaxEntries) throw new Exception("Compilation cache exceeded MaxEntries.");
+
+    await File.WriteAllTextAsync(invalidPath, """
+[Anonymous]
+[Get]
+Sub Index()
+    This Is Not Valid XPScript
+End Sub
+""");
+    var beforeFailure = cache.CompilationStarts;
+    await ExpectCompilationFailureAsync(cache, invalidPath, root);
+    var afterFirstFailure = cache.CompilationStarts;
+    if (afterFirstFailure != beforeFailure + 1) throw new Exception("First failed source did not start exactly one compilation.");
+    await ExpectCompilationFailureAsync(cache, invalidPath, root);
+    if (cache.CompilationStarts != afterFirstFailure)
+        throw new Exception("Failure backoff allowed a compile storm for unchanged invalid source.");
 
     var tinyCache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
     {
@@ -104,7 +179,7 @@ End Sub
         await File.WriteAllTextAsync(oversized, new string('X', 128));
         try
         {
-            await using var _ = await tinyCache.AcquireAsync(oversized);
+            await using var _ = await tinyCache.AcquireAsync(oversized, root);
             throw new Exception("Oversized source was accepted by the compilation cache.");
         }
         catch (XpsWebCompilationException)
@@ -116,7 +191,19 @@ End Sub
 }
 finally
 {
-    Directory.Delete(root, recursive: true);
+    Directory.Delete(parent, recursive: true);
+}
+
+static async Task ExpectCompilationFailureAsync(XpsWebCompilationCache cache, string path, string root)
+{
+    try
+    {
+        await using var _ = await cache.AcquireAsync(path, root);
+        throw new Exception("Invalid XPScript source unexpectedly compiled.");
+    }
+    catch (XpsWebCompilationException)
+    {
+    }
 }
 
 static async Task AssertStatusAsync(
@@ -128,6 +215,24 @@ static async Task AssertStatusAsync(
     int expectedStatus,
     string? expectedHeader = null,
     string? expectedHeaderValue = null)
+{
+    var response = await SendAsync(handler, root, method, path, principal);
+    if (response.StatusCode != expectedStatus)
+        throw new Exception($"Expected HTTP {expectedStatus} for {method} {path}, got {response.StatusCode}.");
+    if (!response.Completed) throw new Exception($"Response was not completed for {method} {path}.");
+    if (expectedHeader is not null)
+    {
+        if (!response.Headers.TryGetValue(expectedHeader, out var values) || !values.Contains(expectedHeaderValue ?? string.Empty))
+            throw new Exception($"Expected header {expectedHeader}: {expectedHeaderValue} for {method} {path}.");
+    }
+}
+
+static async Task<XpsWebResponse> SendAsync(
+    IXpsWebRequestHandler handler,
+    string root,
+    string method,
+    string path,
+    XpsWebPrincipal principal)
 {
     var request = new XpsWebRequest(
         method, path, "", "",
@@ -142,14 +247,7 @@ static async Task AssertStatusAsync(
         new SmokeApplicationState());
 
     await handler.HandleAsync(context);
-    if (response.StatusCode != expectedStatus)
-        throw new Exception($"Expected HTTP {expectedStatus} for {method} {path}, got {response.StatusCode}.");
-    if (!response.Completed) throw new Exception($"Response was not completed for {method} {path}.");
-    if (expectedHeader is not null)
-    {
-        if (!response.Headers.TryGetValue(expectedHeader, out var values) || !values.Contains(expectedHeaderValue ?? string.Empty))
-            throw new Exception($"Expected header {expectedHeader}: {expectedHeaderValue} for {method} {path}.");
-    }
+    return response;
 }
 
 sealed class SmokeApplicationState : IXpsApplicationState
