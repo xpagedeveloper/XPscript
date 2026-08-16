@@ -12,7 +12,7 @@ Allow `.xps` files to run as server-side web applications in two hosting modes w
 
 1. **Standalone Kestrel mode** — XPScript starts a local ASP.NET Core/Kestrel web server.
 2. **FastCGI mode** — XPScript runs as a FastCGI application server/worker that can be used behind nginx and other FastCGI-capable web servers, similar to PHP-FPM at the deployment level.
-3. **CHI mode**
+3. **CGI mode**
 XpScript can also run using cgi mode to support that mode in a HcL Domino server
 
 All three modes must expose the same XPScript web objects, request semantics, routing, runtime compilation, cache behavior, error handling and security model.
@@ -53,7 +53,7 @@ Exact public CLI syntax must be finalized during the architecture phase.
 The target runtime compilation model is:
 
 ```text
-HTTP / FastCGI / CgI request
+HTTP / FastCGI / CGI request
         ↓
 normalize + validate request
         ↓
@@ -191,7 +191,7 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
 
 ---
 ## 5.1 cgi
-Inplement isimiar functions as for fast chi but for older CGI handling
+Implement is similar functions as for fast cgi but for older CGI handling
 
 ## 6. XPScript web objects
 
