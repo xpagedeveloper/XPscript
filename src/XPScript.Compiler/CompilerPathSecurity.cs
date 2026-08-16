@@ -68,9 +68,9 @@ internal static class CompilerPathSecurity
                 UnixFileMode.UserExecute);
         }
         catch (PlatformNotSupportedException) { }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary workspace permissions: " + ex.Message);
+            throw new CompilerException("Unable to secure compiler temporary workspace permissions.");
         }
     }
 
@@ -83,9 +83,9 @@ internal static class CompilerPathSecurity
             File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
         catch (PlatformNotSupportedException) { }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary file permissions: " + ex.Message);
+            throw new CompilerException("Unable to secure compiler temporary file permissions.");
         }
     }
 
@@ -131,9 +131,9 @@ internal static class CompilerPathSecurity
                 if (!string.IsNullOrWhiteSpace(target))
                     current = Path.GetFullPath(target);
             }
-            catch (IOException ex)
+            catch (IOException)
             {
-                throw new CompilerException("Unable to resolve compiler temporary directory path: " + ex.Message);
+                throw new CompilerException("Unable to resolve compiler temporary directory path.");
             }
         }
 
@@ -152,7 +152,7 @@ internal static class CompilerPathSecurity
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs: " + ex.Message);
+            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
         }
 
         if (string.IsNullOrWhiteSpace(sid))
@@ -191,7 +191,7 @@ internal static class CompilerPathSecurity
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary workspace ACLs: " + ex.Message);
+            throw new CompilerException("Unable to secure compiler temporary workspace ACLs.");
         }
     }
 
