@@ -191,15 +191,6 @@ public sealed class XpsSessionStore
         response.DeleteCookie(_options.CookieName, secure: SecureCookieFor(scheme), sameSite: _options.SameSite);
     }
 
-    internal void Touch(SessionRecord record)
-    {
-        lock (record.Gate)
-        {
-            EnsureActive(record);
-            record.LastAccessUtc = DateTimeOffset.UtcNow;
-        }
-    }
-
     internal static void EnsureActive(SessionRecord record)
     {
         if (record.Abandoned) throw new InvalidOperationException("Session has been abandoned.");
@@ -232,18 +223,8 @@ public sealed class XpsSessionStore
 
     private void EnsureCapacityLocked()
     {
-        if (_sessions.Count < _options.MaxSessions) return;
-        var oldest = _sessions.Values
-            .OrderBy(record => record.LastAccessUtc)
-            .FirstOrDefault();
-        if (oldest is null) throw new InvalidOperationException("Session capacity has been reached.");
-        lock (oldest.Gate)
-        {
-            oldest.Abandoned = true;
-            oldest.Values.Clear();
-            oldest.TotalBytes = 0;
-            _sessions.Remove(oldest.Id);
-        }
+        if (_sessions.Count >= _options.MaxSessions)
+            throw new InvalidOperationException("Session capacity has been reached.");
     }
 
     private string CreateUniqueSessionIdLocked()
