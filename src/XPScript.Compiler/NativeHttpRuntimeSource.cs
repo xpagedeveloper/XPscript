@@ -11,33 +11,39 @@ internal static class XPScriptNativeHttp
 internal sealed class XPScriptHttpClient : IDisposable
 {
     private const int MaxRequestBodyBytes = 8 * 1024 * 1024;
-    private const int MaxResponseBodyBytes = 8 * 1024 * 1024;
+    private const int MaxResponseBodyBytes = 64 * 1024 * 1024;
 
     private readonly System.Net.Http.HttpClientHandler _handler;
     private readonly System.Net.Http.HttpClient _client;
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
+    private TimeSpan _timeout = TimeSpan.FromSeconds(30);
     private bool _disposed;
 
     public XPScriptHttpClient()
     {
-        // Redirects are intentionally caller-controlled. This prevents custom/auth headers
-        // from being silently forwarded to a different origin by automatic redirect handling.
         _handler = new System.Net.Http.HttpClientHandler
         {
             AllowAutoRedirect = false
         };
-        _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false);
+        _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
+        {
+            Timeout = System.Threading.Timeout.InfiniteTimeSpan
+        };
     }
 
     public double Timeout
     {
-        get => _client.Timeout.TotalSeconds;
+        get => _timeout.TotalSeconds;
         set
         {
             EnsureNotDisposed();
             if (value <= 0 || double.IsNaN(value) || double.IsInfinity(value))
                 throw new XPScriptRuntimeException(5, "HttpClient.Timeout must be a finite value greater than zero.");
-            _client.Timeout = TimeSpan.FromSeconds(value);
+            try { _timeout = TimeSpan.FromSeconds(value); }
+            catch (OverflowException)
+            {
+                throw new XPScriptRuntimeException(5, "HttpClient.Timeout is outside the supported range.");
+            }
         }
     }
 
@@ -96,10 +102,7 @@ internal sealed class XPScriptHttpClient : IDisposable
             request.Content = new System.Net.Http.StringContent(bodyText, Encoding.UTF8);
             if (_headers.TryGetValue("Content-Type", out var ct) && !string.IsNullOrWhiteSpace(ct))
             {
-                try
-                {
-                    request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(ct);
-                }
+                try { request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(ct); }
                 catch (FormatException)
                 {
                     throw new XPScriptRuntimeException(5, "Invalid Content-Type header value.");
@@ -120,8 +123,9 @@ internal sealed class XPScriptHttpClient : IDisposable
 
         try
         {
-            using var response = _client.Send(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
-            var body = ReadResponseBody(response.Content);
+            using var timeout = new CancellationTokenSource(_timeout);
+            using var response = _client.Send(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            var body = ReadResponseBody(response.Content, timeout.Token);
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var header in response.Headers) headers[header.Key] = string.Join(", ", header.Value);
             foreach (var header in response.Content.Headers) headers[header.Key] = string.Join(", ", header.Value);
@@ -135,7 +139,7 @@ internal sealed class XPScriptHttpClient : IDisposable
                 IsSuccess = response.IsSuccessStatusCode
             };
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
             throw new XPScriptRuntimeException(5, "HTTP request timed out.");
         }
@@ -149,12 +153,12 @@ internal sealed class XPScriptHttpClient : IDisposable
         }
     }
 
-    private static string ReadResponseBody(System.Net.Http.HttpContent content)
+    private static string ReadResponseBody(System.Net.Http.HttpContent content, CancellationToken cancellationToken)
     {
         if (content.Headers.ContentLength is long declaredLength && declaredLength > MaxResponseBodyBytes)
-            throw new XPScriptRuntimeException(5, "HTTP response body exceeds the 8 MiB limit.");
+            throw new XPScriptRuntimeException(5, "HTTP response body exceeds the 64 MiB limit.");
 
-        using var stream = content.ReadAsStream();
+        using var stream = content.ReadAsStream(cancellationToken);
         using var buffer = new MemoryStream();
         var chunk = new byte[16 * 1024];
         var total = 0;
@@ -162,10 +166,11 @@ internal sealed class XPScriptHttpClient : IDisposable
         while (true)
         {
             var read = stream.Read(chunk, 0, chunk.Length);
+            cancellationToken.ThrowIfCancellationRequested();
             if (read == 0) break;
             total = checked(total + read);
             if (total > MaxResponseBodyBytes)
-                throw new XPScriptRuntimeException(5, "HTTP response body exceeds the 8 MiB limit.");
+                throw new XPScriptRuntimeException(5, "HTTP response body exceeds the 64 MiB limit.");
             buffer.Write(chunk, 0, read);
         }
 
@@ -193,7 +198,6 @@ internal sealed class XPScriptHttpClient : IDisposable
         var name = XPScriptRuntime.CStr(nameValue).Trim();
         if (name.Length == 0)
             throw new XPScriptRuntimeException(5, "HTTP header name cannot be empty.");
-
         foreach (var c in name)
         {
             if (!IsHeaderTokenCharacter(c))
@@ -206,7 +210,6 @@ internal sealed class XPScriptHttpClient : IDisposable
     {
         if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
             throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
-
         foreach (var c in value)
         {
             if ((c < 0x20 && c != '\t') || c == 0x7f)
