@@ -65,7 +65,10 @@ internal sealed class ClassOverloadValidator
             {
                 var signature = string.Join("|", method.Parameters.Select(p => $"{EffectiveClrType(p.Type)}:{p.IsArray}:{p.IsByRef}"));
                 if (seen.TryGetValue(signature, out var previous))
-                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {lines[method.Line - 1].TrimEnd()}");
+                {
+                    var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[method.Line - 1]).TrimEnd();
+                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {safeSource}");
+                }
                 seen[signature] = method;
             }
         }
@@ -137,15 +140,17 @@ internal sealed class ClassOverloadValidator
             }
             if (valid) scored.Add((candidate, total));
         }
+
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
         if (scored.Count == 0)
         {
             var supplied = string.Join(", ", arguments.Select(a => InferType(a, variables)?.Type ?? "Unknown"));
-            throw new CompilerException($"{sourceName}({lineNumber},1): No overload of '{displayName}' matches supplied signature ({supplied}).{Environment.NewLine}  {original.TrimEnd()}");
+            throw new CompilerException($"{sourceName}({lineNumber},1): No overload of '{displayName}' matches supplied signature ({supplied}).{Environment.NewLine}  {safeSource}");
         }
         var bestScore = scored.Min(x => x.Score);
         var best = scored.Where(x => x.Score == bestScore).ToArray();
         if (best.Length > 1)
-            throw new CompilerException($"{sourceName}({lineNumber},1): Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.{Environment.NewLine}  {original.TrimEnd()}");
+            throw new CompilerException($"{sourceName}({lineNumber},1): Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.{Environment.NewLine}  {safeSource}");
     }
 
     private static int MatchScore(Parameter parameter, (string Type, bool IsArray)? actual)
