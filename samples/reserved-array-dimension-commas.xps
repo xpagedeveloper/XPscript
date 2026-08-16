@@ -1,8 +1,7 @@
 Option Declare
 
 Sub Main()
-    Dim matrix(1, 2) As Integer, good As Integer
+    Dim matrix(1, 2) As Integer
     matrix(1, 2) = 7
-    good = matrix(1, 2)
-    Print "RESERVED-ARRAY-COMMAS=" & CStr(good)
+    Print "RESERVED-ARRAY-COMMAS=" & CStr(matrix(1, 2))
 End Sub
