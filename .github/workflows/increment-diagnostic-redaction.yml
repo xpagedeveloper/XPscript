@@ -28,7 +28,7 @@ jobs:
       - name: Verify text and JSON redaction
         shell: pwsh
         run: |
-          $compiler = 'src/XPScript.Compiler/bin/Release/net10.0/XPScript.Compiler.dll'
+          $compiler = 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
           $sample = 'samples/diagnostic-redaction-increment-error.xps'
           $text = & dotnet $compiler $sample --result-format text 2>&1 | Out-String
           $textExit = $LASTEXITCODE
