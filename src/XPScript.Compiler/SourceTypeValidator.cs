@@ -17,6 +17,7 @@ internal sealed class SourceTypeValidator
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var procedures = CollectProcedures(lines);
         var moduleVariables = CollectModuleVariables(lines);
+        var classTypes = CollectClassTypes(lines);
         var variables = new Dictionary<string, (string Type, bool IsArray)>(StringComparer.OrdinalIgnoreCase);
         var diagnostics = new List<string>();
         var inProcedure = false;
@@ -80,7 +81,10 @@ internal sealed class SourceTypeValidator
 
                         if (actual.Value.Type.Equals("Nothing", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (expected.Type.Equals("Object", StringComparison.OrdinalIgnoreCase)) continue;
+                            if (!expected.IsArray &&
+                                (expected.Type.Equals("Object", StringComparison.OrdinalIgnoreCase) || classTypes.Contains(expected.Type)))
+                                continue;
+
                             var pos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
                             AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original,
                                 $"Nothing can be passed only to an Object-compatible parameter. Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)}.");
@@ -185,6 +189,21 @@ internal sealed class SourceTypeValidator
                 (NormalizeType(declaration.Groups[3].Value), declaration.Groups[2].Success);
         }
 
+        return result;
+    }
+
+    private static HashSet<string> CollectClassTypes(string[] lines)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in lines)
+        {
+            var line = StripComment(raw).Trim();
+            var match = Regex.Match(
+                line,
+                @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)\b",
+                RegexOptions.IgnoreCase);
+            if (match.Success) result.Add(match.Groups[1].Value);
+        }
         return result;
     }
 
