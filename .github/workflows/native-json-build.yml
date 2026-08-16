@@ -90,6 +90,7 @@ jobs:
             'ARRAY_SET_VALUE=safe',
             'STRINGIFY_SIZE_ERR=5',
             'NONFINITE_ERR=5',
+            'PARSED_NONFINITE_ERR=5',
             'MALFORMED_ERR=5',
             'MALFORMED_TEXT=Invalid JSON input.',
             'JSON_RESOURCE_LIMITS=OK'
