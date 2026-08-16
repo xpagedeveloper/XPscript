@@ -1,0 +1,104 @@
+name: Native Application Local Loader
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/NativeLocalFixture/**'
+      - 'samples/native-application-local.xps'
+      - '.github/workflows/native-application-local-loader.yml'
+      - 'src/XPScript.Compiler/NativeDependencyPackager.cs'
+      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerDriver.cs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-application-local:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Build native fixture
+        shell: pwsh
+        run: |
+          cmake -S ./tests/NativeLocalFixture -B ./native-fixture-build -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed.' }
+          cmake --build ./native-fixture-build --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'Native fixture build failed.' }
+
+          if ($env:RUNNER_OS -eq 'Windows') { $name = 'xps_native_local.dll' }
+          elseif ($env:RUNNER_OS -eq 'Linux') { $name = 'libxps_native_local.so' }
+          elseif ($env:RUNNER_OS -eq 'macOS') { $name = 'libxps_native_local.dylib' }
+          else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+
+          $library = Get-ChildItem ./native-fixture-build -Recurse -File -Filter $name | Select-Object -First 1
+          if (-not $library) { throw "Built native fixture $name was not found." }
+          New-Item -ItemType Directory -Force ./samples/native-local | Out-Null
+          Copy-Item -LiteralPath $library.FullName -Destination (Join-Path ./samples/native-local $name)
+          "NATIVE_FILE=$name" >> $env:GITHUB_ENV
+
+      - name: Resolve current RID
+        id: rid
+        shell: pwsh
+        run: |
+          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } elseif ($env:RUNNER_ARCH -eq 'X64') { 'x64' } else { throw "Unsupported runner architecture: $env:RUNNER_ARCH" }
+          $os = if ($env:RUNNER_OS -eq 'Windows') { 'win' } elseif ($env:RUNNER_OS -eq 'Linux') { 'linux' } elseif ($env:RUNNER_OS -eq 'macOS') { 'osx' } else { throw "Unsupported runner OS: $env:RUNNER_OS" }
+          "rid=$os-$arch" >> $env:GITHUB_OUTPUT
+
+      - name: Compile and package application-local library
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/app | Out-Null
+          $exe = if ($env:RUNNER_OS -eq 'Windows') { './out/app/native-application-local.exe' } else { './out/app/native-application-local' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-application-local.xps --runtime '${{ steps.rid.outputs.rid }}' -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Application-local native sample compilation failed.' }
+          $library = Join-Path ./out/app $env:NATIVE_FILE
+          if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw "Packaged native library is missing beside executable: $library" }
+          "APP_EXE=$((Resolve-Path -LiteralPath $exe).Path)" >> $env:GITHUB_ENV
+          "APP_LIB=$((Resolve-Path -LiteralPath $library).Path)" >> $env:GITHUB_ENV
+
+      - name: Verify executable-directory loading from foreign working directory
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force ./samples/native-local
+          New-Item -ItemType Directory -Force ./foreign-cwd | Out-Null
+          Push-Location ./foreign-cwd
+          try {
+            $result = @(& $env:APP_EXE 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Application-local native sample failed from foreign CWD.`n$result" }
+            if ($result -notcontains 'NATIVE_APP_LOCAL=OK') { throw "Application-local loader success marker missing.`n$result" }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Verify linked library beside executable is rejected
+        shell: pwsh
+        run: |
+          $realDirectory = Join-Path $env:RUNNER_TEMP ('xps-native-real-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Force $realDirectory | Out-Null
+          $realLibrary = Join-Path $realDirectory $env:NATIVE_FILE
+          Move-Item -LiteralPath $env:APP_LIB -Destination $realLibrary
+          New-Item -ItemType SymbolicLink -Path $env:APP_LIB -Target $realLibrary | Out-Null
+
+          $text = & $env:APP_EXE 2>&1 | Out-String
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -eq 0) { throw "Symlinked application-local library unexpectedly loaded.`n$text" }
+          if ($text -match [regex]::Escape($realDirectory)) { throw "Native loader diagnostic leaked the real target path.`n$text" }
