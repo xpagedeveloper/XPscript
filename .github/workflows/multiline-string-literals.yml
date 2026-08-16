@@ -52,11 +52,12 @@ jobs:
           if (-not $IsWindows) { chmod +x $exe }
           $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Multiline string sample failed.`n$output" }
-          if ($output -notcontains 'PIPE=first line<LF>second "quoted" line<LF>third | pipe') { throw "Pipe multiline literal mismatch.`n$output" }
-          if ($output -notcontains 'BRACE=alpha<LF>beta "quoted" line<LF>gamma } brace') { throw "Brace multiline literal mismatch.`n$output" }
-          if ($output -notcontains 'SINGLE-PIPE=single "pipe" value') { throw "Single-line pipe literal mismatch.`n$output" }
-          if ($output -notcontains 'SINGLE-BRACE=single "brace" value') { throw "Single-line brace literal mismatch.`n$output" }
-          if ($output -notcontains 'MULTILINE-STRING=OK') { throw "Success marker missing.`n$output" }
+          $normalized = @($output | ForEach-Object { $_ -replace '<CR><LF>', '<LF>' })
+          if ($normalized -notcontains 'PIPE=first line<LF>second "quoted" line<LF>third | pipe') { throw "Pipe multiline literal mismatch.`n$output" }
+          if ($normalized -notcontains 'BRACE=alpha<LF>beta "quoted" line<LF>gamma } brace') { throw "Brace multiline literal mismatch.`n$output" }
+          if ($normalized -notcontains 'SINGLE-PIPE=single "pipe" value') { throw "Single-line pipe literal mismatch.`n$output" }
+          if ($normalized -notcontains 'SINGLE-BRACE=single "brace" value') { throw "Single-line brace literal mismatch.`n$output" }
+          if ($normalized -notcontains 'MULTILINE-STRING=OK') { throw "Success marker missing.`n$output" }
 
       - name: Verify unterminated literal diagnostic
         shell: pwsh
