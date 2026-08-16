@@ -1,0 +1,112 @@
+name: Diagnostics Security Closeout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'samples/**'
+      - 'docs/diagnostics-security.md'
+      - 'todo/security-review-todo.md'
+      - '.github/workflows/diagnostics-security-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics-security:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Audit diagnostic construction policy
+        shell: pwsh
+        run: |
+          $helper = Get-Content -Raw ./src/XPScript.Compiler/CompilerDiagnosticRedaction.cs
+          if (-not $helper.Contains('MaskStringLiterals')) { throw 'Common compiler string-literal redaction helper is missing.' }
+
+          foreach ($file in @(
+            './src/XPScript.Compiler/SourceTypeValidator.cs',
+            './src/XPScript.Compiler/DateComparisonValidator.cs',
+            './src/XPScript.Compiler/IncrementOperatorSyntaxValidator.cs',
+            './src/XPScript.Compiler/ClassOverloadValidator.cs'
+          )) {
+            $text = Get-Content -Raw $file
+            if (-not $text.Contains('CompilerDiagnosticRedaction.MaskStringLiterals')) {
+              throw "Expected common diagnostic redaction helper usage is missing from $file"
+            }
+          }
+
+          $driver = Get-Content -Raw ./src/XPScript.Compiler/CompilerDriver.cs
+          foreach ($fragment in @('<compiler-workspace>', 'Compilation failed.')) {
+            if (-not $driver.Contains($fragment)) { throw "Missing generated-build diagnostic invariant: $fragment" }
+          }
+
+          $compilerFiles = Get-ChildItem ./src/XPScript.Compiler -Filter '*.cs' -File
+          foreach ($file in $compilerFiles) {
+            $lines = Get-Content $file.FullName
+            foreach ($line in $lines) {
+              if ($line -notmatch 'CompilerException') { continue }
+              if ($line -match '(ex|exception|inner)\.Message') {
+                throw "CompilerException directly exposes an underlying exception message in $($file.Name): $line"
+              }
+            }
+          }
+
+          $policy = Get-Content -Raw ./docs/diagnostics-security.md
+          foreach ($fragment in @('semantic identifiers', 'string literal', '<compiler-workspace>', 'Compilation failed.')) {
+            if (-not $policy.Contains($fragment)) { throw "Diagnostics policy is missing: $fragment" }
+          }
+
+      - name: Verify representative compiler redaction corpus
+        shell: pwsh
+        run: |
+          $compiler = './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+          $samples = @(
+            'samples/diagnostic-redaction-source-type-error.xps',
+            'samples/date-diagnostic-string-redaction-error.xps',
+            'samples/diagnostic-redaction-increment-error.xps',
+            'samples/diagnostic-redaction-class-overload-error.xps',
+            'samples/diagnostic-redaction-enum-member-error.xps',
+            'samples/diagnostic-redaction-type-member-error.xps',
+            'samples/diagnostic-redaction-native-byref-error.xps',
+            'samples/reference-diagnostic-path-redaction-error.xps',
+            'samples/reference-diagnostic-rid-redaction-error.xps',
+            'samples/reference-diagnostic-directive-redaction-error.xps'
+          )
+
+          $oldNativePreference = $PSNativeCommandUseErrorActionPreference
+          $PSNativeCommandUseErrorActionPreference = $false
+          try {
+            foreach ($sample in $samples) {
+              foreach ($format in @('text', 'json')) {
+                $result = @(& dotnet $compiler $sample --result-format $format 2>&1)
+                $exit = $LASTEXITCODE
+                $joined = $result -join "`n"
+                Write-Host "[$format] $sample"
+                $result | ForEach-Object { Write-Host $_ }
+                if ($exit -eq 0) { throw "Expected diagnostic sample to fail compilation: $sample" }
+                if ($joined -match 'DO_NOT_ECHO') { throw "Diagnostic payload leaked from $sample in $format output." }
+              }
+            }
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
+            $global:LASTEXITCODE = 0
+          }
