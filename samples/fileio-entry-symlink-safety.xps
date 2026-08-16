@@ -1,0 +1,14 @@
+Sub Main
+    On Error Resume Next
+
+    Kill "./toctou-fixture/kill-link"
+    Print "KILL_ERR=" & CStr(Err)
+
+    Name "./toctou-fixture/name-source-link" As "./toctou-fixture/name-destination-link"
+    Print "NAME_ERR=" & CStr(Err)
+
+    RmDir "./toctou-fixture/rmdir-link"
+    Print "RMDIR_ERR=" & CStr(Err)
+
+    Print "TOCTOU_ENTRY_SAFETY=DONE"
+End Sub
