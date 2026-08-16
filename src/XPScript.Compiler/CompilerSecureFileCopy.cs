@@ -16,7 +16,7 @@ internal static class CompilerSecureFileCopy
     private const int FileAttributeTagInfo = 9;
 
     // Test seam used only by the cross-platform dependency security probe. Production code leaves this null.
-    internal static Action<string>? AfterSourceOpenedForTesting;
+    internal static Action<string>? AfterSourceOpenedForTesting = null;
 
     public static void CopyValidatedRegularFile(string sourcePath, string destinationPath, string kind)
     {
