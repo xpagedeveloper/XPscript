@@ -1,0 +1,28 @@
+Sub Main()
+    Dim value As Variant
+    value = Null
+
+    If value Then
+        Print "IF=NULL-TRUE"
+    Else
+        Print "IF=NULL-FALSE"
+    End If
+
+    If Empty Then
+        Print "IF=EMPTY-TRUE"
+    Else
+        Print "IF=EMPTY-FALSE"
+    End If
+
+    Dim count As Integer
+    count = 0
+    While value
+        count = count + 1
+    Wend
+    Print "WHILE=" & count
+
+    Do Until value
+        Print "UNTIL=NULL-FALSE"
+        Exit Do
+    Loop
+End Sub
