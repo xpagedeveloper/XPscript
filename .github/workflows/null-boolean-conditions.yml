@@ -1,0 +1,49 @@
+name: Null Boolean Conditions
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/null-boolean-conditions.xps'
+      - '.github/workflows/null-boolean-conditions.yml'
+  push:
+    branches:
+      - 'todo-*'
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'samples/null-boolean-conditions.xps'
+      - '.github/workflows/null-boolean-conditions.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile and verify Null Boolean conditions
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/null-boolean-conditions$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/null-boolean-conditions.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Null Boolean condition fixture failed to compile.' }
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "Null Boolean fixture exited with code $LASTEXITCODE." }
+          foreach ($value in @('IF=NULL-FALSE','IF=EMPTY-FALSE','WHILE=0','UNTIL=NULL-FALSE')) {
+            if ($output -notcontains $value) { throw "Missing expected output: $value" }
+          }
