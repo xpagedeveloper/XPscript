@@ -2,4 +2,5 @@
   <Project Path="src/XPScript.Compiler/XPScript.Compiler.csproj" />
   <Project Path="src/XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
   <Project Path="src/XPScript.Web.Kestrel/XPScript.Web.Kestrel.csproj" />
+  <Project Path="src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
 </Solution>
