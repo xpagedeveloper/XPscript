@@ -111,7 +111,7 @@ jobs:
           }
 
           $listRuntime = Get-Content "$sourceRoot/XPScriptListRuntimeSource.cs" -Raw
-          foreach ($required in @('_values.Remove(', '_order.Remove(', '_values.Clear();', '_order.Clear();')) {
+          foreach ($required in @('_values.Remove(', '_order.RemoveAll(', '_values.Clear();', '_order.Clear();')) {
             if (-not $listRuntime.Contains($required)) { throw "List lifetime contract missing: $required" }
           }
 
