@@ -94,7 +94,7 @@ Status:
 - [>] `Name` refuses a symbolic-link/reparse-point source as well as a linked destination
 - [>] `RmDir` refuses a symbolic-link/reparse-point directory target
 - [>] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
-- [ ] review TOCTOU behavior between symlink/attribute/existence checks and the final filesystem operation
+- [x] TOCTOU behavior between symlink/attribute/existence checks and final directory-entry operations reviewed; `Kill`, `Name` and `RmDir` do not follow a replaced symlink entry to modify its target, verified by `File IO Entry Symlink Safety` on Windows, Ubuntu and macOS
 - [x] Windows versus Unix delete-while-open behavior is verified on Windows, Ubuntu and macOS
 - [x] cross-process byte-range locks are verified on Windows, Ubuntu and macOS, including overlap conflict, non-overlap coexistence and reacquisition after release
 
@@ -172,8 +172,8 @@ Status:
 - [>] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
 - [>] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
 - [>] legacy disabled coverage exists in `samples/runtime-sax.xps`
-- [>] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text
-- [ ] runtime verification on Windows
+- [x] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text; verified by `COM GetObject Runtime`
+- [x] runtime verification on Windows covers Variant-held COM objects, dot-method/property invocation and sanitized activation failures via `COM GetObject Runtime`
 
 ## Diagnostics
 
