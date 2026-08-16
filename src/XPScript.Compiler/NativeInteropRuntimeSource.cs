@@ -6,9 +6,14 @@ internal static class NativeInteropRuntimeSource
 internal static class XPNativeInteropRuntime
 {
     private const string ApplicationLocalMarker = "__XPSCRIPT_APPLOCAL__";
+    private const uint LoadLibrarySearchDllLoadDir = 0x00000100;
+    private const uint LoadLibrarySearchDefaultDirs = 0x00001000;
     private static readonly object ResolverGate = new();
     private static readonly HashSet<string> ApplicationLocalLibraries = new(StringComparer.OrdinalIgnoreCase);
     private static bool ResolverInstalled;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibraryExW(string lpLibFileName, IntPtr hFile, uint dwFlags);
 
     public static void Initialize()
     {
@@ -67,6 +72,17 @@ internal static class XPNativeInteropRuntime
             throw new DllNotFoundException("Application-local native library was not found beside the executable.");
         if (info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0)
             throw new DllNotFoundException("Application-local native library may not be a symbolic link or reparse point.");
+
+        if (OperatingSystem.IsWindows())
+        {
+            var handle = LoadLibraryExW(
+                candidate,
+                IntPtr.Zero,
+                LoadLibrarySearchDllLoadDir | LoadLibrarySearchDefaultDirs);
+            if (handle == IntPtr.Zero)
+                throw new DllNotFoundException("Application-local native library or one of its dependencies could not be loaded from approved Windows search locations.");
+            return handle;
+        }
 
         return System.Runtime.InteropServices.NativeLibrary.Load(candidate, assembly, searchPath);
     }
