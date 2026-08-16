@@ -176,7 +176,8 @@ internal sealed class DateComparisonValidator
             var offending = left.Value.Type.Equals("Date", StringComparison.OrdinalIgnoreCase) ? right.Value : left.Value;
             var displayType = offending.IsArray ? offending.Type + "()" : offending.Type;
             var column = Math.Max(1, original.IndexOf(comparison.Operator, StringComparison.Ordinal) + 1);
-            diagnostics.Add($"{sourceName}({lineNumber},{column}): Date cannot be compared with {displayType} using '{comparison.Operator}'. Convert the value explicitly to Date or a supported scalar type first.{Environment.NewLine}  {original.TrimEnd()}");
+            var safeSourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+            diagnostics.Add($"{sourceName}({lineNumber},{column}): Date cannot be compared with {displayType} using '{comparison.Operator}'. Convert the value explicitly to Date or a supported scalar type first.{Environment.NewLine}  {safeSourceLine}");
         }
     }
 

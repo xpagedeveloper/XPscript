@@ -1,0 +1,11 @@
+' (c) xpagedeveloper.com 2026
+' Must fail without echoing the string literal in the diagnostic source line.
+Type SecretProbe
+    Value As Integer
+End Type
+
+Sub Main()
+    Dim d As Date
+    Dim probe As SecretProbe
+    If d = probe Then Print "DO_NOT_ECHO_DATE_DIAGNOSTIC_SECRET"
+End Sub
