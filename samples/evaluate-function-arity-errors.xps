@@ -11,7 +11,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9501, "Evaluate Left wrong arity should use error 5, got " & CStr(evaluateErr)
     End If
-    If evaluateMessage <> "Evaluate function Left expects 2 arguments, but received 1 argument." Then
+    If evaluateMessage <> "Evaluate source contains an unavailable function." Then
         Error 9502, "Unexpected Evaluate Left arity diagnostic: " & evaluateMessage
     End If
 
@@ -23,7 +23,7 @@ Sub Main()
     If evaluateErr <> 5 Then
         Error 9503, "Unknown Evaluate function should use error 5, got " & CStr(evaluateErr)
     End If
-    If evaluateMessage <> "Function is not available inside Evaluate: MadeUpFunction" Then
+    If evaluateMessage <> "Evaluate source contains an unavailable function." Then
         Error 9504, "Unexpected unavailable-function diagnostic: " & evaluateMessage
     End If
 
