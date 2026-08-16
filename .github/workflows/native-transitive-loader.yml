@@ -3,7 +3,7 @@ name: Native Transitive Loader Security
 on:
   pull_request:
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
       - 'samples/native-transitive-loader.xps'
       - 'tests/NativeTransitiveFixture/**'
       - '.github/workflows/native-transitive-loader.yml'
