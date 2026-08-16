@@ -90,6 +90,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Native HTTP resource-limit regression failed.`n$output" }
           $output | ForEach-Object { Write-Host $_ }
           $required = @(
+            'DEFAULT_TIMEOUT=30',
             'REDIRECT_STATUS=302',
             'REDIRECT_BODY=redirect-not-followed',
             'REQUEST_BODY_LIMIT_ERR=5',
