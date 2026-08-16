@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Security;
 using System.Text.RegularExpressions;
 using XPScript.Compiler;
 using XPScript.Web.Runtime;
@@ -50,6 +51,7 @@ public sealed class XpsWebCompiler
                 fullSourcePath,
                 CompilerDriver.CurrentRuntimeIdentifier(),
                 [fullSourceRoot]);
+            generated = InjectWebObjects(generated);
         }
         catch (CompilerException ex)
         {
@@ -64,7 +66,7 @@ public sealed class XpsWebCompiler
         {
             var projectPath = Path.Combine(workspace, "WebUnit.csproj");
             var generatedPath = Path.Combine(workspace, "Generated.cs");
-            await File.WriteAllTextAsync(projectPath, BuildProject(), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
 
             var psi = new ProcessStartInfo
@@ -97,6 +99,7 @@ public sealed class XpsWebCompiler
                 : null;
 
             var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+            loadContext.Resolving += ResolveSharedAssembly;
             try
             {
                 using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
@@ -115,6 +118,7 @@ public sealed class XpsWebCompiler
             }
             catch
             {
+                loadContext.Resolving -= ResolveSharedAssembly;
                 loadContext.Unload();
                 throw;
             }
@@ -123,6 +127,29 @@ public sealed class XpsWebCompiler
         {
             try { Directory.Delete(workspace, recursive: true); } catch { }
         }
+    }
+
+    private static Assembly? ResolveSharedAssembly(AssemblyLoadContext context, AssemblyName name)
+    {
+        var runtimeAssembly = typeof(XpsWebContext).Assembly;
+        return string.Equals(name.Name, runtimeAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase)
+            ? runtimeAssembly
+            : null;
+    }
+
+    private static string InjectWebObjects(string generated)
+    {
+        const string marker = "internal static class Script\n{";
+        const string members = """
+internal static class Script
+{
+    private static XPScript.Web.Runtime.XpsWebRequest Request => XPScript.Web.Runtime.XpsWebRuntimeObjects.Request;
+    private static XPScript.Web.Runtime.XpsWebResponse Response => XPScript.Web.Runtime.XpsWebRuntimeObjects.Response;
+    private static XPScript.Web.Runtime.XpsWebServer Server => XPScript.Web.Runtime.XpsWebRuntimeObjects.Server;
+""";
+        var index = generated.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
+        return generated[..index] + members + generated[(index + marker.Length)..];
     }
 
     private static string EnsureCompilerEntryPoint(string source) =>
@@ -152,7 +179,11 @@ public sealed class XpsWebCompiler
         }
     }
 
-    private static string BuildProject() => """
+    private static string BuildProject(string webRuntimeAssemblyPath)
+    {
+        var escapedPath = SecurityElement.Escape(webRuntimeAssemblyPath)
+            ?? throw new XpsWebCompilationException("Unable to encode the web runtime assembly path.");
+        return $$"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -162,8 +193,15 @@ public sealed class XpsWebCompiler
     <Nullable>enable</Nullable>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="XPScript.Web.Runtime">
+      <HintPath>{{escapedPath}}</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>
 """;
+    }
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
