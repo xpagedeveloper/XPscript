@@ -77,6 +77,39 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
+    def _send_binary(self):
+        data = bytes([0, 255, 1, 254, 2, 253, 10, 13, 128, 127]) + b'XPS-BINARY'
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/octet-stream')
+        self.send_header('Content-Disposition', 'attachment; filename="report.bin"')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _send_multipart_files(self):
+        boundary = 'xpscript-boundary-2026'
+        first = bytes([0, 1, 2, 250, 251, 252]) + b'FIRST'
+        second = bytes([255, 254, 253, 10, 13]) + b'SECOND'
+        chunks = [
+            f'--{boundary}\r\n'.encode('ascii'),
+            b'Content-Disposition: form-data; name="first"; filename="first.bin"\r\n',
+            b'Content-Type: application/octet-stream\r\n\r\n',
+            first,
+            b'\r\n',
+            f'--{boundary}\r\n'.encode('ascii'),
+            b"Content-Disposition: form-data; name=\"second\"; filename*=UTF-8''second-%C3%A5.bin\r\n",
+            b'Content-Type: application/octet-stream\r\n\r\n',
+            second,
+            b'\r\n',
+            f'--{boundary}--\r\n'.encode('ascii'),
+        ]
+        data = b''.join(chunks)
+        self.send_response(200)
+        self.send_header('Content-Type', f'multipart/form-data; boundary="{boundary}"')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         if self.path == '/redirect':
             self._send_redirect()
@@ -97,6 +130,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == '/slow':
             self._send_slow()
+            return
+        if self.path == '/binary':
+            self._send_binary()
+            return
+        if self.path == '/multipart-files':
+            self._send_multipart_files()
             return
         self._send('GET')
 
