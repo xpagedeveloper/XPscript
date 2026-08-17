@@ -26,8 +26,11 @@ try
 {
     var cliDll = FindCliDll();
     await VerifyHelpAsync(cliDll);
+    await VerifySessionOptionValidationAsync(cliDll, root);
     await VerifySessionsDisabledByDefaultAsync(cliDll, root);
     await VerifySessionsAsync(cliDll, root);
+    await VerifyCustomSessionOptionsAsync(cliDll, root);
+    await VerifySecureSessionCookieAsync(cliDll, root);
     Console.WriteLine("WEB-CLI-SESSION-SMOKE=OK");
 }
 finally
@@ -40,6 +43,24 @@ static async Task VerifyHelpAsync(string cliDll)
     var result = await RunShortAsync(cliDll, ["--help"]);
     if (result.ExitCode != 0 || !result.Stdout.Contains("--sessions", StringComparison.Ordinal))
         throw new Exception("xpscript --help did not expose --sessions.");
+    foreach (var option in new[] { "--session-cookie NAME", "--session-timeout-seconds SECONDS", "--session-same-site Strict|Lax|None", "--session-secure" })
+        if (!result.Stdout.Contains(option, StringComparison.Ordinal))
+            throw new Exception("xpscript --help did not expose " + option + ".");
+}
+
+static async Task VerifySessionOptionValidationAsync(string cliDll, string root)
+{
+    var withoutSessions = await RunShortAsync(cliDll, ["web", "--root", root, "--session-cookie", "CUSTOMSID"]);
+    if (withoutSessions.ExitCode == 0 || !withoutSessions.Stderr.Contains("require --sessions", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Session option without --sessions was not rejected.");
+
+    var invalidTimeout = await RunShortAsync(cliDll, ["web", "--root", root, "--sessions", "--session-timeout-seconds", "9"]);
+    if (invalidTimeout.ExitCode == 0 || !invalidTimeout.Stderr.Contains("between 10 and 2592000", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Invalid session timeout was not rejected.");
+
+    var insecureNone = await RunShortAsync(cliDll, ["web", "--root", root, "--sessions", "--session-same-site", "None"]);
+    if (insecureNone.ExitCode == 0 || !insecureNone.Stderr.Contains("SameSite=None", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("SameSite=None without Secure was not rejected.");
 }
 
 static async Task VerifySessionsDisabledByDefaultAsync(string cliDll, string root)
@@ -83,6 +104,67 @@ static async Task VerifySessionsAsync(string cliDll, string root)
         var value = await getResponse.Content.ReadAsStringAsync();
         if (!getResponse.IsSuccessStatusCode || value != "persisted")
             throw new Exception($"Session state did not survive the next request. Status={(int)getResponse.StatusCode} body={value}");
+    }
+    finally
+    {
+        Stop(process);
+    }
+}
+
+static async Task VerifyCustomSessionOptionsAsync(string cliDll, string root)
+{
+    var port = GetFreePort();
+    using var process = Start(cliDll,
+    [
+        "web", "--root", root, "--port", port.ToString(), "--sessions",
+        "--session-cookie", "CUSTOMSID",
+        "--session-timeout-seconds", "60",
+        "--session-same-site", "Strict"
+    ]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        var cookies = new CookieContainer();
+        using var handler = new HttpClientHandler { CookieContainer = cookies };
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+
+        using var setResponse = await client.GetAsync($"http://127.0.0.1:{port}/session/SetValue");
+        if (!setResponse.IsSuccessStatusCode)
+            throw new Exception("Custom session configuration failed to create a session.");
+        if (!setResponse.Headers.TryGetValues("Set-Cookie", out var headers))
+            throw new Exception("Custom session response did not contain Set-Cookie.");
+        var cookieHeader = string.Join(";", headers);
+        if (!cookieHeader.Contains("CUSTOMSID=", StringComparison.Ordinal) ||
+            !cookieHeader.Contains("Max-Age=60", StringComparison.OrdinalIgnoreCase) ||
+            !cookieHeader.Contains("SameSite=Strict", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Custom session cookie options were not applied: " + cookieHeader);
+
+        var storedCookies = cookies.GetCookies(new Uri($"http://127.0.0.1:{port}/"));
+        if (storedCookies["CUSTOMSID"] is null || storedCookies["XPSID"] is not null)
+            throw new Exception("Custom session cookie name was not used exclusively.");
+
+        using var getResponse = await client.GetAsync($"http://127.0.0.1:{port}/session/GetValue");
+        if (await getResponse.Content.ReadAsStringAsync() != "persisted")
+            throw new Exception("Custom session state did not persist across requests.");
+    }
+    finally
+    {
+        Stop(process);
+    }
+}
+
+static async Task VerifySecureSessionCookieAsync(string cliDll, string root)
+{
+    var port = GetFreePort();
+    using var process = Start(cliDll, ["web", "--root", root, "--port", port.ToString(), "--sessions", "--session-secure"]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        using var response = await client.GetAsync($"http://127.0.0.1:{port}/session/SetValue");
+        if (!response.Headers.TryGetValues("Set-Cookie", out var headers) ||
+            !headers.Any(value => value.Contains("; Secure", StringComparison.OrdinalIgnoreCase)))
+            throw new Exception("--session-secure did not add Secure to the session cookie.");
     }
     finally
     {

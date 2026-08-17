@@ -14,6 +14,36 @@ Sessions are disabled by default. Without `--sessions`, scripts that access `Ses
 
 When enabled, one `XpsSessionStore` is created for the lifetime of the CLI host process. Session data can therefore survive across HTTP requests handled by that process.
 
+## Configure the session cookie and timeout
+
+The CLI exposes the initial session-store controls directly:
+
+```text
+--session-cookie NAME
+--session-timeout-seconds SECONDS
+--session-same-site Strict|Lax|None
+--session-secure
+```
+
+These options require `--sessions`.
+
+Example:
+
+```text
+xpscript web --root ./site --sessions \
+  --session-cookie MYSESSION \
+  --session-timeout-seconds 3600 \
+  --session-same-site Strict
+```
+
+To force the Secure attribute even when the hosting integration reports a non-HTTPS scheme:
+
+```text
+xpscript web --root ./site --sessions --session-secure
+```
+
+`SameSite=None` requires `--session-secure`. The timeout can be configured from 10 seconds through 30 days.
+
 ## Basic example
 
 Create `session.xps`:
