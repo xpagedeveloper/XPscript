@@ -1,5 +1,9 @@
 Option Declare
 
+Class JsonBoundaryPerson
+    Public Name As String
+End Class
+
 Sub Main()
     Dim document As JsonDocument
     Dim parsed As JsonDocument
@@ -7,6 +11,9 @@ Sub Main()
     Dim obj As JsonObject
     Dim arr As JsonArray
     Dim element As JsonElement
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim missingPerson As JsonBoundaryPerson
 
     Set document = JsonDocument.Parse("{""name"":""Alice"",""active"":true}")
     Print "DOCUMENT=" & document.Stringify()
@@ -40,4 +47,10 @@ Sub Main()
 
     Set decoded = JsonDecode("{""ok"":true}")
     Print "DECODE=" & decoded.Stringify()
+
+    nullValue = Null
+    Set missingPerson = Nothing
+    Print "EMPTYJSON=" & JsonStringify(emptyValue)
+    Print "NULLJSON=" & JsonStringify(nullValue)
+    Print "NOTHINGJSON=" & JsonStringify(missingPerson)
 End Sub
