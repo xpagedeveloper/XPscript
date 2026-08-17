@@ -351,7 +351,7 @@ static string FormatHttpProtocols(HttpProtocols protocols) => protocols switch
 {
     HttpProtocols.Http1 => "HTTP/1.1",
     HttpProtocols.Http2 => "HTTP/2",
-    HttpProtocols.Http1And2 => "HTTP/1.1 + HTTP/2",
+    HttpProtocols.Http1AndHttp2 => "HTTP/1.1 + HTTP/2",
     _ => protocols.ToString()
 };
 
