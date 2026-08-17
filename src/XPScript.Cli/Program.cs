@@ -36,6 +36,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var allowedHosts = new List<string>();
     var enableHealth = false;
     var enableMetrics = false;
+    var enableSessions = false;
     var operationalExternal = false;
     var enableStaticFiles = false;
     long? staticMaxBytes = null;
@@ -79,6 +80,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
                 break;
             case "--metrics":
                 enableMetrics = true;
+                break;
+            case "--sessions":
+                enableSessions = true;
                 break;
             case "--operational-external":
                 operationalExternal = true;
@@ -150,7 +154,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
 
         await using var dispatcher = new XpsWebDispatcher(root, defaultDocumentName: defaultDocument);
         var server = CreateServerInfo(root, XpsWebHostingMode.Kestrel, address.ToString(), port);
-        var app = XpsKestrelAdapter.Build(options, server, dispatcher, telemetry: telemetry);
+        var sessions = enableSessions ? new XpsSessionStore() : null;
+        var app = XpsKestrelAdapter.Build(options, server, dispatcher, sessions: sessions, telemetry: telemetry);
 
         using var shutdown = CreateShutdownToken();
         var scheme = options.HttpsEnabled ? "https" : "http";
@@ -161,6 +166,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         if (options.HttpsEnabled) Console.WriteLine($"TLS certificate: {Path.GetFileName(options.HttpsCertificatePath)}");
         if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
             Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
+        if (enableSessions) Console.WriteLine("Sessions: enabled, in-memory store, cookie XPSID");
         if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
         if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
         if (structuredLogPath is not null) Console.WriteLine($"Structured request log: {structuredLogPath}");
@@ -361,13 +367,14 @@ XPScript Web Host
 Usage:
   xpscript web --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
-                [--health] [--metrics] [--structured-log FILE] [--operational-external]
+                [--health] [--metrics] [--sessions] [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES]
   xpscript fastcgi --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi --root DIR [--default-document FILE.xps] --unix-socket PATH
 
 Examples:
   xpscript web --root ./site
+  xpscript web --root ./site --sessions
   xpscript web --root ./site --default-document home.xps
   xpscript web --root ./site --static-files
   xpscript web --root ./site --static-files --static-max-bytes 8388608
@@ -384,6 +391,7 @@ Security defaults:
   The default document is index.xps. --default-document accepts only one .xps filename inside the configured root.
   Kestrel explicitly uses HTTP/1.1 + HTTP/2, 15 second request-header timeout, 30 second keep-alive and 240 B/s minimum request/response data rates with a 5 second grace period.
   Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments.
+  Sessions are disabled by default. --sessions enables the bounded in-memory XPSID session store for this host process.
   Health and metrics are disabled by default.
   Enabled operational endpoints remain loopback-only unless --operational-external is explicitly supplied.
   Static file serving is disabled by default and must be enabled with --static-files.
