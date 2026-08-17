@@ -66,7 +66,7 @@ finally
 
 static List<byte[]> BuildFixedCorpus(byte[] valid, string root)
 {
-    var result = new List<byte[]> { valid, [], [1], valid[..Math.Min(7, valid.Length)] };
+    var result = new List<byte[]> { valid, Array.Empty<byte>(), new byte[] { 1 }, valid[..Math.Min(7, valid.Length)] };
 
     var badVersion = valid.ToArray();
     badVersion[0] = 2;
