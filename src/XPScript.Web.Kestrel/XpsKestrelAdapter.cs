@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -37,6 +38,7 @@ public static class XpsKestrelAdapter
 
         var runtimeTelemetry = telemetry ??
             (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
+        var connectionCounter = new XpsKestrelConnectionCounter();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
         builder.WebHost.ConfigureKestrel(kestrel =>
@@ -45,6 +47,11 @@ public static class XpsKestrelAdapter
             kestrel.Listen(options.Address, options.Port, listen =>
             {
                 listen.Protocols = options.Protocols;
+                listen.Use(next => async connection =>
+                {
+                    using var tracked = connectionCounter.Track();
+                    await next(connection);
+                });
                 if (options.HttpsEnabled)
                     listen.UseHttps(Path.GetFullPath(options.HttpsCertificatePath!), options.HttpsCertificatePassword);
             });
@@ -134,7 +141,7 @@ public static class XpsKestrelAdapter
                 http.Response.StatusCode = StatusCodes.Status200OK;
                 http.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
                 if (!HttpMethods.IsHead(http.Request.Method))
-                    await http.Response.WriteAsync(XpsSessionMetrics.Render(runtimeTelemetry, sessions), http.RequestAborted);
+                    await http.Response.WriteAsync(XpsSessionMetrics.Render(runtimeTelemetry, sessions, connectionCounter.Active), http.RequestAborted);
             });
         }
 
