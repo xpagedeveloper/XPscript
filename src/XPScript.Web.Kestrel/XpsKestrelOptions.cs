@@ -44,7 +44,7 @@ public sealed class XpsKestrelOptions
 
     private static void ValidateOperationalPath(string path, string name)
     {
-        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith('/', StringComparison.Ordinal) ||
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal) ||
             path.Contains('?') || path.Contains('#') || path.Contains('\r') || path.Contains('\n'))
             throw new ArgumentException("Operational endpoint paths must be absolute URL paths without query, fragment or line breaks.", name);
         if (path.Length > 512) throw new ArgumentOutOfRangeException(name, "Operational endpoint paths cannot exceed 512 characters.");
