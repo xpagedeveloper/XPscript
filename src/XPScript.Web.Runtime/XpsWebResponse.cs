@@ -222,8 +222,8 @@ public sealed class XpsWebResponse
     {
         if (domain is null) return null;
         var value = domain.Trim();
-        if (value.StartsWith('.', StringComparison.Ordinal)) value = value[1..];
-        if (value.Length == 0 || value.Length > 253 || value.EndsWith('.', StringComparison.Ordinal) ||
+        if (value.StartsWith(".", StringComparison.Ordinal)) value = value[1..];
+        if (value.Length == 0 || value.Length > 253 || value.EndsWith(".", StringComparison.Ordinal) ||
             value.IndexOfAny(['\r', '\n', '\0', '/', '\\', ':', ';', ',']) >= 0 ||
             value.Any(char.IsWhiteSpace))
             throw new ArgumentException("Cookie Domain must be a DNS host name without a port, path or control characters.", nameof(domain));
