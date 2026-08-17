@@ -61,11 +61,17 @@ public sealed record XpsRoutePolicy(
     public XpsRouteAuthorizationResult Authorize(XpsWebRequest request, XpsWebPrincipal principal, IXpsSession? session = null)
     {
         var effectivePrincipal = principal.MergeSession(session);
-        if (Methods.Count > 0 && !Methods.Contains(request.Method)) return XpsRouteAuthorizationResult.MethodNotAllowed;
+        if (Methods.Count > 0 && !IsMethodAllowed(request.Method)) return XpsRouteAuthorizationResult.MethodNotAllowed;
         if (!AllowAnonymous && !effectivePrincipal.IsAuthenticated) return XpsRouteAuthorizationResult.AuthenticationRequired;
         if (RequiredRules.Any(rule => !effectivePrincipal.HasRule(rule))) return XpsRouteAuthorizationResult.Forbidden;
         if (ForbiddenRules.Any(effectivePrincipal.HasRule)) return XpsRouteAuthorizationResult.Forbidden;
         return XpsRouteAuthorizationResult.Allowed;
+    }
+
+    private bool IsMethodAllowed(string method)
+    {
+        if (Methods.Contains(method)) return true;
+        return method.Equals("HEAD", StringComparison.OrdinalIgnoreCase) && Methods.Contains("GET");
     }
 }
 

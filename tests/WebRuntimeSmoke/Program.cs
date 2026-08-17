@@ -100,6 +100,18 @@ try
     if (policy.Authorize(wrongMethod, authenticated) != XpsRouteAuthorizationResult.MethodNotAllowed)
         throw new Exception("HTTP method policy mismatch.");
 
+    var getPolicy = new XpsRoutePolicy(
+        true,
+        new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase),
+        [],
+        []);
+    var headRequest = new XpsWebRequest(
+        "HEAD", "/foo", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+    if (getPolicy.Authorize(headRequest, anonymous) != XpsRouteAuthorizationResult.Allowed)
+        throw new Exception("HEAD request was not allowed on a GET route.");
+
     var blocked = new XpsWebPrincipal(true, "43", "blocked", ["admin", "blocked"]);
     if (policy.Authorize(request, blocked) != XpsRouteAuthorizationResult.Forbidden)
         throw new Exception("Forbidden rule policy mismatch.");
