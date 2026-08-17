@@ -4,9 +4,9 @@ using XPScript.Web.Runtime;
 
 var application = new XpsApplicationState(new XpsApplicationStateOptions
 {
-    MaxEntries = 4,
-    MaxValueBytes = 64,
-    MaxTotalBytes = 128
+    MaxEntries = 8,
+    MaxValueBytes = 256,
+    MaxTotalBytes = 2048
 });
 application.Set("name", "site-one");
 if (!Equals(application.Get("name"), "site-one")) throw new Exception("Application state round-trip failed.");
@@ -17,6 +17,8 @@ var storedBytes = (byte[]?)application.Get("bytes") ?? throw new Exception("Appl
 if (storedBytes[0] != 1) throw new Exception("Application state did not defensively copy byte arrays.");
 storedBytes[1] = 9;
 if (((byte[])application.Get("bytes")!)[1] != 2) throw new Exception("Application state returned mutable backing storage.");
+if (!application.Exists("name") || application.Count < 2 || !application.Keys.Contains("name", StringComparer.OrdinalIgnoreCase))
+    throw new Exception("Application Exists/Count/Keys semantics failed.");
 
 try
 {
@@ -30,20 +32,32 @@ catch (InvalidOperationException)
 var isolatedApplication = new XpsApplicationState();
 if (isolatedApplication.Get("name") is not null) throw new Exception("Application state leaked between site instances.");
 
+// Application state is one thread-safe shared scope per application/site, independent of user sessions.
+await Task.WhenAll(Enumerable.Range(0, 32).Select(async worker =>
+{
+    for (var i = 0; i < 100; i++)
+    {
+        application.Set("shared-" + worker, i);
+        _ = application.Get("name");
+        await Task.Yield();
+    }
+}));
+if (!Equals(application.Get("shared-0"), 99) || !Equals(application.Get("shared-31"), 99))
+    throw new Exception("Concurrent Application scope updates were not retained.");
+
 var sessionOptions = new XpsSessionOptions
 {
     CookieName = "XPSID",
     IdleTimeout = TimeSpan.FromMinutes(15),
-    MaxSessions = 4,
-    MaxEntriesPerSession = 16,
-    MaxValueBytes = 256,
-    MaxBytesPerSession = 2048,
+    MaxSessions = 8,
+    MaxEntriesPerSession = 32,
+    MaxValueBytes = 512,
+    MaxBytesPerSession = 4096,
     SameSite = "Lax"
 };
 var sessions = new XpsSessionStore(sessionOptions);
-var firstRequest = Request();
 var firstResponse = new XpsWebResponse();
-var first = sessions.Bind(firstRequest, firstResponse);
+var first = sessions.Bind(Request(), firstResponse);
 first.Set("user", "Fredrik");
 var firstId = first.Id;
 if (!first.Started || first.Start() != firstId) throw new Exception("PHP-like Session.Start/Started semantics failed.");
@@ -52,7 +66,7 @@ if (!first.Exists("user") || first.Count != 1 || !first.Keys.Contains("user", St
 var firstRegenerated = first.RegenerateId();
 if (firstRegenerated == firstId) throw new Exception("Session.RegenerateId did not replace the identifier.");
 firstId = firstRegenerated;
-if (first.Unset("user") is false || first.Exists("user")) throw new Exception("Session.Unset did not remove the key.");
+if (!first.Unset("user") || first.Exists("user")) throw new Exception("Session.Unset did not remove the key.");
 first.Set("user", "Fredrik");
 AssertSessionCookie(firstResponse, firstId, secure: false);
 
@@ -84,13 +98,76 @@ var secureResponse = new XpsWebResponse();
 var secureSession = secureStore.Bind(Request(scheme: "https"), secureResponse);
 AssertSessionCookie(secureResponse, secureSession.Id, secure: true);
 
-var capacityStore = new XpsSessionStore(new XpsSessionOptions
+// Sliding Session IdleTimeout is enabled by default and every valid request, GET or POST, renews it.
+var sessionClock = new ManualTimeProvider(DateTimeOffset.Parse("2030-01-01T00:00:00Z"));
+var slidingSessionOptions = new XpsSessionOptions
 {
-    MaxSessions = 1,
-    MaxEntriesPerSession = 4,
-    MaxValueBytes = 64,
-    MaxBytesPerSession = 128
-});
+    IdleTimeout = TimeSpan.FromSeconds(10),
+    SlidingIdleTimeout = true,
+    TimeProvider = sessionClock,
+    MaxSessions = 8
+};
+var slidingSessions = new XpsSessionStore(slidingSessionOptions);
+var slidingInitial = slidingSessions.Bind(Request(), new XpsWebResponse());
+slidingInitial.Set("value", "alive");
+var slidingId = slidingInitial.Id;
+sessionClock.Advance(TimeSpan.FromSeconds(9));
+var slidingGetResponse = new XpsWebResponse();
+var slidingGet = slidingSessions.Bind(Request(method: "GET", cookies: Cookie(slidingId)), slidingGetResponse);
+if (!Equals(slidingGet.Get("value"), "alive")) throw new Exception("GET did not keep sliding session alive.");
+AssertSessionCookie(slidingGetResponse, slidingId, secure: false);
+sessionClock.Advance(TimeSpan.FromSeconds(9));
+var slidingPostResponse = new XpsWebResponse();
+var slidingPost = slidingSessions.Bind(Request(method: "POST", cookies: Cookie(slidingId)), slidingPostResponse);
+if (slidingPost.Id != slidingId) throw new Exception("POST did not renew sliding session idle timeout.");
+sessionClock.Advance(TimeSpan.FromSeconds(11));
+var expiredSliding = slidingSessions.Bind(Request(cookies: Cookie(slidingId)), new XpsWebResponse());
+if (expiredSliding.Id == slidingId) throw new Exception("Sliding session did not expire after a full idle period without requests.");
+
+// The same option can be disabled and re-enabled at runtime.
+var toggleClock = new ManualTimeProvider(DateTimeOffset.Parse("2031-01-01T00:00:00Z"));
+var toggleOptions = new XpsSessionOptions { IdleTimeout = TimeSpan.FromSeconds(10), SlidingIdleTimeout = false, TimeProvider = toggleClock, MaxSessions = 8 };
+var toggleSessions = new XpsSessionStore(toggleOptions);
+var toggleSession = toggleSessions.Bind(Request(), new XpsWebResponse());
+toggleSession.Set("value", "fixed");
+var toggleId = toggleSession.Id;
+toggleClock.Advance(TimeSpan.FromSeconds(6));
+_ = toggleSessions.Bind(Request(cookies: Cookie(toggleId)), new XpsWebResponse());
+toggleClock.Advance(TimeSpan.FromSeconds(5));
+if (toggleSessions.Bind(Request(cookies: Cookie(toggleId)), new XpsWebResponse()).Id == toggleId)
+    throw new Exception("SlidingIdleTimeout=false unexpectedly renewed Session on request.");
+
+toggleOptions.SlidingIdleTimeout = true;
+var reenabled = toggleSessions.Bind(Request(), new XpsWebResponse());
+reenabled.Set("value", "sliding-again");
+var reenabledId = reenabled.Id;
+toggleClock.Advance(TimeSpan.FromSeconds(9));
+_ = toggleSessions.Bind(Request(cookies: Cookie(reenabledId)), new XpsWebResponse());
+toggleClock.Advance(TimeSpan.FromSeconds(9));
+if (toggleSessions.Bind(Request(cookies: Cookie(reenabledId)), new XpsWebResponse()).Id != reenabledId)
+    throw new Exception("SlidingIdleTimeout could not be enabled again for Session.");
+
+// Application defaults to update-based idle recycling. Reads do not extend it unless SlidingIdleTimeout is enabled.
+var applicationClock = new ManualTimeProvider(DateTimeOffset.Parse("2032-01-01T00:00:00Z"));
+var applicationOptions = new XpsApplicationStateOptions { IdleTimeout = TimeSpan.FromSeconds(10), SlidingIdleTimeout = false, TimeProvider = applicationClock };
+var timedApplication = new XpsApplicationState(applicationOptions);
+timedApplication.Set("value", "fixed");
+applicationClock.Advance(TimeSpan.FromSeconds(6));
+if (!Equals(timedApplication.Get("value"), "fixed")) throw new Exception("Application value disappeared before IdleTimeout.");
+applicationClock.Advance(TimeSpan.FromSeconds(5));
+if (timedApplication.Get("value") is not null) throw new Exception("Application read unexpectedly extended IdleTimeout while sliding was disabled.");
+
+applicationOptions.SlidingIdleTimeout = true;
+timedApplication.Set("value", "sliding");
+applicationClock.Advance(TimeSpan.FromSeconds(9));
+if (!Equals(timedApplication.Get("value"), "sliding")) throw new Exception("Application value expired before sliding read.");
+applicationClock.Advance(TimeSpan.FromSeconds(9));
+if (!Equals(timedApplication.Get("value"), "sliding")) throw new Exception("Application sliding read did not extend IdleTimeout.");
+applicationOptions.SlidingIdleTimeout = false;
+applicationClock.Advance(TimeSpan.FromSeconds(11));
+if (timedApplication.Get("value") is not null) throw new Exception("Application SlidingIdleTimeout could not be disabled again.");
+
+var capacityStore = new XpsSessionStore(new XpsSessionOptions { MaxSessions = 1, MaxEntriesPerSession = 4, MaxValueBytes = 64, MaxBytesPerSession = 128 });
 var capacityFirst = capacityStore.Bind(Request(), new XpsWebResponse());
 capacityFirst.Set("keep", "alive");
 var capacityId = capacityFirst.Id;
@@ -102,14 +179,10 @@ try
 catch (InvalidOperationException)
 {
 }
-var capacityExisting = capacityStore.Bind(
-    Request(cookies: new Dictionary<string, string> { ["XPSID"] = capacityId }),
-    new XpsWebResponse());
-if (!Equals(capacityExisting.Get("keep"), "alive"))
+if (!Equals(capacityStore.Bind(Request(cookies: Cookie(capacityId)), new XpsWebResponse()).Get("keep"), "alive"))
     throw new Exception("Active session was lost when session capacity was reached.");
 
-var directAuthResponse = new XpsWebResponse();
-var directAuthSession = new XpsSessionStore(sessionOptions).Bind(Request(), directAuthResponse);
+var directAuthSession = new XpsSessionStore(sessionOptions).Bind(Request(), new XpsWebResponse());
 directAuthSession.Set("authenticated", true);
 directAuthSession.Set("userId", "42");
 directAuthSession.Set("userName", "Fredrik");
@@ -124,6 +197,16 @@ directAuthSession.Set("rules", "admin,blocked");
 if (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)
     throw new Exception("Forbidden [Rule:!name] policy did not evaluate session rules.");
 
+// Request scope is strictly local to one XpsWebContext.
+var requestScopeApplication = new XpsApplicationState();
+var requestScopeSessions = new XpsSessionStore();
+var requestScopeSession = requestScopeSessions.Bind(Request(), new XpsWebResponse());
+var requestContextOne = Context("/tmp", Request(), new XpsWebResponse(), requestScopeApplication, requestScopeSession);
+requestContextOne.RequestScope.Set("temp", "one-request");
+if (!Equals(requestContextOne.RequestScope.Get("temp"), "one-request")) throw new Exception("RequestScope write failed.");
+var requestContextTwo = Context("/tmp", Request(), new XpsWebResponse(), requestScopeApplication, requestScopeSession);
+if (requestContextTwo.RequestScope.Get("temp") is not null) throw new Exception("RequestScope leaked into the next request.");
+
 var root = Path.Combine(Path.GetTempPath(), "xps-web-state-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 var script = Path.Combine(root, "index.xps");
@@ -133,9 +216,12 @@ await File.WriteAllTextAsync(script, """
 Sub Index()
     Session.Set("user", "script-user")
     Application.Set("site", "script-app")
+    RequestScope.Set("request-value", "temporary")
     Response.Write(Session.Get("user"))
     Response.Write("|")
     Response.Write(Application.Get("site"))
+    Response.Write("|")
+    Response.Write(RequestScope.Get("request-value"))
 End Sub
 
 [Anonymous]
@@ -188,27 +274,27 @@ try
     await using var unit = await new XpsWebCompiler().CompileAsync(script, root);
     var scriptApplication = new XpsApplicationState();
     var scriptSessions = new XpsSessionStore(sessionOptions);
-
     var response = new XpsWebResponse();
     var request = Request();
     var session = scriptSessions.Bind(request, response);
     var context = Context(root, request, response, scriptApplication, session);
     await unit.InvokeAsync("Index", context);
-    var body = Encoding.UTF8.GetString(response.Body.Span);
-    if (body != "script-user|script-app") throw new Exception("XPScript Session/Application surface returned unexpected output: " + body);
+    var body = Body(response);
+    if (body != "script-user|script-app|temporary") throw new Exception("XPScript Session/Application/RequestScope surface returned unexpected output: " + body);
 
-    var persistentResponse = new XpsWebResponse();
-    var persistentRequest = Request(cookies: new Dictionary<string, string> { ["XPSID"] = session.Id });
-    var persistentSession = scriptSessions.Bind(persistentRequest, persistentResponse);
+    var nextContext = Context(root, Request(), new XpsWebResponse(), scriptApplication, session);
+    if (nextContext.RequestScope.Get("request-value") is not null) throw new Exception("XPScript RequestScope survived a request boundary.");
+
+    var persistentSession = scriptSessions.Bind(Request(cookies: Cookie(session.Id)), new XpsWebResponse());
     if (!Equals(persistentSession.Get("user"), "script-user")) throw new Exception("XPScript-created session state was not persisted.");
-    if (!Equals(scriptApplication.Get("site"), "script-app")) throw new Exception("XPScript-created application state was not persisted.");
+    if (!Equals(scriptApplication.Get("site"), "script-app")) throw new Exception("XPScript-created application state was not persisted/shared.");
 
     var rotateResponse = new XpsWebResponse();
-    var rotateRequest = Request(cookies: new Dictionary<string, string> { ["XPSID"] = persistentSession.Id });
+    var rotateRequest = Request(cookies: Cookie(persistentSession.Id));
     var rotateSession = scriptSessions.Bind(rotateRequest, rotateResponse);
     var oldScriptId = rotateSession.Id;
     await unit.InvokeAsync("Rotate", Context(root, rotateRequest, rotateResponse, scriptApplication, rotateSession));
-    var newScriptId = Encoding.UTF8.GetString(rotateResponse.Body.Span);
+    var newScriptId = Body(rotateResponse);
     if (newScriptId == oldScriptId || newScriptId != rotateSession.Id) throw new Exception("XPScript Session.RotateId failed.");
 
     await using var dispatcher = new XpsWebDispatcher(root);
@@ -223,24 +309,22 @@ try
     var authenticatedId = login.Session.Id;
     if (!login.Session.IsAuthenticated || !login.Session.HasRule("admin") || login.Session.UserId != "42" || login.Session.UserName != "Fredrik")
         throw new Exception("Session.Authenticate did not establish session principal state.");
-    if (!Equals(login.Session.Get("cart"), "preserved")) throw new Exception("Session.Authenticate did not preserve ordinary PHP-like session data.");
+    if (!Equals(login.Session.Get("cart"), "preserved")) throw new Exception("Session.Authenticate did not preserve ordinary session data.");
 
     var privateRoute = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Private", authenticatedId);
-    if (privateRoute.Response.StatusCode != 200 || Body(privateRoute.Response) != "Fredrik")
-        throw new Exception("[Authenticated] did not evaluate persisted session authentication.");
+    if (privateRoute.Response.StatusCode != 200 || Body(privateRoute.Response) != "Fredrik") throw new Exception("[Authenticated] did not evaluate persisted session authentication.");
 
     var adminRoute = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Admin", authenticatedId);
-    if (adminRoute.Response.StatusCode != 200 || Body(adminRoute.Response) != "ADMIN")
-        throw new Exception("[Rule:admin] did not evaluate persisted session rules.");
+    if (adminRoute.Response.StatusCode != 200 || Body(adminRoute.Response) != "ADMIN") throw new Exception("[Rule:admin] did not evaluate persisted session rules.");
 
     var notBlocked = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/NotBlocked", authenticatedId);
     if (notBlocked.Response.StatusCode != 200) throw new Exception("[Rule:!blocked] rejected a session without the forbidden rule.");
 
     var blockedResponse = new XpsWebResponse();
-    var blockedRequest = Request(cookies: new Dictionary<string, string> { ["XPSID"] = authenticatedId });
+    var blockedRequest = Request(path: "/auth/NotBlocked", cookies: Cookie(authenticatedId));
     var blockedSession = authSessions.Bind(blockedRequest, blockedResponse);
     blockedSession.Set("rules", "admin,editor,blocked");
-    await dispatcher.HandleAsync(Context(root, blockedRequest with { Path = "/auth/NotBlocked" }, blockedResponse, authApplication, blockedSession));
+    await dispatcher.HandleAsync(Context(root, blockedRequest, blockedResponse, authApplication, blockedSession));
     if (blockedResponse.StatusCode != 403) throw new Exception("[Rule:!blocked] did not reject the forbidden session rule.");
     blockedSession.Set("rules", "admin,editor");
 
@@ -268,22 +352,24 @@ static async Task<(XpsWebResponse Response, IXpsSession Session)> Dispatch(
     string path,
     string? sessionId)
 {
-    var cookies = sessionId is null ? null : new Dictionary<string, string> { ["XPSID"] = sessionId };
-    var request = Request(cookies: cookies) with { Path = path };
+    var request = Request(path: path, cookies: sessionId is null ? null : Cookie(sessionId));
     var response = new XpsWebResponse();
     var session = sessions.Bind(request, response);
     await dispatcher.HandleAsync(Context(root, request, response, application, session));
     return (response, session);
 }
 
+static IReadOnlyDictionary<string, string> Cookie(string id) => new Dictionary<string, string> { ["XPSID"] = id };
 static string Body(XpsWebResponse response) => Encoding.UTF8.GetString(response.Body.Span);
 
 static XpsWebRequest Request(
+    string path = "/",
+    string method = "GET",
     IReadOnlyDictionary<string, string>? cookies = null,
     string scheme = "http") =>
     new(
-        "GET",
-        "/",
+        method,
+        path,
         "",
         "",
         new Dictionary<string, IReadOnlyList<string>>(),
@@ -318,4 +404,11 @@ static void AssertSessionCookie(XpsWebResponse response, string id, bool secure)
     if (!cookie.Contains("HttpOnly", StringComparison.Ordinal)) throw new Exception("Session cookie is not HttpOnly.");
     if (!cookie.Contains("SameSite=", StringComparison.Ordinal)) throw new Exception("Session cookie has no explicit SameSite policy.");
     if (secure != cookie.Contains("; Secure", StringComparison.Ordinal)) throw new Exception("Session cookie Secure policy was incorrect.");
+}
+
+sealed class ManualTimeProvider(DateTimeOffset initial) : TimeProvider
+{
+    private DateTimeOffset _utcNow = initial;
+    public override DateTimeOffset GetUtcNow() => _utcNow;
+    public void Advance(TimeSpan amount) => _utcNow = _utcNow.Add(amount);
 }
