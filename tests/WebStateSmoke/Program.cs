@@ -32,7 +32,6 @@ catch (InvalidOperationException)
 var isolatedApplication = new XpsApplicationState();
 if (isolatedApplication.Get("name") is not null) throw new Exception("Application state leaked between site instances.");
 
-// Application state is one thread-safe shared scope per application/site, independent of user sessions.
 await Task.WhenAll(Enumerable.Range(0, 32).Select(async worker =>
 {
     for (var i = 0; i < 100; i++)
@@ -98,7 +97,6 @@ var secureResponse = new XpsWebResponse();
 var secureSession = secureStore.Bind(Request(scheme: "https"), secureResponse);
 AssertSessionCookie(secureResponse, secureSession.Id, secure: true);
 
-// Sliding Session IdleTimeout is enabled by default and every valid request, GET or POST, renews it.
 var sessionClock = new ManualTimeProvider(DateTimeOffset.Parse("2030-01-01T00:00:00Z"));
 var slidingSessionOptions = new XpsSessionOptions
 {
@@ -124,7 +122,6 @@ sessionClock.Advance(TimeSpan.FromSeconds(11));
 var expiredSliding = slidingSessions.Bind(Request(cookies: Cookie(slidingId)), new XpsWebResponse());
 if (expiredSliding.Id == slidingId) throw new Exception("Sliding session did not expire after a full idle period without requests.");
 
-// The same option can be disabled and re-enabled at runtime.
 var toggleClock = new ManualTimeProvider(DateTimeOffset.Parse("2031-01-01T00:00:00Z"));
 var toggleOptions = new XpsSessionOptions { IdleTimeout = TimeSpan.FromSeconds(10), SlidingIdleTimeout = false, TimeProvider = toggleClock, MaxSessions = 8 };
 var toggleSessions = new XpsSessionStore(toggleOptions);
@@ -147,7 +144,6 @@ toggleClock.Advance(TimeSpan.FromSeconds(9));
 if (toggleSessions.Bind(Request(cookies: Cookie(reenabledId)), new XpsWebResponse()).Id != reenabledId)
     throw new Exception("SlidingIdleTimeout could not be enabled again for Session.");
 
-// Application defaults to update-based idle recycling. Reads do not extend it unless SlidingIdleTimeout is enabled.
 var applicationClock = new ManualTimeProvider(DateTimeOffset.Parse("2032-01-01T00:00:00Z"));
 var applicationOptions = new XpsApplicationStateOptions { IdleTimeout = TimeSpan.FromSeconds(10), SlidingIdleTimeout = false, TimeProvider = applicationClock };
 var timedApplication = new XpsApplicationState(applicationOptions);
@@ -197,7 +193,6 @@ directAuthSession.Set("rules", "admin,blocked");
 if (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)
     throw new Exception("Forbidden [Rule:!name] policy did not evaluate session rules.");
 
-// Request scope is strictly local to one XpsWebContext.
 var requestScopeApplication = new XpsApplicationState();
 var requestScopeSessions = new XpsSessionStore();
 var requestScopeSession = requestScopeSessions.Bind(Request(), new XpsWebResponse());
@@ -326,7 +321,6 @@ try
     blockedSession.Set("rules", "admin,editor,blocked");
     await dispatcher.HandleAsync(Context(root, blockedRequest, blockedResponse, authApplication, blockedSession));
     if (blockedResponse.StatusCode != 403) throw new Exception("[Rule:!blocked] did not reject the forbidden session rule.");
-    blockedSession.Set("rules", "admin,editor");
 
     var logout = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Logout", authenticatedId);
     if (logout.Response.StatusCode != 200 || logout.Session.IsAuthenticated) throw new Exception("Session.SignOut did not clear auth state.");
