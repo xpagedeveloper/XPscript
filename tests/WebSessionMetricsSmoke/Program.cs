@@ -40,10 +40,16 @@ try
     metricsResponse.EnsureSuccessStatusCode();
     var metrics = await metricsResponse.Content.ReadAsStringAsync();
 
+    if (!metrics.Contains("# TYPE xpscript_web_active_connections gauge", StringComparison.Ordinal))
+        throw new Exception("Active connection metric type was not exposed. Metrics=" + Escape(metrics));
+    var activeConnections = ReadGauge(metrics, "xpscript_web_active_connections");
+    if (activeConnections < 1)
+        throw new Exception("Active connection count must be at least 1 while the metrics request is in flight. Metrics=" + Escape(metrics));
+
     if (!metrics.Contains("# TYPE xpscript_web_sessions_active gauge", StringComparison.Ordinal))
-        throw new Exception("Session metric type was not exposed. Metrics=" + metrics.Replace("\n", "\\n", StringComparison.Ordinal));
+        throw new Exception("Session metric type was not exposed. Metrics=" + Escape(metrics));
     if (!metrics.Contains("xpscript_web_sessions_active 1\n", StringComparison.Ordinal))
-        throw new Exception("Active session count was not exposed as 1. Metrics=" + metrics.Replace("\n", "\\n", StringComparison.Ordinal));
+        throw new Exception("Active session count was not exposed as 1. Metrics=" + Escape(metrics));
     if (metrics.Contains(sessionToken, StringComparison.Ordinal))
         throw new Exception("Session identifier leaked into metrics output.");
 
@@ -54,6 +60,21 @@ finally
     await app.StopAsync();
     await app.DisposeAsync();
 }
+
+static long ReadGauge(string metrics, string name)
+{
+    foreach (var line in metrics.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    {
+        if (!line.StartsWith(name + " ", StringComparison.Ordinal)) continue;
+        var value = line[(name.Length + 1)..];
+        if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+            return parsed;
+        throw new Exception("Invalid numeric value for metric " + name + ": " + value);
+    }
+    throw new Exception("Metric value not found: " + name);
+}
+
+static string Escape(string value) => value.Replace("\n", "\\n", StringComparison.Ordinal);
 
 static int GetFreePort()
 {
