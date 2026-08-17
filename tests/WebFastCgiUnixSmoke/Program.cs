@@ -10,11 +10,11 @@ if (OperatingSystem.IsWindows())
     return;
 }
 
-var parent = Path.Combine(Path.GetTempPath(), "xps-fcgi-unix-" + Guid.NewGuid().ToString("N"));
+var parent = Path.Combine("/tmp", "xpsf-" + Guid.NewGuid().ToString("N")[..8]);
 Directory.CreateDirectory(parent);
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
-var socketPath = Path.Combine(parent, "xps.sock");
+var socketPath = Path.Combine(parent, "x.sock");
 var scriptPath = Path.Combine(root, "index.xps");
 await File.WriteAllTextAsync(scriptPath, "placeholder");
 
