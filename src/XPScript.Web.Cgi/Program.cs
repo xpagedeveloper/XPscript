@@ -14,6 +14,7 @@ internal static class Program
         {
             var environment = ReadEnvironment();
             var root = ResolveRoot(environment);
+            NormalizeInterpreterEnvironment(environment, root);
             var siteId = Value(environment, "XPSCRIPT_SITE_ID")
                          ?? Value(environment, "SERVER_NAME")
                          ?? "cgi-site";
@@ -61,6 +62,18 @@ internal static class Program
         }
 
         throw new XpsCgiException("CGI site root cannot be determined.");
+    }
+
+    private static void NormalizeInterpreterEnvironment(Dictionary<string, string?> environment, string root)
+    {
+        var pathInfo = Value(environment, "PATH_INFO");
+        if (string.IsNullOrWhiteSpace(pathInfo) || pathInfo == "/") return;
+
+        var requestPath = pathInfo.StartsWith("/", StringComparison.Ordinal) ? pathInfo : "/" + pathInfo;
+        var relative = requestPath.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+        environment["SCRIPT_NAME"] = requestPath;
+        environment["PATH_INFO"] = string.Empty;
+        environment["SCRIPT_FILENAME"] = Path.Combine(root, relative);
     }
 
     private static string? Value(IReadOnlyDictionary<string, string?> environment, string name) =>
