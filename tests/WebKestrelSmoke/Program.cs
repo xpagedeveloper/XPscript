@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,7 @@ var app = XpsKestrelAdapter.Build(
     new SmokeApplicationState(),
     telemetry: telemetry);
 var stopped = false;
+string? firstRequestId = null;
 
 try
 {
@@ -47,11 +49,14 @@ try
     {
         message.Headers.TryAddWithoutValidation("X-Request-Test", "present");
         message.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.9");
+        message.Headers.TryAddWithoutValidation("X-Request-Id", "client-spoofed-id");
         message.Content = new StringContent("abc", Encoding.UTF8, "text/plain");
         using var response = await client.SendAsync(message);
         if ((int)response.StatusCode != 201) throw new Exception($"Expected 201, got {(int)response.StatusCode}.");
         if (!response.Headers.TryGetValues("X-Xps-Test", out var testValues) || testValues.Single() != "ok")
             throw new Exception("Response header was not transferred.");
+        firstRequestId = ReadRequestId(response);
+        if (firstRequestId == "client-spoofed-id") throw new Exception("Client-controlled request id was trusted.");
         var body = await response.Content.ReadAsStringAsync();
         if (!body.Contains("METHOD=POST", StringComparison.Ordinal)) throw new Exception("Method normalization failed.");
         if (!body.Contains("PATH=/hello", StringComparison.Ordinal)) throw new Exception("Path normalization failed.");
@@ -68,6 +73,7 @@ try
         if ((int)response.StatusCode != 201) throw new Exception($"HEAD expected 201, got {(int)response.StatusCode}.");
         if (!response.Headers.TryGetValues("X-Xps-Test", out var testValues) || testValues.Single() != "ok")
             throw new Exception("HEAD response header was not transferred.");
+        _ = ReadRequestId(response);
         var body = await response.Content.ReadAsByteArrayAsync();
         if (body.Length != 0) throw new Exception("Kestrel HEAD response serialized a body.");
     }
@@ -93,6 +99,7 @@ try
         oversized.Content = new ByteArrayContent(new byte[65]);
         using var response = await client.SendAsync(oversized);
         if ((int)response.StatusCode != 413) throw new Exception($"Oversized request expected 413, got {(int)response.StatusCode}.");
+        _ = ReadRequestId(response);
     }
 
     using (var health = await client.GetAsync("/_xps/health"))
@@ -125,7 +132,17 @@ try
     var logText = structuredLog.ToString();
     var logLines = logText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     if (logLines.Length != 3) throw new Exception($"Expected three structured request events, got {logLines.Length}.");
-    foreach (var secret in new[] { "/hello", "/head", "q=1", "X-Request-Test", "present", "abc", "oversized" })
+    var requestIds = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var line in logLines)
+    {
+        using var document = JsonDocument.Parse(line);
+        var requestId = document.RootElement.GetProperty("RequestId").GetString();
+        if (!IsValidRequestId(requestId)) throw new Exception("Structured telemetry contained an invalid request id.");
+        if (!requestIds.Add(requestId!)) throw new Exception("Structured telemetry reused a request id.");
+    }
+    if (firstRequestId is null || !requestIds.Contains(firstRequestId))
+        throw new Exception("Response request id was not correlated with structured telemetry.");
+    foreach (var secret in new[] { "/hello", "/head", "q=1", "X-Request-Test", "present", "abc", "oversized", "client-spoofed-id" })
     {
         if (logText.Contains(secret, StringComparison.OrdinalIgnoreCase))
             throw new Exception("Structured telemetry leaked request path, query, header or body data.");
@@ -144,6 +161,17 @@ finally
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
 }
+
+static string ReadRequestId(HttpResponseMessage response)
+{
+    if (!response.Headers.TryGetValues("X-Request-Id", out var values))
+        throw new Exception("Kestrel response did not contain X-Request-Id.");
+    var requestId = values.Single();
+    if (!IsValidRequestId(requestId)) throw new Exception("Kestrel response contained an invalid X-Request-Id.");
+    return requestId;
+}
+
+static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.All(Uri.IsHexDigit);
 
 sealed class EchoHandler : IXpsWebRequestHandler
 {
