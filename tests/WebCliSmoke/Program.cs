@@ -45,8 +45,11 @@ finally
 static async Task VerifyHelpAsync(string cliDll)
 {
     var result = await RunShortAsync(cliDll, ["--help"]);
-    if (result.ExitCode != 0 || !result.Stdout.Contains("xpscript web --root DIR", StringComparison.Ordinal))
-        throw new Exception("xpscript --help did not expose the web command. stdout=" + result.Stdout + " stderr=" + result.Stderr);
+    if (result.ExitCode != 0 ||
+        !result.Stdout.Contains("xpscript web", StringComparison.Ordinal) ||
+        !result.Stdout.Contains("--root DIR", StringComparison.Ordinal) ||
+        !result.Stdout.Contains("--config FILE", StringComparison.Ordinal))
+        throw new Exception("xpscript --help did not expose the web/config command. stdout=" + result.Stdout + " stderr=" + result.Stderr);
     if (!result.Stdout.Contains("--default-document FILE.xps", StringComparison.Ordinal))
         throw new Exception("xpscript --help did not expose default-document configuration.");
     if (!result.Stdout.Contains("--https-cert FILE", StringComparison.Ordinal) ||
