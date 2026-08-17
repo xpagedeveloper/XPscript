@@ -32,6 +32,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var root = RequireRoot(commandArgs);
     var address = IPAddress.Loopback;
     var port = 8080;
+    var defaultDocument = "index.xps";
     var allowedHosts = new List<string>();
     var enableHealth = false;
     var enableMetrics = false;
@@ -49,6 +50,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         {
             case "--root":
                 i++;
+                break;
+            case "--default-document":
+                defaultDocument = RequireValue(commandArgs, ref i);
                 break;
             case "--address":
             case "--bind":
@@ -144,13 +148,14 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLogWriter));
         }
 
-        await using var dispatcher = new XpsWebDispatcher(root);
+        await using var dispatcher = new XpsWebDispatcher(root, defaultDocumentName: defaultDocument);
         var server = CreateServerInfo(root, XpsWebHostingMode.Kestrel, address.ToString(), port);
         var app = XpsKestrelAdapter.Build(options, server, dispatcher, telemetry: telemetry);
 
         using var shutdown = CreateShutdownToken();
         var scheme = options.HttpsEnabled ? "https" : "http";
         Console.WriteLine($"XPScript web root: {root}");
+        Console.WriteLine($"Default document: {defaultDocument}");
         Console.WriteLine($"Listening: {scheme}://{FormatAddress(address)}:{port}");
         Console.WriteLine($"HTTP protocols: {FormatHttpProtocols(options.Protocols)}");
         if (options.HttpsEnabled) Console.WriteLine($"TLS certificate: {Path.GetFileName(options.HttpsCertificatePath)}");
@@ -178,6 +183,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     var root = RequireRoot(commandArgs);
     var address = IPAddress.Loopback;
     var port = 9000;
+    var defaultDocument = "index.xps";
     string? unixSocket = null;
 
     for (var i = 0; i < commandArgs.Length; i++)
@@ -186,6 +192,9 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
         {
             case "--root":
                 i++;
+                break;
+            case "--default-document":
+                defaultDocument = RequireValue(commandArgs, ref i);
                 break;
             case "--listen":
             {
@@ -211,7 +220,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     if (unixSocket is not null && OperatingSystem.IsWindows())
         throw new PlatformNotSupportedException("--unix-socket is supported only on Linux and macOS.");
 
-    await using var dispatcher = new XpsWebDispatcher(root);
+    await using var dispatcher = new XpsWebDispatcher(root, defaultDocumentName: defaultDocument);
     var options = new XpsFastCgiOptions { Address = address, Port = port };
     var server = CreateServerInfo(root, XpsWebHostingMode.FastCgi, unixSocket ?? address.ToString(), unixSocket is null ? port : null);
     await using var adapter = new XpsFastCgiAdapter(options, server, dispatcher);
@@ -225,6 +234,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
         });
         await listener.StartAsync(shutdown.Token);
         Console.WriteLine($"XPScript FastCGI root: {root}");
+        Console.WriteLine($"Default document: {defaultDocument}");
         Console.WriteLine($"Listening Unix socket: {unixSocket}");
         await WaitForShutdownAsync(shutdown.Token);
         await listener.StopAsync();
@@ -234,6 +244,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     await adapter.StartAsync(shutdown.Token);
     var localEndpoint = adapter.LocalEndpoint;
     Console.WriteLine($"XPScript FastCGI root: {root}");
+    Console.WriteLine($"Default document: {defaultDocument}");
     Console.WriteLine($"Listening: {localEndpoint?.Address}:{localEndpoint?.Port}");
     await WaitForShutdownAsync(shutdown.Token);
     await adapter.StopAsync();
@@ -348,27 +359,29 @@ XPScript Web Host
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
+  xpscript web --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES]
-  xpscript fastcgi --root DIR [--listen ADDRESS:PORT]
-  xpscript fastcgi --root DIR --unix-socket PATH
+  xpscript fastcgi --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
+  xpscript fastcgi --root DIR [--default-document FILE.xps] --unix-socket PATH
 
 Examples:
   xpscript web --root ./site
+  xpscript web --root ./site --default-document home.xps
   xpscript web --root ./site --static-files
   xpscript web --root ./site --static-files --static-max-bytes 8388608
   xpscript web --root ./site --health --metrics
   xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
   XPS_TLS_PASSWORD=secret xpscript web --root ./site --port 8443 --host www.example.com --https-cert ./server.pfx --https-cert-password-env XPS_TLS_PASSWORD
-  xpscript fastcgi --root /srv/xpsite --listen 127.0.0.1:9000
+  xpscript fastcgi --root /srv/xpsite --default-document home.xps --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
 
 Security defaults:
   Kestrel binds to loopback by default.
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
+  The default document is index.xps. --default-document accepts only one .xps filename inside the configured root.
   Kestrel explicitly uses HTTP/1.1 + HTTP/2, 15 second request-header timeout, 30 second keep-alive and 240 B/s minimum request/response data rates with a 5 second grace period.
   Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments.
   Health and metrics are disabled by default.

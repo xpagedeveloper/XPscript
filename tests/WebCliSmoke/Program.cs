@@ -15,6 +15,14 @@ Sub Index()
     Response.Write("CLI-WEB-OK")
 End Sub
 """);
+await File.WriteAllTextAsync(Path.Combine(root, "home.xps"), """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.ContentType = "text/plain; charset=utf-8"
+    Response.Write("HOME-DOC-OK")
+End Sub
+""");
 
 try
 {
@@ -22,7 +30,9 @@ try
     await VerifyHelpAsync(cliDll);
     await VerifyHttpsValidationAsync(cliDll, root);
     await VerifyStaticValidationAsync(cliDll, root);
+    await VerifyDefaultDocumentValidationAsync(cliDll, root);
     await VerifyWebAsync(cliDll, root);
+    await VerifyDefaultDocumentAsync(cliDll, root);
     await VerifyStaticWebAsync(cliDll, root);
     await VerifyFastCgiAsync(cliDll, root);
     Console.WriteLine("WEB-CLI-SMOKE=OK");
@@ -37,6 +47,8 @@ static async Task VerifyHelpAsync(string cliDll)
     var result = await RunShortAsync(cliDll, ["--help"]);
     if (result.ExitCode != 0 || !result.Stdout.Contains("xpscript web --root DIR", StringComparison.Ordinal))
         throw new Exception("xpscript --help did not expose the web command. stdout=" + result.Stdout + " stderr=" + result.Stderr);
+    if (!result.Stdout.Contains("--default-document FILE.xps", StringComparison.Ordinal))
+        throw new Exception("xpscript --help did not expose default-document configuration.");
     if (!result.Stdout.Contains("--https-cert FILE", StringComparison.Ordinal) ||
         !result.Stdout.Contains("--https-cert-password-env NAME", StringComparison.Ordinal) ||
         !result.Stdout.Contains("--protocols http1|http2|http1+2", StringComparison.Ordinal))
@@ -74,6 +86,13 @@ static async Task VerifyStaticValidationAsync(string cliDll, string root)
         throw new Exception("Invalid static-file byte limit was not rejected.");
 }
 
+static async Task VerifyDefaultDocumentValidationAsync(string cliDll, string root)
+{
+    var invalid = await RunShortAsync(cliDll, ["web", "--root", root, "--default-document", "../outside.xps"]);
+    if (invalid.ExitCode == 0 || !invalid.Stderr.Contains("Default document must be a single .xps filename", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Unsafe default document was not rejected.");
+}
+
 static async Task VerifyWebAsync(string cliDll, string root)
 {
     var port = GetFreePort();
@@ -92,6 +111,25 @@ static async Task VerifyWebAsync(string cliDll, string root)
         using var staticDisabled = await client.GetAsync($"http://127.0.0.1:{port}/assets/site.css");
         if (await staticDisabled.Content.ReadAsStringAsync() == "body{color:black}")
             throw new Exception("Static files were served without --static-files.");
+    }
+    finally
+    {
+        Stop(process);
+    }
+}
+
+static async Task VerifyDefaultDocumentAsync(string cliDll, string root)
+{
+    var port = GetFreePort();
+    using var process = Start(cliDll, ["web", "--root", root, "--default-document", "home.xps", "--port", port.ToString()]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        using var response = await client.GetAsync($"http://127.0.0.1:{port}/");
+        var body = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode || body != "HOME-DOC-OK")
+            throw new Exception($"Configured default document returned {(int)response.StatusCode} body={body}");
     }
     finally
     {
@@ -123,7 +161,7 @@ static async Task VerifyStaticWebAsync(string cliDll, string root)
 static async Task VerifyFastCgiAsync(string cliDll, string root)
 {
     var port = GetFreePort();
-    using var process = Start(cliDll, ["fastcgi", "--root", root, "--listen", $"127.0.0.1:{port}"]);
+    using var process = Start(cliDll, ["fastcgi", "--root", root, "--default-document", "home.xps", "--listen", $"127.0.0.1:{port}"]);
     try
     {
         await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
