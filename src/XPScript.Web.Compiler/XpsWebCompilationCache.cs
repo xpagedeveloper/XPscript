@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using XPScript.Compiler;
 
 namespace XPScript.Web.Compiler;
@@ -25,6 +26,15 @@ public sealed class XpsWebCompilationCacheOptions
     }
 }
 
+public sealed record XpsWebCompilationCacheMetrics(
+    int Entries,
+    long Hits,
+    long Misses,
+    long CompilationStarts,
+    long CompilationFailures,
+    long Evictions,
+    TimeSpan TotalCompilationDuration);
+
 public sealed class XpsWebCompilationCache : IAsyncDisposable
 {
     private sealed class Entry
@@ -45,7 +55,12 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     private readonly Dictionary<string, Entry> _entries;
     private readonly XpsWebCompiler _compiler;
     private readonly XpsWebCompilationCacheOptions _options;
+    private long _cacheHits;
+    private long _cacheMisses;
     private long _compilationStarts;
+    private long _compilationFailures;
+    private long _evictions;
+    private long _compilationDurationTicks;
     private bool _disposed;
 
     public XpsWebCompilationCache(XpsWebCompiler compiler, XpsWebCompilationCacheOptions? options = null)
@@ -62,6 +77,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     }
 
     public long CompilationStarts => Interlocked.Read(ref _compilationStarts);
+
+    public XpsWebCompilationCacheMetrics MetricsSnapshot() => new(
+        Count,
+        Interlocked.Read(ref _cacheHits),
+        Interlocked.Read(ref _cacheMisses),
+        Interlocked.Read(ref _compilationStarts),
+        Interlocked.Read(ref _compilationFailures),
+        Interlocked.Read(ref _evictions),
+        TimeSpan.FromTicks(Math.Max(0, Interlocked.Read(ref _compilationDurationTicks))));
 
     public Task<XpsCompiledWebUnitLease> AcquireAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
@@ -101,9 +125,11 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                 !(existing.FailureUntilUtc is not null && existing.FailureUntilUtc <= now))
             {
                 entry = existing;
+                Interlocked.Increment(ref _cacheHits);
             }
             else
             {
+                Interlocked.Increment(ref _cacheMisses);
                 if (existing is not null)
                 {
                     _entries.Remove(key);
@@ -118,11 +144,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                     Identity = snapshot.Identity,
                     LastAccessUtc = now,
                     Compilation = new Lazy<Task<XpsCompiledWebUnit>>(
-                        () =>
-                        {
-                            Interlocked.Increment(ref _compilationStarts);
-                            return CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot);
-                        },
+                        () => CompileMeasuredAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot),
                         LazyThreadSafetyMode.ExecutionAndPublication)
                 };
                 _entries.Add(key, entry);
@@ -169,6 +191,30 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
     }
 
+    private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot)
+    {
+        Interlocked.Increment(ref _compilationStarts);
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot).ConfigureAwait(false);
+        }
+        catch
+        {
+            Interlocked.Increment(ref _compilationFailures);
+            throw;
+        }
+        finally
+        {
+            var elapsed = Stopwatch.GetElapsedTime(started);
+            Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+        }
+    }
+
     private async Task<XpsCompiledWebUnit> CompileAndVerifyAsync(
         string fullPath,
         string fullSiteRoot,
@@ -197,6 +243,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         {
             if (now - pair.Value.LastAccessUtc < _options.IdleTtl) continue;
             _entries.Remove(pair.Key);
+            Interlocked.Increment(ref _evictions);
             RetireLocked(pair.Value, retired);
         }
         return retired;
@@ -212,6 +259,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                 .FirstOrDefault();
             if (victim is null) break;
             _entries.Remove(victim.Key);
+            Interlocked.Increment(ref _evictions);
             RetireLocked(victim, retired);
         }
     }
