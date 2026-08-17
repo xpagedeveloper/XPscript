@@ -17,7 +17,7 @@ The architecture review is documented in `docs/web-runtime-security-review.md`. 
 | Broken Access Control | canonical site-root routing, explicit route method/auth/rule policies, request-local principal |
 | Security Misconfiguration | loopback defaults, Host allowlist, trusted-proxy allowlist, disabled operational endpoints by default, documented bounded limits |
 | Software Supply Chain Failures | .NET/ASP.NET Core platform primitives are preferred; the custom FastCGI parser has no protocol dependency and is covered by deterministic malformed-input regression |
-| Cryptographic Failures | 256-bit cryptographic session identifiers, rotation support, Secure session cookies on HTTPS, explicit SameSite |
+| Cryptographic Failures | direct Kestrel TLS support, 256-bit cryptographic session identifiers, rotation support, Secure session cookies on HTTPS, explicit SameSite |
 | Injection | strict header/cookie validation, canonical path resolution, no request-controlled compiler output path, bounded FastCGI parsing |
 | Insecure Design | architecture ADR/review, explicit trusted-source boundary, site-isolated cache/state and bounded resource model |
 | Authentication Failures | authenticated route metadata, strong server-side session identifiers, session rotation and invalidation |
@@ -27,16 +27,26 @@ The architecture review is documented in `docs/web-runtime-security-review.md`. 
 
 ## Session cache protection
 
-A response that sets a cookie now enforces `Cache-Control: no-store`. `Response.Complete()` reasserts the directive when `Set-Cookie` is present, so later application code cannot accidentally turn a session-bearing response into a cacheable response.
+A response that sets a cookie enforces `Cache-Control: no-store`. `Response.Complete()` reasserts the directive when `Set-Cookie` is present, so later application code cannot accidentally turn a session-bearing response into a cacheable response.
 
 The focused security regression verifies this behavior for new sessions, rotated sessions and abandoned sessions. It also verifies response-header, cookie-value and cookie-path injection rejection and transport-owned `Content-Length` protection.
+
+## Kestrel transport security
+
+Direct Kestrel TLS is supported with an explicitly configured certificate file. The public CLI accepts `--https-cert` and reads a protected certificate password through `--https-cert-password-env` rather than a plaintext password argument.
+
+The initial protocol policy supports HTTP/1.1, HTTP/2, or HTTP/1.1 + HTTP/2. HTTP/3 is rejected until a separate QUIC deployment contract exists.
+
+Slow-client controls are explicit rather than implicit framework assumptions: request-header timeout, keep-alive timeout, request-line/header-size ceilings and request/response minimum data rates with grace periods are represented in `XpsKestrelOptions` and applied to Kestrel limits.
+
+The dedicated TLS gate creates an ephemeral certificate, starts a real HTTPS listener, requires HTTP/2 negotiation and verifies the configured Kestrel limit values on Windows, Ubuntu and macOS.
 
 ## Existing permanent evidence
 
 The web runtime has permanent cross-platform gates for:
 
 - runtime core routing/path/header security
-- Kestrel transport and proxy/Host behavior
+- Kestrel transport, direct TLS, HTTP/2, slow-client limits and proxy/Host behavior
 - compiler target and collectible assembly loading
 - bounded dispatcher/cache behavior and Include invalidation
 - Request/Response/Server runtime objects
@@ -62,7 +72,7 @@ The security review does not convert optional or unimplemented features into cla
 - CSRF protection remains an application/deployment responsibility; SameSite is not represented as a complete CSRF defense
 - CSP and application-specific browser response policy remain application/deployment policy
 - in-memory Session/Application are process-local and require a designed shared provider for non-affine multi-node deployments
-- direct Kestrel HTTPS configuration and explicit protocol/slow-client policy remain separate detailed checklist items until their own regression gates pass
+- HTTP/3 is not part of the initial direct Kestrel contract
 
 ## Release rule
 
