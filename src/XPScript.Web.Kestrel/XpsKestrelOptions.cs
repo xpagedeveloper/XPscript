@@ -106,7 +106,7 @@ public sealed class XpsKestrelOptions
             throw new ArgumentOutOfRangeException(nameof(StaticFileContentTypes), "Static extension allowlist must contain between 1 and 256 entries.");
         foreach (var pair in StaticFileContentTypes)
         {
-            if (string.IsNullOrWhiteSpace(pair.Key) || !pair.Key.StartsWith('.', StringComparison.Ordinal) || pair.Key.Length > 32 ||
+            if (string.IsNullOrWhiteSpace(pair.Key) || !pair.Key.StartsWith(".", StringComparison.Ordinal) || pair.Key.Length > 32 ||
                 pair.Key.IndexOfAny(['/', '\\', ':', '\r', '\n', '\0']) >= 0)
                 throw new ArgumentException("Static file extensions must be simple dot-prefixed extensions.", nameof(StaticFileContentTypes));
             if (pair.Key.Equals(".xps", StringComparison.OrdinalIgnoreCase))
