@@ -132,8 +132,12 @@ static byte[] Mutate(byte[] source, Random random)
                 break;
             }
             default:
-                Array.Reverse(copy, random.Next(copy.Length), Math.Min(random.Next(1, 9), copy.Length));
+            {
+                var index = random.Next(copy.Length);
+                var length = Math.Min(random.Next(1, 9), copy.Length - index);
+                Array.Reverse(copy, index, length);
                 break;
+            }
         }
     }
     return copy;
