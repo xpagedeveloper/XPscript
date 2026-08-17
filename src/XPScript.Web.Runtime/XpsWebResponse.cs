@@ -15,12 +15,23 @@ public sealed record XpsCookieOptions(
 
 public sealed class XpsWebResponse
 {
+    public const int DefaultMaxBodyBytes = 16 * 1024 * 1024;
+
     private readonly MemoryStream _body = new();
     private readonly Dictionary<string, List<string>> _headers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly int _maxBodyBytes;
+
+    public XpsWebResponse(int maxBodyBytes = DefaultMaxBodyBytes)
+    {
+        if (maxBodyBytes is < 1 or > 1024 * 1024 * 1024)
+            throw new ArgumentOutOfRangeException(nameof(maxBodyBytes), "Response body limit must be between 1 byte and 1 GiB.");
+        _maxBodyBytes = maxBodyBytes;
+    }
 
     public int StatusCode { get; set; } = 200;
     public string? ContentType { get; set; } = "text/html; charset=utf-8";
     public bool Completed { get; private set; }
+    public int MaxBodyBytes => _maxBodyBytes;
 
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Headers =>
         new ReadOnlyDictionary<string, IReadOnlyList<string>>(
@@ -113,12 +124,14 @@ public sealed class XpsWebResponse
         EnsureWritable();
         var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
         var bytes = Encoding.UTF8.GetBytes(text);
+        EnsureBodyCapacity(bytes.Length);
         _body.Write(bytes);
     }
 
     public void WriteBinary(ReadOnlySpan<byte> value)
     {
         EnsureWritable();
+        EnsureBodyCapacity(value.Length);
         _body.Write(value);
     }
 
@@ -134,6 +147,8 @@ public sealed class XpsWebResponse
         var safeName = NormalizeDownloadFileName(fileName);
         if (string.IsNullOrWhiteSpace(contentType)) throw new ArgumentException("Content type must not be empty.", nameof(contentType));
         ValidateHeaderValue(contentType);
+        if (content.Length > _maxBodyBytes)
+            throw new InvalidOperationException($"Response body exceeds the configured {_maxBodyBytes} byte limit.");
 
         Clear();
         StatusCode = 200;
@@ -174,6 +189,14 @@ public sealed class XpsWebResponse
         if (ContentType is not null) ValidateHeaderValue(ContentType);
         if (_headers.ContainsKey("Set-Cookie")) EnsureCookieResponseNoStore();
         Completed = true;
+    }
+
+    private void EnsureBodyCapacity(int bytesToAppend)
+    {
+        if (bytesToAppend < 0) throw new ArgumentOutOfRangeException(nameof(bytesToAppend));
+        var nextLength = checked(_body.Length + bytesToAppend);
+        if (nextLength > _maxBodyBytes)
+            throw new InvalidOperationException($"Response body exceeds the configured {_maxBodyBytes} byte limit.");
     }
 
     private void RemoveEquivalentSetCookie(string name, string path, string? domain)
