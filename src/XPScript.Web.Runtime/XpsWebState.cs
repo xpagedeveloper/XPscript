@@ -8,12 +8,14 @@ public sealed class XpsApplicationStateOptions
     public int MaxEntries { get; init; } = 256;
     public int MaxValueBytes { get; init; } = 64 * 1024;
     public long MaxTotalBytes { get; init; } = 4 * 1024 * 1024;
+    public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(20);
 
     internal void Validate()
     {
         if (MaxEntries is < 1 or > 100_000) throw new ArgumentOutOfRangeException(nameof(MaxEntries));
         if (MaxValueBytes is < 1 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxValueBytes));
         if (MaxTotalBytes < MaxValueBytes || MaxTotalBytes > 256L * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxTotalBytes));
+        if (IdleTimeout < TimeSpan.FromSeconds(10) || IdleTimeout > TimeSpan.FromDays(30)) throw new ArgumentOutOfRangeException(nameof(IdleTimeout));
     }
 }
 
@@ -23,18 +25,32 @@ public sealed class XpsApplicationState : IXpsApplicationState
     private readonly Dictionary<string, StateValue> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly XpsApplicationStateOptions _options;
     private long _totalBytes;
+    private DateTimeOffset _lastUpdateUtc;
 
     public XpsApplicationState(XpsApplicationStateOptions? options = null)
     {
         _options = options ?? new XpsApplicationStateOptions();
         _options.Validate();
+        _lastUpdateUtc = DateTimeOffset.UtcNow;
     }
+
+    public int Count { get { lock (_gate) { RecycleIfIdleLocked(); return _values.Count; } } }
+    public IReadOnlyList<string> Keys { get { lock (_gate) { RecycleIfIdleLocked(); return _values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); } } }
 
     public object? Get(string name)
     {
         ValidateStateName(name);
         lock (_gate)
+        {
+            RecycleIfIdleLocked();
             return _values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null;
+        }
+    }
+
+    public bool Exists(string name)
+    {
+        ValidateStateName(name);
+        lock (_gate) { RecycleIfIdleLocked(); return _values.ContainsKey(name); }
     }
 
     public void Set(string name, object? value)
@@ -43,6 +59,7 @@ public sealed class XpsApplicationState : IXpsApplicationState
         var stateValue = StateValuePolicy.Create(value, _options.MaxValueBytes);
         lock (_gate)
         {
+            RecycleIfIdleLocked();
             _values.TryGetValue(name, out var previous);
             if (previous is null && _values.Count >= _options.MaxEntries)
                 throw new InvalidOperationException("Application state entry limit has been reached.");
@@ -51,6 +68,7 @@ public sealed class XpsApplicationState : IXpsApplicationState
                 throw new InvalidOperationException("Application state memory limit has been reached.");
             _values[name] = stateValue;
             _totalBytes = nextTotal;
+            _lastUpdateUtc = DateTimeOffset.UtcNow;
         }
     }
 
@@ -59,19 +77,33 @@ public sealed class XpsApplicationState : IXpsApplicationState
         ValidateStateName(name);
         lock (_gate)
         {
+            RecycleIfIdleLocked();
             if (!_values.Remove(name, out var previous)) return false;
             _totalBytes -= previous.Bytes;
+            _lastUpdateUtc = DateTimeOffset.UtcNow;
             return true;
         }
     }
+
+    public bool Unset(string name) => Remove(name);
 
     public void Clear()
     {
         lock (_gate)
         {
+            RecycleIfIdleLocked();
             _values.Clear();
             _totalBytes = 0;
+            _lastUpdateUtc = DateTimeOffset.UtcNow;
         }
+    }
+
+    private void RecycleIfIdleLocked()
+    {
+        if (_values.Count == 0 || DateTimeOffset.UtcNow - _lastUpdateUtc < _options.IdleTimeout) return;
+        _values.Clear();
+        _totalBytes = 0;
+        _lastUpdateUtc = DateTimeOffset.UtcNow;
     }
 
     private static void ValidateStateName(string name)
@@ -101,9 +133,7 @@ public sealed class XpsSessionOptions
         if (MaxEntriesPerSession is < 1 or > 10_000) throw new ArgumentOutOfRangeException(nameof(MaxEntriesPerSession));
         if (MaxValueBytes is < 1 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxValueBytes));
         if (MaxBytesPerSession < MaxValueBytes || MaxBytesPerSession > 64L * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxBytesPerSession));
-        if (!SameSite.Equals("Strict", StringComparison.OrdinalIgnoreCase) &&
-            !SameSite.Equals("Lax", StringComparison.OrdinalIgnoreCase) &&
-            !SameSite.Equals("None", StringComparison.OrdinalIgnoreCase))
+        if (!SameSite.Equals("Strict", StringComparison.OrdinalIgnoreCase) && !SameSite.Equals("Lax", StringComparison.OrdinalIgnoreCase) && !SameSite.Equals("None", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Session SameSite must be Strict, Lax or None.", nameof(SameSite));
         if (SameSite.Equals("None", StringComparison.OrdinalIgnoreCase) && !RequireSecureCookie)
             throw new ArgumentException("Session SameSite=None requires RequireSecureCookie=true.", nameof(RequireSecureCookie));
@@ -122,10 +152,7 @@ public sealed class XpsSessionStore
         _options.Validate();
     }
 
-    public int Count
-    {
-        get { lock (_gate) return _sessions.Count; }
-    }
+    public int Count { get { lock (_gate) { RemoveExpiredLocked(DateTimeOffset.UtcNow); return _sessions.Count; } } }
 
     public IXpsSession Bind(XpsWebRequest request, XpsWebResponse response)
     {
@@ -134,16 +161,12 @@ public sealed class XpsSessionStore
         var now = DateTimeOffset.UtcNow;
         SessionRecord record;
         var isNew = false;
-
         lock (_gate)
         {
             RemoveExpiredLocked(now);
             var requestedId = request.Cookie(_options.CookieName);
             if (requestedId is not null && IsValidSessionId(requestedId) && _sessions.TryGetValue(requestedId, out var existing))
-            {
                 record = existing;
-                lock (record.Gate) record.LastAccessUtc = now;
-            }
             else
             {
                 EnsureCapacityLocked();
@@ -152,7 +175,6 @@ public sealed class XpsSessionStore
                 isNew = true;
             }
         }
-
         var session = new XpsWebSession(this, record, response, request.Scheme, _options);
         if (isNew) session.WriteCookie();
         return session;
@@ -167,7 +189,7 @@ public sealed class XpsSessionStore
                 EnsureActive(record);
                 _sessions.Remove(record.Id);
                 record.Id = CreateUniqueSessionIdLocked();
-                record.LastAccessUtc = DateTimeOffset.UtcNow;
+                record.LastUpdateUtc = DateTimeOffset.UtcNow;
                 _sessions[record.Id] = record;
             }
         }
@@ -196,35 +218,24 @@ public sealed class XpsSessionStore
         if (record.Abandoned) throw new InvalidOperationException("Session has been abandoned.");
     }
 
-    private void WriteSessionCookie(string id, XpsWebResponse response, string scheme) =>
-        response.SetCookie(
-            _options.CookieName,
-            id,
-            new XpsCookieOptions(
-                Path: "/",
-                HttpOnly: true,
-                Secure: SecureCookieFor(scheme),
-                SameSite: _options.SameSite,
-                MaxAge: _options.IdleTimeout));
+    internal void WriteSessionCookie(string id, XpsWebResponse response, string scheme) => response.SetCookie(
+        _options.CookieName, id, new XpsCookieOptions(Path: "/", HttpOnly: true, Secure: SecureCookieFor(scheme), SameSite: _options.SameSite, MaxAge: _options.IdleTimeout));
 
-    private bool SecureCookieFor(string scheme) =>
-        _options.RequireSecureCookie || scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+    private bool SecureCookieFor(string scheme) => _options.RequireSecureCookie || scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
     private void RemoveExpiredLocked(DateTimeOffset now)
     {
         foreach (var pair in _sessions.ToArray())
         {
             var expired = false;
-            lock (pair.Value.Gate)
-                expired = pair.Value.Abandoned || now - pair.Value.LastAccessUtc >= _options.IdleTimeout;
+            lock (pair.Value.Gate) expired = pair.Value.Abandoned || now - pair.Value.LastUpdateUtc >= _options.IdleTimeout;
             if (expired) _sessions.Remove(pair.Key);
         }
     }
 
     private void EnsureCapacityLocked()
     {
-        if (_sessions.Count >= _options.MaxSessions)
-            throw new InvalidOperationException("Session capacity has been reached.");
+        if (_sessions.Count >= _options.MaxSessions) throw new InvalidOperationException("Session capacity has been reached.");
     }
 
     private string CreateUniqueSessionIdLocked()
@@ -238,17 +249,13 @@ public sealed class XpsSessionStore
     {
         Span<byte> bytes = stackalloc byte[32];
         RandomNumberGenerator.Fill(bytes);
-        return Convert.ToBase64String(bytes)
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
+        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     private static bool IsValidSessionId(string value)
     {
         if (value.Length is < 40 or > 128) return false;
-        foreach (var c in value)
-            if (!(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')) return false;
+        foreach (var c in value) if (!(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')) return false;
         return true;
     }
 
@@ -256,7 +263,7 @@ public sealed class XpsSessionStore
     {
         internal object Gate { get; } = new();
         internal string Id { get; set; } = id;
-        internal DateTimeOffset LastAccessUtc { get; set; } = now;
+        internal DateTimeOffset LastUpdateUtc { get; set; } = now;
         internal Dictionary<string, StateValue> Values { get; } = new(StringComparer.OrdinalIgnoreCase);
         internal long TotalBytes { get; set; }
         internal bool Abandoned { get; set; }
@@ -269,135 +276,67 @@ public sealed class XpsWebSession : IXpsSession
     public const string UserIdKey = "userId";
     public const string UserNameKey = "userName";
     public const string RulesKey = "rules";
-
     private readonly XpsSessionStore _store;
     private readonly XpsSessionStore.SessionRecord _record;
     private readonly XpsWebResponse _response;
     private readonly string _scheme;
     private readonly XpsSessionOptions _options;
 
-    internal XpsWebSession(
-        XpsSessionStore store,
-        XpsSessionStore.SessionRecord record,
-        XpsWebResponse response,
-        string scheme,
-        XpsSessionOptions options)
-    {
-        _store = store;
-        _record = record;
-        _response = response;
-        _scheme = scheme;
-        _options = options;
-    }
+    internal XpsWebSession(XpsSessionStore store, XpsSessionStore.SessionRecord record, XpsWebResponse response, string scheme, XpsSessionOptions options)
+    { _store = store; _record = record; _response = response; _scheme = scheme; _options = options; }
 
-    public string Id
-    {
-        get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Id; } }
-    }
-
-    public bool Started
-    {
-        get { lock (_record.Gate) return !_record.Abandoned; }
-    }
-
-    public int Count
-    {
-        get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.Count; } }
-    }
-
-    public IReadOnlyList<string> Keys
-    {
-        get
-        {
-            lock (_record.Gate)
-            {
-                XpsSessionStore.EnsureActive(_record);
-                return _record.Values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
-            }
-        }
-    }
-
-    public bool IsAuthenticated
-    {
-        get
-        {
-            lock (_record.Gate)
-            {
-                XpsSessionStore.EnsureActive(_record);
-                return _record.Values.TryGetValue(AuthenticatedKey, out var value) && IsTruthy(value.Value);
-            }
-        }
-    }
-
+    public string Id { get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Id; } } }
+    public bool Started { get { lock (_record.Gate) return !_record.Abandoned; } }
+    public int Count { get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.Count; } } }
+    public IReadOnlyList<string> Keys { get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); } } }
+    public bool IsAuthenticated { get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.TryGetValue(AuthenticatedKey, out var value) && IsTruthy(value.Value); } } }
     public string? UserId => Get(UserIdKey) as string;
     public string? UserName => Get(UserNameKey) as string;
-
-    public IReadOnlyCollection<string> Rules
-    {
-        get
-        {
-            var raw = Get(RulesKey) as string;
-            return ParseRules(raw);
-        }
-    }
-
+    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);
     public string Start() => Id;
 
     public object? Get(string name)
     {
         ValidateName(name);
-        lock (_record.Gate)
-        {
-            XpsSessionStore.EnsureActive(_record);
-            _record.LastAccessUtc = DateTimeOffset.UtcNow;
-            return _record.Values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null;
-        }
+        lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null; }
     }
 
     public void Set(string name, object? value)
     {
         ValidateName(name);
-        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)
-            throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
-        if ((name.Equals(UserIdKey, StringComparison.OrdinalIgnoreCase) || name.Equals(UserNameKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string)
-            throw new InvalidOperationException($"Session '{name}' must be a string.");
+        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+        if ((name.Equals(UserIdKey, StringComparison.OrdinalIgnoreCase) || name.Equals(UserNameKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session '{name}' must be a string.");
         var stateValue = StateValuePolicy.Create(value, _options.MaxValueBytes);
         lock (_record.Gate)
         {
             XpsSessionStore.EnsureActive(_record);
             _record.Values.TryGetValue(name, out var previous);
-            if (previous is null && _record.Values.Count >= _options.MaxEntriesPerSession)
-                throw new InvalidOperationException("Session state entry limit has been reached.");
+            if (previous is null && _record.Values.Count >= _options.MaxEntriesPerSession) throw new InvalidOperationException("Session state entry limit has been reached.");
             var nextTotal = checked(_record.TotalBytes - (previous?.Bytes ?? 0) + stateValue.Bytes);
-            if (nextTotal > _options.MaxBytesPerSession)
-                throw new InvalidOperationException("Session state memory limit has been reached.");
+            if (nextTotal > _options.MaxBytesPerSession) throw new InvalidOperationException("Session state memory limit has been reached.");
             _record.Values[name] = stateValue;
             _record.TotalBytes = nextTotal;
-            _record.LastAccessUtc = DateTimeOffset.UtcNow;
+            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
         }
+        WriteCookie();
     }
 
-    public bool Exists(string name)
-    {
-        ValidateName(name);
-        lock (_record.Gate)
-        {
-            XpsSessionStore.EnsureActive(_record);
-            return _record.Values.ContainsKey(name);
-        }
-    }
+    public bool Exists(string name) { ValidateName(name); lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.ContainsKey(name); } }
 
     public bool Remove(string name)
     {
         ValidateName(name);
+        var removed = false;
         lock (_record.Gate)
         {
             XpsSessionStore.EnsureActive(_record);
-            _record.LastAccessUtc = DateTimeOffset.UtcNow;
             if (!_record.Values.Remove(name, out var previous)) return false;
             _record.TotalBytes -= previous.Bytes;
-            return true;
+            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
+            removed = true;
         }
+        if (removed) WriteCookie();
+        return true;
     }
 
     public bool Unset(string name) => Remove(name);
@@ -409,15 +348,12 @@ public sealed class XpsWebSession : IXpsSession
             XpsSessionStore.EnsureActive(_record);
             _record.Values.Clear();
             _record.TotalBytes = 0;
-            _record.LastAccessUtc = DateTimeOffset.UtcNow;
+            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
         }
+        WriteCookie();
     }
 
-    public bool HasRule(string rule)
-    {
-        var normalized = NormalizeRule(rule);
-        return Rules.Contains(normalized, StringComparer.OrdinalIgnoreCase);
-    }
+    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
 
     public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
     {
@@ -433,113 +369,33 @@ public sealed class XpsWebSession : IXpsSession
 
     public void SignOut()
     {
-        RemoveIfPresent(AuthenticatedKey);
-        RemoveIfPresent(UserIdKey);
-        RemoveIfPresent(UserNameKey);
-        RemoveIfPresent(RulesKey);
-        RotateId();
+        RemoveIfPresent(AuthenticatedKey); RemoveIfPresent(UserIdKey); RemoveIfPresent(UserNameKey); RemoveIfPresent(RulesKey); RotateId();
     }
 
     public string RotateId() => _store.Rotate(_record, _response, _scheme);
     public string RegenerateId() => RotateId();
-
     public void Abandon() => _store.Abandon(_record, _response, _scheme);
     public void Destroy() => Abandon();
+    internal void WriteCookie() => _store.WriteSessionCookie(Id, _response, _scheme);
 
-    internal void WriteCookie()
-    {
-        var secure = _options.RequireSecureCookie || _scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-        _response.SetCookie(
-            _options.CookieName,
-            Id,
-            new XpsCookieOptions("/", HttpOnly: true, Secure: secure, SameSite: _options.SameSite, MaxAge: _options.IdleTimeout));
-    }
-
-    private void RemoveIfPresent(string name)
-    {
-        if (Exists(name)) Remove(name);
-    }
-
-    private static bool IsTruthy(object? value) => value switch
-    {
-        bool boolean => boolean,
-        byte number => number != 0,
-        sbyte number => number != 0,
-        short number => number != 0,
-        ushort number => number != 0,
-        int number => number != 0,
-        uint number => number != 0,
-        long number => number != 0,
-        ulong number => number != 0,
-        string text => text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                       text.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                       text.Equals("1", StringComparison.Ordinal),
-        _ => false
-    };
-
+    private void RemoveIfPresent(string name) { if (Exists(name)) Remove(name); }
+    private static bool IsTruthy(object? value) => value switch { bool b => b, byte n => n != 0, sbyte n => n != 0, short n => n != 0, ushort n => n != 0, int n => n != 0, uint n => n != 0, long n => n != 0, ulong n => n != 0, string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("yes", StringComparison.OrdinalIgnoreCase) || s == "1", _ => false };
     private static IReadOnlyCollection<string> ParseRules(string? rules)
     {
         if (string.IsNullOrWhiteSpace(rules)) return Array.Empty<string>();
-        var values = rules
-            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(NormalizeRule)
-            .Where(x => x.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var values = rules.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(NormalizeRule).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (values.Length > 128) throw new ArgumentException("Session rules cannot exceed 128 entries.", nameof(rules));
         return values;
     }
-
-    private static string NormalizeRule(string? rule)
-    {
-        var value = (rule ?? string.Empty).Trim();
-        if (value.Length > 128) throw new ArgumentException("Rule name exceeds 128 characters.", nameof(rule));
-        if (value.Any(char.IsControl)) throw new ArgumentException("Rule name contains a control character.", nameof(rule));
-        return value;
-    }
-
-    private static void ValidateIdentityValue(string value, string parameterName)
-    {
-        if (value.Length > 256) throw new ArgumentOutOfRangeException(parameterName, "Identity value cannot exceed 256 characters.");
-        if (value.Any(char.IsControl)) throw new ArgumentException("Identity value contains a control character.", parameterName);
-    }
-
-    private static void ValidateName(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (name.Length > 256) throw new ArgumentOutOfRangeException(nameof(name), "Session value name cannot exceed 256 characters.");
-    }
+    private static string NormalizeRule(string? rule) { var value = (rule ?? string.Empty).Trim(); if (value.Length > 128) throw new ArgumentException("Rule name exceeds 128 characters.", nameof(rule)); if (value.Any(char.IsControl)) throw new ArgumentException("Rule name contains a control character.", nameof(rule)); return value; }
+    private static void ValidateIdentityValue(string value, string parameterName) { if (value.Length > 256) throw new ArgumentOutOfRangeException(parameterName, "Identity value cannot exceed 256 characters."); if (value.Any(char.IsControl)) throw new ArgumentException("Identity value contains a control character.", parameterName); }
+    private static void ValidateName(string name) { ArgumentException.ThrowIfNullOrWhiteSpace(name); if (name.Length > 256) throw new ArgumentOutOfRangeException(nameof(name), "Session value name cannot exceed 256 characters."); }
 }
 
 internal sealed record StateValue(object? Value, int Bytes);
-
 internal static class StateValuePolicy
 {
-    internal static StateValue Create(object? value, int maxBytes)
-    {
-        var bytes = EstimateBytes(value);
-        if (bytes > maxBytes) throw new InvalidOperationException($"State value exceeds the configured {maxBytes} byte limit.");
-        return new StateValue(Clone(value), bytes);
-    }
-
-    internal static object? Clone(object? value) => value switch
-    {
-        null => null,
-        byte[] bytes => bytes.ToArray(),
-        string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal or char or DateTime or DateTimeOffset or Guid => value,
-        _ => throw new InvalidOperationException("Web state only supports scalar values, strings and byte arrays in the initial runtime.")
-    };
-
-    private static int EstimateBytes(object? value) => value switch
-    {
-        null => 0,
-        string text => Encoding.UTF8.GetByteCount(text),
-        byte[] bytes => bytes.Length,
-        bool or byte or sbyte => 1,
-        short or ushort or char => 2,
-        int or uint or float => 4,
-        long or ulong or double or DateTime or DateTimeOffset => 16,
-        decimal or Guid => 16,
-        _ => throw new InvalidOperationException("Web state only supports scalar values, strings and byte arrays in the initial runtime.")
-    };
+    internal static StateValue Create(object? value, int maxBytes) { var bytes = EstimateBytes(value); if (bytes > maxBytes) throw new InvalidOperationException($"State value exceeds the configured {maxBytes} byte limit."); return new StateValue(Clone(value), bytes); }
+    internal static object? Clone(object? value) => value switch { null => null, byte[] bytes => bytes.ToArray(), string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal or char or DateTime or DateTimeOffset or Guid => value, _ => throw new InvalidOperationException("Web state only supports scalar values, strings and byte arrays in the initial runtime.") };
+    private static int EstimateBytes(object? value) => value switch { null => 0, string text => Encoding.UTF8.GetByteCount(text), byte[] bytes => bytes.Length, bool or byte or sbyte => 1, short or ushort or char => 2, int or uint or float => 4, long or ulong or double or DateTime or DateTimeOffset => 16, decimal or Guid => 16, _ => throw new InvalidOperationException("Web state only supports scalar values, strings and byte arrays in the initial runtime.") };
 }
