@@ -41,9 +41,9 @@ try
     var metrics = await metricsResponse.Content.ReadAsStringAsync();
 
     if (!metrics.Contains("# TYPE xpscript_web_sessions_active gauge", StringComparison.Ordinal))
-        throw new Exception("Session metric type was not exposed.");
+        throw new Exception("Session metric type was not exposed. Metrics=" + metrics.Replace("\n", "\\n", StringComparison.Ordinal));
     if (!metrics.Contains("xpscript_web_sessions_active 1\n", StringComparison.Ordinal))
-        throw new Exception("Active session count was not exposed as 1. Metrics=" + metrics);
+        throw new Exception("Active session count was not exposed as 1. Metrics=" + metrics.Replace("\n", "\\n", StringComparison.Ordinal));
     if (metrics.Contains(sessionToken, StringComparison.Ordinal))
         throw new Exception("Session identifier leaked into metrics output.");
 
