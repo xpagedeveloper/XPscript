@@ -192,8 +192,10 @@ public static class XpsKestrelAdapter
 
         app.Run(async http =>
         {
+            var requestId = Guid.NewGuid().ToString("N");
+            http.Response.Headers["X-Request-Id"] = requestId;
             var declaredRequestBytes = Math.Max(0, http.Request.ContentLength ?? 0);
-            using var requestScope = runtimeTelemetry?.BeginRequest("kestrel", http.Request.Method, declaredRequestBytes);
+            using var requestScope = runtimeTelemetry?.BeginRequest("kestrel", http.Request.Method, declaredRequestBytes, requestId);
             try
             {
                 var request = await CreateRequestAsync(http, options.MaxRequestBodySize);
