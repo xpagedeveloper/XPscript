@@ -7,13 +7,17 @@ using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-kestrel-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
+var structuredLog = new StringWriter();
+var telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLog));
 
 var options = new XpsKestrelOptions
 {
     Port = 0,
     MaxRequestBodySize = 64,
     MaxConcurrentConnections = 32,
-    AllowedHosts = ["localhost", "127.0.0.1", "::1"]
+    AllowedHosts = ["localhost", "127.0.0.1", "::1"],
+    EnableHealthEndpoint = true,
+    EnableMetricsEndpoint = true
 };
 var serverInfo = new XpsServerInfo(
     "kestrel-smoke",
@@ -21,7 +25,13 @@ var serverInfo = new XpsServerInfo(
     XpsWebHostingMode.Kestrel,
     DateTimeOffset.UtcNow,
     "test");
-var app = XpsKestrelAdapter.Build(options, serverInfo, new EchoHandler(), new SmokeApplicationState());
+var app = XpsKestrelAdapter.Build(
+    options,
+    serverInfo,
+    new EchoHandler(),
+    new SmokeApplicationState(),
+    telemetry: telemetry);
+var stopped = false;
 
 try
 {
@@ -66,11 +76,52 @@ try
         if ((int)response.StatusCode != 413) throw new Exception($"Oversized request expected 413, got {(int)response.StatusCode}.");
     }
 
+    using (var health = await client.GetAsync("/_xps/health"))
+    {
+        if ((int)health.StatusCode != 200) throw new Exception($"Health endpoint expected 200, got {(int)health.StatusCode}.");
+        var body = await health.Content.ReadAsStringAsync();
+        if (!body.Contains("\"Status\":0", StringComparison.Ordinal) && !body.Contains("\"Status\":\"Healthy\"", StringComparison.Ordinal))
+            throw new Exception("Health endpoint did not report a healthy state.");
+        if (!body.Contains("\"TotalRequests\":2", StringComparison.Ordinal))
+            throw new Exception("Health endpoint did not report the expected request count.");
+    }
+
+    using (var metrics = await client.GetAsync("/_xps/metrics"))
+    {
+        if ((int)metrics.StatusCode != 200) throw new Exception($"Metrics endpoint expected 200, got {(int)metrics.StatusCode}.");
+        var body = await metrics.Content.ReadAsStringAsync();
+        if (!body.Contains("xpscript_web_requests_total 2", StringComparison.Ordinal))
+            throw new Exception("Metrics endpoint did not expose the request counter.");
+        if (!body.Contains("xpscript_web_responses_2xx_total 1", StringComparison.Ordinal))
+            throw new Exception("Metrics endpoint did not expose the 2xx counter.");
+        if (!body.Contains("xpscript_web_responses_4xx_total 1", StringComparison.Ordinal))
+            throw new Exception("Metrics endpoint did not expose the 4xx counter.");
+    }
+
+    using (var postHealth = await client.PostAsync("/_xps/health", new StringContent(string.Empty)))
+    {
+        if ((int)postHealth.StatusCode != 405) throw new Exception("Operational endpoint must reject non-GET/HEAD methods.");
+    }
+
+    var logText = structuredLog.ToString();
+    var logLines = logText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+    if (logLines.Length != 2) throw new Exception($"Expected two structured request events, got {logLines.Length}.");
+    foreach (var secret in new[] { "/hello", "q=1", "X-Request-Test", "present", "abc", "oversized" })
+    {
+        if (logText.Contains(secret, StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Structured telemetry leaked request path, query, header or body data.");
+    }
+
+    await app.StopAsync();
+    stopped = true;
+    if (telemetry.Snapshot().Status != XpsWebHealthStatus.Stopping)
+        throw new Exception("ApplicationStopping did not transition telemetry health to Stopping.");
+
     Console.WriteLine("WEB-KESTREL-SMOKE=OK");
 }
 finally
 {
-    await app.StopAsync();
+    if (!stopped) await app.StopAsync();
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
 }

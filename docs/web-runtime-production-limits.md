@@ -26,6 +26,11 @@ All web transports share the same route resolver, compiler target, compilation c
 | Keep-alive timeout | 30 seconds | greater than 0, maximum 10 minutes |
 | Allowed hosts | `localhost`, `127.0.0.1`, `[::1]` | at least one valid value |
 | Trusted proxies | none | explicitly configured IP addresses only |
+| Health endpoint | disabled | opt-in |
+| Metrics endpoint | disabled | opt-in |
+| Operational endpoint access | loopback only | explicit opt-out required for network access |
+| Health path | `/_xps/health` | absolute URL path, maximum 512 characters |
+| Metrics path | `/_xps/metrics` | absolute URL path, maximum 512 characters and different from health path |
 
 The public `xpscript web` command keeps the loopback bind and loopback Host allowlist unless the operator explicitly changes them.
 
@@ -123,11 +128,64 @@ The default session store is in-memory and process-local. Multi-node deployments
 
 Application state is in-memory and process-local. Access is synchronized by the runtime.
 
-## Operational status
+## Health and metrics
 
-The runtime currently has transport, route, cache, session, CGI, FastCGI and cross-platform regression coverage.
+Kestrel health and metrics are disabled by default. Enable them through `XpsKestrelOptions` or the public CLI:
 
-A public health endpoint, metrics endpoint and stable structured logging contract are not yet part of the public XPScript web API. Do not expose an ad-hoc administrative endpoint as a substitute. Those surfaces require a separate contract and security review before they are added.
+```text
+xpscript web --root ./site --health --metrics
+```
+
+The default endpoints are:
+
+```text
+/_xps/health
+/_xps/metrics
+```
+
+Both endpoints accept only GET and HEAD. Other methods return 405.
+
+Operational endpoints remain loopback-only by default even when the application bind address is external. A non-loopback caller receives 404. The CLI requires the explicit `--operational-external` switch before these endpoints become network-accessible.
+
+Health returns JSON. Healthy state returns HTTP 200. Once application shutdown begins, health state changes to `Stopping` and returns HTTP 503 while the endpoint remains reachable.
+
+Metrics use Prometheus text exposition and currently expose:
+
+- health state
+- active requests
+- total requests
+- failed requests
+- 2xx, 3xx, 4xx and 5xx response counters
+- request body byte counter
+- response body byte counter
+- process-local web runtime uptime
+
+Operational endpoint requests themselves are intentionally excluded from application request counters.
+
+## Structured request events
+
+`XpsWebTelemetry` can receive an `IXpsWebEventSink`. `XpsWebJsonLineEventSink` writes one JSON object per completed application request.
+
+The public CLI enables this with:
+
+```text
+xpscript web --root ./site --structured-log ./logs/web.jsonl
+```
+
+The stable request event contains only:
+
+- UTC timestamp
+- transport name
+- HTTP method
+- status code
+- duration in milliseconds
+- request body byte count
+- response body byte count
+- failure flag
+
+It deliberately excludes request path, query string, headers, cookies, request body, response body, remote address and site root. This reduces accidental credential and personal-data disclosure in operational logs.
+
+The JSONL file is append-only for the lifetime of the host process and is opened with read sharing so log collectors can consume it while the service is running.
 
 ## Capacity planning
 

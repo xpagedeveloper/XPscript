@@ -12,6 +12,11 @@ public sealed class XpsKestrelOptions
     public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(30);
     public IReadOnlyList<string> AllowedHosts { get; init; } = ["localhost", "127.0.0.1", "[::1]"];
     public IReadOnlyList<IPAddress> KnownProxies { get; init; } = [];
+    public bool EnableHealthEndpoint { get; init; }
+    public bool EnableMetricsEndpoint { get; init; }
+    public bool OperationalEndpointsLocalOnly { get; init; } = true;
+    public string HealthPath { get; init; } = "/_xps/health";
+    public string MetricsPath { get; init; } = "/_xps/metrics";
 
     public void Validate()
     {
@@ -30,5 +35,18 @@ public sealed class XpsKestrelOptions
             if (string.IsNullOrWhiteSpace(host) || host.Contains('\r') || host.Contains('\n'))
                 throw new ArgumentException("Allowed host contains an invalid value.", nameof(AllowedHosts));
         }
+
+        ValidateOperationalPath(HealthPath, nameof(HealthPath));
+        ValidateOperationalPath(MetricsPath, nameof(MetricsPath));
+        if (string.Equals(HealthPath, MetricsPath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("HealthPath and MetricsPath must be different.");
+    }
+
+    private static void ValidateOperationalPath(string path, string name)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal) ||
+            path.Contains('?') || path.Contains('#') || path.Contains('\r') || path.Contains('\n'))
+            throw new ArgumentException("Operational endpoint paths must be absolute URL paths without query, fragment or line breaks.", name);
+        if (path.Length > 512) throw new ArgumentOutOfRangeException(name, "Operational endpoint paths cannot exceed 512 characters.");
     }
 }

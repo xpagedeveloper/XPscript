@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -14,8 +16,9 @@ public static class XpsKestrelAdapter
         XpsServerInfo serverInfo,
         IXpsWebRequestHandler handler,
         Func<HttpContext, XpsWebPrincipal>? principalFactory = null,
-        XpsSessionStore? sessions = null) =>
-        Build(options, serverInfo, handler, new XpsApplicationState(), principalFactory, sessions);
+        XpsSessionStore? sessions = null,
+        XpsWebTelemetry? telemetry = null) =>
+        Build(options, serverInfo, handler, new XpsApplicationState(), principalFactory, sessions, telemetry);
 
     public static WebApplication Build(
         XpsKestrelOptions options,
@@ -23,13 +26,17 @@ public static class XpsKestrelAdapter
         IXpsWebRequestHandler handler,
         IXpsApplicationState application,
         Func<HttpContext, XpsWebPrincipal>? principalFactory = null,
-        XpsSessionStore? sessions = null)
+        XpsSessionStore? sessions = null,
+        XpsWebTelemetry? telemetry = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serverInfo);
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentNullException.ThrowIfNull(application);
         options.Validate();
+
+        var runtimeTelemetry = telemetry ??
+            (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
         builder.WebHost.ConfigureKestrel(kestrel =>
@@ -42,6 +49,8 @@ public static class XpsKestrelAdapter
         });
 
         var app = builder.Build();
+        if (runtimeTelemetry is not null)
+            app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
 
         if (options.KnownProxies.Count > 0)
         {
@@ -69,8 +78,57 @@ public static class XpsKestrelAdapter
             await next();
         });
 
+        if (runtimeTelemetry is not null && (options.EnableHealthEndpoint || options.EnableMetricsEndpoint))
+        {
+            app.Use(async (http, next) =>
+            {
+                var path = http.Request.Path.Value ?? string.Empty;
+                var isHealth = options.EnableHealthEndpoint && string.Equals(path, options.HealthPath, StringComparison.Ordinal);
+                var isMetrics = options.EnableMetricsEndpoint && string.Equals(path, options.MetricsPath, StringComparison.Ordinal);
+                if (!isHealth && !isMetrics)
+                {
+                    await next();
+                    return;
+                }
+
+                if (options.OperationalEndpointsLocalOnly && !IsLoopback(http.Connection.RemoteIpAddress))
+                {
+                    http.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+                {
+                    http.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                    http.Response.Headers.Allow = "GET, HEAD";
+                    return;
+                }
+
+                if (isHealth)
+                {
+                    var snapshot = runtimeTelemetry.Snapshot();
+                    http.Response.StatusCode = snapshot.Status == XpsWebHealthStatus.Healthy
+                        ? StatusCodes.Status200OK
+                        : StatusCodes.Status503ServiceUnavailable;
+                    http.Response.ContentType = "application/json; charset=utf-8";
+                    if (!HttpMethods.IsHead(http.Request.Method))
+                    {
+                        await JsonSerializer.SerializeAsync(http.Response.Body, snapshot, cancellationToken: http.RequestAborted);
+                    }
+                    return;
+                }
+
+                http.Response.StatusCode = StatusCodes.Status200OK;
+                http.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
+                if (!HttpMethods.IsHead(http.Request.Method))
+                    await http.Response.WriteAsync(runtimeTelemetry.RenderPrometheus(), http.RequestAborted);
+            });
+        }
+
         app.Run(async http =>
         {
+            var declaredRequestBytes = Math.Max(0, http.Request.ContentLength ?? 0);
+            using var requestScope = runtimeTelemetry?.BeginRequest("kestrel", http.Request.Method, declaredRequestBytes);
             try
             {
                 var request = await CreateRequestAsync(http, options.MaxRequestBodySize);
@@ -83,15 +141,23 @@ public static class XpsKestrelAdapter
                     await handler.HandleAsync(context);
 
                 response.Complete();
+                requestScope?.Complete(response.StatusCode, response.Body.Length);
                 await WriteResponseAsync(http, response);
             }
             catch (RequestBodyTooLargeException)
             {
                 http.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                requestScope?.Complete(StatusCodes.Status413PayloadTooLarge, 0);
             }
             catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
             {
+                requestScope?.Complete(499, 0);
                 // Client disconnected. Do not attempt to write a second response.
+            }
+            catch
+            {
+                requestScope?.Complete(StatusCodes.Status500InternalServerError, 0, failed: true);
+                throw;
             }
         });
 
@@ -169,6 +235,8 @@ public static class XpsKestrelAdapter
         if (value.StartsWith('[') && value.EndsWith(']')) return value[1..^1];
         return value;
     }
+
+    private static bool IsLoopback(IPAddress? address) => address is not null && IPAddress.IsLoopback(address);
 
     private sealed class RequestBodyTooLargeException : Exception { }
 }
