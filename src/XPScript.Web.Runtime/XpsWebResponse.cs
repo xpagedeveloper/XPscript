@@ -79,6 +79,7 @@ public sealed class XpsWebResponse
             header.Append("; Max-Age=").Append(seconds.ToString(CultureInfo.InvariantCulture));
         }
         AppendHeader("Set-Cookie", header.ToString());
+        EnsureCookieResponseNoStore();
     }
 
     public void DeleteCookie(string name, string path = "/", bool secure = false, string sameSite = "Lax") =>
@@ -122,7 +123,24 @@ public sealed class XpsWebResponse
     {
         if (StatusCode is < 100 or > 599) throw new InvalidOperationException("Response status code must be between 100 and 599.");
         if (ContentType is not null) ValidateHeaderValue(ContentType);
+        if (_headers.ContainsKey("Set-Cookie")) EnsureCookieResponseNoStore();
         Completed = true;
+    }
+
+    private void EnsureCookieResponseNoStore()
+    {
+        if (!_headers.TryGetValue("Cache-Control", out var values))
+        {
+            _headers["Cache-Control"] = ["no-store"];
+            return;
+        }
+
+        if (values.Any(value => value
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(directive => directive.Equals("no-store", StringComparison.OrdinalIgnoreCase))))
+            return;
+
+        values.Add("no-store");
     }
 
     private void EnsureWritable()
