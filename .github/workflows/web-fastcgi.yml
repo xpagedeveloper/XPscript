@@ -9,6 +9,8 @@ on:
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
       - 'tests/WebFastCgiUnixSmoke/**'
+      - 'tests/WebFastCgiAdversarialSmoke/**'
+      - 'docs/web-fastcgi-nginx.md'
       - 'XPScriptCompiler.slnx'
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
       - 'tests/WebFastCgiUnixSmoke/**'
+      - 'tests/WebFastCgiAdversarialSmoke/**'
+      - 'docs/web-fastcgi-nginx.md'
       - 'XPScriptCompiler.slnx'
 
 jobs:
@@ -43,3 +47,5 @@ jobs:
       - name: Run FastCGI Unix socket regression
         if: runner.os != 'Windows'
         run: dotnet run --project ./tests/WebFastCgiUnixSmoke/WebFastCgiUnixSmoke.csproj -c Release
+      - name: Run FastCGI adversarial corpus
+        run: dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
