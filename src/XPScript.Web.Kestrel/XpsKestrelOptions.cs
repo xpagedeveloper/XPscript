@@ -27,6 +27,27 @@ public sealed class XpsKestrelOptions
     public bool OperationalEndpointsLocalOnly { get; init; } = true;
     public string HealthPath { get; init; } = "/_xps/health";
     public string MetricsPath { get; init; } = "/_xps/metrics";
+    public bool EnableStaticFiles { get; init; }
+    public long MaxStaticFileBytes { get; init; } = 32L * 1024 * 1024;
+    public string StaticCacheControl { get; init; } = "public, max-age=300";
+    public IReadOnlyDictionary<string, string> StaticFileContentTypes { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [".css"] = "text/css; charset=utf-8",
+            [".js"] = "text/javascript; charset=utf-8",
+            [".mjs"] = "text/javascript; charset=utf-8",
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".gif"] = "image/gif",
+            [".webp"] = "image/webp",
+            [".svg"] = "image/svg+xml",
+            [".ico"] = "image/x-icon",
+            [".woff"] = "font/woff",
+            [".woff2"] = "font/woff2",
+            [".ttf"] = "font/ttf",
+            [".otf"] = "font/otf"
+        };
 
     public bool HttpsEnabled => !string.IsNullOrWhiteSpace(HttpsCertificatePath);
 
@@ -76,6 +97,23 @@ public sealed class XpsKestrelOptions
         ValidateOperationalPath(MetricsPath, nameof(MetricsPath));
         if (string.Equals(HealthPath, MetricsPath, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("HealthPath and MetricsPath must be different.");
+
+        if (MaxStaticFileBytes is < 1 or > 1024L * 1024L * 1024L)
+            throw new ArgumentOutOfRangeException(nameof(MaxStaticFileBytes), "Static file limit must be between 1 byte and 1 GiB.");
+        if (StaticCacheControl.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new ArgumentException("Static Cache-Control value contains a prohibited control character.", nameof(StaticCacheControl));
+        if (StaticFileContentTypes.Count is < 1 or > 256)
+            throw new ArgumentOutOfRangeException(nameof(StaticFileContentTypes), "Static extension allowlist must contain between 1 and 256 entries.");
+        foreach (var pair in StaticFileContentTypes)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key) || !pair.Key.StartsWith('.', StringComparison.Ordinal) || pair.Key.Length > 32 ||
+                pair.Key.IndexOfAny(['/', '\\', ':', '\r', '\n', '\0']) >= 0)
+                throw new ArgumentException("Static file extensions must be simple dot-prefixed extensions.", nameof(StaticFileContentTypes));
+            if (pair.Key.Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("XPScript source files can never be added to the static-file allowlist.", nameof(StaticFileContentTypes));
+            if (string.IsNullOrWhiteSpace(pair.Value) || pair.Value.IndexOfAny(['\r', '\n', '\0']) >= 0)
+                throw new ArgumentException("Static file content types must be valid header values.", nameof(StaticFileContentTypes));
+        }
     }
 
     private static void ValidateDataRate(double? bytesPerSecond, TimeSpan gracePeriod, string name)
