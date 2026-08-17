@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -114,8 +115,12 @@ try
         throw new Exception("XPScript response cookie was not emitted.");
 
     var directServer = new XpsWebServer(new XpsServerInfo("encoding-probe", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"));
-    if (directServer.JsonStringEncode("a\"b") != "\"a\\\"b\"")
-        throw new Exception("Server.JsonStringEncode did not escape a JSON string safely.");
+    var encodedJson = directServer.JsonStringEncode("a\"b");
+    using (var encodedDocument = JsonDocument.Parse(encodedJson))
+    {
+        if (encodedDocument.RootElement.ValueKind != JsonValueKind.String || encodedDocument.RootElement.GetString() != "a\"b")
+            throw new Exception("Server.JsonStringEncode did not produce a valid JSON string value.");
+    }
 
     var formBody = Encoding.UTF8.GetBytes("value=hello+world&other=1");
     var post = await SendAsync(
