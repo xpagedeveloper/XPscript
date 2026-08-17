@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Kestrel/**'
+      - 'src/XPScript.Cli/**'
       - 'tests/WebKestrelSmoke/**'
       - '.github/workflows/web-kestrel.yml'
       - 'XPScriptCompiler.slnx'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Kestrel/**'
+      - 'src/XPScript.Cli/**'
       - 'tests/WebKestrelSmoke/**'
       - '.github/workflows/web-kestrel.yml'
       - 'XPScriptCompiler.slnx'
