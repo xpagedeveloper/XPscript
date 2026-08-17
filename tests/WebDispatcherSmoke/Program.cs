@@ -75,6 +75,10 @@ try
     await AssertStatusAsync(dispatcher, root, "GET", "/index/NoSuchRoute", new XpsWebPrincipal(false), 404);
     await AssertStatusAsync(dispatcher, root, "GET", "/../secret.xps", new XpsWebPrincipal(false), 400);
 
+    await AssertHeadErrorAsync(dispatcher, root, "/missing", 404);
+    await AssertHeadErrorAsync(dispatcher, root, "/../secret.xps", 400);
+    await AssertHeadErrorAsync(dispatcher, root, "/escape", 500);
+
     var escapeResponse = await SendAsync(dispatcher, root, "GET", "/escape", new XpsWebPrincipal(false));
     if (escapeResponse.StatusCode != 500) throw new Exception("Out-of-root Include did not fail closed.");
     var escapeBody = Encoding.UTF8.GetString(escapeResponse.Body.Span);
@@ -204,6 +208,21 @@ static async Task ExpectCompilationFailureAsync(XpsWebCompilationCache cache, st
     catch (XpsWebCompilationException)
     {
     }
+}
+
+static async Task AssertHeadErrorAsync(
+    IXpsWebRequestHandler handler,
+    string root,
+    string path,
+    int expectedStatus)
+{
+    var response = await SendAsync(handler, root, "HEAD", path, new XpsWebPrincipal(false));
+    if (response.StatusCode != expectedStatus)
+        throw new Exception($"Expected HTTP {expectedStatus} for HEAD {path}, got {response.StatusCode}.");
+    if (response.Body.Length != 0)
+        throw new Exception($"HEAD {path} returned an unexpected response body.");
+    if (!response.Completed)
+        throw new Exception($"HEAD {path} response was not completed.");
 }
 
 static async Task AssertStatusAsync(
