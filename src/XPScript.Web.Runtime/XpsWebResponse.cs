@@ -9,7 +9,9 @@ public sealed record XpsCookieOptions(
     bool HttpOnly = false,
     bool Secure = false,
     string SameSite = "Lax",
-    TimeSpan? MaxAge = null);
+    TimeSpan? MaxAge = null,
+    string? Domain = null,
+    DateTimeOffset? Expires = null);
 
 public sealed class XpsWebResponse
 {
@@ -63,27 +65,46 @@ public sealed class XpsWebResponse
         ValidateCookieValue(value);
         options ??= new XpsCookieOptions();
         ValidateCookiePath(options.Path);
+        var domain = NormalizeCookieDomain(options.Domain);
         var sameSite = NormalizeSameSite(options.SameSite);
         if (sameSite.Equals("None", StringComparison.OrdinalIgnoreCase) && !options.Secure)
             throw new ArgumentException("SameSite=None cookies must also use Secure.", nameof(options));
 
         var header = new StringBuilder()
             .Append(name).Append('=').Append(value)
-            .Append("; Path=").Append(options.Path)
-            .Append("; SameSite=").Append(sameSite);
-        if (options.HttpOnly) header.Append("; HttpOnly");
-        if (options.Secure) header.Append("; Secure");
+            .Append("; Path=").Append(options.Path);
+        if (domain is not null) header.Append("; Domain=").Append(domain);
+        if (options.Expires is not null)
+            header.Append("; Expires=").Append(options.Expires.Value.UtcDateTime.ToString("R", CultureInfo.InvariantCulture));
         if (options.MaxAge is not null)
         {
             var seconds = checked((long)Math.Floor(options.MaxAge.Value.TotalSeconds));
             header.Append("; Max-Age=").Append(seconds.ToString(CultureInfo.InvariantCulture));
         }
+        header.Append("; SameSite=").Append(sameSite);
+        if (options.HttpOnly) header.Append("; HttpOnly");
+        if (options.Secure) header.Append("; Secure");
         AppendHeader("Set-Cookie", header.ToString());
         EnsureCookieResponseNoStore();
     }
 
-    public void DeleteCookie(string name, string path = "/", bool secure = false, string sameSite = "Lax") =>
-        SetCookie(name, string.Empty, new XpsCookieOptions(path, HttpOnly: false, Secure: secure, SameSite: sameSite, MaxAge: TimeSpan.Zero));
+    public void DeleteCookie(
+        string name,
+        string path = "/",
+        bool secure = false,
+        string sameSite = "Lax",
+        string? domain = null) =>
+        SetCookie(
+            name,
+            string.Empty,
+            new XpsCookieOptions(
+                path,
+                HttpOnly: false,
+                Secure: secure,
+                SameSite: sameSite,
+                MaxAge: TimeSpan.Zero,
+                Domain: domain,
+                Expires: DateTimeOffset.UnixEpoch));
 
     public void Write(object? value)
     {
@@ -195,6 +216,24 @@ public sealed class XpsWebResponse
             throw new ArgumentException("Cookie path must be an absolute HTTP path.", nameof(path));
         if (path.IndexOfAny(['\r', '\n', '\0', ';']) >= 0)
             throw new ArgumentException("Cookie path contains a prohibited character.", nameof(path));
+    }
+
+    private static string? NormalizeCookieDomain(string? domain)
+    {
+        if (domain is null) return null;
+        var value = domain.Trim();
+        if (value.StartsWith('.', StringComparison.Ordinal)) value = value[1..];
+        if (value.Length == 0 || value.Length > 253 || value.EndsWith('.', StringComparison.Ordinal) ||
+            value.IndexOfAny(['\r', '\n', '\0', '/', '\\', ':', ';', ',']) >= 0 ||
+            value.Any(char.IsWhiteSpace))
+            throw new ArgumentException("Cookie Domain must be a DNS host name without a port, path or control characters.", nameof(domain));
+
+        string ascii;
+        try { ascii = new IdnMapping().GetAscii(value).ToLowerInvariant(); }
+        catch (ArgumentException ex) { throw new ArgumentException("Cookie Domain is not a valid IDN/DNS name.", nameof(domain), ex); }
+        if (Uri.CheckHostName(ascii) != UriHostNameType.Dns)
+            throw new ArgumentException("Cookie Domain must be a DNS host name.", nameof(domain));
+        return ascii;
     }
 
     private static string NormalizeSameSite(string value)
