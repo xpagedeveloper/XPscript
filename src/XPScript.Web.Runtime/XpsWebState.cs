@@ -9,6 +9,7 @@ public sealed class XpsApplicationStateOptions
     public int MaxValueBytes { get; init; } = 64 * 1024;
     public long MaxTotalBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(20);
+    public bool SlidingIdleTimeout { get; set; } = true;
 
     internal void Validate()
     {
@@ -25,17 +26,17 @@ public sealed class XpsApplicationState : IXpsApplicationState
     private readonly Dictionary<string, StateValue> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly XpsApplicationStateOptions _options;
     private long _totalBytes;
-    private DateTimeOffset _lastUpdateUtc;
+    private DateTimeOffset _lastActivityUtc;
 
     public XpsApplicationState(XpsApplicationStateOptions? options = null)
     {
         _options = options ?? new XpsApplicationStateOptions();
         _options.Validate();
-        _lastUpdateUtc = DateTimeOffset.UtcNow;
+        _lastActivityUtc = DateTimeOffset.UtcNow;
     }
 
-    public int Count { get { lock (_gate) { RecycleIfIdleLocked(); return _values.Count; } } }
-    public IReadOnlyList<string> Keys { get { lock (_gate) { RecycleIfIdleLocked(); return _values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); } } }
+    public int Count { get { lock (_gate) { RecycleIfIdleLocked(); TouchReadLocked(); return _values.Count; } } }
+    public IReadOnlyList<string> Keys { get { lock (_gate) { RecycleIfIdleLocked(); TouchReadLocked(); return _values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); } } }
 
     public object? Get(string name)
     {
@@ -43,6 +44,7 @@ public sealed class XpsApplicationState : IXpsApplicationState
         lock (_gate)
         {
             RecycleIfIdleLocked();
+            TouchReadLocked();
             return _values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null;
         }
     }
@@ -50,7 +52,12 @@ public sealed class XpsApplicationState : IXpsApplicationState
     public bool Exists(string name)
     {
         ValidateStateName(name);
-        lock (_gate) { RecycleIfIdleLocked(); return _values.ContainsKey(name); }
+        lock (_gate)
+        {
+            RecycleIfIdleLocked();
+            TouchReadLocked();
+            return _values.ContainsKey(name);
+        }
     }
 
     public void Set(string name, object? value)
@@ -68,7 +75,7 @@ public sealed class XpsApplicationState : IXpsApplicationState
                 throw new InvalidOperationException("Application state memory limit has been reached.");
             _values[name] = stateValue;
             _totalBytes = nextTotal;
-            _lastUpdateUtc = DateTimeOffset.UtcNow;
+            TouchWriteLocked();
         }
     }
 
@@ -80,7 +87,7 @@ public sealed class XpsApplicationState : IXpsApplicationState
             RecycleIfIdleLocked();
             if (!_values.Remove(name, out var previous)) return false;
             _totalBytes -= previous.Bytes;
-            _lastUpdateUtc = DateTimeOffset.UtcNow;
+            TouchWriteLocked();
             return true;
         }
     }
@@ -94,16 +101,23 @@ public sealed class XpsApplicationState : IXpsApplicationState
             RecycleIfIdleLocked();
             _values.Clear();
             _totalBytes = 0;
-            _lastUpdateUtc = DateTimeOffset.UtcNow;
+            TouchWriteLocked();
         }
     }
 
+    private void TouchReadLocked()
+    {
+        if (_options.SlidingIdleTimeout) _lastActivityUtc = DateTimeOffset.UtcNow;
+    }
+
+    private void TouchWriteLocked() => _lastActivityUtc = DateTimeOffset.UtcNow;
+
     private void RecycleIfIdleLocked()
     {
-        if (_values.Count == 0 || DateTimeOffset.UtcNow - _lastUpdateUtc < _options.IdleTimeout) return;
+        if (_values.Count == 0 || DateTimeOffset.UtcNow - _lastActivityUtc < _options.IdleTimeout) return;
         _values.Clear();
         _totalBytes = 0;
-        _lastUpdateUtc = DateTimeOffset.UtcNow;
+        _lastActivityUtc = DateTimeOffset.UtcNow;
     }
 
     private static void ValidateStateName(string name)
@@ -117,6 +131,7 @@ public sealed class XpsSessionOptions
 {
     public string CookieName { get; init; } = "XPSID";
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(20);
+    public bool SlidingIdleTimeout { get; set; } = true;
     public int MaxSessions { get; init; } = 10_000;
     public int MaxEntriesPerSession { get; init; } = 128;
     public int MaxValueBytes { get; init; } = 64 * 1024;
@@ -161,12 +176,20 @@ public sealed class XpsSessionStore
         var now = DateTimeOffset.UtcNow;
         SessionRecord record;
         var isNew = false;
+        var renewCookie = false;
         lock (_gate)
         {
             RemoveExpiredLocked(now);
             var requestedId = request.Cookie(_options.CookieName);
             if (requestedId is not null && IsValidSessionId(requestedId) && _sessions.TryGetValue(requestedId, out var existing))
+            {
                 record = existing;
+                if (_options.SlidingIdleTimeout)
+                {
+                    lock (record.Gate) record.LastActivityUtc = now;
+                    renewCookie = true;
+                }
+            }
             else
             {
                 EnsureCapacityLocked();
@@ -176,7 +199,7 @@ public sealed class XpsSessionStore
             }
         }
         var session = new XpsWebSession(this, record, response, request.Scheme, _options);
-        if (isNew) session.WriteCookie();
+        if (isNew || renewCookie) session.WriteCookie();
         return session;
     }
 
@@ -189,12 +212,22 @@ public sealed class XpsSessionStore
                 EnsureActive(record);
                 _sessions.Remove(record.Id);
                 record.Id = CreateUniqueSessionIdLocked();
-                record.LastUpdateUtc = DateTimeOffset.UtcNow;
+                record.LastActivityUtc = DateTimeOffset.UtcNow;
                 _sessions[record.Id] = record;
             }
         }
         WriteSessionCookie(record.Id, response, scheme);
         return record.Id;
+    }
+
+    internal void Touch(SessionRecord record, XpsWebResponse response, string scheme)
+    {
+        lock (record.Gate)
+        {
+            EnsureActive(record);
+            record.LastActivityUtc = DateTimeOffset.UtcNow;
+        }
+        WriteSessionCookie(record.Id, response, scheme);
     }
 
     internal void Abandon(SessionRecord record, XpsWebResponse response, string scheme)
@@ -219,7 +252,9 @@ public sealed class XpsSessionStore
     }
 
     internal void WriteSessionCookie(string id, XpsWebResponse response, string scheme) => response.SetCookie(
-        _options.CookieName, id, new XpsCookieOptions(Path: "/", HttpOnly: true, Secure: SecureCookieFor(scheme), SameSite: _options.SameSite, MaxAge: _options.IdleTimeout));
+        _options.CookieName,
+        id,
+        new XpsCookieOptions(Path: "/", HttpOnly: true, Secure: SecureCookieFor(scheme), SameSite: _options.SameSite, MaxAge: _options.IdleTimeout));
 
     private bool SecureCookieFor(string scheme) => _options.RequireSecureCookie || scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
@@ -228,7 +263,7 @@ public sealed class XpsSessionStore
         foreach (var pair in _sessions.ToArray())
         {
             var expired = false;
-            lock (pair.Value.Gate) expired = pair.Value.Abandoned || now - pair.Value.LastUpdateUtc >= _options.IdleTimeout;
+            lock (pair.Value.Gate) expired = pair.Value.Abandoned || now - pair.Value.LastActivityUtc >= _options.IdleTimeout;
             if (expired) _sessions.Remove(pair.Key);
         }
     }
@@ -263,7 +298,7 @@ public sealed class XpsSessionStore
     {
         internal object Gate { get; } = new();
         internal string Id { get; set; } = id;
-        internal DateTimeOffset LastUpdateUtc { get; set; } = now;
+        internal DateTimeOffset LastActivityUtc { get; set; } = now;
         internal Dictionary<string, StateValue> Values { get; } = new(StringComparer.OrdinalIgnoreCase);
         internal long TotalBytes { get; set; }
         internal bool Abandoned { get; set; }
@@ -298,7 +333,11 @@ public sealed class XpsWebSession : IXpsSession
     public object? Get(string name)
     {
         ValidateName(name);
-        lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null; }
+        lock (_record.Gate)
+        {
+            XpsSessionStore.EnsureActive(_record);
+            return _record.Values.TryGetValue(name, out var value) ? StateValuePolicy.Clone(value.Value) : null;
+        }
     }
 
     public void Set(string name, object? value)
@@ -316,9 +355,8 @@ public sealed class XpsWebSession : IXpsSession
             if (nextTotal > _options.MaxBytesPerSession) throw new InvalidOperationException("Session state memory limit has been reached.");
             _record.Values[name] = stateValue;
             _record.TotalBytes = nextTotal;
-            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
         }
-        WriteCookie();
+        _store.Touch(_record, _response, _scheme);
     }
 
     public bool Exists(string name) { ValidateName(name); lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.ContainsKey(name); } }
@@ -326,16 +364,13 @@ public sealed class XpsWebSession : IXpsSession
     public bool Remove(string name)
     {
         ValidateName(name);
-        var removed = false;
         lock (_record.Gate)
         {
             XpsSessionStore.EnsureActive(_record);
             if (!_record.Values.Remove(name, out var previous)) return false;
             _record.TotalBytes -= previous.Bytes;
-            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
-            removed = true;
         }
-        if (removed) WriteCookie();
+        _store.Touch(_record, _response, _scheme);
         return true;
     }
 
@@ -348,9 +383,8 @@ public sealed class XpsWebSession : IXpsSession
             XpsSessionStore.EnsureActive(_record);
             _record.Values.Clear();
             _record.TotalBytes = 0;
-            _record.LastUpdateUtc = DateTimeOffset.UtcNow;
         }
-        WriteCookie();
+        _store.Touch(_record, _response, _scheme);
     }
 
     public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
@@ -369,7 +403,11 @@ public sealed class XpsWebSession : IXpsSession
 
     public void SignOut()
     {
-        RemoveIfPresent(AuthenticatedKey); RemoveIfPresent(UserIdKey); RemoveIfPresent(UserNameKey); RemoveIfPresent(RulesKey); RotateId();
+        RemoveIfPresent(AuthenticatedKey);
+        RemoveIfPresent(UserIdKey);
+        RemoveIfPresent(UserNameKey);
+        RemoveIfPresent(RulesKey);
+        RotateId();
     }
 
     public string RotateId() => _store.Rotate(_record, _response, _scheme);
@@ -379,7 +417,20 @@ public sealed class XpsWebSession : IXpsSession
     internal void WriteCookie() => _store.WriteSessionCookie(Id, _response, _scheme);
 
     private void RemoveIfPresent(string name) { if (Exists(name)) Remove(name); }
-    private static bool IsTruthy(object? value) => value switch { bool b => b, byte n => n != 0, sbyte n => n != 0, short n => n != 0, ushort n => n != 0, int n => n != 0, uint n => n != 0, long n => n != 0, ulong n => n != 0, string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("yes", StringComparison.OrdinalIgnoreCase) || s == "1", _ => false };
+    private static bool IsTruthy(object? value) => value switch
+    {
+        bool b => b,
+        byte n => n != 0,
+        sbyte n => n != 0,
+        short n => n != 0,
+        ushort n => n != 0,
+        int n => n != 0,
+        uint n => n != 0,
+        long n => n != 0,
+        ulong n => n != 0,
+        string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("yes", StringComparison.OrdinalIgnoreCase) || s == "1",
+        _ => false
+    };
     private static IReadOnlyCollection<string> ParseRules(string? rules)
     {
         if (string.IsNullOrWhiteSpace(rules)) return Array.Empty<string>();
