@@ -6,6 +6,7 @@ on:
     paths:
       - 'samples/native-scalar-abi.xps'
       - 'samples/native-null-abi.xps'
+      - 'samples/native-nothing-abi-error.xps'
       - '.github/workflows/native-scalar-abi.yml'
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
@@ -73,7 +74,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Native scalar ABI sample exited with code $LASTEXITCODE.`n$result" }
           if ($result -notcontains 'NATIVE_SCALAR_ABI=OK') { throw "Native scalar ABI success marker missing.`n$result" }
 
-      - name: Verify Empty Null and Nothing native ABI boundaries
+      - name: Verify Empty and Null native ABI boundaries
         shell: pwsh
         run: |
           $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-null-abi.exe' } else { './out/native-null-abi' }
@@ -85,9 +86,27 @@ jobs:
           $result | ForEach-Object { Write-Host $_ }
           if ($result -notcontains 'EMPTY_NATIVE=0') { throw "EMPTY did not coerce to numeric zero at the native scalar boundary.`n$result" }
           if (-not ($result | Where-Object { $_ -match '^NULL_NATIVE_ERR=([1-9][0-9]*)$' })) { throw "NULL was not rejected at the native scalar boundary.`n$result" }
-          if (-not ($result | Where-Object { $_ -match '^NOTHING_NATIVE_ERR=([1-9][0-9]*)$' })) { throw "NOTHING was not rejected at the native scalar boundary.`n$result" }
           $joined = $result -join "`n"
-          if ($joined -match 'NULL_NATIVE_NOT_REJECTED|NOTHING_NATIVE_NOT_REJECTED|LSRef|NativeBoundaryObject') {
-            throw "Native ABI boundary accepted or leaked an invalid absence/object state.`n$result"
-          }
+          if ($joined -match 'NULL_NATIVE_NOT_REJECTED') { throw "Native ABI boundary accepted NULL unexpectedly.`n$result" }
           if ($result -notcontains 'NATIVE_NULL_BOUNDARIES=OK') { throw "Native Null boundary success marker missing.`n$result" }
+
+      - name: Verify NOTHING native ABI compile rejection
+        shell: pwsh
+        run: |
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-nothing-abi-error.exe' } else { './out/native-nothing-abi-error' }
+          $oldPreference = $PSNativeCommandUseErrorActionPreference
+          try {
+            $PSNativeCommandUseErrorActionPreference = $false
+            $result = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-nothing-abi-error.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent 2>&1)
+            $exit = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+          }
+          finally {
+            $PSNativeCommandUseErrorActionPreference = $oldPreference
+          }
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -eq 0) { throw "NOTHING native ABI fixture unexpectedly compiled.`n$result" }
+          $joined = $result -join "`n"
+          if (-not $joined.Contains('where Integer is required.', [StringComparison]::Ordinal)) {
+            throw "Expected native NOTHING type diagnostic missing.`n$result"
+          }
