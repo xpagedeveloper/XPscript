@@ -46,6 +46,29 @@ try
     if (!getOutput.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("FastCGI header mapping failed.");
     if (!getOutput.Contains("COOKIE=abc", StringComparison.Ordinal)) throw new Exception("FastCGI cookie mapping failed.");
 
+    var headInput = BuildRequest(
+        3,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "HEAD",
+            ["SCRIPT_NAME"] = "/index.xps",
+            ["QUERY_STRING"] = "",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["REMOTE_ADDR"] = "127.0.0.1",
+            ["HTTP_HOST"] = "localhost",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps")
+        },
+        []);
+    var headStream = new FragmentedDuplexStream(headInput, 4);
+    await adapter.ProcessConnectionAsync(headStream);
+    var headOutput = ParseResponse(headStream.Written);
+    if (!headOutput.Contains("Status: 201\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI HEAD status was not serialized.");
+    if (!headOutput.Contains("X-FastCGI: ok\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI HEAD response headers were lost.");
+    var headSeparator = headOutput.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+    if (headSeparator < 0) throw new Exception("FastCGI HEAD response did not contain a header terminator.");
+    if (headOutput.Length != headSeparator + 4) throw new Exception("FastCGI HEAD response serialized a body.");
+
     var postBody = Encoding.UTF8.GetBytes("hello=world");
     var postInput = BuildRequest(
         7,

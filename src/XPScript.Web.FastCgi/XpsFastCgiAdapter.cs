@@ -208,7 +208,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         using (XpsWebContextAccessor.Push(context))
             await _handler.HandleAsync(context).ConfigureAwait(false);
         if (!response.Completed) response.Complete();
-        await XpsFastCgiProtocol.WriteStreamAsync(stream, XpsFastCgiRecordType.Stdout, requestId, BuildResponseBytes(response), cancellationToken).ConfigureAwait(false);
+        await XpsFastCgiProtocol.WriteStreamAsync(stream, XpsFastCgiRecordType.Stdout, requestId, BuildResponseBytes(response, request.Method), cancellationToken).ConfigureAwait(false);
     }
 
     private XpsWebRequest CreateRequest(IReadOnlyDictionary<string, string> parameters, byte[] body, CancellationToken cancellationToken)
@@ -314,7 +314,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
     private static bool IsHttps(IReadOnlyDictionary<string, string> parameters) =>
         parameters.TryGetValue("HTTPS", out var value) && (value.Equals("on", StringComparison.OrdinalIgnoreCase) || value.Equals("1", StringComparison.Ordinal));
 
-    private static byte[] BuildResponseBytes(XpsWebResponse response)
+    private static byte[] BuildResponseBytes(XpsWebResponse response, string requestMethod)
     {
         var builder = new StringBuilder().Append("Status: ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
         if (!string.IsNullOrWhiteSpace(response.ContentType)) builder.Append("Content-Type: ").Append(response.ContentType).Append("\r\n");
@@ -322,9 +322,12 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
             foreach (var value in header.Value) builder.Append(header.Key).Append(": ").Append(value).Append("\r\n");
         builder.Append("\r\n");
         var headerBytes = Encoding.UTF8.GetBytes(builder.ToString());
-        var output = new byte[checked(headerBytes.Length + response.Body.Length)];
+        var includeBody = !requestMethod.Equals("HEAD", StringComparison.OrdinalIgnoreCase);
+        var bodyLength = includeBody ? response.Body.Length : 0;
+        var output = new byte[checked(headerBytes.Length + bodyLength)];
         headerBytes.CopyTo(output, 0);
-        response.Body.Span.CopyTo(output.AsSpan(headerBytes.Length));
+        if (includeBody && response.Body.Length > 0)
+            response.Body.Span.CopyTo(output.AsSpan(headerBytes.Length));
         return output;
     }
 
