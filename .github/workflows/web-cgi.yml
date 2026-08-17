@@ -2,7 +2,6 @@ name: Web CGI
 
 on:
   push:
-    branches: ['todo-web-runtime-fastcgi']
     paths:
       - '.github/workflows/web-cgi.yml'
       - 'src/XPScript.Web.Cgi/**'
@@ -13,6 +12,7 @@ on:
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
       - 'tests/WebCgiSmoke/**'
+      - 'tests/WebCgiDominoSmoke/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
     branches: [main]
@@ -26,6 +26,7 @@ on:
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
       - 'tests/WebCgiSmoke/**'
+      - 'tests/WebCgiDominoSmoke/**'
       - 'XPScriptCompiler.slnx'
 
 permissions:
@@ -50,3 +51,5 @@ jobs:
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
       - name: Run CGI adapter and executable regression
         run: dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
+      - name: Run Domino PATH_INFO CGI regression
+        run: dotnet run --project ./tests/WebCgiDominoSmoke/WebCgiDominoSmoke.csproj -c Release
