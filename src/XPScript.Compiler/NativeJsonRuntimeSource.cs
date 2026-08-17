@@ -59,6 +59,9 @@ internal static class XPScriptNativeJson
             node = value switch
             {
                 null => null,
+                _ when XPScriptNullRuntime.IsNull(value) => null,
+                ILSObjectReference reference when reference.IsNothing => null,
+                ILSObjectReference => throw new XPScriptRuntimeException(5, "Bound XPScript object references are not supported for JSON conversion."),
                 XPScriptJsonDocument document => document.Node?.DeepClone(),
                 XPScriptJsonObject obj => obj.Node.DeepClone(),
                 XPScriptJsonArray array => array.Node.DeepClone(),
