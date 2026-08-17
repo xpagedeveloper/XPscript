@@ -84,6 +84,8 @@ public sealed class XpsWebResponse
         header.Append("; SameSite=").Append(sameSite);
         if (options.HttpOnly) header.Append("; HttpOnly");
         if (options.Secure) header.Append("; Secure");
+
+        RemoveEquivalentSetCookie(name, options.Path, domain);
         AppendHeader("Set-Cookie", header.ToString());
         EnsureCookieResponseNoStore();
     }
@@ -120,6 +122,32 @@ public sealed class XpsWebResponse
         _body.Write(value);
     }
 
+    public void SendFile(byte[] content, string fileName, string contentType = "application/octet-stream", bool inline = false)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        SendFile((ReadOnlyMemory<byte>)content, fileName, contentType, inline);
+    }
+
+    public void SendFile(ReadOnlyMemory<byte> content, string fileName, string contentType = "application/octet-stream", bool inline = false)
+    {
+        EnsureWritable();
+        var safeName = NormalizeDownloadFileName(fileName);
+        if (string.IsNullOrWhiteSpace(contentType)) throw new ArgumentException("Content type must not be empty.", nameof(contentType));
+        ValidateHeaderValue(contentType);
+
+        Clear();
+        StatusCode = 200;
+        ContentType = contentType;
+        SetHeader("Content-Disposition", BuildContentDisposition(safeName, inline));
+        WriteBinary(content.Span);
+    }
+
+    public void SendFile(XpsUploadedFile file, bool inline = false)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        SendFile(file.Content, file.FileName, file.ContentType ?? "application/octet-stream", inline);
+    }
+
     public void Clear()
     {
         EnsureWritable();
@@ -146,6 +174,41 @@ public sealed class XpsWebResponse
         if (ContentType is not null) ValidateHeaderValue(ContentType);
         if (_headers.ContainsKey("Set-Cookie")) EnsureCookieResponseNoStore();
         Completed = true;
+    }
+
+    private void RemoveEquivalentSetCookie(string name, string path, string? domain)
+    {
+        if (!_headers.TryGetValue("Set-Cookie", out var values)) return;
+        var prefix = name + "=";
+        values.RemoveAll(value =>
+        {
+            if (!value.StartsWith(prefix, StringComparison.Ordinal)) return false;
+            var pathMatch = value.Contains("; Path=" + path, StringComparison.Ordinal);
+            var domainMatch = domain is null
+                ? !value.Contains("; Domain=", StringComparison.OrdinalIgnoreCase)
+                : value.Contains("; Domain=" + domain, StringComparison.OrdinalIgnoreCase);
+            return pathMatch && domainMatch;
+        });
+        if (values.Count == 0) _headers.Remove("Set-Cookie");
+    }
+
+    private static string NormalizeDownloadFileName(string fileName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        var normalized = fileName.Replace('\\', '/');
+        var slash = normalized.LastIndexOf('/');
+        if (slash >= 0) normalized = normalized[(slash + 1)..];
+        if (normalized.Length is < 1 or > 255 || normalized.Any(char.IsControl))
+            throw new ArgumentException("Download file name is invalid.", nameof(fileName));
+        return normalized;
+    }
+
+    private static string BuildContentDisposition(string fileName, bool inline)
+    {
+        var ascii = new string(fileName.Select(c => c is >= ' ' and <= '~' && c is not '"' and not '\\' ? c : '_').ToArray());
+        if (string.IsNullOrWhiteSpace(ascii)) ascii = "download";
+        var encoded = Uri.EscapeDataString(fileName);
+        return $"{(inline ? "inline" : "attachment")}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}";
     }
 
     private void EnsureCookieResponseNoStore()
