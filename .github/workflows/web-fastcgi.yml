@@ -8,6 +8,7 @@ on:
       - 'src/XPScript.Web.Runtime/**'
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
+      - 'tests/WebFastCgiUnixSmoke/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'src/XPScript.Web.Runtime/**'
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
+      - 'tests/WebFastCgiUnixSmoke/**'
       - 'XPScriptCompiler.slnx'
 
 jobs:
@@ -38,3 +40,6 @@ jobs:
         run: dotnet run --project ./tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj -c Release
       - name: Run FastCGI boundary and TCP regression
         run: dotnet run --project ./tests/WebFastCgiBoundarySmoke/WebFastCgiBoundarySmoke.csproj -c Release
+      - name: Run FastCGI Unix socket regression
+        if: runner.os != 'Windows'
+        run: dotnet run --project ./tests/WebFastCgiUnixSmoke/WebFastCgiUnixSmoke.csproj -c Release
