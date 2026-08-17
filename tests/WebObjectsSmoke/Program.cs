@@ -23,6 +23,10 @@ Sub Index()
     Response.Write(Request.Cookie("client"))
     Response.Write("|")
     Response.Write(Server.HtmlEncode("<x>"))
+    Response.Write("|")
+    Response.Write(Server.UrlEncode("a b"))
+    Response.Write("|")
+    Response.Write(Server.JsonEncode("alpha"))
 End Sub
 
 [Anonymous]
@@ -102,12 +106,16 @@ try
         });
     AssertStatus(get, 200);
     var getBody = Encoding.UTF8.GetString(get.Body.Span);
-    if (getBody != "GET|Fredrik Norling|header-value|cookie-value|&lt;x&gt;")
+    if (getBody != "GET|Fredrik Norling|header-value|cookie-value|&lt;x&gt;|a+b|\"alpha\"")
         throw new Exception("XPScript Request/Response/Server GET surface returned unexpected data: " + getBody);
     if (!get.Headers.TryGetValue("X-XPScript", out var testHeader) || testHeader.Single() != "web-objects")
         throw new Exception("XPScript response header was not preserved.");
     if (!get.Headers.TryGetValue("Set-Cookie", out var cookies) || !cookies.Any(x => x.StartsWith("demo=abc;", StringComparison.Ordinal)))
         throw new Exception("XPScript response cookie was not emitted.");
+
+    var directServer = new XpsWebServer(new XpsServerInfo("encoding-probe", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"));
+    if (directServer.JsonEncode("a\"b") != "\"a\\\"b\"")
+        throw new Exception("Server.JsonEncode did not escape a JSON string safely.");
 
     var formBody = Encoding.UTF8.GetBytes("value=hello+world&other=1");
     var post = await SendAsync(
