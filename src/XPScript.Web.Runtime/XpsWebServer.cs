@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 
 namespace XPScript.Web.Runtime;
 
@@ -40,6 +41,8 @@ public sealed class XpsWebServer
     public string HtmlEncode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 
     public string UrlEncode(string? value) => WebUtility.UrlEncode(value ?? string.Empty);
+
+    public string JsonEncode(string? value) => JsonSerializer.Serialize(value ?? string.Empty);
 
     private static string CanonicalizeExistingSegments(string path)
     {
