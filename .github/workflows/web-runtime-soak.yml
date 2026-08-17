@@ -1,0 +1,43 @@
+name: Web Runtime Soak
+
+on:
+  push:
+    paths:
+      - '.github/workflows/web-runtime-soak.yml'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'tests/WebRuntimeSoak/**'
+      - 'docs/web-runtime-production-limits.md'
+      - 'XPScriptCompiler.slnx'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/web-runtime-soak.yml'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'tests/WebRuntimeSoak/**'
+      - 'docs/web-runtime-production-limits.md'
+      - 'XPScriptCompiler.slnx'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore solution
+        run: dotnet restore ./XPScriptCompiler.slnx
+      - name: Build solution
+        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+      - name: Run web runtime concurrency soak
+        run: dotnet run --project ./tests/WebRuntimeSoak/WebRuntimeSoak.csproj -c Release
