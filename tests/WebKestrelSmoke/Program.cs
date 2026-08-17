@@ -53,6 +53,7 @@ try
         message.Content = new StringContent("abc", Encoding.UTF8, "text/plain");
         using var response = await client.SendAsync(message);
         if ((int)response.StatusCode != 201) throw new Exception($"Expected 201, got {(int)response.StatusCode}.");
+        if (response.Headers.Contains("Server")) throw new Exception("Kestrel exposed a Server response header.");
         if (!response.Headers.TryGetValues("X-Xps-Test", out var testValues) || testValues.Single() != "ok")
             throw new Exception("Response header was not transferred.");
         firstRequestId = ReadRequestId(response);
