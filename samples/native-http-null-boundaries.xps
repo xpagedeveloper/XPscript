@@ -1,0 +1,61 @@
+Option Declare
+
+Class HttpBoundaryObject
+    Public Name As String
+End Class
+
+Sub Main()
+    Dim http As New HttpClient
+    Dim response As HttpResponse
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim objectValue As HttpBoundaryObject
+
+    nullValue = Null
+
+    Set response = http.Post("http://127.0.0.1:18080/inspect", emptyValue)
+    Print "EMPTY_BODY=" & response.Body
+
+    Set response = http.Post("http://127.0.0.1:18080/inspect", nullValue)
+    Print "NULL_BODY=" & response.Body
+
+    Call http.SetHeader("X-XPScript-Test", emptyValue)
+    Set response = http.Get("http://127.0.0.1:18080/header-empty")
+    Print "EMPTY_HEADER=" & response.Body
+
+    Call http.SetHeader("X-XPScript-Test", nullValue)
+    Set response = http.Get("http://127.0.0.1:18080/header-null")
+    Print "NULL_HEADER=" & response.Body
+
+    On Error GoTo EmptyUrlError
+    Set response = http.Get(emptyValue)
+    Print "EMPTY_URL_NOT_REJECTED"
+    GoTo AfterEmptyUrl
+EmptyUrlError:
+    Print "EMPTY_URL_ERR=" & CStr(Err)
+    Resume AfterEmptyUrl
+AfterEmptyUrl:
+    On Error GoTo 0
+
+    On Error GoTo NullUrlError
+    Set response = http.Get(nullValue)
+    Print "NULL_URL_NOT_REJECTED"
+    GoTo AfterNullUrl
+NullUrlError:
+    Print "NULL_URL_ERR=" & CStr(Err)
+    Resume AfterNullUrl
+AfterNullUrl:
+    On Error GoTo 0
+
+    On Error GoTo NothingBodyError
+    Set response = http.Post("http://127.0.0.1:18080/inspect", objectValue)
+    Print "NOTHING_BODY_NOT_REJECTED"
+    GoTo AfterNothingBody
+NothingBodyError:
+    Print "NOTHING_BODY_ERR=" & CStr(Err)
+    Resume AfterNothingBody
+AfterNothingBody:
+    On Error GoTo 0
+
+    Print "HTTP_NULL_BOUNDARIES=OK"
+End Sub
