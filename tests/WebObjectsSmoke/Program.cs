@@ -26,7 +26,7 @@ Sub Index()
     Response.Write("|")
     Response.Write(Server.UrlEncode("a b"))
     Response.Write("|")
-    Response.Write(Server.JsonEncode("alpha"))
+    Response.Write(Server.JsonStringEncode("alpha"))
 End Sub
 
 [Anonymous]
@@ -114,8 +114,8 @@ try
         throw new Exception("XPScript response cookie was not emitted.");
 
     var directServer = new XpsWebServer(new XpsServerInfo("encoding-probe", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"));
-    if (directServer.JsonEncode("a\"b") != "\"a\\\"b\"")
-        throw new Exception("Server.JsonEncode did not escape a JSON string safely.");
+    if (directServer.JsonStringEncode("a\"b") != "\"a\\\"b\"")
+        throw new Exception("Server.JsonStringEncode did not escape a JSON string safely.");
 
     var formBody = Encoding.UTF8.GetBytes("value=hello+world&other=1");
     var post = await SendAsync(
