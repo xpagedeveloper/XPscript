@@ -77,7 +77,7 @@ public sealed class XpsCgiAdapter
             await _handler.HandleAsync(context).ConfigureAwait(false);
         if (!response.Completed) response.Complete();
 
-        await WriteResponseAsync(stdout, response, cancellationToken).ConfigureAwait(false);
+        await WriteResponseAsync(stdout, response, request.Method, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<byte[]> ReadBodyAsync(
@@ -231,10 +231,10 @@ public sealed class XpsCgiAdapter
         };
         response.Write(message);
         response.Complete();
-        await WriteResponseAsync(stdout, response, cancellationToken).ConfigureAwait(false);
+        await WriteResponseAsync(stdout, response, null, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task WriteResponseAsync(Stream stdout, XpsWebResponse response, CancellationToken cancellationToken)
+    private static async Task WriteResponseAsync(Stream stdout, XpsWebResponse response, string? method, CancellationToken cancellationToken)
     {
         var builder = new StringBuilder();
         builder.Append("Status: ")
@@ -251,7 +251,7 @@ public sealed class XpsCgiAdapter
 
         var headerBytes = Encoding.UTF8.GetBytes(builder.ToString());
         await stdout.WriteAsync(headerBytes, cancellationToken).ConfigureAwait(false);
-        if (!response.Body.IsEmpty)
+        if (!string.Equals(method, "HEAD", StringComparison.OrdinalIgnoreCase) && !response.Body.IsEmpty)
             await stdout.WriteAsync(response.Body, cancellationToken).ConfigureAwait(false);
         await stdout.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
