@@ -32,6 +32,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var address = IPAddress.Loopback;
     var port = 8080;
     var allowedHosts = new List<string>();
+    var enableHealth = false;
+    var enableMetrics = false;
+    var operationalExternal = false;
+    string? structuredLogPath = null;
 
     for (var i = 0; i < commandArgs.Length; i++)
     {
@@ -51,33 +55,79 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--allowed-host":
                 allowedHosts.Add(RequireValue(commandArgs, ref i));
                 break;
+            case "--health":
+                enableHealth = true;
+                break;
+            case "--metrics":
+                enableMetrics = true;
+                break;
+            case "--operational-external":
+                operationalExternal = true;
+                break;
+            case "--structured-log":
+                structuredLogPath = Path.GetFullPath(RequireValue(commandArgs, ref i));
+                break;
             default:
                 throw new ArgumentException("Unknown web argument: " + commandArgs[i]);
         }
     }
+
+    if (operationalExternal && !enableHealth && !enableMetrics)
+        throw new ArgumentException("--operational-external requires --health and/or --metrics.");
 
     var defaults = new XpsKestrelOptions();
     var options = new XpsKestrelOptions
     {
         Address = address,
         Port = port,
-        AllowedHosts = allowedHosts.Count > 0 ? allowedHosts.AsReadOnly() : defaults.AllowedHosts
+        AllowedHosts = allowedHosts.Count > 0 ? allowedHosts.AsReadOnly() : defaults.AllowedHosts,
+        EnableHealthEndpoint = enableHealth,
+        EnableMetricsEndpoint = enableMetrics,
+        OperationalEndpointsLocalOnly = !operationalExternal
     };
     options.Validate();
 
-    await using var dispatcher = new XpsWebDispatcher(root);
-    var server = CreateServerInfo(root, XpsWebHostingMode.Kestrel, address.ToString(), port);
-    var app = XpsKestrelAdapter.Build(options, server, dispatcher);
+    StreamWriter? structuredLogWriter = null;
+    try
+    {
+        XpsWebTelemetry? telemetry = null;
+        if (structuredLogPath is not null)
+        {
+            var logDirectory = Path.GetDirectoryName(structuredLogPath);
+            if (!string.IsNullOrWhiteSpace(logDirectory)) Directory.CreateDirectory(logDirectory);
+            structuredLogWriter = new StreamWriter(new FileStream(
+                structuredLogPath,
+                FileMode.Append,
+                FileAccess.Write,
+                FileShare.Read,
+                bufferSize: 16 * 1024,
+                useAsync: false)) { AutoFlush = true };
+            telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLogWriter));
+        }
 
-    using var shutdown = CreateShutdownToken();
-    Console.WriteLine($"XPScript web root: {root}");
-    Console.WriteLine($"Listening: http://{FormatAddress(address)}:{port}");
-    if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
-        Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
-    await app.StartAsync(shutdown.Token);
-    await WaitForShutdownAsync(shutdown.Token);
-    await app.StopAsync();
-    return 0;
+        await using var dispatcher = new XpsWebDispatcher(root);
+        var server = CreateServerInfo(root, XpsWebHostingMode.Kestrel, address.ToString(), port);
+        var app = XpsKestrelAdapter.Build(options, server, dispatcher, telemetry: telemetry);
+
+        using var shutdown = CreateShutdownToken();
+        Console.WriteLine($"XPScript web root: {root}");
+        Console.WriteLine($"Listening: http://{FormatAddress(address)}:{port}");
+        if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
+            Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
+        if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        if (structuredLogPath is not null) Console.WriteLine($"Structured request log: {structuredLogPath}");
+
+        await app.StartAsync(shutdown.Token);
+        await WaitForShutdownAsync(shutdown.Token);
+        await app.StopAsync();
+        await app.DisposeAsync();
+        return 0;
+    }
+    finally
+    {
+        structuredLogWriter?.Dispose();
+    }
 }
 
 static async Task<int> RunFastCgiAsync(string[] commandArgs)
@@ -232,12 +282,14 @@ XPScript Web Host
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...]
+  xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...] [--health] [--metrics] [--structured-log FILE] [--operational-external]
   xpscript fastcgi --root DIR [--listen ADDRESS:PORT]
   xpscript fastcgi --root DIR --unix-socket PATH
 
 Examples:
   xpscript web --root ./site
+  xpscript web --root ./site --health --metrics
+  xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
   xpscript fastcgi --root /srv/xpsite --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
@@ -245,6 +297,9 @@ Examples:
 Security defaults:
   Kestrel binds to loopback by default.
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
+  Health and metrics are disabled by default.
+  Enabled operational endpoints remain loopback-only unless --operational-external is explicitly supplied.
+  Structured request logs exclude request paths, query strings, headers, cookies and bodies.
   FastCGI binds to 127.0.0.1:9000 by default.
   Unix-domain sockets are supported on Linux and macOS only.
 """);
