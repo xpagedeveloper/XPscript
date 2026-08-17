@@ -36,7 +36,7 @@ try
     if (string.IsNullOrWhiteSpace(setCookie)) throw new Exception("Session request did not emit a session cookie.");
     var sessionToken = setCookie.Split(';', 2)[0].Split('=', 2)[1];
 
-    using var metricsResponse = await client.GetAsync("/metrics");
+    using var metricsResponse = await client.GetAsync(options.MetricsPath);
     metricsResponse.EnsureSuccessStatusCode();
     var metrics = await metricsResponse.Content.ReadAsStringAsync();
 
