@@ -41,6 +41,7 @@ public static class XpsKestrelAdapter
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
         builder.WebHost.ConfigureKestrel(kestrel =>
         {
+            kestrel.AddServerHeader = false;
             kestrel.Listen(options.Address, options.Port, listen =>
             {
                 listen.Protocols = options.Protocols;
