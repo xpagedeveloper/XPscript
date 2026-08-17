@@ -15,7 +15,12 @@ internal abstract class LSObjectBase
     }
 }
 
-internal sealed class LSRef<T> where T : LSObjectBase
+internal interface ILSObjectReference
+{
+    bool IsNothing { get; }
+}
+
+internal sealed class LSRef<T> : ILSObjectReference where T : LSObjectBase
 {
     public T? Value { get; private set; }
 
