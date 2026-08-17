@@ -11,6 +11,7 @@ on:
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeInteropDiagnosticsPostProcessor.cs'
       - 'src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs'
       - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
   workflow_dispatch:
