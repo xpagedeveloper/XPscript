@@ -5,14 +5,12 @@ internal static class TypeCoercionRuntimeSource
     public const string Code = """
 internal static class XPScriptNullRuntime
 {
-    private readonly struct NullSentinel
-    {
-        public override string ToString() => "";
-    }
+    // Use the CLR-standard database-null marker at managed interop boundaries.
+    // This keeps Variant EMPTY (CLR null) and XPScript NULL distinguishable without
+    // exposing a private XPScript sentinel type to referenced .NET assemblies.
+    public static readonly object NullValue = System.DBNull.Value;
 
-    public static readonly object NullValue = new NullSentinel();
-
-    public static bool IsNull(object? value) => value is NullSentinel;
+    public static bool IsNull(object? value) => ReferenceEquals(value, System.DBNull.Value);
     public static bool IsEmpty(object? value) => value is null;
 
     public static int DataType(object? value) => IsNull(value) ? 1 : XPScriptRuntime.DataType(value);
