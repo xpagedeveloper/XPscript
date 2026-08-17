@@ -1,0 +1,15 @@
+Option Declare
+
+Declare Function NativeAbs Lib "native-abs" _
+    WindowsLib "msvcrt.dll" WindowsAlias "abs" _
+    LinuxLib "libc.so.6" LinuxAlias "abs" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "abs" _
+    (ByVal value As Integer) As Integer
+
+Class NativeBoundaryObject
+End Class
+
+Sub Main()
+    Dim objectValue As NativeBoundaryObject
+    Print CStr(NativeAbs(objectValue))
+End Sub
