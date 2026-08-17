@@ -74,7 +74,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     Console.WriteLine($"Listening: http://{FormatAddress(address)}:{port}");
     if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
         Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
-    await app.RunAsync(shutdown.Token);
+    await app.StartAsync(shutdown.Token);
+    await WaitForShutdownAsync(shutdown.Token);
+    await app.StopAsync();
     return 0;
 }
 
@@ -94,8 +96,8 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
                 break;
             case "--listen":
             {
-                var endpoint = RequireValue(commandArgs, ref i);
-                ParseEndpoint(endpoint, out address, out port);
+                var listenValue = RequireValue(commandArgs, ref i);
+                ParseEndpoint(listenValue, out address, out port);
                 break;
             }
             case "--address":
@@ -137,9 +139,9 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     }
 
     await adapter.StartAsync(shutdown.Token);
-    var endpoint = adapter.LocalEndpoint;
+    var localEndpoint = adapter.LocalEndpoint;
     Console.WriteLine($"XPScript FastCGI root: {root}");
-    Console.WriteLine($"Listening: {endpoint?.Address}:{endpoint?.Port}");
+    Console.WriteLine($"Listening: {localEndpoint?.Address}:{localEndpoint?.Port}");
     await WaitForShutdownAsync(shutdown.Token);
     await adapter.StopAsync();
     return 0;
