@@ -35,9 +35,9 @@ var sessionOptions = new XpsSessionOptions
     CookieName = "XPSID",
     IdleTimeout = TimeSpan.FromMinutes(15),
     MaxSessions = 4,
-    MaxEntriesPerSession = 4,
-    MaxValueBytes = 64,
-    MaxBytesPerSession = 128,
+    MaxEntriesPerSession = 16,
+    MaxValueBytes = 256,
+    MaxBytesPerSession = 2048,
     SameSite = "Lax"
 };
 var sessions = new XpsSessionStore(sessionOptions);
@@ -46,7 +46,14 @@ var firstResponse = new XpsWebResponse();
 var first = sessions.Bind(firstRequest, firstResponse);
 first.Set("user", "Fredrik");
 var firstId = first.Id;
-if (firstId.Length < 40) throw new Exception("Session id does not have the expected entropy/encoded length.");
+if (!first.Started || first.Start() != firstId) throw new Exception("PHP-like Session.Start/Started semantics failed.");
+if (!first.Exists("user") || first.Count != 1 || !first.Keys.Contains("user", StringComparer.OrdinalIgnoreCase))
+    throw new Exception("PHP-like Session.Exists/Count/Keys semantics failed.");
+var firstRegenerated = first.RegenerateId();
+if (firstRegenerated == firstId) throw new Exception("Session.RegenerateId did not replace the identifier.");
+firstId = firstRegenerated;
+if (first.Unset("user") is false || first.Exists("user")) throw new Exception("Session.Unset did not remove the key.");
+first.Set("user", "Fredrik");
 AssertSessionCookie(firstResponse, firstId, secure: false);
 
 var secondResponse = new XpsWebResponse();
@@ -62,6 +69,8 @@ var oldIdResponse = new XpsWebResponse();
 var oldIdSession = sessions.Bind(Request(cookies: new Dictionary<string, string> { ["XPSID"] = firstId }), oldIdResponse);
 if (oldIdSession.Id == firstId) throw new Exception("Rotated session id remained valid.");
 if (oldIdSession.Get("user") is not null) throw new Exception("Rotated session state was reachable through the old id.");
+oldIdSession.Destroy();
+if (oldIdSession.Started) throw new Exception("Session.Destroy did not end the session.");
 
 var abandonResponse = new XpsWebResponse();
 var abandon = sessions.Bind(Request(cookies: new Dictionary<string, string> { ["XPSID"] = rotated }), abandonResponse);
@@ -99,6 +108,22 @@ var capacityExisting = capacityStore.Bind(
 if (!Equals(capacityExisting.Get("keep"), "alive"))
     throw new Exception("Active session was lost when session capacity was reached.");
 
+var directAuthResponse = new XpsWebResponse();
+var directAuthSession = new XpsSessionStore(sessionOptions).Bind(Request(), directAuthResponse);
+directAuthSession.Set("authenticated", true);
+directAuthSession.Set("userId", "42");
+directAuthSession.Set("userName", "Fredrik");
+directAuthSession.Set("rules", "admin;editor");
+if (!directAuthSession.IsAuthenticated || directAuthSession.UserId != "42" || directAuthSession.UserName != "Fredrik" ||
+    !directAuthSession.HasRule("ADMIN") || !directAuthSession.Rules.Contains("editor", StringComparer.OrdinalIgnoreCase))
+    throw new Exception("Session auth convention values were not exposed correctly.");
+var directPolicy = new XpsRoutePolicy(false, new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase), ["admin"], ["blocked"]);
+if (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Allowed)
+    throw new Exception("[Authenticated]/[Rule] policy did not evaluate session auth state.");
+directAuthSession.Set("rules", "admin,blocked");
+if (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)
+    throw new Exception("Forbidden [Rule:!name] policy did not evaluate session rules.");
+
 var root = Path.Combine(Path.GetTempPath(), "xps-web-state-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 var script = Path.Combine(root, "index.xps");
@@ -117,6 +142,44 @@ End Sub
 [Get]
 Sub Rotate()
     Response.Write(Session.RotateId())
+End Sub
+""");
+
+var authScript = Path.Combine(root, "auth.xps");
+await File.WriteAllTextAsync(authScript, """
+[Anonymous]
+[Get]
+Sub Login()
+    Session.Set("cart", "preserved")
+    Session.Authenticate("42", "Fredrik", "admin,editor")
+    Response.Write("LOGIN")
+End Sub
+
+[Authenticated]
+[Get]
+Sub Private()
+    Response.Write(Session.UserName)
+End Sub
+
+[Authenticated]
+[Rule:admin]
+[Get]
+Sub Admin()
+    Response.Write("ADMIN")
+End Sub
+
+[Authenticated]
+[Rule:!blocked]
+[Get]
+Sub NotBlocked()
+    Response.Write("NOT-BLOCKED")
+End Sub
+
+[Authenticated]
+[Get]
+Sub Logout()
+    Session.SignOut()
+    Response.Write("LOGOUT")
 End Sub
 """);
 
@@ -147,6 +210,48 @@ try
     await unit.InvokeAsync("Rotate", Context(root, rotateRequest, rotateResponse, scriptApplication, rotateSession));
     var newScriptId = Encoding.UTF8.GetString(rotateResponse.Body.Span);
     if (newScriptId == oldScriptId || newScriptId != rotateSession.Id) throw new Exception("XPScript Session.RotateId failed.");
+
+    await using var dispatcher = new XpsWebDispatcher(root);
+    var authSessions = new XpsSessionStore(sessionOptions);
+    var authApplication = new XpsApplicationState();
+
+    var unauthorized = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Private", null);
+    if (unauthorized.Response.StatusCode != 401) throw new Exception("[Authenticated] did not reject an unauthenticated session.");
+
+    var login = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Login", null);
+    if (login.Response.StatusCode != 200 || Body(login.Response) != "LOGIN") throw new Exception("Session login route failed.");
+    var authenticatedId = login.Session.Id;
+    if (!login.Session.IsAuthenticated || !login.Session.HasRule("admin") || login.Session.UserId != "42" || login.Session.UserName != "Fredrik")
+        throw new Exception("Session.Authenticate did not establish session principal state.");
+    if (!Equals(login.Session.Get("cart"), "preserved")) throw new Exception("Session.Authenticate did not preserve ordinary PHP-like session data.");
+
+    var privateRoute = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Private", authenticatedId);
+    if (privateRoute.Response.StatusCode != 200 || Body(privateRoute.Response) != "Fredrik")
+        throw new Exception("[Authenticated] did not evaluate persisted session authentication.");
+
+    var adminRoute = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Admin", authenticatedId);
+    if (adminRoute.Response.StatusCode != 200 || Body(adminRoute.Response) != "ADMIN")
+        throw new Exception("[Rule:admin] did not evaluate persisted session rules.");
+
+    var notBlocked = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/NotBlocked", authenticatedId);
+    if (notBlocked.Response.StatusCode != 200) throw new Exception("[Rule:!blocked] rejected a session without the forbidden rule.");
+
+    var blockedResponse = new XpsWebResponse();
+    var blockedRequest = Request(cookies: new Dictionary<string, string> { ["XPSID"] = authenticatedId });
+    var blockedSession = authSessions.Bind(blockedRequest, blockedResponse);
+    blockedSession.Set("rules", "admin,editor,blocked");
+    await dispatcher.HandleAsync(Context(root, blockedRequest with { Path = "/auth/NotBlocked" }, blockedResponse, authApplication, blockedSession));
+    if (blockedResponse.StatusCode != 403) throw new Exception("[Rule:!blocked] did not reject the forbidden session rule.");
+    blockedSession.Set("rules", "admin,editor");
+
+    var logout = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Logout", authenticatedId);
+    if (logout.Response.StatusCode != 200 || logout.Session.IsAuthenticated) throw new Exception("Session.SignOut did not clear auth state.");
+    if (!Equals(logout.Session.Get("cart"), "preserved")) throw new Exception("Session.SignOut unexpectedly cleared ordinary session data.");
+    var signedOutId = logout.Session.Id;
+    if (signedOutId == authenticatedId) throw new Exception("Session.SignOut did not rotate the session id.");
+
+    var afterLogout = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Private", signedOutId);
+    if (afterLogout.Response.StatusCode != 401) throw new Exception("[Authenticated] still allowed the signed-out session.");
 }
 finally
 {
@@ -154,6 +259,24 @@ finally
 }
 
 Console.WriteLine("WEB-STATE-SMOKE=OK");
+
+static async Task<(XpsWebResponse Response, IXpsSession Session)> Dispatch(
+    XpsWebDispatcher dispatcher,
+    XpsSessionStore sessions,
+    IXpsApplicationState application,
+    string root,
+    string path,
+    string? sessionId)
+{
+    var cookies = sessionId is null ? null : new Dictionary<string, string> { ["XPSID"] = sessionId };
+    var request = Request(cookies: cookies) with { Path = path };
+    var response = new XpsWebResponse();
+    var session = sessions.Bind(request, response);
+    await dispatcher.HandleAsync(Context(root, request, response, application, session));
+    return (response, session);
+}
+
+static string Body(XpsWebResponse response) => Encoding.UTF8.GetString(response.Body.Span);
 
 static XpsWebRequest Request(
     IReadOnlyDictionary<string, string>? cookies = null,
