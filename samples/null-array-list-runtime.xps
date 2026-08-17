@@ -1,0 +1,43 @@
+Option Declare
+
+Sub Main()
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim values(0 To 1) As Variant
+    Dim dynamicValues() As Variant
+    Dim items List As Variant
+
+    nullValue = Null
+
+    values(0) = emptyValue
+    values(1) = nullValue
+    Print "ARRAY_EMPTY=" & CStr(IsEmpty(values(0)))
+    Print "ARRAY_NULL=" & CStr(IsNull(values(1)))
+    Print "ARRAY_NULL_TYPE=" & CStr(TypeName(values(1)))
+
+    values(0) = nullValue
+    values(1) = emptyValue
+    Print "ARRAY_MUTATE_TO_NULL=" & CStr(IsNull(values(0)))
+    Print "ARRAY_MUTATE_TO_EMPTY=" & CStr(IsEmpty(values(1)))
+
+    ReDim dynamicValues(0 To 1)
+    dynamicValues(0) = emptyValue
+    dynamicValues(1) = nullValue
+    ReDim Preserve dynamicValues(0 To 2)
+    Print "REDIM_EMPTY=" & CStr(IsEmpty(dynamicValues(0)))
+    Print "REDIM_NULL=" & CStr(IsNull(dynamicValues(1)))
+    Print "REDIM_NEW_EMPTY=" & CStr(IsEmpty(dynamicValues(2)))
+
+    items("empty") = emptyValue
+    items("null") = nullValue
+    Print "LIST_EMPTY=" & CStr(IsEmpty(items("empty")))
+    Print "LIST_NULL=" & CStr(IsNull(items("null")))
+    Print "LIST_NULL_TYPE=" & CStr(TypeName(items("null")))
+
+    items("empty") = nullValue
+    items("null") = emptyValue
+    Print "LIST_MUTATE_TO_NULL=" & CStr(IsNull(items("empty")))
+    Print "LIST_MUTATE_TO_EMPTY=" & CStr(IsEmpty(items("null")))
+
+    Print "NULL_ARRAY_LIST_RUNTIME=OK"
+End Sub

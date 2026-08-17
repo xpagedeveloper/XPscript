@@ -62,7 +62,7 @@ Status:
 - [>] `NULL` propagates through forgiving Variant `+`; broader arithmetic/comparison/string propagation remains open.
 - [>] `NULL` is not silently converted to EMPTY, zero, empty string or NOTHING in the verified Variant `+` path; broader coercion review remains open.
 - [x] Boolean conditions involving `NULL` and `EMPTY` use the shared `XPScriptNullRuntime.ConditionValue` contract: both evaluate as false in `If`/`ElseIf`/`While`/`Do`/`Loop` conditions, while invalid non-convertible values produce a bounded diagnostic. Cross-platform source: `samples/null-boolean-conditions.xps` and `.github/workflows/null-boolean-conditions.yml`.
-- [>] Array/List snapshots containing EMPTY and NULL preserve both values across Evaluate; broader normal-runtime array/List mutation and conversion edge cases remain open.
+- [x] Normal-runtime Variant Array/List mutation preserves EMPTY and NULL as distinct states, including reassignment and `ReDim Preserve`; cross-platform source: `samples/null-array-list-runtime.xps` and `.github/workflows/null-array-list-runtime.yml`.
 
 ## Object references
 
@@ -98,6 +98,7 @@ Status:
 - [x] Module-global and Static Variant EMPTY initialization and Static persistence are covered by `samples/variant-global-static-empty.xps`.
 - [x] Object-reference NOTHING, alias and Delete behavior are covered by `.github/workflows/null-empty-semantics.yml` using `samples/module-object-references.xps`.
 - [x] Boolean-condition semantics are covered on Windows, Ubuntu and macOS by `.github/workflows/null-boolean-conditions.yml`.
+- [x] Normal-runtime Variant Array/List EMPTY/NULL mutation and `ReDim Preserve` behavior are covered on Windows, Ubuntu and macOS by `.github/workflows/null-array-list-runtime.yml`.
 - [x] JSON EMPTY/NULL/NOTHING serialization boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-json-build.yml` and JSON security gates.
 - [x] Console/text and text-file boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/null-text-boundaries.yml`, including internal representation non-leakage.
 - [x] HTTP EMPTY/NULL/NOTHING request boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-http-build.yml` using `samples/native-http-null-boundaries.xps` and the local request-inspection server.
