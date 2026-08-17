@@ -1,0 +1,41 @@
+Option Declare
+
+Declare Function NativeAbs Lib "native-abs" _
+    WindowsLib "msvcrt.dll" WindowsAlias "abs" _
+    LinuxLib "libc.so.6" LinuxAlias "abs" _
+    MacOSLib "libSystem.B.dylib" MacOSAlias "abs" _
+    (ByVal value As Integer) As Integer
+
+Class NativeBoundaryObject
+End Class
+
+Sub Main()
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim objectValue As NativeBoundaryObject
+    nullValue = Null
+
+    Print "EMPTY_NATIVE=" & CStr(NativeAbs(emptyValue))
+
+    On Error GoTo NullError
+    Print "NULL_NATIVE_VALUE=" & CStr(NativeAbs(nullValue))
+    Print "NULL_NATIVE_NOT_REJECTED"
+    GoTo AfterNull
+NullError:
+    Print "NULL_NATIVE_ERR=" & CStr(Err)
+    Resume AfterNull
+AfterNull:
+    On Error GoTo 0
+
+    On Error GoTo NothingError
+    Print "NOTHING_NATIVE_VALUE=" & CStr(NativeAbs(objectValue))
+    Print "NOTHING_NATIVE_NOT_REJECTED"
+    GoTo AfterNothing
+NothingError:
+    Print "NOTHING_NATIVE_ERR=" & CStr(Err)
+    Resume AfterNothing
+AfterNothing:
+    On Error GoTo 0
+
+    Print "NATIVE_NULL_BOUNDARIES=OK"
+End Sub

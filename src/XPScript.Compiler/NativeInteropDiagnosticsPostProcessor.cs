@@ -32,8 +32,10 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
         var name = match.Groups["name"].Value;
         var parameters = match.Groups["parameters"].Value.Trim();
         var internalName = $"__ls_native_{ordinal}_{name}";
-        var argumentNames = ExtractArgumentNames(parameters);
-        var call = internalName + "(" + string.Join(", ", argumentNames) + ")";
+        var parameterInfos = ParseParameters(parameters);
+        var wrapperParameters = string.Join(", ", parameterInfos.Select(p => "object? " + p.Name));
+        var callArguments = parameterInfos.Select(p => CoerceExpression(p.Type, p.Name));
+        var call = internalName + "(" + string.Join(", ", callArguments) + ")";
 
         var builder = new StringBuilder();
         builder.Append(indent).Append("[System.Runtime.InteropServices.DllImport(\"").Append(Escape(library))
@@ -42,7 +44,7 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
         builder.Append(indent).Append("private static extern ").Append(returnType).Append(' ').Append(internalName)
             .Append('(').Append(parameters).AppendLine(");");
         builder.Append(indent).Append("private static ").Append(returnType).Append(' ').Append(name)
-            .Append('(').Append(parameters).AppendLine(")");
+            .Append('(').Append(wrapperParameters).AppendLine(")");
         builder.Append(indent).AppendLine("{");
         builder.Append(indent).AppendLine("    try");
         builder.Append(indent).AppendLine("    {");
@@ -65,18 +67,38 @@ internal sealed class NativeInteropDiagnosticsPostProcessor
         return builder.ToString().TrimEnd('\r', '\n');
     }
 
-    private static IReadOnlyList<string> ExtractArgumentNames(string parameters)
+    private sealed record NativeParameter(string Type, string Name);
+
+    private static IReadOnlyList<NativeParameter> ParseParameters(string parameters)
     {
-        if (string.IsNullOrWhiteSpace(parameters)) return Array.Empty<string>();
-        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(parameters)) return Array.Empty<NativeParameter>();
+        var result = new List<NativeParameter>();
         foreach (var parameter in SplitParameters(parameters))
         {
-            var match = Regex.Match(parameter.Trim(), @"(?<name>[A-Za-z_]\w*)\s*$");
+            var match = Regex.Match(parameter.Trim(), @"^(?<type>.+?)\s+(?<name>[A-Za-z_]\w*)$");
             if (!match.Success)
                 throw new CompilerException("Unable to generate native interop wrapper for parameter: " + parameter.Trim());
-            result.Add(match.Groups["name"].Value);
+            result.Add(new NativeParameter(match.Groups["type"].Value.Trim(), match.Groups["name"].Value));
         }
         return result;
+    }
+
+    private static string CoerceExpression(string type, string name)
+    {
+        return type switch
+        {
+            "string" => $"XPScriptRuntime.CStr({name})",
+            "int" => $"XPScriptRuntime.CInt({name})",
+            "long" => $"XPScriptRuntime.CLng({name})",
+            "double" => $"XPScriptRuntime.CDbl({name})",
+            "float" => $"XPScriptRuntime.CSng({name})",
+            "bool" => $"XPScriptRuntime.CBool({name})",
+            "byte" => $"XPScriptRuntime.CByte({name})",
+            "decimal" => $"XPScriptRuntime.CCur({name})",
+            "DateTime" => $"XPScriptRuntime.CDate({name})",
+            "object" or "dynamic" => name,
+            _ => throw new CompilerException("Unsupported native interop parameter type: " + type)
+        };
     }
 
     private static IReadOnlyList<string> SplitParameters(string value)

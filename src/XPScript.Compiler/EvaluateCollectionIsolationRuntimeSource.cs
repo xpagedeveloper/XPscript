@@ -206,6 +206,12 @@ internal static class XPScriptEvaluateCollectionRuntime
         if (value is null)
             return null;
 
+        if (XPScriptNullRuntime.IsNull(value))
+        {
+            budget.AddScalar(value);
+            return XPScriptNullRuntime.NullValue;
+        }
+
         if (value is string text)
         {
             budget.AddString(text);

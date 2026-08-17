@@ -119,6 +119,8 @@ internal sealed class TypeCoercionPreprocessor
             var text = code.ToString();
             text = Regex.Replace(text, @"(?<![\w.])IsNull\s*\(", "XPScriptNullRuntime.IsNull(", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"(?<![\w.])IsEmpty\s*\(", "XPScriptNullRuntime.IsEmpty(", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"(?<![\w.])IsObject\s*\(", "XPScriptNullRuntime.IsObject(", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"(?<![\w.])IsScalar\s*\(", "XPScriptNullRuntime.IsScalar(", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"(?<![\w.])DataType\s*\(", "XPScriptNullRuntime.DataType(", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"(?<![\w.])TypeName\s*\(", "XPScriptNullRuntime.TypeName(", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"(?<![\w.])Null\b", "XPScriptNullRuntime.NullValue", RegexOptions.IgnoreCase);

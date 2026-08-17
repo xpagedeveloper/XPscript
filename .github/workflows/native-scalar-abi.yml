@@ -5,8 +5,12 @@ on:
     branches: [main]
     paths:
       - 'samples/native-scalar-abi.xps'
+      - 'samples/native-null-abi.xps'
       - '.github/workflows/native-scalar-abi.yml'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeInteropDiagnosticsPostProcessor.cs'
       - 'src/XPScript.Compiler/NativeLibraryPlatformPreprocessor.cs'
       - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
   workflow_dispatch:
@@ -69,3 +73,22 @@ jobs:
           $result = @(& $env:NATIVE_ABI_EXE 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Native scalar ABI sample exited with code $LASTEXITCODE.`n$result" }
           if ($result -notcontains 'NATIVE_SCALAR_ABI=OK') { throw "Native scalar ABI success marker missing.`n$result" }
+
+      - name: Verify Empty Null and Nothing native ABI boundaries
+        shell: pwsh
+        run: |
+          $output = if ($env:RUNNER_OS -eq 'Windows') { './out/native-null-abi.exe' } else { './out/native-null-abi' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-null-abi.xps --runtime '${{ matrix.rid }}' -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native Null boundary sample compilation failed for ${{ matrix.rid }}.' }
+          if (-not $IsWindows) { chmod +x $output }
+          $result = @(& $output 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native Null boundary sample exited with code $LASTEXITCODE.`n$result" }
+          $result | ForEach-Object { Write-Host $_ }
+          if ($result -notcontains 'EMPTY_NATIVE=0') { throw "EMPTY did not coerce to numeric zero at the native scalar boundary.`n$result" }
+          if (-not ($result | Where-Object { $_ -match '^NULL_NATIVE_ERR=([1-9][0-9]*)$' })) { throw "NULL was not rejected at the native scalar boundary.`n$result" }
+          if (-not ($result | Where-Object { $_ -match '^NOTHING_NATIVE_ERR=([1-9][0-9]*)$' })) { throw "NOTHING was not rejected at the native scalar boundary.`n$result" }
+          $joined = $result -join "`n"
+          if ($joined -match 'NULL_NATIVE_NOT_REJECTED|NOTHING_NATIVE_NOT_REJECTED|LSRef|NativeBoundaryObject') {
+            throw "Native ABI boundary accepted or leaked an invalid absence/object state.`n$result"
+          }
+          if ($result -notcontains 'NATIVE_NULL_BOUNDARIES=OK') { throw "Native Null boundary success marker missing.`n$result" }

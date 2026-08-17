@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/NativeJsonRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/native-json-regression.xps'
