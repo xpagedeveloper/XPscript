@@ -9,6 +9,6 @@
     <ProjectReference Include="../../src/XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
     <ProjectReference Include="../../src/XPScript.Web.Kestrel/XPScript.Web.Kestrel.csproj" />
     <ProjectReference Include="../../src/XPScript.Web.FastCgi/XPScript.Web.FastCgi.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-  <FrameworkReference Include="Microsoft.AspNetCore.App" />
 </Project>
