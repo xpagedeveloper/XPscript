@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/NativeJsonRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/native-json-regression.xps'
@@ -63,10 +64,17 @@ jobs:
             'ELEMENTVALUE=123',
             'STRINGIFY={"name":"Fredrik"}',
             'ENCODE=["TWO"]',
-            'DECODE={"ok":true}'
+            'DECODE={"ok":true}',
+            'EMPTYJSON=null',
+            'NULLJSON=null',
+            'NOTHINGJSON=null'
           )
           foreach ($value in $required) {
             if ($output -notcontains $value) { throw "Native JSON output missing: $value`n$output" }
+          }
+          $joined = $output -join "`n"
+          if ($joined -match 'NullSentinel|ILSObjectReference|LSRef') {
+            throw "Internal NULL/object-reference representation leaked into JSON output.`n$output"
           }
       - name: Verify JSON resource limits and rollback
         shell: pwsh
