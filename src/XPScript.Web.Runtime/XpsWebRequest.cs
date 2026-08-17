@@ -88,16 +88,86 @@ public sealed class XpsWebRequest
         return Body.ToArray();
     }
 
-    public IReadOnlyList<string> Form(string name, int maxBytes = 1_048_576, int maxFields = 256)
+    public IReadOnlyList<string> Form(
+        string name,
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024)
     {
-        if (ContentType is null || !ContentType.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
-            return Array.Empty<string>();
-        var text = BodyText(maxBytes);
-        return GetValues(ParseUrlEncoded(text, maxBytes, maxFields, "form body"), name);
+        if (ContentType is null) return Array.Empty<string>();
+        if (ContentType.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
+        {
+            var text = BodyText(maxBytes);
+            return GetValues(ParseUrlEncoded(text, maxBytes, maxFields, "form body"), name);
+        }
+        if (ContentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+        {
+            var multipart = ParseMultipart(maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes);
+            return GetValues(multipart.Fields, name);
+        }
+        return Array.Empty<string>();
     }
 
-    public string FormFirst(string name, int maxBytes = 1_048_576, int maxFields = 256) =>
-        Form(name, maxBytes, maxFields).FirstOrDefault() ?? string.Empty;
+    public string FormFirst(
+        string name,
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024) =>
+        Form(name, maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes).FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<XpsUploadedFile> Files(
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024)
+    {
+        if (ContentType is null || !ContentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            return Array.Empty<XpsUploadedFile>();
+        return ParseMultipart(maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes).Files;
+    }
+
+    public IReadOnlyList<XpsUploadedFile> Files(
+        string name,
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return Files(maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes)
+            .Where(file => file.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    public XpsUploadedFile? FileFirst(
+        string name,
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024) =>
+        Files(name, maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes).FirstOrDefault();
+
+    private XpsMultipartFormData ParseMultipart(
+        int maxBytes,
+        int maxFields,
+        int maxFiles,
+        int maxFileBytes,
+        int maxPartHeaderBytes) =>
+        XpsMultipartFormParser.Parse(
+            ContentType ?? string.Empty,
+            Body,
+            maxBytes,
+            maxFields,
+            maxFiles,
+            maxFileBytes,
+            maxPartHeaderBytes);
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ParseUrlEncoded(
         string raw,

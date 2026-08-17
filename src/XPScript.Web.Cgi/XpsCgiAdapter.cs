@@ -34,6 +34,7 @@ public sealed class XpsCgiAdapter
     private readonly IXpsWebRequestHandler _handler;
     private readonly IXpsApplicationState _application;
     private readonly XpsSessionStore? _sessions;
+    private readonly Func<XpsWebRequest, XpsWebResponse, IXpsSession?>? _sessionFactory;
     private readonly Func<XpsWebRequest, XpsWebPrincipal>? _principalFactory;
 
     public XpsCgiAdapter(
@@ -42,7 +43,8 @@ public sealed class XpsCgiAdapter
         IXpsWebRequestHandler handler,
         IXpsApplicationState? application = null,
         XpsSessionStore? sessions = null,
-        Func<XpsWebRequest, XpsWebPrincipal>? principalFactory = null)
+        Func<XpsWebRequest, XpsWebPrincipal>? principalFactory = null,
+        Func<XpsWebRequest, XpsWebResponse, IXpsSession?>? sessionFactory = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
@@ -51,6 +53,7 @@ public sealed class XpsCgiAdapter
         _application = application ?? new XpsApplicationState();
         _sessions = sessions;
         _principalFactory = principalFactory;
+        _sessionFactory = sessionFactory;
     }
 
     public async Task RunAsync(
@@ -67,7 +70,7 @@ public sealed class XpsCgiAdapter
         var request = CreateRequest(environment, body, cancellationToken);
         var response = new XpsWebResponse();
         var principal = _principalFactory?.Invoke(request) ?? new XpsWebPrincipal(false);
-        var session = _sessions?.Bind(request, response);
+        var session = _sessionFactory?.Invoke(request, response) ?? _sessions?.Bind(request, response);
         var context = new XpsWebContext(request, response, _serverInfo, principal, _application, session);
 
         using (XpsWebContextAccessor.Push(context))

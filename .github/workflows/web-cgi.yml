@@ -8,11 +8,14 @@ on:
       - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
       - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
+      - 'src/XPScript.Web.Runtime/XpsMultipartForm.cs'
       - 'src/XPScript.Web.Compiler/XpsWebDispatcher.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
       - 'tests/WebCgiSmoke/**'
       - 'tests/WebCgiDominoSmoke/**'
+      - 'tests/WebCgiStateSmoke/**'
+      - 'tests/WebFileTransferSmoke/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
     branches: [main]
@@ -22,11 +25,14 @@ on:
       - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
       - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
+      - 'src/XPScript.Web.Runtime/XpsMultipartForm.cs'
       - 'src/XPScript.Web.Compiler/XpsWebDispatcher.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
       - 'tests/WebCgiSmoke/**'
       - 'tests/WebCgiDominoSmoke/**'
+      - 'tests/WebCgiStateSmoke/**'
+      - 'tests/WebFileTransferSmoke/**'
       - 'XPScriptCompiler.slnx'
 
 permissions:
@@ -53,3 +59,7 @@ jobs:
         run: dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
       - name: Run Domino PATH_INFO CGI regression
         run: dotnet run --project ./tests/WebCgiDominoSmoke/WebCgiDominoSmoke.csproj -c Release
+      - name: Run persistent CGI Session and Application regression
+        run: dotnet run --project ./tests/WebCgiStateSmoke/WebCgiStateSmoke.csproj -c Release
+      - name: Run multipart upload and file response regression
+        run: dotnet run --project ./tests/WebFileTransferSmoke/WebFileTransferSmoke.csproj -c Release

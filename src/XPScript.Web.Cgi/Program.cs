@@ -22,8 +22,23 @@ internal static class Program
             var server = new XpsServerInfo(siteId, root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, version);
 
             await using var dispatcher = new XpsWebDispatcher(root);
-            var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher);
-            await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);
+            var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");
+            if (!string.IsNullOrWhiteSpace(stateRoot))
+            {
+                await using var state = await XpsCgiPersistentState.OpenAsync(stateRoot, siteId).ConfigureAwait(false);
+                var adapter = new XpsCgiAdapter(
+                    new XpsCgiOptions(),
+                    server,
+                    dispatcher,
+                    application: state.Application,
+                    sessionFactory: state.BindSession);
+                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);
+            }
+            else
+            {
+                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher);
+                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);
+            }
             return 0;
         }
         catch (XpsCgiException)
