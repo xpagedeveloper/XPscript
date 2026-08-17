@@ -265,6 +265,11 @@ public sealed class XpsSessionStore
 
 public sealed class XpsWebSession : IXpsSession
 {
+    public const string AuthenticatedKey = "authenticated";
+    public const string UserIdKey = "userId";
+    public const string UserNameKey = "userName";
+    public const string RulesKey = "rules";
+
     private readonly XpsSessionStore _store;
     private readonly XpsSessionStore.SessionRecord _record;
     private readonly XpsWebResponse _response;
@@ -290,6 +295,54 @@ public sealed class XpsWebSession : IXpsSession
         get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Id; } }
     }
 
+    public bool Started
+    {
+        get { lock (_record.Gate) return !_record.Abandoned; }
+    }
+
+    public int Count
+    {
+        get { lock (_record.Gate) { XpsSessionStore.EnsureActive(_record); return _record.Values.Count; } }
+    }
+
+    public IReadOnlyList<string> Keys
+    {
+        get
+        {
+            lock (_record.Gate)
+            {
+                XpsSessionStore.EnsureActive(_record);
+                return _record.Values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+            }
+        }
+    }
+
+    public bool IsAuthenticated
+    {
+        get
+        {
+            lock (_record.Gate)
+            {
+                XpsSessionStore.EnsureActive(_record);
+                return _record.Values.TryGetValue(AuthenticatedKey, out var value) && IsTruthy(value.Value);
+            }
+        }
+    }
+
+    public string? UserId => Get(UserIdKey) as string;
+    public string? UserName => Get(UserNameKey) as string;
+
+    public IReadOnlyCollection<string> Rules
+    {
+        get
+        {
+            var raw = Get(RulesKey) as string;
+            return ParseRules(raw);
+        }
+    }
+
+    public string Start() => Id;
+
     public object? Get(string name)
     {
         ValidateName(name);
@@ -304,6 +357,10 @@ public sealed class XpsWebSession : IXpsSession
     public void Set(string name, object? value)
     {
         ValidateName(name);
+        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)
+            throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+        if ((name.Equals(UserIdKey, StringComparison.OrdinalIgnoreCase) || name.Equals(UserNameKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string)
+            throw new InvalidOperationException($"Session '{name}' must be a string.");
         var stateValue = StateValuePolicy.Create(value, _options.MaxValueBytes);
         lock (_record.Gate)
         {
@@ -320,6 +377,16 @@ public sealed class XpsWebSession : IXpsSession
         }
     }
 
+    public bool Exists(string name)
+    {
+        ValidateName(name);
+        lock (_record.Gate)
+        {
+            XpsSessionStore.EnsureActive(_record);
+            return _record.Values.ContainsKey(name);
+        }
+    }
+
     public bool Remove(string name)
     {
         ValidateName(name);
@@ -333,6 +400,8 @@ public sealed class XpsWebSession : IXpsSession
         }
     }
 
+    public bool Unset(string name) => Remove(name);
+
     public void Clear()
     {
         lock (_record.Gate)
@@ -344,9 +413,38 @@ public sealed class XpsWebSession : IXpsSession
         }
     }
 
+    public bool HasRule(string rule)
+    {
+        var normalized = NormalizeRule(rule);
+        return Rules.Contains(normalized, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
+    {
+        if (userId is not null) ValidateIdentityValue(userId, nameof(userId));
+        if (userName is not null) ValidateIdentityValue(userName, nameof(userName));
+        var normalizedRules = string.Join(',', ParseRules(rules));
+        Set(AuthenticatedKey, true);
+        if (userId is not null) Set(UserIdKey, userId); else RemoveIfPresent(UserIdKey);
+        if (userName is not null) Set(UserNameKey, userName); else RemoveIfPresent(UserNameKey);
+        if (normalizedRules.Length > 0) Set(RulesKey, normalizedRules); else RemoveIfPresent(RulesKey);
+        RotateId();
+    }
+
+    public void SignOut()
+    {
+        RemoveIfPresent(AuthenticatedKey);
+        RemoveIfPresent(UserIdKey);
+        RemoveIfPresent(UserNameKey);
+        RemoveIfPresent(RulesKey);
+        RotateId();
+    }
+
     public string RotateId() => _store.Rotate(_record, _response, _scheme);
+    public string RegenerateId() => RotateId();
 
     public void Abandon() => _store.Abandon(_record, _response, _scheme);
+    public void Destroy() => Abandon();
 
     internal void WriteCookie()
     {
@@ -355,6 +453,55 @@ public sealed class XpsWebSession : IXpsSession
             _options.CookieName,
             Id,
             new XpsCookieOptions("/", HttpOnly: true, Secure: secure, SameSite: _options.SameSite, MaxAge: _options.IdleTimeout));
+    }
+
+    private void RemoveIfPresent(string name)
+    {
+        if (Exists(name)) Remove(name);
+    }
+
+    private static bool IsTruthy(object? value) => value switch
+    {
+        bool boolean => boolean,
+        byte number => number != 0,
+        sbyte number => number != 0,
+        short number => number != 0,
+        ushort number => number != 0,
+        int number => number != 0,
+        uint number => number != 0,
+        long number => number != 0,
+        ulong number => number != 0,
+        string text => text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                       text.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                       text.Equals("1", StringComparison.Ordinal),
+        _ => false
+    };
+
+    private static IReadOnlyCollection<string> ParseRules(string? rules)
+    {
+        if (string.IsNullOrWhiteSpace(rules)) return Array.Empty<string>();
+        var values = rules
+            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeRule)
+            .Where(x => x.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (values.Length > 128) throw new ArgumentException("Session rules cannot exceed 128 entries.", nameof(rules));
+        return values;
+    }
+
+    private static string NormalizeRule(string? rule)
+    {
+        var value = (rule ?? string.Empty).Trim();
+        if (value.Length > 128) throw new ArgumentException("Rule name exceeds 128 characters.", nameof(rule));
+        if (value.Any(char.IsControl)) throw new ArgumentException("Rule name contains a control character.", nameof(rule));
+        return value;
+    }
+
+    private static void ValidateIdentityValue(string value, string parameterName)
+    {
+        if (value.Length > 256) throw new ArgumentOutOfRangeException(parameterName, "Identity value cannot exceed 256 characters.");
+        if (value.Any(char.IsControl)) throw new ArgumentException("Identity value contains a control character.", parameterName);
     }
 
     private static void ValidateName(string name)
