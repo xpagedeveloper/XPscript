@@ -129,8 +129,8 @@ static void AssertStatus((int ExitCode, string Stdout, string Stderr) result, in
 
 static string ExtractSessionCookie(string stdout)
 {
-    var match = Regex.Match(stdout, @"(?im)^Set-Cookie:\s*(XPSID=[^;\r\n]+)");
-    return match.Success ? match.Groups[1].Value : string.Empty;
+    var matches = Regex.Matches(stdout, @"(?im)^Set-Cookie:\s*(XPSID=[^;\r\n]+)");
+    return matches.Count > 0 ? matches[^1].Groups[1].Value : string.Empty;
 }
 
 static string Body(string stdout)
