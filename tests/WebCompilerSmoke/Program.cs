@@ -96,8 +96,12 @@ static void AssertMetadataFailure(string source)
 
 sealed class SmokeApplicationState : IXpsApplicationState
 {
+    public int Count => 0;
+    public IReadOnlyList<string> Keys => Array.Empty<string>();
     public object? Get(string name) => null;
     public void Set(string name, object? value) { }
+    public bool Exists(string name) => false;
     public bool Remove(string name) => false;
+    public bool Unset(string name) => false;
     public void Clear() { }
 }
