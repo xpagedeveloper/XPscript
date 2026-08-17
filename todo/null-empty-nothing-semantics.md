@@ -28,7 +28,7 @@ Status:
 - [x] Variant `EMPTY` has an explicit runtime contract: CLR `null` in Variant value storage, interpreted as EMPTY by Variant inspection semantics.
 - [x] Variant `NULL` has a separate private immutable sentinel in `TypeCoercionRuntimeSource.cs`, verified on Windows, Ubuntu and macOS.
 - [x] Object `NOTHING` is represented by `LSRef<T>.IsNothing`, not by the Variant value itself.
-- [>] Ensure the NULL sentinel cannot leak as a normal user object across serialization/API boundaries; JSON, console/text and text-file boundaries are verified, while HTTP and managed/native interop review remains open.
+- [>] Ensure the NULL sentinel cannot leak as a normal user object across serialization/API boundaries; JSON, console/text, text-file and HTTP boundaries are verified, while managed/native interop review remains open.
 
 ## Variable initialization
 
@@ -70,6 +70,7 @@ Status:
 - [x] Aliases remain valid when one reference is cleared; cross-platform covered by `samples/module-object-references.xps`.
 - [x] Object-reference tests use `LSRef<T>.IsNothing` and object identity rather than Variant `IsNull`.
 - [x] `Delete` and shared-reference cleanup are covered by `samples/module-object-references.xps`.
+- [x] Object-reference wrappers cannot fall back to CLR type-name text conversion; implicit `LSRef<T>.ToString()` now raises a type mismatch instead of exposing implementation details.
 
 ## Evaluate
 
@@ -84,7 +85,7 @@ Status:
 - [x] JSON behavior is defined and cross-platform verified: EMPTY, NULL and NOTHING serialize as JSON `null`; private NULL/object-reference runtime representations do not leak. JSON `null` deserializes to Variant EMPTY because JSON cannot preserve the three-way XPScript distinction.
 - [x] Console/text formatting is cross-platform verified: `CStr(EMPTY)` and `CStr(NULL)` both produce empty text and the private NULL sentinel name does not leak.
 - [x] Text file output preserves the distinction where the file format can represent it: `Print #` uses empty text for EMPTY/NULL, while `Write #` emits an empty field for EMPTY and `#NULL#` for NULL. Dynamic single-EMPTY `params` binding is handled safely.
-- [ ] Review HTTP request/response conversion paths for EMPTY, NULL and NOTHING.
+- [x] HTTP request conversion is defined and cross-platform verified: EMPTY request body remains content-less, NULL becomes an explicit empty text body, EMPTY/NULL header values become empty text, EMPTY/NULL URLs are rejected by URL validation, and object references including NOTHING cannot leak CLR wrapper text. HTTP responses contain normal HTTP scalar/binary values and do not synthesize XPScript NULL/NOTHING states.
 - [ ] Review managed/native interop conversion boundaries.
 
 ## Regression gate
@@ -98,6 +99,7 @@ Status:
 - [x] Boolean-condition semantics are covered on Windows, Ubuntu and macOS by `.github/workflows/null-boolean-conditions.yml`.
 - [x] JSON EMPTY/NULL/NOTHING serialization boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-json-build.yml` and JSON security gates.
 - [x] Console/text and text-file boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/null-text-boundaries.yml`, including private sentinel non-leakage.
+- [x] HTTP EMPTY/NULL/NOTHING request boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-http-build.yml` using `samples/native-http-null-boundaries.xps` and the local request-inspection server.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
 - [x] Evaluate callvar fixture covers scalar, Array and List values containing EMPTY and NULL: `samples/evaluate-callvar-null-empty.xps`.
 - [x] Focused Null/Empty/Nothing runtime and Evaluate gates execute on Windows, Ubuntu and macOS.

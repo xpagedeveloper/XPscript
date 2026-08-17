@@ -28,6 +28,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _send_request_inspection(self):
+        length_header = self.headers.get('Content-Length')
+        content_type = self.headers.get('Content-Type')
+        body = self._body()
+        payload = '|'.join([
+            'INSPECT',
+            'LENGTH=' + ('ABSENT' if length_header is None else length_header),
+            'TYPE=' + ('ABSENT' if content_type is None else content_type),
+            'BODY=' + body,
+        ])
+        data = payload.encode('utf-8')
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain; charset=utf-8')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def _send_redirect(self):
         data = b'redirect-not-followed'
         self.send_response(302)
@@ -146,6 +163,9 @@ class Handler(BaseHTTPRequestHandler):
         self._send('GET')
 
     def do_POST(self):
+        if self.path == '/inspect':
+            self._send_request_inspection()
+            return
         self._send('POST', self._body())
 
     def do_PUT(self):
