@@ -55,6 +55,9 @@ internal sealed class LSRef<T> : ILSObjectReference where T : LSObjectBase
 
     public bool IsSameReference(LSRef<T>? other) =>
         other is not null && ReferenceEquals(this, other);
+
+    public override string ToString() =>
+        throw new InvalidCastException("Object references cannot be converted to String implicitly.");
 }
 
 internal static class LSObjectRuntime
