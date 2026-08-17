@@ -10,7 +10,7 @@ on:
       - '.github/workflows/web-kestrel.yml'
       - 'XPScriptCompiler.slnx'
   push:
-    branches: ['todo-web-runtime-kestrel']
+    branches: ['todo-web-runtime-kestrel', 'todo-web-runtime-observability']
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Kestrel/**'
