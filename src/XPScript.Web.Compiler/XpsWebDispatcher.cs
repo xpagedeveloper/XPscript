@@ -33,13 +33,13 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
         }
         catch (XpsWebPathException)
         {
-            WriteTerminalResponse(context.Response, 400, "Bad Request");
+            WriteTerminalResponse(context.Response, 400, "Bad Request", context.Request.Method);
             return;
         }
 
         if (!resolution.Found || resolution.ScriptPath is null)
         {
-            WriteTerminalResponse(context.Response, 404, "Not Found");
+            WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
             return;
         }
 
@@ -50,7 +50,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
             var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
             if (routeName is null || !unit.Routes.TryGetValue(routeName, out var descriptor))
             {
-                WriteTerminalResponse(context.Response, 404, "Not Found");
+                WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
                 return;
             }
 
@@ -70,12 +70,12 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
         }
         catch (FileNotFoundException)
         {
-            WriteTerminalResponse(context.Response, 404, "Not Found");
+            WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
         }
         catch (Exception)
         {
             if (!context.Response.Completed)
-                WriteTerminalResponse(context.Response, 500, "Internal Server Error");
+                WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
     }
 
