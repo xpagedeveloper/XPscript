@@ -12,6 +12,8 @@ internal static class XPScriptNullRuntime
 
     public static bool IsNull(object? value) => ReferenceEquals(value, System.DBNull.Value);
     public static bool IsEmpty(object? value) => value is null;
+    public static bool IsObject(object? value) => IsNull(value) ? false : XPScriptRuntime.IsObject(value);
+    public static bool IsScalar(object? value) => IsNull(value) ? true : XPScriptRuntime.IsScalar(value);
 
     public static int DataType(object? value) => IsNull(value) ? 1 : XPScriptRuntime.DataType(value);
     public static string TypeName(object? value) => IsNull(value) ? "NULL" : XPScriptRuntime.TypeName(value);
