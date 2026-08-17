@@ -6,6 +6,8 @@ Directory.CreateDirectory(Path.Combine(root, "folder"));
 await File.WriteAllTextAsync(Path.Combine(root, "index.xps"), "' root");
 await File.WriteAllTextAsync(Path.Combine(root, "foo.xps"), "' foo");
 await File.WriteAllTextAsync(Path.Combine(root, "folder", "index.xps"), "' folder");
+await File.WriteAllTextAsync(Path.Combine(root, "welcome.xps"), "' custom root");
+await File.WriteAllTextAsync(Path.Combine(root, "folder", "welcome.xps"), "' custom folder");
 
 try
 {
@@ -16,6 +18,14 @@ try
     AssertPath(resolver.Resolve("/foo.xps"), Path.Combine(root, "foo.xps"), null);
     AssertPath(resolver.Resolve("/folder/"), Path.Combine(root, "folder", "index.xps"), null);
     AssertPath(resolver.Resolve("/foo/save"), Path.Combine(root, "foo.xps"), "save");
+
+    var customResolver = new XpsWebPathResolver(root, "welcome.xps");
+    if (customResolver.DefaultDocumentName != "welcome.xps") throw new Exception("Custom default document name was not retained.");
+    AssertPath(customResolver.Resolve("/"), Path.Combine(root, "welcome.xps"), null);
+    AssertPath(customResolver.Resolve("/folder/"), Path.Combine(root, "folder", "welcome.xps"), null);
+    AssertThrows<ArgumentException>(() => _ = new XpsWebPathResolver(root, "../outside.xps"));
+    AssertThrows<ArgumentException>(() => _ = new XpsWebPathResolver(root, "folder/welcome.xps"));
+    AssertThrows<ArgumentException>(() => _ = new XpsWebPathResolver(root, "index.html"));
 
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/../secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%2e%2e/secret.xps"));

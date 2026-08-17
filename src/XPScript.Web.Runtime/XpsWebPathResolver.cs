@@ -5,10 +5,12 @@ public sealed class XpsWebPathResolver
     private readonly string _root;
     private readonly string _rootWithSeparator;
     private readonly StringComparison _pathComparison;
+    private readonly string _defaultDocumentName;
 
-    public XpsWebPathResolver(string root)
+    public XpsWebPathResolver(string root, string defaultDocumentName = "index.xps")
     {
         if (string.IsNullOrWhiteSpace(root)) throw new ArgumentException("Web root is required.", nameof(root));
+        _defaultDocumentName = ValidateDefaultDocumentName(defaultDocumentName);
         _root = Path.GetFullPath(root);
         _rootWithSeparator = _root.EndsWith(Path.DirectorySeparatorChar)
             ? _root
@@ -17,6 +19,7 @@ public sealed class XpsWebPathResolver
     }
 
     public string Root => _root;
+    public string DefaultDocumentName => _defaultDocumentName;
 
     public XpsRouteResolution Resolve(string requestPath, Func<string, bool>? fileExists = null, Func<string, bool>? directoryExists = null)
     {
@@ -25,14 +28,14 @@ public sealed class XpsWebPathResolver
 
         var segments = NormalizeUrlPath(requestPath);
         if (segments.Count == 0)
-            return ResolveCandidate("index.xps", null, fileExists);
+            return ResolveCandidate(_defaultDocumentName, null, fileExists);
 
         var relative = string.Join(Path.DirectorySeparatorChar, segments);
         var directoryCandidate = MapInsideRoot(relative);
 
         if (directoryExists(directoryCandidate))
         {
-            var index = MapInsideRoot(Path.Combine(relative, "index.xps"));
+            var index = MapInsideRoot(Path.Combine(relative, _defaultDocumentName));
             if (fileExists(index)) return new XpsRouteResolution(index, null, true);
             return XpsRouteResolution.NotFound;
         }
@@ -111,6 +114,20 @@ public sealed class XpsWebPathResolver
         var segments = decoded.Split('/', StringSplitOptions.RemoveEmptyEntries).ToList();
         foreach (var segment in segments) ValidateSegment(segment);
         return segments;
+    }
+
+    private static string ValidateDefaultDocumentName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Default document name is required.", nameof(value));
+        var normalized = value.Trim();
+        if (!normalized.EndsWith(".xps", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Length > 255 ||
+            normalized.IndexOfAny(['/', '\\', '\0', ':']) >= 0 ||
+            normalized.Any(char.IsControl) ||
+            normalized is "." or "..")
+            throw new ArgumentException("Default document must be a single .xps filename inside the configured root.", nameof(value));
+        return normalized;
     }
 
     private static void ValidateSegment(string segment)
