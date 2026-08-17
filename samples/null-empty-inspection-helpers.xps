@@ -16,6 +16,7 @@ Sub Main()
     Print "EMPTY_CVAR_TYPE=" & TypeName(emptyCopy)
     Print "EMPTY_CVAR_ISEMPTY=" & CStr(IsEmpty(emptyCopy))
     Print "EMPTY_CVAR_ISNULL=" & CStr(IsNull(emptyCopy))
+    Print "EMPTY_CSTR_LEN=" & CStr(Len(CStr(emptyValue)))
 
     Print "NULL_ISNUMERIC=" & CStr(IsNumeric(nullValue))
     Print "NULL_ISSCALAR=" & CStr(IsScalar(nullValue))
@@ -25,4 +26,5 @@ Sub Main()
     Print "NULL_CVAR_TYPE=" & TypeName(nullCopy)
     Print "NULL_CVAR_ISEMPTY=" & CStr(IsEmpty(nullCopy))
     Print "NULL_CVAR_ISNULL=" & CStr(IsNull(nullCopy))
+    Print "NULL_CSTR_LEN=" & CStr(Len(CStr(nullValue)))
 End Sub
