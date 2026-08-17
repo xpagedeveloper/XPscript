@@ -24,6 +24,7 @@ End Sub
 try
 {
     await RunAdapterRegression(root, scriptPath);
+    await RunHeadRegression(root, scriptPath);
     await RunExecutableRegression(root, scriptPath);
     await RunInvalidBodyRegression(root, scriptPath);
     Console.WriteLine("WEB-CGI-SMOKE=OK");
@@ -59,6 +60,25 @@ static async Task RunAdapterRegression(string root, string scriptPath)
         throw new Exception("CGI adapter did not preserve response headers.");
     if (!text.EndsWith("POST|a=1|cgi-header|abc|hello", StringComparison.Ordinal))
         throw new Exception("CGI adapter request normalization failed: " + text);
+}
+
+static async Task RunHeadRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["REQUEST_METHOD"] = "HEAD";
+    environment["SCRIPT_NAME"] = "/echo.xps";
+
+    var server = new XpsServerInfo("cgi-head", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new EchoHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    var separator = text.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+    if (separator < 0) throw new Exception("CGI HEAD response did not contain a header terminator.");
+    if (text.Length != separator + 4)
+        throw new Exception("CGI HEAD response unexpectedly contained a response body: " + text[(separator + 4)..]);
+    if (!text.Contains("X-Adapter: ok\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI HEAD response lost response headers.");
 }
 
 static async Task RunExecutableRegression(string root, string scriptPath)
