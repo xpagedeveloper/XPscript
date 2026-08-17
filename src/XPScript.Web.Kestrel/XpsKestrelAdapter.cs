@@ -134,7 +134,7 @@ public static class XpsKestrelAdapter
                 http.Response.StatusCode = StatusCodes.Status200OK;
                 http.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
                 if (!HttpMethods.IsHead(http.Request.Method))
-                    await http.Response.WriteAsync(runtimeTelemetry.RenderPrometheus(), http.RequestAborted);
+                    await http.Response.WriteAsync(XpsSessionMetrics.Render(runtimeTelemetry, sessions), http.RequestAborted);
             });
         }
 
