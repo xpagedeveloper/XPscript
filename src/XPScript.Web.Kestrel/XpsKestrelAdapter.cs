@@ -41,11 +41,24 @@ public static class XpsKestrelAdapter
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
         builder.WebHost.ConfigureKestrel(kestrel =>
         {
-            kestrel.Listen(options.Address, options.Port);
+            kestrel.Listen(options.Address, options.Port, listen =>
+            {
+                listen.Protocols = options.Protocols;
+                if (options.HttpsEnabled)
+                    listen.UseHttps(Path.GetFullPath(options.HttpsCertificatePath!), options.HttpsCertificatePassword);
+            });
             kestrel.Limits.MaxConcurrentConnections = options.MaxConcurrentConnections;
             kestrel.Limits.MaxRequestBodySize = options.MaxRequestBodySize;
+            kestrel.Limits.MaxRequestLineSize = options.MaxRequestLineSize;
+            kestrel.Limits.MaxRequestHeadersTotalSize = options.MaxRequestHeadersTotalSize;
             kestrel.Limits.RequestHeadersTimeout = options.RequestHeadersTimeout;
             kestrel.Limits.KeepAliveTimeout = options.KeepAliveTimeout;
+            kestrel.Limits.MinRequestBodyDataRate = options.MinRequestBodyDataRateBytesPerSecond is null
+                ? null
+                : new MinDataRate(options.MinRequestBodyDataRateBytesPerSecond.Value, options.MinRequestBodyDataRateGracePeriod);
+            kestrel.Limits.MinResponseDataRate = options.MinResponseDataRateBytesPerSecond is null
+                ? null
+                : new MinDataRate(options.MinResponseDataRateBytesPerSecond.Value, options.MinResponseDataRateGracePeriod);
         });
 
         var app = builder.Build();

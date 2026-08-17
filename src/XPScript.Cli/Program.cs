@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using XPScript.Web.Compiler;
 using XPScript.Web.FastCgi;
 using XPScript.Web.Kestrel;
@@ -36,6 +37,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var enableMetrics = false;
     var operationalExternal = false;
     string? structuredLogPath = null;
+    string? httpsCertificatePath = null;
+    string? httpsCertificatePasswordEnvironment = null;
+    var protocols = HttpProtocols.Http1AndHttp2;
 
     for (var i = 0; i < commandArgs.Length; i++)
     {
@@ -54,6 +58,15 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--host":
             case "--allowed-host":
                 allowedHosts.Add(RequireValue(commandArgs, ref i));
+                break;
+            case "--https-cert":
+                httpsCertificatePath = Path.GetFullPath(RequireValue(commandArgs, ref i));
+                break;
+            case "--https-cert-password-env":
+                httpsCertificatePasswordEnvironment = RequireValue(commandArgs, ref i);
+                break;
+            case "--protocols":
+                protocols = ParseHttpProtocols(RequireValue(commandArgs, ref i));
                 break;
             case "--health":
                 enableHealth = true;
@@ -74,12 +87,26 @@ static async Task<int> RunWebAsync(string[] commandArgs)
 
     if (operationalExternal && !enableHealth && !enableMetrics)
         throw new ArgumentException("--operational-external requires --health and/or --metrics.");
+    if (httpsCertificatePasswordEnvironment is not null && httpsCertificatePath is null)
+        throw new ArgumentException("--https-cert-password-env requires --https-cert.");
+
+    string? httpsCertificatePassword = null;
+    if (httpsCertificatePasswordEnvironment is not null)
+    {
+        if (string.IsNullOrWhiteSpace(httpsCertificatePasswordEnvironment) || httpsCertificatePasswordEnvironment.IndexOfAny(['\r', '\n', '\0', '=']) >= 0)
+            throw new ArgumentException("--https-cert-password-env must name one environment variable.");
+        httpsCertificatePassword = Environment.GetEnvironmentVariable(httpsCertificatePasswordEnvironment)
+            ?? throw new InvalidOperationException("HTTPS certificate password environment variable is not set: " + httpsCertificatePasswordEnvironment);
+    }
 
     var defaults = new XpsKestrelOptions();
     var options = new XpsKestrelOptions
     {
         Address = address,
         Port = port,
+        HttpsCertificatePath = httpsCertificatePath,
+        HttpsCertificatePassword = httpsCertificatePassword,
+        Protocols = protocols,
         AllowedHosts = allowedHosts.Count > 0 ? allowedHosts.AsReadOnly() : defaults.AllowedHosts,
         EnableHealthEndpoint = enableHealth,
         EnableMetricsEndpoint = enableMetrics,
@@ -110,8 +137,11 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         var app = XpsKestrelAdapter.Build(options, server, dispatcher, telemetry: telemetry);
 
         using var shutdown = CreateShutdownToken();
+        var scheme = options.HttpsEnabled ? "https" : "http";
         Console.WriteLine($"XPScript web root: {root}");
-        Console.WriteLine($"Listening: http://{FormatAddress(address)}:{port}");
+        Console.WriteLine($"Listening: {scheme}://{FormatAddress(address)}:{port}");
+        Console.WriteLine($"HTTP protocols: {FormatHttpProtocols(options.Protocols)}");
+        if (options.HttpsEnabled) Console.WriteLine($"TLS certificate: {Path.GetFileName(options.HttpsCertificatePath)}");
         if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
             Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
         if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
@@ -231,6 +261,22 @@ static int ParsePort(string value, bool allowZero)
     return port;
 }
 
+static HttpProtocols ParseHttpProtocols(string value) => value.Trim().ToLowerInvariant() switch
+{
+    "http1" or "http/1" or "http/1.1" => HttpProtocols.Http1,
+    "http2" or "http/2" => HttpProtocols.Http2,
+    "http1+2" or "http1and2" or "http/1.1+2" => HttpProtocols.Http1AndHttp2,
+    _ => throw new ArgumentException("--protocols must be http1, http2 or http1+2.")
+};
+
+static string FormatHttpProtocols(HttpProtocols protocols) => protocols switch
+{
+    HttpProtocols.Http1 => "HTTP/1.1",
+    HttpProtocols.Http2 => "HTTP/2",
+    HttpProtocols.Http1AndHttp2 => "HTTP/1.1 + HTTP/2",
+    _ => protocols.ToString()
+};
+
 static void ParseEndpoint(string value, out IPAddress address, out int port)
 {
     var separator = value.LastIndexOf(':');
@@ -282,7 +328,9 @@ XPScript Web Host
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...] [--health] [--metrics] [--structured-log FILE] [--operational-external]
+  xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
+                [--https-cert FILE] [--https-cert-password-env NAME]
+                [--health] [--metrics] [--structured-log FILE] [--operational-external]
   xpscript fastcgi --root DIR [--listen ADDRESS:PORT]
   xpscript fastcgi --root DIR --unix-socket PATH
 
@@ -291,12 +339,15 @@ Examples:
   xpscript web --root ./site --health --metrics
   xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
+  XPS_TLS_PASSWORD=secret xpscript web --root ./site --port 8443 --host www.example.com --https-cert ./server.pfx --https-cert-password-env XPS_TLS_PASSWORD
   xpscript fastcgi --root /srv/xpsite --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
 
 Security defaults:
   Kestrel binds to loopback by default.
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
+  Kestrel explicitly uses HTTP/1.1 + HTTP/2, 15 second request-header timeout, 30 second keep-alive and 240 B/s minimum request/response data rates with a 5 second grace period.
+  Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments.
   Health and metrics are disabled by default.
   Enabled operational endpoints remain loopback-only unless --operational-external is explicitly supplied.
   Structured request logs exclude request paths, query strings, headers, cookies and bodies.

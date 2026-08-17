@@ -20,10 +20,18 @@ All web transports share the same route resolver, compiler target, compilation c
 |---|---:|---|
 | Bind address | loopback | explicit IP address |
 | Port | 8080 | 0 to 65535 |
+| HTTPS certificate | none | explicit existing certificate file enables direct TLS |
+| HTTP protocols | HTTP/1.1 + HTTP/2 | HTTP/1.1, HTTP/2 or HTTP/1.1 + HTTP/2 |
 | Maximum request body | 1 MiB | 0 to 1 GiB |
 | Maximum concurrent connections | 256 | 1 to 1,000,000 |
+| Maximum request line | 8 KiB | 1 KiB to 1 MiB |
+| Maximum request headers total | 32 KiB | 1 KiB to 4 MiB |
 | Request headers timeout | 15 seconds | greater than 0, maximum 10 minutes |
 | Keep-alive timeout | 30 seconds | greater than 0, maximum 10 minutes |
+| Minimum request body rate | 240 bytes/second | positive rate or explicitly disabled with `null` |
+| Request body rate grace | 5 seconds | 1 second to 10 minutes |
+| Minimum response rate | 240 bytes/second | positive rate or explicitly disabled with `null` |
+| Response rate grace | 5 seconds | 1 second to 10 minutes |
 | Allowed hosts | `localhost`, `127.0.0.1`, `[::1]` | at least one valid value |
 | Trusted proxies | none | explicitly configured IP addresses only |
 | Health endpoint | disabled | opt-in |
@@ -35,6 +43,21 @@ All web transports share the same route resolver, compiler target, compilation c
 The public `xpscript web` command keeps the loopback bind and loopback Host allowlist unless the operator explicitly changes them.
 
 Forwarded headers are not trusted unless known proxies are configured.
+
+### Direct HTTPS
+
+Direct Kestrel TLS is enabled by supplying a certificate file. The CLI uses:
+
+```text
+XPS_TLS_PASSWORD=secret xpscript web --root ./site --port 8443 --host www.example.com \
+  --https-cert ./server.pfx --https-cert-password-env XPS_TLS_PASSWORD
+```
+
+The certificate password is intentionally read from an environment variable rather than accepted as a plaintext command-line value. An unprotected certificate file can omit `--https-cert-password-env`.
+
+The initial direct Kestrel protocol contract supports HTTP/1.1, HTTP/2, or HTTP/1.1 + HTTP/2. HTTP/3 is deliberately rejected until XPScript has a separate QUIC deployment and regression contract.
+
+TLS certificate file permissions remain an operator responsibility. The runtime validates that the configured certificate path exists before the listener starts.
 
 ## FastCGI TCP defaults
 
@@ -112,6 +135,8 @@ The cache uses single-flight compilation for the same active source identity. So
 | Secure cookie required | false | `SameSite=None` requires true |
 
 Session IDs are generated cryptographically by the runtime. Session rotation replaces the identifier without copying values into a separate session record.
+
+Responses that set cookies enforce `Cache-Control: no-store`. This is reasserted at response completion so later application code cannot accidentally make a session-bearing response cacheable.
 
 The default session store is in-memory and process-local. Multi-node deployments need an explicitly designed shared session provider before session affinity can be removed.
 
