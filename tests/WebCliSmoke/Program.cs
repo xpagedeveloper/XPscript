@@ -19,6 +19,7 @@ try
 {
     var cliDll = FindCliDll();
     await VerifyHelpAsync(cliDll);
+    await VerifyHttpsValidationAsync(cliDll, root);
     await VerifyWebAsync(cliDll, root);
     await VerifyFastCgiAsync(cliDll, root);
     Console.WriteLine("WEB-CLI-SMOKE=OK");
@@ -33,6 +34,27 @@ static async Task VerifyHelpAsync(string cliDll)
     var result = await RunShortAsync(cliDll, ["--help"]);
     if (result.ExitCode != 0 || !result.Stdout.Contains("xpscript web --root DIR", StringComparison.Ordinal))
         throw new Exception("xpscript --help did not expose the web command. stdout=" + result.Stdout + " stderr=" + result.Stderr);
+    if (!result.Stdout.Contains("--https-cert FILE", StringComparison.Ordinal) ||
+        !result.Stdout.Contains("--https-cert-password-env NAME", StringComparison.Ordinal) ||
+        !result.Stdout.Contains("--protocols http1|http2|http1+2", StringComparison.Ordinal))
+        throw new Exception("xpscript --help did not expose the HTTPS/protocol controls.");
+}
+
+static async Task VerifyHttpsValidationAsync(string cliDll, string root)
+{
+    var missingEnvironment = "XPS_TEST_MISSING_" + Guid.NewGuid().ToString("N");
+    var passwordResult = await RunShortAsync(cliDll,
+    [
+        "web", "--root", root,
+        "--https-cert", Path.Combine(root, "missing.pfx"),
+        "--https-cert-password-env", missingEnvironment
+    ]);
+    if (passwordResult.ExitCode == 0 || !passwordResult.Stderr.Contains("environment variable is not set", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Missing HTTPS certificate password environment variable was not rejected.");
+
+    var protocolResult = await RunShortAsync(cliDll, ["web", "--root", root, "--protocols", "http3"]);
+    if (protocolResult.ExitCode == 0 || !protocolResult.Stderr.Contains("--protocols must be", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Unsupported CLI HTTP protocol value was not rejected.");
 }
 
 static async Task VerifyWebAsync(string cliDll, string root)
