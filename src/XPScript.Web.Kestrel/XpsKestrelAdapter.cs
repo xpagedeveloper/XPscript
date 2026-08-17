@@ -85,7 +85,8 @@ public static class XpsKestrelAdapter
             if (!HostAllowed(http.Request.Host.Host, options.AllowedHosts))
             {
                 http.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await http.Response.WriteAsync("Invalid Host header.", http.RequestAborted);
+                if (!HttpMethods.IsHead(http.Request.Method))
+                    await http.Response.WriteAsync("Invalid Host header.", http.RequestAborted);
                 return;
             }
             await next();
@@ -282,7 +283,7 @@ public static class XpsKestrelAdapter
         if (!string.IsNullOrWhiteSpace(response.ContentType)) http.Response.ContentType = response.ContentType;
         foreach (var pair in response.Headers)
             http.Response.Headers[pair.Key] = pair.Value.ToArray();
-        if (response.Body.Length > 0)
+        if (!HttpMethods.IsHead(http.Request.Method) && response.Body.Length > 0)
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
     }
 
