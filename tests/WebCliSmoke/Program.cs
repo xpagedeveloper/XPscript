@@ -4,7 +4,8 @@ using System.Net.Sockets;
 
 var parent = Path.Combine(Path.GetTempPath(), "xps-web-cli-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
-Directory.CreateDirectory(root);
+Directory.CreateDirectory(Path.Combine(root, "assets"));
+await File.WriteAllTextAsync(Path.Combine(root, "assets", "site.css"), "body{color:black}");
 await File.WriteAllTextAsync(Path.Combine(root, "index.xps"), """
 [Anonymous]
 [Get]
@@ -20,7 +21,9 @@ try
     var cliDll = FindCliDll();
     await VerifyHelpAsync(cliDll);
     await VerifyHttpsValidationAsync(cliDll, root);
+    await VerifyStaticValidationAsync(cliDll, root);
     await VerifyWebAsync(cliDll, root);
+    await VerifyStaticWebAsync(cliDll, root);
     await VerifyFastCgiAsync(cliDll, root);
     Console.WriteLine("WEB-CLI-SMOKE=OK");
 }
@@ -38,6 +41,9 @@ static async Task VerifyHelpAsync(string cliDll)
         !result.Stdout.Contains("--https-cert-password-env NAME", StringComparison.Ordinal) ||
         !result.Stdout.Contains("--protocols http1|http2|http1+2", StringComparison.Ordinal))
         throw new Exception("xpscript --help did not expose the HTTPS/protocol controls.");
+    if (!result.Stdout.Contains("--static-files", StringComparison.Ordinal) ||
+        !result.Stdout.Contains("--static-max-bytes BYTES", StringComparison.Ordinal))
+        throw new Exception("xpscript --help did not expose static-file controls.");
 }
 
 static async Task VerifyHttpsValidationAsync(string cliDll, string root)
@@ -57,6 +63,17 @@ static async Task VerifyHttpsValidationAsync(string cliDll, string root)
         throw new Exception("Unsupported CLI HTTP protocol value was not rejected.");
 }
 
+static async Task VerifyStaticValidationAsync(string cliDll, string root)
+{
+    var missingEnable = await RunShortAsync(cliDll, ["web", "--root", root, "--static-max-bytes", "1024"]);
+    if (missingEnable.ExitCode == 0 || !missingEnable.Stderr.Contains("requires --static-files", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("--static-max-bytes without --static-files was not rejected.");
+
+    var invalidLimit = await RunShortAsync(cliDll, ["web", "--root", root, "--static-files", "--static-max-bytes", "0"]);
+    if (invalidLimit.ExitCode == 0 || !invalidLimit.Stderr.Contains("between 1 and 1073741824", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Invalid static-file byte limit was not rejected.");
+}
+
 static async Task VerifyWebAsync(string cliDll, string root)
 {
     var port = GetFreePort();
@@ -71,6 +88,31 @@ static async Task VerifyWebAsync(string cliDll, string root)
             throw new Exception($"xpscript web returned {(int)response.StatusCode} body={body}");
         if (!response.Headers.TryGetValues("X-XPScript-CLI", out var values) || values.Single() != "web")
             throw new Exception("xpscript web lost the XPScript response header.");
+
+        using var staticDisabled = await client.GetAsync($"http://127.0.0.1:{port}/assets/site.css");
+        if (await staticDisabled.Content.ReadAsStringAsync() == "body{color:black}")
+            throw new Exception("Static files were served without --static-files.");
+    }
+    finally
+    {
+        Stop(process);
+    }
+}
+
+static async Task VerifyStaticWebAsync(string cliDll, string root)
+{
+    var port = GetFreePort();
+    using var process = Start(cliDll, ["web", "--root", root, "--port", port.ToString(), "--static-files", "--static-max-bytes", "1024"]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        using var response = await client.GetAsync($"http://127.0.0.1:{port}/assets/site.css");
+        var body = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode || body != "body{color:black}")
+            throw new Exception($"xpscript web --static-files returned {(int)response.StatusCode} body={body}");
+        if (!string.Equals(response.Content.Headers.ContentType?.MediaType, "text/css", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Static CLI response did not use CSS MIME type.");
     }
     finally
     {
