@@ -25,6 +25,18 @@ public sealed class XpsWebPrincipal
 
     public bool HasRule(string rule) => _rules.Contains(NormalizeRule(rule));
 
+    public XpsWebPrincipal MergeSession(IXpsSession? session)
+    {
+        if (session is null || !session.Started) return this;
+        var rules = new HashSet<string>(_rules, StringComparer.OrdinalIgnoreCase);
+        foreach (var rule in session.Rules) rules.Add(NormalizeRule(rule));
+        return new XpsWebPrincipal(
+            IsAuthenticated || session.IsAuthenticated,
+            UserId ?? session.UserId,
+            Name ?? session.UserName,
+            rules);
+    }
+
     private static string NormalizeRule(string? rule)
     {
         var value = (rule ?? string.Empty).Trim();
@@ -46,12 +58,13 @@ public sealed record XpsRoutePolicy(
     public static XpsRoutePolicy Authenticated(params string[] methods) =>
         new(false, new HashSet<string>(methods.Select(x => x.ToUpperInvariant()), StringComparer.OrdinalIgnoreCase), [], []);
 
-    public XpsRouteAuthorizationResult Authorize(XpsWebRequest request, XpsWebPrincipal principal)
+    public XpsRouteAuthorizationResult Authorize(XpsWebRequest request, XpsWebPrincipal principal, IXpsSession? session = null)
     {
+        var effectivePrincipal = principal.MergeSession(session);
         if (Methods.Count > 0 && !Methods.Contains(request.Method)) return XpsRouteAuthorizationResult.MethodNotAllowed;
-        if (!AllowAnonymous && !principal.IsAuthenticated) return XpsRouteAuthorizationResult.AuthenticationRequired;
-        if (RequiredRules.Any(rule => !principal.HasRule(rule))) return XpsRouteAuthorizationResult.Forbidden;
-        if (ForbiddenRules.Any(principal.HasRule)) return XpsRouteAuthorizationResult.Forbidden;
+        if (!AllowAnonymous && !effectivePrincipal.IsAuthenticated) return XpsRouteAuthorizationResult.AuthenticationRequired;
+        if (RequiredRules.Any(rule => !effectivePrincipal.HasRule(rule))) return XpsRouteAuthorizationResult.Forbidden;
+        if (ForbiddenRules.Any(effectivePrincipal.HasRule)) return XpsRouteAuthorizationResult.Forbidden;
         return XpsRouteAuthorizationResult.Allowed;
     }
 }
