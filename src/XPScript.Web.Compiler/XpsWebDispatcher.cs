@@ -8,16 +8,22 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
     private readonly XpsWebCompilationCache _cache;
     private readonly bool _ownsCache;
 
-    public XpsWebDispatcher(string webRoot, XpsWebCompilationCacheOptions? cacheOptions = null)
+    public XpsWebDispatcher(
+        string webRoot,
+        XpsWebCompilationCacheOptions? cacheOptions = null,
+        string defaultDocumentName = "index.xps")
     {
-        _resolver = new XpsWebPathResolver(webRoot);
+        _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
     }
 
-    public XpsWebDispatcher(string webRoot, XpsWebCompilationCache cache)
+    public XpsWebDispatcher(
+        string webRoot,
+        XpsWebCompilationCache cache,
+        string defaultDocumentName = "index.xps")
     {
-        _resolver = new XpsWebPathResolver(webRoot);
+        _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
