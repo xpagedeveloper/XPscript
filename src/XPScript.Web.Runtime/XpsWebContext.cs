@@ -19,12 +19,27 @@ public sealed record XpsServerInfo(
 public interface IXpsSession
 {
     string Id { get; }
+    bool Started { get; }
+    int Count { get; }
+    IReadOnlyList<string> Keys { get; }
+    bool IsAuthenticated { get; }
+    string? UserId { get; }
+    string? UserName { get; }
+    IReadOnlyCollection<string> Rules { get; }
+    string Start();
     object? Get(string name);
     void Set(string name, object? value);
+    bool Exists(string name);
     bool Remove(string name);
+    bool Unset(string name);
     void Clear();
+    bool HasRule(string rule);
+    void Authenticate(string? userId = null, string? userName = null, string? rules = null);
+    void SignOut();
     string RotateId();
+    string RegenerateId();
     void Abandon();
+    void Destroy();
 }
 
 public interface IXpsApplicationState
