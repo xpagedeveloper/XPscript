@@ -1,13 +1,20 @@
 using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-web-smoke-" + Guid.NewGuid().ToString("N"));
+var outsideRoot = Path.Combine(Path.GetTempPath(), "xps-web-outside-" + Guid.NewGuid().ToString("N"));
+var escapeLink = Path.Combine(root, "escape");
+var insideLink = Path.Combine(root, "inside-link");
 Directory.CreateDirectory(root);
+Directory.CreateDirectory(outsideRoot);
 Directory.CreateDirectory(Path.Combine(root, "folder"));
+Directory.CreateDirectory(Path.Combine(root, "inside-target"));
 await File.WriteAllTextAsync(Path.Combine(root, "index.xps"), "' root");
 await File.WriteAllTextAsync(Path.Combine(root, "foo.xps"), "' foo");
 await File.WriteAllTextAsync(Path.Combine(root, "folder", "index.xps"), "' folder");
 await File.WriteAllTextAsync(Path.Combine(root, "welcome.xps"), "' custom root");
 await File.WriteAllTextAsync(Path.Combine(root, "folder", "welcome.xps"), "' custom folder");
+await File.WriteAllTextAsync(Path.Combine(root, "inside-target", "safe.xps"), "' safe");
+await File.WriteAllTextAsync(Path.Combine(outsideRoot, "secret.xps"), "' secret");
 
 try
 {
@@ -31,6 +38,19 @@ try
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%2e%2e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%252e%252e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/C:/Windows/system.ini"));
+
+    try
+    {
+        Directory.CreateSymbolicLink(escapeLink, outsideRoot);
+        AssertThrows<XpsWebPathException>(() => resolver.Resolve("/escape/secret.xps"));
+
+        Directory.CreateSymbolicLink(insideLink, Path.Combine(root, "inside-target"));
+        AssertPath(resolver.Resolve("/inside-link/safe.xps"), Path.Combine(root, "inside-link", "safe.xps"), null);
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+    {
+        Console.WriteLine($"WEB-RUNTIME-SYMLINK-SMOKE=SKIPPED:{ex.GetType().Name}");
+    }
 
     var request = new XpsWebRequest(
         "post",
@@ -97,7 +117,10 @@ try
 }
 finally
 {
-    Directory.Delete(root, recursive: true);
+    TryDeleteLink(escapeLink);
+    TryDeleteLink(insideLink);
+    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    if (Directory.Exists(outsideRoot)) Directory.Delete(outsideRoot, recursive: true);
 }
 
 static void AssertPath(XpsRouteResolution resolution, string expectedPath, string? expectedFunction)
@@ -121,6 +144,18 @@ static void AssertThrows<T>(Action action) where T : Exception
         return;
     }
     throw new Exception($"Expected {typeof(T).Name} was not thrown.");
+}
+
+static void TryDeleteLink(string path)
+{
+    try
+    {
+        if (Directory.Exists(path)) Directory.Delete(path);
+        else if (File.Exists(path)) File.Delete(path);
+    }
+    catch
+    {
+    }
 }
 
 sealed class SmokeApplicationState : IXpsApplicationState
