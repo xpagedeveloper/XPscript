@@ -176,7 +176,8 @@ internal static class XPScriptTextIO
             ?? throw new IOException("File is not open for output.");
         var encoded = values.Select(v =>
         {
-            if (v is null) return "#NULL#";
+            if (XPScriptNullRuntime.IsNull(v)) return "#NULL#";
+            if (v is null) return "";
             if (v is DateTime dt) return "#" + dt.ToString(CultureInfo.InvariantCulture) + "#";
             if (v is string s) return "\"" + s.Replace("\"", "\"\"") + "\"";
             return Convert.ToString(v, CultureInfo.InvariantCulture) ?? "";
