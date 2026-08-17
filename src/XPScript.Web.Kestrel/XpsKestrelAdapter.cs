@@ -125,9 +125,7 @@ public static class XpsKestrelAdapter
                         : StatusCodes.Status503ServiceUnavailable;
                     http.Response.ContentType = "application/json; charset=utf-8";
                     if (!HttpMethods.IsHead(http.Request.Method))
-                    {
                         await JsonSerializer.SerializeAsync(http.Response.Body, snapshot, cancellationToken: http.RequestAborted);
-                    }
                     return;
                 }
 
@@ -135,6 +133,59 @@ public static class XpsKestrelAdapter
                 http.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
                 if (!HttpMethods.IsHead(http.Request.Method))
                     await http.Response.WriteAsync(runtimeTelemetry.RenderPrometheus(), http.RequestAborted);
+            });
+        }
+
+        if (options.EnableStaticFiles)
+        {
+            var staticServer = new XpsWebServer(serverInfo);
+            app.Use(async (http, next) =>
+            {
+                if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+                {
+                    await next();
+                    return;
+                }
+
+                var rawPath = http.Request.Path.Value ?? string.Empty;
+                if (!TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType))
+                {
+                    await next();
+                    return;
+                }
+
+                string fullPath;
+                try
+                {
+                    fullPath = staticServer.MapPath(relativePath);
+                }
+                catch (XpsWebPathException)
+                {
+                    http.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                FileInfo info;
+                try { info = new FileInfo(fullPath); }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    http.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                if (!info.Exists || info.Length > options.MaxStaticFileBytes)
+                {
+                    http.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                http.Response.StatusCode = StatusCodes.Status200OK;
+                http.Response.ContentType = contentType;
+                http.Response.ContentLength = info.Length;
+                http.Response.Headers.CacheControl = options.StaticCacheControl;
+                http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                if (!HttpMethods.IsHead(http.Request.Method))
+                    await http.Response.SendFileAsync(fullPath, http.RequestAborted);
             });
         }
 
@@ -165,7 +216,6 @@ public static class XpsKestrelAdapter
             catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
             {
                 requestScope?.Complete(499, 0);
-                // Client disconnected. Do not attempt to write a second response.
             }
             catch
             {
@@ -234,6 +284,43 @@ public static class XpsKestrelAdapter
             http.Response.Headers[pair.Key] = pair.Value.ToArray();
         if (response.Body.Length > 0)
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
+    }
+
+    private static bool TryGetStaticPath(
+        string requestPath,
+        IReadOnlyDictionary<string, string> contentTypes,
+        out string relativePath,
+        out string contentType)
+    {
+        relativePath = string.Empty;
+        contentType = string.Empty;
+        if (string.IsNullOrWhiteSpace(requestPath) || requestPath.EndsWith("/", StringComparison.Ordinal)) return false;
+
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(requestPath); }
+        catch (UriFormatException) { return false; }
+        if (decoded.IndexOf('\0') >= 0 || decoded.Any(char.IsControl)) return false;
+        if (ContainsPercentEscape(decoded)) return false;
+
+        var normalized = decoded.Replace('\\', '/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0 || segments.Any(segment => segment is "." or ".." || segment.StartsWith(".", StringComparison.Ordinal))) return false;
+
+        var extension = Path.GetExtension(segments[^1]);
+        if (string.IsNullOrWhiteSpace(extension) || extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!contentTypes.TryGetValue(extension, out contentType!)) return false;
+
+        relativePath = string.Join('/', segments);
+        return true;
+    }
+
+    private static bool ContainsPercentEscape(string value)
+    {
+        for (var i = 0; i + 2 < value.Length; i++)
+        {
+            if (value[i] == '%' && Uri.IsHexDigit(value[i + 1]) && Uri.IsHexDigit(value[i + 2])) return true;
+        }
+        return false;
     }
 
     private static bool HostAllowed(string host, IReadOnlyList<string> allowedHosts)
