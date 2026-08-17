@@ -171,13 +171,13 @@ internal static class XpsHostConfig
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
-    private sealed class XpsHostConfigFile
+    public sealed class XpsHostConfigFile
     {
         public WebConfig? Web { get; init; }
         public FastCgiConfig? FastCgi { get; init; }
     }
 
-    private sealed class WebConfig
+    public sealed class WebConfig
     {
         public string? Root { get; init; }
         public string? DefaultDocument { get; init; }
@@ -200,7 +200,7 @@ internal static class XpsHostConfig
         public long? StaticMaxBytes { get; init; }
     }
 
-    private sealed class FastCgiConfig
+    public sealed class FastCgiConfig
     {
         public string? Root { get; init; }
         public string? DefaultDocument { get; init; }
