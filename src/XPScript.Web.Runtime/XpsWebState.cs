@@ -9,7 +9,8 @@ public sealed class XpsApplicationStateOptions
     public int MaxValueBytes { get; init; } = 64 * 1024;
     public long MaxTotalBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(20);
-    public bool SlidingIdleTimeout { get; set; } = true;
+    public bool SlidingIdleTimeout { get; set; } = false;
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     internal void Validate()
     {
@@ -17,6 +18,7 @@ public sealed class XpsApplicationStateOptions
         if (MaxValueBytes is < 1 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxValueBytes));
         if (MaxTotalBytes < MaxValueBytes || MaxTotalBytes > 256L * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(MaxTotalBytes));
         if (IdleTimeout < TimeSpan.FromSeconds(10) || IdleTimeout > TimeSpan.FromDays(30)) throw new ArgumentOutOfRangeException(nameof(IdleTimeout));
+        ArgumentNullException.ThrowIfNull(TimeProvider);
     }
 }
 
@@ -32,9 +34,10 @@ public sealed class XpsApplicationState : IXpsApplicationState
     {
         _options = options ?? new XpsApplicationStateOptions();
         _options.Validate();
-        _lastActivityUtc = DateTimeOffset.UtcNow;
+        _lastActivityUtc = Now;
     }
 
+    private DateTimeOffset Now => _options.TimeProvider.GetUtcNow();
     public int Count { get { lock (_gate) { RecycleIfIdleLocked(); TouchReadLocked(); return _values.Count; } } }
     public IReadOnlyList<string> Keys { get { lock (_gate) { RecycleIfIdleLocked(); TouchReadLocked(); return _values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); } } }
 
@@ -107,17 +110,17 @@ public sealed class XpsApplicationState : IXpsApplicationState
 
     private void TouchReadLocked()
     {
-        if (_options.SlidingIdleTimeout) _lastActivityUtc = DateTimeOffset.UtcNow;
+        if (_options.SlidingIdleTimeout) _lastActivityUtc = Now;
     }
 
-    private void TouchWriteLocked() => _lastActivityUtc = DateTimeOffset.UtcNow;
+    private void TouchWriteLocked() => _lastActivityUtc = Now;
 
     private void RecycleIfIdleLocked()
     {
-        if (_values.Count == 0 || DateTimeOffset.UtcNow - _lastActivityUtc < _options.IdleTimeout) return;
+        if (_values.Count == 0 || Now - _lastActivityUtc < _options.IdleTimeout) return;
         _values.Clear();
         _totalBytes = 0;
-        _lastActivityUtc = DateTimeOffset.UtcNow;
+        _lastActivityUtc = Now;
     }
 
     private static void ValidateStateName(string name)
@@ -138,6 +141,7 @@ public sealed class XpsSessionOptions
     public long MaxBytesPerSession { get; init; } = 1024 * 1024;
     public string SameSite { get; init; } = "Lax";
     public bool RequireSecureCookie { get; init; }
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     internal void Validate()
     {
@@ -152,6 +156,7 @@ public sealed class XpsSessionOptions
             throw new ArgumentException("Session SameSite must be Strict, Lax or None.", nameof(SameSite));
         if (SameSite.Equals("None", StringComparison.OrdinalIgnoreCase) && !RequireSecureCookie)
             throw new ArgumentException("Session SameSite=None requires RequireSecureCookie=true.", nameof(RequireSecureCookie));
+        ArgumentNullException.ThrowIfNull(TimeProvider);
     }
 }
 
@@ -167,13 +172,14 @@ public sealed class XpsSessionStore
         _options.Validate();
     }
 
-    public int Count { get { lock (_gate) { RemoveExpiredLocked(DateTimeOffset.UtcNow); return _sessions.Count; } } }
+    private DateTimeOffset Now => _options.TimeProvider.GetUtcNow();
+    public int Count { get { lock (_gate) { RemoveExpiredLocked(Now); return _sessions.Count; } } }
 
     public IXpsSession Bind(XpsWebRequest request, XpsWebResponse response)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(response);
-        var now = DateTimeOffset.UtcNow;
+        var now = Now;
         SessionRecord record;
         var isNew = false;
         var renewCookie = false;
@@ -212,7 +218,7 @@ public sealed class XpsSessionStore
                 EnsureActive(record);
                 _sessions.Remove(record.Id);
                 record.Id = CreateUniqueSessionIdLocked();
-                record.LastActivityUtc = DateTimeOffset.UtcNow;
+                record.LastActivityUtc = Now;
                 _sessions[record.Id] = record;
             }
         }
@@ -225,7 +231,7 @@ public sealed class XpsSessionStore
         lock (record.Gate)
         {
             EnsureActive(record);
-            record.LastActivityUtc = DateTimeOffset.UtcNow;
+            record.LastActivityUtc = Now;
         }
         WriteSessionCookie(record.Id, response, scheme);
     }
