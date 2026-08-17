@@ -1,8 +1,10 @@
+using System.Globalization;
+using System.Text;
 using XPScript.Web.Runtime;
 
 namespace XPScript.Web.Compiler;
 
-public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
+public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProvider, IAsyncDisposable
 {
     private readonly XpsWebPathResolver _resolver;
     private readonly XpsWebCompilationCache _cache;
@@ -83,6 +85,38 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
+    }
+
+    public string RenderPrometheusMetrics()
+    {
+        var metrics = _cache.MetricsSnapshot();
+        var builder = new StringBuilder();
+        AppendGauge(builder, "xpscript_web_cache_entries", metrics.Entries, "Current compiled web cache entries.");
+        AppendCounter(builder, "xpscript_web_cache_hits_total", metrics.Hits, "Compilation cache hits.");
+        AppendCounter(builder, "xpscript_web_cache_misses_total", metrics.Misses, "Compilation cache misses.");
+        AppendCounter(builder, "xpscript_web_compilations_total", metrics.CompilationStarts, "Web compilation attempts started.");
+        AppendCounter(builder, "xpscript_web_compilation_failures_total", metrics.CompilationFailures, "Web compilation attempts that failed.");
+        AppendCounter(builder, "xpscript_web_cache_evictions_total", metrics.Evictions, "Compiled web cache entries evicted by TTL or capacity.");
+        builder.Append("# TYPE xpscript_web_compilation_duration_seconds_total counter\n");
+        builder.Append("# HELP xpscript_web_compilation_duration_seconds_total Total time spent compiling web units in seconds.\n");
+        builder.Append("xpscript_web_compilation_duration_seconds_total ")
+            .Append(metrics.TotalCompilationDuration.TotalSeconds.ToString("0.######", CultureInfo.InvariantCulture))
+            .Append('\n');
+        return builder.ToString();
+    }
+
+    private static void AppendGauge(StringBuilder builder, string name, long value, string help)
+    {
+        builder.Append("# TYPE ").Append(name).Append(" gauge\n");
+        builder.Append("# HELP ").Append(name).Append(' ').Append(help).Append('\n');
+        builder.Append(name).Append(' ').Append(value.ToString(CultureInfo.InvariantCulture)).Append('\n');
+    }
+
+    private static void AppendCounter(StringBuilder builder, string name, long value, string help)
+    {
+        builder.Append("# TYPE ").Append(name).Append(" counter\n");
+        builder.Append("# HELP ").Append(name).Append(' ').Append(help).Append('\n');
+        builder.Append(name).Append(' ').Append(value.ToString(CultureInfo.InvariantCulture)).Append('\n');
     }
 
     private static string? SelectRoute(
