@@ -80,10 +80,45 @@ public sealed class XpsWebPathResolver
     {
         if (Path.IsPathRooted(relativePath)) throw new XpsWebPathException("Absolute request paths are not permitted.");
         var full = Path.GetFullPath(Path.Combine(_root, relativePath));
-        if (!full.Equals(_root, _pathComparison) && !full.StartsWith(_rootWithSeparator, _pathComparison))
+        if (!IsInsideRoot(full))
             throw new XpsWebPathException("Resolved request path escapes the configured web root.");
+
+        EnsureLinkTargetsStayInsideRoot(full);
         return full;
     }
+
+    private void EnsureLinkTargetsStayInsideRoot(string fullPath)
+    {
+        var relative = Path.GetRelativePath(_root, fullPath);
+        if (relative == ".") return;
+
+        var current = _root;
+        foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+
+            FileSystemInfo? info = null;
+            if (Directory.Exists(current)) info = new DirectoryInfo(current);
+            else if (File.Exists(current)) info = new FileInfo(current);
+            if (info is null || info.LinkTarget is null) continue;
+
+            FileSystemInfo? target;
+            try
+            {
+                target = info.ResolveLinkTarget(returnFinalTarget: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                throw new XpsWebPathException("Unable to safely resolve a symbolic link or reparse point in the request path.", ex);
+            }
+
+            if (target is null || !IsInsideRoot(Path.GetFullPath(target.FullName)))
+                throw new XpsWebPathException("Resolved request path escapes the configured web root through a symbolic link or reparse point.");
+        }
+    }
+
+    private bool IsInsideRoot(string path) =>
+        path.Equals(_root, _pathComparison) || path.StartsWith(_rootWithSeparator, _pathComparison);
 
     private static List<string> NormalizeUrlPath(string requestPath)
     {
