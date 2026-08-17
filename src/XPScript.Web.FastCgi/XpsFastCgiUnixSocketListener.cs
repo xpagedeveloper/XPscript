@@ -65,7 +65,8 @@ public sealed class XpsFastCgiUnixSocketListener : IAsyncDisposable
         {
             listener.Bind(new UnixDomainSocketEndPoint(_options.SocketPath));
             listener.Listen(_options.Backlog);
-            File.SetUnixFileMode(_options.SocketPath, _options.SocketMode);
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                File.SetUnixFileMode(_options.SocketPath, _options.SocketMode);
             _listener = listener;
             _acceptLoop = AcceptLoopAsync(listener, _shutdown.Token);
             return Task.CompletedTask;
@@ -129,7 +130,10 @@ public sealed class XpsFastCgiUnixSocketListener : IAsyncDisposable
                 client = null;
                 _active[id] = task;
                 _ = task.ContinueWith(
-                    _ => _active.TryRemove(id, out _),
+                    completedTask =>
+                    {
+                        _active.TryRemove(id, out var removedTask);
+                    },
                     CancellationToken.None,
                     TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Default);
@@ -176,7 +180,7 @@ public sealed class XpsFastCgiUnixSocketListener : IAsyncDisposable
         finally
         {
             _connections.Release();
-            _active.TryRemove(id, out _);
+            _active.TryRemove(id, out var removedTask);
         }
     }
 
