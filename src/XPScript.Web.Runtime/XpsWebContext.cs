@@ -16,15 +16,42 @@ public sealed record XpsServerInfo(
     string? Address = null,
     int? Port = null);
 
+public interface IXpsRequestState
+{
+    int Count { get; }
+    IReadOnlyList<string> Keys { get; }
+    object? Get(string name);
+    void Set(string name, object? value);
+    bool Exists(string name);
+    bool Remove(string name);
+    bool Unset(string name);
+    void Clear();
+}
+
 public interface IXpsSession
 {
     string Id { get; }
+    bool Started { get; }
+    int Count { get; }
+    IReadOnlyList<string> Keys { get; }
+    bool IsAuthenticated { get; }
+    string? UserId { get; }
+    string? UserName { get; }
+    IReadOnlyCollection<string> Rules { get; }
+    string Start();
     object? Get(string name);
     void Set(string name, object? value);
+    bool Exists(string name);
     bool Remove(string name);
+    bool Unset(string name);
     void Clear();
+    bool HasRule(string rule);
+    void Authenticate(string? userId = null, string? userName = null, string? rules = null);
+    void SignOut();
     string RotateId();
+    string RegenerateId();
     void Abandon();
+    void Destroy();
 }
 
 public interface IXpsApplicationState
@@ -43,7 +70,8 @@ public sealed class XpsWebContext
         XpsServerInfo server,
         XpsWebPrincipal principal,
         IXpsApplicationState application,
-        IXpsSession? session = null)
+        IXpsSession? session = null,
+        IXpsRequestState? requestScope = null)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Response = response ?? throw new ArgumentNullException(nameof(response));
@@ -51,6 +79,7 @@ public sealed class XpsWebContext
         Principal = principal ?? throw new ArgumentNullException(nameof(principal));
         Application = application ?? throw new ArgumentNullException(nameof(application));
         Session = session;
+        RequestScope = requestScope ?? new XpsRequestState();
     }
 
     public XpsWebRequest Request { get; }
@@ -59,6 +88,7 @@ public sealed class XpsWebContext
     public XpsWebPrincipal Principal { get; }
     public IXpsApplicationState Application { get; }
     public IXpsSession? Session { get; }
+    public IXpsRequestState RequestScope { get; }
 }
 
 public static class XpsWebContextAccessor

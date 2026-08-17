@@ -54,7 +54,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IAsyncDisposable
                 return;
             }
 
-            var authorization = descriptor.Policy.Authorize(context.Request, context.Principal);
+            var authorization = descriptor.Policy.Authorize(context.Request, context.Principal, context.Session);
             if (authorization != XpsRouteAuthorizationResult.Allowed)
             {
                 WriteAuthorizationResponse(context, descriptor.Policy, authorization);

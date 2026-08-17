@@ -10,7 +10,9 @@ on:
       - 'todo/runtime-reference-todo.md'
       - '.github/workflows/web-security-closeout.yml'
   push:
-    branches: ['todo-web-runtime-security-closeout']
+    branches:
+      - 'todo-web-runtime-security-closeout'
+      - 'todo-web-runtime-cookie-completeness'
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'tests/WebSecurityCloseoutSmoke/**'
