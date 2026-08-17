@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/NativeHttpRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'samples/native-http-*.xps'
       - 'tests/native_http_server.py'
       - '.github/workflows/native-http-build.yml'
@@ -79,6 +80,32 @@ jobs:
           if (-not $headerLine) { throw "Native HTTP headers property missing.`n$output" }
           $count = [int](($headerLine -split '=',2)[1])
           if ($count -lt 2) { throw "Native HTTP response headers unexpectedly empty: $headerLine" }
+      - name: Verify HTTP Empty Null and Nothing boundaries
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/native-http-null-boundaries.exe' } else { './out/native-http-null-boundaries' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-null-boundaries.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native HTTP Null/Empty/Nothing boundary sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native HTTP Null/Empty/Nothing boundary regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          if (-not ($output | Where-Object { $_ -like 'EMPTY_BODY=INSPECT|LENGTH=*|TYPE=ABSENT|BODY=' })) {
+            throw "EMPTY HTTP body did not remain content-less.`n$output"
+          }
+          if (-not ($output | Where-Object { $_ -like 'NULL_BODY=INSPECT|LENGTH=0|TYPE=text/plain*|BODY=' })) {
+            throw "NULL HTTP body did not become an explicit empty text body.`n$output"
+          }
+          foreach ($value in @('EMPTY_HEADER=GET|', 'NULL_HEADER=GET|', 'EMPTY_URL_ERR=5', 'NULL_URL_ERR=5', 'HTTP_NULL_BOUNDARIES=OK')) {
+            if ($output -notcontains $value) { throw "HTTP boundary output missing: $value`n$output" }
+          }
+          $nothingError = $output | Where-Object { $_ -match '^NOTHING_BODY_ERR=([1-9][0-9]*)$' } | Select-Object -First 1
+          if (-not $nothingError) { throw "NOTHING HTTP body was not rejected with a bounded runtime error.`n$output" }
+          $joined = $output -join "`n"
+          if ($joined -match 'LSRef|HttpBoundaryObject|NOTHING_BODY_NOT_REJECTED') {
+            throw "HTTP object-reference boundary leaked implementation details or accepted NOTHING.`n$output"
+          }
       - name: Verify HTTP redirect and resource safety
         shell: pwsh
         run: |
