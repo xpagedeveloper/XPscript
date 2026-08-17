@@ -1,0 +1,29 @@
+Option Declare
+
+Sub Main()
+    Dim f As Integer
+    Dim line As String
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+
+    nullValue = Null
+
+    f = FreeFile
+    Open "xpscript-null-file-boundaries.txt" For Output As #f Charset "utf-8"
+    Print #f, emptyValue
+    Print #f, nullValue
+    Write #f, emptyValue, nullValue
+    Close #f
+
+    f = FreeFile
+    Open "xpscript-null-file-boundaries.txt" For Input As #f Charset "utf-8"
+    Line Input #f, line
+    Print "PRINT_EMPTY_LEN=" & CStr(Len(line))
+    Line Input #f, line
+    Print "PRINT_NULL_LEN=" & CStr(Len(line))
+    Line Input #f, line
+    Print "WRITE_LINE=" & line
+    Close #f
+
+    Kill "xpscript-null-file-boundaries.txt"
+End Sub
