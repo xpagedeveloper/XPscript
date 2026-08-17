@@ -42,7 +42,7 @@ public sealed class XpsWebServer
 
     public string UrlEncode(string? value) => WebUtility.UrlEncode(value ?? string.Empty);
 
-    public string JsonEncode(string? value) => JsonSerializer.Serialize(value ?? string.Empty);
+    public string JsonStringEncode(string? value) => JsonSerializer.Serialize(value ?? string.Empty);
 
     private static string CanonicalizeExistingSegments(string path)
     {
