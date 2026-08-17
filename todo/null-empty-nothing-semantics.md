@@ -28,7 +28,7 @@ Status:
 - [x] Variant `EMPTY` has an explicit runtime contract: CLR `null` in Variant value storage, interpreted as EMPTY by Variant inspection semantics.
 - [x] Variant `NULL` has a separate private immutable sentinel in `TypeCoercionRuntimeSource.cs`, verified on Windows, Ubuntu and macOS.
 - [x] Object `NOTHING` is represented by `LSRef<T>.IsNothing`, not by the Variant value itself.
-- [>] Ensure the NULL sentinel cannot leak as a normal user object across serialization/API boundaries; the runtime sentinel itself is private and immutable, while serialization/API review remains open.
+- [>] Ensure the NULL sentinel cannot leak as a normal user object across serialization/API boundaries; JSON, console/text and text-file boundaries are verified, while HTTP and managed/native interop review remains open.
 
 ## Variable initialization
 
@@ -61,7 +61,7 @@ Status:
 - [x] EMPTY converts to empty string through the existing `CStr(null)` path.
 - [>] `NULL` propagates through forgiving Variant `+`; broader arithmetic/comparison/string propagation remains open.
 - [>] `NULL` is not silently converted to EMPTY, zero, empty string or NOTHING in the verified Variant `+` path; broader coercion review remains open.
-- [ ] Review Boolean conditions involving `NULL` and define bounded diagnostics where required.
+- [x] Boolean conditions involving `NULL` and `EMPTY` use the shared `XPScriptNullRuntime.ConditionValue` contract: both evaluate as false in `If`/`ElseIf`/`While`/`Do`/`Loop` conditions, while invalid non-convertible values produce a bounded diagnostic. Cross-platform source: `samples/null-boolean-conditions.xps` and `.github/workflows/null-boolean-conditions.yml`.
 - [>] Array/List snapshots containing EMPTY and NULL preserve both values across Evaluate; broader normal-runtime array/List mutation and conversion edge cases remain open.
 
 ## Object references
@@ -81,8 +81,10 @@ Status:
 
 ## Serialization and APIs
 
-- [ ] Define JSON behavior for EMPTY, NULL and NOTHING without accidentally leaking internal sentinel objects.
-- [ ] Review HTTP, console/text formatting and file I/O conversion paths.
+- [x] JSON behavior is defined and cross-platform verified: EMPTY, NULL and NOTHING serialize as JSON `null`; private NULL/object-reference runtime representations do not leak. JSON `null` deserializes to Variant EMPTY because JSON cannot preserve the three-way XPScript distinction.
+- [x] Console/text formatting is cross-platform verified: `CStr(EMPTY)` and `CStr(NULL)` both produce empty text and the private NULL sentinel name does not leak.
+- [x] Text file output preserves the distinction where the file format can represent it: `Print #` uses empty text for EMPTY/NULL, while `Write #` emits an empty field for EMPTY and `#NULL#` for NULL. Dynamic single-EMPTY `params` binding is handled safely.
+- [ ] Review HTTP request/response conversion paths for EMPTY, NULL and NOTHING.
 - [ ] Review managed/native interop conversion boundaries.
 
 ## Regression gate
@@ -93,6 +95,9 @@ Status:
 - [x] Parameter fixtures verify `Null` is preserved for Variant parameters and rejected for typed scalar parameters: `samples/null-variant-parameter.xps` and `samples/null-integer-parameter-error.xps`.
 - [x] Module-global and Static Variant EMPTY initialization and Static persistence are covered by `samples/variant-global-static-empty.xps`.
 - [x] Object-reference NOTHING, alias and Delete behavior are covered by `.github/workflows/null-empty-semantics.yml` using `samples/module-object-references.xps`.
+- [x] Boolean-condition semantics are covered on Windows, Ubuntu and macOS by `.github/workflows/null-boolean-conditions.yml`.
+- [x] JSON EMPTY/NULL/NOTHING serialization boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-json-build.yml` and JSON security gates.
+- [x] Console/text and text-file boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/null-text-boundaries.yml`, including private sentinel non-leakage.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
 - [x] Evaluate callvar fixture covers scalar, Array and List values containing EMPTY and NULL: `samples/evaluate-callvar-null-empty.xps`.
 - [x] Focused Null/Empty/Nothing runtime and Evaluate gates execute on Windows, Ubuntu and macOS.
