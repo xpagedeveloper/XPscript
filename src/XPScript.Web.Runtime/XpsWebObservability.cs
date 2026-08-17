@@ -27,6 +27,7 @@ public sealed record XpsWebHealthSnapshot(
 
 public sealed record XpsWebRequestEvent(
     DateTimeOffset TimestampUtc,
+    string RequestId,
     string Transport,
     string Method,
     int StatusCode,
@@ -82,15 +83,16 @@ public sealed class XpsWebTelemetry
         _eventSink = eventSink;
     }
 
-    public RequestScope BeginRequest(string transport, string method, long requestBodyBytes = 0)
+    public RequestScope BeginRequest(string transport, string method, long requestBodyBytes = 0, string? requestId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(transport);
         ArgumentException.ThrowIfNullOrWhiteSpace(method);
         if (requestBodyBytes < 0) requestBodyBytes = 0;
+        requestId = NormalizeRequestId(requestId);
         Interlocked.Increment(ref _activeRequests);
         Interlocked.Increment(ref _totalRequests);
         Interlocked.Add(ref _requestBodyBytes, requestBodyBytes);
-        return new RequestScope(this, transport, method, requestBodyBytes);
+        return new RequestScope(this, requestId, transport, method, requestBodyBytes);
     }
 
     public void MarkStopping() => Interlocked.Exchange(ref _stopping, 1);
@@ -133,7 +135,7 @@ public sealed class XpsWebTelemetry
         return builder.ToString();
     }
 
-    private void Complete(string transport, string method, int statusCode, long requestBodyBytes, long responseBodyBytes, long startedTimestamp, bool failed)
+    private void Complete(string requestId, string transport, string method, int statusCode, long requestBodyBytes, long responseBodyBytes, long startedTimestamp, bool failed)
     {
         Interlocked.Decrement(ref _activeRequests);
         if (responseBodyBytes > 0) Interlocked.Add(ref _responseBodyBytes, responseBodyBytes);
@@ -151,6 +153,7 @@ public sealed class XpsWebTelemetry
             var elapsed = Stopwatch.GetElapsedTime(startedTimestamp);
             _eventSink.Write(new XpsWebRequestEvent(
                 DateTimeOffset.UtcNow,
+                requestId,
                 transport,
                 method,
                 statusCode,
@@ -159,6 +162,15 @@ public sealed class XpsWebTelemetry
                 Math.Max(0, responseBodyBytes),
                 isFailure));
         }
+    }
+
+    private static string NormalizeRequestId(string? requestId)
+    {
+        if (string.IsNullOrWhiteSpace(requestId)) return Guid.NewGuid().ToString("N");
+        var value = requestId.Trim();
+        if (value.Length is < 8 or > 128 || value.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')))
+            throw new ArgumentException("Request id contains invalid characters.", nameof(requestId));
+        return value;
     }
 
     private static void AppendGauge(StringBuilder builder, string name, long value, string help)
@@ -178,31 +190,35 @@ public sealed class XpsWebTelemetry
     public sealed class RequestScope : IDisposable
     {
         private readonly XpsWebTelemetry _owner;
+        private readonly string _requestId;
         private readonly string _transport;
         private readonly string _method;
         private readonly long _requestBodyBytes;
         private readonly long _startedTimestamp = Stopwatch.GetTimestamp();
         private int _completed;
 
-        internal RequestScope(XpsWebTelemetry owner, string transport, string method, long requestBodyBytes)
+        internal RequestScope(XpsWebTelemetry owner, string requestId, string transport, string method, long requestBodyBytes)
         {
             _owner = owner;
+            _requestId = requestId;
             _transport = transport;
             _method = method;
             _requestBodyBytes = requestBodyBytes;
         }
 
+        public string RequestId => _requestId;
+
         public void Complete(int statusCode, long responseBodyBytes, bool failed = false)
         {
             if (statusCode is < 100 or > 999) throw new ArgumentOutOfRangeException(nameof(statusCode));
             if (Interlocked.Exchange(ref _completed, 1) != 0) return;
-            _owner.Complete(_transport, _method, statusCode, _requestBodyBytes, responseBodyBytes, _startedTimestamp, failed);
+            _owner.Complete(_requestId, _transport, _method, statusCode, _requestBodyBytes, responseBodyBytes, _startedTimestamp, failed);
         }
 
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _completed, 1) != 0) return;
-            _owner.Complete(_transport, _method, 500, _requestBodyBytes, 0, _startedTimestamp, failed: true);
+            _owner.Complete(_requestId, _transport, _method, 500, _requestBodyBytes, 0, _startedTimestamp, failed: true);
         }
     }
 }
