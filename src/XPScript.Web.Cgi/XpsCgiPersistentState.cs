@@ -263,39 +263,29 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
 
     private static async Task<FileStream> AcquireLockAsync(string path, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
-        if (stream.Length == 0) stream.SetLength(1);
         var deadline = DateTimeOffset.UtcNow + timeout;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                stream.Lock(0, 1);
-                return stream;
+                return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.None);
             }
             catch (IOException) when (DateTimeOffset.UtcNow < deadline)
             {
                 await Task.Delay(25, cancellationToken).ConfigureAwait(false);
             }
-            catch
+            catch (UnauthorizedAccessException) when (DateTimeOffset.UtcNow < deadline)
             {
-                stream.Dispose();
-                throw;
+                await Task.Delay(25, cancellationToken).ConfigureAwait(false);
             }
+
             if (DateTimeOffset.UtcNow >= deadline)
-            {
-                stream.Dispose();
                 throw new XpsCgiException("Timed out waiting for the CGI persistent state lock.");
-            }
         }
     }
 
-    private static void ReleaseLock(FileStream stream)
-    {
-        try { stream.Unlock(0, 1); } catch { }
-        stream.Dispose();
-    }
+    private static void ReleaseLock(FileStream stream) => stream.Dispose();
 
     private sealed class PersistentApplicationState : IXpsApplicationState
     {
