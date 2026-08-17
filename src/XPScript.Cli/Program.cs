@@ -36,6 +36,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var enableHealth = false;
     var enableMetrics = false;
     var operationalExternal = false;
+    var enableStaticFiles = false;
+    long? staticMaxBytes = null;
     string? structuredLogPath = null;
     string? httpsCertificatePath = null;
     string? httpsCertificatePasswordEnvironment = null;
@@ -80,6 +82,12 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--structured-log":
                 structuredLogPath = Path.GetFullPath(RequireValue(commandArgs, ref i));
                 break;
+            case "--static-files":
+                enableStaticFiles = true;
+                break;
+            case "--static-max-bytes":
+                staticMaxBytes = ParsePositiveLong(RequireValue(commandArgs, ref i), "--static-max-bytes");
+                break;
             default:
                 throw new ArgumentException("Unknown web argument: " + commandArgs[i]);
         }
@@ -89,6 +97,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         throw new ArgumentException("--operational-external requires --health and/or --metrics.");
     if (httpsCertificatePasswordEnvironment is not null && httpsCertificatePath is null)
         throw new ArgumentException("--https-cert-password-env requires --https-cert.");
+    if (staticMaxBytes is not null && !enableStaticFiles)
+        throw new ArgumentException("--static-max-bytes requires --static-files.");
 
     string? httpsCertificatePassword = null;
     if (httpsCertificatePasswordEnvironment is not null)
@@ -110,7 +120,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         AllowedHosts = allowedHosts.Count > 0 ? allowedHosts.AsReadOnly() : defaults.AllowedHosts,
         EnableHealthEndpoint = enableHealth,
         EnableMetricsEndpoint = enableMetrics,
-        OperationalEndpointsLocalOnly = !operationalExternal
+        OperationalEndpointsLocalOnly = !operationalExternal,
+        EnableStaticFiles = enableStaticFiles,
+        MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes
     };
     options.Validate();
 
@@ -147,6 +159,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
         if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
         if (structuredLogPath is not null) Console.WriteLine($"Structured request log: {structuredLogPath}");
+        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
 
         await app.StartAsync(shutdown.Token);
         await WaitForShutdownAsync(shutdown.Token);
@@ -261,6 +274,13 @@ static int ParsePort(string value, bool allowZero)
     return port;
 }
 
+static long ParsePositiveLong(string value, string optionName)
+{
+    if (!long.TryParse(value, out var number) || number < 1 || number > 1024L * 1024L * 1024L)
+        throw new ArgumentException(optionName + " must be between 1 and 1073741824 bytes.");
+    return number;
+}
+
 static HttpProtocols ParseHttpProtocols(string value) => value.Trim().ToLowerInvariant() switch
 {
     "http1" or "http/1" or "http/1.1" => HttpProtocols.Http1,
@@ -331,11 +351,14 @@ Usage:
   xpscript web --root DIR [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--structured-log FILE] [--operational-external]
+                [--static-files] [--static-max-bytes BYTES]
   xpscript fastcgi --root DIR [--listen ADDRESS:PORT]
   xpscript fastcgi --root DIR --unix-socket PATH
 
 Examples:
   xpscript web --root ./site
+  xpscript web --root ./site --static-files
+  xpscript web --root ./site --static-files --static-max-bytes 8388608
   xpscript web --root ./site --health --metrics
   xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
@@ -350,6 +373,8 @@ Security defaults:
   Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments.
   Health and metrics are disabled by default.
   Enabled operational endpoints remain loopback-only unless --operational-external is explicitly supplied.
+  Static file serving is disabled by default and must be enabled with --static-files.
+  XPScript source files are never served by the static-file middleware.
   Structured request logs exclude request paths, query strings, headers, cookies and bodies.
   FastCGI binds to 127.0.0.1:9000 by default.
   Unix-domain sockets are supported on Linux and macOS only.

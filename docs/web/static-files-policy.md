@@ -4,6 +4,22 @@ Kestrel mode may optionally serve static assets from the configured XPScript sit
 
 FastCGI and CGI deployments should normally let nginx, HCL Domino, IIS or another front-end web server serve static assets directly. XPScript FastCGI/CGI transports do not implement a parallel static-file server.
 
+## CLI
+
+Enable Kestrel static-file serving explicitly:
+
+```text
+xpscript web --root ./site --static-files
+```
+
+The default maximum static-file size is 32 MiB. Override it with bytes:
+
+```text
+xpscript web --root ./site --static-files --static-max-bytes 8388608
+```
+
+`--static-max-bytes` requires `--static-files`.
+
 ## Kestrel rules
 
 When enabled, only explicitly allowlisted file extensions may be returned. The default allowlist is intended for public web assets such as CSS, JavaScript, images and fonts.
