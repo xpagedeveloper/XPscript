@@ -4,7 +4,7 @@ using XPScript.Web.Runtime;
 
 var application = new XpsApplicationState(new XpsApplicationStateOptions
 {
-    MaxEntries = 8,
+    MaxEntries = 64,
     MaxValueBytes = 256,
     MaxTotalBytes = 2048
 });
@@ -309,7 +309,7 @@ try
     var authenticatedId = login.Session.Id;
     if (!login.Session.IsAuthenticated || !login.Session.HasRule("admin") || login.Session.UserId != "42" || login.Session.UserName != "Fredrik")
         throw new Exception("Session.Authenticate did not establish session principal state.");
-    if (!Equals(login.Session.Get("cart"), "preserved")) throw new Exception("Session.Authenticate did not preserve ordinary session data.");
+    if (!Equals(login.Session.Get("cart"), "preserved")) throw new Exception("Session.Authenticate did not preserve ordinary PHP-like session data.");
 
     var privateRoute = await Dispatch(dispatcher, authSessions, authApplication, root, "/auth/Private", authenticatedId);
     if (privateRoute.Response.StatusCode != 200 || Body(privateRoute.Response) != "Fredrik") throw new Exception("[Authenticated] did not evaluate persisted session authentication.");
