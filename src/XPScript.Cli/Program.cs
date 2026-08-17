@@ -29,6 +29,7 @@ catch (Exception ex)
 
 static async Task<int> RunWebAsync(string[] commandArgs)
 {
+    commandArgs = XpsHostConfig.Apply("web", commandArgs);
     var root = RequireRoot(commandArgs);
     var address = IPAddress.Loopback;
     var port = 8080;
@@ -218,6 +219,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
 
 static async Task<int> RunFastCgiAsync(string[] commandArgs)
 {
+    commandArgs = XpsHostConfig.Apply("fastcgi", commandArgs);
     var root = RequireRoot(commandArgs);
     var address = IPAddress.Loopback;
     var port = 9000;
@@ -349,7 +351,7 @@ static string FormatHttpProtocols(HttpProtocols protocols) => protocols switch
 {
     HttpProtocols.Http1 => "HTTP/1.1",
     HttpProtocols.Http2 => "HTTP/2",
-    HttpProtocols.Http1AndHttp2 => "HTTP/1.1 + HTTP/2",
+    HttpProtocols.Http1And2 => "HTTP/1.1 + HTTP/2",
     _ => protocols.ToString()
 };
 
@@ -404,17 +406,24 @@ XPScript Web Host
 (c) xpagedeveloper.com 2026
 
 Usage:
-  xpscript web --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
+  xpscript web [--config FILE] --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--sessions]
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES]
-  xpscript fastcgi --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
-  xpscript fastcgi --root DIR [--default-document FILE.xps] --unix-socket PATH
+  xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
+  xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
+
+Config:
+  --config FILE loads JSON host settings from the selected file.
+  Without --config, web.cfg is loaded automatically from the directory containing the xpscript executable when that file exists.
+  Paths inside the config file are resolved relative to the config file directory.
+  Explicit command-line values override matching values from the config file.
 
 Examples:
+  xpscript web --config ./production.cfg
   xpscript web --root ./site
   xpscript web --root ./site --sessions
   xpscript web --root ./site --sessions --session-cookie MYSESSION --session-timeout-seconds 3600 --session-same-site Strict
@@ -426,6 +435,7 @@ Examples:
   xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
   XPS_TLS_PASSWORD=secret xpscript web --root ./site --port 8443 --host www.example.com --https-cert ./server.pfx --https-cert-password-env XPS_TLS_PASSWORD
+  xpscript fastcgi --config ./production.cfg
   xpscript fastcgi --root /srv/xpsite --default-document home.xps --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
 
@@ -434,7 +444,7 @@ Security defaults:
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
   The default document is index.xps. --default-document accepts only one .xps filename inside the configured root.
   Kestrel explicitly uses HTTP/1.1 + HTTP/2, 15 second request-header timeout, 30 second keep-alive and 240 B/s minimum request/response data rates with a 5 second grace period.
-  Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments.
+  Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments or config-file secrets.
   Sessions are disabled by default. --sessions enables the bounded in-memory XPSID session store for this host process.
   Session configuration flags require --sessions. SameSite=None requires --session-secure.
   Health and metrics are disabled by default.
