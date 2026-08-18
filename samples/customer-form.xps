@@ -1,0 +1,36 @@
+' XPscript UIListView target form showcase
+' (c) xpagedeveloper.com 2026
+
+[Anonymous]
+[Get]
+[Post]
+Sub Main()
+    Dim data As New JsonObject
+    Dim form As New UIForm("Customer", 720, 420, True)
+    Dim customerId As String
+    Dim result As String
+
+    customerId = Request.QueryFirst("customerId")
+    If customerId = "" Then
+        customerId = "new"
+    End If
+
+    Call data.Set("id", customerId)
+    Call data.Set("name", "Customer " & customerId)
+    Call data.Set("status", "Loaded from UIListView")
+
+    Call form.BindData(data)
+    Call form.SetGridColumns(12)
+    Call form.AddHiddenField("id")
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextField("status", "Status")
+    Call form.SetFieldReadOnly("status", True)
+    Call form.SetFieldPosition("name", 1, 1, 12, 1)
+    Call form.SetFieldPosition("status", 2, 1, 12, 1)
+
+    result = form.ShowDialog()
+    If result = "OK" Then
+        Print "CUSTOMER_ID=" & data.Get("id")
+        Print "NAME=" & data.Get("name")
+    End If
+End Sub
