@@ -5,7 +5,7 @@ internal static class UIDialogRuntimeSource
     public const string Code = """
 internal static class XPScriptUIDialogRuntime
 {
-    private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private const string HostTypeName = "XPScript.UI.Desktop.DesktopDialogHost, XPScript.UI.Desktop";
     private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
 
     public static string ShowDialog(object? message) => ShowDialog(message, string.Empty, "OK", null);
