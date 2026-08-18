@@ -1,0 +1,110 @@
+name: Web Console Error Fallback
+
+on:
+  push:
+    paths:
+      - '.github/workflows/web-console-error-fallback.yml'
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Web.Compiler/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/web-console-error-fallback.yml'
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Web.Compiler/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore CLI
+        run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+      - name: Build CLI
+        run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+      - name: Verify console fallback and structured-log suppression
+        shell: pwsh
+        run: |
+          $dll = Resolve-Path './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
+          $root = Join-Path $env:RUNNER_TEMP 'xps-console-errors'
+          New-Item -ItemType Directory -Force $root | Out-Null
+
+          function Get-FreePort {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+            $listener.Start()
+            $port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+            $listener.Stop()
+            return $port
+          }
+
+          function Invoke-FailingHost([string]$source, [bool]$withLog) {
+            Set-Content -Path (Join-Path $root 'index.xps') -Value $source
+            $port = Get-FreePort
+            $stdout = Join-Path $env:RUNNER_TEMP ("xps-error-$port-out.txt")
+            $stderr = Join-Path $env:RUNNER_TEMP ("xps-error-$port-err.txt")
+            $args = @($dll, 'web', '--root', $root, '--port', $port)
+            if ($withLog) {
+              $log = Join-Path $env:RUNNER_TEMP ("xps-error-$port.jsonl")
+              $args += @('--structured-log', $log)
+            }
+            $process = Start-Process dotnet -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+            try {
+              $deadline = [DateTime]::UtcNow.AddSeconds(30)
+              do {
+                Start-Sleep -Milliseconds 200
+                if ($process.HasExited) { throw "Host exited early: $(Get-Content $stderr -Raw)" }
+                try {
+                  Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 2 -SkipHttpErrorCheck | Out-Null
+                  break
+                } catch { }
+              } while ([DateTime]::UtcNow -lt $deadline)
+              Start-Sleep -Milliseconds 500
+            }
+            finally {
+              if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+              $process.WaitForExit()
+            }
+            return (Get-Content $stderr -Raw -ErrorAction SilentlyContinue)
+          }
+
+          $compileFailure = @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Dim number As Integer
+              number = "not-an-integer"
+              Response.Write(number)
+          End Sub
+          '@
+          $compileConsole = Invoke-FailingHost $compileFailure $false
+          if ($compileConsole -notmatch 'XPScript web error') { throw "Compile error was not written to console.`n$compileConsole" }
+
+          $runtimeFailure = @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Dim numerator As Integer
+              Dim denominator As Integer
+              Dim result As Integer
+              numerator = 1
+              denominator = 0
+              result = numerator \ denominator
+              Response.Write(result)
+          End Sub
+          '@
+          $runtimeConsole = Invoke-FailingHost $runtimeFailure $false
+          if ($runtimeConsole -notmatch 'XPScript web error') { throw "Runtime error was not written to console.`n$runtimeConsole" }
+
+          $loggedConsole = Invoke-FailingHost $compileFailure $true
+          if ($loggedConsole -match 'XPScript web error') { throw "Console fallback remained enabled with --structured-log.`n$loggedConsole" }
