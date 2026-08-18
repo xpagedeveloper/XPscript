@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace XPScript.Web.Runtime;
@@ -43,6 +45,30 @@ public sealed class XpsWebServer
     public string UrlEncode(string? value) => WebUtility.UrlEncode(value ?? string.Empty);
 
     public string JsonStringEncode(string? value) => JsonSerializer.Serialize(value ?? string.Empty);
+
+    public string CsrfToken()
+    {
+        var session = XpsWebContextAccessor.Current.Session
+            ?? throw new InvalidOperationException("CSRF tokens require an active session.");
+        return CreateCsrfToken(session.Id);
+    }
+
+    public bool ValidateCsrfToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length > 128) return false;
+        var expected = CsrfToken();
+        if (token.Length != expected.Length) return false;
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(token),
+            Encoding.ASCII.GetBytes(expected));
+    }
+
+    private string CreateCsrfToken(string sessionId)
+    {
+        var payload = Encoding.UTF8.GetBytes("xps-csrf-v1\0" + _info.SiteId + "\0" + sessionId);
+        var hash = SHA256.HashData(payload);
+        return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
 
     private static string CanonicalizeExistingSegments(string path)
     {
