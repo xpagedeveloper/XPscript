@@ -1,0 +1,18 @@
+' XPScript UIForm ColorField and MonthField regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim form As New UIForm("Color and Month")
+    Dim data As New JsonObject
+
+    Call data.Set("color", "#336699")
+    Call data.Set("month", "2026-08")
+    Call form.BindData(data)
+
+    Call form.AddColorField("color", "Color")
+    Call form.AddMonthField("month", "Month")
+
+    Print "COLOR=" & form.GetFieldValueString("color")
+    Print "MONTH=" & form.GetFieldValueString("month")
+    Print "FIELD_COUNT=" & CStr(form.FieldCount)
+End Sub
