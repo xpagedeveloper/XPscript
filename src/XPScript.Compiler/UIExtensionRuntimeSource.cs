@@ -48,6 +48,7 @@ internal sealed class XPScriptUIField
     public string Name { get; }
     public string Label { get; set; }
     public string Type { get; }
+    public bool Required { get; set; }
 }
 
 internal sealed class XPScriptUIForm
@@ -114,17 +115,21 @@ internal sealed class XPScriptUIForm
         };
     }
 
-    public XPScriptUIField AddTextField(object? name)
-        => AddTextField(name, name);
+    public XPScriptUIField AddTextField(object? name) => AddField(name, name, "TextField");
+    public XPScriptUIField AddTextField(object? name, object? label) => AddField(name, label, "TextField");
+    public XPScriptUIField AddTextArea(object? name) => AddField(name, name, "TextArea");
+    public XPScriptUIField AddTextArea(object? name, object? label) => AddField(name, label, "TextArea");
+    public XPScriptUIField AddNumberField(object? name) => AddField(name, name, "NumberField");
+    public XPScriptUIField AddNumberField(object? name, object? label) => AddField(name, label, "NumberField");
+    public XPScriptUIField AddCheckBox(object? name) => AddField(name, name, "CheckBox");
+    public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
+    public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
+    public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
 
-    public XPScriptUIField AddTextField(object? name, object? label)
+    public void SetRequired(object? name, object? required)
     {
-        var fieldName = NormalizeFieldName(name);
-        if (_fields.Any(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase)))
-            throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' already exists.");
-        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), "TextField");
-        _fields.Add(field);
-        return field;
+        var field = FindField(name);
+        field.Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
     }
 
     public object? GetFieldValue(object? name)
@@ -153,12 +158,75 @@ internal sealed class XPScriptUIForm
         if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
             foreach (var field in _fields)
-                SetFieldValue(field.Name, XPScriptUIWebAdapter.FormFirst(field.Name));
+                ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
             return "OK";
         }
 
         XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
         return "Pending";
+    }
+
+    private XPScriptUIField AddField(object? name, object? label, string type)
+    {
+        var fieldName = NormalizeFieldName(name);
+        if (_fields.Any(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' already exists.");
+        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);
+        _fields.Add(field);
+        return field;
+    }
+
+    private XPScriptUIField FindField(object? name)
+    {
+        var fieldName = NormalizeFieldName(name);
+        return _fields.FirstOrDefault(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' does not exist.");
+    }
+
+    private void ApplySubmittedValue(XPScriptUIField field, string submitted)
+    {
+        var exists = _data.Contains(field.Name);
+        if (field.Required && submitted.Length == 0)
+            throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
+
+        switch (field.Type)
+        {
+            case "NumberField":
+                if (submitted.Length == 0)
+                {
+                    if (exists) _data.Set(field.Name, string.Empty);
+                    return;
+                }
+                if (!decimal.TryParse(submitted, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var number))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid number.");
+                _data.Set(field.Name, number);
+                return;
+
+            case "CheckBox":
+                if (submitted.Length == 0)
+                {
+                    if (exists) _data.Set(field.Name, false);
+                    return;
+                }
+                _data.Set(field.Name, submitted.Equals("1", StringComparison.OrdinalIgnoreCase) || submitted.Equals("true", StringComparison.OrdinalIgnoreCase) || submitted.Equals("on", StringComparison.OrdinalIgnoreCase));
+                return;
+
+            case "DateField":
+                if (submitted.Length == 0)
+                {
+                    if (exists) _data.Set(field.Name, string.Empty);
+                    return;
+                }
+                if (!DateTime.TryParseExact(submitted, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid date in yyyy-MM-dd format.");
+                _data.Set(field.Name, submitted);
+                return;
+
+            default:
+                if (!exists && submitted.Length == 0) return;
+                _data.Set(field.Name, submitted);
+                return;
+        }
     }
 
     private string RenderWebForm()
@@ -173,10 +241,37 @@ internal sealed class XPScriptUIForm
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
             var label = System.Net.WebUtility.HtmlEncode(field.Label);
             var value = System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
+            var required = field.Required ? " required" : string.Empty;
             html.Append("<div class=\"xpscript-uiform-field\"><label for=\"xps_")
-                .Append(name).Append("\">").Append(label).Append("</label>")
-                .Append("<input type=\"text\" id=\"xps_").Append(name)
-                .Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"></div>");
+                .Append(name).Append("\">").Append(label).Append("</label>");
+
+            switch (field.Type)
+            {
+                case "TextArea":
+                    html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"")
+                        .Append(required).Append(">").Append(value).Append("</textarea>");
+                    break;
+                case "NumberField":
+                    html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
+                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
+                    break;
+                case "CheckBox":
+                    var checkedValue = GetFieldValue(field.Name) is bool b && b;
+                    html.Append("<input type=\"checkbox\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"1\"");
+                    if (checkedValue) html.Append(" checked");
+                    html.Append(required).Append(">");
+                    break;
+                case "DateField":
+                    html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
+                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
+                    break;
+                default:
+                    html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
+                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
+                    break;
+            }
+
+            html.Append("</div>");
         }
 
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
