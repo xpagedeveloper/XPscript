@@ -6,21 +6,24 @@
 
 Add a cross-platform list view that can display a complete JSON array on web and desktop using the same XPscript API.
 
-The component must support:
+Implemented core capabilities on the current integration branch:
 
 - JSON array binding
 - multiple visible columns
-- configurable column labels
-- configurable column order
-- sorting when the user clicks a column header
-- ascending and descending sort toggle
-- filtering rows by a free-text search across visible columns
+- configurable column labels and widths
+- ascending/descending type-aware sorting
+- filtering across visible columns
 - row selection
-- opening another XPscript file when a row is clicked
-- passing a selected value from the JSON row to the target script
-- identical behaviour on Kestrel, CGI, FastCGI and Avalonia desktop where applicable
+- `SetOnSelect` and `SetOnDoubleClick`
+- live JSON/list updates after handlers
+- row navigation to another `.xps` file
+- per-row handler buttons
+- per-row navigation buttons
+- secure desktop navigation through the XPscript launcher
+- web support through Kestrel, CGI and FastCGI
+- Avalonia desktop support
 
-## Proposed API
+## Core API
 
 ```xps
 Dim rows As JsonArray
@@ -30,25 +33,72 @@ Call list.BindData(rows)
 Call list.AddColumn("name", "Name")
 Call list.AddColumn("email", "Email")
 Call list.AddColumn("country", "Country")
+Call list.SetColumnWidth("name", 240)
 Call list.SetFilterEnabled(True)
 Call list.SetSortable(True)
-Call list.SetRowAction("customer.xps", "id")
-Call list.Show()
+Call list.SetKeyField("id")
 ```
 
-Optional column width/alignment API:
+## Selection events
 
 ```xps
-Call list.SetColumnWidth("name", 240)
-Call list.SetColumnWidth("email", 320)
-Call list.SetColumnAlignment("id", "Right")
+Call list.SetOnSelect("CustomerSelected")
+Call list.SetOnDoubleClick("CustomerDoubleClicked")
+
+Sub CustomerSelected(list As Variant)
+    Dim row As Variant
+    row = list.GetSelectedRow()
+    Call row.Set("status", "Selected")
+End Sub
 ```
+
+Handlers may change the bound JSON array or visible list properties. The web renderer applies a state patch without a full page reload. Avalonia rebuilds only the list/header area and keeps the dialog open.
+
+## Row navigation
+
+```xps
+Call list.SetRowAction("customer.xps", "id", "customerId")
+```
+
+A normal row open navigates to the configured local `.xps` target with the configured value.
+
+Web example:
+
+```text
+customer.xps?customerId=1001
+```
+
+Desktop uses the XPscript launcher navigation protocol and validates the target before execution.
+
+## Per-row action buttons
+
+Handler button:
+
+```xps
+Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
+
+Sub DeleteCustomer(list As Variant)
+    Call list.RemoveSelectedRow()
+End Sub
+```
+
+Navigation button:
+
+```xps
+Call list.AddRowNavigationButton("edit", "Edit", "customer.xps", "id", "customerId")
+```
+
+Remove all configured row buttons:
+
+```xps
+Call list.ClearRowActions()
+```
+
+Handler buttons keep the list open and apply the returned live state. Navigation buttons open the configured target. Clicking an action button does not also trigger the row click/navigation event.
 
 ## JSON binding
 
 The list binds to a JSON array whose elements are JSON objects.
-
-Example:
 
 ```json
 [
@@ -67,211 +117,101 @@ Example:
 ]
 ```
 
-Only configured columns are rendered.
+Only configured columns are rendered. Missing JSON keys render as an empty cell. Values are converted to display strings without changing the source JSON type.
 
-Missing JSON keys render as an empty cell.
+Useful data methods include:
 
-Values should be converted to display strings without changing the source JSON type.
+```text
+RowCount
+ColumnCount
+SelectedIndex
+GetRow(index)
+GetRowValue(index, field)
+GetRowValueString(index, field)
+GetSelectedRow()
+GetSelectedValue(field)
+GetSelectedValueString(field)
+GetSelectedKey()
+SelectRow(index)
+ClearSelection()
+RemoveSelectedRow()
+```
 
 ## Sorting
 
-Clicking a sortable column header sorts the current rows by that column.
+Clicking a sortable column header toggles ascending/descending order.
 
-First click:
-
-```text
-ascending
-```
-
-Second click:
-
-```text
-descending
-```
-
-Third click may either reset to unsorted or return to ascending. Initial implementation should use ascending/descending toggle.
-
-Sorting should preserve JSON source order when values compare equal.
-
-Type-aware sorting should be used when possible:
+Sorting is type-aware where possible:
 
 - numbers as numbers
 - booleans as booleans
 - ISO dates/date-times chronologically
-- strings using ordinal/culture-safe comparison as defined by runtime
+- strings case-insensitively
 
 ## Filtering
 
-A single filter input filters the list against all visible columns.
+A single filter input searches all visible columns. Hidden JSON properties do not participate. Filtering is case-insensitive by default.
 
-Example visible columns:
-
-```text
-Name | Email | Country
-```
-
-Searching for:
-
-```text
-sweden
-```
-
-must match if the value occurs in any visible column.
-
-Filtering must be case-insensitive by default.
-
-Hidden/non-visible JSON properties must not participate in filtering.
-
-Possible later API:
-
-```xps
-Call list.SetFilterMode("Contains")
-Call list.SetFilterCaseSensitive(False)
-```
-
-## Row action
-
-```xps
-Call list.SetRowAction("customer.xps", "id")
-```
-
-When a row is selected, the value of the configured key is read from the selected JSON object.
-
-If the selected row is:
-
-```json
-{
-  "id": "1001",
-  "name": "Kalle Andersson"
-}
-```
-
-then the target is opened with value `1001`.
-
-Recommended navigation contract:
-
-Web:
-
-```text
-/customer.xps?id=1001
-```
-
-or the equivalent XPscript route generated by the runtime.
-
-Desktop:
-
-Launch/execute `customer.xps` using the XPscript runtime and pass the same parameter through the normal command-line/application argument mechanism or a dedicated navigation context.
-
-The row action must never allow path traversal.
-
-Target script paths must be validated as local `.xps` paths relative to the configured application/site root.
-
-## Optional row action API
-
-Support explicit query/parameter name:
-
-```xps
-Call list.SetRowAction("customer.xps", "id", "customerId")
-```
-
-This generates:
-
-```text
-customer.xps?customerId=1001
-```
+`SetFilterEnabled(True/False)` and `SetSortable(True/False)` may also be changed by an event handler while the list is open.
 
 ## Web implementation
 
-Render semantic HTML:
+The renderer uses semantic HTML table markup and built-in JavaScript. No external JavaScript framework is required.
 
-```html
-<input type="search">
-<table>
-  <thead>
-  <tbody>
-</table>
-```
-
-Requirements:
+Requirements implemented or enforced:
 
 - encoded headers and cell values
-- clickable sortable `<th>` headers
-- client-side sort/filter for already loaded rows by default
-- no external JavaScript framework required
-- row links must be URL encoded
-- keyboard accessible row/action behaviour
+- client-side sort/filter
+- URL-encoded action values
+- keyboard-accessible row navigation
+- event POSTs to the same XPscript route
+- row actions stop event bubbling so they do not also execute row navigation
 
-For large arrays, later support server-side paging/filtering.
+Interactive web list routes must permit both GET and POST.
 
 ## Desktop implementation
 
-Use Avalonia DataGrid or equivalent mature Avalonia control if available as a maintained NuGet/component.
+Avalonia renders:
 
-Requirements:
-
-- sortable columns
+- sortable column headers
 - filter TextBox
-- row selection/double-click action
-- same visible column definitions as web
-- same selected-key navigation semantics
+- row selection
+- double-click event/action
+- per-row buttons
+- live list refresh
+- secure navigation through the XPscript launcher
 
-Use an existing Avalonia grid/list component rather than implementing a custom table widget if practical.
+## Security
 
-## Size and performance
+- encode rendered web values and labels
+- URL encode selected values
+- validate target `.xps` paths
+- reject absolute paths
+- reject `..`
+- reject non-XPscript target extensions
+- do not execute target paths supplied by JSON data
+- handler names come only from server-side XPscript configuration
+- action targets come only from server-side XPscript configuration
+- browser/desktop clients send only event/action name and row index
 
-Initial version should support arrays of at least several thousand rows without excessive memory duplication.
+## Remaining performance work
 
-For large lists add later:
+For very large lists add later:
 
 - paging
 - virtualization
 - server-side/provider mode
 - incremental loading
 
-## Security
+## Tests and showcase scripts
 
-- encode all rendered web cell values and labels
-- URL encode selected action values
-- validate target `.xps` path
-- reject absolute paths
-- reject `..`
-- reject non-XPscript file extensions
-- do not execute target paths supplied from JSON data
-- only the action value may come from the JSON row
-- action target must be configured server-side in XPscript code
-
-## Tests
-
-Add tests for:
-
-- JSON array binding
-- missing property becomes empty cell
-- multiple columns
-- column ordering
-- ascending/descending sorting
-- numeric sorting
-- string sorting
-- filtering across visible columns only
-- case-insensitive filtering
-- row action parameter extraction
-- target path traversal rejection
-- web URL encoding
-- HTML encoding
-- desktop selection action
-- arrays with several thousand rows
-
-## Showcase scripts
-
-Add:
+Current showcase/regression files include:
 
 ```text
+samples/ui-list-view-core.xps
 samples/ui-list-view-desktop.xps
 samples/ui-list-view-web.xps
+samples/customer-form.xps
 ```
 
-Both should use the same sample JSON array and demonstrate:
-
-- 4 visible columns
-- sorting
-- filtering
-- row navigation
+They cover JSON binding, columns, selection, sorting/filtering configuration, events, live updates, row navigation and per-row buttons.
