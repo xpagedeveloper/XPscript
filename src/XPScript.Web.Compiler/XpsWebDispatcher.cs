@@ -80,8 +80,9 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         {
             WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            XpsWebConsoleErrorFallback.Write(ex, resolution.ScriptPath, context.Request.Path);
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
