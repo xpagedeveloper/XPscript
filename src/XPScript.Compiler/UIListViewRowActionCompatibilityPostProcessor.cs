@@ -27,8 +27,8 @@ internal sealed class UIListViewRowActionCompatibilityPostProcessor
 """);
 
         generated = ReplaceRequired(generated,
-            "if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0)\n            sb.Append(\"const postEvent=async",
-            "if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0 || _rowActions.Any(action => action.Kind.Equals(\"Handler\", StringComparison.OrdinalIgnoreCase)))\n            sb.Append(\"const postEvent=async");
+            "if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0)",
+            "if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0 || _rowActions.Any(action => action.Kind.Equals(\"Handler\", StringComparison.OrdinalIgnoreCase)))");
 
         generated = ReplaceRequired(generated,
             "e.stopPropagation();const r=a.closest('tr[data-row-index]');",
