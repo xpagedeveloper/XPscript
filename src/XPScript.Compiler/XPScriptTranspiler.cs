@@ -151,7 +151,7 @@ public sealed class XPScriptTranspiler
         {
             source = Regex.Replace(
                 source,
-                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)\s*",
+                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)",
                 m => $"{listName}.ContainsTag({m.Groups["key"].Value})",
                 RegexOptions.IgnoreCase);
         }
