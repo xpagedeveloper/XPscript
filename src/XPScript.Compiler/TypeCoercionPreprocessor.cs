@@ -78,7 +78,7 @@ internal sealed class TypeCoercionPreprocessor
             return "(" + RewriteVariantArithmeticExpression(expression[1..^1]) + ")";
 
         // LotusScript precedence, low to high for recursive lowering:
-        // +/-, Mod, integer division, */, then exponentiation.
+        // +/-, Mod, integer division, */, unary +/- and exponentiation.
         // Operators at the same precedence are evaluated left-to-right, so finding the
         // rightmost operator makes the recursively lowered tree left-associative.
         var additive = FindRightmostTopLevelBinaryOperator(expression, '+', '-');
@@ -115,6 +115,13 @@ internal sealed class TypeCoercionPreprocessor
             var right = RewriteVariantArithmeticExpression(expression[(multiplicative + 1)..]);
             var method = op == '*' ? "MultiplyVariant" : "DivideVariant";
             return $"XPScriptCoercion.{method}({left}, {right})";
+        }
+
+        if (expression.Length > 1 && expression[0] is '+' or '-')
+        {
+            var operand = RewriteVariantArithmeticExpression(expression[1..]);
+            var method = expression[0] == '+' ? "UnaryPlusVariant" : "NegateVariant";
+            return $"XPScriptCoercion.{method}({operand})";
         }
 
         var exponentiation = FindRightmostTopLevelBinaryOperator(expression, '^');
