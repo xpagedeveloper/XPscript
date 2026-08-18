@@ -61,6 +61,23 @@ internal static class XPScriptUIDesktopAdapter
         var result = root.TryGetProperty("result", out var resultElement)
             ? resultElement.GetString() ?? "Cancel"
             : "Cancel";
+
+        if (result.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!root.TryGetProperty("values", out var navigationValues) || navigationValues.ValueKind != System.Text.Json.JsonValueKind.Object)
+                throw new XPScriptRuntimeException(5, "Desktop UIForm navigation result is incomplete.");
+            var target = navigationValues.TryGetProperty("__xps_navigation_target", out var targetElement)
+                ? targetElement.GetString() ?? string.Empty
+                : string.Empty;
+            var parameterName = navigationValues.TryGetProperty("__xps_navigation_parameter_name", out var nameElement)
+                ? nameElement.GetString() ?? string.Empty
+                : string.Empty;
+            var parameterValue = navigationValues.TryGetProperty("__xps_navigation_parameter_value", out var valueElement)
+                ? valueElement.GetString() ?? string.Empty
+                : string.Empty;
+            return "Navigate|" + target + "|" + parameterName + "|" + parameterValue;
+        }
+
         if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
         if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object)
             return "OK";
