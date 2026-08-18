@@ -13,14 +13,42 @@ public sealed record DesktopFormField(
     int? MaxLength,
     decimal? Minimum,
     decimal? Maximum,
-    IReadOnlyList<string> Options);
+    IReadOnlyList<string> Options)
+{
+    public int LayoutRow { get; init; }
+    public int LayoutColumn { get; init; }
+    public int ColumnSpan { get; init; } = 1;
+    public int RowSpan { get; init; } = 1;
+    public string RegionId { get; init; } = string.Empty;
+    public string RefreshTargetRegion { get; init; } = string.Empty;
+    public string RefreshHandler { get; init; } = string.Empty;
+    public string OnChangeHandler { get; init; } = string.Empty;
+    public bool Visible { get; init; } = true;
+    public bool Enabled { get; init; } = true;
+    public bool ReadOnly { get; init; }
+}
+
+public sealed record DesktopFormButton(
+    string Name,
+    string Label,
+    string Style,
+    int LayoutRow,
+    int LayoutColumn,
+    int ColumnSpan,
+    int RowSpan,
+    bool Visible,
+    bool Enabled);
 
 public sealed record DesktopFormRequest(
     string Title,
     int? Width,
     int? Height,
     bool Resizable,
-    IReadOnlyList<DesktopFormField> Fields);
+    IReadOnlyList<DesktopFormField> Fields)
+{
+    public int GridColumns { get; init; } = 1;
+    public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
+}
 
 public sealed record DesktopFormResult(
     string Result,
