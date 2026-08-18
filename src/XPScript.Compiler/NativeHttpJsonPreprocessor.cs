@@ -53,7 +53,7 @@ internal sealed class NativeHttpJsonPreprocessor
             output.Add(indent + rewritten);
         }
 
-        return string.Join(Environment.NewLine, output);
+        return new UIExtensionPreprocessor().Transform(string.Join(Environment.NewLine, output));
     }
 
     private static string CreateExpression(string type, string rawArguments)
