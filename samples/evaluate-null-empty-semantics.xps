@@ -22,4 +22,6 @@ Sub Initialize
     Print "INNER_NULL_DT=" & CStr(Evaluate("Return DataType(Null)"))
     Print "INNER_NULL_ISEMPTY=" & CStr(Evaluate("Return IsEmpty(Null)"))
     Print "INNER_NULL_ISNULL=" & CStr(Evaluate("Return IsNull(Null)"))
+    Print "INNER_NULL_ISOBJECT=" & CStr(Evaluate("Return IsObject(Null)"))
+    Print "INNER_NULL_ISSCALAR=" & CStr(Evaluate("Return IsScalar(Null)"))
 End Sub
