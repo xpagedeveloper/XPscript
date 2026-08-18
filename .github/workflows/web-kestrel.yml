@@ -6,17 +6,25 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Kestrel/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'src/XPScript.Cli/**'
       - 'tests/WebKestrelSmoke/**'
+      - 'tests/WebUIFormKestrelSmoke/**'
       - '.github/workflows/web-kestrel.yml'
       - 'XPScriptCompiler.slnx'
   push:
-    branches: ['todo-web-runtime-kestrel', 'todo-web-runtime-observability']
+    branches: ['todo-web-runtime-kestrel', 'todo-web-runtime-observability', 'todo-ui-form-core-*']
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Kestrel/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'src/XPScript.Cli/**'
       - 'tests/WebKestrelSmoke/**'
+      - 'tests/WebUIFormKestrelSmoke/**'
       - '.github/workflows/web-kestrel.yml'
       - 'XPScriptCompiler.slnx'
   workflow_dispatch:
@@ -45,3 +53,6 @@ jobs:
 
       - name: Run Kestrel loopback integration
         run: dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
+
+      - name: Run UIForm Kestrel GET/POST JSON binding regression
+        run: dotnet run --project ./tests/WebUIFormKestrelSmoke/WebUIFormKestrelSmoke.csproj -c Release
