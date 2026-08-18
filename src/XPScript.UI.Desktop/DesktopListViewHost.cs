@@ -23,6 +23,15 @@ public sealed record DesktopListRequest(
     IReadOnlyList<DesktopListRow> Rows);
 public sealed record DesktopListResult(string Result, int SelectedIndex);
 
+internal sealed record DesktopListLiveColumn(string Name, string Label, int Width);
+internal sealed record DesktopListLiveRow(int Index, string? Href, IReadOnlyList<string> Values);
+internal sealed record DesktopListLiveState(
+    int SelectedIndex,
+    bool Sortable,
+    bool FilterEnabled,
+    IReadOnlyList<DesktopListLiveColumn> Columns,
+    IReadOnlyList<DesktopListLiveRow> Rows);
+
 public static class DesktopListViewHost
 {
     private static readonly object SyncRoot = new();
@@ -67,71 +76,75 @@ public static class DesktopListViewHost
     private static DesktopListResult ShowDialogCore(DesktopListRequest request, Func<string, string, string>? eventCallback)
     {
         var root = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        var columns = request.Columns.ToList();
         var workingRows = request.Rows.ToList();
+        var sortable = request.Sortable;
+        var filterEnabled = request.FilterEnabled;
+        var selectedIndexState = request.SelectedIndex;
         var sortAscending = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         var listItems = new ObservableCollection<ListBoxItem>();
         var list = new ListBox { MinHeight = 240, ItemsSource = listItems };
-        TextBox? filter = null;
+        var filter = new TextBox { Watermark = "Filter visible columns", IsVisible = filterEnabled };
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var rebuilding = false;
 
-        if (request.FilterEnabled)
-        {
-            filter = new TextBox { Watermark = "Filter visible columns" };
-            root.Children.Add(filter);
-        }
-
-        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        foreach (var column in request.Columns)
-        {
-            if (request.Sortable)
-            {
-                var sort = new Button
-                {
-                    Content = column.Label,
-                    Width = NormalizeWidth(column.Width),
-                    Tag = column.Name,
-                    HorizontalContentAlignment = HorizontalAlignment.Left
-                };
-                sort.Click += (_, _) =>
-                {
-                    var name = Convert.ToString(sort.Tag, CultureInfo.InvariantCulture) ?? string.Empty;
-                    var ascending = !sortAscending.TryGetValue(name, out var previous) || !previous;
-                    sortAscending.Clear();
-                    sortAscending[name] = ascending;
-                    workingRows.Sort((left, right) => CompareValues(GetValue(left, name), GetValue(right, name), ascending));
-                    RebuildRows();
-                };
-                header.Children.Add(sort);
-            }
-            else
-            {
-                header.Children.Add(new TextBlock
-                {
-                    Text = column.Label,
-                    Width = NormalizeWidth(column.Width)
-                });
-            }
-        }
+        root.Children.Add(filter);
         root.Children.Add(header);
         root.Children.Add(list);
 
+        void RebuildHeader()
+        {
+            header.Children.Clear();
+            foreach (var column in columns)
+            {
+                if (sortable)
+                {
+                    var sort = new Button
+                    {
+                        Content = column.Label,
+                        Width = NormalizeWidth(column.Width),
+                        Tag = column.Name,
+                        HorizontalContentAlignment = HorizontalAlignment.Left
+                    };
+                    sort.Click += (_, _) =>
+                    {
+                        var name = Convert.ToString(sort.Tag, CultureInfo.InvariantCulture) ?? string.Empty;
+                        var ascending = !sortAscending.TryGetValue(name, out var previous) || !previous;
+                        sortAscending.Clear();
+                        sortAscending[name] = ascending;
+                        workingRows.Sort((left, right) => CompareValues(GetValue(left, name), GetValue(right, name), ascending));
+                        RebuildRows();
+                    };
+                    header.Children.Add(sort);
+                }
+                else
+                {
+                    header.Children.Add(new TextBlock
+                    {
+                        Text = column.Label,
+                        Width = NormalizeWidth(column.Width)
+                    });
+                }
+            }
+        }
+
         void RebuildRows()
         {
-            var selected = list.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag is int selectedIndex
-                ? selectedIndex
-                : request.SelectedIndex;
-            var query = filter?.Text?.Trim() ?? string.Empty;
+            var selected = list.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag is int currentSelected
+                ? currentSelected
+                : selectedIndexState;
+            var query = filter.Text?.Trim() ?? string.Empty;
             rebuilding = true;
             try
             {
                 listItems.Clear();
                 foreach (var row in workingRows)
                 {
-                    if (query.Length > 0 && !request.Columns.Any(column => GetValue(row, column.Name).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+                    if (query.Length > 0 && !columns.Any(column => GetValue(row, column.Name).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
                         continue;
 
                     var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    foreach (var column in request.Columns)
+                    foreach (var column in columns)
                     {
                         rowPanel.Children.Add(new TextBlock
                         {
@@ -152,8 +165,30 @@ public static class DesktopListViewHost
             }
         }
 
-        if (filter is not null)
-            filter.TextChanged += (_, _) => RebuildRows();
+        void ApplyLiveState(string stateJson)
+        {
+            if (string.IsNullOrWhiteSpace(stateJson)) return;
+            var state = JsonSerializer.Deserialize<DesktopListLiveState>(stateJson, JsonOptions);
+            if (state is null) return;
+
+            columns = state.Columns.Select(column => new DesktopListColumn(column.Name, column.Label, column.Width)).ToList();
+            workingRows = state.Rows.Select(row =>
+            {
+                var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < columns.Count; i++)
+                    values[columns[i].Name] = i < row.Values.Count ? row.Values[i] ?? string.Empty : string.Empty;
+                return new DesktopListRow(row.Index, values);
+            }).ToList();
+            selectedIndexState = state.SelectedIndex;
+            sortable = state.Sortable;
+            filterEnabled = state.FilterEnabled;
+            filter.IsVisible = filterEnabled;
+            sortAscending.Clear();
+            RebuildHeader();
+            RebuildRows();
+        }
+
+        filter.TextChanged += (_, _) => RebuildRows();
 
         var actions = new StackPanel
         {
@@ -170,16 +205,17 @@ public static class DesktopListViewHost
         list.SelectionChanged += (_, _) =>
         {
             ok.IsEnabled = list.SelectedItem is not null;
-            if (rebuilding || !request.HasOnSelect || eventCallback is null) return;
+            if (rebuilding) return;
             var selectedIndex = SelectedIndex(list);
-            if (selectedIndex >= 0)
-                eventCallback("select", selectedIndex.ToString(CultureInfo.InvariantCulture));
+            selectedIndexState = selectedIndex;
+            if (!request.HasOnSelect || eventCallback is null || selectedIndex < 0) return;
+            ApplyLiveState(eventCallback("select", selectedIndex.ToString(CultureInfo.InvariantCulture)));
         };
 
         var window = new Window
         {
             Title = request.Title,
-            Width = Math.Clamp(EstimateWidth(request.Columns), 480, 1600),
+            Width = Math.Clamp(EstimateWidth(columns), 480, 1600),
             Height = 560,
             CanResize = true,
             Content = root
@@ -197,8 +233,12 @@ public static class DesktopListViewHost
         {
             var selectedIndex = SelectedIndex(list);
             if (selectedIndex < 0) return;
+            selectedIndexState = selectedIndex;
             if (request.HasOnDoubleClick && eventCallback is not null)
-                eventCallback("doubleclick", selectedIndex.ToString(CultureInfo.InvariantCulture));
+            {
+                ApplyLiveState(eventCallback("doubleclick", selectedIndex.ToString(CultureInfo.InvariantCulture)));
+                selectedIndex = selectedIndexState;
+            }
             result = new DesktopListResult(request.HasRowAction ? "Open" : "OK", selectedIndex);
             window.Close();
         };
@@ -209,6 +249,7 @@ public static class DesktopListViewHost
         };
         window.Closed += (_, _) => loop.Continue = false;
 
+        RebuildHeader();
         RebuildRows();
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
