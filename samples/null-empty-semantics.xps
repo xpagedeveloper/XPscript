@@ -11,6 +11,17 @@ Sub Main()
     Dim nullIntegerDivision As Variant
     Dim nullModulo As Variant
     Dim nullPower As Variant
+    Dim nullUnaryPlus As Variant
+    Dim nullUnaryMinus As Variant
+    Dim nullEqual As Variant
+    Dim nullNotEqual As Variant
+    Dim nullLess As Variant
+    Dim nullLessEqual As Variant
+    Dim nullGreater As Variant
+    Dim nullGreaterEqual As Variant
+    Dim nullConcatLeft As Variant
+    Dim nullConcatRight As Variant
+    Dim nullConcatBoth As Variant
     Dim emptyDifference As Variant
     Dim emptyProduct As Variant
     Dim emptyDivision As Variant
@@ -34,6 +45,17 @@ Sub Main()
     nullIntegerDivision = nullValue \ 2
     nullModulo = nullValue Mod 2
     nullPower = nullValue ^ 2
+    nullUnaryPlus = +nullValue
+    nullUnaryMinus = -nullValue
+    nullEqual = nullValue = 1
+    nullNotEqual = nullValue <> 1
+    nullLess = nullValue < 1
+    nullLessEqual = nullValue <= 1
+    nullGreater = nullValue > 1
+    nullGreaterEqual = nullValue >= 1
+    nullConcatLeft = nullValue & "A"
+    nullConcatRight = "A" & nullValue
+    nullConcatBoth = nullValue & nullValue
     emptyDifference = emptyValue - 1
     emptyProduct = emptyValue * 5
     emptyDivision = emptyValue / 2
@@ -65,6 +87,17 @@ Sub Main()
     Print "NULL_INTEGER_DIVIDE_PROPAGATES=" & CStr(IsNull(nullIntegerDivision))
     Print "NULL_MOD_PROPAGATES=" & CStr(IsNull(nullModulo))
     Print "NULL_POWER_PROPAGATES=" & CStr(IsNull(nullPower))
+    Print "NULL_UNARY_PLUS_PROPAGATES=" & CStr(IsNull(nullUnaryPlus))
+    Print "NULL_UNARY_MINUS_PROPAGATES=" & CStr(IsNull(nullUnaryMinus))
+    Print "NULL_EQUAL_PROPAGATES=" & CStr(IsNull(nullEqual))
+    Print "NULL_NOT_EQUAL_PROPAGATES=" & CStr(IsNull(nullNotEqual))
+    Print "NULL_LESS_PROPAGATES=" & CStr(IsNull(nullLess))
+    Print "NULL_LESS_EQUAL_PROPAGATES=" & CStr(IsNull(nullLessEqual))
+    Print "NULL_GREATER_PROPAGATES=" & CStr(IsNull(nullGreater))
+    Print "NULL_GREATER_EQUAL_PROPAGATES=" & CStr(IsNull(nullGreaterEqual))
+    Print "NULL_CONCAT_LEFT=" & CStr(nullConcatLeft)
+    Print "NULL_CONCAT_RIGHT=" & CStr(nullConcatRight)
+    Print "NULL_CONCAT_BOTH_PROPAGATES=" & CStr(IsNull(nullConcatBoth))
     Print "EMPTY_SUBTRACT_ZERO=" & CStr(emptyDifference)
     Print "EMPTY_MULTIPLY_ZERO=" & CStr(emptyProduct)
     Print "EMPTY_DIVIDE_ZERO=" & CStr(emptyDivision)
