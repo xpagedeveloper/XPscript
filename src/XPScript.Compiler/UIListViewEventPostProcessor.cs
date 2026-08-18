@@ -120,13 +120,41 @@ internal sealed class UIListViewEventPostProcessor
 
         generated = ReplaceRequired(generated,
             """
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};body.addEventListener('click',e=>go(e.target.closest('tr[data-href]')));body.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('tr[data-href]');if(r){e.preventDefault();go(r);}}});})();</script>");
+""",
+            """
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};");
+        if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0)
+            sb.Append("const postEvent=async(k,r)=>{const p=new URLSearchParams();p.set('__xps_list_event',k);p.set('__xps_list_index',r?.dataset.rowIndex||'');const x=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},credentials:'same-origin',body:p.toString()});if(!x.ok)throw new Error('UIListView event failed');};");
+        else
+            sb.Append("const postEvent=async()=>{};");
+
+        if (_onDoubleClickHandler.Length > 0)
+        {
+            sb.Append("body.addEventListener('click',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;");
+            if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+            sb.Append("});body.addEventListener('dblclick',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;await postEvent('doubleclick',r);go(r);});");
+        }
+        else
+        {
+            sb.Append("body.addEventListener('click',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;");
+            if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+            sb.Append("go(r);});");
+        }
+        sb.Append("body.addEventListener('keydown',async e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('tr[data-row-index]');if(r){e.preventDefault();");
+        if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+        sb.Append("go(r);}}});})();</script>");
+""");
+
+        generated = ReplaceRequired(generated,
+            """
     private static string NormalizeTarget(object? value)
 """,
             """
     private static string NormalizeHandlerName(object? value)
     {
         var name = XPScriptRuntime.CStr(value).Trim();
-        if (name.Length is < 1 or > 128 || !char.IsLetter(name[0]) && name[0] != '_' || name.Any(ch => !(char.IsLetterOrDigit(ch) || ch == '_')))
+        if (name.Length is < 1 or > 128 || (!char.IsLetter(name[0]) && name[0] != '_') || name.Any(ch => !(char.IsLetterOrDigit(ch) || ch == '_')))
             throw new XPScriptRuntimeException(5, "UIListView handler name is invalid.");
         return name;
     }
