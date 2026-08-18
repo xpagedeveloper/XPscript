@@ -54,6 +54,9 @@ try
         using var response = await client.SendAsync(message);
         if ((int)response.StatusCode != 201) throw new Exception($"Expected 201, got {(int)response.StatusCode}.");
         if (response.Headers.Contains("Server")) throw new Exception("Kestrel exposed a Server response header.");
+        AssertHeader(response, "X-Content-Type-Options", "nosniff");
+        AssertHeader(response, "X-Frame-Options", "DENY");
+        AssertHeader(response, "Referrer-Policy", "no-referrer");
         if (!response.Headers.TryGetValues("X-Xps-Test", out var testValues) || testValues.Single() != "ok")
             throw new Exception("Response header was not transferred.");
         firstRequestId = ReadRequestId(response);
@@ -72,6 +75,7 @@ try
     using (var response = await client.SendAsync(head))
     {
         if ((int)response.StatusCode != 201) throw new Exception($"HEAD expected 201, got {(int)response.StatusCode}.");
+        AssertHeader(response, "X-Content-Type-Options", "nosniff");
         if (!response.Headers.TryGetValues("X-Xps-Test", out var testValues) || testValues.Single() != "ok")
             throw new Exception("HEAD response header was not transferred.");
         _ = ReadRequestId(response);
@@ -84,6 +88,7 @@ try
         invalidHost.Headers.Host = "evil.example";
         using var response = await client.SendAsync(invalidHost);
         if ((int)response.StatusCode != 400) throw new Exception("Invalid Host was not rejected.");
+        AssertHeader(response, "X-Content-Type-Options", "nosniff");
     }
 
     using (var invalidHeadHost = new HttpRequestMessage(HttpMethod.Head, "/"))
@@ -106,6 +111,7 @@ try
     using (var health = await client.GetAsync("/_xps/health"))
     {
         if ((int)health.StatusCode != 200) throw new Exception($"Health endpoint expected 200, got {(int)health.StatusCode}.");
+        AssertHeader(health, "X-Content-Type-Options", "nosniff");
         var body = await health.Content.ReadAsStringAsync();
         if (!body.Contains("\"Status\":0", StringComparison.Ordinal) && !body.Contains("\"Status\":\"Healthy\"", StringComparison.Ordinal))
             throw new Exception("Health endpoint did not report a healthy state.");
@@ -161,6 +167,12 @@ finally
     if (!stopped) await app.StopAsync();
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
+}
+
+static void AssertHeader(HttpResponseMessage response, string name, string expected)
+{
+    if (!response.Headers.TryGetValues(name, out var values) || values.Single() != expected)
+        throw new Exception($"Expected response header {name}: {expected}.");
 }
 
 static string ReadRequestId(HttpResponseMessage response)

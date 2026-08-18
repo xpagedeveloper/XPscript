@@ -88,6 +88,17 @@ public static class XpsKestrelAdapter
             app.UseForwardedHeaders(forwarded);
         }
 
+        if (options.EnableDefaultSecurityHeaders)
+        {
+            app.Use(async (http, next) =>
+            {
+                foreach (var pair in options.DefaultSecurityHeaders)
+                    if (!http.Response.Headers.ContainsKey(pair.Key))
+                        http.Response.Headers[pair.Key] = pair.Value;
+                await next();
+            });
+        }
+
         app.Use(async (http, next) =>
         {
             if (!HostAllowed(http.Request.Host.Host, options.AllowedHosts))

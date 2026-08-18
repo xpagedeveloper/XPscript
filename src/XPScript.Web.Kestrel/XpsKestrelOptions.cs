@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using XPScript.Web.Runtime;
 
 namespace XPScript.Web.Kestrel;
 
@@ -22,6 +23,14 @@ public sealed class XpsKestrelOptions
     public TimeSpan MinResponseDataRateGracePeriod { get; init; } = TimeSpan.FromSeconds(5);
     public IReadOnlyList<string> AllowedHosts { get; init; } = ["localhost", "127.0.0.1", "[::1]"];
     public IReadOnlyList<IPAddress> KnownProxies { get; init; } = [];
+    public bool EnableDefaultSecurityHeaders { get; init; } = true;
+    public IReadOnlyDictionary<string, string> DefaultSecurityHeaders { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Content-Type-Options"] = "nosniff",
+            ["X-Frame-Options"] = "DENY",
+            ["Referrer-Policy"] = "no-referrer"
+        };
     public bool EnableHealthEndpoint { get; init; }
     public bool EnableMetricsEndpoint { get; init; }
     public bool OperationalEndpointsLocalOnly { get; init; } = true;
@@ -91,6 +100,22 @@ public sealed class XpsKestrelOptions
         {
             if (string.IsNullOrWhiteSpace(host) || host.Contains('\r') || host.Contains('\n'))
                 throw new ArgumentException("Allowed host contains an invalid value.", nameof(AllowedHosts));
+        }
+
+        if (DefaultSecurityHeaders.Count > 64)
+            throw new ArgumentOutOfRangeException(nameof(DefaultSecurityHeaders), "At most 64 default security headers may be configured.");
+        foreach (var pair in DefaultSecurityHeaders)
+        {
+            XpsWebResponse.ValidateHeaderName(pair.Key);
+            XpsWebResponse.ValidateHeaderValue(pair.Value);
+            if (pair.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Upgrade", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("Server", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"Header '{pair.Key}' cannot be configured as a default security header.", nameof(DefaultSecurityHeaders));
         }
 
         ValidateOperationalPath(HealthPath, nameof(HealthPath));
