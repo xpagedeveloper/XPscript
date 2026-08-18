@@ -1,0 +1,79 @@
+name: Web CLI No Microsoft Logs
+
+on:
+  push:
+    paths:
+      - '.github/workflows/web-cli-no-microsoft-logs.yml'
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Web.Kestrel/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/web-cli-no-microsoft-logs.yml'
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Web.Kestrel/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore CLI
+        run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+      - name: Build CLI
+        run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+      - name: Verify framework logs are suppressed
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'xps-no-microsoft-logs'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.ContentType = "text/plain"
+              Response.Write("OK")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $root 'index.xps')
+
+          $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+          $listener.Start()
+          $port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+          $listener.Stop()
+
+          $stdout = Join-Path $env:RUNNER_TEMP 'xps-web-stdout.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'xps-web-stderr.txt'
+          $dll = Resolve-Path './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
+          $process = Start-Process dotnet -ArgumentList @($dll, 'web', '--root', $root, '--port', $port) -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            do {
+              Start-Sleep -Milliseconds 200
+              if ($process.HasExited) { throw "xpscript web exited early: $(Get-Content $stderr -Raw)" }
+              try {
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { break }
+              } catch { }
+            } while ([DateTime]::UtcNow -lt $deadline)
+            if ([DateTime]::UtcNow -ge $deadline) { throw 'xpscript web did not become ready.' }
+          }
+          finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+            $process.WaitForExit()
+          }
+
+          $combined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
+          if ($combined -match '(?im)^\s*(trace|debug|info|warn|fail|critical):\s+Microsoft\.' -or $combined -match 'Microsoft\.AspNetCore' -or $combined -match 'Microsoft\.Hosting') {
+            throw "Microsoft framework logging leaked to the CLI console.`n$combined"
+          }
