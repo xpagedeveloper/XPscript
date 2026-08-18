@@ -1,0 +1,39 @@
+name: Web Root Paths
+
+on:
+  push:
+    paths:
+      - '.github/workflows/web-root-paths.yml'
+      - 'src/XPScript.Cli/**'
+      - 'tests/WebRootPathSmoke/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/web-root-paths.yml'
+      - 'src/XPScript.Cli/XpsHostConfig.cs'
+      - 'tests/WebRootPathSmoke/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore CLI and regression project
+        run: |
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          dotnet restore ./tests/WebRootPathSmoke/WebRootPathSmoke.csproj
+      - name: Build CLI
+        run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+      - name: Run web root path regressions
+        run: dotnet run --project ./tests/WebRootPathSmoke/WebRootPathSmoke.csproj -c Release --no-restore
