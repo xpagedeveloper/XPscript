@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../XPScript.Compiler/XPScript.Compiler.csproj" />
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
     <ProjectReference Include="../XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
     <ProjectReference Include="../XPScript.Web.Kestrel/XPScript.Web.Kestrel.csproj" />
