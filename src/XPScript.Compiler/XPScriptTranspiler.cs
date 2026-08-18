@@ -96,7 +96,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
-        generated += "\n\n" + XPScriptEvaluateRuntimeSource.Code + "\n";
+        generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
@@ -128,6 +128,12 @@ public sealed class XPScriptTranspiler
         foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
         return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
     }
+
+    private static string NormalizeEvaluateRuntime(string code) => code
+        .Replace("\"isobject\" when args.Count == 1 => XPScriptRuntime.IsObject(Arg(0)),",
+            "\"isobject\" when args.Count == 1 => XPScriptNullRuntime.IsObject(Arg(0)),", StringComparison.Ordinal)
+        .Replace("\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptRuntime.IsScalar(Arg(0)),",
+            "\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptNullRuntime.IsScalar(Arg(0)),", StringComparison.Ordinal);
 
     public string Transpile(string source) => Transpile(source, "input.xps");
 
