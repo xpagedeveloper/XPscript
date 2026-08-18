@@ -18,24 +18,18 @@ internal static class CompilerBuildEnvironment
 
         ConfigureDesktopUiDependencies(root);
 
-        // Resolve the SDK host to an absolute path so the generated build cannot be hijacked
-        // by a relative/current-directory PATH entry such as a project-local dotnet.exe.
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
-        // Redirect writable build/process state into this invocation's GUID workspace.
         startInfo.Environment["TEMP"] = processTemp;
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
         startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
 
-        // Avoid first-run state and telemetry side effects in a compiler-generated build.
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
 
-        // Generated projects are fully invocation-local. Do not let externally supplied
-        // MSBuild extensions inject targets into them through these common environment hooks.
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
         startInfo.Environment.Remove("MSBuildSDKsPath");
@@ -49,11 +43,13 @@ internal static class CompilerBuildEnvironment
         if (!File.Exists(generatedSource)) return;
 
         var source = File.ReadAllText(generatedSource);
-        if (!source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal)) return;
+        var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
+        var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        if (!usesUiForm && !usesDesktopDialog) return;
 
         var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
         if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly))
-            throw new CompilerException("Desktop UI runtime assembly is unavailable for UIForm compilation.");
+            throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
 
         var escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly))
             ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
