@@ -108,6 +108,10 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddTimeField(object? name, object? label) => AddField(name, label, "TimeField");
     public XPScriptUIField AddDateTimeField(object? name) => AddField(name, name, "DateTimeField");
     public XPScriptUIField AddDateTimeField(object? name, object? label) => AddField(name, label, "DateTimeField");
+    public XPScriptUIField AddMonthField(object? name) => AddField(name, name, "MonthField");
+    public XPScriptUIField AddMonthField(object? name, object? label) => AddField(name, label, "MonthField");
+    public XPScriptUIField AddColorField(object? name) => AddField(name, name, "ColorField");
+    public XPScriptUIField AddColorField(object? name, object? label) => AddField(name, label, "ColorField");
     public XPScriptUIField AddEmailField(object? name) => AddField(name, name, "EmailField");
     public XPScriptUIField AddEmailField(object? name, object? label) => AddField(name, label, "EmailField");
     public XPScriptUIField AddUrlField(object? name) => AddField(name, name, "UrlField");
@@ -281,6 +285,18 @@ internal sealed class XPScriptUIForm
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid local date/time in yyyy-MM-ddTHH:mm or yyyy-MM-ddTHH:mm:ss format.");
                 _data.Set(field.Name, submitted);
                 return;
+            case "MonthField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!DateTime.TryParseExact(submitted, "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid month in yyyy-MM format.");
+                _data.Set(field.Name, submitted);
+                return;
+            case "ColorField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!System.Text.RegularExpressions.Regex.IsMatch(submitted, "^#[0-9A-Fa-f]{6}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a color in #RRGGBB format.");
+                _data.Set(field.Name, submitted.ToLowerInvariant());
+                return;
             case "EmailField":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 try
@@ -350,6 +366,8 @@ internal sealed class XPScriptUIForm
                 case "DateField": html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "TimeField": html.Append("<input type=\"time\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "DateTimeField": html.Append("<input type=\"datetime-local\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "MonthField": html.Append("<input type=\"month\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "ColorField": html.Append("<input type=\"color\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "EmailField": html.Append("<input type=\"email\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "UrlField": html.Append("<input type=\"url\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
