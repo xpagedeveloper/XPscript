@@ -7,6 +7,12 @@ public enum XpsWebHostingMode
     Cgi
 }
 
+public enum XpsWebEnvironment
+{
+    Production,
+    Development
+}
+
 public sealed record XpsServerInfo(
     string SiteId,
     string RootPath,
@@ -14,7 +20,8 @@ public sealed record XpsServerInfo(
     DateTimeOffset StartTimeUtc,
     string RuntimeVersion,
     string? Address = null,
-    int? Port = null);
+    int? Port = null,
+    XpsWebEnvironment Environment = XpsWebEnvironment.Production);
 
 public interface IXpsRequestState
 {
