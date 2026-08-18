@@ -53,23 +53,38 @@ public static class DesktopFormHost
     {
         var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        var fieldsGrid = CreateFieldsGrid(request.GridColumns);
+        panel.Children.Add(fieldsGrid);
         var validationText = new TextBlock
         {
             IsVisible = false,
             TextWrapping = TextWrapping.Wrap
         };
 
+        var automaticRow = 0;
         foreach (var field in request.Fields)
         {
             if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            var fieldPanel = new StackPanel { Spacing = 4, Margin = new Thickness(4) };
             if (!string.IsNullOrWhiteSpace(field.Label))
-                panel.Children.Add(new TextBlock { Text = field.Label });
+                fieldPanel.Children.Add(new TextBlock { Text = field.Label });
 
             var editor = CreateEditor(field);
             editors[field.Name] = editor;
-            panel.Children.Add(editor);
+            fieldPanel.Children.Add(editor);
+
+            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
+            var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
+            var columnSpan = field.LayoutColumn > 0 ? Math.Max(1, field.ColumnSpan) : Math.Max(1, request.GridColumns);
+            var rowSpan = Math.Max(1, field.RowSpan);
+            EnsureRows(fieldsGrid, row + rowSpan);
+            Grid.SetRow(fieldPanel, row);
+            Grid.SetColumn(fieldPanel, column);
+            Grid.SetColumnSpan(fieldPanel, columnSpan);
+            Grid.SetRowSpan(fieldPanel, rowSpan);
+            fieldsGrid.Children.Add(fieldPanel);
         }
 
         panel.Children.Add(validationText);
@@ -145,6 +160,21 @@ public static class DesktopFormHost
         Dispatcher.UIThread.PushFrame(loop);
 
         return result ?? EmptyResult("Cancel");
+    }
+
+    private static Grid CreateFieldsGrid(int requestedColumns)
+    {
+        var grid = new Grid();
+        var columns = Math.Clamp(requestedColumns, 1, 64);
+        for (var i = 0; i < columns; i++)
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        return grid;
+    }
+
+    private static void EnsureRows(Grid grid, int requiredRows)
+    {
+        while (grid.RowDefinitions.Count < requiredRows)
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
     }
 
     private static Control CreateEditor(DesktopFormField field)
