@@ -60,7 +60,7 @@ try
     var metrics = await response.Content.ReadAsStringAsync();
 
     AssertMetric(metrics, "xpscript_web_cache_entries", 1);
-    AssertMetric(metrics, "xpscript_web_cache_hits_total", 1);
+    AssertMetric(metrics, "xpscript_web_cache_hits_total", 2);
     AssertMetric(metrics, "xpscript_web_cache_misses_total", 2);
     AssertMetric(metrics, "xpscript_web_compilations_total", 2);
     AssertMetric(metrics, "xpscript_web_compilation_failures_total", 0);
