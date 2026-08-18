@@ -1,0 +1,23 @@
+' XPScript UIForm EmailField, UrlField and TimeField regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim form As New UIForm("Contact")
+    Dim data As New JsonObject
+
+    Call data.Set("email", "test@example.com")
+    Call data.Set("website", "https://example.com")
+    Call data.Set("time", "18:30")
+    Call form.BindData(data)
+
+    Call form.AddEmailField("email", "Email")
+    Call form.AddUrlField("website", "Website")
+    Call form.AddTimeField("time", "Time")
+    Call form.SetLength("email", 3, 320)
+    Call form.SetLength("website", 8, 2048)
+
+    Print "EMAIL=" & form.GetFieldValueString("email")
+    Print "WEBSITE=" & form.GetFieldValueString("website")
+    Print "TIME=" & form.GetFieldValueString("time")
+    Print "FIELD_COUNT=" & CStr(form.FieldCount)
+End Sub

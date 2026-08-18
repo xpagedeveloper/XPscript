@@ -1,0 +1,21 @@
+' XPScript UIForm RadioGroup and HiddenField regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim form As New UIForm("Radio and Hidden")
+    Dim data As New JsonObject
+
+    Call data.Set("mode", "safe")
+    Call data.Set("token", "abc123")
+    Call form.BindData(data)
+
+    Call form.AddRadioGroup("mode", "Mode")
+    Call form.AddOption("mode", "safe")
+    Call form.AddOption("mode", "fast")
+    Call form.AddHiddenField("token")
+    Call form.SetRequired("mode", True)
+
+    Print "MODE=" & form.GetFieldValueString("mode")
+    Print "TOKEN=" & form.GetFieldValueString("token")
+    Print "FIELD_COUNT=" & CStr(form.FieldCount)
+End Sub
