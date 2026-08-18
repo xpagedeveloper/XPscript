@@ -79,7 +79,9 @@ jobs:
             'INNER_NULL_TYPE=NULL',
             'INNER_NULL_DT=1',
             'INNER_NULL_ISEMPTY=False',
-            'INNER_NULL_ISNULL=True'
+            'INNER_NULL_ISNULL=True',
+            'INNER_NULL_ISOBJECT=False',
+            'INNER_NULL_ISSCALAR=True'
           )) {
             if ($output -notcontains $value) { throw "Evaluate Null/Empty output missing: $value" }
           }
