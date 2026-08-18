@@ -6,6 +6,7 @@ internal static class UIExtensionDesktopRuntimeSource
 internal static class XPScriptUIDesktopAdapter
 {
     private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private const string NavigationFileEnvironmentVariable = "XPSCRIPT_NAVIGATION_FILE";
     private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
 
     public static bool IsAvailable =>
@@ -75,6 +76,28 @@ internal static class XPScriptUIDesktopAdapter
             var parameterValue = navigationValues.TryGetProperty("__xps_navigation_parameter_value", out var valueElement)
                 ? valueElement.GetString() ?? string.Empty
                 : string.Empty;
+
+            var navigationFile = Environment.GetEnvironmentVariable(NavigationFileEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(navigationFile))
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    version = 1,
+                    target,
+                    parameterName,
+                    parameterValue
+                });
+                try
+                {
+                    File.WriteAllText(navigationFile, payload, new System.Text.UTF8Encoding(false));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+                {
+                    throw new XPScriptRuntimeException(5, "Unable to write desktop navigation request: " + ex.Message);
+                }
+                return "Navigate";
+            }
+
             return "Navigate|" + target + "|" + parameterName + "|" + parameterValue;
         }
 
