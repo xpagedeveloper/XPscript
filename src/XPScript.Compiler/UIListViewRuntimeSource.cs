@@ -28,6 +28,7 @@ internal sealed class XPScriptUIListColumn
 
 internal sealed class XPScriptUIListView
 {
+    private const string DesktopHostTypeName = "XPScript.UI.Desktop.DesktopListViewHost, XPScript.UI.Desktop";
     private string _title;
     private XPScriptJsonArray _data = XPScriptNativeJson.CreateArray();
     private readonly List<XPScriptUIListColumn> _columns = [];
@@ -137,6 +138,56 @@ internal sealed class XPScriptUIListView
     {
         if (_selectedIndex < 0 || _keyField.Length == 0) return string.Empty;
         return GetRowValueString(_selectedIndex, _keyField);
+    }
+
+    public string ShowDialog()
+    {
+        var hostType = Type.GetType(DesktopHostTypeName, throwOnError: false, ignoreCase: false)
+            ?? throw new XPScriptRuntimeException(5, "UIListView.ShowDialog requires the XPScript desktop UI runtime.");
+        var method = hostType.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
+
+        var visibleColumns = _columns.Where(column => column.Visible).ToArray();
+        var request = new
+        {
+            title = _title,
+            selectedIndex = _selectedIndex,
+            columns = visibleColumns.Select(column => new
+            {
+                name = column.Name,
+                label = column.Label,
+                width = column.Width
+            }).ToArray(),
+            rows = Enumerable.Range(0, _data.Count).Select(index => new
+            {
+                index,
+                values = visibleColumns.ToDictionary(
+                    column => column.Name,
+                    column => GetRowValueString(index, column.Name),
+                    StringComparer.OrdinalIgnoreCase)
+            }).ToArray()
+        };
+
+        string resultJson;
+        try
+        {
+            resultJson = Convert.ToString(method.Invoke(null, [System.Text.Json.JsonSerializer.Serialize(request)]), System.Globalization.CultureInfo.InvariantCulture)
+                ?? string.Empty;
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XPScriptRuntimeException(5, "Desktop UIListView failed: " + ex.InnerException.Message);
+        }
+
+        using var document = System.Text.Json.JsonDocument.Parse(resultJson);
+        var root = document.RootElement;
+        var result = root.TryGetProperty("result", out var resultElement)
+            ? resultElement.GetString() ?? "Cancel"
+            : "Cancel";
+        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
+        if (root.TryGetProperty("selectedIndex", out var selectedElement) && selectedElement.TryGetInt32(out var selected))
+            _selectedIndex = selected >= 0 && selected < _data.Count ? selected : -1;
+        return "OK";
     }
 
     private XPScriptUIListColumn FindColumn(object? name)
