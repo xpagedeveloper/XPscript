@@ -1,0 +1,22 @@
+Sub Initialize
+    Dim nullValue As Variant
+    Dim emptyValue As Variant
+    Dim result As Variant
+
+    nullValue = Null
+
+    result = nullValue & "right"
+    Print "NULL_LEFT=" & CStr(result)
+
+    result = "left" & nullValue
+    Print "NULL_RIGHT=" & CStr(result)
+
+    result = nullValue & nullValue
+    Print "NULL_BOTH=" & CStr(IsNull(result))
+
+    result = emptyValue & "right"
+    Print "EMPTY_LEFT=" & CStr(result)
+
+    result = "left" & emptyValue
+    Print "EMPTY_RIGHT=" & CStr(result)
+End Sub
