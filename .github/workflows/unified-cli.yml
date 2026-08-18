@@ -5,7 +5,8 @@ on:
     paths:
       - '.github/workflows/unified-cli.yml'
       - 'src/XPScript.Cli/**'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
       - 'samples/unified-cli-smoke.xps'
       - 'XPScriptCompiler.slnx'
   pull_request:
@@ -13,7 +14,8 @@ on:
     paths:
       - '.github/workflows/unified-cli.yml'
       - 'src/XPScript.Cli/**'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/Program.cs'
+      - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
       - 'samples/unified-cli-smoke.xps'
       - 'XPScriptCompiler.slnx'
 
