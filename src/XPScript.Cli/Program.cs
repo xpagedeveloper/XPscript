@@ -1,6 +1,7 @@
 using System.Net;
 using System.Reflection;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.FastCgi;
 using XPScript.Web.Kestrel;
@@ -14,8 +15,13 @@ if (args.Length == 0 || args[0] is "--help" or "-h")
 
 try
 {
+    if (args[0].EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
+        return await XPScriptCompilerCommandLine.CompileAsync(args);
+
     return args[0].ToLowerInvariant() switch
     {
+        "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
+        "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -402,10 +408,15 @@ static int Fail(string message)
 static void WriteHelp()
 {
     Console.WriteLine("""
-XPScript Web Host
+XPScript CLI
 (c) xpagedeveloper.com 2026
 
+One executable is used for compiler, runtime execution and web hosting.
+
 Usage:
+  xpscript compile <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
+  xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
   xpscript web [--config FILE] --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--sessions]
@@ -416,6 +427,14 @@ Usage:
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
 
+Command model:
+  compile  Compile an XPScript source file.
+  run      Compile to an isolated temporary output and execute on the current OS/architecture.
+  web      Run the standalone Kestrel web runtime.
+  fastcgi  Run the FastCGI web runtime.
+
+The same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
+
 Config:
   --config FILE loads JSON host settings from the selected file.
   Without --config, web.cfg is loaded automatically from the directory containing the xpscript executable when that file exists.
@@ -423,35 +442,30 @@ Config:
   Explicit command-line values override matching values from the config file.
 
 Examples:
+  xpscript compile hello.xps
+  xpscript compile hello.xps --runtime linux-x64 -o hello
+  xpscript run hello.xps
+  xpscript run hello.xps -- --runtime passed-to-script
   xpscript web --config ./production.cfg
   xpscript web --root ./site
   xpscript web --root ./site --sessions
-  xpscript web --root ./site --sessions --session-cookie MYSESSION --session-timeout-seconds 3600 --session-same-site Strict
-  xpscript web --root ./site --sessions --session-secure
   xpscript web --root ./site --default-document home.xps
   xpscript web --root ./site --static-files
-  xpscript web --root ./site --static-files --static-max-bytes 8388608
   xpscript web --root ./site --health --metrics
   xpscript web --root ./site --structured-log ./logs/web.jsonl
   xpscript web --root ./site --address 0.0.0.0 --port 8080 --host www.example.com
-  XPS_TLS_PASSWORD=secret xpscript web --root ./site --port 8443 --host www.example.com --https-cert ./server.pfx --https-cert-password-env XPS_TLS_PASSWORD
   xpscript fastcgi --config ./production.cfg
   xpscript fastcgi --root /srv/xpsite --default-document home.xps --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
 
 Security defaults:
+  Compile/run retain the existing restricted Include and source-root controls.
   Kestrel binds to loopback by default.
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
-  The default document is index.xps. --default-document accepts only one .xps filename inside the configured root.
-  Kestrel explicitly uses HTTP/1.1 + HTTP/2, 15 second request-header timeout, 30 second keep-alive and 240 B/s minimum request/response data rates with a 5 second grace period.
-  Direct TLS requires --https-cert. Certificate passwords should be supplied through --https-cert-password-env rather than command-line arguments or config-file secrets.
-  Sessions are disabled by default. --sessions enables the bounded in-memory XPSID session store for this host process.
-  Session configuration flags require --sessions. SameSite=None requires --session-secure.
+  Sessions are disabled by default.
   Health and metrics are disabled by default.
-  Enabled operational endpoints remain loopback-only unless --operational-external is explicitly supplied.
-  Static file serving is disabled by default and must be enabled with --static-files.
+  Static file serving is disabled by default.
   XPScript source files are never served by the static-file middleware.
-  Structured request logs exclude request paths, query strings, headers, cookies and bodies.
   FastCGI binds to 127.0.0.1:9000 by default.
   Unix-domain sockets are supported on Linux and macOS only.
 """);
