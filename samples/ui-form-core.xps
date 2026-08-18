@@ -21,6 +21,12 @@ Sub Main()
     first.Height = 600
     first.Resizable = False
 
+    Print "FIRST_CHANGED_TITLE=" & first.Title
+    Print "FIRST_CHANGED_WIDTH=" & CStr(first.Width)
+    Print "FIRST_CHANGED_HEIGHT=" & CStr(first.Height)
+    Print "FIRST_CHANGED_RESIZABLE=" & CStr(first.Resizable)
+    Print "SECOND_STILL_TITLE=" & second.Title
+
     Call data.Set("existing", "Loaded from JSON")
     Call data.Set("age", 42)
     Call data.Set("enabled", True)
