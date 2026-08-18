@@ -18,6 +18,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
+        WarmDefaultDocument();
     }
 
     public XpsWebDispatcher(
@@ -27,6 +28,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        WarmDefaultDocument();
     }
 
     public async Task HandleAsync(XpsWebContext context)
@@ -71,6 +73,12 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
 
             await unit.InvokeAsync(descriptor.ProcedureName, context).ConfigureAwait(false);
             if (!context.Response.Completed) context.Response.Complete();
+
+            await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
+                context.Response,
+                _resolver,
+                _cache,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -104,6 +112,22 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             .Append(metrics.TotalCompilationDuration.TotalSeconds.ToString("0.######", CultureInfo.InvariantCulture))
             .Append('\n');
         return builder.ToString();
+    }
+
+    private void WarmDefaultDocument()
+    {
+        try
+        {
+            var resolution = _resolver.Resolve("/");
+            if (!resolution.Found || resolution.ScriptPath is null) return;
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            var lease = _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cts.Token).GetAwaiter().GetResult();
+            lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            XpsWebConsoleErrorFallback.Write(ex, Path.Combine(_resolver.Root, "index.xps"), "/");
+        }
     }
 
     private static void AppendGauge(StringBuilder builder, string name, long value, string help)
