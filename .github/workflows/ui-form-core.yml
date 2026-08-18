@@ -6,19 +6,27 @@ on:
     paths:
       - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
       - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
+      - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
-      - 'samples/ui-form-core.xps'
+      - 'samples/ui-form-*.xps'
+      - 'samples/ui-layout-*.xps'
       - '.github/workflows/ui-form-core.yml'
   push:
     branches:
-      - 'todo-ui-form-core-*'
+      - 'todo-ui-form-*'
     paths:
       - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
       - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
+      - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
-      - 'samples/ui-form-core.xps'
+      - 'samples/ui-form-*.xps'
+      - 'samples/ui-layout-*.xps'
       - '.github/workflows/ui-form-core.yml'
 
 permissions:
@@ -67,4 +75,13 @@ jobs:
             'SECOND_STILL_TITLE=Second'
           )) {
             if ($output -notcontains $value) { throw "UIForm output missing: $value" }
+          }
+      - name: Compile UIForm action and layout samples
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          foreach ($sample in @('ui-form-actions', 'ui-layout-reactive')) {
+            $program = "./out/$sample$extension"
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./samples/$sample.xps" -o $program --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "$sample compilation failed." }
           }
