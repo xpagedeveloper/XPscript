@@ -17,6 +17,8 @@ public sealed record DesktopListRequest(
     bool Sortable,
     bool FilterEnabled,
     bool HasRowAction,
+    bool HasOnSelect,
+    bool HasOnDoubleClick,
     IReadOnlyList<DesktopListColumn> Columns,
     IReadOnlyList<DesktopListRow> Rows);
 public sealed record DesktopListResult(string Result, int SelectedIndex);
@@ -30,7 +32,9 @@ public static class DesktopListViewHost
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public static string ShowDialog(string requestJson)
+    public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
+
+    public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
@@ -41,7 +45,7 @@ public static class DesktopListViewHost
             ?? throw new InvalidOperationException("Desktop UIListView request is empty.");
 
         DesktopListResult? result = null;
-        Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request));
+        Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request, eventCallback));
         return JsonSerializer.Serialize(result ?? new DesktopListResult("Cancel", -1), JsonOptions);
     }
 
@@ -60,7 +64,7 @@ public static class DesktopListViewHost
         }
     }
 
-    private static DesktopListResult ShowDialogCore(DesktopListRequest request)
+    private static DesktopListResult ShowDialogCore(DesktopListRequest request, Func<string, string, string>? eventCallback)
     {
         var root = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var workingRows = request.Rows.ToList();
@@ -68,6 +72,7 @@ public static class DesktopListViewHost
         var listItems = new ObservableCollection<ListBoxItem>();
         var list = new ListBox { MinHeight = 240, ItemsSource = listItems };
         TextBox? filter = null;
+        var rebuilding = false;
 
         if (request.FilterEnabled)
         {
@@ -116,26 +121,34 @@ public static class DesktopListViewHost
                 ? selectedIndex
                 : request.SelectedIndex;
             var query = filter?.Text?.Trim() ?? string.Empty;
-            listItems.Clear();
-            foreach (var row in workingRows)
+            rebuilding = true;
+            try
             {
-                if (query.Length > 0 && !request.Columns.Any(column => GetValue(row, column.Name).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
-                    continue;
-
-                var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                foreach (var column in request.Columns)
+                listItems.Clear();
+                foreach (var row in workingRows)
                 {
-                    rowPanel.Children.Add(new TextBlock
-                    {
-                        Text = GetValue(row, column.Name),
-                        Width = NormalizeWidth(column.Width),
-                        TextWrapping = Avalonia.Media.TextWrapping.NoWrap
-                    });
-                }
+                    if (query.Length > 0 && !request.Columns.Any(column => GetValue(row, column.Name).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+                        continue;
 
-                var item = new ListBoxItem { Content = rowPanel, Tag = row.Index };
-                listItems.Add(item);
-                if (row.Index == selected) list.SelectedItem = item;
+                    var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                    foreach (var column in request.Columns)
+                    {
+                        rowPanel.Children.Add(new TextBlock
+                        {
+                            Text = GetValue(row, column.Name),
+                            Width = NormalizeWidth(column.Width),
+                            TextWrapping = Avalonia.Media.TextWrapping.NoWrap
+                        });
+                    }
+
+                    var item = new ListBoxItem { Content = rowPanel, Tag = row.Index };
+                    listItems.Add(item);
+                    if (row.Index == selected) list.SelectedItem = item;
+                }
+            }
+            finally
+            {
+                rebuilding = false;
             }
         }
 
@@ -154,7 +167,14 @@ public static class DesktopListViewHost
         actions.Children.Add(cancel);
         root.Children.Add(actions);
 
-        list.SelectionChanged += (_, _) => ok.IsEnabled = list.SelectedItem is not null;
+        list.SelectionChanged += (_, _) =>
+        {
+            ok.IsEnabled = list.SelectedItem is not null;
+            if (rebuilding || !request.HasOnSelect || eventCallback is null) return;
+            var selectedIndex = SelectedIndex(list);
+            if (selectedIndex >= 0)
+                eventCallback("select", selectedIndex.ToString(CultureInfo.InvariantCulture));
+        };
 
         var window = new Window
         {
@@ -177,6 +197,8 @@ public static class DesktopListViewHost
         {
             var selectedIndex = SelectedIndex(list);
             if (selectedIndex < 0) return;
+            if (request.HasOnDoubleClick && eventCallback is not null)
+                eventCallback("doubleclick", selectedIndex.ToString(CultureInfo.InvariantCulture));
             result = new DesktopListResult(request.HasRowAction ? "Open" : "OK", selectedIndex);
             window.Close();
         };
