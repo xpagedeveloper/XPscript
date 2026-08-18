@@ -47,11 +47,11 @@ internal sealed class UIExtensionDesktopPostProcessor
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
 
         replaced = RewriteDialogCalls(replaced);
-        replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
-        return replaced
+        replaced = replaced
             + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
             + Environment.NewLine + UIDialogRuntimeSource.Code
             + Environment.NewLine;
+        return new UIFormLayoutReactivePostProcessor().Transform(replaced);
     }
 
     private static string RewriteDialogCalls(string source)
