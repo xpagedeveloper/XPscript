@@ -100,10 +100,13 @@ internal sealed class UIExtensionDesktopPostProcessor
                     if (i + function.Length > source.Length ||
                         !source.AsSpan(i, function.Length).Equals(function, StringComparison.OrdinalIgnoreCase))
                         continue;
+
                     var beforeOk = i == 0 || !(char.IsLetterOrDigit(source[i - 1]) || source[i - 1] is '_' or '.');
                     var after = i + function.Length;
                     while (after < source.Length && char.IsWhiteSpace(source[after])) after++;
-                    if (!beforeOk || after >= source.Length || source[after] != '(') continue;
+                    if (!beforeOk || after >= source.Length || source[after] != '(' || LooksLikeMethodDeclaration(source, i))
+                        continue;
+
                     output.Append("XPScriptUIDialogRuntime.").Append(function);
                     i += function.Length;
                     replaced = true;
@@ -117,5 +120,15 @@ internal sealed class UIExtensionDesktopPostProcessor
         }
 
         return output.ToString();
+    }
+
+    private static bool LooksLikeMethodDeclaration(string source, int nameIndex)
+    {
+        var lineStart = source.LastIndexOf('\n', Math.Max(0, nameIndex - 1));
+        var prefix = source[(lineStart + 1)..nameIndex].Trim();
+        return Regex.IsMatch(
+            prefix,
+            @"^(?:(?:public|private|protected|internal|static|virtual|override|sealed|async)\s+)*(?:void|string|object|dynamic|bool|byte|short|int|long|float|double|decimal|DateTime|Task(?:<[^>]+>)?)\s+$",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }
 }
