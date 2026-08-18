@@ -61,6 +61,17 @@ internal static class XPScriptCoercion
         return ToDouble(left, "addition") + ToDouble(right, "addition");
     }
 
+    public static object? ConcatVariant(object? left, object? right)
+    {
+        var leftNull = XPScriptNullRuntime.IsNull(left);
+        var rightNull = XPScriptNullRuntime.IsNull(right);
+        if (leftNull && rightNull) return XPScriptNullRuntime.NullValue;
+
+        var leftText = leftNull || left is null ? string.Empty : XPScriptRuntime.CStr(left);
+        var rightText = rightNull || right is null ? string.Empty : XPScriptRuntime.CStr(right);
+        return leftText + rightText;
+    }
+
     public static object? SubtractVariant(object? left, object? right)
     {
         if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
