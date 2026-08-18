@@ -193,6 +193,7 @@ public static class XPScriptCompilerCommandLine
             tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-");
             var executableName = Path.GetFileNameWithoutExtension(sourcePath) + (OperatingSystem.IsWindows() ? ".exe" : "");
             var executablePath = Path.Combine(tempRoot, executableName);
+            var navigationPath = Path.Combine(tempRoot, "navigation.json");
 
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
@@ -215,13 +216,70 @@ public static class XPScriptCompilerCommandLine
                 UseShellExecute = false,
                 WorkingDirectory = sourceDirectory
             };
+            startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
             foreach (var argument in scriptArgs)
                 startInfo.ArgumentList.Add(argument);
 
             using var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Unable to start the compiled XPScript program.");
             await process.WaitForExitAsync().ConfigureAwait(false);
-            return process.ExitCode;
+            if (process.ExitCode != 0 || !File.Exists(navigationPath))
+                return process.ExitCode;
+
+            using var navigationDocument = JsonDocument.Parse(await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false));
+            var navigation = navigationDocument.RootElement;
+            var version = navigation.TryGetProperty("version", out var versionElement) && versionElement.TryGetInt32(out var parsedVersion)
+                ? parsedVersion
+                : 0;
+            if (version != 1)
+                throw new InvalidOperationException("Unsupported desktop navigation request version.");
+
+            var target = navigation.TryGetProperty("target", out var targetElement)
+                ? targetElement.GetString()?.Trim() ?? string.Empty
+                : string.Empty;
+            var parameterName = navigation.TryGetProperty("parameterName", out var parameterNameElement)
+                ? parameterNameElement.GetString()?.Trim() ?? string.Empty
+                : string.Empty;
+            var parameterValue = navigation.TryGetProperty("parameterValue", out var parameterValueElement)
+                ? parameterValueElement.GetString() ?? string.Empty
+                : string.Empty;
+
+            if (target.Length is < 5 or > 512 || Path.IsPathRooted(target) || target.Contains("..", StringComparison.Ordinal) ||
+                !target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Desktop navigation target must be a relative local .xps path.");
+            if (parameterName.Length > 0 && (parameterName.Length > 128 || !parameterName.All(ch => char.IsLetterOrDigit(ch) || ch is '_' or '-')))
+                throw new InvalidOperationException("Desktop navigation parameter name is invalid.");
+
+            var nextSourcePath = Path.GetFullPath(Path.Combine(sourceDirectory, target.Replace('/', Path.DirectorySeparatorChar)));
+            var relativeTarget = Path.GetRelativePath(sourceDirectory, nextSourcePath);
+            if (Path.IsPathRooted(relativeTarget) || relativeTarget.Equals("..", StringComparison.Ordinal) ||
+                relativeTarget.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidOperationException("Desktop navigation target escapes the current script directory.");
+            if (!File.Exists(nextSourcePath))
+                throw new FileNotFoundException("Desktop navigation target was not found.", nextSourcePath);
+
+            var nextArgs = new List<string> { "run", nextSourcePath };
+            if (restricted)
+            {
+                nextArgs.Add("--restricted");
+                foreach (var root in sourceRoots)
+                {
+                    nextArgs.Add("--source-root");
+                    nextArgs.Add(root);
+                }
+            }
+            foreach (var preprocessor in sourcePreprocessors)
+            {
+                nextArgs.Add("--preprocessor");
+                nextArgs.Add(preprocessor);
+            }
+            if (parameterName.Length > 0)
+            {
+                nextArgs.Add("--");
+                nextArgs.Add(parameterName + "=" + parameterValue);
+            }
+
+            return await RunScriptAsync(nextArgs.ToArray()).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

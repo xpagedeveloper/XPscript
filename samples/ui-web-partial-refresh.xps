@@ -1,0 +1,57 @@
+' XPscript web partial UIForm refresh example
+' Country changes refresh only the City region.
+' Works with Kestrel, CGI and FastCGI.
+' (c) xpagedeveloper.com 2026
+
+[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim data As New JsonObject
+    Dim form As New UIForm("Dependent fields")
+    Dim country As String
+    Dim city As String
+    Dim result As String
+
+    country = "SE"
+    city = "Stockholm"
+
+    If Request.Method = "POST" Then
+        country = Request.FormFirst("country")
+        city = Request.FormFirst("city")
+    End If
+
+    Call data.Set("country", country)
+    Call data.Set("city", city)
+    Call form.BindData(data)
+
+    Call form.SetGridColumns(12)
+    Call form.AddSelect("country", "Country")
+    Call form.AddSelect("city", "City")
+
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+    Call form.AddOption("country", "DK")
+
+    If country = "NO" Then
+        Call form.AddOption("city", "Oslo")
+        Call form.AddOption("city", "Bergen")
+    ElseIf country = "DK" Then
+        Call form.AddOption("city", "Copenhagen")
+        Call form.AddOption("city", "Aarhus")
+    Else
+        Call form.AddOption("city", "Stockholm")
+        Call form.AddOption("city", "Göteborg")
+    End If
+
+    Call form.SetFieldPosition("country", 1, 1, 6, 1)
+    Call form.SetFieldPosition("city", 1, 7, 6, 1)
+    Call form.SetFieldRegion("city", "cityRegion")
+    Call form.SetRefreshOnChange("country", "cityRegion")
+
+    result = form.ShowDialog()
+    If result = "OK" Then
+        Response.ContentType = "application/json; charset=utf-8"
+        Response.Write(data.Stringify())
+    End If
+End Sub
