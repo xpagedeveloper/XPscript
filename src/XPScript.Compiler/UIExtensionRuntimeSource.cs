@@ -49,12 +49,28 @@ internal sealed class XPScriptUIForm
     public void SetNumberRange(object? name, object? minimum, object? maximum) { var field = FindField(name); if (field.Type is not ("NumberField" or "RangeField")) throw new XPScriptRuntimeException(5, "UIForm numeric range is only supported for NumberField and RangeField."); var min = Convert.ToDecimal(minimum, System.Globalization.CultureInfo.InvariantCulture); var max = Convert.ToDecimal(maximum, System.Globalization.CultureInfo.InvariantCulture); if (max < min) throw new XPScriptRuntimeException(5, "UIForm numeric range is invalid."); field.Minimum = min; field.Maximum = max; }
     public object? GetFieldValue(object? name) { var n = NormalizeFieldName(name); return _data.Contains(n) ? _data.Get(n) ?? string.Empty : string.Empty; } public string GetFieldValueString(object? name) => XPScriptRuntime.CStr(GetFieldValue(name));
     public void SetFieldValue(object? name, object? value) { var n = NormalizeFieldName(name); var exists = _data.Contains(n); var empty = value is null || XPScriptRuntime.CStr(value).Length == 0; if (!exists && empty) return; _data.Set(n, value ?? string.Empty); }
-    public string ShowDialog() { if (!XPScriptUIWebAdapter.IsAvailable) throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request."); if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase)) { foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name)); return "OK"; } XPScriptUIWebAdapter.WriteHtml(RenderWebForm()); return "Pending"; }
+    public string ShowDialog()
+    {
+        if (XPScriptUIWebAdapter.IsAvailable)
+        {
+            if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase)) { foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name)); return "OK"; }
+            XPScriptUIWebAdapter.WriteHtml(RenderWebForm()); return "Pending";
+        }
+        if (!XPScriptUIDesktopAdapter.IsAvailable) throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
+        return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue);
+    }
+    private void ApplyDesktopValue(XPScriptUIField field, string submitted)
+    {
+        if (field.Type == "CheckBox" && !_data.Contains(field.Name) && submitted.Equals("false", StringComparison.OrdinalIgnoreCase)) return;
+        ApplySubmittedValue(field, submitted);
+    }
     private XPScriptUIField AddField(object? name, object? label, string type) { var n = NormalizeFieldName(name); if (_fields.Any(f => f.Name.Equals(n, StringComparison.OrdinalIgnoreCase))) throw new XPScriptRuntimeException(5, $"UIForm field '{n}' already exists."); var f = new XPScriptUIField(n, XPScriptRuntime.CStr(label), type); _fields.Add(f); return f; }
     private XPScriptUIField FindField(object? name) { var n = NormalizeFieldName(name); return _fields.FirstOrDefault(f => f.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) ?? throw new XPScriptRuntimeException(5, $"UIForm field '{n}' does not exist."); }
     private void ApplySubmittedValue(XPScriptUIField field, string submitted)
     {
-        var exists = _data.Contains(field.Name); if (field.Required && submitted.Length == 0) throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
+        var exists = _data.Contains(field.Name);
+        if (field.Type == "PasswordField" && submitted.Length == 0 && exists) return;
+        if (field.Required && submitted.Length == 0) throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
         if (field.Type is "TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField") { if (field.MinLength.HasValue && submitted.Length < field.MinLength.Value) throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at least {field.MinLength.Value} characters."); if (field.MaxLength.HasValue && submitted.Length > field.MaxLength.Value) throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at most {field.MaxLength.Value} characters."); }
         switch (field.Type)
         {
@@ -110,6 +126,62 @@ internal static class XPScriptUIWebAdapter
     public static string Method => InvokeString("Method"); public static string FormFirst(string name) => InvokeString("FormFirst", name);
     public static void WriteHtml(string html) { var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable."); var method = type.GetMethod("WriteHtml", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete."); method.Invoke(null, [html]); }
     private static string InvokeString(string methodName, params object?[] args) { var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable."); var method = type.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete."); return Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty; }
+}
+internal static class XPScriptUIDesktopAdapter
+{
+    private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
+    public static bool IsAvailable => HostType?.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) is not null;
+    public static string ShowDialog(XPScriptUIForm form, IReadOnlyList<XPScriptUIField> fields, XPScriptJsonObject data, Action<XPScriptUIField, string> apply)
+    {
+        var type = HostType ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is unavailable.");
+        var method = type.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is incomplete.");
+        var request = new
+        {
+            title = form.Title,
+            width = form.Width > 0 ? form.Width : (int?)null,
+            height = form.Height > 0 ? form.Height : (int?)null,
+            resizable = form.Resizable,
+            fields = fields.Select(field => new
+            {
+                name = field.Name,
+                label = field.Label,
+                type = field.Type,
+                required = field.Required,
+                value = field.Type == "PasswordField" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
+                minLength = field.MinLength,
+                maxLength = field.MaxLength,
+                minimum = field.Minimum,
+                maximum = field.Maximum,
+                options = field.Options
+            }).ToArray()
+        };
+        var requestJson = System.Text.Json.JsonSerializer.Serialize(request);
+        string resultJson;
+        try { resultJson = Convert.ToString(method.Invoke(null, [requestJson]), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty; }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "Desktop UIForm failed: " + ex.InnerException.Message); }
+        using var document = System.Text.Json.JsonDocument.Parse(resultJson);
+        var root = document.RootElement;
+        var result = root.TryGetProperty("result", out var resultElement) ? resultElement.GetString() ?? "Cancel" : "Cancel";
+        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
+        if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object) return "OK";
+        foreach (var property in values.EnumerateObject())
+        {
+            var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            if (field is null) continue;
+            var submitted = property.Value.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => string.Empty,
+                _ => throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned an unsupported value type.")
+            };
+            apply(field, submitted);
+        }
+        return "OK";
+    }
 }
 """;
 }
