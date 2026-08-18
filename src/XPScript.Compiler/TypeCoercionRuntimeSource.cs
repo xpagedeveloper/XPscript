@@ -99,6 +99,31 @@ internal static class XPScriptCoercion
         return dividend % divisor;
     }
 
+    public static object? UnaryPlusVariant(object? value)
+    {
+        if (XPScriptNullRuntime.IsNull(value)) return XPScriptNullRuntime.NullValue;
+        return ToDouble(value, "unary plus");
+    }
+
+    public static object? NegateVariant(object? value)
+    {
+        if (XPScriptNullRuntime.IsNull(value)) return XPScriptNullRuntime.NullValue;
+        return -ToDouble(value, "negation");
+    }
+
+    public static object? PowerVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        var number = ToDouble(left, "exponentiation");
+        var exponent = ToDouble(right, "exponentiation");
+        if ((number == 0d && exponent <= 0d) || (number < 0d && exponent != Math.Truncate(exponent)))
+            throw new XPScriptRuntimeException(5, "Invalid ^ operator operands.");
+        var result = Math.Pow(number, exponent);
+        if (double.IsInfinity(result)) throw new XPScriptRuntimeException(6, "Overflow.");
+        if (double.IsNaN(result)) throw new XPScriptRuntimeException(5, "Invalid ^ operator operands.");
+        return result;
+    }
+
     private static decimal AddDecimal(object? left, object? right)
     {
         return ToDecimal(left) + ToDecimal(right);
