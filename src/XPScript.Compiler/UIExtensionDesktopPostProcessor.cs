@@ -50,12 +50,18 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = replaced
             + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
             + Environment.NewLine + UIDialogRuntimeSource.Code
+            + Environment.NewLine + UIListViewRuntimeSource.Code
             + Environment.NewLine;
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopLayoutMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopReactivePostProcessor().Transform(replaced);
+        replaced = new UIListViewDesktopPostProcessor().Transform(replaced);
+        replaced = new UIListViewEventPostProcessor().Transform(replaced);
+        replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
+        replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
+        replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
         return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
     }
 
