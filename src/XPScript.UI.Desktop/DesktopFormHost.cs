@@ -18,7 +18,9 @@ public static class DesktopFormHost
     private static readonly object SyncRoot = new();
     private static bool _initialized;
 
-    public static string ShowDialog(string requestJson)
+    public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
+
+    public static string ShowDialog(string requestJson, Func<string, string, string>? reactiveCallback)
     {
         var request = XpsUIDesktopRuntimeBridge.ParseRequest(requestJson);
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
@@ -27,7 +29,7 @@ public static class DesktopFormHost
         EnsureApplication();
 
         DesktopFormResult? result = null;
-        Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request));
+        Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request, reactiveCallback));
         return XpsUIDesktopRuntimeBridge.SerializeResult(result ?? EmptyResult("Cancel"));
     }
 
@@ -49,9 +51,10 @@ public static class DesktopFormHost
         }
     }
 
-    private static DesktopFormResult ShowDialogCore(DesktopFormRequest request)
+    private static DesktopFormResult ShowDialogCore(DesktopFormRequest request, Func<string, string, string>? reactiveCallback)
     {
         var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+        var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
@@ -85,6 +88,68 @@ public static class DesktopFormHost
             Grid.SetColumnSpan(fieldPanel, columnSpan);
             Grid.SetRowSpan(fieldPanel, rowSpan);
             fieldsGrid.Children.Add(fieldPanel);
+        }
+
+        var reactiveUpdateInProgress = false;
+        void TriggerReactiveUpdate(DesktopFormField sourceField, Control sourceEditor)
+        {
+            if (reactiveCallback is null || sourceField.RefreshTargetRegion.Length == 0 || reactiveUpdateInProgress)
+                return;
+            try
+            {
+                reactiveUpdateInProgress = true;
+                var responseJson = reactiveCallback(sourceField.Name, ReadEditorText(sourceField, sourceEditor));
+                using var document = JsonDocument.Parse(responseJson);
+                var root = document.RootElement;
+                if (!root.TryGetProperty("fieldName", out var fieldNameElement)) return;
+                var fieldName = fieldNameElement.GetString() ?? string.Empty;
+                if (!editors.TryGetValue(fieldName, out var targetEditor)) return;
+                var targetField = request.Fields.FirstOrDefault(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+                if (targetField is null) return;
+
+                var value = root.TryGetProperty("value", out var valueElement) ? valueElement.GetString() ?? string.Empty : string.Empty;
+                var options = root.TryGetProperty("options", out var optionsElement) && optionsElement.ValueKind == JsonValueKind.Array
+                    ? optionsElement.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray()
+                    : [];
+                if (options.Length > 0 || targetField.Type is "Select" or "RadioGroup")
+                    optionOverrides[targetField.Name] = options;
+
+                ApplyReactiveUpdate(targetField, targetEditor, value, options);
+                validationText.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                validationText.Text = "Reactive UI update failed: " + ex.Message;
+                validationText.IsVisible = true;
+            }
+            finally
+            {
+                reactiveUpdateInProgress = false;
+            }
+        }
+
+        if (reactiveCallback is not null)
+        {
+            foreach (var sourceField in request.Fields.Where(field => field.RefreshTargetRegion.Length > 0))
+            {
+                if (!editors.TryGetValue(sourceField.Name, out var sourceEditor)) continue;
+                switch (sourceEditor)
+                {
+                    case ComboBox comboBox:
+                        comboBox.SelectionChanged += (_, _) => TriggerReactiveUpdate(sourceField, comboBox);
+                        break;
+                    case CheckBox checkBox:
+                        checkBox.Click += (_, _) => TriggerReactiveUpdate(sourceField, checkBox);
+                        break;
+                    case StackPanel radioPanel:
+                        foreach (var radio in radioPanel.Children.OfType<RadioButton>())
+                            radio.Click += (_, _) => TriggerReactiveUpdate(sourceField, radioPanel);
+                        break;
+                    case TextBox textBox:
+                        textBox.LostFocus += (_, _) => TriggerReactiveUpdate(sourceField, textBox);
+                        break;
+                }
+            }
         }
 
         panel.Children.Add(validationText);
@@ -130,7 +195,8 @@ public static class DesktopFormHost
                 if (!editors.TryGetValue(field.Name, out var editor))
                     continue;
 
-                var validationError = ValidateEditorValue(field, editor);
+                optionOverrides.TryGetValue(field.Name, out var allowedOptions);
+                var validationError = ValidateEditorValue(field, editor, allowedOptions);
                 if (validationError is not null)
                 {
                     validationText.Text = validationError;
@@ -177,6 +243,35 @@ public static class DesktopFormHost
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
     }
 
+    private static void ApplyReactiveUpdate(DesktopFormField field, Control editor, string value, IReadOnlyList<string> options)
+    {
+        switch (editor)
+        {
+            case ComboBox comboBox:
+                comboBox.ItemsSource = options;
+                comboBox.SelectedItem = value;
+                break;
+            case StackPanel radioPanel:
+                radioPanel.Children.Clear();
+                foreach (var option in options)
+                {
+                    radioPanel.Children.Add(new RadioButton
+                    {
+                        Content = option,
+                        GroupName = field.Name,
+                        IsChecked = string.Equals(option, value, StringComparison.Ordinal)
+                    });
+                }
+                break;
+            case CheckBox checkBox:
+                checkBox.IsChecked = value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+                break;
+            case TextBox textBox:
+                textBox.Text = value;
+                break;
+        }
+    }
+
     private static Control CreateEditor(DesktopFormField field)
     {
         var value = field.Value ?? string.Empty;
@@ -214,7 +309,7 @@ public static class DesktopFormHost
         return panel;
     }
 
-    private static string? ValidateEditorValue(DesktopFormField field, Control editor)
+    private static string? ValidateEditorValue(DesktopFormField field, Control editor, IReadOnlyList<string>? allowedOptions = null)
     {
         var text = ReadEditorText(field, editor);
 
@@ -289,7 +384,8 @@ public static class DesktopFormHost
 
             case "Select":
             case "RadioGroup":
-                if (!field.Options.Contains(text, StringComparer.Ordinal))
+                var options = allowedOptions ?? field.Options;
+                if (!options.Contains(text, StringComparer.Ordinal))
                     return $"{field.LabelOrName()} contains an unsupported option.";
                 break;
         }
