@@ -13,15 +13,53 @@ public enum XpsWebEnvironment
     Development
 }
 
-public sealed record XpsServerInfo(
-    string SiteId,
-    string RootPath,
-    XpsWebHostingMode HostingMode,
-    DateTimeOffset StartTimeUtc,
-    string RuntimeVersion,
-    string? Address = null,
-    int? Port = null,
-    XpsWebEnvironment Environment = XpsWebEnvironment.Production);
+public static class XpsWebEnvironmentDefaults
+{
+    private static int _current = (int)XpsWebEnvironment.Production;
+
+    public static XpsWebEnvironment Current
+    {
+        get => (XpsWebEnvironment)Volatile.Read(ref _current);
+        set
+        {
+            if (value is not (XpsWebEnvironment.Production or XpsWebEnvironment.Development))
+                throw new ArgumentOutOfRangeException(nameof(value));
+            Volatile.Write(ref _current, (int)value);
+        }
+    }
+}
+
+public sealed record XpsServerInfo
+{
+    public XpsServerInfo(
+        string siteId,
+        string rootPath,
+        XpsWebHostingMode hostingMode,
+        DateTimeOffset startTimeUtc,
+        string runtimeVersion,
+        string? address = null,
+        int? port = null,
+        XpsWebEnvironment? environment = null)
+    {
+        SiteId = siteId;
+        RootPath = rootPath;
+        HostingMode = hostingMode;
+        StartTimeUtc = startTimeUtc;
+        RuntimeVersion = runtimeVersion;
+        Address = address;
+        Port = port;
+        Environment = environment ?? XpsWebEnvironmentDefaults.Current;
+    }
+
+    public string SiteId { get; init; }
+    public string RootPath { get; init; }
+    public XpsWebHostingMode HostingMode { get; init; }
+    public DateTimeOffset StartTimeUtc { get; init; }
+    public string RuntimeVersion { get; init; }
+    public string? Address { get; init; }
+    public int? Port { get; init; }
+    public XpsWebEnvironment Environment { get; init; }
+}
 
 public interface IXpsRequestState
 {

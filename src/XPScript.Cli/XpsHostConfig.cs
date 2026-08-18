@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using XPScript.Web.Runtime;
 
 internal static class XpsHostConfig
 {
@@ -14,7 +15,10 @@ internal static class XpsHostConfig
         if (configPath is null)
         {
             var automaticPath = Path.Combine(AppContext.BaseDirectory, DefaultFileName);
-            if (!File.Exists(automaticPath)) return remainingArgs;
+            if (!File.Exists(automaticPath))
+                return command.Equals("web", StringComparison.OrdinalIgnoreCase)
+                    ? ApplyWebEnvironment(remainingArgs)
+                    : remainingArgs;
             configPath = automaticPath;
         }
         else if (!File.Exists(configPath))
@@ -36,8 +40,44 @@ internal static class XpsHostConfig
         if (configArgs.Count == 0 && explicitConfig)
             throw new InvalidOperationException($"Config file '{fullPath}' does not contain a '{command}' section.");
 
-        return [.. configArgs, .. remainingArgs];
+        var merged = new string[configArgs.Count + remainingArgs.Length];
+        configArgs.CopyTo(merged, 0);
+        Array.Copy(remainingArgs, 0, merged, configArgs.Count, remainingArgs.Length);
+        return command.Equals("web", StringComparison.OrdinalIgnoreCase)
+            ? ApplyWebEnvironment(merged)
+            : merged;
     }
+
+    private static string[] ApplyWebEnvironment(string[] args)
+    {
+        XpsWebEnvironmentDefaults.Current = XpsWebEnvironment.Production;
+        var remaining = new List<string>(args.Length);
+        string? selected = null;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (!args[i].Equals("--environment", StringComparison.OrdinalIgnoreCase))
+            {
+                remaining.Add(args[i]);
+                continue;
+            }
+
+            if (selected is not null) throw new ArgumentException("--environment can be specified only once.");
+            if (++i >= args.Length) throw new ArgumentException("--environment requires Production or Development.");
+            selected = args[i];
+        }
+
+        if (selected is not null)
+            XpsWebEnvironmentDefaults.Current = ParseEnvironment(selected);
+        return remaining.ToArray();
+    }
+
+    private static XpsWebEnvironment ParseEnvironment(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "production" => XpsWebEnvironment.Production,
+        "development" => XpsWebEnvironment.Development,
+        _ => throw new ArgumentException("--environment must be Production or Development.")
+    };
 
     private static XpsHostConfigFile Load(string path)
     {
@@ -79,6 +119,7 @@ internal static class XpsHostConfig
 
         AddValue(result, cliArgs, "--root", config.Root is null ? null : ResolvePath(baseDirectory, config.Root));
         AddValue(result, cliArgs, "--default-document", config.DefaultDocument);
+        AddValue(result, cliArgs, "--environment", config.Environment);
         AddValue(result, cliArgs, ["--address", "--bind"], "--address", config.Address);
         AddValue(result, cliArgs, "--port", config.Port);
 
@@ -181,6 +222,7 @@ internal static class XpsHostConfig
     {
         public string? Root { get; init; }
         public string? DefaultDocument { get; init; }
+        public string? Environment { get; init; }
         public string? Address { get; init; }
         public int? Port { get; init; }
         public string[]? AllowedHosts { get; init; }
