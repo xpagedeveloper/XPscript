@@ -9,12 +9,18 @@ on:
       - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
       - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
       - 'src/XPScript.Web.Runtime/XpsMultipartForm.cs'
+      - 'src/XPScript.Web.Runtime/XpsUIWebRuntimeBridge.cs'
       - 'src/XPScript.Web.Compiler/XpsWebDispatcher.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'tests/WebCgiSmoke/**'
       - 'tests/WebCgiDominoSmoke/**'
       - 'tests/WebCgiStateSmoke/**'
+      - 'tests/WebUIFormCgiSmoke/**'
       - 'tests/WebFileTransferSmoke/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
@@ -26,12 +32,18 @@ on:
       - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
       - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
       - 'src/XPScript.Web.Runtime/XpsMultipartForm.cs'
+      - 'src/XPScript.Web.Runtime/XpsUIWebRuntimeBridge.cs'
       - 'src/XPScript.Web.Compiler/XpsWebDispatcher.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompiler.cs'
       - 'src/XPScript.Web.Compiler/XpsWebCompilationCache.cs'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'tests/WebCgiSmoke/**'
       - 'tests/WebCgiDominoSmoke/**'
       - 'tests/WebCgiStateSmoke/**'
+      - 'tests/WebUIFormCgiSmoke/**'
       - 'tests/WebFileTransferSmoke/**'
       - 'XPScriptCompiler.slnx'
 
@@ -57,6 +69,8 @@ jobs:
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
       - name: Run CGI adapter and executable regression
         run: dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
+      - name: Run UIForm CGI GET/POST JSON binding regression
+        run: dotnet run --project ./tests/WebUIFormCgiSmoke/WebUIFormCgiSmoke.csproj -c Release
       - name: Run Domino PATH_INFO CGI regression
         run: dotnet run --project ./tests/WebCgiDominoSmoke/WebCgiDominoSmoke.csproj -c Release
       - name: Run persistent CGI Session and Application regression
