@@ -1,4 +1,4 @@
-name: UIForm Core
+name: UI Runtime Core
 
 on:
   pull_request:
@@ -8,11 +8,13 @@ on:
       - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
+      - 'samples/ui-list-view-*.xps'
       - '.github/workflows/ui-form-core.yml'
   push:
     branches:
@@ -22,11 +24,13 @@ on:
       - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
+      - 'samples/ui-list-view-*.xps'
       - '.github/workflows/ui-form-core.yml'
 
 permissions:
@@ -84,4 +88,26 @@ jobs:
             $program = "./out/$sample$extension"
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./samples/$sample.xps" -o $program --framework-dependent
             if ($LASTEXITCODE -ne 0) { throw "$sample compilation failed." }
+          }
+      - name: Compile and verify UIListView core
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/ui-list-view-core$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-list-view-core.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'UIListView core compilation failed.' }
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "UIListView core runtime failed with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @(
+            'TITLE=Customers',
+            'ROWS=2',
+            'COLUMNS=2',
+            'ROW0_NAME=Kalle',
+            'SELECTED_INDEX=1',
+            'SELECTED_NAME=Anna',
+            'SELECTED_KEY=1002',
+            'SELECTED_AFTER_CLEAR=-1'
+          )) {
+            if ($output -notcontains $value) { throw "UIListView output missing: $value" }
           }
