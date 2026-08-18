@@ -1,0 +1,57 @@
+name: String Quote Diagnostics
+
+on:
+  push:
+    paths:
+      - '.github/workflows/string-quote-diagnostics.yml'
+      - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
+      - 'samples/string-quote-*.xps'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/string-quote-diagnostics.yml'
+      - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
+      - 'samples/string-quote-*.xps'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify escaped and invalid quote handling
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/quote-tests | Out-Null
+          $compiler = './src/XPScript.Compiler/XPScript.Compiler.csproj'
+
+          foreach ($valid in @('string-quote-valid-backslash.xps', 'string-quote-valid-doubled.xps')) {
+            $name = [IO.Path]::GetFileNameWithoutExtension($valid)
+            $ext = if ($IsWindows) { '.exe' } else { '' }
+            dotnet run --project $compiler -c Release --no-build -- ./samples/$valid --framework-dependent -o "./out/quote-tests/$name$ext"
+            if ($LASTEXITCODE -ne 0) { throw "Valid escaped quote sample failed: $valid" }
+          }
+
+          foreach ($invalid in @('string-quote-invalid-html.xps', 'string-quote-invalid-variable.xps')) {
+            $stdout = Join-Path $env:RUNNER_TEMP ("$invalid.stdout.txt")
+            $stderr = Join-Path $env:RUNNER_TEMP ("$invalid.stderr.txt")
+            $process = Start-Process dotnet -ArgumentList @('run', '--project', $compiler, '-c', 'Release', '--no-build', '--', "./samples/$invalid", '--framework-dependent', '--result-format', 'text') -RedirectStandardOutput $stdout -RedirectStandardError $stderr -Wait -PassThru
+            if ($process.ExitCode -eq 0) { throw "Invalid quote sample unexpectedly compiled: $invalid" }
+            $text = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
+            if ($text -notmatch 'Possible unescaped quote inside String') { throw "Missing targeted quote diagnostic for $invalid.`n$text" }
+            if ($text -notmatch 'concatenate it with & or \+') { throw "Missing concatenation guidance for $invalid.`n$text" }
+          }
