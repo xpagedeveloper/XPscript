@@ -1,0 +1,32 @@
+' XPscript UIListView desktop sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim rows As New JsonArray
+    Dim first As New JsonObject
+    Dim second As New JsonObject
+    Dim list As New UIListView("Customers")
+    Dim result As String
+
+    Call first.Set("id", "1001")
+    Call first.Set("name", "Kalle")
+    Call first.Set("city", "Stockholm")
+    Call rows.Add(first)
+
+    Call second.Set("id", "1002")
+    Call second.Set("name", "Anna")
+    Call second.Set("city", "Gothenburg")
+    Call rows.Add(second)
+
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("city", "City")
+    Call list.SetColumnWidth("name", 240)
+    Call list.SetColumnWidth("city", 220)
+    Call list.SetKeyField("id")
+
+    result = list.ShowDialog()
+    Print "RESULT=" & result
+    Print "SELECTED_INDEX=" & list.SelectedIndex
+    Print "SELECTED_KEY=" & list.GetSelectedKey()
+End Sub
