@@ -50,6 +50,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = replaced
             + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
             + Environment.NewLine + UIDialogRuntimeSource.Code
+            + Environment.NewLine + UIListViewRuntimeSource.Code
             + Environment.NewLine;
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
