@@ -11,7 +11,6 @@ Sub Main()
     Print "FIRST_HEIGHT=" & CStr(first.Height)
     Print "FIRST_RESIZABLE=" & CStr(first.Resizable)
     Print "FIRST_HAS_SIZE=" & CStr(first.HasExplicitSize)
-
     Print "SECOND_TITLE=" & second.Title
     Print "SECOND_WIDTH=" & CStr(second.Width)
     Print "SECOND_HEIGHT=" & CStr(second.Height)
@@ -40,7 +39,11 @@ Sub Main()
     Call first.AddCheckBox("enabled", "Enabled")
     Call first.AddDateField("birthday", "Birthday")
     Call first.SetRequired("existing", True)
+    Call first.SetLength("existing", 3, 100)
+    Call first.SetLength("notes", 0, 2000)
+    Call first.SetNumberRange("age", 0, 150)
 
+    Print "VALIDATION_CONFIGURED=True"
     Print "FIELD_COUNT=" & CStr(first.FieldCount)
     Print "BOUND_EXISTING=" & first.GetFieldValueString("existing")
     Print "BOUND_MISSING=" & first.GetFieldValueString("missing")
