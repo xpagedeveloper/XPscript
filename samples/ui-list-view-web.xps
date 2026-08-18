@@ -1,0 +1,72 @@
+' XPscript UIListView web showcase
+' (c) xpagedeveloper.com 2026
+
+[Anonymous]
+[Get]
+[Post]
+Sub Main()
+    Dim rows As New JsonArray
+    Dim row1 As New JsonObject
+    Dim row2 As New JsonObject
+    Dim row3 As New JsonObject
+    Dim list As New UIListView("Customers")
+    Dim result As String
+
+    Call row1.Set("id", "1001")
+    Call row1.Set("name", "Kalle")
+    Call row1.Set("country", "Sweden")
+    Call row1.Set("amount", 125.5)
+    Call row1.Set("status", "Ready")
+    Call rows.Add(row1)
+
+    Call row2.Set("id", "1002")
+    Call row2.Set("name", "Anna")
+    Call row2.Set("country", "Norway")
+    Call row2.Set("amount", 42)
+    Call row2.Set("status", "Ready")
+    Call rows.Add(row2)
+
+    Call row3.Set("id", "1003")
+    Call row3.Set("name", "Sven")
+    Call row3.Set("country", "Sweden")
+    Call row3.Set("amount", 310)
+    Call row3.Set("status", "Ready")
+    Call rows.Add(row3)
+
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("country", "Country")
+    Call list.AddColumn("amount", "Amount")
+    Call list.AddColumn("status", "Status")
+    Call list.SetColumnWidth("name", 220)
+    Call list.SetColumnWidth("country", 160)
+    Call list.SetColumnWidth("amount", 120)
+    Call list.SetColumnWidth("status", 140)
+    Call list.SetKeyField("id")
+    Call list.SetSortable(True)
+    Call list.SetFilterEnabled(True)
+    Call list.SetOnSelect("CustomerSelected")
+    Call list.SetOnDoubleClick("CustomerDoubleClicked")
+    Call list.AddRowNavigationButton("edit", "Edit", "customer-form.xps", "id", "customerId")
+    Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
+    Call list.SetRowAction("customer-form.xps", "id", "customerId")
+
+    result = list.ShowDialog()
+End Sub
+
+Sub CustomerSelected(list As Variant)
+    Dim row As Variant
+    row = list.GetSelectedRow()
+    Call row.Set("status", "Selected")
+    Call list.SetColumnLabel("status", "Current status")
+End Sub
+
+Sub CustomerDoubleClicked(list As Variant)
+    Dim row As Variant
+    row = list.GetSelectedRow()
+    Call row.Set("status", "Opening")
+End Sub
+
+Sub DeleteCustomer(list As Variant)
+    Call list.RemoveSelectedRow()
+End Sub

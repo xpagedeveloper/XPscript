@@ -1,0 +1,57 @@
+' XPscript UIListView desktop sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim rows As New JsonArray
+    Dim first As New JsonObject
+    Dim second As New JsonObject
+    Dim list As New UIListView("Customers")
+    Dim result As String
+
+    Call first.Set("id", "1001")
+    Call first.Set("name", "Kalle")
+    Call first.Set("city", "Stockholm")
+    Call first.Set("status", "Ready")
+    Call rows.Add(first)
+
+    Call second.Set("id", "1002")
+    Call second.Set("name", "Anna")
+    Call second.Set("city", "Gothenburg")
+    Call second.Set("status", "Ready")
+    Call rows.Add(second)
+
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("city", "City")
+    Call list.AddColumn("status", "Status")
+    Call list.SetColumnWidth("name", 240)
+    Call list.SetColumnWidth("city", 220)
+    Call list.SetColumnWidth("status", 140)
+    Call list.SetKeyField("id")
+    Call list.SetOnSelect("CustomerSelected")
+    Call list.SetOnDoubleClick("CustomerDoubleClicked")
+    Call list.AddRowNavigationButton("edit", "Edit", "customer-form.xps", "id", "customerId")
+    Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
+    Call list.SetRowAction("customer-form.xps", "id", "customerId")
+
+    result = list.ShowDialog()
+    Print "RESULT=" & result
+    Print "SELECTED_INDEX=" & list.SelectedIndex
+    Print "SELECTED_KEY=" & list.GetSelectedKey()
+End Sub
+
+Sub CustomerSelected(list As Variant)
+    Dim row As Variant
+    row = list.GetSelectedRow()
+    Call row.Set("status", "Selected")
+End Sub
+
+Sub CustomerDoubleClicked(list As Variant)
+    Dim row As Variant
+    row = list.GetSelectedRow()
+    Call row.Set("status", "Opening")
+End Sub
+
+Sub DeleteCustomer(list As Variant)
+    Call list.RemoveSelectedRow()
+End Sub

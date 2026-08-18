@@ -1,0 +1,38 @@
+' XPscript UIListView core runtime sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim rows As New JsonArray
+    Dim first As New JsonObject
+    Dim second As New JsonObject
+    Dim list As New UIListView("Customers")
+
+    Call first.Set("id", "1001")
+    Call first.Set("name", "Kalle")
+    Call first.Set("city", "Stockholm")
+    Call rows.Add(first)
+
+    Call second.Set("id", "1002")
+    Call second.Set("name", "Anna")
+    Call second.Set("city", "Gothenburg")
+    Call rows.Add(second)
+
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("city", "City")
+    Call list.SetColumnWidth("name", 240)
+    Call list.SetKeyField("id")
+
+    Print "TITLE=" & list.Title
+    Print "ROWS=" & list.RowCount
+    Print "COLUMNS=" & list.ColumnCount
+    Print "ROW0_NAME=" & list.GetRowValueString(0, "name")
+
+    Call list.SelectRow(1)
+    Print "SELECTED_INDEX=" & list.SelectedIndex
+    Print "SELECTED_NAME=" & list.GetSelectedValueString("name")
+    Print "SELECTED_KEY=" & list.GetSelectedKey()
+
+    Call list.ClearSelection()
+    Print "SELECTED_AFTER_CLEAR=" & list.SelectedIndex
+End Sub
