@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -7,6 +8,8 @@ internal sealed class UIExtensionDesktopPostProcessor
     private static readonly Regex ShowDialogPattern = new(
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
         RegexOptions.CultureInvariant);
+
+    private static readonly string[] DialogFunctions = ["ShowDialog", "OpenFileDialog", "SaveFileDialog"];
 
     private const string Replacement = """
     public string ShowDialog()
@@ -42,6 +45,77 @@ internal sealed class UIExtensionDesktopPostProcessor
         var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
         if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
-        return replaced + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code + Environment.NewLine;
+
+        replaced = RewriteDialogCalls(replaced);
+        return replaced
+            + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
+            + Environment.NewLine + UIDialogRuntimeSource.Code
+            + Environment.NewLine;
+    }
+
+    private static string RewriteDialogCalls(string source)
+    {
+        var output = new StringBuilder(source.Length + 128);
+        var inString = false;
+        var inChar = false;
+        var escaped = false;
+
+        for (var i = 0; i < source.Length;)
+        {
+            var c = source[i];
+            if (escaped)
+            {
+                output.Append(c);
+                escaped = false;
+                i++;
+                continue;
+            }
+            if ((inString || inChar) && c == '\\')
+            {
+                output.Append(c);
+                escaped = true;
+                i++;
+                continue;
+            }
+            if (!inChar && c == '"')
+            {
+                inString = !inString;
+                output.Append(c);
+                i++;
+                continue;
+            }
+            if (!inString && c == '\'')
+            {
+                inChar = !inChar;
+                output.Append(c);
+                i++;
+                continue;
+            }
+
+            if (!inString && !inChar)
+            {
+                var replaced = false;
+                foreach (var function in DialogFunctions)
+                {
+                    if (i + function.Length > source.Length ||
+                        !source.AsSpan(i, function.Length).Equals(function, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    var beforeOk = i == 0 || !(char.IsLetterOrDigit(source[i - 1]) || source[i - 1] is '_' or '.');
+                    var after = i + function.Length;
+                    while (after < source.Length && char.IsWhiteSpace(source[after])) after++;
+                    if (!beforeOk || after >= source.Length || source[after] != '(') continue;
+                    output.Append("XPScriptUIDialogRuntime.").Append(function);
+                    i += function.Length;
+                    replaced = true;
+                    break;
+                }
+                if (replaced) continue;
+            }
+
+            output.Append(c);
+            i++;
+        }
+
+        return output.ToString();
     }
 }
