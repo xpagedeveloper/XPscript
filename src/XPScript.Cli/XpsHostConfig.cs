@@ -79,6 +79,7 @@ internal static class XpsHostConfig
 
         AddValue(result, cliArgs, "--root", config.Root is null ? null : ResolvePath(baseDirectory, config.Root));
         AddValue(result, cliArgs, "--default-document", config.DefaultDocument);
+        AddValue(result, cliArgs, "--environment", config.Environment);
         AddValue(result, cliArgs, ["--address", "--bind"], "--address", config.Address);
         AddValue(result, cliArgs, "--port", config.Port);
 
@@ -181,6 +182,7 @@ internal static class XpsHostConfig
     {
         public string? Root { get; init; }
         public string? DefaultDocument { get; init; }
+        public string? Environment { get; init; }
         public string? Address { get; init; }
         public int? Port { get; init; }
         public string[]? AllowedHosts { get; init; }
