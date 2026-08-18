@@ -77,6 +77,16 @@ internal sealed class TypeCoercionPreprocessor
         if (IsFullyParenthesized(expression))
             return "(" + RewriteVariantArithmeticExpression(expression[1..^1]) + ")";
 
+        // Comparison has lower precedence than arithmetic. Variant comparisons must keep
+        // their Variant result so NULL can propagate instead of being collapsed to bool.
+        var relational = FindRightmostTopLevelRelationalOperator(expression);
+        if (relational.Index >= 0)
+        {
+            var left = RewriteVariantArithmeticExpression(expression[..relational.Index]);
+            var right = RewriteVariantArithmeticExpression(expression[(relational.Index + relational.Operator.Length)..]);
+            return $"XPScriptCoercion.RelateVariant({left}, \"{relational.Operator}\", {right})";
+        }
+
         // LotusScript precedence, low to high for recursive lowering:
         // +/-, Mod, integer division, */, unary +/- and exponentiation.
         // Operators at the same precedence are evaluated left-to-right, so finding the
@@ -133,6 +143,44 @@ internal sealed class TypeCoercionPreprocessor
         }
 
         return expression;
+    }
+
+    private static (int Index, string Operator) FindRightmostTopLevelRelationalOperator(string value)
+    {
+        var inString = false;
+        var depth = 0;
+        var candidate = -1;
+        var candidateOperator = string.Empty;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0) continue;
+
+            string? op = null;
+            if (i + 1 < value.Length)
+            {
+                var pair = value.Substring(i, 2);
+                if (pair is "<=" or ">=" or "<>") op = pair;
+            }
+            if (op is null && c is '=' or '<' or '>') op = c.ToString();
+            if (op is null) continue;
+
+            candidate = i;
+            candidateOperator = op;
+            if (op.Length == 2) i++;
+        }
+
+        return (candidate, candidateOperator);
     }
 
     private static int FindRightmostTopLevelBinaryOperator(string value, params char[] operators)

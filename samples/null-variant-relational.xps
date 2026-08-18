@@ -1,0 +1,31 @@
+Sub Initialize
+    Dim nullValue As Variant
+    Dim emptyValue As Variant
+    Dim result As Variant
+
+    nullValue = Null
+
+    result = (nullValue = 1)
+    Print "NULL_EQ=" & CStr(IsNull(result))
+
+    result = (nullValue <> 1)
+    Print "NULL_NE=" & CStr(IsNull(result))
+
+    result = (nullValue < 1)
+    Print "NULL_LT=" & CStr(IsNull(result))
+
+    result = (nullValue <= 1)
+    Print "NULL_LE=" & CStr(IsNull(result))
+
+    result = (nullValue > 1)
+    Print "NULL_GT=" & CStr(IsNull(result))
+
+    result = (nullValue >= 1)
+    Print "NULL_GE=" & CStr(IsNull(result))
+
+    result = (emptyValue = 0)
+    Print "EMPTY_EQ_ZERO=" & CStr(result)
+
+    result = (emptyValue < 1)
+    Print "EMPTY_LT_ONE=" & CStr(result)
+End Sub

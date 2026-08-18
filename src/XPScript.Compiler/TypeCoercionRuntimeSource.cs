@@ -124,6 +124,41 @@ internal static class XPScriptCoercion
         return result;
     }
 
+    public static object? RelateVariant(object? left, string operation, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+
+        int comparison;
+        var numericComparison = (left is null || XPScriptRuntime.IsNumeric(left)) &&
+                                (right is null || XPScriptRuntime.IsNumeric(right));
+        if (numericComparison)
+        {
+            comparison = ToDouble(left, "comparison").CompareTo(ToDouble(right, "comparison"));
+        }
+        else if (left is DateTime || right is DateTime)
+        {
+            comparison = XPScriptRuntime.CDat(left).CompareTo(XPScriptRuntime.CDat(right));
+        }
+        else
+        {
+            comparison = string.Compare(
+                XPScriptRuntime.CStr(left),
+                XPScriptRuntime.CStr(right),
+                StringComparison.CurrentCulture);
+        }
+
+        return operation switch
+        {
+            "=" => comparison == 0,
+            "<>" => comparison != 0,
+            "<" => comparison < 0,
+            "<=" => comparison <= 0,
+            ">" => comparison > 0,
+            ">=" => comparison >= 0,
+            _ => throw new XPScriptRuntimeException(5, "Unsupported relational operator.")
+        };
+    }
+
     private static decimal AddDecimal(object? left, object? right)
     {
         return ToDecimal(left) + ToDecimal(right);
