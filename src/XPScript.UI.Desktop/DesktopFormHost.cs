@@ -54,7 +54,6 @@ public static class DesktopFormHost
         var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
-
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
@@ -64,7 +63,6 @@ public static class DesktopFormHost
         foreach (var field in request.Fields)
         {
             if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
-
             var fieldPanel = new StackPanel { Spacing = 4, Margin = new Thickness(4), IsVisible = field.Visible };
             fieldPanels[field.Name] = fieldPanel;
             if (!string.IsNullOrWhiteSpace(field.Label))
@@ -73,7 +71,6 @@ public static class DesktopFormHost
                 fieldLabels[field.Name] = label;
                 fieldPanel.Children.Add(label);
             }
-
             var editor = CreateEditor(field);
             ApplyEditorState(field, editor);
             editors[field.Name] = editor;
@@ -95,11 +92,35 @@ public static class DesktopFormHost
         DesktopFormResult? result = null;
         Window? window = null;
 
+        string SerializeCurrentEditorState()
+        {
+            var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in request.Fields)
+            {
+                if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (field.Value is not null) values[field.Name] = field.Value;
+                    continue;
+                }
+                if (!editors.TryGetValue(field.Name, out var editor)) continue;
+                var raw = ReadEditorValue(field, editor);
+                if (raw is null) continue;
+                values[field.Name] = raw.Value.ValueKind switch
+                {
+                    JsonValueKind.String => raw.Value.GetString(),
+                    JsonValueKind.Number => raw.Value.TryGetDecimal(out var number) ? number : raw.Value.GetRawText(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => null
+                };
+            }
+            return JsonSerializer.Serialize(values);
+        }
+
         void ApplyStatePatch(string responseJson)
         {
             using var document = JsonDocument.Parse(responseJson);
             var root = document.RootElement;
-
             if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
                 foreach (var state in fields.EnumerateArray())
@@ -108,24 +129,16 @@ public static class DesktopFormHost
                     if (name.Length == 0 || !editors.TryGetValue(name, out var editor)) continue;
                     var definition = request.Fields.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
                     if (definition is null) continue;
-
-                    if (fieldPanels.TryGetValue(name, out var fieldPanel) && state.TryGetProperty("visible", out var visible))
-                        fieldPanel.IsVisible = visible.ValueKind != JsonValueKind.False;
-                    if (state.TryGetProperty("enabled", out var enabled))
-                        editor.IsEnabled = enabled.ValueKind != JsonValueKind.False;
-                    if (editor is TextBox textBox && state.TryGetProperty("readOnly", out var readOnly))
-                        textBox.IsReadOnly = readOnly.ValueKind == JsonValueKind.True;
-                    if (fieldLabels.TryGetValue(name, out var label) && state.TryGetProperty("label", out var labelElement))
-                        label.Text = labelElement.GetString() ?? string.Empty;
+                    if (fieldPanels.TryGetValue(name, out var fieldPanel) && state.TryGetProperty("visible", out var visible)) fieldPanel.IsVisible = visible.ValueKind != JsonValueKind.False;
+                    if (state.TryGetProperty("enabled", out var enabled)) editor.IsEnabled = enabled.ValueKind != JsonValueKind.False;
+                    if (editor is TextBox textBox && state.TryGetProperty("readOnly", out var readOnly)) textBox.IsReadOnly = readOnly.ValueKind == JsonValueKind.True;
+                    if (fieldLabels.TryGetValue(name, out var label) && state.TryGetProperty("label", out var labelElement)) label.Text = labelElement.GetString() ?? string.Empty;
 
                     var options = state.TryGetProperty("options", out var optionsElement) && optionsElement.ValueKind == JsonValueKind.Array
                         ? optionsElement.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray()
                         : Array.Empty<string>();
                     if (definition.Type is "Select" or "RadioGroup") optionOverrides[name] = options;
-
-                    var value = state.TryGetProperty("value", out var valueElement) && valueElement.ValueKind != JsonValueKind.Null
-                        ? valueElement.ToString()
-                        : null;
+                    var value = state.TryGetProperty("value", out var valueElement) && valueElement.ValueKind != JsonValueKind.Null ? valueElement.ToString() : null;
                     ApplyReactiveUpdate(definition, editor, value, options);
                 }
             }
@@ -167,7 +180,9 @@ public static class DesktopFormHost
             try
             {
                 eventInProgress = true;
-                var value = sourceField is null || sourceEditor is null ? string.Empty : ReadEditorText(sourceField, sourceEditor);
+                var value = token.StartsWith("button:", StringComparison.OrdinalIgnoreCase)
+                    ? SerializeCurrentEditorState()
+                    : sourceField is null || sourceEditor is null ? string.Empty : ReadEditorText(sourceField, sourceEditor);
                 ApplyStatePatch(eventCallback(token, value));
                 validationText.IsVisible = false;
             }
@@ -189,43 +204,23 @@ public static class DesktopFormHost
                 if (!editors.TryGetValue(sourceField.Name, out var sourceEditor)) continue;
                 switch (sourceEditor)
                 {
-                    case ComboBox comboBox:
-                        comboBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, comboBox);
-                        break;
-                    case CheckBox checkBox:
-                        checkBox.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, checkBox);
-                        break;
+                    case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, comboBox); break;
+                    case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, checkBox); break;
                     case StackPanel radioPanel:
-                        foreach (var radio in radioPanel.Children.OfType<RadioButton>())
-                            radio.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, radioPanel);
+                        foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, radioPanel);
                         break;
-                    case TextBox textBox:
-                        textBox.LostFocus += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, textBox);
-                        break;
+                    case TextBox textBox: textBox.LostFocus += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, textBox); break;
                 }
             }
         }
 
         panel.Children.Add(validationText);
-
         if (request.Buttons.Count > 0)
         {
-            var actionButtons = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Spacing = 8,
-                Margin = new Thickness(0, 8, 0, 0)
-            };
+            var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
             foreach (var definition in request.Buttons)
             {
-                var button = new Button
-                {
-                    Content = definition.Label,
-                    MinWidth = 80,
-                    IsVisible = definition.Visible,
-                    IsEnabled = definition.Enabled
-                };
+                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
                 customButtons[definition.Name] = button;
                 button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
                 actionButtons.Children.Add(button);
@@ -233,13 +228,7 @@ public static class DesktopFormHost
             panel.Children.Add(actionButtons);
         }
 
-        var buttons = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8,
-            Margin = new Thickness(0, 8, 0, 0)
-        };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         var ok = new Button { Content = "OK", MinWidth = 80 };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
         buttons.Children.Add(ok);
@@ -283,11 +272,7 @@ public static class DesktopFormHost
             result = new DesktopFormResult("OK", new ReadOnlyDictionary<string, JsonElement>(values));
             window.Close();
         };
-        cancel.Click += (_, _) =>
-        {
-            result = EmptyResult("Cancel");
-            window.Close();
-        };
+        cancel.Click += (_, _) => { result = EmptyResult("Cancel"); window.Close(); };
         window.Closed += (_, _) => loop.Continue = false;
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
@@ -328,12 +313,7 @@ public static class DesktopFormHost
                     radioPanel.Children.Clear();
                     foreach (var option in options)
                     {
-                        radioPanel.Children.Add(new RadioButton
-                        {
-                            Content = option,
-                            GroupName = field.Name,
-                            IsChecked = string.Equals(option, value, StringComparison.Ordinal)
-                        });
+                        radioPanel.Children.Add(new RadioButton { Content = option, GroupName = field.Name, IsChecked = string.Equals(option, value, StringComparison.Ordinal) });
                     }
                 }
                 break;
@@ -370,15 +350,7 @@ public static class DesktopFormHost
     private static Control CreateRadioGroup(DesktopFormField field)
     {
         var panel = new StackPanel { Spacing = 4 };
-        foreach (var option in field.Options)
-        {
-            panel.Children.Add(new RadioButton
-            {
-                Content = option,
-                GroupName = field.Name,
-                IsChecked = string.Equals(option, field.Value, StringComparison.Ordinal)
-            });
-        }
+        foreach (var option in field.Options) panel.Children.Add(new RadioButton { Content = option, GroupName = field.Name, IsChecked = string.Equals(option, field.Value, StringComparison.Ordinal) });
         return panel;
     }
 
@@ -392,7 +364,6 @@ public static class DesktopFormHost
             if (field.MaxLength.HasValue && text.Length > field.MaxLength.Value) return $"{field.LabelOrName()} must contain at most {field.MaxLength.Value} characters.";
         }
         if (string.IsNullOrEmpty(text)) return null;
-
         switch (field.Type)
         {
             case "NumberField":
@@ -401,37 +372,18 @@ public static class DesktopFormHost
                 if (field.Minimum.HasValue && number < field.Minimum.Value) return $"{field.LabelOrName()} must be at least {field.Minimum.Value.ToString(CultureInfo.InvariantCulture)}.";
                 if (field.Maximum.HasValue && number > field.Maximum.Value) return $"{field.LabelOrName()} must be at most {field.Maximum.Value.ToString(CultureInfo.InvariantCulture)}.";
                 break;
-            case "DateField":
-                if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format.";
-                break;
-            case "TimeField":
-                if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format.";
-                break;
-            case "DateTimeField":
-                if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid local date/time.";
-                break;
-            case "MonthField":
-                if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format.";
-                break;
-            case "ColorField":
-                if (!Regex.IsMatch(text, "^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant)) return $"{field.LabelOrName()} must contain a color in #RRGGBB format.";
-                break;
+            case "DateField": if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format."; break;
+            case "TimeField": if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format."; break;
+            case "DateTimeField": if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid local date/time."; break;
+            case "MonthField": if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format."; break;
+            case "ColorField": if (!Regex.IsMatch(text, "^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant)) return $"{field.LabelOrName()} must contain a color in #RRGGBB format."; break;
             case "EmailField":
-                try
-                {
-                    var address = new MailAddress(text);
-                    if (!address.Address.Equals(text, StringComparison.OrdinalIgnoreCase)) return $"{field.LabelOrName()} must contain a valid email address.";
-                }
+                try { var address = new MailAddress(text); if (!address.Address.Equals(text, StringComparison.OrdinalIgnoreCase)) return $"{field.LabelOrName()} must contain a valid email address."; }
                 catch (FormatException) { return $"{field.LabelOrName()} must contain a valid email address."; }
                 break;
-            case "UrlField":
-                if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return $"{field.LabelOrName()} must contain an absolute HTTP or HTTPS URL.";
-                break;
+            case "UrlField": if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return $"{field.LabelOrName()} must contain an absolute HTTP or HTTPS URL."; break;
             case "Select":
-            case "RadioGroup":
-                var options = allowedOptions ?? field.Options;
-                if (!options.Contains(text, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option.";
-                break;
+            case "RadioGroup": var options = allowedOptions ?? field.Options; if (!options.Contains(text, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option."; break;
         }
         return null;
     }
@@ -464,21 +416,16 @@ public static class DesktopFormHost
         return null;
     }
 
-    private static DesktopFormResult EmptyResult(string result) =>
-        new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
-
-    private static string LabelOrName(this DesktopFormField field) =>
-        string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;
+    private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
+    private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;
 }
 
 internal sealed class XpsDesktopApplication : Application
 {
     public override void Initialize() => Styles.Add(new FluentTheme());
-
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnFrameworkInitializationCompleted();
     }
 }
