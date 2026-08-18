@@ -191,7 +191,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
 
         try
         {
-            if (target.StartsWith('/', StringComparison.Ordinal) || target.StartsWith('\\'))
+            if (target.StartsWith("/", StringComparison.Ordinal) || target.StartsWith('\\'))
             {
                 var route = _resolver.Resolve('/' + target.TrimStart('/', '\\').Replace('\\', '/'));
                 return route.Found ? route.ScriptPath : null;
