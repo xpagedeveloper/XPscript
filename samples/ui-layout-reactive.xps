@@ -1,0 +1,45 @@
+' XPscript UIForm layout and reactive refresh API sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New JsonObject
+    Dim form As New UIForm("Layout and reactive example", 760, 520, True)
+    Dim result As String
+
+    Call data.Set("country", "SE")
+    Call data.Set("city", "Stockholm")
+    Call data.Set("name", "Kalle")
+    Call data.Set("email", "kalle@example.com")
+    Call form.BindData(data)
+
+    Call form.SetGridColumns(12)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddEmailField("email", "Email")
+    Call form.AddSelect("country", "Country")
+    Call form.AddSelect("city", "City")
+
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+
+    Call form.AddOption("city", "Stockholm")
+    Call form.AddOption("city", "Göteborg")
+
+    Call form.SetFieldPosition("name", 1, 1, 6, 1)
+    Call form.SetFieldPosition("email", 1, 7, 6, 1)
+    Call form.SetFieldPosition("country", 2, 1, 6, 1)
+    Call form.SetFieldPosition("city", 2, 7, 6, 1)
+
+    Call form.SetFieldRegion("city", "cityRegion")
+    Call form.SetRefreshOnChange("country", "cityRegion", "RefreshCities")
+
+    result = form.ShowDialog()
+    Print "RESULT=" & result
+    Print "DATA=" & data.Stringify()
+End Sub
+
+Sub RefreshCities()
+    ' The reactive dispatcher will call this after current field values
+    ' have been written to the bound JSON document.
+    Print "REFRESH_CITIES_HANDLER"
+End Sub
