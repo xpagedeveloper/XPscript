@@ -15,12 +15,12 @@ internal static partial class XpsWebLinkedPrecompiler
     public static async Task PrecompileResponseLinksAsync(
         XpsWebResponse response,
         XpsWebPathResolver resolver,
-        XpsWebCompilationCache cache,
+        Func<string, CancellationToken, Task> precompileAsync,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(resolver);
-        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(precompileAsync);
 
         if (response.Body.IsEmpty || response.Body.Length > MaxResponseScanBytes) return;
         if (!IsHtml(response.ContentType)) return;
@@ -52,18 +52,7 @@ internal static partial class XpsWebLinkedPrecompiler
             if (!resolution.Found || resolution.ScriptPath is null) continue;
             if (!seen.Add(resolution.ScriptPath)) continue;
 
-            try
-            {
-                await using var lease = await cache.AcquireAsync(resolution.ScriptPath, resolver.Root, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                XpsWebConsoleErrorFallback.Write(ex, resolution.ScriptPath, clean);
-            }
+            await precompileAsync(resolution.ScriptPath, cancellationToken).ConfigureAwait(false);
         }
     }
 
