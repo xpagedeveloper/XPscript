@@ -1,0 +1,49 @@
+name: Web Environment CLI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Cli/XpsHostConfig.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'tests/WebEnvironmentCliSmoke/**'
+      - '.github/workflows/web-environment-cli.yml'
+      - 'docs/web-host-config.md'
+  push:
+    branches:
+      - 'todo-web-environment-cli'
+    paths:
+      - 'src/XPScript.Cli/XpsHostConfig.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'tests/WebEnvironmentCliSmoke/**'
+      - '.github/workflows/web-environment-cli.yml'
+      - 'docs/web-host-config.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build CLI
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'CLI restore failed.' }
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
+      - name: Verify CLI environment selection
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/WebEnvironmentCliSmoke/WebEnvironmentCliSmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Web environment CLI regression failed.' }
