@@ -1,0 +1,5 @@
+Sub Main()
+    Dim a As String
+    a = "Kalle \"eller\" Anka"
+    Print a
+End Sub
