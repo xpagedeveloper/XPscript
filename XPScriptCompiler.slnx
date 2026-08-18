@@ -7,4 +7,5 @@
   <Project Path="src/XPScript.Web.FastCgi/XPScript.Web.FastCgi.csproj" />
   <Project Path="src/XPScript.Web.Cgi/XPScript.Web.Cgi.csproj" />
   <Project Path="src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
+  <Project Path="tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj" />
 </Solution>
