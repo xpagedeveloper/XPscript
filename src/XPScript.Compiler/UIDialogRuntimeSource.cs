@@ -24,6 +24,11 @@ internal static class XPScriptUIDialogRuntime
         return Invoke("ShowChoiceDialog", System.Text.Json.JsonSerializer.Serialize(request));
     }
 
+    public static string LoadFileDialog() => OpenFileDialog();
+    public static string LoadFileDialog(object? title) => OpenFileDialog(title);
+    public static string LoadFileDialog(object? title, object? initialPath) => OpenFileDialog(title, initialPath);
+    public static string LoadFileDialog(object? title, object? initialPath, object? filter) => OpenFileDialog(title, initialPath, filter);
+
     public static string OpenFileDialog() => OpenFileDialog(string.Empty, string.Empty, string.Empty);
     public static string OpenFileDialog(object? title) => OpenFileDialog(title, string.Empty, string.Empty);
     public static string OpenFileDialog(object? title, object? initialPath) => OpenFileDialog(title, initialPath, string.Empty);
