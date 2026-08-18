@@ -49,6 +49,10 @@ internal sealed class XPScriptUIField
     public string Label { get; set; }
     public string Type { get; }
     public bool Required { get; set; }
+    public int? MinLength { get; set; }
+    public int? MaxLength { get; set; }
+    public decimal? Minimum { get; set; }
+    public decimal? Maximum { get; set; }
 }
 
 internal sealed class XPScriptUIForm
@@ -68,38 +72,10 @@ internal sealed class XPScriptUIForm
         _resizable = resizable;
     }
 
-    public string Title
-    {
-        get => _title;
-        set => _title = value ?? string.Empty;
-    }
-
-    public int Width
-    {
-        get => _width ?? 0;
-        set
-        {
-            if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero.");
-            _width = value;
-        }
-    }
-
-    public int Height
-    {
-        get => _height ?? 0;
-        set
-        {
-            if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero.");
-            _height = value;
-        }
-    }
-
-    public bool Resizable
-    {
-        get => _resizable;
-        set => _resizable = value;
-    }
-
+    public string Title { get => _title; set => _title = value ?? string.Empty; }
+    public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
+    public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
+    public bool Resizable { get => _resizable; set => _resizable = value; }
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
@@ -127,9 +103,50 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
 
     public void SetRequired(object? name, object? required)
+        => FindField(name).Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
+
+    public void SetLength(object? name, object? minLength, object? maxLength)
     {
         var field = FindField(name);
-        field.Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
+        if (field.Type is not ("TextField" or "TextArea"))
+            throw new XPScriptRuntimeException(5, "UIForm length validation is only supported for text fields.");
+        int min;
+        int max;
+        try
+        {
+            min = Convert.ToInt32(minLength, System.Globalization.CultureInfo.CurrentCulture);
+            max = Convert.ToInt32(maxLength, System.Globalization.CultureInfo.CurrentCulture);
+        }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm text length limits must be Integer values.");
+        }
+        if (min < 0 || max < min)
+            throw new XPScriptRuntimeException(5, "UIForm text length range is invalid.");
+        field.MinLength = min;
+        field.MaxLength = max;
+    }
+
+    public void SetNumberRange(object? name, object? minimum, object? maximum)
+    {
+        var field = FindField(name);
+        if (field.Type != "NumberField")
+            throw new XPScriptRuntimeException(5, "UIForm numeric range is only supported for NumberField.");
+        decimal min;
+        decimal max;
+        try
+        {
+            min = Convert.ToDecimal(minimum, System.Globalization.CultureInfo.InvariantCulture);
+            max = Convert.ToDecimal(maximum, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm numeric range limits must be numeric values.");
+        }
+        if (max < min)
+            throw new XPScriptRuntimeException(5, "UIForm numeric range is invalid.");
+        field.Minimum = min;
+        field.Maximum = max;
     }
 
     public object? GetFieldValue(object? name)
@@ -138,8 +155,7 @@ internal sealed class XPScriptUIForm
         return _data.Contains(fieldName) ? _data.Get(fieldName) ?? string.Empty : string.Empty;
     }
 
-    public string GetFieldValueString(object? name)
-        => XPScriptRuntime.CStr(GetFieldValue(name));
+    public string GetFieldValueString(object? name) => XPScriptRuntime.CStr(GetFieldValue(name));
 
     public void SetFieldValue(object? name, object? value)
     {
@@ -154,14 +170,11 @@ internal sealed class XPScriptUIForm
     {
         if (!XPScriptUIWebAdapter.IsAvailable)
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
-
         if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var field in _fields)
-                ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+            foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
             return "OK";
         }
-
         XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
         return "Pending";
     }
@@ -188,40 +201,36 @@ internal sealed class XPScriptUIForm
         var exists = _data.Contains(field.Name);
         if (field.Required && submitted.Length == 0)
             throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
+        if (field.Type is "TextField" or "TextArea")
+        {
+            if (field.MinLength.HasValue && submitted.Length < field.MinLength.Value)
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at least {field.MinLength.Value} characters.");
+            if (field.MaxLength.HasValue && submitted.Length > field.MaxLength.Value)
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at most {field.MaxLength.Value} characters.");
+        }
 
         switch (field.Type)
         {
             case "NumberField":
-                if (submitted.Length == 0)
-                {
-                    if (exists) _data.Set(field.Name, string.Empty);
-                    return;
-                }
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!decimal.TryParse(submitted, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var number))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid number.");
+                if (field.Minimum.HasValue && number < field.Minimum.Value)
+                    throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must be at least {field.Minimum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}.");
+                if (field.Maximum.HasValue && number > field.Maximum.Value)
+                    throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must be at most {field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}.");
                 _data.Set(field.Name, number);
                 return;
-
             case "CheckBox":
-                if (submitted.Length == 0)
-                {
-                    if (exists) _data.Set(field.Name, false);
-                    return;
-                }
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, false); return; }
                 _data.Set(field.Name, submitted.Equals("1", StringComparison.OrdinalIgnoreCase) || submitted.Equals("true", StringComparison.OrdinalIgnoreCase) || submitted.Equals("on", StringComparison.OrdinalIgnoreCase));
                 return;
-
             case "DateField":
-                if (submitted.Length == 0)
-                {
-                    if (exists) _data.Set(field.Name, string.Empty);
-                    return;
-                }
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!DateTime.TryParseExact(submitted, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid date in yyyy-MM-dd format.");
                 _data.Set(field.Name, submitted);
                 return;
-
             default:
                 if (!exists && submitted.Length == 0) return;
                 _data.Set(field.Name, submitted);
@@ -233,47 +242,33 @@ internal sealed class XPScriptUIForm
     {
         var html = new System.Text.StringBuilder();
         html.Append("<form method=\"post\" class=\"xpscript-uiform\">");
-        if (_title.Length > 0)
-            html.Append("<h1>").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
-
+        if (_title.Length > 0) html.Append("<h1>").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
             var label = System.Net.WebUtility.HtmlEncode(field.Label);
             var value = System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
             var required = field.Required ? " required" : string.Empty;
-            html.Append("<div class=\"xpscript-uiform-field\"><label for=\"xps_")
-                .Append(name).Append("\">").Append(label).Append("</label>");
-
+            var length = (field.MinLength.HasValue ? $" minlength=\"{field.MinLength.Value}\"" : string.Empty)
+                + (field.MaxLength.HasValue ? $" maxlength=\"{field.MaxLength.Value}\"" : string.Empty);
+            var range = (field.Minimum.HasValue ? $" min=\"{field.Minimum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty)
+                + (field.Maximum.HasValue ? $" max=\"{field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty);
+            html.Append("<div class=\"xpscript-uiform-field\"><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
             switch (field.Type)
             {
-                case "TextArea":
-                    html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"")
-                        .Append(required).Append(">").Append(value).Append("</textarea>");
-                    break;
-                case "NumberField":
-                    html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
-                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
-                    break;
+                case "TextArea": html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">").Append(value).Append("</textarea>"); break;
+                case "NumberField": html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "CheckBox":
                     var checkedValue = GetFieldValue(field.Name) is bool b && b;
                     html.Append("<input type=\"checkbox\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"1\"");
                     if (checkedValue) html.Append(" checked");
                     html.Append(required).Append(">");
                     break;
-                case "DateField":
-                    html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
-                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
-                    break;
-                default:
-                    html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name)
-                        .Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">");
-                    break;
+                case "DateField": html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                default: html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
             }
-
             html.Append("</div>");
         }
-
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
     }
@@ -281,10 +276,8 @@ internal sealed class XPScriptUIForm
     private static string NormalizeFieldName(object? value)
     {
         var name = XPScriptRuntime.CStr(value).Trim();
-        if (name.Length is < 1 or > 128)
-            throw new XPScriptRuntimeException(5, "UIForm field name must contain between 1 and 128 characters.");
-        if (name.Any(c => !(char.IsLetterOrDigit(c) || c is '_' or '-' or '.')))
-            throw new XPScriptRuntimeException(5, "UIForm field name contains unsupported characters.");
+        if (name.Length is < 1 or > 128) throw new XPScriptRuntimeException(5, "UIForm field name must contain between 1 and 128 characters.");
+        if (name.Any(c => !(char.IsLetterOrDigit(c) || c is '_' or '-' or '.'))) throw new XPScriptRuntimeException(5, "UIForm field name contains unsupported characters.");
         return name;
     }
 }
@@ -292,9 +285,7 @@ internal sealed class XPScriptUIForm
 internal static class XPScriptUIWebAdapter
 {
     private const string BridgeTypeName = "XPScript.Web.Runtime.XpsUIWebRuntimeBridge, XPScript.Web.Runtime";
-
     private static Type? BridgeType => Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);
-
     public static bool IsAvailable
     {
         get
@@ -305,10 +296,8 @@ internal static class XPScriptUIWebAdapter
             return method is not null && method.Invoke(null, null) is true;
         }
     }
-
     public static string Method => InvokeString("Method");
     public static string FormFirst(string name) => InvokeString("FormFirst", name);
-
     public static void WriteHtml(string html)
     {
         var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable.");
@@ -316,7 +305,6 @@ internal static class XPScriptUIWebAdapter
             ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete.");
         method.Invoke(null, [html]);
     }
-
     private static string InvokeString(string methodName, params object?[] args)
     {
         var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable.");
