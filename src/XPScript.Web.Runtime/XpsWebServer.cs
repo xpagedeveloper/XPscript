@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,8 @@ namespace XPScript.Web.Runtime;
 
 public sealed class XpsWebServer
 {
+    private static readonly ConditionalWeakTable<XpsServerInfo, CsrfSecret> CsrfSecrets = new();
+
     private readonly XpsServerInfo _info;
     private readonly XpsWebPathResolver _resolver;
     private readonly string _canonicalRoot;
@@ -65,9 +68,10 @@ public sealed class XpsWebServer
 
     private string CreateCsrfToken(string sessionId)
     {
-        var payload = Encoding.UTF8.GetBytes("xps-csrf-v1\0" + _info.SiteId + "\0" + sessionId);
-        var hash = SHA256.HashData(payload);
-        return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var payload = Encoding.UTF8.GetBytes("xps-csrf-v2\0" + _info.SiteId + "\0" + sessionId);
+        var secret = CsrfSecrets.GetValue(_info, static _ => new CsrfSecret()).Key;
+        var mac = HMACSHA256.HashData(secret, payload);
+        return Convert.ToBase64String(mac).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     private static string CanonicalizeExistingSegments(string path)
@@ -101,5 +105,10 @@ public sealed class XpsWebServer
             current = Path.GetFullPath(target);
         }
         return Path.GetFullPath(current);
+    }
+
+    private sealed class CsrfSecret
+    {
+        internal byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
     }
 }

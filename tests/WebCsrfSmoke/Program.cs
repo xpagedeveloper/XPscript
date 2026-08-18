@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
@@ -38,6 +39,21 @@ try
         if (!server.ValidateCsrfToken(token)) throw new Exception("Valid CSRF token was rejected.");
         if (server.ValidateCsrfToken(token[..^1] + (token[^1] == 'A' ? 'B' : 'A')))
             throw new Exception("Modified CSRF token was accepted.");
+
+        var sameServerInfoToken = new XpsWebServer(info).CsrfToken();
+        if (sameServerInfoToken != token) throw new Exception("CSRF token was not stable across Server object wrappers for one host instance.");
+
+        var publicPayload = Encoding.UTF8.GetBytes("xps-csrf-v2\0" + info.SiteId + "\0" + session.Id);
+        var forgeablePublicHash = Convert.ToBase64String(SHA256.HashData(publicPayload)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        if (forgeablePublicHash == token) throw new Exception("CSRF token can be derived from public site/session data without a server secret.");
+    }
+
+    var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
+    var independentContext = new XpsWebContext(request, new XpsWebResponse(), independentInfo, new XpsWebPrincipal(false), new XpsApplicationState(), session);
+    using (XpsWebContextAccessor.Push(independentContext))
+    {
+        if (new XpsWebServer(independentInfo).CsrfToken() == token)
+            throw new Exception("Independent host instances unexpectedly shared CSRF secret material.");
     }
 
     var rotatedResponse = new XpsWebResponse();
