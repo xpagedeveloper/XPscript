@@ -11,6 +11,7 @@ on:
       - 'src/XPScript.Compiler/NativeDependencyPackager.cs'
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeInteropSafetyPreprocessor.cs'
+      - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'
   workflow_dispatch:
 

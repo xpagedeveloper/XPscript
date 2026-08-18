@@ -6,12 +6,16 @@ on:
       - '.github/workflows/string-quote-diagnostics.yml'
       - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
       - 'samples/string-quote-*.xps'
+      - 'samples/file-io-portability.xps'
+      - 'samples/file-path-security-negatives.xps'
   pull_request:
     branches: [main]
     paths:
       - '.github/workflows/string-quote-diagnostics.yml'
       - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
       - 'samples/string-quote-*.xps'
+      - 'samples/file-io-portability.xps'
+      - 'samples/file-path-security-negatives.xps'
 
 permissions:
   contents: read
@@ -39,11 +43,11 @@ jobs:
           New-Item -ItemType Directory -Force ./out/quote-tests | Out-Null
           $compiler = './src/XPScript.Compiler/XPScript.Compiler.csproj'
 
-          foreach ($valid in @('string-quote-valid-backslash.xps', 'string-quote-valid-doubled.xps')) {
+          foreach ($valid in @('string-quote-valid-backslash.xps', 'string-quote-valid-doubled.xps', 'file-io-portability.xps', 'file-path-security-negatives.xps')) {
             $name = [IO.Path]::GetFileNameWithoutExtension($valid)
             $ext = if ($IsWindows) { '.exe' } else { '' }
             dotnet run --project $compiler -c Release --no-build -- ./samples/$valid --framework-dependent -o "./out/quote-tests/$name$ext"
-            if ($LASTEXITCODE -ne 0) { throw "Valid escaped quote sample failed: $valid" }
+            if ($LASTEXITCODE -ne 0) { throw "Valid quote sample failed: $valid" }
           }
 
           foreach ($invalid in @('string-quote-invalid-html.xps', 'string-quote-invalid-variable.xps')) {
