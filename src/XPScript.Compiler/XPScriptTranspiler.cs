@@ -66,6 +66,7 @@ public sealed class XPScriptTranspiler
         source = moduleGlobals.Transform(source);
         source = new DateObjectPreprocessor().Transform(source);
         source = new TypeCoercionPreprocessor().Transform(source);
+        source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
