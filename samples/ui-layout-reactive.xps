@@ -21,6 +21,7 @@ Sub Main()
 
     Call form.AddOption("country", "SE")
     Call form.AddOption("country", "NO")
+    Call form.AddOption("country", "DK")
 
     Call form.AddOption("city", "Stockholm")
     Call form.AddOption("city", "Göteborg")
@@ -38,8 +39,12 @@ Sub Main()
     Print "DATA=" & data.Stringify()
 End Sub
 
-Sub RefreshCities()
-    ' The reactive dispatcher will call this after current field values
-    ' have been written to the bound JSON document.
-    Print "REFRESH_CITIES_HANDLER"
-End Sub
+Function RefreshCities(country As String) As String
+    If country = "NO" Then
+        RefreshCities = "Oslo|Bergen"
+    ElseIf country = "DK" Then
+        RefreshCities = "Copenhagen|Aarhus"
+    Else
+        RefreshCities = "Stockholm|Göteborg"
+    End If
+End Function
