@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Logging;
 using XPScript.Web.Runtime;
 
 namespace XPScript.Web.Kestrel;
@@ -41,6 +43,11 @@ public static class XpsKestrelAdapter
         var connectionCounter = new XpsKestrelConnectionCounter();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
+
+        // XPScript owns command-line logging. Do not expose Microsoft.Hosting,
+        // Microsoft.AspNetCore, Kestrel or other framework categories by default.
+        builder.Logging.ClearProviders();
+
         builder.WebHost.ConfigureKestrel(kestrel =>
         {
             kestrel.AddServerHeader = false;
@@ -72,6 +79,25 @@ public static class XpsKestrelAdapter
         var app = builder.Build();
         if (runtimeTelemetry is not null)
             app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
+
+        // Keep a compact XPScript-owned access log while framework logging stays silent.
+        // Query strings are intentionally excluded so secrets are not written to console.
+        app.Use(async (http, next) =>
+        {
+            var started = Stopwatch.GetTimestamp();
+            var statusCode = StatusCodes.Status500InternalServerError;
+            try
+            {
+                await next();
+                statusCode = http.Response.StatusCode;
+            }
+            finally
+            {
+                var elapsed = Stopwatch.GetElapsedTime(started);
+                var path = http.Request.Path.HasValue ? http.Request.Path.Value! : "/";
+                Console.WriteLine($"{http.Request.Method} {path} {statusCode} {elapsed.TotalMilliseconds:0}ms");
+            }
+        });
 
         if (options.KnownProxies.Count > 0)
         {
