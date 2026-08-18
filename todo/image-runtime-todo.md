@@ -4,14 +4,18 @@
 
 Implement after `todo/hcl-domino-data-todo.md` is complete and merged.
 
-## Implementation policy
+## Required implementation strategy
 
-- [ ] Prefer mature, maintained, production-proven .NET libraries and existing XPScript runtime helpers over custom implementations.
-- [ ] Do not implement image codecs, EXIF parsers, resamplers, font engines or compression algorithms manually when a vetted library already provides them.
+- [ ] Use a mature, maintained cross-platform NuGet image-processing library. Do not build the image engine from scratch.
+- [ ] Evaluate `SixLabors.ImageSharp` first for raster image loading, encoding, resizing, cropping, transforms, effects, metadata and drawing integration, subject to final license/security review.
+- [ ] Evaluate `SixLabors.ImageSharp.Drawing` for vector shapes/text drawing where required, subject to final license/security review.
+- [ ] If ImageSharp licensing or a required capability makes it unsuitable, evaluate another maintained cross-platform NuGet implementation and document the reason for the choice.
+- [ ] Use the selected library's built-in PNG, JPEG, WebP, GIF, BMP and supported TIFF codecs instead of implementing codecs manually.
+- [ ] Use its built-in resampling, EXIF/metadata, transforms and encoding APIs rather than duplicating those algorithms.
 - [ ] Reuse existing XPScript path-security, HTTP, JSON, web response, upload, diagnostics and resource-lifetime infrastructure.
-- [ ] Wrap third-party functionality behind a stable XPScript API so the underlying implementation can be replaced without breaking scripts.
-- [ ] Evaluate licensing, maintenance status, CVE history, platform support and transitive dependencies before selecting a library.
-- [ ] Prefer one cross-platform implementation where practical instead of separate Windows/Linux/macOS code paths.
+- [ ] Wrap the NuGet implementation behind a stable XPScript-owned image API so the underlying package can later be upgraded or replaced without breaking scripts.
+- [ ] Verify .NET 10 compatibility, Windows/Linux/macOS support, license, maintenance activity, security advisories/CVEs and transitive dependencies before final package selection.
+- [ ] Pin/centrally manage package versions and include dependency/security maintenance in CI/release processes.
 
 ## Goals
 
