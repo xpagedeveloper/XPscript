@@ -11,18 +11,21 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 - [ ] Support MariaDB/MySQL-compatible servers through a maintained .NET provider.
 - [ ] Support PostgreSQL.
 - [ ] Keep the public XPScript API stable across database providers where practical.
-- [ ] Build on ADO.NET provider abstractions instead of implementing database wire protocols.
+- [ ] Build on ADO.NET provider abstractions and maintained NuGet database providers. Do not implement database wire protocols.
 - [ ] Keep provider-specific extensions optional and clearly namespaced.
 - [ ] Make the SQL layer reusable by later RAG/retrieval implementations where appropriate.
 
-## Provider implementation
+## Required NuGet provider strategy
 
-- [ ] Evaluate and use `Microsoft.Data.SqlClient` for SQL Server.
-- [ ] Evaluate and use `MySqlConnector` for MariaDB/MySQL compatibility.
-- [ ] Evaluate and use `Npgsql` for PostgreSQL.
-- [ ] Pin maintained provider versions and track security updates.
-- [ ] Do not require all providers to be packaged when an application uses only one provider where feasible.
-- [ ] Add provider capability detection for features that are not portable.
+- [ ] Use `Microsoft.Data.SqlClient` for Microsoft SQL Server unless a documented compatibility/security blocker is found during implementation.
+- [ ] Use `MySqlConnector` for MariaDB/MySQL-compatible servers unless a documented compatibility/security blocker is found during implementation.
+- [ ] Use `Npgsql` for PostgreSQL unless a documented compatibility/security blocker is found during implementation.
+- [ ] Use the providers' built-in connection pooling, TLS, parameter binding, transactions, async I/O, cancellation and type mapping instead of reimplementing those features.
+- [ ] Use `DbConnection`, `DbCommand`, `DbDataReader`, `DbTransaction` and related ADO.NET abstractions for the common XPScript layer where practical.
+- [ ] Keep each provider behind an XPScript-owned adapter so provider packages can be upgraded/replaced without changing the public script API.
+- [ ] Pin/centrally manage provider package versions.
+- [ ] Verify .NET 10 support, Windows/Linux/macOS behavior where applicable, package maintenance, license and security advisories before finalizing versions.
+- [ ] Do not create custom TDS, MySQL/MariaDB or PostgreSQL protocol implementations.
 
 ## Core object model
 
@@ -101,7 +104,7 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 
 - [ ] Allow the SQL runtime to act as a storage/retrieval backend for `RAGTool` through an adapter rather than coupling `AIClient` directly to SQL.
 - [ ] Support ordinary SQL retrieval for metadata/document stores independently of vector search.
-- [ ] Investigate PostgreSQL vector retrieval through pgvector or equivalent maintained extension.
+- [ ] Investigate PostgreSQL vector retrieval through pgvector or equivalent maintained extension/library rather than implementing vector indexing algorithms in XPScript.
 - [ ] Investigate current SQL Server vector capabilities when the database/provider version supports them.
 - [ ] Investigate current MariaDB vector capabilities when the database/provider version supports them.
 - [ ] Keep vector support capability-based and optional. Base SQL support must not require vector extensions.
