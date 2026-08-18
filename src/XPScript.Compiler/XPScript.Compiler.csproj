@@ -10,4 +10,7 @@
     <Product>XPScript</Product>
     <Copyright>(c) xpagedeveloper.com 2026</Copyright>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
+  </ItemGroup>
 </Project>
