@@ -7,6 +7,31 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
 
         generated = ReplaceRequired(generated,
+            "    public void SetRefreshOnChange(object? sourceField, object? targetRegion, object? handlerName)\n",
+            """
+    public void SetRefreshOnChange(object? sourceField, object? targetRegion)
+        => SetRefreshOnChange(sourceField, targetRegion, string.Empty);
+
+    public void SetRefreshOnChange(object? sourceField, object? targetRegion, object? handlerName)
+""");
+
+        generated = ReplaceRequired(generated,
+            """
+        var handler = XPScriptRuntime.CStr(handlerName).Trim();
+        if (handler.Length is < 1 or > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_')
+            throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
+        field.RefreshTargetRegion = region;
+        field.RefreshHandler = handler;
+""",
+            """
+        var handler = XPScriptRuntime.CStr(handlerName).Trim();
+        if (handler.Length > 0 && (handler.Length > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_'))
+            throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
+        field.RefreshTargetRegion = region;
+        field.RefreshHandler = handler;
+""");
+
+        generated = ReplaceRequired(generated,
             """
             if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
             {
