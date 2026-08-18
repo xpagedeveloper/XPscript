@@ -1,0 +1,82 @@
+name: Null Operator Propagation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/StringConcatenationPreprocessor.cs'
+      - 'samples/null-empty-semantics.xps'
+      - 'todo/null-empty-nothing-semantics.md'
+      - '.github/workflows/null-operator-propagation.yml'
+  push:
+    branches:
+      - 'todo-*'
+    paths:
+      - 'src/XPScript.Compiler/TypeCoercionPreprocessor.cs'
+      - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/StringConcatenationPreprocessor.cs'
+      - 'samples/null-empty-semantics.xps'
+      - 'todo/null-empty-nothing-semantics.md'
+      - '.github/workflows/null-operator-propagation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify NULL arithmetic comparison and concatenation semantics
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/null-operator-propagation$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/null-empty-semantics.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'NULL operator propagation sample compilation failed.' }
+
+          $output = @(& $program)
+          if ($LASTEXITCODE -ne 0) { throw "NULL operator propagation sample exited with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'NULL_PROPAGATES=True',
+            'NULL_SUBTRACT_PROPAGATES=True',
+            'NULL_MULTIPLY_PROPAGATES=True',
+            'NULL_DIVIDE_PROPAGATES=True',
+            'NULL_INTEGER_DIVIDE_PROPAGATES=True',
+            'NULL_MOD_PROPAGATES=True',
+            'NULL_POWER_PROPAGATES=True',
+            'NULL_UNARY_PLUS_PROPAGATES=True',
+            'NULL_UNARY_MINUS_PROPAGATES=True',
+            'NULL_EQUAL_PROPAGATES=True',
+            'NULL_NOT_EQUAL_PROPAGATES=True',
+            'NULL_LESS_PROPAGATES=True',
+            'NULL_LESS_EQUAL_PROPAGATES=True',
+            'NULL_GREATER_PROPAGATES=True',
+            'NULL_GREATER_EQUAL_PROPAGATES=True',
+            'NULL_CONCAT_LEFT=A',
+            'NULL_CONCAT_RIGHT=A',
+            'NULL_CONCAT_BOTH_PROPAGATES=True'
+          )) {
+            if ($output -notcontains $value) { throw "NULL operator propagation output missing: $value" }
+          }
