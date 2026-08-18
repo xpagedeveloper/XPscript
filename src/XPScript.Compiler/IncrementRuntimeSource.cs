@@ -31,5 +31,5 @@ internal static class XPScriptIncrementRuntime
         }
     }
 }
-""";
+""" + UIExtensionRuntimeSource.Code;
 }
