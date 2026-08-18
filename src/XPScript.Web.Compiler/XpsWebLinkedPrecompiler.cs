@@ -57,7 +57,7 @@ internal static partial class XpsWebLinkedPrecompiler
     {
         try
         {
-            if (link.StartsWith('/', StringComparison.Ordinal) || link.StartsWith('\\'))
+            if (link.StartsWith("/", StringComparison.Ordinal) || link.StartsWith('\\'))
             {
                 var route = resolver.Resolve('/' + link.TrimStart('/', '\\').Replace('\\', '/'));
                 return route.Found ? route.ScriptPath : null;
