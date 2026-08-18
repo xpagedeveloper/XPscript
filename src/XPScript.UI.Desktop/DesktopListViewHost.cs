@@ -18,6 +18,8 @@ public sealed record DesktopListResult(string Result, int SelectedIndex);
 
 public static class DesktopListViewHost
 {
+    private static readonly object SyncRoot = new();
+    private static bool _initialized;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -29,12 +31,28 @@ public static class DesktopListViewHost
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
             throw new PlatformNotSupportedException("XPScript desktop UIListView is supported on Windows, Linux and macOS.");
 
+        EnsureApplication();
         var request = JsonSerializer.Deserialize<DesktopListRequest>(requestJson, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIListView request is empty.");
 
         DesktopListResult? result = null;
         Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request));
         return JsonSerializer.Serialize(result ?? new DesktopListResult("Cancel", -1), JsonOptions);
+    }
+
+    private static void EnsureApplication()
+    {
+        lock (SyncRoot)
+        {
+            if (_initialized) return;
+            if (Application.Current is null)
+            {
+                AppBuilder.Configure<XpsDesktopApplication>()
+                    .UsePlatformDetect()
+                    .SetupWithoutStarting();
+            }
+            _initialized = true;
+        }
     }
 
     private static DesktopListResult ShowDialogCore(DesktopListRequest request)
