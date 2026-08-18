@@ -1,0 +1,113 @@
+' XPscript desktop UI showcase
+' Demonstrates UIForm, generic dialogs and file dialogs.
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New JsonObject
+    Dim form As New UIForm("XPscript desktop UI showcase", 760, 820, True)
+    Dim result As String
+    Dim answer As String
+    Dim selected As String
+    Dim inputValue As String
+    Dim passwordValue As String
+    Dim fileName As String
+
+    Call data.Set("name", "Kalle")
+    Call data.Set("notes", "This form demonstrates all current UIForm field types.")
+    Call data.Set("age", 42)
+    Call data.Set("volume", 50)
+    Call data.Set("enabled", True)
+    Call data.Set("birthday", "2026-08-18")
+    Call data.Set("time", "18:30")
+    Call data.Set("meeting", "2026-08-18T18:30")
+    Call data.Set("month", "2026-08")
+    Call data.Set("color", "#336699")
+    Call data.Set("email", "test@example.com")
+    Call data.Set("website", "https://example.com")
+    Call data.Set("country", "SE")
+    Call data.Set("mode", "safe")
+    Call data.Set("token", "desktop-demo")
+
+    Call form.BindData(data)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddNumberField("age", "Age")
+    Call form.AddRangeField("volume", "Volume")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddDateField("birthday", "Birthday")
+    Call form.AddTimeField("time", "Time")
+    Call form.AddDateTimeField("meeting", "Meeting")
+    Call form.AddMonthField("month", "Month")
+    Call form.AddColorField("color", "Color")
+    Call form.AddEmailField("email", "Email")
+    Call form.AddUrlField("website", "Website")
+    Call form.AddPasswordField("password", "Password")
+
+    Call form.AddSelect("country", "Country")
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+    Call form.AddOption("country", "DK")
+
+    Call form.AddRadioGroup("mode", "Mode")
+    Call form.AddOption("mode", "safe")
+    Call form.AddOption("mode", "fast")
+    Call form.AddOption("mode", "debug")
+
+    Call form.AddHiddenField("token")
+
+    Call form.SetRequired("name", True)
+    Call form.SetRequired("country", True)
+    Call form.SetRequired("mode", True)
+    Call form.SetLength("name", 2, 100)
+    Call form.SetLength("notes", 0, 2000)
+    Call form.SetLength("email", 3, 320)
+    Call form.SetLength("website", 8, 2048)
+    Call form.SetLength("password", 8, 128)
+    Call form.SetNumberRange("age", 0, 150)
+    Call form.SetNumberRange("volume", 0, 100)
+
+    result = form.ShowDialog()
+    Print "UIFORM_RESULT=" & result
+    Print "UIFORM_JSON=" & data.Stringify()
+
+    answer = ShowDialog("This is an OK dialog.", "ShowDialog", "OK")
+    Print "DIALOG_OK=" & answer
+
+    answer = ShowDialog("Continue?", "ShowDialog", "OKCancel")
+    Print "DIALOG_OK_CANCEL=" & answer
+
+    answer = ShowDialog("Save changes?", "ShowDialog", "YesNo")
+    Print "DIALOG_YES_NO=" & answer
+
+    answer = ShowDialog("Save changes before closing?", "ShowDialog", "YesNoCancel")
+    Print "DIALOG_YES_NO_CANCEL=" & answer
+
+    answer = ShowDialog("Operation failed. Retry?", "ShowDialog", "RetryCancel")
+    Print "DIALOG_RETRY_CANCEL=" & answer
+
+    answer = ShowDialog("Choose an action.", "ShowDialog", "AbortRetryIgnore")
+    Print "DIALOG_ABORT_RETRY_IGNORE=" & answer
+
+    selected = ShowDialog("Choose environment", "ShowDialog", "List", "Development|Test|Production")
+    Print "DIALOG_LIST=" & selected
+
+    inputValue = ShowDialog("Enter your name", "ShowDialog", "Input", "Kalle")
+    Print "DIALOG_INPUT=" & inputValue
+
+    passwordValue = ShowDialog("Enter a password", "ShowDialog", "Password")
+    If passwordValue = "Cancel" Then
+        Print "DIALOG_PASSWORD=Cancel"
+    Else
+        Print "DIALOG_PASSWORD_LENGTH=" & CStr(Len(passwordValue))
+    End If
+
+    fileName = LoadFileDialog("Load a file", "", "JSON|*.json|Text|*.txt|All files|*")
+    Print "LOAD_FILE=" & fileName
+
+    fileName = OpenFileDialog("Open a file", "", "Images|*.png;*.jpg;*.jpeg|All files|*")
+    Print "OPEN_FILE=" & fileName
+
+    fileName = SaveFileDialog("Save a file", "ui-showcase.json", "JSON|*.json|All files|*")
+    Print "SAVE_FILE=" & fileName
+End Sub

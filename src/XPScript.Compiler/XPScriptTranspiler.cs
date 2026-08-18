@@ -113,6 +113,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
 
+        generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 
         generated = generated.Replace(

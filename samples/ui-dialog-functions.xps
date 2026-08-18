@@ -1,0 +1,21 @@
+' XPscript desktop dialog API compile regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Print "UI_DIALOG_API_COMPILED=True"
+End Sub
+
+Sub DialogExamples()
+    Dim answer As String
+    Dim selected As String
+    Dim fileName As String
+
+    answer = ShowDialog("Save changes?", "Confirm", "YesNo")
+    selected = ShowDialog("Choose environment", "Environment", "List", "Development|Test|Production")
+    selected = ShowDialog("Enter name", "Input", "Input", "Fredrik")
+    selected = ShowDialog("Enter secret", "Password", "Password")
+
+    fileName = LoadFileDialog("Open data", "", "JSON|*.json|CSV|*.csv|All files|*")
+    fileName = OpenFileDialog("Open document")
+    fileName = SaveFileDialog("Save report", "report.json", "JSON|*.json|All files|*")
+End Sub
