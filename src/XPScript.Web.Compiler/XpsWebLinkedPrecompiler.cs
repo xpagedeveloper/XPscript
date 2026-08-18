@@ -15,11 +15,13 @@ internal static partial class XpsWebLinkedPrecompiler
     public static async Task PrecompileResponseLinksAsync(
         XpsWebResponse response,
         XpsWebPathResolver resolver,
+        string sourceScriptPath,
         Func<string, CancellationToken, Task> precompileAsync,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(resolver);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceScriptPath);
         ArgumentNullException.ThrowIfNull(precompileAsync);
 
         if (response.Body.IsEmpty || response.Body.Length > MaxResponseScanBytes) return;
@@ -44,15 +46,35 @@ internal static partial class XpsWebLinkedPrecompiler
             if (cut >= 0) clean = clean[..cut];
             if (!clean.EndsWith(".xps", StringComparison.OrdinalIgnoreCase)) continue;
 
-            if (!clean.StartsWith('/', StringComparison.Ordinal)) clean = "/" + clean.TrimStart('/');
+            var scriptPath = ResolveLinkedScript(resolver, sourceScriptPath, clean);
+            if (scriptPath is null || !seen.Add(scriptPath)) continue;
 
-            XpsRouteResolution resolution;
-            try { resolution = resolver.Resolve(clean); }
-            catch (XpsWebPathException) { continue; }
-            if (!resolution.Found || resolution.ScriptPath is null) continue;
-            if (!seen.Add(resolution.ScriptPath)) continue;
+            await precompileAsync(scriptPath, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
-            await precompileAsync(resolution.ScriptPath, cancellationToken).ConfigureAwait(false);
+    private static string? ResolveLinkedScript(XpsWebPathResolver resolver, string sourceScriptPath, string link)
+    {
+        try
+        {
+            if (link.StartsWith('/', StringComparison.Ordinal) || link.StartsWith('\\'))
+            {
+                var route = resolver.Resolve('/' + link.TrimStart('/', '\\').Replace('\\', '/'));
+                return route.Found ? route.ScriptPath : null;
+            }
+
+            var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(sourceScriptPath));
+            if (sourceDirectory is null) return null;
+            var normalized = link.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            var candidate = Path.GetFullPath(Path.Combine(sourceDirectory, normalized));
+            var relative = Path.GetRelativePath(resolver.Root, candidate);
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)) return null;
+            if (!Path.GetExtension(candidate).Equals(".xps", StringComparison.OrdinalIgnoreCase)) return null;
+            return File.Exists(candidate) ? candidate : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or XpsWebPathException)
+        {
+            return null;
         }
     }
 
