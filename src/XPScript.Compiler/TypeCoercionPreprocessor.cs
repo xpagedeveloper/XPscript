@@ -77,6 +77,8 @@ internal sealed class TypeCoercionPreprocessor
         if (IsFullyParenthesized(expression))
             return "(" + RewriteVariantArithmeticExpression(expression[1..^1]) + ")";
 
+        // LotusScript precedence, low to high for recursive lowering:
+        // +/-, Mod, integer division, */. Exponentiation is intentionally handled later.
         var additive = FindRightmostTopLevelBinaryOperator(expression, '+', '-');
         if (additive >= 0)
         {
@@ -87,12 +89,30 @@ internal sealed class TypeCoercionPreprocessor
             return $"XPScriptCoercion.{method}({left}, {right})";
         }
 
-        var multiplicative = FindRightmostTopLevelBinaryOperator(expression, '*');
+        var modulo = FindRightmostTopLevelWordOperator(expression, "Mod");
+        if (modulo >= 0)
+        {
+            var left = RewriteVariantArithmeticExpression(expression[..modulo]);
+            var right = RewriteVariantArithmeticExpression(expression[(modulo + 3)..]);
+            return $"XPScriptCoercion.ModVariant({left}, {right})";
+        }
+
+        var integerDivision = FindRightmostTopLevelBinaryOperator(expression, '\\');
+        if (integerDivision >= 0)
+        {
+            var left = RewriteVariantArithmeticExpression(expression[..integerDivision]);
+            var right = RewriteVariantArithmeticExpression(expression[(integerDivision + 1)..]);
+            return $"XPScriptCoercion.IntegerDivideVariant({left}, {right})";
+        }
+
+        var multiplicative = FindRightmostTopLevelBinaryOperator(expression, '*', '/');
         if (multiplicative >= 0)
         {
+            var op = expression[multiplicative];
             var left = RewriteVariantArithmeticExpression(expression[..multiplicative]);
             var right = RewriteVariantArithmeticExpression(expression[(multiplicative + 1)..]);
-            return $"XPScriptCoercion.MultiplyVariant({left}, {right})";
+            var method = op == '*' ? "MultiplyVariant" : "DivideVariant";
+            return $"XPScriptCoercion.{method}({left}, {right})";
         }
 
         return expression;
@@ -118,6 +138,37 @@ internal sealed class TypeCoercionPreprocessor
             if (depth != 0 || !operators.Contains(c)) continue;
             if ((c == '+' || c == '-') && IsUnarySign(value, i)) continue;
             candidate = i;
+        }
+        return candidate;
+    }
+
+    private static int FindRightmostTopLevelWordOperator(string value, string operation)
+    {
+        var inString = false;
+        var depth = 0;
+        var candidate = -1;
+        for (var i = 0; i <= value.Length - operation.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0 || !value.AsSpan(i, operation.Length).Equals(operation, StringComparison.OrdinalIgnoreCase)) continue;
+
+            var beforeOk = i == 0 || !(char.IsLetterOrDigit(value[i - 1]) || value[i - 1] == '_');
+            var afterIndex = i + operation.Length;
+            var afterOk = afterIndex == value.Length || !(char.IsLetterOrDigit(value[afterIndex]) || value[afterIndex] == '_');
+            if (beforeOk && afterOk)
+            {
+                candidate = i;
+                i += operation.Length - 1;
+            }
         }
         return candidate;
     }
@@ -177,10 +228,6 @@ internal sealed class TypeCoercionPreprocessor
             var condition = match.Groups["condition"].Value.Trim();
             if (condition.StartsWith("XPScriptNullRuntime.ConditionValue(", StringComparison.Ordinal)) return line;
 
-            // Comparisons already produce Boolean values. More importantly, compound
-            // comparison conditions must remain visible to the later operator pass so
-            // expressions such as "a = b Or c = d" can be lowered with the correct
-            // precedence before any NULL/EMPTY coercion wrapper is considered.
             if (ContainsComparisonOperator(condition)) return line;
 
             return match.Groups["prefix"].Value + "XPScriptNullRuntime.ConditionValue(" + condition + ")" + match.Groups["suffix"].Value;
