@@ -24,9 +24,20 @@ Sub Main()
     Call list.SetColumnWidth("name", 240)
     Call list.SetColumnWidth("city", 220)
     Call list.SetKeyField("id")
+    Call list.SetOnSelect("CustomerSelected")
+    Call list.SetOnDoubleClick("CustomerDoubleClicked")
+    Call list.SetRowAction("customer-form.xps", "id", "customerId")
 
     result = list.ShowDialog()
     Print "RESULT=" & result
     Print "SELECTED_INDEX=" & list.SelectedIndex
     Print "SELECTED_KEY=" & list.GetSelectedKey()
+End Sub
+
+Sub CustomerSelected(list As Variant)
+    Print "SELECTED=" & list.GetSelectedKey()
+End Sub
+
+Sub CustomerDoubleClicked(list As Variant)
+    Print "DOUBLE_CLICKED=" & list.GetSelectedValueString("name")
 End Sub
