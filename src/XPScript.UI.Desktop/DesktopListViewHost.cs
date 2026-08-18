@@ -11,6 +11,7 @@ namespace XPScript.UI.Desktop;
 
 public sealed record DesktopListColumn(string Name, string Label, int Width);
 public sealed record DesktopListRow(int Index, IReadOnlyDictionary<string, string> Values);
+public sealed record DesktopListAction(string Name, string Label, string Kind);
 public sealed record DesktopListRequest(
     string Title,
     int SelectedIndex,
@@ -19,12 +20,14 @@ public sealed record DesktopListRequest(
     bool HasRowAction,
     bool HasOnSelect,
     bool HasOnDoubleClick,
+    IReadOnlyList<DesktopListAction> RowActions,
     IReadOnlyList<DesktopListColumn> Columns,
     IReadOnlyList<DesktopListRow> Rows);
 public sealed record DesktopListResult(string Result, int SelectedIndex);
 
 internal sealed record DesktopListLiveColumn(string Name, string Label, int Width);
-internal sealed record DesktopListLiveRow(int Index, string? Href, IReadOnlyList<string> Values);
+internal sealed record DesktopListLiveAction(string Name, string Label, string Kind, string? Href);
+internal sealed record DesktopListLiveRow(int Index, string? Href, IReadOnlyList<string> Values, IReadOnlyList<DesktopListLiveAction>? Actions);
 internal sealed record DesktopListLiveState(
     int SelectedIndex,
     bool Sortable,
@@ -77,6 +80,7 @@ public static class DesktopListViewHost
     {
         var root = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var columns = request.Columns.ToList();
+        var rowActions = request.RowActions?.ToList() ?? [];
         var workingRows = request.Rows.ToList();
         var sortable = request.Sortable;
         var filterEnabled = request.FilterEnabled;
@@ -87,6 +91,8 @@ public static class DesktopListViewHost
         var filter = new TextBox { Watermark = "Filter visible columns", IsVisible = filterEnabled };
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var rebuilding = false;
+        Window? window = null;
+        DesktopListResult? result = null;
 
         root.Children.Add(filter);
         root.Children.Add(header);
@@ -126,6 +132,26 @@ public static class DesktopListViewHost
                     });
                 }
             }
+
+            if (rowActions.Count > 0)
+                header.Children.Add(new TextBlock { Text = "Actions", MinWidth = Math.Max(100, rowActions.Count * 84) });
+        }
+
+        void HandleAction(DesktopListAction action, int rowIndex)
+        {
+            selectedIndexState = rowIndex;
+            if (action.Kind.Equals("Handler", StringComparison.OrdinalIgnoreCase))
+            {
+                if (eventCallback is not null)
+                    ApplyLiveState(eventCallback("action:" + action.Name, rowIndex.ToString(CultureInfo.InvariantCulture)));
+                return;
+            }
+
+            if (action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
+            {
+                result = new DesktopListResult("RowAction:" + action.Name, rowIndex);
+                window?.Close();
+            }
         }
 
         void RebuildRows()
@@ -154,6 +180,20 @@ public static class DesktopListViewHost
                         });
                     }
 
+                    if (rowActions.Count > 0)
+                    {
+                        var actionPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+                        foreach (var action in rowActions)
+                        {
+                            var capturedAction = action;
+                            var capturedIndex = row.Index;
+                            var button = new Button { Content = action.Label, MinWidth = 72 };
+                            button.Click += (_, _) => HandleAction(capturedAction, capturedIndex);
+                            actionPanel.Children.Add(button);
+                        }
+                        rowPanel.Children.Add(actionPanel);
+                    }
+
                     var item = new ListBoxItem { Content = rowPanel, Tag = row.Index };
                     listItems.Add(item);
                     if (row.Index == selected) list.SelectedItem = item;
@@ -172,6 +212,15 @@ public static class DesktopListViewHost
             if (state is null) return;
 
             columns = state.Columns.Select(column => new DesktopListColumn(column.Name, column.Label, column.Width)).ToList();
+            var actionMap = new Dictionary<string, DesktopListAction>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in state.Rows)
+            {
+                foreach (var action in row.Actions ?? [])
+                    actionMap.TryAdd(action.Name, new DesktopListAction(action.Name, action.Label, action.Kind));
+            }
+            if (actionMap.Count > 0 || rowActions.Count > 0)
+                rowActions = actionMap.Values.ToList();
+
             workingRows = state.Rows.Select(row =>
             {
                 var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -212,16 +261,15 @@ public static class DesktopListViewHost
             ApplyLiveState(eventCallback("select", selectedIndex.ToString(CultureInfo.InvariantCulture)));
         };
 
-        var window = new Window
+        window = new Window
         {
             Title = request.Title,
-            Width = Math.Clamp(EstimateWidth(columns), 480, 1600),
+            Width = Math.Clamp(EstimateWidth(columns, rowActions.Count), 480, 1800),
             Height = 560,
             CanResize = true,
             Content = root
         };
 
-        DesktopListResult? result = null;
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
         {
@@ -286,6 +334,6 @@ public static class DesktopListViewHost
 
     private static double NormalizeWidth(int width) => width > 0 ? Math.Clamp(width, 48, 4096) : 180;
 
-    private static double EstimateWidth(IReadOnlyList<DesktopListColumn> columns)
-        => columns.Sum(column => NormalizeWidth(column.Width)) + Math.Max(0, columns.Count - 1) * 8 + 64;
+    private static double EstimateWidth(IReadOnlyList<DesktopListColumn> columns, int actionCount)
+        => columns.Sum(column => NormalizeWidth(column.Width)) + Math.Max(0, columns.Count - 1) * 8 + Math.Max(0, actionCount) * 84 + 64;
 }
