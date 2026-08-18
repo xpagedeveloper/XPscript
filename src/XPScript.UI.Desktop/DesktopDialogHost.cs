@@ -59,16 +59,27 @@ public static class DesktopDialogHost
 
     private static string ShowChoiceDialogCore(ChoiceDialogRequest request)
     {
+        var kind = request.Kind.Trim().ToLowerInvariant();
         var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16) };
         if (!string.IsNullOrWhiteSpace(request.Message))
             panel.Children.Add(new TextBlock { Text = request.Message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
 
         ComboBox? list = null;
-        if (request.Kind.Equals("List", StringComparison.OrdinalIgnoreCase))
+        TextBox? input = null;
+        if (kind == "list")
         {
             list = new ComboBox { ItemsSource = request.Options ?? [] };
             if ((request.Options?.Length ?? 0) > 0) list.SelectedIndex = 0;
             panel.Children.Add(list);
+        }
+        else if (kind is "input" or "password")
+        {
+            input = new TextBox
+            {
+                Text = request.Options?.FirstOrDefault() ?? string.Empty,
+                PasswordChar = kind == "password" ? '•' : '\0'
+            };
+            panel.Children.Add(input);
         }
 
         var buttons = new StackPanel
@@ -83,23 +94,27 @@ public static class DesktopDialogHost
         {
             Title = string.IsNullOrWhiteSpace(request.Title) ? "XPScript" : request.Title,
             Width = 460,
-            Height = request.Kind.Equals("List", StringComparison.OrdinalIgnoreCase) ? 220 : 180,
+            Height = kind is "list" or "input" or "password" ? 220 : 180,
             CanResize = false,
             Content = panel
         };
 
         string result = "Cancel";
         var loop = new DispatcherFrame();
-        void AddButton(string caption, string value, bool requireList = false)
+        void AddButton(string caption, string value, bool useSelection = false, bool useInput = false)
         {
             var button = new Button { Content = caption, MinWidth = 80 };
             button.Click += (_, _) =>
             {
-                if (requireList)
+                if (useSelection)
                 {
                     var selected = list?.SelectedItem?.ToString();
                     if (string.IsNullOrEmpty(selected)) return;
                     result = selected;
+                }
+                else if (useInput)
+                {
+                    result = input?.Text ?? string.Empty;
                 }
                 else result = value;
                 window.Close();
@@ -107,15 +122,19 @@ public static class DesktopDialogHost
             buttons.Children.Add(button);
         }
 
-        switch (request.Kind.Trim().ToLowerInvariant())
+        switch (kind)
         {
             case "yesno": AddButton("Yes", "Yes"); AddButton("No", "No"); break;
             case "yesnocancel": AddButton("Yes", "Yes"); AddButton("No", "No"); AddButton("Cancel", "Cancel"); break;
             case "okcancel": AddButton("OK", "OK"); AddButton("Cancel", "Cancel"); break;
-            case "list": AddButton("OK", "", requireList: true); AddButton("Cancel", "Cancel"); break;
+            case "retrycancel": AddButton("Retry", "Retry"); AddButton("Cancel", "Cancel"); break;
+            case "abortretryignore": AddButton("Abort", "Abort"); AddButton("Retry", "Retry"); AddButton("Ignore", "Ignore"); break;
+            case "list": AddButton("OK", string.Empty, useSelection: true); AddButton("Cancel", "Cancel"); break;
+            case "input":
+            case "password": AddButton("OK", string.Empty, useInput: true); AddButton("Cancel", "Cancel"); break;
             case "ok":
             case "": AddButton("OK", "OK"); break;
-            default: throw new ArgumentException("Unsupported ShowDialog kind. Use OK, OKCancel, YesNo, YesNoCancel or List.");
+            default: throw new ArgumentException("Unsupported ShowDialog kind. Use OK, OKCancel, YesNo, YesNoCancel, RetryCancel, AbortRetryIgnore, List, Input or Password.");
         }
 
         window.Closed += (_, _) => loop.Continue = false;
