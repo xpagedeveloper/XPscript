@@ -44,8 +44,9 @@ internal static class CompilerBuildEnvironment
 
         var source = File.ReadAllText(generatedSource);
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
+        var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
-        if (!usesUiForm && !usesDesktopDialog) return;
+        if (!usesUiForm && !usesUiListView && !usesDesktopDialog) return;
 
         var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
         if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly))
