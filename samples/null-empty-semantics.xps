@@ -7,17 +7,33 @@ Sub Main()
     Dim nullSum As Variant
     Dim nullDifference As Variant
     Dim nullProduct As Variant
+    Dim nullDivision As Variant
+    Dim nullIntegerDivision As Variant
+    Dim nullModulo As Variant
     Dim emptyDifference As Variant
     Dim emptyProduct As Variant
+    Dim emptyDivision As Variant
+    Dim emptyModulo As Variant
     Dim arithmeticPrecedence As Variant
+    Dim divisionValue As Variant
+    Dim integerDivisionValue As Variant
+    Dim moduloValue As Variant
 
     nullValue = Null
     nullSum = nullValue + 1
     nullDifference = nullValue - 1
     nullProduct = 2 * nullValue
+    nullDivision = nullValue / 2
+    nullIntegerDivision = nullValue \ 2
+    nullModulo = nullValue Mod 2
     emptyDifference = emptyValue - 1
     emptyProduct = emptyValue * 5
-    arithmeticPrecedence = 10 - 2 * 3
+    emptyDivision = emptyValue / 2
+    emptyModulo = emptyValue Mod 5
+    arithmeticPrecedence = 10 - 8 / 2 * 3
+    divisionValue = 8 / 5
+    integerDivisionValue = 16.9 \ 5.6
+    moduloValue = 12 Mod 8
 
     Print "EMPTY_DT=" & CStr(DataType(emptyValue))
     Print "EMPTY_TYPE=" & TypeName(emptyValue)
@@ -31,7 +47,15 @@ Sub Main()
     Print "NULL_PROPAGATES=" & CStr(IsNull(nullSum))
     Print "NULL_SUBTRACT_PROPAGATES=" & CStr(IsNull(nullDifference))
     Print "NULL_MULTIPLY_PROPAGATES=" & CStr(IsNull(nullProduct))
+    Print "NULL_DIVIDE_PROPAGATES=" & CStr(IsNull(nullDivision))
+    Print "NULL_INTEGER_DIVIDE_PROPAGATES=" & CStr(IsNull(nullIntegerDivision))
+    Print "NULL_MOD_PROPAGATES=" & CStr(IsNull(nullModulo))
     Print "EMPTY_SUBTRACT_ZERO=" & CStr(emptyDifference)
     Print "EMPTY_MULTIPLY_ZERO=" & CStr(emptyProduct)
+    Print "EMPTY_DIVIDE_ZERO=" & CStr(emptyDivision)
+    Print "EMPTY_MOD_ZERO=" & CStr(emptyModulo)
     Print "ARITHMETIC_PRECEDENCE=" & CStr(arithmeticPrecedence)
+    Print "DIVISION_VALUE=" & CStr(divisionValue)
+    Print "INTEGER_DIVISION_VALUE=" & CStr(integerDivisionValue)
+    Print "MOD_VALUE=" & CStr(moduloValue)
 End Sub
