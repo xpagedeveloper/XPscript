@@ -9,13 +9,25 @@ internal sealed class StringConcatenationPreprocessor
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new string[lines.Length];
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
             var code = StripComment(line);
-            var assignment = Regex.Match(code, @"^(?<indent>\s*)(?<prefix>(?:Let\s+)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\s*=\s*)(?<rhs>.+)$", RegexOptions.IgnoreCase);
-            if (!assignment.Success)
+            var trimmed = code.Trim();
+
+            if (Regex.IsMatch(trimmed, @"^(?:Sub|Function|Property)\b", RegexOptions.IgnoreCase))
+                variables.Clear();
+
+            var dim = Regex.Match(trimmed, @"^Dim\s+([A-Za-z_]\w*)\s*(?:\([^)]*\))?\s+As\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
+            if (dim.Success)
+                variables[dim.Groups[1].Value] = dim.Groups[2].Value;
+
+            var assignment = Regex.Match(code, @"^(?<indent>\s*)(?<prefix>(?:Let\s+)?(?<target>[A-Za-z_]\w*)\s*=\s*)(?<rhs>.+)$", RegexOptions.IgnoreCase);
+            if (!assignment.Success ||
+                !variables.TryGetValue(assignment.Groups["target"].Value, out var targetType) ||
+                !targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase))
             {
                 output[i] = line;
                 continue;
