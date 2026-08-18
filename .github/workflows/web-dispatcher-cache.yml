@@ -10,16 +10,19 @@ on:
       - 'src/XPScript.Web.Runtime/XpsWebRequest.cs'
       - 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
       - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRouteMetadataParser.cs'
       - 'src/XPScript.Web.Runtime/IXpsWebRequestHandler.cs'
       - 'tests/WebDispatcherSmoke/**'
+      - 'tests/WebPrecompileSmoke/**'
       - '.github/workflows/web-dispatcher-cache.yml'
       - 'XPScriptCompiler.slnx'
   push:
-    branches: ['todo-web-runtime-dispatch-cache']
+    branches: ['feat-web-precompile-linked-xps']
     paths:
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.Web.Runtime/**'
       - 'tests/WebDispatcherSmoke/**'
+      - 'tests/WebPrecompileSmoke/**'
       - '.github/workflows/web-dispatcher-cache.yml'
       - 'XPScriptCompiler.slnx'
   workflow_dispatch:
@@ -48,3 +51,6 @@ jobs:
 
       - name: Run dispatcher and cache regression
         run: dotnet run --project ./tests/WebDispatcherSmoke/WebDispatcherSmoke.csproj -c Release
+
+      - name: Run web precompile regression
+        run: dotnet run --project ./tests/WebPrecompileSmoke/WebPrecompileSmoke.csproj -c Release
