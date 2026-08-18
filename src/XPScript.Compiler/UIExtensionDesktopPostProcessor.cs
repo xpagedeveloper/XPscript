@@ -51,7 +51,8 @@ internal sealed class UIExtensionDesktopPostProcessor
             + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
             + Environment.NewLine + UIDialogRuntimeSource.Code
             + Environment.NewLine;
-        return new UIFormLayoutReactivePostProcessor().Transform(replaced);
+        replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
+        return new UIFormDesktopLayoutMetadataPostProcessor().Transform(replaced);
     }
 
     private static string RewriteDialogCalls(string source)
