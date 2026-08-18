@@ -29,6 +29,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
+            ApplySubmittedStateJson(submittedValue);
             handlerName = FindButton(controlName).Handler;
         }
         else
@@ -38,6 +39,30 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
         InvokeRegisteredHandler(handlerName);
         return SerializeActionState();
+    }
+
+    private void ApplySubmittedStateJson(string submittedJson)
+    {
+        if (string.IsNullOrWhiteSpace(submittedJson)) return;
+        using var document = System.Text.Json.JsonDocument.Parse(submittedJson);
+        if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            throw new XPScriptRuntimeException(5, "UIForm submitted event state must be a JSON object.");
+
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            var field = _fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            if (field is null) continue;
+            var submitted = property.Value.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => string.Empty,
+                _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported event value type.")
+            };
+            ApplySubmittedValue(field, submitted);
+        }
     }
 
     private void InvokeRegisteredHandler(string handlerName)
