@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Avalonia;
@@ -12,6 +14,9 @@ public sealed record DesktopListRow(int Index, IReadOnlyDictionary<string, strin
 public sealed record DesktopListRequest(
     string Title,
     int SelectedIndex,
+    bool Sortable,
+    bool FilterEnabled,
+    bool HasRowAction,
     IReadOnlyList<DesktopListColumn> Columns,
     IReadOnlyList<DesktopListRow> Rows);
 public sealed record DesktopListResult(string Result, int SelectedIndex);
@@ -58,48 +63,84 @@ public static class DesktopListViewHost
     private static DesktopListResult ShowDialogCore(DesktopListRequest request)
     {
         var root = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        var workingRows = request.Rows.ToList();
+        var sortAscending = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var listItems = new ObservableCollection<ListBoxItem>();
+        var list = new ListBox { MinHeight = 240, ItemsSource = listItems };
+        TextBox? filter = null;
+
+        if (request.FilterEnabled)
+        {
+            filter = new TextBox { Watermark = "Filter visible columns" };
+            root.Children.Add(filter);
+        }
 
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         foreach (var column in request.Columns)
         {
-            header.Children.Add(new TextBlock
+            if (request.Sortable)
             {
-                Text = column.Label,
-                Width = NormalizeWidth(column.Width)
-            });
-        }
-        root.Children.Add(header);
-
-        var list = new ListBox { MinHeight = 240 };
-        foreach (var row in request.Rows)
-        {
-            var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            foreach (var column in request.Columns)
-            {
-                row.Values.TryGetValue(column.Name, out var value);
-                rowPanel.Children.Add(new TextBlock
+                var sort = new Button
                 {
-                    Text = value ?? string.Empty,
+                    Content = column.Label,
                     Width = NormalizeWidth(column.Width),
-                    TextWrapping = Avalonia.Media.TextWrapping.NoWrap
+                    Tag = column.Name,
+                    HorizontalContentAlignment = HorizontalAlignment.Left
+                };
+                sort.Click += (_, _) =>
+                {
+                    var name = Convert.ToString(sort.Tag, CultureInfo.InvariantCulture) ?? string.Empty;
+                    var ascending = !sortAscending.TryGetValue(name, out var previous) || !previous;
+                    sortAscending.Clear();
+                    sortAscending[name] = ascending;
+                    workingRows.Sort((left, right) => CompareValues(GetValue(left, name), GetValue(right, name), ascending));
+                    RebuildRows();
+                };
+                header.Children.Add(sort);
+            }
+            else
+            {
+                header.Children.Add(new TextBlock
+                {
+                    Text = column.Label,
+                    Width = NormalizeWidth(column.Width)
                 });
             }
-
-            list.Items.Add(new ListBoxItem
-            {
-                Content = rowPanel,
-                Tag = row.Index
-            });
         }
-
-        if (request.SelectedIndex >= 0)
-        {
-            var selectedItem = list.Items.OfType<ListBoxItem>()
-                .FirstOrDefault(item => item.Tag is int index && index == request.SelectedIndex);
-            if (selectedItem is not null) list.SelectedItem = selectedItem;
-        }
-
+        root.Children.Add(header);
         root.Children.Add(list);
+
+        void RebuildRows()
+        {
+            var selected = list.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag is int selectedIndex
+                ? selectedIndex
+                : request.SelectedIndex;
+            var query = filter?.Text?.Trim() ?? string.Empty;
+            listItems.Clear();
+            foreach (var row in workingRows)
+            {
+                if (query.Length > 0 && !request.Columns.Any(column => GetValue(row, column.Name).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+                    continue;
+
+                var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                foreach (var column in request.Columns)
+                {
+                    rowPanel.Children.Add(new TextBlock
+                    {
+                        Text = GetValue(row, column.Name),
+                        Width = NormalizeWidth(column.Width),
+                        TextWrapping = Avalonia.Media.TextWrapping.NoWrap
+                    });
+                }
+
+                var item = new ListBoxItem { Content = rowPanel, Tag = row.Index };
+                listItems.Add(item);
+                if (row.Index == selected) list.SelectedItem = item;
+            }
+        }
+
+        if (filter is not null)
+            filter.TextChanged += (_, _) => RebuildRows();
 
         var actions = new StackPanel
         {
@@ -107,17 +148,13 @@ public static class DesktopListViewHost
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8
         };
-        var ok = new Button { Content = "OK", MinWidth = 80, IsEnabled = list.SelectedItem is not null };
+        var ok = new Button { Content = "OK", MinWidth = 80, IsEnabled = false };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
         actions.Children.Add(ok);
         actions.Children.Add(cancel);
         root.Children.Add(actions);
 
         list.SelectionChanged += (_, _) => ok.IsEnabled = list.SelectedItem is not null;
-        list.DoubleTapped += (_, _) =>
-        {
-            if (list.SelectedItem is not null) ok.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
-        };
 
         var window = new Window
         {
@@ -132,8 +169,15 @@ public static class DesktopListViewHost
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
         {
-            var selectedIndex = list.SelectedItem is ListBoxItem item && item.Tag is int index ? index : -1;
+            var selectedIndex = SelectedIndex(list);
             result = new DesktopListResult("OK", selectedIndex);
+            window.Close();
+        };
+        list.DoubleTapped += (_, _) =>
+        {
+            var selectedIndex = SelectedIndex(list);
+            if (selectedIndex < 0) return;
+            result = new DesktopListResult(request.HasRowAction ? "Open" : "OK", selectedIndex);
             window.Close();
         };
         cancel.Click += (_, _) =>
@@ -143,9 +187,38 @@ public static class DesktopListViewHost
         };
         window.Closed += (_, _) => loop.Continue = false;
 
+        RebuildRows();
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
         return result ?? new DesktopListResult("Cancel", -1);
+    }
+
+    private static int SelectedIndex(ListBox list)
+        => list.SelectedItem is ListBoxItem item && item.Tag is int index ? index : -1;
+
+    private static string GetValue(DesktopListRow row, string name)
+        => row.Values.TryGetValue(name, out var value) ? value ?? string.Empty : string.Empty;
+
+    private static int CompareValues(string left, string right, bool ascending)
+    {
+        var result = CompareValuesCore(left, right);
+        return ascending ? result : -result;
+    }
+
+    private static int CompareValuesCore(string left, string right)
+    {
+        if (decimal.TryParse(left, NumberStyles.Number, CultureInfo.InvariantCulture, out var leftNumber) &&
+            decimal.TryParse(right, NumberStyles.Number, CultureInfo.InvariantCulture, out var rightNumber))
+            return leftNumber.CompareTo(rightNumber);
+
+        if (bool.TryParse(left, out var leftBool) && bool.TryParse(right, out var rightBool))
+            return leftBool.CompareTo(rightBool);
+
+        if (DateTime.TryParse(left, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var leftDate) &&
+            DateTime.TryParse(right, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var rightDate))
+            return leftDate.CompareTo(rightDate);
+
+        return StringComparer.CurrentCultureIgnoreCase.Compare(left, right);
     }
 
     private static double NormalizeWidth(int width) => width > 0 ? Math.Clamp(width, 48, 4096) : 180;
