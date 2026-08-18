@@ -10,14 +10,21 @@ Sub Main()
     Dim nullDivision As Variant
     Dim nullIntegerDivision As Variant
     Dim nullModulo As Variant
+    Dim nullPower As Variant
     Dim emptyDifference As Variant
     Dim emptyProduct As Variant
     Dim emptyDivision As Variant
     Dim emptyModulo As Variant
+    Dim emptyPower As Variant
     Dim arithmeticPrecedence As Variant
     Dim divisionValue As Variant
     Dim integerDivisionValue As Variant
     Dim moduloValue As Variant
+    Dim powerValue As Variant
+    Dim powerChain As Variant
+    Dim powerParenthesized As Variant
+    Dim negativePowerPrecedence As Variant
+    Dim negativePowerParenthesized As Variant
 
     nullValue = Null
     nullSum = nullValue + 1
@@ -26,14 +33,21 @@ Sub Main()
     nullDivision = nullValue / 2
     nullIntegerDivision = nullValue \ 2
     nullModulo = nullValue Mod 2
+    nullPower = nullValue ^ 2
     emptyDifference = emptyValue - 1
     emptyProduct = emptyValue * 5
     emptyDivision = emptyValue / 2
     emptyModulo = emptyValue Mod 5
+    emptyPower = emptyValue ^ 2
     arithmeticPrecedence = 10 - 8 / 2 * 3
     divisionValue = 8 / 5
     integerDivisionValue = 16.9 \ 5.6
     moduloValue = 12 Mod 8
+    powerValue = 4.5 ^ 3
+    powerChain = 2 ^ 3 ^ 2
+    powerParenthesized = 2 ^ (3 ^ 2)
+    negativePowerPrecedence = -2 ^ 2
+    negativePowerParenthesized = (-2) ^ 2
 
     Print "EMPTY_DT=" & CStr(DataType(emptyValue))
     Print "EMPTY_TYPE=" & TypeName(emptyValue)
@@ -50,12 +64,19 @@ Sub Main()
     Print "NULL_DIVIDE_PROPAGATES=" & CStr(IsNull(nullDivision))
     Print "NULL_INTEGER_DIVIDE_PROPAGATES=" & CStr(IsNull(nullIntegerDivision))
     Print "NULL_MOD_PROPAGATES=" & CStr(IsNull(nullModulo))
+    Print "NULL_POWER_PROPAGATES=" & CStr(IsNull(nullPower))
     Print "EMPTY_SUBTRACT_ZERO=" & CStr(emptyDifference)
     Print "EMPTY_MULTIPLY_ZERO=" & CStr(emptyProduct)
     Print "EMPTY_DIVIDE_ZERO=" & CStr(emptyDivision)
     Print "EMPTY_MOD_ZERO=" & CStr(emptyModulo)
+    Print "EMPTY_POWER_ZERO=" & CStr(emptyPower)
     Print "ARITHMETIC_PRECEDENCE=" & CStr(arithmeticPrecedence)
     Print "DIVISION_VALUE=" & CStr(divisionValue)
     Print "INTEGER_DIVISION_VALUE=" & CStr(integerDivisionValue)
     Print "MOD_VALUE=" & CStr(moduloValue)
+    Print "POWER_VALUE=" & CStr(powerValue)
+    Print "POWER_CHAIN=" & CStr(powerChain)
+    Print "POWER_PARENTHESIZED=" & CStr(powerParenthesized)
+    Print "NEGATIVE_POWER_PRECEDENCE=" & CStr(negativePowerPrecedence)
+    Print "NEGATIVE_POWER_PARENTHESIZED=" & CStr(negativePowerParenthesized)
 End Sub
