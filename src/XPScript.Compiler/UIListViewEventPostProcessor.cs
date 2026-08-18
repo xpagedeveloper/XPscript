@@ -97,6 +97,21 @@ internal sealed class UIListViewEventPostProcessor
 
         generated = ReplaceRequired(generated,
             """
+        var method = hostType.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
+""",
+            """
+        var method = hostType.GetMethod(
+                "ShowDialog",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+                binder: null,
+                types: [typeof(string), typeof(Func<string, string, string>)],
+                modifiers: null)
+            ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
+""");
+
+        generated = ReplaceRequired(generated,
+            """
             hasRowAction = _rowActionTarget.Length > 0,
             columns = visibleColumns.Select(column => new
 """,
