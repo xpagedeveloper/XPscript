@@ -53,6 +53,7 @@ internal sealed class UIExtensionDesktopPostProcessor
             + Environment.NewLine;
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
+        replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopLayoutMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopReactivePostProcessor().Transform(replaced);
         return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
