@@ -33,7 +33,7 @@ jobs:
         run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
       - name: Build CLI
         run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
-      - name: Verify framework logs are suppressed
+      - name: Verify framework logs are suppressed and XPScript access logs remain
         shell: pwsh
         run: |
           $root = Join-Path $env:RUNNER_TEMP 'xps-no-microsoft-logs'
@@ -67,6 +67,9 @@ jobs:
               } catch { }
             } while ([DateTime]::UtcNow -lt $deadline)
             if ([DateTime]::UtcNow -ge $deadline) { throw 'xpscript web did not become ready.' }
+
+            Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -Method Post -SkipHttpErrorCheck -TimeoutSec 5 | Out-Null
+            Start-Sleep -Milliseconds 300
           }
           finally {
             if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
@@ -74,6 +77,12 @@ jobs:
           }
 
           $combined = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $stderr -Raw -ErrorAction SilentlyContinue))
-          if ($combined -match '(?im)^\s*(trace|debug|info|warn|fail|critical):\s+Microsoft\.' -or $combined -match 'Microsoft\.AspNetCore' -or $combined -match 'Microsoft\.Hosting') {
-            throw "Microsoft framework logging leaked to the CLI console.`n$combined"
+          if ($combined -match 'Microsoft\.' -or $combined -match 'AspNetCore' -or $combined -match '(?im)^\s*Request starting HTTP/') {
+            throw "Microsoft/ASP.NET Core framework logging leaked to the CLI console.`n$combined"
+          }
+          if ($combined -notmatch '(?m)^GET / 200 [0-9]+ms\s*$') {
+            throw "XPScript GET access log was not printed.`n$combined"
+          }
+          if ($combined -notmatch '(?m)^POST / 405 [0-9]+ms\s*$') {
+            throw "XPScript POST access log was not printed.`n$combined"
           }
