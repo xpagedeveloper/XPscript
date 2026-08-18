@@ -1,0 +1,75 @@
+' XPscript web UI showcase for Kestrel, CGI and FastCGI
+' Demonstrates all current UIForm controls supported on the web.
+' Desktop-only ShowDialog and file dialogs are intentionally not used here.
+' (c) xpagedeveloper.com 2026
+
+[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim data As New JsonObject
+    Dim form As New UIForm("XPscript web UI showcase")
+    Dim result As String
+
+    Call data.Set("name", "Kalle")
+    Call data.Set("notes", "This form demonstrates all current web UIForm field types.")
+    Call data.Set("age", 42)
+    Call data.Set("volume", 50)
+    Call data.Set("enabled", True)
+    Call data.Set("birthday", "2026-08-18")
+    Call data.Set("time", "18:30")
+    Call data.Set("meeting", "2026-08-18T18:30")
+    Call data.Set("month", "2026-08")
+    Call data.Set("color", "#336699")
+    Call data.Set("email", "test@example.com")
+    Call data.Set("website", "https://example.com")
+    Call data.Set("country", "SE")
+    Call data.Set("mode", "safe")
+    Call data.Set("token", "web-demo")
+
+    Call form.BindData(data)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddNumberField("age", "Age")
+    Call form.AddRangeField("volume", "Volume")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddDateField("birthday", "Birthday")
+    Call form.AddTimeField("time", "Time")
+    Call form.AddDateTimeField("meeting", "Meeting")
+    Call form.AddMonthField("month", "Month")
+    Call form.AddColorField("color", "Color")
+    Call form.AddEmailField("email", "Email")
+    Call form.AddUrlField("website", "Website")
+    Call form.AddPasswordField("password", "Password")
+
+    Call form.AddSelect("country", "Country")
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+    Call form.AddOption("country", "DK")
+
+    Call form.AddRadioGroup("mode", "Mode")
+    Call form.AddOption("mode", "safe")
+    Call form.AddOption("mode", "fast")
+    Call form.AddOption("mode", "debug")
+
+    Call form.AddHiddenField("token")
+
+    Call form.SetRequired("name", True)
+    Call form.SetRequired("country", True)
+    Call form.SetRequired("mode", True)
+    Call form.SetLength("name", 2, 100)
+    Call form.SetLength("notes", 0, 2000)
+    Call form.SetLength("email", 3, 320)
+    Call form.SetLength("website", 8, 2048)
+    Call form.SetLength("password", 8, 128)
+    Call form.SetNumberRange("age", 0, 150)
+    Call form.SetNumberRange("volume", 0, 100)
+
+    result = form.ShowDialog()
+
+    If result = "OK" Then
+        Response.ContentType = "application/json; charset=utf-8"
+        Response.Write(data.Stringify())
+    End If
+End Sub

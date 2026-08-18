@@ -1,9 +1,11 @@
 <Solution>
   <Project Path="src/XPScript.Compiler/XPScript.Compiler.csproj" />
   <Project Path="src/XPScript.Cli/XPScript.Cli.csproj" />
+  <Project Path="src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
   <Project Path="src/XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
   <Project Path="src/XPScript.Web.Kestrel/XPScript.Web.Kestrel.csproj" />
   <Project Path="src/XPScript.Web.FastCgi/XPScript.Web.FastCgi.csproj" />
   <Project Path="src/XPScript.Web.Cgi/XPScript.Web.Cgi.csproj" />
   <Project Path="src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
+  <Project Path="tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj" />
 </Solution>
