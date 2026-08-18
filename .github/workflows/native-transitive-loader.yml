@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
+      - 'src/XPScript.Compiler/EscapedQuotePreprocessor.cs'
       - 'samples/native-transitive-loader.xps'
       - 'tests/NativeTransitiveFixture/**'
       - 'todo/security-review-todo.md'
