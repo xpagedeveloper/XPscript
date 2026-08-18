@@ -34,6 +34,11 @@ internal sealed class XPScriptUIListView
     private readonly List<XPScriptUIListColumn> _columns = [];
     private string _keyField = string.Empty;
     private int _selectedIndex = -1;
+    private bool _sortable = true;
+    private bool _filterEnabled = true;
+    private string _rowActionTarget = string.Empty;
+    private string _rowActionValueField = string.Empty;
+    private string _rowActionParameterName = string.Empty;
 
     internal XPScriptUIListView(string title)
     {
@@ -45,6 +50,8 @@ internal sealed class XPScriptUIListView
     public int ColumnCount => _columns.Count;
     public int SelectedIndex => _selectedIndex;
     public string KeyField => _keyField;
+    public bool Sortable => _sortable;
+    public bool FilterEnabled => _filterEnabled;
     public object Data => _data;
 
     public void BindData(object? value)
@@ -96,6 +103,22 @@ internal sealed class XPScriptUIListView
         _keyField = NormalizeName(name, "key field");
     }
 
+    public void SetSortable(object? value)
+        => _sortable = Convert.ToBoolean(value, System.Globalization.CultureInfo.CurrentCulture);
+
+    public void SetFilterEnabled(object? value)
+        => _filterEnabled = Convert.ToBoolean(value, System.Globalization.CultureInfo.CurrentCulture);
+
+    public void SetRowAction(object? targetScript, object? valueField)
+        => SetRowAction(targetScript, valueField, valueField);
+
+    public void SetRowAction(object? targetScript, object? valueField, object? parameterName)
+    {
+        _rowActionTarget = NormalizeTarget(targetScript);
+        _rowActionValueField = NormalizeName(valueField, "row action value field");
+        _rowActionParameterName = NormalizeName(parameterName, "row action parameter");
+    }
+
     public object? GetRow(object? index)
     {
         var rowIndex = NormalizeRowIndex(index);
@@ -142,8 +165,14 @@ internal sealed class XPScriptUIListView
 
     public string ShowDialog()
     {
+        if (XPScriptUIWebAdapter.IsAvailable)
+        {
+            XPScriptUIWebAdapter.WriteHtml(RenderWebList());
+            return "Pending";
+        }
+
         var hostType = Type.GetType(DesktopHostTypeName, throwOnError: false, ignoreCase: false)
-            ?? throw new XPScriptRuntimeException(5, "UIListView.ShowDialog requires the XPScript desktop UI runtime.");
+            ?? throw new XPScriptRuntimeException(5, "UIListView.ShowDialog requires the XPScript desktop UI runtime or an active XPScript web request.");
         var method = hostType.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
 
@@ -190,6 +219,68 @@ internal sealed class XPScriptUIListView
         return "OK";
     }
 
+    private string RenderWebList()
+    {
+        var visibleColumns = _columns.Where(column => column.Visible).ToArray();
+        if (visibleColumns.Length == 0)
+            throw new XPScriptRuntimeException(5, "UIListView requires at least one visible column.");
+
+        var id = "xps-list-" + Guid.NewGuid().ToString("N");
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<section class=\"xps-list-view\" id=\"").Append(id).Append("\">");
+        if (_title.Length > 0)
+            sb.Append("<h2>").Append(Html(_title)).Append("</h2>");
+        if (_filterEnabled)
+            sb.Append("<label>Filter <input type=\"search\" class=\"xps-list-filter\" autocomplete=\"off\"></label>");
+
+        sb.Append("<table><thead><tr>");
+        for (var columnIndex = 0; columnIndex < visibleColumns.Length; columnIndex++)
+        {
+            var column = visibleColumns[columnIndex];
+            sb.Append("<th");
+            if (column.Width > 0) sb.Append(" style=\"width:").Append(column.Width).Append("px\"");
+            sb.Append('>');
+            if (_sortable)
+                sb.Append("<button type=\"button\" class=\"xps-list-sort\" data-column=\"").Append(columnIndex).Append("\">").Append(Html(column.Label)).Append("</button>");
+            else
+                sb.Append(Html(column.Label));
+            sb.Append("</th>");
+        }
+        sb.Append("</tr></thead><tbody>");
+
+        for (var rowIndex = 0; rowIndex < _data.Count; rowIndex++)
+        {
+            var href = BuildRowHref(rowIndex);
+            sb.Append("<tr data-row-index=\"").Append(rowIndex).Append('"');
+            if (href.Length > 0) sb.Append(" data-href=\"").Append(HtmlAttribute(href)).Append("\" tabindex=\"0\" role=\"link\"");
+            sb.Append('>');
+            foreach (var column in visibleColumns)
+                sb.Append("<td>").Append(Html(GetRowValueString(rowIndex, column.Name))).Append("</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table>");
+        sb.Append("<script>(()=>{const root=document.getElementById('").Append(id).Append("');if(!root)return;const body=root.querySelector('tbody');");
+        sb.Append("const valueOf=t=>{const s=t.trim();if(/^[-+]?\\d+(?:\\.\\d+)?$/.test(s))return [1,Number(s)];if(/^(true|false)$/i.test(s))return [2,s.toLowerCase()==='true'?1:0];const d=Date.parse(s);if(!Number.isNaN(d)&&/^\\d{4}-\\d{2}/.test(s))return [3,d];return [4,s.toLocaleLowerCase()];};");
+        if (_sortable)
+        {
+            sb.Append("root.querySelectorAll('.xps-list-sort').forEach(b=>b.addEventListener('click',()=>{const c=Number(b.dataset.column);const asc=b.dataset.order!=='asc';root.querySelectorAll('.xps-list-sort').forEach(x=>delete x.dataset.order);b.dataset.order=asc?'asc':'desc';const rows=[...body.rows];rows.sort((a,z)=>{const x=valueOf(a.cells[c]?.textContent||'');const y=valueOf(z.cells[c]?.textContent||'');let r=x[0]-y[0];if(!r)r=x[1]<y[1]?-1:x[1]>y[1]?1:0;return asc?r:-r;});rows.forEach(r=>body.appendChild(r));}));");
+        }
+        if (_filterEnabled)
+        {
+            sb.Append("const filter=root.querySelector('.xps-list-filter');filter?.addEventListener('input',()=>{const q=filter.value.trim().toLocaleLowerCase();[...body.rows].forEach(r=>{r.hidden=q.length>0&&![...r.cells].some(c=>(c.textContent||'').toLocaleLowerCase().includes(q));});});");
+        }
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};body.addEventListener('click',e=>go(e.target.closest('tr[data-href]')));body.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('tr[data-href]');if(r){e.preventDefault();go(r);}}});})();</script>");
+        sb.Append("</section>");
+        return sb.ToString();
+    }
+
+    private string BuildRowHref(int rowIndex)
+    {
+        if (_rowActionTarget.Length == 0) return string.Empty;
+        var value = GetRowValueString(rowIndex, _rowActionValueField);
+        return _rowActionTarget + "?" + Uri.EscapeDataString(_rowActionParameterName) + "=" + Uri.EscapeDataString(value);
+    }
+
     private XPScriptUIListColumn FindColumn(object? name)
     {
         var columnName = NormalizeName(name, "column");
@@ -217,6 +308,17 @@ internal sealed class XPScriptUIListView
             throw new XPScriptRuntimeException(5, $"UIListView {kind} name is invalid.");
         return name;
     }
+
+    private static string NormalizeTarget(object? value)
+    {
+        var target = XPScriptRuntime.CStr(value).Trim().Replace('\\', '/');
+        if (target.Length is < 5 or > 512 || !target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase) || target.StartsWith('/') || target.Contains("..", StringComparison.Ordinal) || target.Contains(':'))
+            throw new XPScriptRuntimeException(5, "UIListView row action target must be a relative local .xps path.");
+        return target;
+    }
+
+    private static string Html(string value) => System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
+    private static string HtmlAttribute(string value) => System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
 }
 """;
 }
