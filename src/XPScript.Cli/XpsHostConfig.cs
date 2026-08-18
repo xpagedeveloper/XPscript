@@ -16,9 +16,12 @@ internal static class XpsHostConfig
         {
             var automaticPath = Path.Combine(AppContext.BaseDirectory, DefaultFileName);
             if (!File.Exists(automaticPath))
-                return command.Equals("web", StringComparison.OrdinalIgnoreCase)
+            {
+                var withoutConfig = command.Equals("web", StringComparison.OrdinalIgnoreCase)
                     ? ApplyWebEnvironment(remainingArgs)
                     : remainingArgs;
+                return NormalizeRootArgument(withoutConfig);
+            }
             configPath = automaticPath;
         }
         else if (!File.Exists(configPath))
@@ -43,9 +46,67 @@ internal static class XpsHostConfig
         var merged = new string[configArgs.Count + remainingArgs.Length];
         configArgs.CopyTo(merged, 0);
         Array.Copy(remainingArgs, 0, merged, configArgs.Count, remainingArgs.Length);
-        return command.Equals("web", StringComparison.OrdinalIgnoreCase)
+        var normalized = command.Equals("web", StringComparison.OrdinalIgnoreCase)
             ? ApplyWebEnvironment(merged)
             : merged;
+        return NormalizeRootArgument(normalized);
+    }
+
+    private static string[] NormalizeRootArgument(string[] args)
+    {
+        var normalized = (string[])args.Clone();
+        for (var i = 0; i < normalized.Length; i++)
+        {
+            if (!normalized[i].Equals("--root", StringComparison.OrdinalIgnoreCase)) continue;
+            if (i + 1 >= normalized.Length) throw new ArgumentException("--root requires a directory path.");
+
+            var supplied = normalized[++i].Trim();
+            if (supplied.Length >= 2 &&
+                ((supplied[0] == '"' && supplied[^1] == '"') ||
+                 (supplied[0] == '\'' && supplied[^1] == '\'')))
+            {
+                supplied = supplied[1..^1].Trim();
+            }
+            if (supplied.Length == 0) throw new ArgumentException("--root requires a directory path.");
+
+            var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(supplied));
+            if (!Directory.Exists(fullPath))
+            {
+                var suggestions = FindRootSuggestions(fullPath);
+                var message = "Web root does not exist: " + fullPath;
+                if (suggestions.Count > 0)
+                    message += Environment.NewLine + "Did you mean: " + string.Join(", ", suggestions);
+                throw new DirectoryNotFoundException(message);
+            }
+
+            normalized[i] = fullPath;
+        }
+        return normalized;
+    }
+
+    private static IReadOnlyList<string> FindRootSuggestions(string missingRoot)
+    {
+        try
+        {
+            var parent = Directory.GetParent(missingRoot);
+            if (parent is null || !parent.Exists) return Array.Empty<string>();
+            var requestedName = Path.GetFileName(missingRoot);
+            if (string.IsNullOrWhiteSpace(requestedName)) return Array.Empty<string>();
+
+            return parent.EnumerateDirectories()
+                .Where(directory =>
+                    directory.Name.StartsWith(requestedName, StringComparison.OrdinalIgnoreCase) ||
+                    requestedName.StartsWith(directory.Name, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(directory => Math.Abs(directory.Name.Length - requestedName.Length))
+                .ThenBy(directory => directory.Name, StringComparer.OrdinalIgnoreCase)
+                .Take(3)
+                .Select(directory => directory.FullName)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return Array.Empty<string>();
+        }
     }
 
     private static string[] ApplyWebEnvironment(string[] args)
