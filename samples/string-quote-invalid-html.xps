@@ -1,0 +1,6 @@
+[Anonymous]
+[Get]
+Sub Main()
+    Dim text As String
+    text = "<h1>Hello from XPScript <a href="/kalle">Kalle</a></h1>"
+End Sub
