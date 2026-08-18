@@ -87,6 +87,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
                 context.Response,
                 _resolver,
+                resolution.ScriptPath,
                 PrecompileDiscoveredScriptAsync,
                 cancellationToken).ConfigureAwait(false);
         }
