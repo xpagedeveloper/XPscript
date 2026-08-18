@@ -6,13 +6,14 @@ Implement after `todo/sql-database-todo.md` is complete and merged.
 
 ## Architecture decision
 
-- [ ] Use HCL Domino REST API as the primary/default integration path for remote and cross-platform XPScript applications.
+- [ ] Use HCL Domino REST API as the required primary/default integration path for remote and cross-platform XPScript applications.
+- [ ] All first implementation phases must target Domino REST API. Java NotesFactory/IIOP must not be required for normal use.
 - [ ] Keep the XPScript public API independent of Domino REST API endpoint details where practical.
 - [ ] Do not make a local Notes/Domino client installation a requirement for the default integration.
 - [ ] Treat Java NotesFactory/IIOP access as an optional legacy/advanced adapter only if a concrete use case requires capabilities unavailable through Domino REST API.
 - [ ] Do not build a new direct NSF wire protocol or proprietary Domino client protocol.
 
-Rationale to preserve in the final design: Domino REST API is HCL's current HTTP(S)-based integration layer for documents, views, folders and agents, supports configured schemas/scopes, DQL and OData modes, and works with applications that can speak HTTP(S). HCL's Java NotesFactory remote API uses IIOP and local calls require Notes/Domino installation, making it a less suitable default for a .NET cross-platform XPScript runtime.
+Rationale to preserve in the final design: Domino REST API is HCL's HTTP(S)-based integration layer for documents, views, folders and agents, supports configured schemas/scopes, DQL and OData modes, and works with applications that can speak HTTP(S). HCL's Java NotesFactory remote API uses IIOP and local calls require Notes/Domino installation, making it a less suitable default for a .NET cross-platform XPScript runtime.
 
 ## Core object model
 
@@ -138,10 +139,10 @@ Rationale to preserve in the final design: Domino REST API is HCL's current HTTP
 
 ## Recommended implementation order
 
-- [ ] Phase 1: `DominoClient`, endpoint/auth, dataSource/scope selection and read-only document access.
-- [ ] Phase 2: views/folders and pagination.
-- [ ] Phase 3: document create/update/delete with schema-mode enforcement.
-- [ ] Phase 4: DQL queries using variables and bounded execution limits.
+- [ ] Phase 1: `DominoClient`, endpoint/auth, dataSource/scope selection and read-only document access through Domino REST API.
+- [ ] Phase 2: views/folders and pagination through Domino REST API.
+- [ ] Phase 3: document create/update/delete with schema-mode enforcement through Domino REST API.
+- [ ] Phase 4: DQL queries using variables and bounded execution limits through Domino REST API.
 - [ ] Phase 5: attachments/rich-text investigation and safe implementation where required.
 - [ ] Phase 6: optional RAG retrieval adapter.
 - [ ] Phase 7: reconsider Java/IIOP only if a specific unsupported Domino capability remains.
