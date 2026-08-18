@@ -1,0 +1,85 @@
+' XPscript UIForm buttons, events, mutable fields and navigation sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New JsonObject
+    Dim form As New UIForm("Customer", 820, 620, True)
+    Dim result As String
+
+    Call data.Set("id", "1001")
+    Call data.Set("name", "Kalle")
+    Call data.Set("country", "SE")
+    Call data.Set("city", "Stockholm")
+    Call data.Set("status", "Editing")
+
+    Call form.BindData(data)
+    Call form.SetGridColumns(12)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddSelect("country", "Country")
+    Call form.AddSelect("city", "City")
+    Call form.AddTextField("status", "Status")
+
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+    Call form.AddOption("city", "Stockholm")
+    Call form.AddOption("city", "Gothenburg")
+
+    Call form.SetFieldPosition("name", 1, 1, 12, 1)
+    Call form.SetFieldPosition("country", 2, 1, 6, 1)
+    Call form.SetFieldPosition("city", 2, 7, 6, 1)
+    Call form.SetFieldPosition("status", 3, 1, 12, 1)
+
+    Call form.SetFieldRegion("city", "cityRegion")
+    Call form.SetFieldRegion("status", "statusRegion")
+    Call form.SetFieldReadOnly("status", True)
+
+    Call form.SetOnChange("country", "CountryChanged")
+
+    Call form.AddButton("save", "Save", "SaveCustomer")
+    Call form.AddButton("back", "Back to list", "BackToList")
+    Call form.SetButtonPosition("save", 10, 7, 3, 1)
+    Call form.SetButtonPosition("back", 10, 10, 3, 1)
+    Call form.SetButtonStyle("save", "Primary")
+
+    result = form.ShowDialog()
+    Print "RESULT=" & result
+    Print "DATA=" & data.Stringify()
+End Sub
+
+Sub CountryChanged(form As Variant)
+    Dim country As String
+    country = form.GetFieldValueString("country")
+
+    Call form.ClearOptions("city")
+
+    If country = "SE" Then
+        Call form.AddOption("city", "Stockholm")
+        Call form.AddOption("city", "Gothenburg")
+        Call form.SetFieldValue("city", "Stockholm")
+    ElseIf country = "NO" Then
+        Call form.AddOption("city", "Oslo")
+        Call form.AddOption("city", "Bergen")
+        Call form.SetFieldValue("city", "Oslo")
+    Else
+        Call form.SetFieldValue("city", "")
+    End If
+
+    Call form.SetFieldLabel("city", "City for " & country)
+    Call form.RefreshRegion("cityRegion")
+End Sub
+
+Sub SaveCustomer(form As Variant)
+    Dim data As Variant
+    data = form.GetData()
+
+    Call data.Set("saved", True)
+    Call form.SetFieldValue("status", "Saved")
+    Call form.SetFieldEnabled("name", False)
+    Call form.SetButtonEnabled("save", False)
+    Call form.RefreshRegion("statusRegion")
+End Sub
+
+Sub BackToList(form As Variant)
+    Call form.Navigate("ui-list-view-desktop.xps", "selectedId", form.GetFieldValueString("id"))
+End Sub
