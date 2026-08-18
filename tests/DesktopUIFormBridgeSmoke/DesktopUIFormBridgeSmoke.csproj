@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />
     <ProjectReference Include="../../src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
   </ItemGroup>
 </Project>
