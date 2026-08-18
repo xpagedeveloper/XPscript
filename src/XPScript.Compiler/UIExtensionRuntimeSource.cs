@@ -53,6 +53,7 @@ internal sealed class XPScriptUIField
     public int? MaxLength { get; set; }
     public decimal? Minimum { get; set; }
     public decimal? Maximum { get; set; }
+    public List<string> Options { get; } = [];
 }
 
 internal sealed class XPScriptUIForm
@@ -101,6 +102,22 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
+    public XPScriptUIField AddPasswordField(object? name) => AddField(name, name, "PasswordField");
+    public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
+    public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
+    public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
+
+    public void AddOption(object? name, object? value)
+    {
+        var field = FindField(name);
+        if (field.Type != "Select")
+            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select fields.");
+        var option = XPScriptRuntime.CStr(value);
+        if (option.Length is < 1 or > 256)
+            throw new XPScriptRuntimeException(5, "UIForm select option must contain between 1 and 256 characters.");
+        if (!field.Options.Contains(option, StringComparer.Ordinal))
+            field.Options.Add(option);
+    }
 
     public void SetRequired(object? name, object? required)
         => FindField(name).Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
@@ -108,7 +125,7 @@ internal sealed class XPScriptUIForm
     public void SetLength(object? name, object? minLength, object? maxLength)
     {
         var field = FindField(name);
-        if (field.Type is not ("TextField" or "TextArea"))
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField"))
             throw new XPScriptRuntimeException(5, "UIForm length validation is only supported for text fields.");
         int min;
         int max;
@@ -199,9 +216,11 @@ internal sealed class XPScriptUIForm
     private void ApplySubmittedValue(XPScriptUIField field, string submitted)
     {
         var exists = _data.Contains(field.Name);
+        if (field.Type == "PasswordField" && submitted.Length == 0 && exists)
+            return;
         if (field.Required && submitted.Length == 0)
             throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
-        if (field.Type is "TextField" or "TextArea")
+        if (field.Type is "TextField" or "TextArea" or "PasswordField")
         {
             if (field.MinLength.HasValue && submitted.Length < field.MinLength.Value)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at least {field.MinLength.Value} characters.");
@@ -229,6 +248,12 @@ internal sealed class XPScriptUIForm
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!DateTime.TryParseExact(submitted, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid date in yyyy-MM-dd format.");
+                _data.Set(field.Name, submitted);
+                return;
+            case "Select":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!field.Options.Contains(submitted, StringComparer.Ordinal))
+                    throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' contains an unsupported option.");
                 _data.Set(field.Name, submitted);
                 return;
             default:
@@ -265,6 +290,19 @@ internal sealed class XPScriptUIForm
                     html.Append(required).Append(">");
                     break;
                 case "DateField": html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
+                case "Select":
+                    html.Append("<select id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">");
+                    if (!field.Required) html.Append("<option value=\"\"></option>");
+                    foreach (var option in field.Options)
+                    {
+                        var encodedOption = System.Net.WebUtility.HtmlEncode(option);
+                        html.Append("<option value=\"").Append(encodedOption).Append("\"");
+                        if (option == GetFieldValueString(field.Name)) html.Append(" selected");
+                        html.Append(">").Append(encodedOption).Append("</option>");
+                    }
+                    html.Append("</select>");
+                    break;
                 default: html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
             }
             html.Append("</div>");
