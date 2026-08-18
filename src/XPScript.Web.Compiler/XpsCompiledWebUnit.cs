@@ -10,18 +10,22 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
     private AssemblyLoadContext? _loadContext;
     private Assembly? _assembly;
     private readonly IReadOnlyDictionary<string, XpsWebRouteDescriptor> _routes;
+    private readonly IReadOnlyList<string> _precompileTargets;
 
     internal XpsCompiledWebUnit(
         AssemblyLoadContext loadContext,
         Assembly assembly,
-        IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
+        IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes,
+        IReadOnlyList<string> precompileTargets)
     {
         _loadContext = loadContext;
         _assembly = assembly;
         _routes = routes;
+        _precompileTargets = precompileTargets;
     }
 
     public IReadOnlyDictionary<string, XpsWebRouteDescriptor> Routes => _routes;
+    public IReadOnlyList<string> PrecompileTargets => _precompileTargets;
 
     public async Task InvokeAsync(string procedureName, XpsWebContext context)
     {

@@ -6,9 +6,12 @@ namespace XPScript.Web.Compiler;
 
 public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProvider, IAsyncDisposable
 {
+    private const int MaxPrecompileGraph = 256;
+
     private readonly XpsWebPathResolver _resolver;
     private readonly XpsWebCompilationCache _cache;
     private readonly bool _ownsCache;
+    private readonly StringComparer _pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public XpsWebDispatcher(
         string webRoot,
@@ -18,6 +21,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
+        WarmDefaultDocument();
     }
 
     public XpsWebDispatcher(
@@ -27,6 +31,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        WarmDefaultDocument();
     }
 
     public async Task HandleAsync(XpsWebContext context)
@@ -55,6 +60,13 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         {
             await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
             var unit = lease.Unit;
+
+            await PrecompileDeclaredTargetsAsync(
+                resolution.ScriptPath,
+                unit,
+                new HashSet<string>(_pathComparer) { resolution.ScriptPath },
+                cancellationToken).ConfigureAwait(false);
+
             var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
             if (routeName is null || !unit.Routes.TryGetValue(routeName, out var descriptor))
             {
@@ -71,6 +83,13 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
 
             await unit.InvokeAsync(descriptor.ProcedureName, context).ConfigureAwait(false);
             if (!context.Response.Completed) context.Response.Complete();
+
+            await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
+                context.Response,
+                _resolver,
+                resolution.ScriptPath,
+                PrecompileDiscoveredScriptAsync,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -104,6 +123,94 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             .Append(metrics.TotalCompilationDuration.TotalSeconds.ToString("0.######", CultureInfo.InvariantCulture))
             .Append('\n');
         return builder.ToString();
+    }
+
+    private void WarmDefaultDocument()
+    {
+        try
+        {
+            var resolution = _resolver.Resolve("/");
+            if (!resolution.Found || resolution.ScriptPath is null) return;
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            PrecompileScriptGraphAsync(resolution.ScriptPath, new HashSet<string>(_pathComparer), cts.Token)
+                .GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            XpsWebConsoleErrorFallback.Write(ex, Path.Combine(_resolver.Root, "index.xps"), "/");
+        }
+    }
+
+    private Task PrecompileDiscoveredScriptAsync(string scriptPath, CancellationToken cancellationToken) =>
+        PrecompileScriptGraphAsync(scriptPath, new HashSet<string>(_pathComparer), cancellationToken);
+
+    private async Task PrecompileScriptGraphAsync(
+        string scriptPath,
+        HashSet<string> visited,
+        CancellationToken cancellationToken)
+    {
+        var fullPath = Path.GetFullPath(scriptPath);
+        if (!visited.Add(fullPath)) return;
+        if (visited.Count > MaxPrecompileGraph) return;
+
+        try
+        {
+            await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
+            await PrecompileDeclaredTargetsAsync(fullPath, lease.Unit, visited, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            XpsWebConsoleErrorFallback.Write(ex, fullPath, "precompile");
+        }
+    }
+
+    private async Task PrecompileDeclaredTargetsAsync(
+        string sourceScriptPath,
+        XpsCompiledWebUnit unit,
+        HashSet<string> visited,
+        CancellationToken cancellationToken)
+    {
+        foreach (var target in unit.PrecompileTargets)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (visited.Count >= MaxPrecompileGraph) return;
+
+            var resolved = ResolveDeclaredPrecompileTarget(sourceScriptPath, target);
+            if (resolved is null) continue;
+            await PrecompileScriptGraphAsync(resolved, visited, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private string? ResolveDeclaredPrecompileTarget(string sourceScriptPath, string target)
+    {
+        if (string.IsNullOrWhiteSpace(target)) return null;
+
+        try
+        {
+            if (target.StartsWith("/", StringComparison.Ordinal) || target.StartsWith('\\'))
+            {
+                var route = _resolver.Resolve('/' + target.TrimStart('/', '\\').Replace('\\', '/'));
+                return route.Found ? route.ScriptPath : null;
+            }
+
+            var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(sourceScriptPath));
+            if (sourceDirectory is null) return null;
+
+            var normalizedTarget = target.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            var candidate = Path.GetFullPath(Path.Combine(sourceDirectory, normalizedTarget));
+            var relative = Path.GetRelativePath(_resolver.Root, candidate);
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)) return null;
+            if (!Path.GetExtension(candidate).Equals(".xps", StringComparison.OrdinalIgnoreCase)) return null;
+            return File.Exists(candidate) ? candidate : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or XpsWebPathException)
+        {
+            return null;
+        }
     }
 
     private static void AppendGauge(StringBuilder builder, string name, long value, string help)

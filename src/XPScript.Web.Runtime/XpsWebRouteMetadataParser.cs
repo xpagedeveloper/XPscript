@@ -5,7 +5,10 @@ namespace XPScript.Web.Runtime;
 
 public sealed record XpsWebRouteDescriptor(string ProcedureName, XpsRoutePolicy Policy);
 
-public sealed record XpsWebRouteParseResult(string Source, IReadOnlyDictionary<string, XpsWebRouteDescriptor> Routes);
+public sealed record XpsWebRouteParseResult(
+    string Source,
+    IReadOnlyDictionary<string, XpsWebRouteDescriptor> Routes,
+    IReadOnlyList<string> PrecompileTargets);
 
 public sealed class XpsWebRouteMetadataParser
 {
@@ -20,13 +23,22 @@ public sealed class XpsWebRouteMetadataParser
         var output = new StringBuilder(source.Length);
         var pending = new List<string>();
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase);
+        var precompileTargets = new List<string>();
 
         foreach (var raw in lines)
         {
             var trimmed = raw.Trim();
             if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
             {
-                pending.Add(trimmed[1..^1].Trim());
+                var attribute = trimmed[1..^1].Trim();
+                if (attribute.StartsWith("PreCompile:", StringComparison.OrdinalIgnoreCase))
+                {
+                    ParsePrecompileTargets(attribute[11..], precompileTargets);
+                    output.AppendLine();
+                    continue;
+                }
+
+                pending.Add(attribute);
                 output.AppendLine();
                 continue;
             }
@@ -56,7 +68,37 @@ public sealed class XpsWebRouteMetadataParser
         if (pending.Count > 0)
             throw new XpsWebRouteMetadataException("Web route attributes are not followed by a Sub or Function declaration.");
 
-        return new XpsWebRouteParseResult(output.ToString().TrimEnd('\r', '\n'), routes);
+        return new XpsWebRouteParseResult(
+            output.ToString().TrimEnd('\r', '\n'),
+            routes,
+            precompileTargets.AsReadOnly());
+    }
+
+    private static void ParsePrecompileTargets(string value, List<string> targets)
+    {
+        foreach (var raw in value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var target = raw.Trim();
+            if (target.Length is 0 or > 1024)
+                throw new XpsWebRouteMetadataException("PreCompile target must contain 1 to 1024 characters.");
+            if (target.Any(char.IsControl))
+                throw new XpsWebRouteMetadataException("PreCompile target contains a control character.");
+            if (!target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase) &&
+                !target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
+                throw new XpsWebRouteMetadataException("PreCompile targets must use the .xps extension.");
+
+            // Accept the common .xsp transposition in directives, but normalize to the actual XPScript extension.
+            if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
+                target = target[..^4] + ".xps";
+
+            if (!targets.Contains(target, StringComparer.OrdinalIgnoreCase))
+                targets.Add(target);
+            if (targets.Count > 128)
+                throw new XpsWebRouteMetadataException("A script may declare at most 128 PreCompile targets.");
+        }
+
+        if (targets.Count == 0)
+            throw new XpsWebRouteMetadataException("PreCompile requires at least one .xps target.");
     }
 
     private static XpsRoutePolicy BuildPolicy(IReadOnlyList<string> attributes)
