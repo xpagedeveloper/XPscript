@@ -26,6 +26,7 @@ public sealed class XpsWebServer
     public string SiteId => _info.SiteId;
     public string RootPath => _info.RootPath;
     public string HostingMode => _info.HostingMode.ToString();
+    public string Environment => _info.Environment.ToString();
     public DateTimeOffset StartTimeUtc => _info.StartTimeUtc;
     public string RuntimeVersion => _info.RuntimeVersion;
     public string? Address => _info.Address;
