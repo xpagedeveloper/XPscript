@@ -59,6 +59,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormDesktopReactivePostProcessor().Transform(replaced);
         replaced = new UIListViewDesktopPostProcessor().Transform(replaced);
         replaced = new UIListViewEventPostProcessor().Transform(replaced);
+        replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
         return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
     }
 
