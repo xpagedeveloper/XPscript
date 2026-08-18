@@ -106,21 +106,29 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
     public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
+    public XPScriptUIField AddRadioGroup(object? name) => AddField(name, name, "RadioGroup");
+    public XPScriptUIField AddRadioGroup(object? name, object? label) => AddField(name, label, "RadioGroup");
+    public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");
 
     public void AddOption(object? name, object? value)
     {
         var field = FindField(name);
-        if (field.Type != "Select")
-            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select fields.");
+        if (field.Type is not ("Select" or "RadioGroup"))
+            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select and RadioGroup fields.");
         var option = XPScriptRuntime.CStr(value);
         if (option.Length is < 1 or > 256)
-            throw new XPScriptRuntimeException(5, "UIForm select option must contain between 1 and 256 characters.");
+            throw new XPScriptRuntimeException(5, "UIForm option must contain between 1 and 256 characters.");
         if (!field.Options.Contains(option, StringComparer.Ordinal))
             field.Options.Add(option);
     }
 
     public void SetRequired(object? name, object? required)
-        => FindField(name).Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
+    {
+        var field = FindField(name);
+        if (field.Type == "HiddenField")
+            throw new XPScriptRuntimeException(5, "UIForm HiddenField cannot be marked required.");
+        field.Required = Convert.ToBoolean(required, System.Globalization.CultureInfo.CurrentCulture);
+    }
 
     public void SetLength(object? name, object? minLength, object? maxLength)
     {
@@ -251,6 +259,7 @@ internal sealed class XPScriptUIForm
                 _data.Set(field.Name, submitted);
                 return;
             case "Select":
+            case "RadioGroup":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!field.Options.Contains(submitted, StringComparer.Ordinal))
                     throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' contains an unsupported option.");
@@ -271,8 +280,14 @@ internal sealed class XPScriptUIForm
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
-            var label = System.Net.WebUtility.HtmlEncode(field.Label);
             var value = System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
+            if (field.Type == "HiddenField")
+            {
+                html.Append("<input type=\"hidden\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\">");
+                continue;
+            }
+
+            var label = System.Net.WebUtility.HtmlEncode(field.Label);
             var required = field.Required ? " required" : string.Empty;
             var length = (field.MinLength.HasValue ? $" minlength=\"{field.MinLength.Value}\"" : string.Empty)
                 + (field.MaxLength.HasValue ? $" maxlength=\"{field.MaxLength.Value}\"" : string.Empty);
@@ -302,6 +317,15 @@ internal sealed class XPScriptUIForm
                         html.Append(">").Append(encodedOption).Append("</option>");
                     }
                     html.Append("</select>");
+                    break;
+                case "RadioGroup":
+                    foreach (var option in field.Options)
+                    {
+                        var encodedOption = System.Net.WebUtility.HtmlEncode(option);
+                        html.Append("<label><input type=\"radio\" name=\"").Append(name).Append("\" value=\"").Append(encodedOption).Append("\"");
+                        if (option == GetFieldValueString(field.Name)) html.Append(" checked");
+                        html.Append(required).Append(">").Append(encodedOption).Append("</label>");
+                    }
                     break;
                 default: html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
             }
