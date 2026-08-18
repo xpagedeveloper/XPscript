@@ -39,7 +39,12 @@ internal static partial class XpsWebLinkedPrecompiler
 
             var raw = match.Groups["url"].Value.Trim();
             if (string.IsNullOrWhiteSpace(raw) || raw.StartsWith("//", StringComparison.Ordinal)) continue;
-            if (Uri.TryCreate(raw, UriKind.Absolute, out _)) continue;
+
+            // Root-relative web paths are valid local XPS links on every platform.
+            // Uri.TryCreate can interpret /sub/page.xps as an absolute file URI on Unix,
+            // so only apply absolute-URI filtering to non-root-relative values.
+            var rootRelative = raw.StartsWith("/", StringComparison.Ordinal) || raw.StartsWith('\\');
+            if (!rootRelative && Uri.TryCreate(raw, UriKind.Absolute, out _)) continue;
 
             var clean = raw;
             var cut = clean.IndexOfAny(['?', '#']);
