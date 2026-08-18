@@ -111,3 +111,10 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "UIListView output missing: $value" }
           }
+      - name: Compile desktop UIListView sample
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/ui-list-view-desktop$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-list-view-desktop.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop UIListView compilation failed.' }
