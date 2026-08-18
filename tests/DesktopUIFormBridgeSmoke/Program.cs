@@ -1,4 +1,5 @@
 using System.Text.Json;
+using XPScript.Compiler;
 using XPScript.UI.Desktop;
 
 var requestJson = """
@@ -78,4 +79,33 @@ if (root.GetProperty("values").GetProperty("age").ValueKind != JsonValueKind.Num
 if (root.GetProperty("values").GetProperty("enabled").ValueKind != JsonValueKind.True)
     throw new InvalidOperationException("Desktop UIForm Boolean result mismatch.");
 
+var source = """
+Sub Main()
+    Dim answer As String
+    Dim fileName As String
+    answer = ShowDialog("Save?", "Confirm", "YesNo")
+    answer = ShowDialog("Environment", "Choose", "List", "Dev|Test|Prod")
+    fileName = LoadFileDialog("Load", "", "JSON|*.json")
+    fileName = OpenFileDialog("Open")
+    fileName = SaveFileDialog("Save", "report.json", "JSON|*.json")
+End Sub
+""";
+var generated = new XPScriptTranspiler().Transpile(source, "ui-dialog-smoke.xps", "win-x64");
+foreach (var expected in new[]
+{
+    "XPScriptUIDialogRuntime.ShowDialog(",
+    "XPScriptUIDialogRuntime.LoadFileDialog(",
+    "XPScriptUIDialogRuntime.OpenFileDialog(",
+    "XPScriptUIDialogRuntime.SaveFileDialog(",
+    "internal static class XPScriptUIDialogRuntime",
+    "internal static class XPScriptUIDesktopAdapter"
+})
+{
+    if (!generated.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated desktop dialog runtime is missing: " + expected);
+}
+if (!generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
+    throw new InvalidOperationException("UIForm.ShowDialog method declaration was incorrectly rewritten.");
+
 Console.WriteLine("DESKTOP_UIFORM_BRIDGE_OK");
+Console.WriteLine("DESKTOP_DIALOG_TRANSPILE_OK");
