@@ -102,6 +102,12 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
+    public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");
+    public XPScriptUIField AddTimeField(object? name, object? label) => AddField(name, label, "TimeField");
+    public XPScriptUIField AddEmailField(object? name) => AddField(name, name, "EmailField");
+    public XPScriptUIField AddEmailField(object? name, object? label) => AddField(name, label, "EmailField");
+    public XPScriptUIField AddUrlField(object? name) => AddField(name, name, "UrlField");
+    public XPScriptUIField AddUrlField(object? name, object? label) => AddField(name, label, "UrlField");
     public XPScriptUIField AddPasswordField(object? name) => AddField(name, name, "PasswordField");
     public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
     public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
@@ -133,7 +139,7 @@ internal sealed class XPScriptUIForm
     public void SetLength(object? name, object? minLength, object? maxLength)
     {
         var field = FindField(name);
-        if (field.Type is not ("TextField" or "TextArea" or "PasswordField"))
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
             throw new XPScriptRuntimeException(5, "UIForm length validation is only supported for text fields.");
         int min;
         int max;
@@ -228,7 +234,7 @@ internal sealed class XPScriptUIForm
             return;
         if (field.Required && submitted.Length == 0)
             throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
-        if (field.Type is "TextField" or "TextArea" or "PasswordField")
+        if (field.Type is "TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField")
         {
             if (field.MinLength.HasValue && submitted.Length < field.MinLength.Value)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' must contain at least {field.MinLength.Value} characters.");
@@ -256,6 +262,31 @@ internal sealed class XPScriptUIForm
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!DateTime.TryParseExact(submitted, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid date in yyyy-MM-dd format.");
+                _data.Set(field.Name, submitted);
+                return;
+            case "TimeField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!TimeOnly.TryParseExact(submitted, new[] { "HH:mm", "HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid time in HH:mm or HH:mm:ss format.");
+                _data.Set(field.Name, submitted);
+                return;
+            case "EmailField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                try
+                {
+                    var address = new System.Net.Mail.MailAddress(submitted);
+                    if (!address.Address.Equals(submitted, StringComparison.OrdinalIgnoreCase)) throw new FormatException();
+                }
+                catch (FormatException)
+                {
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid email address.");
+                }
+                _data.Set(field.Name, submitted);
+                return;
+            case "UrlField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!Uri.TryCreate(submitted, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain an absolute HTTP or HTTPS URL.");
                 _data.Set(field.Name, submitted);
                 return;
             case "Select":
@@ -305,6 +336,9 @@ internal sealed class XPScriptUIForm
                     html.Append(required).Append(">");
                     break;
                 case "DateField": html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "TimeField": html.Append("<input type=\"time\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "EmailField": html.Append("<input type=\"email\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
+                case "UrlField": html.Append("<input type=\"url\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "Select":
                     html.Append("<select id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">");
