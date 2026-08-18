@@ -30,31 +30,131 @@ internal sealed class TypeCoercionPreprocessor
             if (assign.Success && variables.TryGetValue(assign.Groups[1].Value, out var targetType))
             {
                 var rhs = assign.Groups[2].Value.Trim();
-                var plus = FindTopLevelPlus(rhs);
-                if (plus > 0 && (NumericTypes.Contains(targetType) || targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase)))
+                var indent = line[..(line.Length - line.TrimStart().Length)];
+
+                if (targetType.Equals("Variant", StringComparison.OrdinalIgnoreCase))
                 {
-                    var left = rhs[..plus].Trim();
-                    var right = rhs[(plus + 1)..].Trim();
-                    var method = targetType.ToLowerInvariant() switch
+                    var rewritten = RewriteVariantArithmeticExpression(rhs);
+                    if (!rewritten.Equals(rhs, StringComparison.Ordinal))
                     {
-                        "byte" => "AddByte",
-                        "integer" => "AddInteger",
-                        "long" => "AddLong",
-                        "single" => "AddSingle",
-                        "double" => "AddDouble",
-                        "currency" => "AddCurrency",
-                        "variant" => "AddVariant",
-                        _ => "AddVariant"
-                    };
-                    var indent = line[..(line.Length - line.TrimStart().Length)];
-                    output[i] = RewriteNullSemantics(RewriteBooleanCondition($"{indent}{assign.Groups[1].Value} = XPScriptCoercion.{method}({left}, {right})"));
-                    continue;
+                        output[i] = RewriteNullSemantics(RewriteBooleanCondition($"{indent}{assign.Groups[1].Value} = {rewritten}"));
+                        continue;
+                    }
+                }
+                else
+                {
+                    var plus = FindTopLevelPlus(rhs);
+                    if (plus > 0 && NumericTypes.Contains(targetType))
+                    {
+                        var left = rhs[..plus].Trim();
+                        var right = rhs[(plus + 1)..].Trim();
+                        var method = targetType.ToLowerInvariant() switch
+                        {
+                            "byte" => "AddByte",
+                            "integer" => "AddInteger",
+                            "long" => "AddLong",
+                            "single" => "AddSingle",
+                            "double" => "AddDouble",
+                            "currency" => "AddCurrency",
+                            _ => throw new InvalidOperationException("Unsupported numeric coercion target: " + targetType)
+                        };
+                        output[i] = RewriteNullSemantics(RewriteBooleanCondition($"{indent}{assign.Groups[1].Value} = XPScriptCoercion.{method}({left}, {right})"));
+                        continue;
+                    }
                 }
             }
 
             output[i] = RewriteNullSemantics(RewriteBooleanCondition(line));
         }
         return string.Join("\n", output);
+    }
+
+    private static string RewriteVariantArithmeticExpression(string value)
+    {
+        var expression = value.Trim();
+        if (expression.Length == 0) return expression;
+
+        if (IsFullyParenthesized(expression))
+            return "(" + RewriteVariantArithmeticExpression(expression[1..^1]) + ")";
+
+        var additive = FindRightmostTopLevelBinaryOperator(expression, '+', '-');
+        if (additive >= 0)
+        {
+            var op = expression[additive];
+            var left = RewriteVariantArithmeticExpression(expression[..additive]);
+            var right = RewriteVariantArithmeticExpression(expression[(additive + 1)..]);
+            var method = op == '+' ? "AddVariant" : "SubtractVariant";
+            return $"XPScriptCoercion.{method}({left}, {right})";
+        }
+
+        var multiplicative = FindRightmostTopLevelBinaryOperator(expression, '*');
+        if (multiplicative >= 0)
+        {
+            var left = RewriteVariantArithmeticExpression(expression[..multiplicative]);
+            var right = RewriteVariantArithmeticExpression(expression[(multiplicative + 1)..]);
+            return $"XPScriptCoercion.MultiplyVariant({left}, {right})";
+        }
+
+        return expression;
+    }
+
+    private static int FindRightmostTopLevelBinaryOperator(string value, params char[] operators)
+    {
+        var inString = false;
+        var depth = 0;
+        var candidate = -1;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0 || !operators.Contains(c)) continue;
+            if ((c == '+' || c == '-') && IsUnarySign(value, i)) continue;
+            candidate = i;
+        }
+        return candidate;
+    }
+
+    private static bool IsUnarySign(string value, int index)
+    {
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (char.IsWhiteSpace(value[i])) continue;
+            return value[i] is '(' or ',' or '+' or '-' or '*' or '/' or '\\' or '^' or '=' or '<' or '>';
+        }
+        return true;
+    }
+
+    private static bool IsFullyParenthesized(string value)
+    {
+        if (value.Length < 2 || value[0] != '(' || value[^1] != ')') return false;
+        var inString = false;
+        var depth = 0;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')')
+            {
+                depth--;
+                if (depth == 0 && i != value.Length - 1) return false;
+            }
+        }
+        return depth == 0;
     }
 
     private static string RewriteBooleanCondition(string line)

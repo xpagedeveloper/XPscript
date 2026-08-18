@@ -5,9 +5,19 @@ Sub Main()
     Dim emptyValue As Variant
     Dim nullValue As Variant
     Dim nullSum As Variant
+    Dim nullDifference As Variant
+    Dim nullProduct As Variant
+    Dim emptyDifference As Variant
+    Dim emptyProduct As Variant
+    Dim arithmeticPrecedence As Variant
 
     nullValue = Null
     nullSum = nullValue + 1
+    nullDifference = nullValue - 1
+    nullProduct = 2 * nullValue
+    emptyDifference = emptyValue - 1
+    emptyProduct = emptyValue * 5
+    arithmeticPrecedence = 10 - 2 * 3
 
     Print "EMPTY_DT=" & CStr(DataType(emptyValue))
     Print "EMPTY_TYPE=" & TypeName(emptyValue)
@@ -19,4 +29,9 @@ Sub Main()
     Print "NULL_ISEMPTY=" & CStr(IsEmpty(nullValue))
     Print "NULL_ISNULL=" & CStr(IsNull(nullValue))
     Print "NULL_PROPAGATES=" & CStr(IsNull(nullSum))
+    Print "NULL_SUBTRACT_PROPAGATES=" & CStr(IsNull(nullDifference))
+    Print "NULL_MULTIPLY_PROPAGATES=" & CStr(IsNull(nullProduct))
+    Print "EMPTY_SUBTRACT_ZERO=" & CStr(emptyDifference)
+    Print "EMPTY_MULTIPLY_ZERO=" & CStr(emptyProduct)
+    Print "ARITHMETIC_PRECEDENCE=" & CStr(arithmeticPrecedence)
 End Sub

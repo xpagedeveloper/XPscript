@@ -54,11 +54,23 @@ internal static class XPScriptCoercion
         if (right is string rightText)
         {
             if (TryDouble(rightText, out var parsed))
-                return ToDouble(left) + parsed;
+                return ToDouble(left, "addition") + parsed;
             return XPScriptRuntime.CStr(left) + rightText;
         }
 
-        return ToDouble(left) + ToDouble(right);
+        return ToDouble(left, "addition") + ToDouble(right, "addition");
+    }
+
+    public static object? SubtractVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        return ToDouble(left, "subtraction") - ToDouble(right, "subtraction");
+    }
+
+    public static object? MultiplyVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        return ToDouble(left, "multiplication") * ToDouble(right, "multiplication");
     }
 
     private static decimal AddDecimal(object? left, object? right)
@@ -68,7 +80,7 @@ internal static class XPScriptCoercion
 
     private static double AddDoubleCore(object? left, object? right)
     {
-        return ToDouble(left) + ToDouble(right);
+        return ToDouble(left, "addition") + ToDouble(right, "addition");
     }
 
     private static decimal ToDecimal(object? value)
@@ -85,17 +97,17 @@ internal static class XPScriptCoercion
         catch (Exception ex) { throw new InvalidCastException($"Unable to convert {value.GetType().Name} to a numeric value for addition.", ex); }
     }
 
-    private static double ToDouble(object? value)
+    private static double ToDouble(object? value, string operation)
     {
-        if (XPScriptNullRuntime.IsNull(value)) throw new InvalidCastException("Unable to convert Null to a numeric value for addition.");
+        if (XPScriptNullRuntime.IsNull(value)) throw new InvalidCastException($"Unable to convert Null to a numeric value for {operation}.");
         if (value is null) return 0d;
         if (value is string text)
         {
             if (TryDouble(text, out var number)) return number;
-            throw new InvalidCastException($"Unable to convert String value '{text}' to a numeric value for addition.");
+            throw new InvalidCastException($"Unable to convert String value '{text}' to a numeric value for {operation}.");
         }
         try { return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture); }
-        catch (Exception ex) { throw new InvalidCastException($"Unable to convert {value.GetType().Name} to a numeric value for addition.", ex); }
+        catch (Exception ex) { throw new InvalidCastException($"Unable to convert {value.GetType().Name} to a numeric value for {operation}.", ex); }
     }
 
     private static bool TryDouble(string text, out double value)
