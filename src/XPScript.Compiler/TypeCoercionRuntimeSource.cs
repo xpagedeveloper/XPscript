@@ -73,6 +73,32 @@ internal static class XPScriptCoercion
         return ToDouble(left, "multiplication") * ToDouble(right, "multiplication");
     }
 
+    public static object? DivideVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        var divisor = ToDouble(right, "division");
+        if (divisor == 0d) throw new XPScriptRuntimeException(11, "Division by zero.");
+        return ToDouble(left, "division") / divisor;
+    }
+
+    public static object? IntegerDivideVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        var dividend = ToRoundedLong(left, "integer division");
+        var divisor = ToRoundedLong(right, "integer division");
+        if (divisor == 0) throw new XPScriptRuntimeException(11, "Division by zero.");
+        return dividend / divisor;
+    }
+
+    public static object? ModVariant(object? left, object? right)
+    {
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        var dividend = ToRoundedLong(left, "Mod");
+        var divisor = ToRoundedLong(right, "Mod");
+        if (divisor == 0) throw new XPScriptRuntimeException(11, "Division by zero.");
+        return dividend % divisor;
+    }
+
     private static decimal AddDecimal(object? left, object? right)
     {
         return ToDecimal(left) + ToDecimal(right);
@@ -108,6 +134,18 @@ internal static class XPScriptCoercion
         }
         try { return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture); }
         catch (Exception ex) { throw new InvalidCastException($"Unable to convert {value.GetType().Name} to a numeric value for {operation}.", ex); }
+    }
+
+    private static long ToRoundedLong(object? value, string operation)
+    {
+        try
+        {
+            return checked(Convert.ToInt64(ToDouble(value, operation)));
+        }
+        catch (OverflowException ex)
+        {
+            throw new XPScriptRuntimeException(6, ex.Message);
+        }
     }
 
     private static bool TryDouble(string text, out double value)
