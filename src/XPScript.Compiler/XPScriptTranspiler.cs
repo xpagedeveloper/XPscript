@@ -113,6 +113,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
 
+        generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 
         generated = generated.Replace(
@@ -150,7 +151,7 @@ public sealed class XPScriptTranspiler
         {
             source = Regex.Replace(
                 source,
-                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)",
+                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)\s*",
                 m => $"{listName}.ContainsTag({m.Groups["key"].Value})",
                 RegexOptions.IgnoreCase);
         }
