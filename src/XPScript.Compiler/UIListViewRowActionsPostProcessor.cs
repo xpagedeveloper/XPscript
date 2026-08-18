@@ -86,9 +86,9 @@ internal sealed class XPScriptUIListView
                 ? _onDoubleClickHandler
                 : throw new XPScriptRuntimeException(5, "UIListView event type is unsupported.");
 
-        if (handlerName.Length == 0) return string.Empty;
-        InvokeRegisteredHandler(handlerName);
-        return string.Empty;
+        if (handlerName.Length > 0)
+            InvokeRegisteredHandler(handlerName);
+        return SerializeLiveState();
 """,
             """
         string handlerName;
@@ -108,9 +108,9 @@ internal sealed class XPScriptUIListView
         else
             throw new XPScriptRuntimeException(5, "UIListView event type is unsupported.");
 
-        if (handlerName.Length == 0) return string.Empty;
-        InvokeRegisteredHandler(handlerName);
-        return string.Empty;
+        if (handlerName.Length > 0)
+            InvokeRegisteredHandler(handlerName);
+        return SerializeLiveState();
 """);
 
         generated = ReplaceRequired(generated,
@@ -158,6 +158,55 @@ internal sealed class XPScriptUIListView
 
         generated = ReplaceRequired(generated,
             """
+        sb.Append("</tr></thead><tbody>");
+""",
+            """
+        if (_rowActions.Count > 0) sb.Append("<th class=\"xps-list-actions-header\">Actions</th>");
+        sb.Append("</tr></thead><tbody>");
+""");
+
+        generated = ReplaceRequired(generated,
+            """
+            foreach (var column in visibleColumns)
+                sb.Append("<td>").Append(Html(GetRowValueString(rowIndex, column.Name))).Append("</td>");
+            sb.Append("</tr>");
+""",
+            """
+            foreach (var column in visibleColumns)
+                sb.Append("<td>").Append(Html(GetRowValueString(rowIndex, column.Name))).Append("</td>");
+            if (_rowActions.Count > 0)
+            {
+                sb.Append("<td class=\"xps-list-actions\">");
+                foreach (var action in _rowActions)
+                {
+                    if (action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
+                        sb.Append("<a class=\"xps-list-action\" data-action=\"").Append(HtmlAttribute(action.Name)).Append("\" href=\"").Append(HtmlAttribute(BuildActionHref(action, rowIndex))).Append("\">").Append(Html(action.Label)).Append("</a>");
+                    else
+                        sb.Append("<button type=\"button\" class=\"xps-list-action\" data-action=\"").Append(HtmlAttribute(action.Name)).Append("\">").Append(Html(action.Label)).Append("</button>");
+                }
+                sb.Append("</td>");
+            }
+            sb.Append("</tr>");
+""");
+
+        generated = ReplaceRequired(generated,
+            """
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};");
+""",
+            """
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};const actionClick=async e=>{const a=e.target.closest('.xps-list-action');if(!a)return false;e.stopPropagation();const r=a.closest('tr[data-row-index]');if(!r)return true;if(a.tagName==='A')return true;e.preventDefault();await postEvent('action:'+String(a.dataset.action||''),r);return true;};body.addEventListener('click',actionClick);");
+""");
+
+        generated = ReplaceRequired(generated,
+            """
+const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i)=>{const th=document.createElement('th');if(Number(c.width)>0)th.style.width=Number(c.width)+'px';if(s.sortable){const b=document.createElement('button');b.type='button';b.className='xps-list-sort';b.dataset.column=String(i);b.textContent=c.label??c.name??'';th.appendChild(b);}else th.textContent=c.label??c.name??'';hr.appendChild(th);});}body.innerHTML='';rows.forEach(r=>{const tr=document.createElement('tr');tr.dataset.rowIndex=String(r.index);if(r.href){tr.dataset.href=r.href;tr.tabIndex=0;tr.setAttribute('role','link');}(Array.isArray(r.values)?r.values:[]).forEach(v=>{const td=document.createElement('td');td.textContent=v??'';tr.appendChild(td);});body.appendChild(tr);});
+""",
+            """
+const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i)=>{const th=document.createElement('th');if(Number(c.width)>0)th.style.width=Number(c.width)+'px';if(s.sortable){const b=document.createElement('button');b.type='button';b.className='xps-list-sort';b.dataset.column=String(i);b.textContent=c.label??c.name??'';th.appendChild(b);}else th.textContent=c.label??c.name??'';hr.appendChild(th);});if(rows.some(r=>Array.isArray(r.actions)&&r.actions.length)){const th=document.createElement('th');th.className='xps-list-actions-header';th.textContent='Actions';hr.appendChild(th);}}body.innerHTML='';rows.forEach(r=>{const tr=document.createElement('tr');tr.dataset.rowIndex=String(r.index);if(r.href){tr.dataset.href=r.href;tr.tabIndex=0;tr.setAttribute('role','link');}(Array.isArray(r.values)?r.values:[]).forEach(v=>{const td=document.createElement('td');td.textContent=v??'';tr.appendChild(td);});if(Array.isArray(r.actions)&&r.actions.length){const td=document.createElement('td');td.className='xps-list-actions';r.actions.forEach(a=>{let el;if(String(a.kind).toLowerCase()==='navigate'){el=document.createElement('a');el.href=a.href||'#';}else{el=document.createElement('button');el.type='button';}el.className='xps-list-action';el.dataset.action=a.name||'';el.textContent=a.label||a.name||'';td.appendChild(el);});tr.appendChild(td);}body.appendChild(tr);});
+""");
+
+        generated = ReplaceRequired(generated,
+            """
     private string BuildRowHref(int rowIndex)
 """,
             """
@@ -186,6 +235,21 @@ internal sealed class XPScriptUIListView
     }
 
     private string BuildRowHref(int rowIndex)
+""");
+
+        generated = ReplaceRequired(generated,
+            """
+        if (result.Equals("Open", StringComparison.OrdinalIgnoreCase))
+""",
+            """
+        if (result.StartsWith("RowAction:", StringComparison.OrdinalIgnoreCase))
+        {
+            var actionName = result[10..];
+            if (TryWriteDesktopRowActionNavigation(actionName)) return "Navigate";
+            return "Cancel";
+        }
+
+        if (result.Equals("Open", StringComparison.OrdinalIgnoreCase))
 """);
 
         return generated;
