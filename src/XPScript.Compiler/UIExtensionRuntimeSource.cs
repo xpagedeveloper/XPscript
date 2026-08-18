@@ -98,12 +98,16 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddTextArea(object? name, object? label) => AddField(name, label, "TextArea");
     public XPScriptUIField AddNumberField(object? name) => AddField(name, name, "NumberField");
     public XPScriptUIField AddNumberField(object? name, object? label) => AddField(name, label, "NumberField");
+    public XPScriptUIField AddRangeField(object? name) => AddField(name, name, "RangeField");
+    public XPScriptUIField AddRangeField(object? name, object? label) => AddField(name, label, "RangeField");
     public XPScriptUIField AddCheckBox(object? name) => AddField(name, name, "CheckBox");
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
     public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");
     public XPScriptUIField AddTimeField(object? name, object? label) => AddField(name, label, "TimeField");
+    public XPScriptUIField AddDateTimeField(object? name) => AddField(name, name, "DateTimeField");
+    public XPScriptUIField AddDateTimeField(object? name, object? label) => AddField(name, label, "DateTimeField");
     public XPScriptUIField AddEmailField(object? name) => AddField(name, name, "EmailField");
     public XPScriptUIField AddEmailField(object? name, object? label) => AddField(name, label, "EmailField");
     public XPScriptUIField AddUrlField(object? name) => AddField(name, name, "UrlField");
@@ -161,8 +165,8 @@ internal sealed class XPScriptUIForm
     public void SetNumberRange(object? name, object? minimum, object? maximum)
     {
         var field = FindField(name);
-        if (field.Type != "NumberField")
-            throw new XPScriptRuntimeException(5, "UIForm numeric range is only supported for NumberField.");
+        if (field.Type is not ("NumberField" or "RangeField"))
+            throw new XPScriptRuntimeException(5, "UIForm numeric range is only supported for NumberField and RangeField.");
         decimal min;
         decimal max;
         try
@@ -245,6 +249,7 @@ internal sealed class XPScriptUIForm
         switch (field.Type)
         {
             case "NumberField":
+            case "RangeField":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!decimal.TryParse(submitted, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var number))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid number.");
@@ -268,6 +273,12 @@ internal sealed class XPScriptUIForm
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!TimeOnly.TryParseExact(submitted, new[] { "HH:mm", "HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
                     throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid time in HH:mm or HH:mm:ss format.");
+                _data.Set(field.Name, submitted);
+                return;
+            case "DateTimeField":
+                if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
+                if (!DateTime.TryParseExact(submitted, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' must contain a valid local date/time in yyyy-MM-ddTHH:mm or yyyy-MM-ddTHH:mm:ss format.");
                 _data.Set(field.Name, submitted);
                 return;
             case "EmailField":
@@ -329,6 +340,7 @@ internal sealed class XPScriptUIForm
             {
                 case "TextArea": html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">").Append(value).Append("</textarea>"); break;
                 case "NumberField": html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
+                case "RangeField": html.Append("<input type=\"range\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "CheckBox":
                     var checkedValue = GetFieldValue(field.Name) is bool b && b;
                     html.Append("<input type=\"checkbox\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"1\"");
@@ -337,6 +349,7 @@ internal sealed class XPScriptUIForm
                     break;
                 case "DateField": html.Append("<input type=\"date\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "TimeField": html.Append("<input type=\"time\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
+                case "DateTimeField": html.Append("<input type=\"datetime-local\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "EmailField": html.Append("<input type=\"email\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "UrlField": html.Append("<input type=\"url\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
