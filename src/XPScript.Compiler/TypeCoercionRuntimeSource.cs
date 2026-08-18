@@ -99,6 +99,18 @@ internal static class XPScriptCoercion
         return dividend % divisor;
     }
 
+    public static object? UnaryPlusVariant(object? value)
+    {
+        if (XPScriptNullRuntime.IsNull(value)) return XPScriptNullRuntime.NullValue;
+        return ToDouble(value, "unary plus");
+    }
+
+    public static object? NegateVariant(object? value)
+    {
+        if (XPScriptNullRuntime.IsNull(value)) return XPScriptNullRuntime.NullValue;
+        return -ToDouble(value, "negation");
+    }
+
     public static object? PowerVariant(object? left, object? right)
     {
         if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
