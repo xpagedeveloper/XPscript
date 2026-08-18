@@ -101,7 +101,17 @@ internal static class XPScriptNativeJson
         if (node is System.Text.Json.Nodes.JsonValue value)
         {
             if (value.TryGetValue<bool>(out var b)) return b;
-            if (value.TryGetValue<long>(out var l)) return l;
+            if (value.TryGetValue<byte>(out var b8)) return b8;
+            if (value.TryGetValue<short>(out var i16)) return i16;
+            if (value.TryGetValue<int>(out var i32)) return i32;
+            if (value.TryGetValue<long>(out var i64)) return i64;
+            if (value.TryGetValue<decimal>(out var dec)) return dec;
+            if (value.TryGetValue<float>(out var f))
+            {
+                if (float.IsNaN(f) || float.IsInfinity(f))
+                    throw new XPScriptRuntimeException(5, "JSON numeric value is outside the supported finite range.");
+                return f;
+            }
             if (value.TryGetValue<double>(out var d))
             {
                 if (double.IsNaN(d) || double.IsInfinity(d))
