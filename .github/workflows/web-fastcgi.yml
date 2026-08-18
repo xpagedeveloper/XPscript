@@ -6,21 +6,30 @@ on:
       - '.github/workflows/web-fastcgi.yml'
       - 'src/XPScript.Web.FastCgi/**'
       - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
       - 'tests/WebFastCgiUnixSmoke/**'
       - 'tests/WebFastCgiAdversarialSmoke/**'
+      - 'tests/WebUIFormFastCgiSmoke/**'
       - 'docs/web-fastcgi-nginx.md'
       - 'XPScriptCompiler.slnx'
   pull_request:
+    branches: [main]
     paths:
       - '.github/workflows/web-fastcgi.yml'
       - 'src/XPScript.Web.FastCgi/**'
       - 'src/XPScript.Web.Runtime/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'tests/WebFastCgiSmoke/**'
       - 'tests/WebFastCgiBoundarySmoke/**'
       - 'tests/WebFastCgiUnixSmoke/**'
       - 'tests/WebFastCgiAdversarialSmoke/**'
+      - 'tests/WebUIFormFastCgiSmoke/**'
       - 'docs/web-fastcgi-nginx.md'
       - 'XPScriptCompiler.slnx'
 
@@ -49,3 +58,5 @@ jobs:
         run: dotnet run --project ./tests/WebFastCgiUnixSmoke/WebFastCgiUnixSmoke.csproj -c Release
       - name: Run FastCGI adversarial corpus
         run: dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
+      - name: Run UIForm FastCGI GET/POST JSON binding regression
+        run: dotnet run --project ./tests/WebUIFormFastCgiSmoke/WebUIFormFastCgiSmoke.csproj -c Release

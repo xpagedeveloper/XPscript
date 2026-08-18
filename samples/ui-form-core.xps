@@ -1,0 +1,47 @@
+' XPScript UIForm core and JSON binding regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim first As New UIForm("First", 640, 480, True)
+    Dim second As New UIForm("Second")
+    Dim data As New JsonObject
+
+    Print "FIRST_TITLE=" & first.Title
+    Print "FIRST_WIDTH=" & CStr(first.Width)
+    Print "FIRST_HEIGHT=" & CStr(first.Height)
+    Print "FIRST_RESIZABLE=" & CStr(first.Resizable)
+    Print "FIRST_HAS_SIZE=" & CStr(first.HasExplicitSize)
+
+    Print "SECOND_TITLE=" & second.Title
+    Print "SECOND_WIDTH=" & CStr(second.Width)
+    Print "SECOND_HEIGHT=" & CStr(second.Height)
+    Print "SECOND_HAS_SIZE=" & CStr(second.HasExplicitSize)
+
+    first.Title = "Changed"
+    first.Width = 800
+    first.Height = 600
+    first.Resizable = False
+
+    Print "FIRST_CHANGED_TITLE=" & first.Title
+    Print "FIRST_CHANGED_WIDTH=" & CStr(first.Width)
+    Print "FIRST_CHANGED_HEIGHT=" & CStr(first.Height)
+    Print "FIRST_CHANGED_RESIZABLE=" & CStr(first.Resizable)
+    Print "SECOND_STILL_TITLE=" & second.Title
+
+    Call data.Set("existing", "Loaded from JSON")
+    Call first.BindData(data)
+    Call first.AddTextField("existing", "Existing")
+    Call first.AddTextField("missing", "Missing")
+
+    Print "BOUND_EXISTING=" & first.GetFieldValueString("existing")
+    Print "BOUND_MISSING=" & first.GetFieldValueString("missing")
+    Print "MISSING_EXISTS_INITIAL=" & CStr(data.Contains("missing"))
+
+    Call first.SetFieldValue("missing", "")
+    Print "MISSING_EXISTS_AFTER_EMPTY=" & CStr(data.Contains("missing"))
+
+    Call first.SetFieldValue("missing", "Created by user")
+    Print "MISSING_EXISTS_AFTER_VALUE=" & CStr(data.Contains("missing"))
+    Print "MISSING_VALUE=" & CStr(data.Get("missing"))
+    Print "JSON_DATA=" & data.Stringify()
+End Sub

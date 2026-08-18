@@ -1,0 +1,70 @@
+name: UIForm Core
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'samples/ui-form-core.xps'
+      - '.github/workflows/ui-form-core.yml'
+  push:
+    branches:
+      - 'todo-ui-form-core-*'
+    paths:
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'samples/ui-form-core.xps'
+      - '.github/workflows/ui-form-core.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile and verify UIForm core
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/ui-form-core$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-form-core.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'UIForm core compilation failed.' }
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "UIForm core runtime failed with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @(
+            'FIRST_TITLE=First',
+            'FIRST_WIDTH=640',
+            'FIRST_HEIGHT=480',
+            'FIRST_RESIZABLE=True',
+            'FIRST_HAS_SIZE=True',
+            'SECOND_TITLE=Second',
+            'SECOND_WIDTH=0',
+            'SECOND_HEIGHT=0',
+            'SECOND_HAS_SIZE=False',
+            'FIRST_CHANGED_TITLE=Changed',
+            'FIRST_CHANGED_WIDTH=800',
+            'FIRST_CHANGED_HEIGHT=600',
+            'FIRST_CHANGED_RESIZABLE=False',
+            'SECOND_STILL_TITLE=Second'
+          )) {
+            if ($output -notcontains $value) { throw "UIForm output missing: $value" }
+          }
