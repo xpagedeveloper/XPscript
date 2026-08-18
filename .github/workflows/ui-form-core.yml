@@ -9,12 +9,15 @@ on:
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
       - 'samples/ui-list-view-*.xps'
+      - 'samples/customer-form.xps'
       - '.github/workflows/ui-form-core.yml'
   push:
     branches:
@@ -25,12 +28,15 @@ on:
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
       - 'samples/ui-list-view-*.xps'
+      - 'samples/customer-form.xps'
       - '.github/workflows/ui-form-core.yml'
 
 permissions:
@@ -111,10 +117,12 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "UIListView output missing: $value" }
           }
-      - name: Compile desktop UIListView sample
+      - name: Compile UIListView desktop and web samples
         shell: pwsh
         run: |
           $extension = if ($IsWindows) { '.exe' } else { '' }
-          $program = "./out/ui-list-view-desktop$extension"
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-list-view-desktop.xps -o $program --framework-dependent
-          if ($LASTEXITCODE -ne 0) { throw 'Desktop UIListView compilation failed.' }
+          foreach ($sample in @('ui-list-view-desktop', 'ui-list-view-web', 'customer-form')) {
+            $program = "./out/$sample$extension"
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./samples/$sample.xps" -o $program --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "$sample compilation failed." }
+          }
