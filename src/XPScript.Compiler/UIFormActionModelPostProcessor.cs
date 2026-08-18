@@ -54,6 +54,7 @@ internal sealed class XPScriptUIForm
             """
     public int GridColumns => _gridColumns;
     public int ButtonCount => _buttons.Count;
+    internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
 """);
