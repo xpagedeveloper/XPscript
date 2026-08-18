@@ -81,7 +81,7 @@ public sealed class XpsWebCompiler
                 }
                 else assembly = loadContext.LoadFromStream(assemblyStream);
                 ValidateCompiledRoutes(assembly, parsed.Routes);
-                return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes);
+                return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
             }
             catch
             {
