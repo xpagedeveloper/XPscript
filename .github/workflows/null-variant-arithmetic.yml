@@ -49,9 +49,17 @@ jobs:
             'NULL_PROPAGATES=True',
             'NULL_SUBTRACT_PROPAGATES=True',
             'NULL_MULTIPLY_PROPAGATES=True',
+            'NULL_DIVIDE_PROPAGATES=True',
+            'NULL_INTEGER_DIVIDE_PROPAGATES=True',
+            'NULL_MOD_PROPAGATES=True',
             'EMPTY_SUBTRACT_ZERO=-1',
             'EMPTY_MULTIPLY_ZERO=0',
-            'ARITHMETIC_PRECEDENCE=4'
+            'EMPTY_DIVIDE_ZERO=0',
+            'EMPTY_MOD_ZERO=0',
+            'ARITHMETIC_PRECEDENCE=-2',
+            'DIVISION_VALUE=1.6',
+            'INTEGER_DIVISION_VALUE=2',
+            'MOD_VALUE=4'
           )) {
             if ($output -notcontains $value) { throw "NULL Variant arithmetic output missing: $value" }
           }
