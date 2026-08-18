@@ -37,8 +37,18 @@ Sub Main()
     Call list.SetKeyField("id")
     Call list.SetSortable(True)
     Call list.SetFilterEnabled(True)
+    Call list.SetOnSelect("CustomerSelected")
+    Call list.SetOnDoubleClick("CustomerDoubleClicked")
     Call list.SetRowAction("customer-form.xps", "id", "customerId")
 
     result = list.ShowDialog()
     Print "RESULT=" & result
+End Sub
+
+Sub CustomerSelected(list As Variant)
+    Print "SELECTED=" & list.GetSelectedKey()
+End Sub
+
+Sub CustomerDoubleClicked(list As Variant)
+    Print "DOUBLE_CLICKED=" & list.GetSelectedValueString("name")
 End Sub
