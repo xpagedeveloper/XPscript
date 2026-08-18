@@ -47,6 +47,8 @@ Sub Main()
     Call list.SetFilterEnabled(True)
     Call list.SetOnSelect("CustomerSelected")
     Call list.SetOnDoubleClick("CustomerDoubleClicked")
+    Call list.AddRowNavigationButton("edit", "Edit", "customer-form.xps", "id", "customerId")
+    Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
     Call list.SetRowAction("customer-form.xps", "id", "customerId")
 
     result = list.ShowDialog()
@@ -63,4 +65,8 @@ Sub CustomerDoubleClicked(list As Variant)
     Dim row As Variant
     row = list.GetSelectedRow()
     Call row.Set("status", "Opening")
+End Sub
+
+Sub DeleteCustomer(list As Variant)
+    Call list.RemoveSelectedRow()
 End Sub
