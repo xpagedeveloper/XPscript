@@ -1,6 +1,9 @@
 ' XPscript UIListView web showcase
 ' (c) xpagedeveloper.com 2026
 
+[Anonymous]
+[Get]
+[Post]
 Sub Main()
     Dim rows As New JsonArray
     Dim row1 As New JsonObject
