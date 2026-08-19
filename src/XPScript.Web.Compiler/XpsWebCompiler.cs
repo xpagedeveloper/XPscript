@@ -12,6 +12,7 @@ public sealed class XpsWebCompiler
 {
     private static readonly Regex MainOrInitialize = new(@"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b", RegexOptions.CultureInvariant);
     private static readonly Regex ScriptClassMarker = new(@"internal\s+static\s+class\s+Script\s*\{", RegexOptions.CultureInvariant);
+    private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
 
     public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
@@ -35,7 +36,7 @@ public sealed class XpsWebCompiler
         var parsed = new XpsWebRouteMetadataParser().Parse(source);
         if (parsed.Routes.Count == 0) throw new XpsWebCompilationException("Web source must export at least one route using web route attributes.");
 
-        var compilerSource = EnsureCompilerEntryPoint(parsed.Source);
+        var compilerSource = EnsureCompilerEntryPoint(NormalizeVariantSetAssignments(parsed.Source));
         string generated;
         try
         {
@@ -114,6 +115,26 @@ internal static class Script
         var match = ScriptClassMarker.Match(generated);
         if (!match.Success) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
         return generated[..match.Index] + members + generated[(match.Index + match.Length)..];
+    }
+
+    private static string NormalizeVariantSetAssignments(string source)
+    {
+        var variantNames = VariantDeclaration.Matches(source)
+            .Select(match => match.Groups[1].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (variantNames.Length == 0) return source;
+
+        var normalized = source;
+        foreach (var name in variantNames)
+        {
+            normalized = Regex.Replace(
+                normalized,
+                $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$",
+                $"$1{name} = $2",
+                RegexOptions.CultureInvariant);
+        }
+        return normalized;
     }
 
     private static string EnsureCompilerEntryPoint(string source) => MainOrInitialize.IsMatch(source) ? source : source + Environment.NewLine + Environment.NewLine + "Public Sub Main()" + Environment.NewLine + "End Sub" + Environment.NewLine;
