@@ -54,3 +54,38 @@ jobs:
               throw "Web distribution does not contain xpscript: $path"
             }
           }
+      - name: Upload compiler artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-compiler
+          path: artifacts/distributions/compiler/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload desktop runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-desktop-runtime
+          path: artifacts/distributions/desktop-runtime/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload CGI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-cgi
+          path: artifacts/distributions/cgi/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload FastCGI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-fastcgi
+          path: artifacts/distributions/fastcgi/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Kestrel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-kestrel
+          path: artifacts/distributions/kestrel/
+          if-no-files-found: error
+          retention-days: 14
