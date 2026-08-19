@@ -107,5 +107,31 @@ foreach (var expected in new[]
 if (!generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
     throw new InvalidOperationException("UIForm.ShowDialog method declaration was incorrectly rewritten.");
 
+var listSource = """
+Sub Main()
+    Dim rows As New JsonArray
+    Dim row As New JsonObject
+    Dim list As New UIListView("Customers")
+    Call row.Set("id", "1001")
+    Call row.Set("name", "Kalle")
+    Call rows.Add(row)
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.SetKeyField("id")
+End Sub
+""";
+var generatedList = new XPScriptTranspiler().Transpile(listSource, "ui-list-smoke.xps", "win-x64");
+foreach (var expected in new[]
+{
+    "internal static class XPScriptUIList",
+    "internal sealed class XPScriptUIListView",
+    "XPScriptUIList.CreateListView("
+})
+{
+    if (!generatedList.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated UIListView runtime is missing: " + expected);
+}
+
 Console.WriteLine("DESKTOP_UIFORM_BRIDGE_OK");
 Console.WriteLine("DESKTOP_DIALOG_TRANSPILE_OK");
+Console.WriteLine("DESKTOP_UILISTVIEW_TRANSPILE_OK");
