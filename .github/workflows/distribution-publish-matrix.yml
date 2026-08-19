@@ -1,0 +1,94 @@
+name: Distribution Publish Matrix
+
+on:
+  pull_request:
+    paths:
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+      - 'src/XPScript.UI.Desktop/**'
+      - 'src/XPScript.Web.Cgi/**'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.Web.FastCgi/**'
+      - 'src/XPScript.Web.Kestrel/**'
+      - 'src/XPScript.Web.Runtime/**'
+      - 'scripts/publish-distributions.ps1'
+      - 'docs/getting-started.md'
+      - '.github/workflows/distribution-publish-matrix.yml'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: publish-${{ matrix.rid }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        rid:
+          - win-x64
+          - linux-x64
+          - linux-arm64
+          - osx-x64
+          - osx-arm64
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish platform distributions
+        shell: pwsh
+        run: ./scripts/publish-distributions.ps1 -Package all -Runtime '${{ matrix.rid }}'
+      - name: Verify platform distributions
+        shell: pwsh
+        run: |
+          $required = @(
+            'artifacts/distributions/compiler',
+            'artifacts/distributions/desktop-runtime',
+            'artifacts/distributions/cgi',
+            'artifacts/distributions/fastcgi',
+            'artifacts/distributions/kestrel'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) { throw "Missing distribution folder: $path" }
+            if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Distribution is empty: $path" }
+          }
+      - name: Upload compiler artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-compiler-${{ matrix.rid }}
+          path: artifacts/distributions/compiler/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload desktop runtime artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-desktop-runtime-${{ matrix.rid }}
+          path: artifacts/distributions/desktop-runtime/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload CGI artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-cgi-${{ matrix.rid }}
+          path: artifacts/distributions/cgi/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload FastCGI artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-fastcgi-${{ matrix.rid }}
+          path: artifacts/distributions/fastcgi/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Kestrel artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpscript-kestrel-${{ matrix.rid }}
+          path: artifacts/distributions/kestrel/
+          if-no-files-found: error
+          retention-days: 14

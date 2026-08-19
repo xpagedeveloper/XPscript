@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>XPScript.Compiler</RootNamespace>
+    <AssemblyName>XPScript.Compiler.Core</AssemblyName>
+    <AssemblyTitle>XPScript Compiler Core</AssemblyTitle>
+    <Product>XPScript</Product>
+    <Copyright>(c) xpagedeveloper.com 2026</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../XPScript.Compiler/**/*.cs"
+             Exclude="../XPScript.Compiler/Program.cs;../XPScript.Compiler/bin/**;../XPScript.Compiler/obj/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
+  </ItemGroup>
+</Project>

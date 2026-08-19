@@ -11,6 +11,18 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $OutputRoot = Join-Path $repoRoot $OutputRoot
 
+function Clear-BuildOutputs {
+    $srcRoot = Join-Path $repoRoot 'src'
+    if (-not (Test-Path $srcRoot)) { return }
+
+    Get-ChildItem -Path $srcRoot -Directory -Recurse -Force |
+        Where-Object { $_.Name -in @('bin', 'obj') } |
+        Sort-Object FullName -Descending |
+        ForEach-Object {
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+}
+
 function Publish-Project {
     param(
         [string]$Name,
@@ -22,6 +34,8 @@ function Publish-Project {
     $output = Join-Path $OutputRoot $SubFolder
     if (Test-Path $output) { Remove-Item $output -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $output | Out-Null
+
+    Clear-BuildOutputs
 
     $args = @('publish', (Join-Path $repoRoot $Project), '-c', $Configuration, '-o', $output, '--nologo')
     if ($Runtime) { $args += @('-r', $Runtime) }
