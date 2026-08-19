@@ -26,7 +26,7 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         {
             generated = ReplaceRequiredRegex(
                 generated,
-                @"var\s+handler\s*=\s*XPScriptRuntime\.CStr\(handlerName\)\.Trim\(\)\s*;\s*if\s*\(handler\.Length\s+is\s+<\s*1\s+or\s+>\s+128\s*\|\|.*?throw\s+new\s+XPScriptRuntimeException\(5,\s*\"UIForm refresh handler name is invalid\.\"\)\s*;\s*field\.RefreshTargetRegion\s*=\s*region\s*;\s*field\.RefreshHandler\s*=\s*handler\s*;",
+                """var\s+handler\s*=\s*XPScriptRuntime\.CStr\(handlerName\)\.Trim\(\)\s*;\s*if\s*\(handler\.Length\s+is\s+<\s*1\s+or\s+>\s+128\s*\|\|.*?throw\s+new\s+XPScriptRuntimeException\(5,\s*"UIForm refresh handler name is invalid\."\)\s*;\s*field\.RefreshTargetRegion\s*=\s*region\s*;\s*field\.RefreshHandler\s*=\s*handler\s*;""",
                 """
         var handler = XPScriptRuntime.CStr(handlerName).Trim();
         if (handler.Length > 0 && (handler.Length > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_'))
@@ -42,7 +42,7 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         {
             generated = ReplaceRequiredRegex(
                 generated,
-                @"if\s*\(XPScriptUIWebAdapter\.Method\.Equals\(\"POST\",\s*StringComparison\.OrdinalIgnoreCase\)\)\s*\{\s*foreach\s*\(var\s+field\s+in\s+_fields\)\s+ApplySubmittedValue\(field,\s*XPScriptUIWebAdapter\.FormFirst\(field\.Name\)\)\s*;\s*return\s+\"OK\"\s*;\s*\}\s*XPScriptUIWebAdapter\.WriteHtml\(RenderWebForm\(\)\)\s*;\s*return\s+\"Pending\"\s*;",
+                """if\s*\(XPScriptUIWebAdapter\.Method\.Equals\("POST",\s*StringComparison\.OrdinalIgnoreCase\)\)\s*\{\s*foreach\s*\(var\s+field\s+in\s+_fields\)\s+ApplySubmittedValue\(field,\s*XPScriptUIWebAdapter\.FormFirst\(field\.Name\)\)\s*;\s*return\s+"OK"\s*;\s*\}\s*XPScriptUIWebAdapter\.WriteHtml\(RenderWebForm\(\)\)\s*;\s*return\s+"Pending"\s*;""",
                 """
             if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
             {
@@ -77,7 +77,7 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         {
             generated = ReplaceRequiredRegex(
                 generated,
-                @"html\.Append\(\"<button style=\\\"grid-column:1/-1\\\" type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\"\)\s*;",
+                """html\.Append\("<button style=\\"grid-column:1/-1\\" type=\\"submit\\" name=\\"__xps_uiform_submit\\" value=\\"1\\">OK</button></form>"\)\s*;""",
                 """
         foreach (var button in _buttons.Where(button => button.Visible))
         {
