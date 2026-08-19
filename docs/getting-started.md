@@ -225,7 +225,29 @@ The `Distribution Publish` workflow publishes five separate downloadable artifac
 | `xpscript-fastcgi` | FastCGI host distribution. |
 | `xpscript-kestrel` | Kestrel host distribution. |
 
-Artifacts are retained for 14 days. The workflow fails if a required distribution is missing or empty.
+The `Distribution Publish Matrix` workflow verifies every package for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` on pull requests. Manual runs also create one release bundle per RID. Each bundle contains five versioned ZIP files and one SHA-256 manifest.
+
+Example files for version `1.2.0` and `linux-x64`:
+
+```text
+xpscript-compiler-1.2.0-linux-x64.zip
+xpscript-desktop-runtime-1.2.0-linux-x64.zip
+xpscript-cgi-1.2.0-linux-x64.zip
+xpscript-fastcgi-1.2.0-linux-x64.zip
+xpscript-kestrel-1.2.0-linux-x64.zip
+SHA256SUMS-1.2.0-linux-x64.txt
+```
+
+Start the matrix workflow manually and optionally supply the `version` input. If `version` is empty, the first 12 characters of the commit SHA are used in the file names. Version values may contain letters, numbers, dots, underscores and hyphens.
+
+Verify a downloaded ZIP against the manifest before deployment. On PowerShell:
+
+```powershell
+(Get-FileHash .\xpscript-kestrel-1.2.0-linux-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+Get-Content .\SHA256SUMS-1.2.0-linux-x64.txt
+```
+
+Artifacts are retained for 14 days. Both distribution workflows fail if required output is missing. The matrix release step also verifies that exactly five ZIP files and five checksum entries were produced.
 
 ## Publish parameters
 
