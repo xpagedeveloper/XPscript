@@ -211,6 +211,8 @@ function applyFieldState(field, editor) {
   if (field.maxLength != null && 'maxLength' in editor) editor.maxLength = Number(field.maxLength);
   if (field.minimum != null && 'min' in editor) editor.min = String(field.minimum);
   if (field.maximum != null && 'max' in editor) editor.max = String(field.maximum);
+  if (field.dateMinimum && 'min' in editor) editor.min = String(field.dateMinimum);
+  if (field.dateMaximum && 'max' in editor) editor.max = String(field.dateMaximum);
   if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);
   if (field.regexPattern && 'pattern' in editor) editor.pattern = String(field.regexPattern);
   if (field.tooltip) editor.title = String(field.tooltip);

@@ -29,6 +29,8 @@ public sealed record DesktopFormField(
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
     public string RegexPattern { get; init; } = string.Empty;
+    public string DateMinimum { get; init; } = string.Empty;
+    public string DateMaximum { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
 }
 

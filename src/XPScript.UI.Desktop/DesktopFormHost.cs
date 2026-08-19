@@ -429,7 +429,14 @@ public static class DesktopFormHost
                 if (field.Minimum.HasValue && number < field.Minimum.Value) return $"{field.LabelOrName()} must be at least {field.Minimum.Value.ToString(CultureInfo.InvariantCulture)}.";
                 if (field.Maximum.HasValue && number > field.Maximum.Value) return $"{field.LabelOrName()} must be at most {field.Maximum.Value.ToString(CultureInfo.InvariantCulture)}.";
                 break;
-            case "DateField": if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format."; break;
+            case "DateField":
+      if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
+          return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format.";
+      if (field.DateMinimum.Length > 0 && DateTime.TryParseExact(field.DateMinimum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMinimum) && dateValue < dateMinimum)
+          return $"{field.LabelOrName()} must be on or after {field.DateMinimum}.";
+      if (field.DateMaximum.Length > 0 && DateTime.TryParseExact(field.DateMaximum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMaximum) && dateValue > dateMaximum)
+          return $"{field.LabelOrName()} must be on or before {field.DateMaximum}.";
+      break;
             case "TimeField": if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format."; break;
             case "DateTimeField": if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid local date/time."; break;
             case "MonthField": if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format."; break;

@@ -52,9 +52,11 @@ Sub Main()
     Call first.SetLength("password", 8, 128)
     Call first.SetNumberRange("age", 0, 150)
     Call first.SetRegexValidation("existing", "^[A-Za-z ]+$")
+    Call first.SetDateRange("birthday", "2020-01-01", "2030-12-31")
 
     Print "VALIDATION_CONFIGURED=True"
     Print "REGEX_VALIDATION_CONFIGURED=True"
+    Print "DATE_RANGE_CONFIGURED=True"
     Print "FIELD_COUNT=" & CStr(first.FieldCount)
     Print "BOUND_EXISTING=" & first.GetFieldValueString("existing")
     Print "BOUND_MISSING=" & first.GetFieldValueString("missing")
