@@ -19,6 +19,8 @@ internal sealed class UIFormActionModelPostProcessor
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
+    public string Placeholder { get; set; } = string.Empty;
+    public string Tooltip { get; set; } = string.Empty;
 """, "field-state");
         }
 
@@ -97,6 +99,22 @@ internal sealed class XPScriptUIForm
     public void SetFieldReadOnly(object? name, object? readOnly)
     {
         FindField(name).ReadOnly = Convert.ToBoolean(readOnly, System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    public void SetFieldPlaceholder(object? name, object? placeholder)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
+            throw new XPScriptRuntimeException(5, "UIForm placeholder is only supported for text-entry fields.");
+        field.Placeholder = NormalizeHintText(placeholder, "placeholder", 512);
+    }
+
+    public void SetFieldTooltip(object? name, object? tooltip)
+    {
+        var field = FindField(name);
+        if (field.Type is "HiddenField" or "Separator" or "Spacer")
+            throw new XPScriptRuntimeException(5, "UIForm tooltip is not supported for hidden or structural fields.");
+        field.Tooltip = NormalizeHintText(tooltip, "tooltip", 1024);
     }
 
     public void SetOnChange(object? name, object? handlerName)
@@ -197,6 +215,16 @@ internal sealed class XPScriptUIForm
         var buttonName = NormalizeControlName(name, "button");
         return _buttons.FirstOrDefault(button => button.Name.Equals(buttonName, StringComparison.OrdinalIgnoreCase))
             ?? throw new XPScriptRuntimeException(5, $"UIForm button '{buttonName}' does not exist.");
+    }
+
+    private static string NormalizeHintText(object? value, string kind, int maximumLength)
+    {
+        var text = XPScriptRuntime.CStr(value);
+        if (text.Length > maximumLength)
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} must contain at most {maximumLength} characters.");
+        if (text.Any(char.IsControl))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} contains a control character.");
+        return text;
     }
 
     private static string NormalizeHandlerName(object? value)

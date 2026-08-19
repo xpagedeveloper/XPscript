@@ -9,7 +9,9 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
 
         if (generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
-            generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
+            generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
+            generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
+            generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal))
             return generated;
 
         const string pattern = """
@@ -55,7 +57,9 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 onChangeHandler = field.OnChangeHandler,
                 visible = field.Visible,
                 enabled = field.Enabled,
-                readOnly = field.ReadOnly
+                readOnly = field.ReadOnly,
+                placeholder = field.Placeholder,
+                tooltip = field.Tooltip
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
             {

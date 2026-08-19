@@ -85,6 +85,27 @@ Call grid.SetFieldPosition("actions_spacer", 12)
 
 Server-rendered web uses a Bootstrap-compatible horizontal rule for Separator and an empty spacing block for Spacer. Desktop and browser-wasm preserve the same structural intent through their UI backends.
 
+## Placeholder and Tooltip
+
+Use `SetFieldPlaceholder(name, text)` for text-entry controls. Supported field types are `TextField`, `TextArea`, `PasswordField`, `EmailField` and `UrlField`.
+
+```xpscript
+Call form.AddTextField("name", "Name")
+Call form.SetFieldPlaceholder("name", "Enter the customer name")
+```
+
+Use `SetFieldTooltip(name, text)` to add help text to normal data-entry fields.
+
+```xpscript
+Call form.SetFieldTooltip("name", "The name shown in customer lists")
+```
+
+The same metadata is used by all UI backends. Desktop maps placeholder text to the Avalonia `PlaceholderText` property and tooltip text to `ToolTip`. Server-rendered web uses HTML `placeholder` and `title` attributes. Browser-wasm sets the corresponding DOM properties.
+
+Placeholder and tooltip values can be changed from UI event handlers. Reactive updates send the changed metadata with the normal UIForm state response.
+
+Empty text clears an existing placeholder or tooltip. Hint text rejects control characters. Placeholder text is limited to 512 characters and tooltip text to 1024 characters.
+
 ## Grid layout
 
 The form is the top container. Add a grid with a configurable number of columns:
@@ -155,7 +176,7 @@ Web UIForm uses Bootstrap 5.3.8 styling. The runtime loads the Bootstrap stylesh
 
 On GET, `ShowDialog()` renders the form and returns `Pending`. On POST, it reads submitted values, performs form validation, updates the bound data and returns `OK` when accepted.
 
-HTML labels, names and values are encoded before rendering.
+HTML labels, names, values, placeholders and tooltips are encoded before rendering.
 
 ## Desktop rendering
 

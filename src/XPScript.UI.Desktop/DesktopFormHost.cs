@@ -73,6 +73,7 @@ public static class DesktopFormHost
             }
             var editor = CreateEditor(field);
             ApplyEditorState(field, editor);
+            ApplyFieldHints(field, editor);
             editors[field.Name] = editor;
             fieldPanel.Children.Add(editor);
 
@@ -133,6 +134,12 @@ public static class DesktopFormHost
                     if (fieldPanels.TryGetValue(name, out var fieldPanel) && state.TryGetProperty("visible", out var visible)) fieldPanel.IsVisible = visible.ValueKind != JsonValueKind.False;
                     if (state.TryGetProperty("enabled", out var enabled)) editor.IsEnabled = enabled.ValueKind != JsonValueKind.False;
                     if (editor is TextBox textBox && state.TryGetProperty("readOnly", out var readOnly)) textBox.IsReadOnly = readOnly.ValueKind == JsonValueKind.True;
+                    if (editor is TextBox hintBox && state.TryGetProperty("placeholder", out var placeholder)) hintBox.PlaceholderText = placeholder.GetString() ?? string.Empty;
+                    if (state.TryGetProperty("tooltip", out var tooltip))
+                    {
+                        var text = tooltip.GetString() ?? string.Empty;
+                        ToolTip.SetTip(editor, text.Length == 0 ? null : text);
+                    }
                     if (fieldLabels.TryGetValue(name, out var label) && state.TryGetProperty("label", out var labelElement)) label.Text = labelElement.GetString() ?? string.Empty;
 
                     var options = state.TryGetProperty("options", out var optionsElement) && optionsElement.ValueKind == JsonValueKind.Array
@@ -302,6 +309,14 @@ public static class DesktopFormHost
         editor.IsEnabled = field.Enabled;
         if (editor is TextBox textBox) textBox.IsReadOnly = field.ReadOnly;
         else if (field.ReadOnly) editor.IsEnabled = false;
+    }
+
+    private static void ApplyFieldHints(DesktopFormField field, Control editor)
+    {
+        if (editor is TextBox textBox && field.Placeholder.Length > 0)
+            textBox.PlaceholderText = field.Placeholder;
+        if (field.Tooltip.Length > 0)
+            ToolTip.SetTip(editor, field.Tooltip);
     }
 
     private static void ApplyReactiveUpdate(DesktopFormField field, Control editor, string? value, IReadOnlyList<string> options, IReadOnlyList<string> selectedValues)
