@@ -291,6 +291,8 @@ internal static class XpsHostConfig
         public string? HttpsCertificatePasswordEnvironment { get; init; }
         public bool? Health { get; init; }
         public bool? Metrics { get; init; }
+        // Legacy compatibility only. Sessions are always enabled for Kestrel/FastCGI.
+        public bool? Sessions { get; init; }
         public string? SessionCookie { get; init; }
         public int? SessionTimeoutSeconds { get; init; }
         public string? SessionSameSite { get; init; }
