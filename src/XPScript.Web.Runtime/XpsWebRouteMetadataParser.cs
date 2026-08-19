@@ -38,6 +38,13 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                if (!IsKnownRouteAttribute(attribute))
+                {
+                    Console.Error.WriteLine($"error: Unsupported web route attribute '[{attribute}]'. Ignoring rule.");
+                    output.AppendLine();
+                    continue;
+                }
+
                 pending.Add(attribute);
                 output.AppendLine();
                 continue;
@@ -83,13 +90,17 @@ public sealed class XpsWebRouteMetadataParser
                 throw new XpsWebRouteMetadataException("PreCompile target must contain 1 to 1024 characters.");
             if (target.Any(char.IsControl))
                 throw new XpsWebRouteMetadataException("PreCompile target contains a control character.");
-            if (!target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase) &&
-                !target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
-                throw new XpsWebRouteMetadataException("PreCompile targets must use the .xps extension.");
 
-            // Accept the common .xsp transposition in directives, but normalize to the actual XPScript extension.
-            if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
+            // Extensionless targets are treated as XPScript files. Keep accepting the common .xsp transposition.
+            if (string.IsNullOrEmpty(Path.GetExtension(target)))
+                target += ".xps";
+            else if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
                 target = target[..^4] + ".xps";
+            else if (!target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine($"error: PreCompile target '{target}' does not use the .xps extension. Ignoring target.");
+                continue;
+            }
 
             if (!targets.Contains(target, StringComparer.OrdinalIgnoreCase))
                 targets.Add(target);
@@ -98,7 +109,20 @@ public sealed class XpsWebRouteMetadataParser
         }
 
         if (targets.Count == 0)
-            throw new XpsWebRouteMetadataException("PreCompile requires at least one .xps target.");
+            throw new XpsWebRouteMetadataException("PreCompile requires at least one valid target.");
+    }
+
+    private static bool IsKnownRouteAttribute(string attribute)
+    {
+        if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
+            attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var method = attribute.ToUpperInvariant();
+        if (method is "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS")
+            return true;
+
+        return attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static XpsRoutePolicy BuildPolicy(IReadOnlyList<string> attributes)
@@ -148,8 +172,6 @@ public sealed class XpsWebRouteMetadataParser
                 }
                 continue;
             }
-
-            throw new XpsWebRouteMetadataException($"Unsupported web route attribute '[{attribute}]'.");
         }
 
         if (methods.Count == 0)
