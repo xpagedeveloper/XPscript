@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class UIFormWebPartialRefreshPostProcessor
@@ -6,42 +8,42 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        generated = ReplaceRequired(generated,
-            "    public void SetRefreshOnChange(object? sourceField, object? targetRegion, object? handlerName)\n",
-            """
+        if (!generated.Contains("public void SetRefreshOnChange(object? sourceField, object? targetRegion)\n", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(
+                generated,
+                @"public\s+void\s+SetRefreshOnChange\s*\(\s*object\?\s+sourceField\s*,\s*object\?\s+targetRegion\s*,\s*object\?\s+handlerName\s*\)",
+                """
     public void SetRefreshOnChange(object? sourceField, object? targetRegion)
         => SetRefreshOnChange(sourceField, targetRegion, string.Empty);
 
     public void SetRefreshOnChange(object? sourceField, object? targetRegion, object? handlerName)
-""");
-
-        generated = ReplaceRequired(generated,
-            """
-        var handler = XPScriptRuntime.CStr(handlerName).Trim();
-        if (handler.Length is < 1 or > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_')
-            throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
-        field.RefreshTargetRegion = region;
-        field.RefreshHandler = handler;
 """,
-            """
+                "refresh-overload");
+        }
+
+        if (!generated.Contains("if (handler.Length > 0 &&", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(
+                generated,
+                @"var\s+handler\s*=\s*XPScriptRuntime\.CStr\(handlerName\)\.Trim\(\)\s*;\s*if\s*\(handler\.Length\s+is\s+<\s*1\s+or\s+>\s+128\s*\|\|.*?throw\s+new\s+XPScriptRuntimeException\(5,\s*\"UIForm refresh handler name is invalid\.\"\)\s*;\s*field\.RefreshTargetRegion\s*=\s*region\s*;\s*field\.RefreshHandler\s*=\s*handler\s*;",
+                """
         var handler = XPScriptRuntime.CStr(handlerName).Trim();
         if (handler.Length > 0 && (handler.Length > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_'))
             throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
         field.RefreshTargetRegion = region;
         field.RefreshHandler = handler;
-""");
-
-        generated = ReplaceRequired(generated,
-            """
-            if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
-                return "OK";
-            }
-            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
-            return "Pending";
 """,
-            """
+                "optional-handler",
+                RegexOptions.CultureInvariant | RegexOptions.Singleline);
+        }
+
+        if (!generated.Contains("__xps_uiform_event", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(
+                generated,
+                @"if\s*\(XPScriptUIWebAdapter\.Method\.Equals\(\"POST\",\s*StringComparison\.OrdinalIgnoreCase\)\)\s*\{\s*foreach\s*\(var\s+field\s+in\s+_fields\)\s+ApplySubmittedValue\(field,\s*XPScriptUIWebAdapter\.FormFirst\(field\.Name\)\)\s*;\s*return\s+\"OK\"\s*;\s*\}\s*XPScriptUIWebAdapter\.WriteHtml\(RenderWebForm\(\)\)\s*;\s*return\s+\"Pending\"\s*;",
+                """
             if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
@@ -66,17 +68,17 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
             }
             XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
             return "Pending";
-""");
-
-        generated = ReplaceRequired(generated,
-            """
-        html.Append("<button style=\"grid-column:1/-1\" type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
-        return html.ToString();
-    }
-
-    private static string NormalizeFieldName(object? value)
 """,
-            """
+                "web-post-dispatch",
+                RegexOptions.CultureInvariant | RegexOptions.Singleline);
+        }
+
+        if (!generated.Contains("private string RenderReactiveScript()", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(
+                generated,
+                @"html\.Append\(\"<button style=\\\"grid-column:1/-1\\\" type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\"\)\s*;",
+                """
         foreach (var button in _buttons.Where(button => button.Visible))
         {
             var buttonName = System.Net.WebUtility.HtmlEncode(button.Name);
@@ -92,9 +94,13 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         html.Append("<button style=\"grid-column:1/-1\" type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button>");
         html.Append(RenderReactiveScript());
         html.Append("</form>");
-        return html.ToString();
-    }
+""",
+                "reactive-form-render");
 
+            generated = ReplaceRequiredRegex(
+                generated,
+                @"private\s+static\s+string\s+NormalizeFieldName\s*\(\s*object\?\s+value\s*\)",
+                """
     private string RenderWebRegion(string regionId)
     {
         var html = RenderWebForm();
@@ -142,15 +148,23 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
     }
 
     private static string NormalizeFieldName(object? value)
-""");
+""",
+                "reactive-helpers");
+        }
 
         return generated;
     }
 
-    private static string ReplaceRequired(string source, string oldValue, string newValue)
+    private static string ReplaceRequiredRegex(
+        string source,
+        string pattern,
+        string replacement,
+        string stage,
+        RegexOptions options = RegexOptions.CultureInvariant)
     {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm web partial refresh runtime.");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        var regex = new Regex(pattern, options);
+        if (!regex.IsMatch(source))
+            throw new CompilerException($"Unable to install UIForm web partial refresh runtime ({stage}).");
+        return regex.Replace(source, replacement, 1);
     }
 }
