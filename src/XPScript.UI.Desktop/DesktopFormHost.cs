@@ -140,7 +140,10 @@ public static class DesktopFormHost
                         : Array.Empty<string>();
                     if (definition.Type is "Select" or "RadioGroup" or "ListBox" or "MultiListBox") optionOverrides[name] = options;
                     var value = state.TryGetProperty("value", out var valueElement) && valueElement.ValueKind != JsonValueKind.Null ? valueElement.ToString() : null;
-                    ApplyReactiveUpdate(definition, editor, value, options);
+                    var selectedValues = state.TryGetProperty("values", out var valuesElement) && valuesElement.ValueKind == JsonValueKind.Array
+                        ? valuesElement.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString() ?? string.Empty).ToArray()
+                        : definition.Values;
+                    ApplyReactiveUpdate(definition, editor, value, options, selectedValues);
                 }
             }
 
@@ -183,7 +186,7 @@ public static class DesktopFormHost
                 eventInProgress = true;
                 var value = token.StartsWith("button:", StringComparison.OrdinalIgnoreCase)
                     ? SerializeCurrentEditorState()
-                    : sourceField is null || sourceEditor is null ? string.Empty : ReadEditorText(sourceField, sourceEditor);
+                    : sourceField is null || sourceEditor is null ? string.Empty : ReadEditorEventValue(sourceField, sourceEditor);
                 ApplyStatePatch(eventCallback(token, value));
                 validationText.IsVisible = false;
             }
@@ -301,7 +304,7 @@ public static class DesktopFormHost
         else if (field.ReadOnly) editor.IsEnabled = false;
     }
 
-    private static void ApplyReactiveUpdate(DesktopFormField field, Control editor, string? value, IReadOnlyList<string> options)
+    private static void ApplyReactiveUpdate(DesktopFormField field, Control editor, string? value, IReadOnlyList<string> options, IReadOnlyList<string> selectedValues)
     {
         switch (editor)
         {
@@ -312,7 +315,7 @@ public static class DesktopFormHost
             case ListBox listBox:
                 listBox.ItemsSource = options;
                 if (field.Type == "MultiListBox")
-                    listBox.SelectedItems = field.Values.Where(options.Contains).Cast<object>().ToList();
+                    listBox.SelectedItems = selectedValues.Where(item => options.Contains(item, StringComparer.Ordinal)).Cast<object>().ToList();
                 else if (value is not null)
                     listBox.SelectedItem = value;
                 break;
@@ -383,7 +386,7 @@ public static class DesktopFormHost
     private static string? ValidateEditorValue(DesktopFormField field, Control editor, IReadOnlyList<string>? allowedOptions = null)
     {
         var text = ReadEditorText(field, editor);
-        if (field.Required && field.Type == "MultiListBox" && editor is ListBox requiredList && requiredList.SelectedItems.Count == 0)
+        if (field.Required && field.Type == "MultiListBox" && editor is ListBox requiredList && (requiredList.SelectedItems?.Count ?? 0) == 0)
             return $"{field.LabelOrName()} is required.";
         if (field.Required && string.IsNullOrEmpty(text)) return $"{field.LabelOrName()} is required.";
         if (field.Type is "TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField")
@@ -394,8 +397,12 @@ public static class DesktopFormHost
         if (field.Type == "MultiListBox" && editor is ListBox multiList)
         {
             var options = allowedOptions ?? field.Options;
-            foreach (var selected in multiList.SelectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty))
-                if (!options.Contains(selected, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option.";
+            var selectedItems = multiList.SelectedItems;
+            if (selectedItems is not null)
+            {
+                foreach (var selected in selectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty))
+                    if (!options.Contains(selected, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option.";
+            }
             return null;
         }
         if (string.IsNullOrEmpty(text)) return null;
@@ -424,6 +431,17 @@ public static class DesktopFormHost
         return null;
     }
 
+    private static string ReadEditorEventValue(DesktopFormField field, Control editor)
+    {
+        if (field.Type == "MultiListBox" && editor is ListBox multiList)
+        {
+            var selectedItems = multiList.SelectedItems;
+            if (selectedItems is null) return string.Empty;
+            return string.Join('\u001f', selectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty).Where(item => item.Length > 0));
+        }
+        return ReadEditorText(field, editor);
+    }
+
     private static string ReadEditorText(DesktopFormField field, Control editor)
     {
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
@@ -449,7 +467,10 @@ public static class DesktopFormHost
         {
             if (field.Type == "MultiListBox")
             {
-                var selected = listBox.SelectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty).Where(item => item.Length > 0).ToArray();
+                var selectedItems = listBox.SelectedItems;
+                var selected = selectedItems is null
+                    ? Array.Empty<string>()
+                    : selectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty).Where(item => item.Length > 0).ToArray();
                 return JsonSerializer.SerializeToElement(selected);
             }
             return JsonSerializer.SerializeToElement(listBox.SelectedItem?.ToString() ?? string.Empty);
