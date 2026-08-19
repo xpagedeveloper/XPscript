@@ -6,6 +6,8 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
+Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
+
 var parent = Path.Combine(Path.GetTempPath(), "xps-uiform-kestrel-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
