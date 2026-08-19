@@ -128,6 +128,7 @@ public sealed class XpsBrowserWasmCompiler
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
+    <StartupObject>Program</StartupObject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WasmMainJSPath>main.js</WasmMainJSPath>
     <Nullable>enable</Nullable>
