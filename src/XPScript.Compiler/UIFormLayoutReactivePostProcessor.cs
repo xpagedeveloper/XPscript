@@ -20,6 +20,65 @@ internal sealed class UIFormLayoutReactivePostProcessor
 """);
 
         generated = ReplaceRequired(generated,
+            "internal sealed class XPScriptUIForm\n{\n",
+            """
+internal sealed class XPScriptUIGrid
+{
+    private readonly XPScriptUIForm _form;
+    private readonly int _columns;
+    private int _row = 1;
+    private int _usedColumns;
+
+    internal XPScriptUIGrid(XPScriptUIForm form, int columns)
+    {
+        _form = form;
+        _columns = columns;
+    }
+
+    public int Columns => _columns;
+
+    public void SetFieldPosition(object? name, object? columnSpan)
+    {
+        int span;
+        try { span = Convert.ToInt32(columnSpan, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm grid field span must be an Integer value.");
+        }
+
+        if (span < 1 || span > _columns)
+            throw new XPScriptRuntimeException(5, $"UIForm grid field span must be between 1 and {_columns}.");
+
+        if (_usedColumns > 0 && _usedColumns + span > _columns)
+        {
+            _row++;
+            _usedColumns = 0;
+        }
+
+        var column = _usedColumns + 1;
+        _form.SetFieldPosition(name, _row, column, span, 1);
+        _usedColumns += span;
+
+        if (_usedColumns == _columns)
+        {
+            _row++;
+            _usedColumns = 0;
+        }
+    }
+
+    public void AddNewRow()
+    {
+        if (_usedColumns == 0) return;
+        _row++;
+        _usedColumns = 0;
+    }
+}
+
+internal sealed class XPScriptUIForm
+{
+""");
+
+        generated = ReplaceRequired(generated,
             "    private readonly List<XPScriptUIField> _fields = [];\n",
             """
     private readonly List<XPScriptUIField> _fields = [];
@@ -36,6 +95,12 @@ internal sealed class UIFormLayoutReactivePostProcessor
         generated = ReplaceRequired(generated,
             "    public object? GetFieldValue(object? name)\n",
             """
+    public XPScriptUIGrid AddGridColumns(object? columns)
+    {
+        SetGridColumns(columns);
+        return new XPScriptUIGrid(this, _gridColumns);
+    }
+
     public void SetGridColumns(object? columns)
     {
         int value;
@@ -128,14 +193,15 @@ internal sealed class UIFormLayoutReactivePostProcessor
         generated = ReplaceRequired(generated,
             "        html.Append(\"<form method=\\\"post\\\" class=\\\"xpscript-uiform\\\">\");\n",
             """
-        html.Append("<form method=\"post\" class=\"xpscript-uiform\" style=\"display:grid;grid-template-columns:repeat(")
-            .Append(_gridColumns).Append(",minmax(0,1fr));gap:12px\">");
+        html.Append("<form method=\"post\" class=\"xpscript-uiform container-fluid py-3\">");
 """);
 
         generated = ReplaceRequired(generated,
             "        if (_title.Length > 0) html.Append(\"<h1>\").Append(System.Net.WebUtility.HtmlEncode(_title)).Append(\"</h1>\");\n",
             """
-        if (_title.Length > 0) html.Append("<h1 style=\"grid-column:1/-1\">").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
+        if (_title.Length > 0) html.Append("<h1 class=\"xpscript-uiform-title h3 mb-4\">").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
+        html.Append("<div class=\"xpscript-uiform-grid\" style=\"display:grid;grid-template-columns:repeat(")
+            .Append(_gridColumns).Append(",minmax(0,1fr));gap:12px\">");
 """);
 
         generated = ReplaceRequired(generated,
@@ -153,6 +219,7 @@ internal sealed class UIFormLayoutReactivePostProcessor
         generated = ReplaceRequired(generated,
             "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n",
             """
+        html.Append("</div>");
         html.Append("<button style=\"grid-column:1/-1\" type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
 """);
 
