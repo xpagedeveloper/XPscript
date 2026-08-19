@@ -11,7 +11,7 @@ internal sealed class UIFormActionModelPostProcessor
         if (!generated.Contains("public string OnChangeHandler { get; set; } = string.Empty;", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"(?m)^[ \t]*public string RefreshHandler \{ get; set; \} = string\.Empty;[ \t]*$",
+                @"public\s+string\s+RefreshHandler\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;",
                 """
     public string RefreshHandler { get; set; } = string.Empty;
     public string OnChangeHandler { get; set; } = string.Empty;
@@ -24,7 +24,7 @@ internal sealed class UIFormActionModelPostProcessor
         if (!generated.Contains("internal sealed class XPScriptUIButton", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"internal sealed class XPScriptUIForm\s*\{",
+                @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
                 """
 internal sealed class XPScriptUIButton
 {
@@ -48,7 +48,7 @@ internal sealed class XPScriptUIForm
         if (!generated.Contains("private readonly List<XPScriptUIButton> _buttons = [];", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"(?m)^[ \t]*private int _gridColumns = 1;[ \t]*$",
+                @"private\s+int\s+_gridColumns\s*=\s*1\s*;",
                 """
     private int _gridColumns = 1;
     private readonly List<XPScriptUIButton> _buttons = [];
@@ -63,7 +63,7 @@ internal sealed class XPScriptUIForm
         if (!generated.Contains("public int ButtonCount => _buttons.Count;", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"(?m)^[ \t]*public int GridColumns => _gridColumns;[ \t]*$",
+                @"public\s+int\s+GridColumns\s*=>\s*_gridColumns\s*;",
                 """
     public int GridColumns => _gridColumns;
     public int ButtonCount => _buttons.Count;
@@ -76,7 +76,7 @@ internal sealed class XPScriptUIForm
         if (!generated.Contains("public void SetFieldLabel(object? name, object? label)", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"(?m)^[ \t]*public object\? GetFieldValue\(object\? name\)[ \t]*$",
+                @"public\s+object\?\s+GetFieldValue\s*\(\s*object\?\s+name\s*\)",
                 """
     public void SetFieldLabel(object? name, object? label)
     {
