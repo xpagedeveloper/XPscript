@@ -68,7 +68,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
         _options = options ?? new XpsWebCompilationCacheOptions();
         _options.Validate();
-        _entries = new Dictionary<string, Entry>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        _entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
     }
 
     public int Count
@@ -109,7 +109,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         var fullSiteRoot = Path.GetFullPath(siteRoot);
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         var snapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
-        var key = fullSiteRoot + "\0" + fullPath;
+        var key = BuildCanonicalKey(fullSiteRoot, fullPath);
         Entry entry;
         List<Entry> retired;
 
@@ -168,6 +168,9 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             throw;
         }
     }
+
+    private static string BuildCanonicalKey(string fullSiteRoot, string fullPath)
+        => (fullSiteRoot + "\0" + fullPath).Replace('\\', '/').ToLowerInvariant();
 
     private async Task<XPScriptCompilationSnapshot> CreateSnapshotAsync(
         string fullPath,
