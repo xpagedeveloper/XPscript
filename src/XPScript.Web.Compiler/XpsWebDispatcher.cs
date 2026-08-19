@@ -12,6 +12,9 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private readonly XpsWebCompilationCache _cache;
     private readonly bool _ownsCache;
     private readonly StringComparer _pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    private readonly object _backgroundGate = new();
+    private readonly HashSet<Task> _backgroundPrecompileTasks = [];
+    private bool _disposing;
 
     public XpsWebDispatcher(
         string webRoot,
@@ -63,8 +66,6 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
             var unit = lease.Unit;
 
-            await PrecompileOneHopAsync(resolution.ScriptPath, unit, cancellationToken).ConfigureAwait(false);
-
             var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
             if (routeName is null || !unit.Routes.TryGetValue(routeName, out var descriptor))
             {
@@ -82,12 +83,10 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             await unit.InvokeAsync(descriptor.ProcedureName, context).ConfigureAwait(false);
             if (!context.Response.Completed) context.Response.Complete();
 
-            await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
-                context.Response,
-                _resolver,
+            QueueBackgroundPrecompile(
                 resolution.ScriptPath,
-                PrecompileTargetOnlyAsync,
-                cancellationToken).ConfigureAwait(false);
+                unit.PrecompileTargets.ToArray(),
+                context.Response);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -143,17 +142,57 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         var fullPath = Path.GetFullPath(scriptPath);
         WriteConsole($"Precompiling: {fullPath}");
         await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
-        await PrecompileOneHopAsync(fullPath, lease.Unit, cancellationToken).ConfigureAwait(false);
+        await PrecompileOneHopAsync(fullPath, lease.Unit.PrecompileTargets, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void QueueBackgroundPrecompile(
+        string sourceScriptPath,
+        IReadOnlyList<string> precompileTargets,
+        XpsWebResponse response)
+    {
+        Task task;
+        lock (_backgroundGate)
+        {
+            if (_disposing) return;
+            task = Task.Run(async () =>
+            {
+                try
+                {
+                    await PrecompileOneHopAsync(sourceScriptPath, precompileTargets, CancellationToken.None).ConfigureAwait(false);
+                    await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
+                        response,
+                        _resolver,
+                        sourceScriptPath,
+                        PrecompileTargetOnlyAsync,
+                        CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    XpsWebConsoleErrorFallback.Write(ex, sourceScriptPath, "background-precompile");
+                }
+            });
+            _backgroundPrecompileTasks.Add(task);
+        }
+
+        _ = task.ContinueWith(
+            completed =>
+            {
+                lock (_backgroundGate)
+                    _backgroundPrecompileTasks.Remove(completed);
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private async Task PrecompileOneHopAsync(
         string sourceScriptPath,
-        XpsCompiledWebUnit unit,
+        IReadOnlyList<string> precompileTargets,
         CancellationToken cancellationToken)
     {
         var seen = new HashSet<string>(_pathComparer) { Path.GetFullPath(sourceScriptPath) };
 
-        foreach (var target in unit.PrecompileTargets)
+        foreach (var target in precompileTargets)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (seen.Count > MaxPrecompileTargetsPerScript) break;
@@ -310,5 +349,22 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             context.Response.Write(body);
     }
 
-    public ValueTask DisposeAsync() => _ownsCache ? _cache.DisposeAsync() : ValueTask.CompletedTask;
+    public async ValueTask DisposeAsync()
+    {
+        Task[] pending;
+        lock (_backgroundGate)
+        {
+            _disposing = true;
+            pending = _backgroundPrecompileTasks.ToArray();
+        }
+
+        if (pending.Length > 0)
+        {
+            try { await Task.WhenAll(pending).ConfigureAwait(false); }
+            catch { }
+        }
+
+        if (_ownsCache)
+            await _cache.DisposeAsync().ConfigureAwait(false);
+    }
 }

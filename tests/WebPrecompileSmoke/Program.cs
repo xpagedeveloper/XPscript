@@ -149,7 +149,7 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v6-load-hop-rules"
+        ConfigurationIdentity = "precompile-smoke-v7-background-load-hop-rules"
     });
     await using var secondDispatcher = new XpsWebDispatcher(root, secondCache);
 
@@ -162,11 +162,15 @@ try
     var beforePageRequest = secondCache.CompilationStarts;
     var pageResponse = await SendAsync(secondDispatcher, root, "/sub/page.xps");
     if (pageResponse.StatusCode != 200) throw new Exception($"Sub page request failed with {pageResponse.StatusCode}.");
-    if (secondCache.CompilationStarts != beforePageRequest + 2)
-        throw new Exception("Loading page.xps must precompile exactly its direct static link and its direct PreCompile rule target.");
+    if (secondCache.CompilationStarts != beforePageRequest)
+        throw new Exception("Loading page.xps must return before its direct neighbours are precompiled.");
 
-    await AssertAlreadyWarmAsync(secondCache, childPath, root, "child.xps after page.xps load");
-    await AssertAlreadyWarmAsync(secondCache, pageRulePath, root, "page-rule.xps after page.xps load");
+    await WaitForCompilationStartsAsync(secondCache, beforePageRequest + 2, TimeSpan.FromSeconds(15));
+    if (secondCache.CompilationStarts != beforePageRequest + 2)
+        throw new Exception("Background precompile must warm exactly the direct static link and direct PreCompile rule target.");
+
+    await AssertAlreadyWarmAsync(secondCache, childPath, root, "child.xps after page.xps background warmup");
+    await AssertAlreadyWarmAsync(secondCache, pageRulePath, root, "page-rule.xps after page.xps background warmup");
 
     var beforeNestedProbe = secondCache.CompilationStarts;
     await using (var nestedLease = await secondCache.AcquireAsync(pageRuleNestedPath, root))
@@ -256,6 +260,16 @@ End Sub
         if (parsed.PrecompileTargets.Count != 1 || !parsed.PrecompileTargets[0].Equals("kalle.xps", StringComparison.OrdinalIgnoreCase))
             throw new Exception("PreCompile attribute order changed the parsed target list.");
     }
+}
+
+static async Task WaitForCompilationStartsAsync(XpsWebCompilationCache cache, long expected, TimeSpan timeout)
+{
+    var deadline = DateTime.UtcNow + timeout;
+    while (cache.CompilationStarts < expected && DateTime.UtcNow < deadline)
+        await Task.Delay(25);
+
+    if (cache.CompilationStarts < expected)
+        throw new Exception($"Timed out waiting for background precompile. Expected at least {expected} compilation starts, got {cache.CompilationStarts}.");
 }
 
 static async Task AssertAlreadyWarmAsync(XpsWebCompilationCache cache, string path, string root, string name)
