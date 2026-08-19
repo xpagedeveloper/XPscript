@@ -4,8 +4,19 @@ using System.Text.RegularExpressions;
 var parent = Path.Combine(Path.GetTempPath(), "xps-cgi-state-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 var stateRoot = Path.Combine(parent, "state");
+var noSessionRoot = Path.Combine(parent, "no-session-site");
 Directory.CreateDirectory(root);
 Directory.CreateDirectory(stateRoot);
+Directory.CreateDirectory(noSessionRoot);
+
+await File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), "{\"cgi\":{\"sessionFolder\":\"../state\"}}");
+await File.WriteAllTextAsync(Path.Combine(noSessionRoot, "index.xps"), """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write(Session.Id)
+End Sub
+""");
 
 await File.WriteAllTextAsync(Path.Combine(root, "state.xps"), """
 [Anonymous]
@@ -13,6 +24,7 @@ await File.WriteAllTextAsync(Path.Combine(root, "state.xps"), """
 Sub Login()
     Session.Set("cart", "alpha")
     Session.Authenticate("42", "Fredrik", "admin")
+    Call Session.SetRole("admin")
     Application.Set("shared", "site-value")
     RequestScope.Set("temp", "request-one")
     Response.Write(Session.Id)
@@ -20,6 +32,7 @@ End Sub
 
 [Authenticated]
 [Rule:admin]
+[Role:admin]
 [Get]
 Sub Private()
     Response.Write(Session.Get("cart"))
@@ -27,6 +40,22 @@ Sub Private()
     Response.Write(Application.Get("shared"))
     Response.Write("|")
     Response.Write(RequestScope.Get("temp"))
+    Response.Write("|")
+    Response.Write(Session.GetRole())
+    Response.Write("|")
+    Response.Write(CStr(Session.HasRole("admin")))
+End Sub
+
+[Authenticated]
+[Get]
+Sub RemoveAdminRole()
+    Response.Write(Session.GetRole())
+    Response.Write("|")
+    Response.Write(CStr(Session.HasRole("admin")))
+    Response.Write("|")
+    Response.Write(CStr(Session.RemoveRole("admin")))
+    Response.Write("|")
+    Response.Write(CStr(Session.HasRole("admin")))
 End Sub
 
 [Anonymous]
@@ -40,32 +69,44 @@ End Sub
 
 try
 {
-    var login = await RunAsync(root, stateRoot, "/state/Login", null);
+    var noSession = await RunAsync(noSessionRoot, "/", null);
+    if (noSession.ExitCode == 0 || !noSession.Stdout.StartsWith("Status: 500 Internal Server Error\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI without cgi.sessionFolder unexpectedly exposed a Session object.");
+
+    var login = await RunAsync(root, "/state/Login", null);
     AssertStatus(login, 200);
     var cookie = ExtractSessionCookie(login.Stdout);
     if (string.IsNullOrWhiteSpace(cookie)) throw new Exception("Persistent CGI login did not emit a session cookie.");
 
-    var privateRequest = await RunAsync(root, stateRoot, "/state/Private", cookie);
+    var privateRequest = await RunAsync(root, "/state/Private", cookie);
     AssertStatus(privateRequest, 200);
     var privateBody = Body(privateRequest.Stdout);
-    if (privateBody != "alpha|site-value|")
-        throw new Exception("Persistent CGI did not preserve Session/Application or leaked RequestScope: " + privateBody);
+    if (privateBody != "alpha|site-value||admin|True")
+        throw new Exception("Persistent CGI did not preserve Session/Application/role or leaked RequestScope: " + privateBody);
 
-    var otherUser = await RunAsync(root, stateRoot, "/state/OtherUser", null);
+    var otherUser = await RunAsync(root, "/state/OtherUser", null);
     AssertStatus(otherUser, 200);
     var otherBody = Body(otherUser.Stdout);
     if (otherBody != "|site-value")
         throw new Exception("Application was not shared across CGI users or Session leaked across users: " + otherBody);
 
-    var privateAgain = await RunAsync(root, stateRoot, "/state/Private", cookie);
+    var privateAgain = await RunAsync(root, "/state/Private", cookie);
     AssertStatus(privateAgain, 200);
-    if (Body(privateAgain.Stdout) != "alpha|site-value|")
-        throw new Exception("Session auth/rules did not persist across multiple CGI processes.");
+    if (Body(privateAgain.Stdout) != "alpha|site-value||admin|True")
+        throw new Exception("Session auth/rules/roles did not persist across multiple CGI processes.");
+
+    var removeRole = await RunAsync(root, "/state/RemoveAdminRole", cookie);
+    AssertStatus(removeRole, 200);
+    if (Body(removeRole.Stdout) != "admin|True|True|False")
+        throw new Exception("CGI session role API did not persist or remove the role correctly: " + Body(removeRole.Stdout));
+
+    var deniedAfterRoleRemoval = await RunAsync(root, "/state/Private", cookie);
+    AssertStatus(deniedAfterRoleRemoval, 403);
 
     var stateFiles = Directory.GetFiles(stateRoot, "*.json");
     if (stateFiles.Length != 1) throw new Exception("Expected one site-isolated CGI state file.");
     await File.WriteAllTextAsync(stateFiles[0], "{not valid json");
-    var corrupt = await RunAsync(root, stateRoot, "/state/OtherUser", null);
+    var corrupt = await RunAsync(root, "/state/OtherUser", null);
     if (corrupt.ExitCode == 0 || !corrupt.Stdout.StartsWith("Status: 400 Bad Request\r\n", StringComparison.Ordinal))
         throw new Exception("Corrupt CGI persistent state did not fail closed.");
 
@@ -78,7 +119,6 @@ finally
 
 static async Task<(int ExitCode, string Stdout, string Stderr)> RunAsync(
     string root,
-    string stateRoot,
     string path,
     string? cookie)
 {
@@ -96,11 +136,10 @@ static async Task<(int ExitCode, string Stdout, string Stderr)> RunAsync(
     };
     start.ArgumentList.Add(cgiDll);
     start.Environment["XPSCRIPT_WEB_ROOT"] = root;
-    start.Environment["XPSCRIPT_STATE_ROOT"] = stateRoot;
     start.Environment["XPSCRIPT_SITE_ID"] = "cgi-state-smoke";
     start.Environment["REQUEST_METHOD"] = "GET";
     start.Environment["SCRIPT_NAME"] = path;
-    start.Environment["SCRIPT_FILENAME"] = Path.Combine(root, "state.xps");
+    start.Environment["SCRIPT_FILENAME"] = path == "/" ? Path.Combine(root, "index.xps") : Path.Combine(root, "state.xps");
     start.Environment["PATH_INFO"] = string.Empty;
     start.Environment["QUERY_STRING"] = string.Empty;
     start.Environment["SERVER_NAME"] = "state.example.test";
