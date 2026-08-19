@@ -111,6 +111,7 @@ public static class DesktopFormHost
                     JsonValueKind.Number => raw.Value.TryGetDecimal(out var number) ? number : raw.Value.GetRawText(),
                     JsonValueKind.True => true,
                     JsonValueKind.False => false,
+                    JsonValueKind.Array => raw.Value.Clone(),
                     _ => null
                 };
             }
@@ -137,7 +138,7 @@ public static class DesktopFormHost
                     var options = state.TryGetProperty("options", out var optionsElement) && optionsElement.ValueKind == JsonValueKind.Array
                         ? optionsElement.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray()
                         : Array.Empty<string>();
-                    if (definition.Type is "Select" or "RadioGroup") optionOverrides[name] = options;
+                    if (definition.Type is "Select" or "RadioGroup" or "ListBox" or "MultiListBox") optionOverrides[name] = options;
                     var value = state.TryGetProperty("value", out var valueElement) && valueElement.ValueKind != JsonValueKind.Null ? valueElement.ToString() : null;
                     ApplyReactiveUpdate(definition, editor, value, options);
                 }
@@ -205,6 +206,7 @@ public static class DesktopFormHost
                 switch (sourceEditor)
                 {
                     case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, comboBox); break;
+                    case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, checkBox); break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, radioPanel);
@@ -307,6 +309,13 @@ public static class DesktopFormHost
                 comboBox.ItemsSource = options;
                 if (value is not null) comboBox.SelectedItem = value;
                 break;
+            case ListBox listBox:
+                listBox.ItemsSource = options;
+                if (field.Type == "MultiListBox")
+                    listBox.SelectedItems = field.Values.Where(options.Contains).Cast<object>().ToList();
+                else if (value is not null)
+                    listBox.SelectedItem = value;
+                break;
             case StackPanel radioPanel:
                 if (options.Count > 0)
                 {
@@ -335,6 +344,8 @@ public static class DesktopFormHost
             "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
+            "ListBox" => CreateListBox(field, false),
+            "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
             _ => new TextBox { Text = value }
         };
@@ -344,6 +355,21 @@ public static class DesktopFormHost
     {
         var box = new ComboBox { ItemsSource = field.Options };
         if (!string.IsNullOrEmpty(field.Value)) box.SelectedItem = field.Value;
+        return box;
+    }
+
+    private static Control CreateListBox(DesktopFormField field, bool multiple)
+    {
+        var box = new ListBox
+        {
+            ItemsSource = field.Options,
+            MinHeight = 112,
+            SelectionMode = multiple ? SelectionMode.Multiple | SelectionMode.Toggle : SelectionMode.Single
+        };
+        if (multiple)
+            box.SelectedItems = field.Values.Cast<object>().ToList();
+        else if (!string.IsNullOrEmpty(field.Value))
+            box.SelectedItem = field.Value;
         return box;
     }
 
@@ -357,11 +383,20 @@ public static class DesktopFormHost
     private static string? ValidateEditorValue(DesktopFormField field, Control editor, IReadOnlyList<string>? allowedOptions = null)
     {
         var text = ReadEditorText(field, editor);
+        if (field.Required && field.Type == "MultiListBox" && editor is ListBox requiredList && requiredList.SelectedItems.Count == 0)
+            return $"{field.LabelOrName()} is required.";
         if (field.Required && string.IsNullOrEmpty(text)) return $"{field.LabelOrName()} is required.";
         if (field.Type is "TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField")
         {
             if (field.MinLength.HasValue && text.Length < field.MinLength.Value) return $"{field.LabelOrName()} must contain at least {field.MinLength.Value} characters.";
             if (field.MaxLength.HasValue && text.Length > field.MaxLength.Value) return $"{field.LabelOrName()} must contain at most {field.MaxLength.Value} characters.";
+        }
+        if (field.Type == "MultiListBox" && editor is ListBox multiList)
+        {
+            var options = allowedOptions ?? field.Options;
+            foreach (var selected in multiList.SelectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty))
+                if (!options.Contains(selected, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option.";
+            return null;
         }
         if (string.IsNullOrEmpty(text)) return null;
         switch (field.Type)
@@ -383,6 +418,7 @@ public static class DesktopFormHost
                 break;
             case "UrlField": if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return $"{field.LabelOrName()} must contain an absolute HTTP or HTTPS URL."; break;
             case "Select":
+            case "ListBox":
             case "RadioGroup": var options = allowedOptions ?? field.Options; if (!options.Contains(text, StringComparer.Ordinal)) return $"{field.LabelOrName()} contains an unsupported option."; break;
         }
         return null;
@@ -393,6 +429,7 @@ public static class DesktopFormHost
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
+        if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
         return string.Empty;
     }
@@ -408,6 +445,15 @@ public static class DesktopFormHost
         }
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
+        if (editor is ListBox listBox)
+        {
+            if (field.Type == "MultiListBox")
+            {
+                var selected = listBox.SelectedItems.Cast<object>().Select(item => item?.ToString() ?? string.Empty).Where(item => item.Length > 0).ToArray();
+                return JsonSerializer.SerializeToElement(selected);
+            }
+            return JsonSerializer.SerializeToElement(listBox.SelectedItem?.ToString() ?? string.Empty);
+        }
         if (editor is StackPanel radioPanel)
         {
             var selected = radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
