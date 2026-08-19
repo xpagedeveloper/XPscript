@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
+    <ProjectReference Include="../XPScript.UI.Browser/XPScript.UI.Browser.csproj" />
   </ItemGroup>
 </Project>
