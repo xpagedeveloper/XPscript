@@ -21,6 +21,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
+        WriteConsole($"XPScript web engine starting. Root: {_resolver.Root}");
         WarmDefaultDocument();
     }
 
@@ -31,6 +32,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        WriteConsole($"XPScript web engine starting. Root: {_resolver.Root}");
         WarmDefaultDocument();
     }
 
@@ -141,6 +143,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private async Task WarmDefaultDocumentAsync(string scriptPath, CancellationToken cancellationToken)
     {
         var fullPath = Path.GetFullPath(scriptPath);
+        WriteConsole($"Precompiling: {fullPath}");
         await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
         await PrecompileOneHopAsync(fullPath, lease.Unit, cancellationToken).ConfigureAwait(false);
     }
@@ -178,7 +181,9 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         try
         {
-            await using var lease = await _cache.AcquireAsync(Path.GetFullPath(scriptPath), _resolver.Root, cancellationToken).ConfigureAwait(false);
+            var fullPath = Path.GetFullPath(scriptPath);
+            WriteConsole($"Precompiling: {fullPath}");
+            await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -217,6 +222,9 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             return null;
         }
     }
+
+    private static void WriteConsole(string message)
+        => Console.Error.WriteLine(message);
 
     private static void AppendGauge(StringBuilder builder, string name, long value, string help)
     {

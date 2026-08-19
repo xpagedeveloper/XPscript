@@ -43,24 +43,55 @@ try
     if (save.Policy.AllowAnonymous || !save.Policy.Methods.Contains("POST")) throw new Exception("Authenticated POST metadata mismatch.");
     if (!save.Policy.RequiredRules.Contains("admin") || !save.Policy.ForbiddenRules.Contains("blocked")) throw new Exception("Route rule metadata mismatch.");
 
-    AssertMetadataFailure("""
+    var originalError = Console.Error;
+    using var conflictError = new StringWriter();
+    try
+    {
+        Console.SetError(conflictError);
+        var conflict = parser.Parse("""
 [Anonymous]
 [Authenticated]
 [Get]
-Sub Bad()
+Sub Protected()
 End Sub
 """);
+        if (!conflict.Routes.TryGetValue("Protected", out var protectedRoute))
+            throw new Exception("Authenticated/Anonymous conflict prevented route parsing.");
+        if (protectedRoute.Policy.AllowAnonymous)
+            throw new Exception("[Authenticated] must take precedence over [Anonymous].");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (!conflictError.ToString().Contains("[Authenticated] takes precedence", StringComparison.Ordinal))
+        throw new Exception("Authenticated/Anonymous conflict did not produce a console error.");
+
     AssertMetadataFailure("""
 [Anonymous]
 Sub MissingMethod()
 End Sub
 """);
-    AssertMetadataFailure("""
+
+    using var capturedError = new StringWriter();
+    try
+    {
+        Console.SetError(capturedError);
+        var tolerant = parser.Parse("""
 [Unknown]
 [Get]
 Sub BadAttribute()
 End Sub
 """);
+        if (!tolerant.Routes.ContainsKey("BadAttribute"))
+            throw new Exception("Unknown web route attribute prevented compilation.");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (!capturedError.ToString().Contains("Unsupported web route attribute '[Unknown]'", StringComparison.Ordinal))
+        throw new Exception("Unknown web route attribute did not produce a console error.");
 
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
     if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save"))

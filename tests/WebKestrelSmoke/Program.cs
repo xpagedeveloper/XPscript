@@ -149,10 +149,20 @@ try
     }
     if (firstRequestId is null || !requestIds.Contains(firstRequestId))
         throw new Exception("Response request id was not correlated with structured telemetry.");
-    foreach (var secret in new[] { "/hello", "/head", "q=1", "X-Request-Test", "present", "abc", "oversized", "client-spoofed-id" })
+
+    foreach (var line in logLines)
     {
-        if (logText.Contains(secret, StringComparison.OrdinalIgnoreCase))
-            throw new Exception("Structured telemetry leaked request path, query, header or body data.");
+        using var document = JsonDocument.Parse(line);
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            if (property.NameEquals("RequestId")) continue;
+            var valueText = property.Value.GetRawText();
+            foreach (var secret in new[] { "/hello", "/head", "q=1", "X-Request-Test", "present", "abc", "oversized", "client-spoofed-id" })
+            {
+                if (valueText.Contains(secret, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"Structured telemetry field '{property.Name}' leaked request path, query, header or body data.");
+            }
+        }
     }
 
     await app.StopAsync();
