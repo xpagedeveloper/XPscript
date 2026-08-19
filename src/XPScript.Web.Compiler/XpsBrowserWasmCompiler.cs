@@ -190,39 +190,240 @@ await runMain();
 """;
 
     private const string BrowserModuleJs = """
+function clampInteger(value, minimum, maximum, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(minimum, Math.min(maximum, parsed));
+}
+
+function fieldType(field) {
+  return String(field.type || 'TextField').toLowerCase();
+}
+
+function applyFieldState(field, editor) {
+  if (field.enabled === false) editor.disabled = true;
+  if (field.readOnly === true) {
+    if ('readOnly' in editor) editor.readOnly = true;
+    else editor.disabled = true;
+  }
+  if (field.required === true) editor.required = true;
+  if (field.minLength != null && 'minLength' in editor) editor.minLength = Number(field.minLength);
+  if (field.maxLength != null && 'maxLength' in editor) editor.maxLength = Number(field.maxLength);
+  if (field.minimum != null && 'min' in editor) editor.min = String(field.minimum);
+  if (field.maximum != null && 'max' in editor) editor.max = String(field.maximum);
+}
+
+function createEditor(field) {
+  const type = fieldType(field);
+  if (type === 'select') {
+    const select = document.createElement('select');
+    select.className = 'form-select';
+    for (const optionValue of field.options || []) {
+      const option = document.createElement('option');
+      option.value = String(optionValue);
+      option.textContent = String(optionValue);
+      option.selected = field.value != null && String(field.value) === option.value;
+      select.appendChild(option);
+    }
+    return select;
+  }
+
+  if (type === 'radiogroup') {
+    const group = document.createElement('div');
+    group.className = 'd-flex flex-column gap-1';
+    for (const optionValue of field.options || []) {
+      const item = document.createElement('div');
+      item.className = 'form-check';
+      const radio = document.createElement('input');
+      radio.className = 'form-check-input';
+      radio.type = 'radio';
+      radio.name = field.name;
+      radio.value = String(optionValue);
+      radio.checked = field.value != null && String(field.value) === radio.value;
+      applyFieldState(field, radio);
+      const optionLabel = document.createElement('label');
+      optionLabel.className = 'form-check-label';
+      optionLabel.textContent = String(optionValue);
+      item.append(radio, optionLabel);
+      group.appendChild(item);
+    }
+    return group;
+  }
+
+  const editor = document.createElement(type === 'textarea' ? 'textarea' : 'input');
+  editor.className = type === 'checkbox' ? 'form-check-input' : 'form-control';
+  if (type === 'passwordfield') editor.type = 'password';
+  else if (type === 'numberfield' || type === 'rangefield') editor.type = type === 'rangefield' ? 'range' : 'number';
+  else if (type === 'datefield') editor.type = 'date';
+  else if (type === 'timefield') editor.type = 'time';
+  else if (type === 'datetimefield') editor.type = 'datetime-local';
+  else if (type === 'monthfield') editor.type = 'month';
+  else if (type === 'colorfield') editor.type = 'color';
+  else if (type === 'emailfield') editor.type = 'email';
+  else if (type === 'urlfield') editor.type = 'url';
+  else if (type === 'checkbox') editor.type = 'checkbox';
+  else editor.type = 'text';
+  if (type === 'checkbox') {
+    const value = String(field.value || '').toLowerCase();
+    editor.checked = value === 'true' || value === '1';
+  } else if (type !== 'passwordfield' && field.value != null) {
+    editor.value = String(field.value);
+  }
+  applyFieldState(field, editor);
+  return editor;
+}
+
+function readFieldValue(field, editor) {
+  const type = fieldType(field);
+  if (type === 'checkbox') return Boolean(editor.checked);
+  if (type === 'radiogroup') {
+    const selected = editor.querySelector('input[type="radio"]:checked');
+    return selected ? selected.value : '';
+  }
+  if (type === 'numberfield' || type === 'rangefield') {
+    if (editor.value === '') return '';
+    const number = Number(editor.value);
+    return Number.isFinite(number) ? number : editor.value;
+  }
+  return editor.value ?? '';
+}
+
+function buttonClass(style) {
+  switch (String(style || '').toLowerCase()) {
+    case 'primary': return 'btn btn-primary';
+    case 'success': return 'btn btn-success';
+    case 'danger': return 'btn btn-danger';
+    case 'warning': return 'btn btn-warning';
+    case 'info': return 'btn btn-info';
+    case 'light': return 'btn btn-light';
+    case 'dark': return 'btn btn-dark';
+    case 'link': return 'btn btn-link';
+    default: return 'btn btn-secondary';
+  }
+}
+
 export function renderForm(requestJson) {
   const request = JSON.parse(requestJson);
   const root = document.getElementById('xpscript-app');
+  if (!root) throw new Error('XPScript browser root element was not found.');
   root.replaceChildren();
-  const form = document.createElement('form');
-  form.className = 'row g-3';
+
   if (request.title) {
     const heading = document.createElement('h1');
     heading.className = 'mb-3';
     heading.textContent = request.title;
     root.appendChild(heading);
   }
+
+  const gridColumns = clampInteger(request.gridColumns, 1, 64, 1);
+  const form = document.createElement('form');
+  form.className = 'xpscript-uiform';
+  form.style.display = 'grid';
+  form.style.gridTemplateColumns = `repeat(${gridColumns}, minmax(0, 1fr))`;
+  form.style.gap = '1rem';
+  form.noValidate = false;
+
+  const editors = new Map();
+  let automaticRow = 1;
   for (const field of request.fields || []) {
+    const type = fieldType(field);
+    if (type === 'hiddenfield') continue;
+
     const wrap = document.createElement('div');
-    const span = Math.max(1, Math.min(12, Number(field.columnSpan || 12)));
-    wrap.className = `col-12 col-md-${span}`;
-    const label = document.createElement('label');
-    label.className = 'form-label';
-    label.textContent = field.label || field.name;
-    const input = document.createElement(field.type === 'TextArea' ? 'textarea' : 'input');
-    input.className = field.type === 'CheckBox' ? 'form-check-input' : 'form-control';
-    input.name = field.name;
-    if (field.type === 'PasswordField') input.type = 'password';
-    else if (field.type === 'NumberField') input.type = 'number';
-    else if (field.type === 'DateField') input.type = 'date';
-    else if (field.type === 'CheckBox') input.type = 'checkbox';
-    else input.type = 'text';
-    if (field.required) input.required = true;
-    if (field.value != null && input.type !== 'checkbox') input.value = field.value;
-    wrap.append(label, input);
+    wrap.dataset.fieldName = field.name || '';
+    if (field.regionId) wrap.dataset.regionId = field.regionId;
+    if (field.visible === false) wrap.hidden = true;
+
+    const row = Number(field.layoutRow) > 0 ? Number(field.layoutRow) : automaticRow++;
+    const column = Number(field.layoutColumn) > 0 ? Number(field.layoutColumn) : 1;
+    const columnSpan = Number(field.layoutColumn) > 0
+      ? clampInteger(field.columnSpan, 1, gridColumns, 1)
+      : gridColumns;
+    const rowSpan = clampInteger(field.rowSpan, 1, 64, 1);
+    wrap.style.gridColumn = `${column} / span ${columnSpan}`;
+    wrap.style.gridRow = `${row} / span ${rowSpan}`;
+
+    const editor = createEditor(field);
+    if (type !== 'radiogroup') editor.name = field.name || '';
+    editors.set(field.name || '', editor);
+
+    if (type === 'checkbox') {
+      const checkWrap = document.createElement('div');
+      checkWrap.className = 'form-check';
+      const label = document.createElement('label');
+      label.className = 'form-check-label';
+      label.textContent = field.label || field.name || '';
+      checkWrap.append(editor, label);
+      wrap.appendChild(checkWrap);
+    } else {
+      if (field.label) {
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = field.label;
+        wrap.appendChild(label);
+      }
+      wrap.appendChild(editor);
+    }
     form.appendChild(wrap);
   }
+
   root.appendChild(form);
+
+  const collectValues = () => {
+    const values = {};
+    for (const field of request.fields || []) {
+      const type = fieldType(field);
+      if (type === 'hiddenfield') {
+        if (field.value != null) values[field.name] = field.value;
+        continue;
+      }
+      const editor = editors.get(field.name || '');
+      if (editor) values[field.name] = readFieldValue(field, editor);
+    }
+    return values;
+  };
+
+  const publishResult = (result, actionName = '') => {
+    const payload = { result, values: collectValues() };
+    if (actionName) payload.action = actionName;
+    root.dataset.xpscriptResult = JSON.stringify(payload);
+    root.dispatchEvent(new CustomEvent('xpscript:form-result', { detail: payload }));
+  };
+
+  if ((request.buttons || []).length > 0) {
+    const actions = document.createElement('div');
+    actions.className = 'd-flex justify-content-end gap-2 mt-3';
+    for (const definition of request.buttons) {
+      if (definition.visible === false) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = buttonClass(definition.style);
+      button.textContent = definition.label || definition.name || 'Action';
+      button.disabled = definition.enabled === false;
+      button.dataset.actionName = definition.name || '';
+      button.addEventListener('click', () => publishResult('Action', definition.name || ''));
+      actions.appendChild(button);
+    }
+    root.appendChild(actions);
+  }
+
+  const dialogButtons = document.createElement('div');
+  dialogButtons.className = 'd-flex justify-content-end gap-2 mt-3';
+  const ok = document.createElement('button');
+  ok.type = 'button';
+  ok.className = 'btn btn-primary';
+  ok.textContent = 'OK';
+  ok.addEventListener('click', () => {
+    if (form.reportValidity()) publishResult('OK');
+  });
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn btn-secondary';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => publishResult('Cancel'));
+  dialogButtons.append(ok, cancel);
+  root.appendChild(dialogButtons);
+
   return JSON.stringify({ result: 'Pending', values: {} });
 }
 """;
