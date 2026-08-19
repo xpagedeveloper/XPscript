@@ -6,7 +6,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../XPScript.Compiler/XPScript.Compiler.csproj" />
+    <ProjectReference Include="../XPScript.Compiler/XPScript.Compiler.csproj">
+      <AdditionalProperties>GenerateDependencyFile=false;GenerateRuntimeConfigurationFiles=false;UseAppHost=false</AdditionalProperties>
+    </ProjectReference>
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
   </ItemGroup>
 </Project>
