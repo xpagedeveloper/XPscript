@@ -100,7 +100,7 @@ Use `SetFieldTooltip(name, text)` to add help text to normal data-entry fields.
 Call form.SetFieldTooltip("name", "The name shown in customer lists")
 ```
 
-The same metadata is used by all UI backends. Desktop maps placeholder text to the Avalonia `Watermark` property and tooltip text to `ToolTip`. Server-rendered web uses HTML `placeholder` and `title` attributes. Browser-wasm sets the corresponding DOM properties.
+The same metadata is used by all UI backends. Desktop maps placeholder text to the Avalonia `PlaceholderText` property and tooltip text to `ToolTip`. Server-rendered web uses HTML `placeholder` and `title` attributes. Browser-wasm sets the corresponding DOM properties.
 
 Placeholder and tooltip values can be changed from UI event handlers. Reactive updates send the changed metadata with the normal UIForm state response.
 
