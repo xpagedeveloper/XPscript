@@ -10,7 +10,7 @@ public sealed class XpsWebPathResolver
     public XpsWebPathResolver(string root, string defaultDocumentName = "index.xps")
     {
         if (string.IsNullOrWhiteSpace(root)) throw new ArgumentException("Web root is required.", nameof(root));
-        _defaultDocumentName = ValidateDefaultDocumentName(defaultDocumentName);
+        _defaultDocumentName = ValidateDefaultDocumentName(defaultDocumentName).ToLowerInvariant();
         _root = Path.GetFullPath(root);
         _rootWithSeparator = _root.EndsWith(Path.DirectorySeparatorChar)
             ? _root
@@ -62,7 +62,7 @@ public sealed class XpsWebPathResolver
     public string MapPath(string relativePath)
     {
         if (relativePath is null) throw new ArgumentNullException(nameof(relativePath));
-        var normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        var normalized = relativePath.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         foreach (var segment in segments) ValidateSegment(segment);
         return MapInsideRoot(Path.Combine(segments));
@@ -145,7 +145,7 @@ public sealed class XpsWebPathResolver
             }
         }
 
-        decoded = decoded.Replace('\\', '/');
+        decoded = decoded.Replace('\\', '/').ToLowerInvariant();
         var segments = decoded.Split('/', StringSplitOptions.RemoveEmptyEntries).ToList();
         foreach (var segment in segments) ValidateSegment(segment);
         return segments;
