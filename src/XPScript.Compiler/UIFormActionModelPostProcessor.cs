@@ -11,8 +11,9 @@ internal sealed class UIFormActionModelPostProcessor
         if (!generated.Contains("public string OnChangeHandler { get; set; } = string.Empty;", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"public\s+string\s+RefreshHandler\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;",
+                @"public\s+string\s+RefreshTargetRegion\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;\s*(?:public\s+string\s+RefreshHandler\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;)?",
                 """
+    public string RefreshTargetRegion { get; set; } = string.Empty;
     public string RefreshHandler { get; set; } = string.Empty;
     public string OnChangeHandler { get; set; } = string.Empty;
     public bool Visible { get; set; } = true;
