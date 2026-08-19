@@ -9,10 +9,10 @@ internal sealed class UIFormRegexValidationPostProcessor
             return generated;
 
         generated = ReplaceRequired(generated,
-            "    public string Tooltip { get; set; } = string.Empty;\n",
+            "    public List<string> Options { get; } = [];\n",
             """
-    public string Tooltip { get; set; } = string.Empty;
     public string RegexPattern { get; set; } = string.Empty;
+    public List<string> Options { get; } = [];
 """,
             "field-metadata");
 
