@@ -1,0 +1,39 @@
+name: CGI Session Role Test Patch
+on:
+  push:
+    branches: [session-defaults-role-restoration]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[cgi-session-role-test-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: session-defaults-role-restoration
+      - shell: python
+        run: |
+          from pathlib import Path
+          p=Path('tests/WebCgiStateSmoke/Program.cs')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('Directory.CreateDirectory(stateRoot);\n','Directory.CreateDirectory(stateRoot);\nawait File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), "{\\\"cgi\\\":{\\\"sessionFolder\\\":\\\"../state\\\"}}");\n')
+          s=s.replace('    Session.Authenticate("42", "Fredrik", "admin")\n','    Session.Authenticate("42", "Fredrik", "admin")\n    Call Session.SetRole("admin")\n')
+          s=s.replace('[Rule:admin]\n[Get]\nSub Private()','[Rule:admin]\n[Role:admin]\n[Get]\nSub Private()')
+          s=s.replace('    Response.Write(RequestScope.Get("temp"))\nEnd Sub','    Response.Write(RequestScope.Get("temp"))\n    Response.Write("|")\n    Response.Write(Session.GetRole())\n    Response.Write("|")\n    Response.Write(CStr(Session.HasRole("admin")))\nEnd Sub',1)
+          insert='''\n\n[Authenticated]\n[Get]\nSub RemoveAdminRole()\n    Response.Write(Session.GetRole())\n    Response.Write("|")\n    Response.Write(CStr(Session.HasRole("admin")))\n    Response.Write("|")\n    Response.Write(CStr(Session.RemoveRole("admin")))\n    Response.Write("|")\n    Response.Write(CStr(Session.HasRole("admin")))\nEnd Sub\n'''
+          s=s.replace('\n[Anonymous]\n[Get]\nSub OtherUser()',insert+'\n[Anonymous]\n[Get]\nSub OtherUser()',1)
+          s=s.replace('if (privateBody != "alpha|site-value|")','if (privateBody != "alpha|site-value||admin|True")')
+          s=s.replace('if (Body(privateAgain.Stdout) != "alpha|site-value|")','if (Body(privateAgain.Stdout) != "alpha|site-value||admin|True")')
+          marker='''    var stateFiles = Directory.GetFiles(stateRoot, "*.json");'''
+          extra='''    var removeRole = await RunAsync(root, stateRoot, "/state/RemoveAdminRole", cookie);\n    AssertStatus(removeRole, 200);\n    if (Body(removeRole.Stdout) != "admin|True|True|False")\n        throw new Exception("CGI session role API did not persist or remove the role correctly: " + Body(removeRole.Stdout));\n\n    var deniedAfterRoleRemoval = await RunAsync(root, stateRoot, "/state/Private", cookie);\n    AssertStatus(deniedAfterRoleRemoval, 403);\n\n'''
+          s=s.replace(marker,extra+marker,1)
+          s=s.replace('    start.Environment["XPSCRIPT_STATE_ROOT"] = stateRoot;\n','')
+          p.write_text(s,encoding='utf-8')
+      - shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/WebCgiStateSmoke/Program.cs
+          git commit -m "Verify CGI session folder and role authorization [cgi-session-role-test-patched]"
+          git push origin HEAD:session-defaults-role-restoration
