@@ -7,6 +7,7 @@
 Sub Main()
     Dim data As New JsonObject
     Dim form As New UIForm("Customer", 720, 420, True)
+    Dim grid As Variant
     Dim customerId As String
     Dim result As String
 
@@ -20,13 +21,15 @@ Sub Main()
     Call data.Set("status", "Loaded from UIListView")
 
     Call form.BindData(data)
-    Call form.SetGridColumns(12)
     Call form.AddHiddenField("id")
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("status", "Status")
     Call form.SetFieldReadOnly("status", True)
-    Call form.SetFieldPosition("name", 1, 1, 12, 1)
-    Call form.SetFieldPosition("status", 2, 1, 12, 1)
+
+    Set grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("name", 6)
+    Call grid.AddNewRow()
+    Call grid.SetFieldPosition("status", 12)
 
     result = form.ShowDialog()
     If result = "OK" Then
