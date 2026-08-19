@@ -14,6 +14,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private readonly StringComparer _pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private readonly object _backgroundGate = new();
     private readonly HashSet<Task> _backgroundPrecompileTasks = [];
+    private readonly HashSet<string> _activatedPrecompileSources;
     private bool _disposing;
 
     public XpsWebDispatcher(
@@ -24,7 +25,8 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
-        WriteConsole($"XPScript web engine starting. Root: {_resolver.Root}");
+        _activatedPrecompileSources = new HashSet<string>(_pathComparer);
+        WriteConsole("XPScript web engine starting. Root: /");
         WarmDefaultDocument();
     }
 
@@ -35,7 +37,8 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        WriteConsole($"XPScript web engine starting. Root: {_resolver.Root}");
+        _activatedPrecompileSources = new HashSet<string>(_pathComparer);
+        WriteConsole("XPScript web engine starting. Root: /");
         WarmDefaultDocument();
     }
 
@@ -98,7 +101,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
         catch (Exception ex)
         {
-            XpsWebConsoleErrorFallback.Write(ex, resolution.ScriptPath, context.Request.Path);
+            XpsWebConsoleErrorFallback.Write(ex, ToWebPath(resolution.ScriptPath), context.Request.Path);
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
@@ -133,14 +136,14 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
         catch (Exception ex)
         {
-            XpsWebConsoleErrorFallback.Write(ex, Path.Combine(_resolver.Root, "index.xps"), "/");
+            XpsWebConsoleErrorFallback.Write(ex, "/index.xps", "/");
         }
     }
 
     private async Task WarmDefaultDocumentAsync(string scriptPath, CancellationToken cancellationToken)
     {
         var fullPath = Path.GetFullPath(scriptPath);
-        WriteConsole($"Precompiling: {fullPath}");
+        WriteConsole($"Precompiling: {ToWebPath(fullPath)}");
         await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
         await PrecompileOneHopAsync(fullPath, lease.Unit.PrecompileTargets, cancellationToken).ConfigureAwait(false);
     }
@@ -150,25 +153,32 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         IReadOnlyList<string> precompileTargets,
         XpsWebResponse response)
     {
+        var fullSourcePath = Path.GetFullPath(sourceScriptPath);
+        var activateDeclaredTargets = false;
         Task task;
+
         lock (_backgroundGate)
         {
             if (_disposing) return;
+
+            activateDeclaredTargets = _activatedPrecompileSources.Add(fullSourcePath);
             task = Task.Run(async () =>
             {
                 try
                 {
-                    await PrecompileOneHopAsync(sourceScriptPath, precompileTargets, CancellationToken.None).ConfigureAwait(false);
+                    if (activateDeclaredTargets)
+                        await PrecompileOneHopAsync(fullSourcePath, precompileTargets, CancellationToken.None).ConfigureAwait(false);
+
                     await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
                         response,
                         _resolver,
-                        sourceScriptPath,
+                        fullSourcePath,
                         PrecompileTargetOnlyAsync,
                         CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    XpsWebConsoleErrorFallback.Write(ex, sourceScriptPath, "background-precompile");
+                    XpsWebConsoleErrorFallback.Write(ex, ToWebPath(fullSourcePath), "background-precompile");
                 }
             });
             _backgroundPrecompileTasks.Add(task);
@@ -219,7 +229,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         try
         {
             var fullPath = Path.GetFullPath(scriptPath);
-            WriteConsole($"Precompiling: {fullPath}");
+            WriteConsole($"Precompiling: {ToWebPath(fullPath)}");
             await using var lease = await _cache.AcquireAsync(fullPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -228,7 +238,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
         catch (Exception ex)
         {
-            XpsWebConsoleErrorFallback.Write(ex, scriptPath, "precompile");
+            XpsWebConsoleErrorFallback.Write(ex, ToWebPath(scriptPath), "precompile");
         }
     }
 
@@ -249,7 +259,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(sourceScriptPath));
             if (sourceDirectory is null)
             {
-                WriteConsole($"error: Unable to resolve PreCompile target '{target}' from '{sourceScriptPath}'. Continuing without it.");
+                WriteConsole($"error: Unable to resolve PreCompile target '{target}' from '{ToWebPath(sourceScriptPath)}'. Continuing without it.");
                 return null;
             }
 
@@ -268,13 +278,36 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             }
             if (File.Exists(candidate)) return candidate;
 
-            WriteConsole($"error: PreCompile target '{target}' was not found as '{candidate}'. Continuing without it.");
+            WriteConsole($"error: PreCompile target '{target}' was not found as '{ToWebPath(candidate)}'. Continuing without it.");
             return null;
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or XpsWebPathException)
         {
             WriteConsole($"error: Unable to resolve PreCompile target '{target}': {ex.Message}. Continuing without it.");
             return null;
+        }
+    }
+
+    private string ToWebPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "/";
+
+        try
+        {
+            if (path.StartsWith("/", StringComparison.Ordinal) && !Path.IsPathRooted(path))
+                return path.Replace('\\', '/');
+
+            var fullPath = Path.GetFullPath(path);
+            var relative = Path.GetRelativePath(_resolver.Root, fullPath).Replace('\\', '/');
+            if (relative == ".") return "/";
+            if (relative == ".." || relative.StartsWith("../", StringComparison.Ordinal))
+                return "/" + Path.GetFileName(fullPath);
+            return "/" + relative.TrimStart('/');
+        }
+        catch
+        {
+            try { return "/" + Path.GetFileName(path); }
+            catch { return "/"; }
         }
     }
 
