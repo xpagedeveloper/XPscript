@@ -26,6 +26,8 @@ public sealed record DesktopFormField(
     public bool Visible { get; init; } = true;
     public bool Enabled { get; init; } = true;
     public bool ReadOnly { get; init; }
+    public string Placeholder { get; init; } = string.Empty;
+    public string Tooltip { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
 }
 
