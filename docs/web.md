@@ -37,7 +37,7 @@ Supported HTTP method rules include the standard methods handled by the web runt
 
 Startup warms the default document and its direct precompile targets. Nested targets are not recursively warmed at startup. If `index.xps` precompiles `kalle.xps`, and `kalle.xps` declares `[PreCompile:nisse.xps]`, `nisse.xps` is warmed after the first real request to `kalle.xps`.
 
-Already compiled files are reused while their source/dependency snapshot remains unchanged. The response is allowed to complete before sublevel warmup runs in the background.
+Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side `.xps` pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives server restarts and is reused only when the source/dependency snapshot, runtime, compiler configuration and compiler version still match. A changed source or dependency automatically causes recompilation and replacement of the old artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.
 
 ## Request
 

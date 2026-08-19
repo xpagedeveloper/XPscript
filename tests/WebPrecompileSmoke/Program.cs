@@ -179,6 +179,41 @@ try
             throw new Exception("Nested PreCompile target was unexpectedly warmed recursively.");
     }
 
+    var persistentCacheDirectory = Path.Combine(parent, "persistent-cache");
+    var persistentSource = Path.Combine(root, "persistent.xps");
+    await File.WriteAllTextAsync(persistentSource, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("persistent-v1")
+End Sub
+""");
+    var persistentOptions = new XpsWebCompilationCacheOptions
+    {
+        MaxEntries = 8,
+        MaxSourceBytes = 1024 * 1024,
+        IdleTtl = TimeSpan.FromMinutes(5),
+        FailureBackoff = TimeSpan.FromSeconds(2),
+        ConfigurationIdentity = "persistent-restart-smoke-v1",
+        PersistentCacheDirectory = persistentCacheDirectory
+    };
+    await using (var firstPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await firstPersistentCache.AcquireAsync(persistentSource, root);
+        if (firstPersistentCache.CompilationStarts != 1) throw new Exception("Initial persistent page compile did not compile exactly once.");
+    }
+    await using (var restartedPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await restartedPersistentCache.AcquireAsync(persistentSource, root);
+        if (restartedPersistentCache.CompilationStarts != 0) throw new Exception("Persistent precompile artifact was not reused after cache/server restart.");
+    }
+    await File.AppendAllTextAsync(persistentSource, Environment.NewLine + "' changed");
+    await using (var changedPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await changedPersistentCache.AcquireAsync(persistentSource, root);
+        if (changedPersistentCache.CompilationStarts != 1) throw new Exception("Touched web source did not invalidate persistent precompile artifact.");
+    }
+
     using var capturedError = new StringWriter();
     try
     {
