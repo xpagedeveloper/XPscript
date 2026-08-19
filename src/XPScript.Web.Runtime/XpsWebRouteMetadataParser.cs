@@ -91,7 +91,6 @@ public sealed class XpsWebRouteMetadataParser
             if (target.Any(char.IsControl))
                 throw new XpsWebRouteMetadataException("PreCompile target contains a control character.");
 
-            // Extensionless targets are treated as XPScript files. Keep accepting the common .xsp transposition.
             if (string.IsNullOrEmpty(Path.GetExtension(target)))
                 target += ".xps";
             else if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
@@ -127,28 +126,21 @@ public sealed class XpsWebRouteMetadataParser
 
     private static XpsRoutePolicy BuildPolicy(IReadOnlyList<string> attributes)
     {
-        var allowAnonymous = false;
-        var explicitAuthentication = false;
+        var hasAnonymous = attributes.Any(x => x.Equals("Anonymous", StringComparison.OrdinalIgnoreCase));
+        var hasAuthenticated = attributes.Any(x => x.Equals("Authenticated", StringComparison.OrdinalIgnoreCase));
+        if (hasAnonymous && hasAuthenticated)
+            Console.Error.WriteLine("error: Route declares both [Anonymous] and [Authenticated]. [Authenticated] takes precedence.");
+
+        var allowAnonymous = hasAnonymous && !hasAuthenticated;
         var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var requiredRules = new List<string>();
         var forbiddenRules = new List<string>();
 
         foreach (var attribute in attributes)
         {
-            if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
-            {
-                if (explicitAuthentication)
-                    throw new XpsWebRouteMetadataException("A route cannot be both Anonymous and Authenticated.");
-                allowAnonymous = true;
+            if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
+                attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase))
                 continue;
-            }
-            if (attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase))
-            {
-                if (allowAnonymous)
-                    throw new XpsWebRouteMetadataException("A route cannot be both Anonymous and Authenticated.");
-                explicitAuthentication = true;
-                continue;
-            }
 
             var method = attribute.ToUpperInvariant();
             if (method is "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS")
@@ -162,15 +154,9 @@ public sealed class XpsWebRouteMetadataParser
                 var rule = attribute[5..].Trim();
                 if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");
                 if (rule.StartsWith('!'))
-                {
-                    var forbidden = NormalizeRule(rule[1..]);
-                    forbiddenRules.Add(forbidden);
-                }
+                    forbiddenRules.Add(NormalizeRule(rule[1..]));
                 else
-                {
                     requiredRules.Add(NormalizeRule(rule));
-                }
-                continue;
             }
         }
 
