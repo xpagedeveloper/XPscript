@@ -8,10 +8,6 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        // Replace the complete desktop request object as one scoped unit.  The old
-        // implementation patched a generic "}).ToArray() };" marker which could
-        // match another anonymous object in generated code and inject form.Buttons
-        // where `form` was not in scope.
         if (generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
             return generated;
@@ -40,9 +36,10 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 label = field.Label,
                 type = field.Type,
                 required = field.Required,
-                value = field.Type == "PasswordField"
+                value = field.Type is "PasswordField" or "MultiListBox"
                     ? null
                     : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
+                values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength,
                 maxLength = field.MaxLength,
                 minimum = field.Minimum,
