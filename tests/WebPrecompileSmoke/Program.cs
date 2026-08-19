@@ -16,10 +16,10 @@ var pageRulePath = Path.Combine(sub, "page-rule.xps");
 var pageRuleNestedPath = Path.Combine(sub, "page-rule-nested.xps");
 
 await File.WriteAllTextAsync(indexPath, """
-[PreCompile:direct;/sub/rooted.xsp;missing-precompile]
 [Anonmous]
 [Anonymous]
 [Get]
+[PreCompile:direct;/sub/rooted.xsp;missing-precompile]
 Sub Index()
     Response.ContentType = "text/html"
     Response.Write("<a href=""linked.xps"">Linked</a><a href=""/sub/page.xps"">Page</a>")
@@ -94,22 +94,30 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v4-forgiving-rules"
+        ConfigurationIdentity = "precompile-smoke-v5-index-order"
     });
 
+    var originalError = Console.Error;
+    using var startupErrors = new StringWriter();
+    Console.SetError(startupErrors);
     await using var dispatcher = new XpsWebDispatcher(root, cache);
+    Console.SetError(originalError);
 
-    // Startup warms index.xps and only its existing direct neighbours.
-    // The extensionless direct target resolves to direct.xps, .xsp normalizes to .xps,
-    // the missing target is skipped, and the misspelled [] rule is logged but ignored.
     if (cache.CompilationStarts != 5)
         throw new Exception($"Startup one-hop precompile expected 5 compilations, got {cache.CompilationStarts}.");
 
     await AssertAlreadyWarmAsync(cache, indexPath, root, "index.xps");
-    await AssertAlreadyWarmAsync(cache, directPath, root, "extensionless direct PreCompile target");
+    await AssertAlreadyWarmAsync(cache, directPath, root, "extensionless direct PreCompile target declared after [Get]");
     await AssertAlreadyWarmAsync(cache, rootedPath, root, "root-relative .xsp PreCompile target");
     await AssertAlreadyWarmAsync(cache, linkedPath, root, "relative static source link");
     await AssertAlreadyWarmAsync(cache, pagePath, root, "root-relative static source link");
+
+    var startupText = startupErrors.ToString();
+    if (!startupText.Contains("uses the misspelled .xsp extension", StringComparison.Ordinal))
+        throw new Exception("Misspelled .xsp PreCompile target did not produce a console error.");
+    if (!startupText.Contains("missing-precompile.xps", StringComparison.OrdinalIgnoreCase) ||
+        !startupText.Contains("was not found", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Missing PreCompile target did not produce a console error.");
 
     var indexResponseAtStartup = await SendAsync(dispatcher, root, "/");
     if (indexResponseAtStartup.StatusCode != 200)
@@ -125,7 +133,6 @@ try
     if (cache.CompilationStarts != beforeIndexAliases)
         throw new Exception("/index, /index.xps and case variants must use the same precompile cache entry.");
 
-    // page.xps is warmed, but its own direct neighbours must wait until page.xps itself is loaded.
     var beforeColdPageNeighbours = cache.CompilationStarts;
     await using (var childLease = await cache.AcquireAsync(childPath, root))
     await using (var pageRuleLease = await cache.AcquireAsync(pageRulePath, root))
@@ -134,14 +141,13 @@ try
             throw new Exception("A precompiled page recursively warmed its own child link or PreCompile rule before being loaded.");
     }
 
-    // Use a fresh cache/dispatcher to verify one-hop warming when page.xps is actually loaded.
     await using var secondCache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
     {
         MaxEntries = 32,
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v4-load-hop-rules"
+        ConfigurationIdentity = "precompile-smoke-v5-load-hop-rules"
     });
     await using var secondDispatcher = new XpsWebDispatcher(root, secondCache);
 
@@ -160,7 +166,6 @@ try
     await AssertAlreadyWarmAsync(secondCache, childPath, root, "child.xps after page.xps load");
     await AssertAlreadyWarmAsync(secondCache, pageRulePath, root, "page-rule.xps after page.xps load");
 
-    // page-rule.xps itself has a PreCompile rule, but that nested target must wait until page-rule.xps is loaded.
     var beforeNestedProbe = secondCache.CompilationStarts;
     await using (var nestedLease = await secondCache.AcquireAsync(pageRuleNestedPath, root))
     {
@@ -168,7 +173,6 @@ try
             throw new Exception("Nested PreCompile target was unexpectedly warmed recursively.");
     }
 
-    var originalError = Console.Error;
     using var capturedError = new StringWriter();
     try
     {
