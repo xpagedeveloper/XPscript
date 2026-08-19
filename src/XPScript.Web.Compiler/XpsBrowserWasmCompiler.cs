@@ -211,10 +211,25 @@ function applyFieldState(field, editor) {
   if (field.maxLength != null && 'maxLength' in editor) editor.maxLength = Number(field.maxLength);
   if (field.minimum != null && 'min' in editor) editor.min = String(field.minimum);
   if (field.maximum != null && 'max' in editor) editor.max = String(field.maximum);
+  if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);
+  if (field.tooltip) editor.title = String(field.tooltip);
 }
 
 function createEditor(field) {
   const type = fieldType(field);
+  if (type === 'separator') {
+    const separator = document.createElement('hr');
+    separator.className = 'xpscript-uiform-separator my-2';
+    separator.setAttribute('aria-hidden', 'true');
+    return separator;
+  }
+  if (type === 'spacer') {
+    const spacer = document.createElement('div');
+    spacer.className = 'xpscript-uiform-spacer';
+    spacer.style.height = '1rem';
+    spacer.setAttribute('aria-hidden', 'true');
+    return spacer;
+  }
   if (type === 'select' || type === 'listbox' || type === 'multilistbox') {
     const select = document.createElement('select');
     select.className = 'form-select';
@@ -237,6 +252,7 @@ function createEditor(field) {
   if (type === 'radiogroup') {
     const group = document.createElement('div');
     group.className = 'd-flex flex-column gap-1';
+    if (field.tooltip) group.title = String(field.tooltip);
     for (const optionValue of field.options || []) {
       const item = document.createElement('div');
       item.className = 'form-check';
@@ -340,6 +356,7 @@ export function renderForm(requestJson) {
     wrap.dataset.fieldName = field.name || '';
     if (field.regionId) wrap.dataset.regionId = field.regionId;
     if (field.visible === false) wrap.hidden = true;
+    if (field.tooltip && type !== 'separator' && type !== 'spacer') wrap.title = String(field.tooltip);
 
     const row = Number(field.layoutRow) > 0 ? Number(field.layoutRow) : automaticRow++;
     const column = Number(field.layoutColumn) > 0 ? Number(field.layoutColumn) : 1;
@@ -351,10 +368,12 @@ export function renderForm(requestJson) {
     wrap.style.gridRow = `${row} / span ${rowSpan}`;
 
     const editor = createEditor(field);
-    if (type !== 'radiogroup') editor.name = field.name || '';
-    editors.set(field.name || '', editor);
+    if (type !== 'radiogroup' && type !== 'separator' && type !== 'spacer') editor.name = field.name || '';
+    if (type !== 'separator' && type !== 'spacer') editors.set(field.name || '', editor);
 
-    if (type === 'checkbox') {
+    if (type === 'separator' || type === 'spacer') {
+      wrap.appendChild(editor);
+    } else if (type === 'checkbox') {
       const checkWrap = document.createElement('div');
       checkWrap.className = 'form-check';
       const label = document.createElement('label');
@@ -380,6 +399,7 @@ export function renderForm(requestJson) {
     const values = {};
     for (const field of request.fields || []) {
       const type = fieldType(field);
+      if (type === 'separator' || type === 'spacer') continue;
       if (type === 'hiddenfield') {
         if (field.value != null) values[field.name] = field.value;
         continue;
