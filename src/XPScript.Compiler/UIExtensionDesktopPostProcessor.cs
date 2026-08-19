@@ -62,13 +62,7 @@ internal sealed class UIExtensionDesktopPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-
-        // Keep all downstream source transforms deterministic across Windows,
-        // macOS and Linux. Several generated-runtime markers are intentionally
-        // expressed with LF because the emitted C# itself is platform-neutral.
-        // Normalize CRLF/lone-CR once at the pipeline boundary rather than making
-        // every individual UI postprocessor depend on the host OS line ending.
-        generated = generated.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        generated = NormalizeLineEndings(generated);
 
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
@@ -86,6 +80,13 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n" + UIDialogRuntimeSource.Code
             + "\n" + UIListViewRuntimeSource.Code
             + "\n";
+
+        // Raw string runtime constants preserve the source file's newline style.
+        // A Windows build can therefore reintroduce CRLF after the first
+        // normalization. Normalize the complete appended runtime before every
+        // structural UIForm/UIListView postprocessor runs.
+        replaced = NormalizeLineEndings(replaced);
+
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
@@ -99,6 +100,9 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
+
+    private static string NormalizeLineEndings(string value)
+        => value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
     private static string HardenWebBridgeLookup(string generated)
     {
