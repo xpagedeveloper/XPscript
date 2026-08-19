@@ -62,6 +62,29 @@ Print CStr(values.Count)
 
 The same ListBox APIs are used on desktop, server-rendered web and browser-wasm. Desktop uses native Avalonia list controls. Server-rendered web uses HTML `select` controls. Browser-wasm uses DOM `select` controls and returns multiple selections as an array.
 
+## Separator and Spacer
+
+`AddSeparator(name)` adds a visual separator to the form. `AddSpacer(name)` adds vertical spacing. They are structural elements, not data-entry fields, and are never written to bound `JsonObject` data.
+
+```xpscript
+Call form.AddTextField("name", "Name")
+Call form.AddSeparator("details_separator")
+Call form.AddTextField("email", "Email")
+Call form.AddSpacer("actions_spacer")
+```
+
+Separator and Spacer participate in the same grid as normal fields. Give them a name so they can be positioned with the grid API.
+
+```xpscript
+Set grid = form.AddGridColumns(12)
+Call grid.SetFieldPosition("name", 6)
+Call grid.SetFieldPosition("details_separator", 12)
+Call grid.SetFieldPosition("email", 6)
+Call grid.SetFieldPosition("actions_spacer", 12)
+```
+
+Server-rendered web uses a Bootstrap-compatible horizontal rule for Separator and an empty spacing block for Spacer. Desktop and browser-wasm preserve the same structural intent through their UI backends.
+
 ## Grid layout
 
 The form is the top container. Add a grid with a configurable number of columns:
