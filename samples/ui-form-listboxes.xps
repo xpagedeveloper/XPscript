@@ -1,0 +1,31 @@
+' XPScript UIForm ListBox and MultiListBox regression
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim form As New UIForm("List choices")
+    Dim data As New JsonObject
+    Dim selected As New JsonArray
+    Dim values As Variant
+
+    Call selected.Add("SE")
+    Call selected.Add("DK")
+    Call data.Set("country", "NO")
+    Call data.Set("markets", selected)
+    Call form.BindData(data)
+
+    Call form.AddListBox("country", "Country")
+    Call form.AddOption("country", "SE")
+    Call form.AddOption("country", "NO")
+    Call form.AddOption("country", "DK")
+
+    Call form.AddMultiListBox("markets", "Markets")
+    Call form.AddOption("markets", "SE")
+    Call form.AddOption("markets", "NO")
+    Call form.AddOption("markets", "DK")
+
+    values = form.GetFieldValues("markets")
+    Print "COUNTRY=" & form.GetFieldValueString("country")
+    Print "MARKET_COUNT=" & CStr(values.Count)
+    Print "MARKET0=" & CStr(values.Get(0))
+    Print "MARKET1=" & CStr(values.Get(1))
+End Sub
