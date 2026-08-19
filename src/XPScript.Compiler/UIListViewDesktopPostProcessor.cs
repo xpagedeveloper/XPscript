@@ -24,6 +24,7 @@ internal sealed class UIListViewDesktopPostProcessor
             if (index < 0)
                 throw new CompilerException("Unable to install UIListView desktop runtime bridge (metadata).");
             index += token.Length;
+            // Match the platform newline used by raw string templates in later postprocessors.
             var newline = Environment.NewLine;
             listSource = listSource[..index]
                 + newline + "            sortable = _sortable,"
