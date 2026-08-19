@@ -1,6 +1,6 @@
 # UIForm
 
-`UIForm` is the shared XPScript form model for desktop and web applications. Fields can bind to a `JsonObject`/object-root `JsonDocument`. The same form definition can be rendered by the desktop backend or into an HTTP response.
+`UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `JsonObject` or object-root `JsonDocument`. The same form definition is rendered by the active UI backend.
 
 ## Basic form
 
@@ -22,9 +22,45 @@ The form title belongs to the top-level form container. On the web it is rendere
 
 ## Fields
 
-Core field APIs include `AddTextField(name, label)`, `AddTextArea(name, label)`, `AddNumberField(name, label)`, `AddCheckBox(name, label)` and `AddDateField(name, label)`. Additional UIForm field types supported by the runtime follow the same named-field model. `SetRequired(name, True)` marks a field required.
+Core field APIs include `AddTextField(name, label)`, `AddTextArea(name, label)`, `AddNumberField(name, label)`, `AddCheckBox(name, label)`, `AddDateField(name, label)`, `AddSelect(name, label)`, `AddRadioGroup(name, label)`, `AddListBox(name, label)` and `AddMultiListBox(name, label)`. `SetRequired(name, True)` marks a field required.
 
-A field name is also its JSON binding key. Creating/rendering an empty field does not by itself create a missing JSON key. A supplied value creates or updates the key.
+A field name is also its JSON binding key. Creating or rendering an empty field does not by itself create a missing JSON key. A supplied value creates or updates the key.
+
+## ListBox and MultiListBox
+
+`ListBox` allows one selected option. Its bound value is a scalar string.
+
+```xpscript
+Call form.AddListBox("country", "Country")
+Call form.AddOption("country", "SE")
+Call form.AddOption("country", "NO")
+Call form.AddOption("country", "DK")
+```
+
+`MultiListBox` allows several selected options. Its bound value is a `JsonArray` of strings. Use `GetFieldValues(name)` when you want the selected values as a `JsonArray` regardless of the current backing value.
+
+```xpscript
+Dim data As New JsonObject
+Dim selected As New JsonArray
+Dim values As Variant
+
+Call selected.Add("SE")
+Call selected.Add("DK")
+Call data.Set("markets", selected)
+Call form.BindData(data)
+
+Call form.AddMultiListBox("markets", "Markets")
+Call form.AddOption("markets", "SE")
+Call form.AddOption("markets", "NO")
+Call form.AddOption("markets", "DK")
+
+values = form.GetFieldValues("markets")
+Print CStr(values.Count)
+```
+
+`AddOption` and `ClearOptions` work with `Select`, `RadioGroup`, `ListBox` and `MultiListBox`. Submitted values are checked against the configured option list before they are written to bound data.
+
+The same ListBox APIs are used on desktop, server-rendered web and browser-wasm. Desktop uses native Avalonia list controls. Server-rendered web uses HTML `select` controls. Browser-wasm uses DOM `select` controls and returns multiple selections as an array.
 
 ## Grid layout
 
