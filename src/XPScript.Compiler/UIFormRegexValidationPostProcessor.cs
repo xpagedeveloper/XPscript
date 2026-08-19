@@ -17,9 +17,9 @@ internal sealed class UIFormRegexValidationPostProcessor
             "field-metadata");
 
         generated = ReplaceRequired(generated,
-            "    public object? GetFieldValue(object? name)\n",
+            "public object? GetFieldValue(object? name)",
             """
-    public void SetRegexValidation(object? name, object? pattern)
+public void SetRegexValidation(object? name, object? pattern)
     {
         var field = FindField(name);
         if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
