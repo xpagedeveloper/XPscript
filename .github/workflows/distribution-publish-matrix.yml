@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/XPScript.Cli/**'
-      - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler.Core/**'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Web.Cgi/**'
       - 'src/XPScript.Web.Compiler/**'
@@ -15,6 +16,11 @@ on:
       - 'docs/getting-started.md'
       - '.github/workflows/distribution-publish-matrix.yml'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version used in ZIP file names. Leave empty to use the commit SHA.'
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -52,43 +58,55 @@ jobs:
             if (-not (Test-Path $path)) { throw "Missing distribution folder: $path" }
             if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Distribution is empty: $path" }
           }
-      - name: Upload compiler artifact
+      - name: Create release ZIPs and SHA-256 manifest
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $version = '${{ inputs.version }}'
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = '${{ github.sha }}'.Substring(0, 12)
+          }
+          if ($version -notmatch '^[0-9A-Za-z._-]+$') {
+            throw 'Version may contain only letters, numbers, dot, underscore and hyphen.'
+          }
+
+          $rid = '${{ matrix.rid }}'
+          $releaseRoot = 'artifacts/releases'
+          New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
+
+          $checksums = @()
+          foreach ($package in @('compiler', 'desktop-runtime', 'cgi', 'fastcgi', 'kestrel')) {
+            $source = "artifacts/distributions/$package/*"
+            $fileName = "xpscript-$package-$version-$rid.zip"
+            $zipPath = Join-Path $releaseRoot $fileName
+            Compress-Archive -Path $source -DestinationPath $zipPath -Force
+            $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            $checksums += "$hash  $fileName"
+          }
+
+          $manifest = Join-Path $releaseRoot "SHA256SUMS-$version-$rid.txt"
+          $checksums | Set-Content -Path $manifest -Encoding ascii
+      - name: Verify release ZIPs and checksums
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $releaseFiles = @(Get-ChildItem 'artifacts/releases' -Filter '*.zip' -File)
+          if ($releaseFiles.Count -ne 5) {
+            throw "Expected 5 release ZIP files, found $($releaseFiles.Count)."
+          }
+          $manifest = @(Get-ChildItem 'artifacts/releases' -Filter 'SHA256SUMS-*.txt' -File)
+          if ($manifest.Count -ne 1) {
+            throw "Expected one SHA-256 manifest, found $($manifest.Count)."
+          }
+          $manifestLines = @(Get-Content $manifest[0].FullName | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($manifestLines.Count -ne 5) {
+            throw "Expected 5 SHA-256 entries, found $($manifestLines.Count)."
+          }
+      - name: Upload RID release bundle
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: xpscript-compiler-${{ matrix.rid }}
-          path: artifacts/distributions/compiler/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload desktop runtime artifact
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-desktop-runtime-${{ matrix.rid }}
-          path: artifacts/distributions/desktop-runtime/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload CGI artifact
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-cgi-${{ matrix.rid }}
-          path: artifacts/distributions/cgi/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload FastCGI artifact
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-fastcgi-${{ matrix.rid }}
-          path: artifacts/distributions/fastcgi/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload Kestrel artifact
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-kestrel-${{ matrix.rid }}
-          path: artifacts/distributions/kestrel/
+          name: xpscript-release-${{ matrix.rid }}
+          path: artifacts/releases/
           if-no-files-found: error
           retention-days: 14
