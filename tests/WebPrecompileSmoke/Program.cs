@@ -115,6 +115,16 @@ try
     if (indexResponseAtStartup.StatusCode != 200)
         throw new Exception($"Misspelled [] rule must not stop compilation; index returned {indexResponseAtStartup.StatusCode}.");
 
+    var beforeIndexAliases = cache.CompilationStarts;
+    foreach (var alias in new[] { "/index", "/index.xps", "/INDEX", "/INDEX.XPS", "/InDeX.XpS" })
+    {
+        var response = await SendAsync(dispatcher, root, alias);
+        if (response.StatusCode != 200)
+            throw new Exception($"Canonical index alias '{alias}' returned {response.StatusCode}.");
+    }
+    if (cache.CompilationStarts != beforeIndexAliases)
+        throw new Exception("/index, /index.xps and case variants must use the same precompile cache entry.");
+
     // page.xps is warmed, but its own direct neighbours must wait until page.xps itself is loaded.
     var beforeColdPageNeighbours = cache.CompilationStarts;
     await using (var childLease = await cache.AcquireAsync(childPath, root))
