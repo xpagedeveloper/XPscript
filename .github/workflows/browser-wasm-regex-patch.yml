@@ -1,0 +1,50 @@
+name: Browser WASM Regex Source Patch
+
+on:
+  push:
+    branches: [browser-wasm-regex-validation]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[browser-regex-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: browser-wasm-regex-validation
+      - name: Apply browser regex validation patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          compiler = Path('src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs')
+          text = compiler.read_text(encoding='utf-8')
+          old = "  if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);\n  if (field.tooltip) editor.title = String(field.tooltip);"
+          new = "  if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);\n  if (field.regexPattern && 'pattern' in editor) editor.pattern = String(field.regexPattern);\n  if (field.tooltip) editor.title = String(field.tooltip);"
+          if old not in text:
+              if "field.regexPattern && 'pattern' in editor" not in text:
+                  raise SystemExit('Browser regex patch target was not found.')
+          else:
+              compiler.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          smoke = Path('tests/WebBrowserWasmSmoke/Program.cs')
+          text = smoke.read_text(encoding='utf-8')
+          old = '"multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.tooltip",'
+          new = '"multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.tooltip",'
+          if old not in text:
+              if '"field.regexPattern"' not in text:
+                  raise SystemExit('Browser smoke regex marker target was not found.')
+          else:
+              smoke.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs tests/WebBrowserWasmSmoke/Program.cs
+          git commit -m "Add browser-wasm regex pattern validation [browser-regex-patched]"
+          git push origin HEAD:browser-wasm-regex-validation
