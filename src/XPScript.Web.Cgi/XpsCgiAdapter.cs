@@ -141,7 +141,8 @@ public sealed class XpsCgiAdapter
             remoteAddress,
             protocol,
             cookies,
-            cancellationToken);
+            cancellationToken,
+            environment);
     }
 
     private void ValidateScriptFilename(IReadOnlyDictionary<string, string?> environment)
