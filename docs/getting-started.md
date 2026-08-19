@@ -225,7 +225,7 @@ The `Distribution Publish` workflow publishes five separate downloadable artifac
 | `xpscript-fastcgi` | FastCGI host distribution. |
 | `xpscript-kestrel` | Kestrel host distribution. |
 
-The `Distribution Publish Matrix` workflow verifies every package for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` on pull requests. Manual runs also create one release bundle per RID. Each bundle contains five versioned ZIP files and one SHA-256 manifest.
+The `Distribution Publish Matrix` workflow verifies every package for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` on pull requests. Manual runs also create one release bundle per RID. Each bundle contains five versioned ZIP files and one SHA-256 manifest.
 
 Example files for version `1.2.0` and `linux-x64`:
 
