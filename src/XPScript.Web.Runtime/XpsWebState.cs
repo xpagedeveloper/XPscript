@@ -351,7 +351,7 @@ public sealed class XpsWebSession : IXpsSession
     public void Set(string name, object? value)
     {
         ValidateName(name);
-        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+        if ((name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) || name.Equals(RolesKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session '{name}' must be a comma- or semicolon-separated string.");
         if ((name.Equals(UserIdKey, StringComparison.OrdinalIgnoreCase) || name.Equals(UserNameKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session '{name}' must be a string.");
         var stateValue = StateValuePolicy.Create(value, _options.MaxValueBytes);
         lock (_record.Gate)

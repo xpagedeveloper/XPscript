@@ -185,7 +185,8 @@ public sealed class XpsWebRouteMetadataParser
             {
                 var role = attribute[5..].Trim();
                 if (role.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires a role name.");
-                requiredRules.Add("role:" + NormalizeRule(role));
+                if (role.StartsWith('!')) forbiddenRules.Add("role:" + NormalizeRule(role[1..]));
+                else requiredRules.Add("role:" + NormalizeRule(role));
                 continue;
             }
 

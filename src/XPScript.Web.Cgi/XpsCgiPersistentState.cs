@@ -398,8 +398,8 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
         public void Set(string name, object? value)
         {
             ValidateName(name);
-            if (name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)
-                throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+            if ((name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) || name.Equals(XpsWebSession.RolesKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string)
+                throw new InvalidOperationException($"Session '{name}' must be a comma- or semicolon-separated string.");
             var encoded = PersistentValue.FromObject(value, _options.MaxValueBytes);
             Ensure();
             if (!_record.Values.ContainsKey(name) && _record.Values.Count >= _options.MaxEntriesPerSession)
