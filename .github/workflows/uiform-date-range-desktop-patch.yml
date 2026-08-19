@@ -1,0 +1,45 @@
+name: UIForm Date Range Desktop Patch
+
+on:
+  push:
+    branches: [uiform-date-range-validation]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[date-range-desktop-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: uiform-date-range-validation
+      - name: Add desktop date range validation
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/XPScript.UI.Desktop/DesktopFormHost.cs')
+          text = p.read_text(encoding='utf-8')
+          old = '            case "DateField": if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format."; break;'
+          new = '''            case "DateField":
+                if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
+                    return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format.";
+                if (field.DateMinimum.Length > 0 && DateTime.TryParseExact(field.DateMinimum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMinimum) && dateValue < dateMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.DateMinimum}.";
+                if (field.DateMaximum.Length > 0 && DateTime.TryParseExact(field.DateMaximum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMaximum) && dateValue > dateMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.DateMaximum}.";
+                break;'''
+          if old in text:
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          elif 'field.DateMinimum.Length > 0' not in text:
+              raise SystemExit('Desktop DateField validation patch target not found.')
+      - name: Commit desktop validation
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.UI.Desktop/DesktopFormHost.cs
+          git commit -m "Validate UIForm date ranges in desktop host [date-range-desktop-patched]"
+          git push origin HEAD:uiform-date-range-validation
