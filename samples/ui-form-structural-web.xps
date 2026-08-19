@@ -1,0 +1,23 @@
+' XPScript server-rendered UIForm structural elements sample
+' (c) xpagedeveloper.com 2026
+
+[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim form As New UIForm("Structural web form")
+    Dim grid As Variant
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddSeparator("details_separator")
+    Call form.AddTextField("email", "Email")
+    Call form.AddSpacer("submit_spacer")
+
+    Set grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("name", 6)
+    Call grid.SetFieldPosition("details_separator", 12)
+    Call grid.SetFieldPosition("email", 6)
+    Call grid.SetFieldPosition("submit_spacer", 12)
+
+    Call form.ShowDialog()
+End Sub
