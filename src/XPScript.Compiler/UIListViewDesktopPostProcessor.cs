@@ -2,6 +2,7 @@ namespace XPScript.Compiler;
 
 internal sealed class UIListViewDesktopPostProcessor
 {
+    private const string ClassToken = "internal sealed class XPScriptUIListView";
     private const string MetadataSentinel = "hasRowAction = _rowActionTarget.Length > 0";
     private const string NavigationSentinel = "private void WriteDesktopNavigationRequest()";
 
@@ -9,20 +10,29 @@ internal sealed class UIListViewDesktopPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        if (!generated.Contains(MetadataSentinel, StringComparison.Ordinal))
+        var classStart = generated.IndexOf(ClassToken, StringComparison.Ordinal);
+        if (classStart < 0)
+            throw new CompilerException("Unable to install UIListView desktop runtime bridge (class).");
+
+        var prefix = generated[..classStart];
+        var listSource = generated[classStart..];
+
+        if (!listSource.Contains(MetadataSentinel, StringComparison.Ordinal))
         {
             const string token = "selectedIndex = _selectedIndex,";
-            var index = generated.IndexOf(token, StringComparison.Ordinal);
+            var index = listSource.IndexOf(token, StringComparison.Ordinal);
             if (index < 0)
                 throw new CompilerException("Unable to install UIListView desktop runtime bridge (metadata).");
             index += token.Length;
-            generated = generated[..index] + "\n            sortable = _sortable,\n            filterEnabled = _filterEnabled,\n            hasRowAction = _rowActionTarget.Length > 0," + generated[index..];
+            listSource = listSource[..index]
+                + "\n            sortable = _sortable,\n            filterEnabled = _filterEnabled,\n            hasRowAction = _rowActionTarget.Length > 0,"
+                + listSource[index..];
         }
 
-        if (!generated.Contains(NavigationSentinel, StringComparison.Ordinal))
+        if (!listSource.Contains(NavigationSentinel, StringComparison.Ordinal))
         {
-            generated = ReplaceBetweenRequired(
-                generated,
+            listSource = ReplaceBetweenRequired(
+                listSource,
                 "if (!result.Equals(\"OK\", StringComparison.OrdinalIgnoreCase)) return \"Cancel\";",
                 "private string RenderWebList()",
                 """
@@ -62,7 +72,7 @@ if (root.TryGetProperty("selectedIndex", out var selectedElement) && selectedEle
                 "navigation");
         }
 
-        return generated;
+        return prefix + listSource;
     }
 
     private static string ReplaceBetweenRequired(
