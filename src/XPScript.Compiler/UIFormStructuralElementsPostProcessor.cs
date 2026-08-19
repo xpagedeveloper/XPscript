@@ -9,25 +9,30 @@ internal sealed class UIFormStructuralElementsPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (generated.Contains(InstalledSentinel, StringComparison.Ordinal)) return generated;
+        if (generated.Contains(InstalledSentinel, StringComparison.Ordinal) &&
+            generated.Contains("field.Placeholder", StringComparison.Ordinal) &&
+            generated.Contains("field.Tooltip", StringComparison.Ordinal))
+            return generated;
 
-        generated = ReplaceRequired(
-            generated,
-            "    public void AddOption(object? name, object? value)\n",
-            """
+        if (!generated.Contains(InstalledSentinel, StringComparison.Ordinal))
+        {
+            generated = ReplaceRequired(
+                generated,
+                "    public void AddOption(object? name, object? value)\n",
+                """
     public XPScriptUIField AddSeparator(object? name) => AddField(name, string.Empty, "Separator");
     public XPScriptUIField AddSpacer(object? name) => AddField(name, string.Empty, "Spacer");
 
     public void AddOption(object? name, object? value)
 """,
-            "api");
+                "api");
 
-        generated = ReplaceRequired(
-            generated,
-            """
+            generated = ReplaceRequired(
+                generated,
+                """
             html.Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """,
-            """
+                """
             html.Append(">");
             if (field.Type == "Separator")
             {
@@ -43,26 +48,26 @@ internal sealed class UIFormStructuralElementsPostProcessor
             }
             html.Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """,
-            "web-render");
+                "web-render");
 
-        generated = ReplaceRequired(
-            generated,
-            """
+            generated = ReplaceRequired(
+                generated,
+                """
             var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
             if (field is null) continue;
             if (field.Type == "MultiListBox")
 """,
-            """
+                """
             var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
             if (field is null || field.Type is "Separator" or "Spacer") continue;
             if (field.Type == "MultiListBox")
 """,
-            "desktop-result");
+                "desktop-result");
 
-        generated = Regex.Replace(
-            generated,
-            """foreach \(var field in _fields\)\n                \{\n                    if \(field.Type == \"MultiListBox\"\) ApplySubmittedValues\(field, XPScriptUIWebAdapter.FormValues\(field.Name\)\);\n                    else ApplySubmittedValue\(field, XPScriptUIWebAdapter.FormFirst\(field.Name\)\);\n                \}""",
-            """
+            generated = Regex.Replace(
+                generated,
+                """foreach \(var field in _fields\)\n                \{\n                    if \(field.Type == \"MultiListBox\"\) ApplySubmittedValues\(field, XPScriptUIWebAdapter.FormValues\(field.Name\)\);\n                    else ApplySubmittedValue\(field, XPScriptUIWebAdapter.FormFirst\(field.Name\)\);\n                \}""",
+                """
 foreach (var field in _fields)
                 {
                     if (field.Type is "Separator" or "Spacer") continue;
@@ -70,7 +75,48 @@ foreach (var field in _fields)
                     else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
                 }
 """,
-            RegexOptions.CultureInvariant);
+                RegexOptions.CultureInvariant);
+        }
+
+        if (!generated.Contains("var placeholder = field.Placeholder.Length > 0", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequired(
+                generated,
+                """
+            var required = field.Required ? " required" : string.Empty;
+            var length = (field.MinLength.HasValue ? $" minlength=\"{field.MinLength.Value}\"" : string.Empty)
+""",
+                """
+            var required = field.Required ? " required" : string.Empty;
+            var placeholder = field.Placeholder.Length > 0
+                ? " placeholder=\"" + System.Net.WebUtility.HtmlEncode(field.Placeholder) + "\""
+                : string.Empty;
+            var length = (field.MinLength.HasValue ? $" minlength=\"{field.MinLength.Value}\"" : string.Empty)
+""",
+                "placeholder-state");
+
+            generated = generated.Replace(
+                ".Append(required).Append(length).Append(\">\")",
+                ".Append(required).Append(length).Append(placeholder).Append(\">\")",
+                StringComparison.Ordinal);
+        }
+
+        if (!generated.Contains("field.Tooltip.Length > 0", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequired(
+                generated,
+                """
+            html.Append(">");
+            if (field.Type == "Separator")
+""",
+                """
+            if (field.Tooltip.Length > 0)
+                html.Append(" title=\"").Append(System.Net.WebUtility.HtmlEncode(field.Tooltip)).Append("\"");
+            html.Append(">");
+            if (field.Type == "Separator")
+""",
+                "tooltip-render");
+        }
 
         return generated;
     }
