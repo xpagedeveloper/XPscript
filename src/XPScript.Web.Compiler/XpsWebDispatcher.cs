@@ -63,7 +63,6 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
             var unit = lease.Unit;
 
-            // Precompile exactly one hop from the script that is being loaded.
             await PrecompileOneHopAsync(resolution.ScriptPath, unit, cancellationToken).ConfigureAwait(false);
 
             var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
@@ -83,7 +82,6 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             await unit.InvokeAsync(descriptor.ProcedureName, context).ConfigureAwait(false);
             if (!context.Response.Completed) context.Response.Complete();
 
-            // Dynamic links discovered in the produced HTML are also only warmed one hop.
             await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
                 context.Response,
                 _resolver,
@@ -204,21 +202,39 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             if (target.StartsWith("/", StringComparison.Ordinal) || target.StartsWith('\\'))
             {
                 var route = _resolver.Resolve('/' + target.TrimStart('/', '\\').Replace('\\', '/'));
-                return route.Found ? route.ScriptPath : null;
+                if (route.Found) return route.ScriptPath;
+                WriteConsole($"error: PreCompile target '{target}' was not found. Continuing without it.");
+                return null;
             }
 
             var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(sourceScriptPath));
-            if (sourceDirectory is null) return null;
+            if (sourceDirectory is null)
+            {
+                WriteConsole($"error: Unable to resolve PreCompile target '{target}' from '{sourceScriptPath}'. Continuing without it.");
+                return null;
+            }
 
             var normalizedTarget = target.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
             var candidate = Path.GetFullPath(Path.Combine(sourceDirectory, normalizedTarget));
             var relative = Path.GetRelativePath(_resolver.Root, candidate);
-            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)) return null;
-            if (!Path.GetExtension(candidate).Equals(".xps", StringComparison.OrdinalIgnoreCase)) return null;
-            return File.Exists(candidate) ? candidate : null;
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            {
+                WriteConsole($"error: PreCompile target '{target}' resolves outside the web root. Ignoring target.");
+                return null;
+            }
+            if (!Path.GetExtension(candidate).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteConsole($"error: PreCompile target '{target}' does not resolve to an .xps file. Ignoring target.");
+                return null;
+            }
+            if (File.Exists(candidate)) return candidate;
+
+            WriteConsole($"error: PreCompile target '{target}' was not found as '{candidate}'. Continuing without it.");
+            return null;
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or XpsWebPathException)
         {
+            WriteConsole($"error: Unable to resolve PreCompile target '{target}': {ex.Message}. Continuing without it.");
             return null;
         }
     }
