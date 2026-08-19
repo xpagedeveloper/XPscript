@@ -10,15 +10,15 @@ internal sealed class UIFormTemporalRangeValidationPostProcessor
 
         generated = ReplaceRequired(
             generated,
-            "    public string DateMaximum { get; set; } = string.Empty;\n",
+            "    public List<string> Options { get; } = [];\n",
             """
-    public string DateMaximum { get; set; } = string.Empty;
     public string TimeMinimum { get; set; } = string.Empty;
     public string TimeMaximum { get; set; } = string.Empty;
     public string DateTimeMinimum { get; set; } = string.Empty;
     public string DateTimeMaximum { get; set; } = string.Empty;
     public string MonthMinimum { get; set; } = string.Empty;
     public string MonthMaximum { get; set; } = string.Empty;
+    public List<string> Options { get; } = [];
 """,
             "field-metadata");
 
