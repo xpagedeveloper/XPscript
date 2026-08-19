@@ -66,4 +66,4 @@ Call form.SetRegexValidation("code", "^[A-Z]{3}-[0-9]{3}$")
 
 UIForm patterns are limited to 1024 characters. Desktop, server-rendered web and browser-wasm use the configured rule as field validation metadata. Server-side web handling always validates submitted values again before accepting them.
 
-See `samples/reference-runtime-batch1.xps` for executable core examples and `docs/uiform-regex-validation.md` for UIForm-specific details.
+See [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) for executable core examples and [UIForm regex validation](uiform-regex-validation.md) for UIForm-specific details.
