@@ -60,7 +60,6 @@ jobs:
             if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Distribution is empty: $path" }
           }
       - name: Create release ZIPs and SHA-256 manifest
-        if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
           $version = '${{ inputs.version }}'
@@ -88,7 +87,6 @@ jobs:
           $manifest = Join-Path $releaseRoot "SHA256SUMS-$version-$rid.txt"
           $checksums | Set-Content -Path $manifest -Encoding ascii
       - name: Verify release ZIPs and checksums
-        if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
           $releaseFiles = @(Get-ChildItem 'artifacts/releases' -Filter '*.zip' -File)
@@ -102,6 +100,21 @@ jobs:
           $manifestLines = @(Get-Content $manifest[0].FullName | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
           if ($manifestLines.Count -ne 5) {
             throw "Expected 5 SHA-256 entries, found $($manifestLines.Count)."
+          }
+          foreach ($line in $manifestLines) {
+            if ($line -notmatch '^([0-9a-f]{64})  (.+)$') {
+              throw "Invalid SHA-256 manifest line: $line"
+            }
+            $expected = $matches[1]
+            $fileName = $matches[2]
+            $zipPath = Join-Path 'artifacts/releases' $fileName
+            if (-not (Test-Path $zipPath)) {
+              throw "Checksum references missing file: $fileName"
+            }
+            $actual = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $expected) {
+              throw "SHA-256 mismatch for $fileName"
+            }
           }
       - name: Upload RID release bundle
         if: github.event_name == 'workflow_dispatch'
