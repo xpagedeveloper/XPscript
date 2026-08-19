@@ -72,7 +72,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         foreach (var property in document.RootElement.EnumerateObject())
         {
             var field = _fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
-            if (field is null) continue;
+            if (field is null || field.Type is "Separator" or "Spacer") continue;
             if (field.Type == "MultiListBox")
             {
                 if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Null)
@@ -147,7 +147,9 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 enabled = field.Enabled,
                 readOnly = field.ReadOnly,
                 required = field.Required,
-                value = field.Type is "PasswordField" or "MultiListBox" ? null : GetFieldValueString(field.Name),
+                placeholder = field.Placeholder,
+                tooltip = field.Tooltip,
+                value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
                 regionId = field.RegionId
