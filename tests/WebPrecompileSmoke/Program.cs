@@ -52,8 +52,8 @@ End Sub
 """);
 
 await File.WriteAllTextAsync(pagePath, """
-[PreCompile:page-rule.xps]
 [Anonymous]
+[PreCompile:page-rule.xps]
 [Get]
 Sub Index()
     Response.ContentType = "text/html"
@@ -70,9 +70,9 @@ End Sub
 """);
 
 await File.WriteAllTextAsync(pageRulePath, """
-[PreCompile:page-rule-nested.xps]
 [Anonymous]
 [Get]
+[PreCompile:page-rule-nested.xps]
 Sub Index()
     Response.Write("page-rule")
 End Sub
@@ -88,13 +88,15 @@ End Sub
 
 try
 {
+    AssertPrecompileOrderIndependence();
+
     await using var cache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
     {
         MaxEntries = 32,
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v5-index-order"
+        ConfigurationIdentity = "precompile-smoke-v6-any-order"
     });
 
     var originalError = Console.Error;
@@ -107,7 +109,7 @@ try
         throw new Exception($"Startup one-hop precompile expected 5 compilations, got {cache.CompilationStarts}.");
 
     await AssertAlreadyWarmAsync(cache, indexPath, root, "index.xps");
-    await AssertAlreadyWarmAsync(cache, directPath, root, "extensionless direct PreCompile target declared after [Get]");
+    await AssertAlreadyWarmAsync(cache, directPath, root, "PreCompile target declared after [Get]");
     await AssertAlreadyWarmAsync(cache, rootedPath, root, "root-relative .xsp PreCompile target");
     await AssertAlreadyWarmAsync(cache, linkedPath, root, "relative static source link");
     await AssertAlreadyWarmAsync(cache, pagePath, root, "root-relative static source link");
@@ -147,7 +149,7 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v5-load-hop-rules"
+        ConfigurationIdentity = "precompile-smoke-v6-load-hop-rules"
     });
     await using var secondDispatcher = new XpsWebDispatcher(root, secondCache);
 
@@ -201,6 +203,59 @@ End Sub
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static void AssertPrecompileOrderIndependence()
+{
+    var parser = new XpsWebRouteMetadataParser();
+    var sources = new[]
+    {
+        """
+[PreCompile:kalle.xps]
+[Anonymous]
+[Get]
+Sub Index()
+End Sub
+""",
+        """
+[Anonymous]
+[PreCompile:kalle.xps]
+[Get]
+Sub Index()
+End Sub
+""",
+        """
+[Anonymous]
+[Get]
+[PreCompile:kalle.xps]
+Sub Index()
+End Sub
+""",
+        """
+[Get]
+[PreCompile:kalle.xps]
+[Anonymous]
+Sub Index()
+End Sub
+""",
+        """
+[Rule:admin]
+[PreCompile:kalle.xps]
+[Authenticated]
+[Get]
+Sub Index()
+End Sub
+"""
+    };
+
+    foreach (var source in sources)
+    {
+        var parsed = parser.Parse(source);
+        if (!parsed.Routes.ContainsKey("Index"))
+            throw new Exception("PreCompile attribute order prevented Index route parsing.");
+        if (parsed.PrecompileTargets.Count != 1 || !parsed.PrecompileTargets[0].Equals("kalle.xps", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("PreCompile attribute order changed the parsed target list.");
+    }
 }
 
 static async Task AssertAlreadyWarmAsync(XpsWebCompilationCache cache, string path, string root, string name)
