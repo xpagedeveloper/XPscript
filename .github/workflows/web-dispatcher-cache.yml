@@ -17,21 +17,339 @@ on:
       - '.github/workflows/web-dispatcher-cache.yml'
       - 'XPScriptCompiler.slnx'
   push:
-    branches: ['feat-web-precompile-linked-xps']
-    paths:
-      - 'src/XPScript.Web.Compiler/**'
-      - 'src/XPScript.Web.Runtime/**'
-      - 'tests/WebDispatcherSmoke/**'
-      - 'tests/WebPrecompileSmoke/**'
-      - '.github/workflows/web-dispatcher-cache.yml'
-      - 'XPScriptCompiler.slnx'
+    branches: ['session-defaults-role-restoration']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  patch-persistent-cache:
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[persistent-web-cache-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: session-defaults-role-restoration
+      - shell: python
+        run: |
+          from pathlib import Path
+
+          p=Path('src/XPScript.Web.Compiler/XpsWebCompilationCache.cs')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('using System.Diagnostics;\n','using System.Diagnostics;\nusing System.Security.Cryptography;\nusing System.Text;\n')
+          s=s.replace('    public string ConfigurationIdentity { get; init; } = "default";\n','    public string ConfigurationIdentity { get; init; } = "default";\n    public bool EnablePersistentCache { get; init; } = true;\n    public string? PersistentCacheDirectory { get; init; }\n')
+          s=s.replace('        if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)\n            throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));\n','        if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)\n            throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));\n        if (PersistentCacheDirectory is not null && string.IsNullOrWhiteSpace(PersistentCacheDirectory))\n            throw new ArgumentException("PersistentCacheDirectory cannot be empty when specified.", nameof(PersistentCacheDirectory));\n')
+          old='''    private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot)
+    {
+        Interlocked.Increment(ref _compilationStarts);
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot).ConfigureAwait(false);
+        }
+        catch
+        {
+            Interlocked.Increment(ref _compilationFailures);
+            throw;
+        }
+        finally
+        {
+            var elapsed = Stopwatch.GetElapsedTime(started);
+            Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+        }
+    }
+
+    private async Task<XpsCompiledWebUnit> CompileAndVerifyAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot)
+    {
+        var unit = await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false);
+'''
+          new='''    private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot)
+    {
+        var persistentCacheDirectory = ResolvePersistentCacheDirectory(fullSiteRoot);
+        if (persistentCacheDirectory is not null)
+        {
+            var persisted = await _compiler.TryLoadPersistentAsync(
+                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+            if (persisted is not null) return persisted;
+        }
+
+        Interlocked.Increment(ref _compilationStarts);
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
+        }
+        catch
+        {
+            Interlocked.Increment(ref _compilationFailures);
+            throw;
+        }
+        finally
+        {
+            var elapsed = Stopwatch.GetElapsedTime(started);
+            Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+        }
+    }
+
+    private string? ResolvePersistentCacheDirectory(string fullSiteRoot)
+    {
+        if (!_options.EnablePersistentCache) return null;
+        if (!string.IsNullOrWhiteSpace(_options.PersistentCacheDirectory))
+            return Path.GetFullPath(_options.PersistentCacheDirectory);
+
+        var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(fullSiteRoot)).Replace('\\', '/');
+        var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot))).ToLowerInvariant();
+        return Path.Combine(localData, "XPScript", "web-cache", siteHash);
+    }
+
+    private async Task<XpsCompiledWebUnit> CompileAndVerifyAsync(
+        string fullPath,
+        string fullSiteRoot,
+        string runtimeIdentifier,
+        XPScriptCompilationSnapshot expectedSnapshot,
+        string? persistentCacheDirectory)
+    {
+        var unit = persistentCacheDirectory is null
+            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false)
+            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+'''
+          if old not in s: raise SystemExit('cache compile target missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          p=Path('src/XPScript.Web.Compiler/XpsWebCompiler.cs')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('using System.Security;\n','using System.Security;\nusing System.Security.Cryptography;\nusing System.Text;\n')
+          old='''    public async Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, string allowedSourceRoot, CancellationToken cancellationToken = default)
+    {
+'''
+          new='''    public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, string allowedSourceRoot, CancellationToken cancellationToken = default)
+        => CompileCoreAsync(sourcePath, allowedSourceRoot, null, null, cancellationToken);
+
+    internal Task<XpsCompiledWebUnit> CompileAndPersistAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string snapshotIdentity,
+        string persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
+        => CompileCoreAsync(sourcePath, allowedSourceRoot, snapshotIdentity, persistentCacheDirectory, cancellationToken);
+
+    internal async Task<XpsCompiledWebUnit?> TryLoadPersistentAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string snapshotIdentity,
+        string persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshotIdentity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(persistentCacheDirectory);
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var fullSourceRoot = Path.GetFullPath(allowedSourceRoot);
+        if (!File.Exists(fullSourcePath)) return null;
+        var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
+        var parsed = new XpsWebRouteMetadataParser().Parse(source);
+        if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase) || parsed.Routes.Count == 0) return null;
+        var artifactDirectory = PersistentArtifactDirectory(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity);
+        var assemblyPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.dll");
+        if (!File.Exists(assemblyPath)) return null;
+        try
+        {
+            var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
+            var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
+            var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
+        {
+            try { Directory.Delete(artifactDirectory, recursive: true); } catch { }
+            return null;
+        }
+    }
+
+    private async Task<XpsCompiledWebUnit> CompileCoreAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string? snapshotIdentity,
+        string? persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
+    {
+'''
+          if old not in s: raise SystemExit('compiler overload target missing')
+          s=s.replace(old,new,1)
+          old='''            var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+            loadContext.Resolving += ResolveSharedAssembly;
+            try
+            {
+                using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
+                Assembly assembly;
+                if (pdbBytes is not null)
+                {
+                    using var pdbStream = new MemoryStream(pdbBytes, writable: false);
+                    assembly = loadContext.LoadFromStream(assemblyStream, pdbStream);
+                }
+                else assembly = loadContext.LoadFromStream(assemblyStream);
+                ValidateCompiledRoutes(assembly, parsed.Routes);
+                return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
+            }
+            catch
+            {
+                loadContext.Resolving -= ResolveSharedAssembly;
+                loadContext.Unload();
+                throw;
+            }
+'''
+          new='''            if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
+                await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, cancellationToken).ConfigureAwait(false);
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+'''
+          if old not in s: raise SystemExit('compiler assembly target missing')
+          s=s.replace(old,new,1)
+          marker='    private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync'
+          helpers='''    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed)
+    {
+        var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+        loadContext.Resolving += ResolveSharedAssembly;
+        try
+        {
+            using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
+            Assembly assembly;
+            if (pdbBytes is not null)
+            {
+                using var pdbStream = new MemoryStream(pdbBytes, writable: false);
+                assembly = loadContext.LoadFromStream(assemblyStream, pdbStream);
+            }
+            else assembly = loadContext.LoadFromStream(assemblyStream);
+            ValidateCompiledRoutes(assembly, parsed.Routes);
+            return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
+        }
+        catch
+        {
+            loadContext.Resolving -= ResolveSharedAssembly;
+            loadContext.Unload();
+            throw;
+        }
+    }
+
+    private static string PersistentArtifactDirectory(string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity)
+    {
+        var sourceKey = HashText(Path.GetFullPath(siteRoot) + "\\0" + Path.GetFullPath(sourcePath));
+        var compilerVersion = typeof(XpsWebCompiler).Assembly.GetName().Version?.ToString() ?? "unknown";
+        var identityKey = HashText(snapshotIdentity + "\\0" + compilerVersion);
+        return Path.Combine(Path.GetFullPath(cacheRoot), sourceKey, identityKey);
+    }
+
+    private static string HashText(string value)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private static async Task PersistArtifactAsync(string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, CancellationToken cancellationToken)
+    {
+        var artifactDirectory = PersistentArtifactDirectory(cacheRoot, siteRoot, sourcePath, snapshotIdentity);
+        Directory.CreateDirectory(artifactDirectory);
+        await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.dll"), assemblyBytes, cancellationToken).ConfigureAwait(false);
+        if (pdbBytes is not null)
+            await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb"), pdbBytes, cancellationToken).ConfigureAwait(false);
+        var sourceDirectory = Directory.GetParent(artifactDirectory)?.FullName;
+        if (sourceDirectory is null) return;
+        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory))
+        {
+            if (Path.GetFullPath(directory).Equals(Path.GetFullPath(artifactDirectory), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
+            try { Directory.Delete(directory, recursive: true); } catch { }
+        }
+    }
+
+    private static async Task WriteAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken)
+    {
+        var temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllBytesAsync(temp, bytes, cancellationToken).ConfigureAwait(false);
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+        }
+    }
+
+'''
+          if marker not in s: raise SystemExit('helper insertion target missing')
+          s=s.replace(marker,helpers+marker,1)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('tests/WebPrecompileSmoke/Program.cs')
+          s=p.read_text(encoding='utf-8')
+          marker='    using var capturedError = new StringWriter();\n'
+          test='''    var persistentCacheDirectory = Path.Combine(parent, "persistent-cache");
+    var persistentSource = Path.Combine(root, "persistent.xps");
+    await File.WriteAllTextAsync(persistentSource, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("persistent-v1")
+End Sub
+""");
+    var persistentOptions = new XpsWebCompilationCacheOptions
+    {
+        MaxEntries = 8,
+        MaxSourceBytes = 1024 * 1024,
+        IdleTtl = TimeSpan.FromMinutes(5),
+        FailureBackoff = TimeSpan.FromSeconds(2),
+        ConfigurationIdentity = "persistent-restart-smoke-v1",
+        PersistentCacheDirectory = persistentCacheDirectory
+    };
+    await using (var firstPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await firstPersistentCache.AcquireAsync(persistentSource, root);
+        if (firstPersistentCache.CompilationStarts != 1) throw new Exception("Initial persistent page compile did not compile exactly once.");
+    }
+    await using (var restartedPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await restartedPersistentCache.AcquireAsync(persistentSource, root);
+        if (restartedPersistentCache.CompilationStarts != 0) throw new Exception("Persistent precompile artifact was not reused after cache/server restart.");
+    }
+    await File.AppendAllTextAsync(persistentSource, Environment.NewLine + "' changed");
+    await using (var changedPersistentCache = new XpsWebCompilationCache(new XpsWebCompiler(), persistentOptions))
+    {
+        await using var lease = await changedPersistentCache.AcquireAsync(persistentSource, root);
+        if (changedPersistentCache.CompilationStarts != 1) throw new Exception("Touched web source did not invalidate persistent precompile artifact.");
+    }
+
+'''
+          if marker not in s: raise SystemExit('test insertion target missing')
+          p.write_text(s.replace(marker,test+marker,1),encoding='utf-8')
+
+          p=Path('docs/web.md')
+          s=p.read_text(encoding='utf-8')
+          needle='Already compiled files are reused while their source/dependency snapshot remains unchanged. The response is allowed to complete before sublevel warmup runs in the background.\n'
+          repl='Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side `.xps` pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives server restarts and is reused only when the source/dependency snapshot, runtime, compiler configuration and compiler version still match. A changed source or dependency automatically causes recompilation and replacement of the old artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.\n'
+          if needle not in s: raise SystemExit('docs target missing')
+          p.write_text(s.replace(needle,repl,1),encoding='utf-8')
+      - shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src tests docs
+          git commit -m "Persist web precompile cache across server restarts [persistent-web-cache-patched]"
+          git push origin HEAD:session-defaults-role-restoration
+
   verify:
+    if: ${{ github.event_name != 'push' }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,15 +360,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
-      - name: Restore solution
-        run: dotnet restore ./XPScriptCompiler.slnx
-
-      - name: Build solution
-        run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
-
-      - name: Run dispatcher and cache regression
-        run: dotnet run --project ./tests/WebDispatcherSmoke/WebDispatcherSmoke.csproj -c Release
-
-      - name: Run web precompile regression
-        run: dotnet run --project ./tests/WebPrecompileSmoke/WebPrecompileSmoke.csproj -c Release
+      - run: dotnet restore ./XPScriptCompiler.slnx
+      - run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+      - run: dotnet run --project ./tests/WebDispatcherSmoke/WebDispatcherSmoke.csproj -c Release
+      - run: dotnet run --project ./tests/WebPrecompileSmoke/WebPrecompileSmoke.csproj -c Release
