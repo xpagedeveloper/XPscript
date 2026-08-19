@@ -43,4 +43,5 @@ Do not pass untrusted user input directly to `Evaluate`. Validation must constra
 
 ## Related samples
 
-The repository contains evaluator regression samples including `samples/evaluate-xpscript.xps` and `samples/evaluate-array-helpers.xps`. Use those as executable compatibility references when extending Evaluate.
+- [evaluate-xpscript.xps](../samples/evaluate-xpscript.xps)
+- [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps)
