@@ -120,6 +120,10 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
     public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
+    public XPScriptUIField AddListBox(object? name) => AddField(name, name, "ListBox");
+    public XPScriptUIField AddListBox(object? name, object? label) => AddField(name, label, "ListBox");
+    public XPScriptUIField AddMultiListBox(object? name) => AddField(name, name, "MultiListBox");
+    public XPScriptUIField AddMultiListBox(object? name, object? label) => AddField(name, label, "MultiListBox");
     public XPScriptUIField AddRadioGroup(object? name) => AddField(name, name, "RadioGroup");
     public XPScriptUIField AddRadioGroup(object? name, object? label) => AddField(name, label, "RadioGroup");
     public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");
@@ -127,8 +131,8 @@ internal sealed class XPScriptUIForm
     public void AddOption(object? name, object? value)
     {
         var field = FindField(name);
-        if (field.Type is not ("Select" or "RadioGroup"))
-            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select and RadioGroup fields.");
+        if (field.Type is not ("Select" or "RadioGroup" or "ListBox" or "MultiListBox"))
+            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select, RadioGroup, ListBox and MultiListBox fields.");
         var option = XPScriptRuntime.CStr(value);
         if (option.Length is < 1 or > 256)
             throw new XPScriptRuntimeException(5, "UIForm option must contain between 1 and 256 characters.");
@@ -196,6 +200,14 @@ internal sealed class XPScriptUIForm
 
     public string GetFieldValueString(object? name) => XPScriptRuntime.CStr(GetFieldValue(name));
 
+    public object GetFieldValues(object? name)
+    {
+        var values = ReadSelectedValues(NormalizeFieldName(name));
+        var result = XPScriptNativeJson.CreateArray();
+        foreach (var value in values) result.Add(value);
+        return result;
+    }
+
     public void SetFieldValue(object? name, object? value)
     {
         var fieldName = NormalizeFieldName(name);
@@ -211,7 +223,11 @@ internal sealed class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
         if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+            foreach (var field in _fields)
+            {
+                if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
+                else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+            }
             return "OK";
         }
         XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
@@ -233,6 +249,47 @@ internal sealed class XPScriptUIForm
         var fieldName = NormalizeFieldName(name);
         return _fields.FirstOrDefault(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase))
             ?? throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' does not exist.");
+    }
+
+    private IReadOnlyList<string> ReadSelectedValues(string fieldName)
+    {
+        if (!_data.Contains(fieldName)) return Array.Empty<string>();
+        var value = _data.Get(fieldName);
+        if (value is XPScriptJsonArray array)
+        {
+            var values = new List<string>(array.Count);
+            for (var i = 0; i < array.Count; i++)
+            {
+                var item = XPScriptRuntime.CStr(array.Get(i));
+                if (item.Length > 0 && !values.Contains(item, StringComparer.Ordinal)) values.Add(item);
+            }
+            return values;
+        }
+        var scalar = XPScriptRuntime.CStr(value);
+        return scalar.Length == 0 ? Array.Empty<string>() : new[] { scalar };
+    }
+
+    private void ApplySubmittedValues(XPScriptUIField field, IReadOnlyList<string> submitted)
+    {
+        if (field.Type != "MultiListBox")
+            throw new XPScriptRuntimeException(5, "UIForm multi-value submission is only supported for MultiListBox fields.");
+
+        var selected = submitted
+            .Where(value => !string.IsNullOrEmpty(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (field.Required && selected.Length == 0)
+            throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is required.");
+        foreach (var value in selected)
+        {
+            if (!field.Options.Contains(value, StringComparer.Ordinal))
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' contains an unsupported option.");
+        }
+
+        if (selected.Length == 0 && !_data.Contains(field.Name)) return;
+        var array = XPScriptNativeJson.CreateArray();
+        foreach (var value in selected) array.Add(value);
+        _data.Set(field.Name, array);
     }
 
     private void ApplySubmittedValue(XPScriptUIField field, string submitted)
@@ -317,6 +374,7 @@ internal sealed class XPScriptUIForm
                 _data.Set(field.Name, submitted);
                 return;
             case "Select":
+            case "ListBox":
             case "RadioGroup":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
                 if (!field.Options.Contains(submitted, StringComparer.Ordinal))
@@ -338,7 +396,7 @@ internal sealed class XPScriptUIForm
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
-            var value = System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
+            var value = field.Type == "MultiListBox" ? string.Empty : System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
             if (field.Type == "HiddenField")
             {
                 html.Append("<input type=\"hidden\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\">");
@@ -372,13 +430,28 @@ internal sealed class XPScriptUIForm
                 case "UrlField": html.Append("<input type=\"url\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "Select":
-                    html.Append("<select id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">");
-                    if (!field.Required) html.Append("<option value=\"\"></option>");
+                case "ListBox":
+                    html.Append("<select id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"");
+                    if (field.Type == "ListBox") html.Append(" size=\"6\"");
+                    html.Append(required).Append(">");
+                    if (field.Type == "Select" && !field.Required) html.Append("<option value=\"\"></option>");
                     foreach (var option in field.Options)
                     {
                         var encodedOption = System.Net.WebUtility.HtmlEncode(option);
                         html.Append("<option value=\"").Append(encodedOption).Append("\"");
                         if (option == GetFieldValueString(field.Name)) html.Append(" selected");
+                        html.Append(">").Append(encodedOption).Append("</option>");
+                    }
+                    html.Append("</select>");
+                    break;
+                case "MultiListBox":
+                    var selectedValues = ReadSelectedValues(field.Name);
+                    html.Append("<select multiple size=\"6\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">");
+                    foreach (var option in field.Options)
+                    {
+                        var encodedOption = System.Net.WebUtility.HtmlEncode(option);
+                        html.Append("<option value=\"").Append(encodedOption).Append("\"");
+                        if (selectedValues.Contains(option, StringComparer.Ordinal)) html.Append(" selected");
                         html.Append(">").Append(encodedOption).Append("</option>");
                     }
                     html.Append("</select>");
@@ -425,6 +498,13 @@ internal static class XPScriptUIWebAdapter
     }
     public static string Method => InvokeString("Method");
     public static string FormFirst(string name) => InvokeString("FormFirst", name);
+    public static string[] FormValues(string name)
+    {
+        var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable.");
+        var method = type.GetMethod("FormValues", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete.");
+        return method.Invoke(null, [name]) as string[] ?? Array.Empty<string>();
+    }
     public static void WriteHtml(string html)
     {
         var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable.");
