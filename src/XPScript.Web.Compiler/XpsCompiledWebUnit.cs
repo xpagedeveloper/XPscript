@@ -11,6 +11,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
     private Assembly? _assembly;
     private readonly IReadOnlyDictionary<string, XpsWebRouteDescriptor> _routes;
     private readonly IReadOnlyList<string> _precompileTargets;
+    private readonly Func<string, XpsWebContext, Task>? _syntheticHandler;
 
     internal XpsCompiledWebUnit(
         AssemblyLoadContext loadContext,
@@ -24,6 +25,16 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         _precompileTargets = precompileTargets;
     }
 
+    internal XpsCompiledWebUnit(
+        IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes,
+        IReadOnlyList<string> precompileTargets,
+        Func<string, XpsWebContext, Task> syntheticHandler)
+    {
+        _routes = routes;
+        _precompileTargets = precompileTargets;
+        _syntheticHandler = syntheticHandler ?? throw new ArgumentNullException(nameof(syntheticHandler));
+    }
+
     public IReadOnlyDictionary<string, XpsWebRouteDescriptor> Routes => _routes;
     public IReadOnlyList<string> PrecompileTargets => _precompileTargets;
 
@@ -33,6 +44,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(context);
         if (!_routes.ContainsKey(procedureName))
             throw new XpsWebRouteException($"Procedure '{procedureName}' is not exported as a web route.");
+
+        if (_syntheticHandler is not null)
+        {
+            await _syntheticHandler(procedureName, context).ConfigureAwait(false);
+            return;
+        }
 
         var assembly = _assembly ?? throw new ObjectDisposedException(nameof(XpsCompiledWebUnit));
         var script = assembly.GetType("Script", throwOnError: true, ignoreCase: false)
