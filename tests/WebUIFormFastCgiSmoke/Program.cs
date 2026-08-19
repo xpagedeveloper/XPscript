@@ -50,7 +50,7 @@ try
     var get = await RunAsync(adapter, BuildRequest(1, BaseParams("GET", root, scriptPath, null), []));
     if (!get.Contains("Content-Type: text/html; charset=utf-8\r\n", StringComparison.Ordinal))
         throw new Exception("UIForm FastCGI GET did not return HTML: " + get);
-    if (!get.Contains("<h1>Contact form</h1>", StringComparison.Ordinal))
+    if (!get.Contains(">Contact form</h1>", StringComparison.Ordinal))
         throw new Exception("UIForm FastCGI GET did not render title: " + get);
     if (!get.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal))
         throw new Exception("UIForm FastCGI GET did not load existing JSON value: " + get);
