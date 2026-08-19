@@ -12,7 +12,7 @@ internal sealed class UIListViewEventPostProcessor
     private string _rowActionParameterName = string.Empty;
     private string _onSelectHandler = string.Empty;
     private string _onDoubleClickHandler = string.Empty;
-""");
+""", "event-fields");
 
         generated = ReplaceRequired(generated,
             """
@@ -67,7 +67,7 @@ internal sealed class UIListViewEventPostProcessor
     }
 
     public object? GetRow(object? index)
-""");
+""", "event-api");
 
         generated = ReplaceRequired(generated,
             """
@@ -93,7 +93,7 @@ internal sealed class UIListViewEventPostProcessor
             XPScriptUIWebAdapter.WriteHtml(RenderWebList());
             return "Pending";
         }
-""");
+""", "web-dispatch");
 
         generated = ReplaceRequired(generated,
             """
@@ -108,7 +108,7 @@ internal sealed class UIListViewEventPostProcessor
                 types: [typeof(string), typeof(Func<string, string, string>)],
                 modifiers: null)
             ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
-""");
+""", "desktop-method");
 
         generated = ReplaceRequired(generated,
             """
@@ -120,7 +120,7 @@ internal sealed class UIListViewEventPostProcessor
             hasOnSelect = _onSelectHandler.Length > 0,
             hasOnDoubleClick = _onDoubleClickHandler.Length > 0,
             columns = visibleColumns.Select(column => new
-""");
+""", "desktop-metadata");
 
         generated = ReplaceRequired(generated,
             """
@@ -131,7 +131,7 @@ internal sealed class UIListViewEventPostProcessor
             var callback = new Func<string, string, string>((eventName, rowIndex) => DispatchRegisteredEvent(eventName, rowIndex));
             resultJson = Convert.ToString(method.Invoke(null, [System.Text.Json.JsonSerializer.Serialize(request), callback]), System.Globalization.CultureInfo.InvariantCulture)
                 ?? string.Empty;
-""");
+""", "desktop-invoke");
 
         generated = ReplaceRequired(generated,
             """
@@ -159,7 +159,7 @@ internal sealed class UIListViewEventPostProcessor
         sb.Append("body.addEventListener('keydown',async e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('tr[data-row-index]');if(r){e.preventDefault();");
         if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
         sb.Append("go(r);}}});})();</script>");
-""");
+""", "web-events");
 
         generated = ReplaceRequired(generated,
             """
@@ -175,15 +175,15 @@ internal sealed class UIListViewEventPostProcessor
     }
 
     private static string NormalizeTarget(object? value)
-""");
+""", "handler-normalizer");
 
         return generated;
     }
 
-    private static string ReplaceRequired(string source, string oldValue, string newValue)
+    private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIListView event runtime.");
+            throw new CompilerException($"Unable to install UIListView event runtime ({stage}).");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
