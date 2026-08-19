@@ -10,19 +10,34 @@ try
 [Platform:browser-wasm]
 Sub Main()
     Dim form As New UIForm("Browser Smoke")
+    Dim data As New JsonObject
+    Dim markets As New JsonArray
     Dim grid As Variant
+    Call markets.Add("SE")
+    Call markets.Add("DK")
+    Call data.Set("markets", markets)
+    Call form.BindData(data)
     Call form.AddTextField("name", "Name")
     Call form.AddPasswordField("password", "Password")
     Call form.AddSelect("country", "Country")
     Call form.AddOption("country", "SE")
     Call form.AddOption("country", "NO")
+    Call form.AddListBox("office", "Office")
+    Call form.AddOption("office", "Stockholm")
+    Call form.AddOption("office", "Oslo")
+    Call form.AddMultiListBox("markets", "Markets")
+    Call form.AddOption("markets", "SE")
+    Call form.AddOption("markets", "NO")
+    Call form.AddOption("markets", "DK")
     Call form.SetRequired("name", True)
     Call form.SetLength("password", 8, 128)
     Set grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.SetFieldPosition("password", 6)
     Call grid.AddNewRow()
-    Call grid.SetFieldPosition("country", 6)
+    Call grid.SetFieldPosition("country", 4)
+    Call grid.SetFieldPosition("office", 4)
+    Call grid.SetFieldPosition("markets", 4)
     Call form.ShowDialog()
 End Sub
 """);
@@ -45,7 +60,7 @@ End Sub
     if (index is null || dotnetJs is null || browserJs is null) throw new Exception("WASM publish output was not cached.");
 
     var browserModule = await File.ReadAllTextAsync(browserJs);
-    foreach (var requiredMarker in new[] { "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result" })
+    foreach (var requiredMarker in new[] { "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result", "multilistbox", "selectedOptions", "select.multiple" })
     {
         if (!browserModule.Contains(requiredMarker, StringComparison.Ordinal))
             throw new Exception($"Browser UIForm renderer is missing parity marker '{requiredMarker}'.");
