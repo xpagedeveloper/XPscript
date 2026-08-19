@@ -3,7 +3,7 @@
 
 Sub Main()
     Dim form As New UIForm("Structural elements")
-    Dim grid As Variant
+    Dim grid As Object
 
     Call form.AddTextField("name", "Name")
     Call form.AddSeparator("customer_separator")
