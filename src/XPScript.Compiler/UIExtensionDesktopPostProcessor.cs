@@ -100,8 +100,8 @@ internal sealed class UIExtensionDesktopPostProcessor
             replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
         }
 
-        replaced = new UIWebBootstrapPostProcessor().Transform(replaced);
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        replaced = new UIWebBootstrapPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
 
