@@ -55,12 +55,27 @@ End Sub
 Sub MissingMethod()
 End Sub
 """);
-    AssertMetadataFailure("""
+
+    var originalError = Console.Error;
+    using var capturedError = new StringWriter();
+    try
+    {
+        Console.SetError(capturedError);
+        var tolerant = parser.Parse("""
 [Unknown]
 [Get]
 Sub BadAttribute()
 End Sub
 """);
+        if (!tolerant.Routes.ContainsKey("BadAttribute"))
+            throw new Exception("Unknown web route attribute prevented compilation.");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (!capturedError.ToString().Contains("Unsupported web route attribute '[Unknown]'", StringComparison.Ordinal))
+        throw new Exception("Unknown web route attribute did not produce a console error.");
 
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
     if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save"))
