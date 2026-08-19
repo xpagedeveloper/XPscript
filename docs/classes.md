@@ -103,4 +103,9 @@ Variables declared outside procedures can be `Public` or `Private`. Module stora
 
 ## Related samples
 
-See `samples/lists-classes.xps`, `samples/indexed-properties.xps`, `samples/module-globals.xps`, `samples/module-arrays.xps`, `samples/module-type-values.xps`, `samples/module-object-references.xps` and the Type value-copy samples for executable coverage.
+- [lists-classes.xps](../samples/lists-classes.xps)
+- [indexed-properties.xps](../samples/indexed-properties.xps)
+- [module-globals.xps](../samples/module-globals.xps)
+- [module-arrays.xps](../samples/module-arrays.xps)
+- [module-type-values.xps](../samples/module-type-values.xps)
+- [module-object-references.xps](../samples/module-object-references.xps)
