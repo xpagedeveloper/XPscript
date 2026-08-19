@@ -3,6 +3,7 @@ namespace XPScript.Compiler;
 internal sealed class UIListViewEventPostProcessor
 {
     private const string ListViewClassToken = "internal sealed class XPScriptUIListView";
+    private const string DesktopCallbackSentinel = "types: [typeof(string), typeof(Func<string, string, string>)]";
 
     public string Transform(string generated)
     {
@@ -105,13 +106,14 @@ if (XPScriptUIWebAdapter.IsAvailable)
 """, "web-dispatch");
         }
 
-        listSource = ReplaceRequired(listSource,
-            """
-        var method = hostType.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-            ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
-""",
-            """
-        var method = hostType.GetMethod(
+        if (!listSource.Contains(DesktopCallbackSentinel, StringComparison.Ordinal))
+        {
+            listSource = ReplaceBetweenRequired(
+                listSource,
+                "var method = hostType.GetMethod(",
+                "?? throw new XPScriptRuntimeException(5, \"XPScript desktop UIListView bridge is incomplete.\");",
+                """
+var method = hostType.GetMethod(
                 "ShowDialog",
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
                 binder: null,
@@ -119,6 +121,7 @@ if (XPScriptUIWebAdapter.IsAvailable)
                 modifiers: null)
             ?? throw new XPScriptRuntimeException(5, "XPScript desktop UIListView bridge is incomplete.");
 """, "desktop-method");
+        }
 
         listSource = ReplaceRequired(listSource,
             """
