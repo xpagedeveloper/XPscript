@@ -1,0 +1,45 @@
+name: Session Role Hardening Patch
+on:
+  push:
+    branches: [session-defaults-role-restoration]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[session-role-hardened]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: session-defaults-role-restoration
+      - shell: python
+        run: |
+          from pathlib import Path
+
+          p=Path('src/XPScript.Web.Runtime/XpsWebState.cs')
+          s=p.read_text(encoding='utf-8')
+          old='if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");'
+          new='if ((name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) || name.Equals(RolesKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session \'{name}\' must be a comma- or semicolon-separated string.");'
+          if old not in s: raise SystemExit('runtime role type target missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          p=Path('src/XPScript.Web.Cgi/XpsCgiPersistentState.cs')
+          s=p.read_text(encoding='utf-8')
+          old='''            if (name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)\n                throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");'''
+          new='''            if ((name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) || name.Equals(XpsWebSession.RolesKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string)\n                throw new InvalidOperationException($"Session '{name}' must be a comma- or semicolon-separated string.");'''
+          if old not in s: raise SystemExit('cgi role type target missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          p=Path('src/XPScript.Web.Runtime/XpsWebRouteMetadataParser.cs')
+          s=p.read_text(encoding='utf-8')
+          old='''                var role = attribute[5..].Trim();\n                if (role.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires a role name.");\n                requiredRules.Add("role:" + NormalizeRule(role));\n                continue;'''
+          new='''                var role = attribute[5..].Trim();\n                if (role.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires a role name.");\n                if (role.StartsWith('!')) forbiddenRules.Add("role:" + NormalizeRule(role[1..]));\n                else requiredRules.Add("role:" + NormalizeRule(role));\n                continue;'''
+          if old not in s: raise SystemExit('role route target missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+      - shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src
+          git commit -m "Harden session role validation and forbidden roles [session-role-hardened]"
+          git push origin HEAD:session-defaults-role-restoration
