@@ -73,36 +73,56 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v1"
+        ConfigurationIdentity = "precompile-smoke-v2-one-hop"
     });
 
     await using var dispatcher = new XpsWebDispatcher(root, cache);
 
-    if (cache.CompilationStarts != 3)
-        throw new Exception($"Startup precompile expected index plus two explicit targets, got {cache.CompilationStarts} compilations.");
+    // Startup warms index.xps and only its direct neighbours:
+    // two [PreCompile] targets plus two static href/src links.
+    if (cache.CompilationStarts != 5)
+        throw new Exception($"Startup one-hop precompile expected 5 compilations, got {cache.CompilationStarts}.");
 
     await AssertAlreadyWarmAsync(cache, indexPath, root, "index.xps");
     await AssertAlreadyWarmAsync(cache, directPath, root, "direct.xps from .xsp directive");
     await AssertAlreadyWarmAsync(cache, rootedPath, root, "root-relative PreCompile target");
+    await AssertAlreadyWarmAsync(cache, linkedPath, root, "relative static source link");
+    await AssertAlreadyWarmAsync(cache, pagePath, root, "root-relative static source link");
 
-    var beforeIndexRequest = cache.CompilationStarts;
-    var indexResponse = await SendAsync(dispatcher, root, "/");
+    // child.xps is one level beyond page.xps and must NOT be warmed yet.
+    var beforeChildProbe = cache.CompilationStarts;
+    await using (var childLease = await cache.AcquireAsync(childPath, root))
+    {
+        if (cache.CompilationStarts != beforeChildProbe + 1)
+            throw new Exception("child.xps was unexpectedly precompiled recursively at startup.");
+    }
+
+    // Use a fresh cache/dispatcher to verify that loading page.xps warms exactly one more hop.
+    await using var secondCache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
+    {
+        MaxEntries = 32,
+        MaxSourceBytes = 1024 * 1024,
+        IdleTtl = TimeSpan.FromMinutes(5),
+        FailureBackoff = TimeSpan.FromSeconds(2),
+        ConfigurationIdentity = "precompile-smoke-v2-load-hop"
+    });
+    await using var secondDispatcher = new XpsWebDispatcher(root, secondCache);
+
+    var beforeIndexRequest = secondCache.CompilationStarts;
+    var indexResponse = await SendAsync(secondDispatcher, root, "/");
     if (indexResponse.StatusCode != 200) throw new Exception($"Index request failed with {indexResponse.StatusCode}.");
-    if (cache.CompilationStarts != beforeIndexRequest + 2)
-        throw new Exception("HTML link discovery did not precompile linked.xps and /sub/page.xps exactly once.");
+    if (secondCache.CompilationStarts != beforeIndexRequest)
+        throw new Exception("Loading index.xps should not recursively precompile beyond its already-warmed direct neighbours.");
 
-    await AssertAlreadyWarmAsync(cache, linkedPath, root, "relative HTML link");
-    await AssertAlreadyWarmAsync(cache, pagePath, root, "root-relative HTML link");
-
-    var beforePageRequest = cache.CompilationStarts;
-    var pageResponse = await SendAsync(dispatcher, root, "/sub/page.xps");
+    var beforePageRequest = secondCache.CompilationStarts;
+    var pageResponse = await SendAsync(secondDispatcher, root, "/sub/page.xps");
     if (pageResponse.StatusCode != 200) throw new Exception($"Sub page request failed with {pageResponse.StatusCode}.");
-    if (cache.CompilationStarts != beforePageRequest + 1)
-        throw new Exception("Relative link on a loaded sub-page did not precompile /sub/child.xps.");
+    if (secondCache.CompilationStarts != beforePageRequest + 1)
+        throw new Exception("Loading page.xps did not precompile exactly one additional hop to child.xps.");
 
-    await AssertAlreadyWarmAsync(cache, childPath, root, "relative HTML link from subdirectory");
+    await AssertAlreadyWarmAsync(secondCache, childPath, root, "child.xps after page.xps load");
 
-    Console.WriteLine("WEB-PRECOMPILE-SMOKE=OK");
+    Console.WriteLine("WEB-PRECOMPILE-ONE-HOP=OK");
 }
 finally
 {
