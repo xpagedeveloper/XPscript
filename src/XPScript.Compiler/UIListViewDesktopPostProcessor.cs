@@ -24,8 +24,11 @@ internal sealed class UIListViewDesktopPostProcessor
             if (index < 0)
                 throw new CompilerException("Unable to install UIListView desktop runtime bridge (metadata).");
             index += token.Length;
+            var newline = Environment.NewLine;
             listSource = listSource[..index]
-                + "\n            sortable = _sortable,\n            filterEnabled = _filterEnabled,\n            hasRowAction = _rowActionTarget.Length > 0,"
+                + newline + "            sortable = _sortable,"
+                + newline + "            filterEnabled = _filterEnabled,"
+                + newline + "            hasRowAction = _rowActionTarget.Length > 0,"
                 + listSource[index..];
         }
 
