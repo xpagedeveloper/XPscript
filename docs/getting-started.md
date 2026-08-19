@@ -14,6 +14,8 @@
 - [CGI hosting](#cgi-hosting)
 - [CGI configuration](#cgi-configuration)
 - [Deployment packages](#deployment-packages)
+- [Publish parameters](#publish-parameters)
+- [Which package to deploy](#which-package-to-deploy)
 
 ## Build the tools
 
@@ -166,10 +168,73 @@ Important CGI values include `REQUEST_METHOD`, `QUERY_STRING`, `CONTENT_TYPE`, `
 
 ## Deployment packages
 
-Use `scripts/publish-distributions.ps1` to create clean runtime packages instead of copying `src` directories:
+Production systems should use published distributions instead of copying repository `src` directories.
+
+Publish all packages:
 
 ```powershell
 ./scripts/publish-distributions.ps1 -Package all
 ```
 
-Outputs are created below `artifacts/distributions/` for compiler, desktop runtime, CGI, FastCGI and Kestrel deployment.
+The script creates:
+
+```text
+artifacts/distributions/
+  compiler/
+  desktop-runtime/
+  cgi/
+  fastcgi/
+  kestrel/
+```
+
+Publish one package only:
+
+```powershell
+./scripts/publish-distributions.ps1 -Package compiler
+./scripts/publish-distributions.ps1 -Package desktop-runtime
+./scripts/publish-distributions.ps1 -Package cgi
+./scripts/publish-distributions.ps1 -Package fastcgi
+./scripts/publish-distributions.ps1 -Package kestrel
+```
+
+Use an explicit runtime identifier when required:
+
+```powershell
+./scripts/publish-distributions.ps1 -Package compiler -Runtime win-x64
+./scripts/publish-distributions.ps1 -Package kestrel -Runtime linux-x64
+```
+
+Create a self-contained package:
+
+```powershell
+./scripts/publish-distributions.ps1 -Package cgi -Runtime win-x64 -SelfContained
+```
+
+Framework-dependent output requires the matching .NET runtime on the target machine. Self-contained output includes the .NET runtime for the selected RID. Web hosts that dynamically compile `.xps` files still need the SDK/toolchain required by the web compiler.
+
+## Publish parameters
+
+| Parameter | Purpose |
+|---|---|
+| `-Package all` | Publish all distribution types. |
+| `-Package compiler` | Publish the compiler package. |
+| `-Package desktop-runtime` | Publish desktop UI runtime dependencies. |
+| `-Package cgi` | Publish the CGI host. |
+| `-Package fastcgi` | Publish the FastCGI host bundle. |
+| `-Package kestrel` | Publish the Kestrel host bundle. |
+| `-Configuration Release` | Select the .NET build configuration. `Release` is the default. |
+| `-Runtime RID` | Publish for an explicit runtime identifier. |
+| `-SelfContained` | Include the .NET runtime for the selected RID. |
+| `-OutputRoot PATH` | Override the default `artifacts/distributions` output directory. |
+
+## Which package to deploy
+
+| Target | Package |
+|---|---|
+| Developer or build server | `compiler` |
+| Compiled desktop application | Application output plus required `desktop-runtime` dependencies |
+| CGI web server | `cgi` |
+| FastCGI web server | `fastcgi` |
+| Standalone Kestrel web server | `kestrel` |
+
+The FastCGI and Kestrel packages currently publish the `XPScript.Cli` dependency closure because those commands are hosted by the CLI. A production web server does not need the repository source tree. It needs the selected distribution and the site's `.xps` files.
