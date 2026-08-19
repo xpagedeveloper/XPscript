@@ -437,9 +437,30 @@ public static class DesktopFormHost
       if (field.DateMaximum.Length > 0 && DateTime.TryParseExact(field.DateMaximum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMaximum) && dateValue > dateMaximum)
           return $"{field.LabelOrName()} must be on or before {field.DateMaximum}.";
       break;
-            case "TimeField": if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format."; break;
-            case "DateTimeField": if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid local date/time."; break;
-            case "MonthField": if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format."; break;
+            case "TimeField":
+      if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeValue))
+          return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format.";
+      if (field.TimeMinimum.Length > 0 && TimeOnly.TryParseExact(field.TimeMinimum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMinimum) && timeValue < timeMinimum)
+          return $"{field.LabelOrName()} must be at or after {field.TimeMinimum}.";
+      if (field.TimeMaximum.Length > 0 && TimeOnly.TryParseExact(field.TimeMaximum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMaximum) && timeValue > timeMaximum)
+          return $"{field.LabelOrName()} must be at or before {field.TimeMaximum}.";
+      break;
+            case "DateTimeField":
+      if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
+          return $"{field.LabelOrName()} must contain a valid local date/time.";
+      if (field.DateTimeMinimum.Length > 0 && DateTime.TryParseExact(field.DateTimeMinimum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMinimum) && dateTimeValue < dateTimeMinimum)
+          return $"{field.LabelOrName()} must be on or after {field.DateTimeMinimum}.";
+      if (field.DateTimeMaximum.Length > 0 && DateTime.TryParseExact(field.DateTimeMaximum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMaximum) && dateTimeValue > dateTimeMaximum)
+          return $"{field.LabelOrName()} must be on or before {field.DateTimeMaximum}.";
+      break;
+            case "MonthField":
+      if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthValue))
+          return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format.";
+      if (field.MonthMinimum.Length > 0 && DateTime.TryParseExact(field.MonthMinimum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMinimum) && monthValue < monthMinimum)
+          return $"{field.LabelOrName()} must be on or after {field.MonthMinimum}.";
+      if (field.MonthMaximum.Length > 0 && DateTime.TryParseExact(field.MonthMaximum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMaximum) && monthValue > monthMaximum)
+          return $"{field.LabelOrName()} must be on or before {field.MonthMaximum}.";
+      break;
             case "ColorField": if (!Regex.IsMatch(text, "^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant)) return $"{field.LabelOrName()} must contain a color in #RRGGBB format."; break;
             case "EmailField":
                 try { var address = new MailAddress(text); if (!address.Address.Equals(text, StringComparison.OrdinalIgnoreCase)) return $"{field.LabelOrName()} must contain a valid email address."; }

@@ -20,6 +20,9 @@ Sub Main()
     Call form.AddTextField("name", "Name")
     Call form.AddPasswordField("password", "Password")
     Call form.AddDateField("birthday", "Birthday")
+    Call form.AddTimeField("start_time", "Start time")
+    Call form.AddDateTimeField("meeting", "Meeting")
+    Call form.AddMonthField("billing_month", "Billing month")
     Call form.AddSeparator("identity_separator")
     Call form.AddSelect("country", "Country")
     Call form.AddOption("country", "SE")
@@ -36,6 +39,9 @@ Sub Main()
     Call form.SetLength("password", 8, 128)
     Call form.SetRegexValidation("name", "^[A-Za-z ]+$")
     Call form.SetDateRange("birthday", "2020-01-01", "2030-12-31")
+    Call form.SetTimeRange("start_time", "08:00", "18:00")
+    Call form.SetDateTimeRange("meeting", "2026-01-01T08:00", "2026-12-31T18:00")
+    Call form.SetMonthRange("billing_month", "2026-01", "2026-12")
     Call form.SetFieldPlaceholder("name", "Enter your name")
     Call form.SetFieldTooltip("name", "Customer display name")
     Call form.SetFieldTooltip("country", "Select a country")
@@ -72,7 +78,7 @@ End Sub
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
-        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.dateMinimum", "field.dateMaximum", "field.tooltip",
+        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
         "type === 'separator'", "type === 'spacer'"
     })
     {

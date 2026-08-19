@@ -31,6 +31,12 @@ public sealed record DesktopFormField(
     public string RegexPattern { get; init; } = string.Empty;
     public string DateMinimum { get; init; } = string.Empty;
     public string DateMaximum { get; init; } = string.Empty;
+    public string TimeMinimum { get; init; } = string.Empty;
+    public string TimeMaximum { get; init; } = string.Empty;
+    public string DateTimeMinimum { get; init; } = string.Empty;
+    public string DateTimeMaximum { get; init; } = string.Empty;
+    public string MonthMinimum { get; init; } = string.Empty;
+    public string MonthMaximum { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
 }
 

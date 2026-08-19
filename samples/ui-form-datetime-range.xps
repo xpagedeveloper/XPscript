@@ -7,13 +7,22 @@ Sub Main()
 
     Call data.Set("meeting", "2026-08-18T18:30")
     Call data.Set("volume", 50)
+    Call data.Set("start_time", "09:30")
+    Call data.Set("billing_month", "2026-08")
     Call form.BindData(data)
 
     Call form.AddDateTimeField("meeting", "Meeting")
+    Call form.AddTimeField("start_time", "Start time")
+    Call form.AddMonthField("billing_month", "Billing month")
     Call form.AddRangeField("volume", "Volume")
     Call form.SetNumberRange("volume", 0, 100)
+    Call form.SetTimeRange("start_time", "08:00", "18:00")
+    Call form.SetDateTimeRange("meeting", "2026-01-01T00:00", "2026-12-31T23:59")
+    Call form.SetMonthRange("billing_month", "2026-01", "2026-12")
 
     Print "MEETING=" & form.GetFieldValueString("meeting")
+    Print "START_TIME=" & form.GetFieldValueString("start_time")
+    Print "BILLING_MONTH=" & form.GetFieldValueString("billing_month")
     Print "VOLUME=" & form.GetFieldValueString("volume")
     Print "FIELD_COUNT=" & CStr(form.FieldCount)
 End Sub

@@ -106,6 +106,21 @@ Placeholder and tooltip values can be changed from UI event handlers. Reactive u
 
 Empty text clears an existing placeholder or tooltip. Hint text rejects control characters. Placeholder text is limited to 512 characters and tooltip text to 1024 characters.
 
+## Date and time ranges
+
+UIForm supports range validation for date and time controls. The same rules are enforced by desktop, server-rendered web and browser-wasm.
+
+```xpscript
+Call form.SetDateRange("birthday", "2020-01-01", "2030-12-31")
+Call form.SetTimeRange("start_time", "08:00", "18:00")
+Call form.SetDateTimeRange("meeting", "2026-01-01T08:00", "2026-12-31T18:00")
+Call form.SetMonthRange("billing_month", "2026-01", "2026-12")
+```
+
+`SetDateRange` applies to `DateField` and uses `yyyy-MM-dd`. `SetTimeRange` applies to `TimeField` and accepts `HH:mm` or `HH:mm:ss`. `SetDateTimeRange` applies to `DateTimeField` and accepts local values in `yyyy-MM-ddTHH:mm` or `yyyy-MM-ddTHH:mm:ss`. `SetMonthRange` applies to `MonthField` and uses `yyyy-MM`.
+
+The minimum value must not be greater than the maximum value. Server-side validation is authoritative. Web and browser-wasm also map the configured limits to native HTML `min` and `max` constraints for immediate client-side feedback.
+
 ## Grid layout
 
 The form is the top container. Add a grid with a configurable number of columns:
