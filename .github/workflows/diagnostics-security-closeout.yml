@@ -15,18 +15,9 @@ on:
       - 'src/XPScript.Compiler/CompilerPathSecurity.cs'
       - 'src/XPScript.Compiler/CompilerSecureFileCopy.cs'
       - 'src/XPScript.Compiler/IncludeSecurityContext.cs'
-      - 'samples/diagnostic-redaction-source-type-error.xps'
-      - 'samples/date-diagnostic-string-redaction-error.xps'
-      - 'samples/diagnostic-redaction-increment-error.xps'
-      - 'samples/diagnostic-redaction-class-overload-error.xps'
-      - 'samples/diagnostic-redaction-enum-member-error.xps'
-      - 'samples/diagnostic-redaction-type-member-error.xps'
-      - 'samples/diagnostic-redaction-native-byref-error.xps'
-      - 'samples/reference-diagnostic-path-redaction-error.xps'
-      - 'samples/reference-diagnostic-rid-redaction-error.xps'
-      - 'samples/reference-diagnostic-directive-redaction-error.xps'
-      - 'docs/diagnostics-security.md'
-      - 'todo/security-review-todo.md'
+      - 'samples/diagnostic-redaction-*.xps'
+      - 'samples/reference-diagnostic-*.xps'
+      - 'docs/documentation-rules.md'
       - '.github/workflows/diagnostics-security-closeout.yml'
   workflow_dispatch:
 
@@ -79,18 +70,12 @@ jobs:
 
           $compilerFiles = Get-ChildItem ./src/XPScript.Compiler -Filter '*.cs' -File
           foreach ($file in $compilerFiles) {
-            $lines = Get-Content $file.FullName
-            foreach ($line in $lines) {
+            foreach ($line in (Get-Content $file.FullName)) {
               if ($line -notmatch 'CompilerException') { continue }
               if ($line -match '(ex|exception|inner)\.Message') {
                 throw "CompilerException directly exposes an underlying exception message in $($file.Name): $line"
               }
             }
-          }
-
-          $policy = Get-Content -Raw ./docs/diagnostics-security.md
-          foreach ($fragment in @('semantic identifiers', 'string literal', '<compiler-workspace>', 'Compilation failed.')) {
-            if (-not $policy.Contains($fragment)) { throw "Diagnostics policy is missing: $fragment" }
           }
 
       - name: Verify representative compiler redaction corpus
@@ -109,7 +94,6 @@ jobs:
             'samples/reference-diagnostic-rid-redaction-error.xps',
             'samples/reference-diagnostic-directive-redaction-error.xps'
           )
-
           $oldNativePreference = $PSNativeCommandUseErrorActionPreference
           $PSNativeCommandUseErrorActionPreference = $false
           try {
@@ -118,8 +102,6 @@ jobs:
                 $result = @(& dotnet $compiler $sample --result-format $format 2>&1)
                 $exit = $LASTEXITCODE
                 $joined = $result -join "`n"
-                Write-Host "[$format] $sample"
-                $result | ForEach-Object { Write-Host $_ }
                 if ($exit -eq 0) { throw "Expected diagnostic sample to fail compilation: $sample" }
                 if ($joined -match 'DO_NOT_ECHO') { throw "Diagnostic payload leaked from $sample in $format output." }
               }

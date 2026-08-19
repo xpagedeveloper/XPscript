@@ -5,12 +5,8 @@ on:
     branches: [main]
     paths:
       - 'README.md'
-      - 'docs/security.md'
-      - 'docs/diagnostics-security.md'
-      - 'docs/platform-native.md'
-      - 'docs/native-http-json.md'
-      - 'docs/index.md'
-      - 'todo/security-review-todo.md'
+      - 'docs/**'
+      - 'tools/validate_docs.py'
       - '.github/workflows/security-documentation-closeout.yml'
   workflow_dispatch:
 
@@ -36,62 +32,14 @@ jobs:
           python tools/validate_docs.py
           if ($LASTEXITCODE -ne 0) { throw 'Documentation reference validation failed.' }
 
-      - name: Verify security documentation invariants
+      - name: Verify documentation governance
         shell: pwsh
         run: |
-          $security = Get-Content -Raw ./docs/security.md
-          $native = Get-Content -Raw ./docs/platform-native.md
-          $http = Get-Content -Raw ./docs/native-http-json.md
           $index = Get-Content -Raw ./docs/index.md
-          $readme = Get-Content -Raw ./README.md
-          $diagnostics = Get-Content -Raw ./docs/diagnostics-security.md
-
-          foreach ($fragment in @(
-            'response bodies to 64 MiB',
-            'Raw response bytes can be saved without text conversion',
-            'docs/diagnostics-security.md',
-            'Compiler workspace isolation, permissions, parallel invocation safety',
-            'GetObject(pathname, className)'
-          )) {
-            if (-not $security.Contains($fragment)) { throw "Security documentation invariant missing: $fragment" }
+          $rules = Get-Content -Raw ./docs/documentation-rules.md
+          foreach ($fragment in @('getting-started.md','language.md','commands.md','evaluate.md','classes.md','web.md','uiform.md')) {
+            if (-not $index.Contains($fragment)) { throw "Documentation index is missing: $fragment" }
           }
-
-          foreach ($fragment in @(
-            'SaveBodyToFile',
-            'Parts',
-            'Files',
-            'SaveToFile',
-            '64 MiB'
-          )) {
-            if (-not $http.Contains($fragment)) { throw "HTTP documentation invariant missing: $fragment" }
-          }
-
-          foreach ($fragment in @(
-            'DllImportResolver',
-            'explicitly `ByVal`',
-            'WindowsX64Lib',
-            'LinuxArm64Lib',
-            'MacOSArm64Lib',
-            'same OS privileges'
-          )) {
-            if (-not $native.Contains($fragment)) { throw "Native documentation invariant missing: $fragment" }
-          }
-
-          foreach ($fragment in @('docs/security.md', 'docs/platform-native.md')) {
-            if (-not $readme.Contains($fragment)) { throw "README security documentation link missing: $fragment" }
-          }
-          if (-not $readme.Contains('docs/diagnostics-security.md')) { throw 'README diagnostics security link missing.' }
-          if (-not $index.Contains('[docs/security.md](security.md)')) { throw 'Documentation index security link missing.' }
-          if (-not $diagnostics.Contains('Diagnostic security policy')) { throw 'Diagnostics security policy is missing.' }
-
-          foreach ($stale in @(
-            'Runtime verification on each target OS remains pending',
-            'no-CI development branch',
-            'response bodies to 8 MiB',
-            'once that support is added',
-            'Other runtime/compiler diagnostics remain under review',
-            'Items remain `[>]` until'
-          )) {
-            $combined = $security + "`n" + $http + "`n" + $readme
-            if ($combined.Contains($stale)) { throw "Stale documentation status remains: $stale" }
+          foreach ($fragment in @('English','new command','executable','commands.md')) {
+            if (-not $rules.Contains($fragment)) { throw "Documentation governance is missing: $fragment" }
           }

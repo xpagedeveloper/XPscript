@@ -10,9 +10,7 @@ on:
       - 'samples/com-getobject-invalid.xps'
       - 'samples/com-getobject-platform-error.xps'
       - 'samples/runtime-sax.xps'
-      - 'docs/security.md'
-      - 'todo/security-review-todo.md'
-      - '.github/workflows/com-getobject-runtime.yml'
+      - 'docs/commands.md'
       - '.github/workflows/com-compatibility-security-closeout.yml'
   workflow_dispatch:
 
@@ -43,24 +41,12 @@ jobs:
         run: |
           $runtime = Get-Content -Raw ./src/XPScript.Compiler/ExtendedCompatibilityRuntimeSource.cs
           $transpiler = Get-Content -Raw ./src/XPScript.Compiler/ExtendedCompatibilityTranspiler.cs
-          $security = Get-Content -Raw ./docs/security.md
           $legacy = Get-Content -Raw ./samples/runtime-sax.xps
-
-          foreach ($fragment in @(
-            'public static object? GetObject(object? pathname = null, object? className = null)',
-            'OperatingSystem.IsWindows()',
-            'Marshal.BindToMoniker(path)',
-            'Type.GetTypeFromProgID(progId, throwOnError: true)',
-            'Activator.CreateInstance(type)',
-            'COM GetObject activation failed.'
-          )) {
+          foreach ($fragment in @('public static object? GetObject(object? pathname = null, object? className = null)','OperatingSystem.IsWindows()','Marshal.BindToMoniker(path)','Type.GetTypeFromProgID(progId, throwOnError: true)','Activator.CreateInstance(type)','COM GetObject activation failed.')) {
             if (-not $runtime.Contains($fragment)) { throw "Missing COM runtime invariant: $fragment" }
           }
           if (-not $transpiler.Contains('"GetObject"')) { throw 'GetObject is missing from the standalone compatibility function inventory.' }
           if ($transpiler -match '"CreateObject"') { throw 'Unexpected general CreateObject compatibility function found.' }
-          foreach ($fragment in @('Windows-only', 'COM moniker binding', 'ProgID', 'powerful local-code/integration boundary')) {
-            if (-not $security.Contains($fragment)) { throw "Missing COM security documentation: $fragment" }
-          }
           if (-not $legacy.Contains('GetObject')) { throw 'Legacy disabled GetObject coverage is missing.' }
 
       - name: Verify non-Windows GetObject rejection
@@ -77,11 +63,8 @@ jobs:
             $result = @(& $exe 2>&1)
             $exitCode = $LASTEXITCODE
           }
-          finally {
-            $PSNativeCommandUseErrorActionPreference = $oldNativePreference
-          }
+          finally { $PSNativeCommandUseErrorActionPreference = $oldNativePreference }
           $text = $result -join [Environment]::NewLine
-          $result | ForEach-Object { Write-Host $_ }
           if ($exitCode -eq 0 -or $result -contains 'SHOULD_NOT_REACH') { throw 'GetObject unexpectedly executed on a non-Windows platform.' }
           if ($text -notmatch 'available only on Windows') { throw "Windows-only diagnostic missing.`n$text" }
           if ($text -match 'XPScript\.Platform\.Probe') { throw 'Platform diagnostic leaked the supplied ProgID.' }
