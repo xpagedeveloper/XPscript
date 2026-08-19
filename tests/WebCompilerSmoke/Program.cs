@@ -43,20 +43,36 @@ try
     if (save.Policy.AllowAnonymous || !save.Policy.Methods.Contains("POST")) throw new Exception("Authenticated POST metadata mismatch.");
     if (!save.Policy.RequiredRules.Contains("admin") || !save.Policy.ForbiddenRules.Contains("blocked")) throw new Exception("Route rule metadata mismatch.");
 
-    AssertMetadataFailure("""
+    var originalError = Console.Error;
+    using var conflictError = new StringWriter();
+    try
+    {
+        Console.SetError(conflictError);
+        var conflict = parser.Parse("""
 [Anonymous]
 [Authenticated]
 [Get]
-Sub Bad()
+Sub Protected()
 End Sub
 """);
+        if (!conflict.Routes.TryGetValue("Protected", out var protectedRoute))
+            throw new Exception("Authenticated/Anonymous conflict prevented route parsing.");
+        if (protectedRoute.Policy.AllowAnonymous)
+            throw new Exception("[Authenticated] must take precedence over [Anonymous].");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (!conflictError.ToString().Contains("[Authenticated] takes precedence", StringComparison.Ordinal))
+        throw new Exception("Authenticated/Anonymous conflict did not produce a console error.");
+
     AssertMetadataFailure("""
 [Anonymous]
 Sub MissingMethod()
 End Sub
 """);
 
-    var originalError = Console.Error;
     using var capturedError = new StringWriter();
     try
     {
