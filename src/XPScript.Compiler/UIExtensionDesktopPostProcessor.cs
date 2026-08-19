@@ -7,6 +7,23 @@ internal sealed class UIExtensionDesktopPostProcessor
 {
     private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
     private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
+    private const string BridgeLookupOld = "    private static Type? BridgeType => Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);";
+    private const string BridgeLookupNew = """
+    private static Type? BridgeType
+    {
+        get
+        {
+            var direct = Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);
+            if (direct is not null) return direct;
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var candidate = assembly.GetType("XPScript.Web.Runtime.XpsUIWebRuntimeBridge", throwOnError: false, ignoreCase: false);
+                if (candidate is not null) return candidate;
+            }
+            return null;
+        }
+    }
+""";
 
     private static readonly Regex ShowDialogPattern = new(
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
@@ -46,17 +63,9 @@ internal sealed class UIExtensionDesktopPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        // Some compiler paths can run post-processing more than once. Once the
-        // desktop runtime is present, all UIForm/UIListView extensions below have
-        // already been installed and must not be appended/transformed again.
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
 
-        // Core generated source contains the base UI runtime even for scripts that
-        // never use UI features. Only inspect the generated script portion before
-        // that runtime declaration. This prevents normal scripts (Evaluate, web
-        // runtime probes, CLI programs, etc.) from being forced through UIForm
-        // postprocessors whose structural markers are intentionally UI-specific.
         if (!NeedsUiExtensions(generated))
             return generated;
 
@@ -80,7 +89,16 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
         replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
         replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
-        return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        return HardenWebBridgeLookup(replaced);
+    }
+
+    private static string HardenWebBridgeLookup(string generated)
+    {
+        if (generated.Contains(BridgeLookupNew, StringComparison.Ordinal)) return generated;
+        if (!generated.Contains(BridgeLookupOld, StringComparison.Ordinal))
+            throw new CompilerException("Unable to harden generated XPScript web UI bridge lookup.");
+        return generated.Replace(BridgeLookupOld, BridgeLookupNew, StringComparison.Ordinal);
     }
 
     private static bool NeedsUiExtensions(string generated)
