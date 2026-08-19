@@ -88,7 +88,7 @@ public static class DesktopListViewHost
         var sortAscending = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         var listItems = new ObservableCollection<ListBoxItem>();
         var list = new ListBox { MinHeight = 240, ItemsSource = listItems };
-        var filter = new TextBox { Watermark = "Filter visible columns", IsVisible = filterEnabled };
+        var filter = new TextBox { PlaceholderText = "Filter visible columns", IsVisible = filterEnabled };
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var rebuilding = false;
         Window? window = null;
