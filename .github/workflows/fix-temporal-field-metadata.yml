@@ -1,0 +1,59 @@
+name: Fix Temporal Field Metadata
+on:
+  push:
+    branches: [uiform-temporal-range-validation]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[temporal-field-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: uiform-temporal-range-validation
+      - name: Patch stable field metadata insertion point
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/XPScript.Compiler/UIFormTemporalRangeValidationPostProcessor.cs')
+          text = p.read_text(encoding='utf-8')
+          old = '''        generated = ReplaceRequired(
+            generated,
+            "    public string DateMaximum { get; set; } = string.Empty;\\n",
+            """
+    public string DateMaximum { get; set; } = string.Empty;
+    public string TimeMinimum { get; set; } = string.Empty;
+    public string TimeMaximum { get; set; } = string.Empty;
+    public string DateTimeMinimum { get; set; } = string.Empty;
+    public string DateTimeMaximum { get; set; } = string.Empty;
+    public string MonthMinimum { get; set; } = string.Empty;
+    public string MonthMaximum { get; set; } = string.Empty;
+""",
+            "field-metadata");'''
+          new = '''        generated = ReplaceRequired(
+            generated,
+            "    public List<string> Options { get; } = [];\\n",
+            """
+    public string TimeMinimum { get; set; } = string.Empty;
+    public string TimeMaximum { get; set; } = string.Empty;
+    public string DateTimeMinimum { get; set; } = string.Empty;
+    public string DateTimeMaximum { get; set; } = string.Empty;
+    public string MonthMinimum { get; set; } = string.Empty;
+    public string MonthMaximum { get; set; } = string.Empty;
+    public List<string> Options { get; } = [];
+""",
+            "field-metadata");'''
+          if old not in text:
+              if 'public string TimeMinimum' in text and 'public List<string> Options' in text:
+                  raise SystemExit('Expected temporal metadata block not found.')
+              raise SystemExit('Patch target missing.')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Compiler/UIFormTemporalRangeValidationPostProcessor.cs
+          git commit -m "Use stable temporal field metadata insertion point [temporal-field-fixed]"
+          git push origin HEAD:uiform-temporal-range-validation
