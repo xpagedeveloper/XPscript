@@ -63,6 +63,13 @@ internal sealed class UIExtensionDesktopPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
+        // Keep all downstream source transforms deterministic across Windows,
+        // macOS and Linux. Several generated-runtime markers are intentionally
+        // expressed with LF because the emitted C# itself is platform-neutral.
+        // Normalize CRLF/lone-CR once at the pipeline boundary rather than making
+        // every individual UI postprocessor depend on the host OS line ending.
+        generated = generated.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
 
@@ -75,10 +82,10 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
-            + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
-            + Environment.NewLine + UIDialogRuntimeSource.Code
-            + Environment.NewLine + UIListViewRuntimeSource.Code
-            + Environment.NewLine;
+            + "\n" + UIExtensionDesktopRuntimeSource.Code
+            + "\n" + UIDialogRuntimeSource.Code
+            + "\n" + UIListViewRuntimeSource.Code
+            + "\n";
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
