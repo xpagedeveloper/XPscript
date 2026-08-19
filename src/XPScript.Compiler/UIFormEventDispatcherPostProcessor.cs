@@ -149,6 +149,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 required = field.Required,
                 placeholder = field.Placeholder,
                 tooltip = field.Tooltip,
+                regexPattern = field.RegexPattern,
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
