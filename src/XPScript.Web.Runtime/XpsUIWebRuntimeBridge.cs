@@ -31,6 +31,12 @@ public static class XpsUIWebRuntimeBridge
         return XpsWebContextAccessor.Current.Request.FormFirst(name);
     }
 
+    public static string[] FormValues(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return XpsWebContextAccessor.Current.Request.Form(name).ToArray();
+    }
+
     public static void WriteHtml(string html)
     {
         ArgumentNullException.ThrowIfNull(html);
