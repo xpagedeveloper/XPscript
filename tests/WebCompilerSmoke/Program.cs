@@ -1,6 +1,19 @@
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
+if (args.Length > 0)
+{
+    foreach (var input in args)
+    {
+        var fullPath = Path.GetFullPath(input);
+        await using var sampleUnit = await new XpsWebCompiler().CompileAsync(fullPath);
+        if (sampleUnit.Routes.Count == 0)
+            throw new Exception($"Web sample '{Path.GetFileName(fullPath)}' did not export any routes.");
+        Console.WriteLine($"WEB-SAMPLE-COMPILE=OK {Path.GetFileName(fullPath)} routes={sampleUnit.Routes.Count}");
+    }
+    return;
+}
+
 var root = Path.Combine(Path.GetTempPath(), "xps-web-compiler-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 var sourcePath = Path.Combine(root, "index.xps");

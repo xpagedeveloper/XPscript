@@ -1,0 +1,4 @@
+# Keep C# source line endings deterministic across Windows, Linux and macOS.
+# Several compiler postprocessors compare generated source with raw string
+# templates, so checkout-specific CRLF conversion must not change templates.
+*.cs text eol=lf

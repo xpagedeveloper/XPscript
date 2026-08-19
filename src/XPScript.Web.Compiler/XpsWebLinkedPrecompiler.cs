@@ -6,8 +6,8 @@ namespace XPScript.Web.Compiler;
 
 internal static partial class XpsWebLinkedPrecompiler
 {
-    private const int MaxResponseScanBytes = 2 * 1024 * 1024;
-    private const int MaxLinkedScriptsPerResponse = 64;
+    private const int MaxScanBytes = 2 * 1024 * 1024;
+    private const int MaxLinkedScriptsPerScan = 64;
 
     [GeneratedRegex("(?is)(?:href|src)\\s*=\\s*[\\\"'](?<url>[^\\\"']+\\.xps(?:[?#][^\\\"']*)?)[\\\"']", RegexOptions.CultureInvariant)]
     private static partial Regex XpsLinkRegex();
@@ -20,29 +20,73 @@ internal static partial class XpsWebLinkedPrecompiler
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(response);
-        ArgumentNullException.ThrowIfNull(resolver);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourceScriptPath);
-        ArgumentNullException.ThrowIfNull(precompileAsync);
-
-        if (response.Body.IsEmpty || response.Body.Length > MaxResponseScanBytes) return;
+        if (response.Body.IsEmpty || response.Body.Length > MaxScanBytes) return;
         if (!IsHtml(response.ContentType)) return;
 
         string html;
         try { html = Encoding.UTF8.GetString(response.Body.Span); }
         catch { return; }
 
+        await PrecompileLinksFromTextAsync(
+            html,
+            resolver,
+            sourceScriptPath,
+            precompileAsync,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task PrecompileSourceLinksAsync(
+        string sourceScriptPath,
+        XpsWebPathResolver resolver,
+        Func<string, CancellationToken, Task> precompileAsync,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceScriptPath);
+        ArgumentNullException.ThrowIfNull(resolver);
+        ArgumentNullException.ThrowIfNull(precompileAsync);
+
+        FileInfo info;
+        try { info = new FileInfo(sourceScriptPath); }
+        catch { return; }
+        if (!info.Exists || info.Length <= 0 || info.Length > MaxScanBytes) return;
+
+        string source;
+        try { source = await File.ReadAllTextAsync(sourceScriptPath, cancellationToken).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DecoderFallbackException) { return; }
+
+        // XPscript string literals escape a quote as two double-quotes. Collapsing those
+        // for discovery lets href=""page.xps"" be treated like href="page.xps".
+        source = source.Replace("\"\"", "\"", StringComparison.Ordinal);
+
+        await PrecompileLinksFromTextAsync(
+            source,
+            resolver,
+            sourceScriptPath,
+            precompileAsync,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task PrecompileLinksFromTextAsync(
+        string text,
+        XpsWebPathResolver resolver,
+        string sourceScriptPath,
+        Func<string, CancellationToken, Task> precompileAsync,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resolver);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceScriptPath);
+        ArgumentNullException.ThrowIfNull(precompileAsync);
+        if (string.IsNullOrEmpty(text)) return;
+
         var seen = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-        foreach (Match match in XpsLinkRegex().Matches(html))
+        foreach (Match match in XpsLinkRegex().Matches(text))
         {
-            if (seen.Count >= MaxLinkedScriptsPerResponse) break;
+            if (seen.Count >= MaxLinkedScriptsPerScan) break;
             cancellationToken.ThrowIfCancellationRequested();
 
             var raw = match.Groups["url"].Value.Trim();
             if (string.IsNullOrWhiteSpace(raw) || raw.StartsWith("//", StringComparison.Ordinal)) continue;
 
-            // Root-relative web paths are valid local XPS links on every platform.
-            // Uri.TryCreate can interpret /sub/page.xps as an absolute file URI on Unix,
-            // so only apply absolute-URI filtering to non-root-relative values.
             var rootRelative = raw.StartsWith("/", StringComparison.Ordinal) || raw.StartsWith('\\');
             if (!rootRelative && Uri.TryCreate(raw, UriKind.Absolute, out _)) continue;
 

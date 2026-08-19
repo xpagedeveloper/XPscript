@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class UIFormActionModelPostProcessor
@@ -6,19 +8,25 @@ internal sealed class UIFormActionModelPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        generated = ReplaceRequired(generated,
-            "    public string RefreshHandler { get; set; } = string.Empty;\n",
-            """
+        if (!generated.Contains("public string OnChangeHandler { get; set; } = string.Empty;", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"public\s+string\s+RefreshTargetRegion\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;\s*(?:public\s+string\s+RefreshHandler\s*\{\s*get;\s*set;\s*\}\s*=\s*string\.Empty\s*;)?",
+                """
+    public string RefreshTargetRegion { get; set; } = string.Empty;
     public string RefreshHandler { get; set; } = string.Empty;
     public string OnChangeHandler { get; set; } = string.Empty;
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
-""");
+""", "field-state");
+        }
 
-        generated = ReplaceRequired(generated,
-            "internal sealed class XPScriptUIForm\n{\n",
-            """
+        if (!generated.Contains("internal sealed class XPScriptUIButton", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
+                """
 internal sealed class XPScriptUIButton
 {
     public required string Name { get; init; }
@@ -35,11 +43,14 @@ internal sealed class XPScriptUIButton
 
 internal sealed class XPScriptUIForm
 {
-""");
+""", "button-type");
+        }
 
-        generated = ReplaceRequired(generated,
-            "    private int _gridColumns = 1;\n",
-            """
+        if (!generated.Contains("private readonly List<XPScriptUIButton> _buttons = [];", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"private\s+int\s+_gridColumns\s*=\s*1\s*;",
+                """
     private int _gridColumns = 1;
     private readonly List<XPScriptUIButton> _buttons = [];
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
@@ -47,21 +58,27 @@ internal sealed class XPScriptUIForm
     private string _navigationTarget = string.Empty;
     private string _navigationParameterName = string.Empty;
     private string _navigationParameterValue = string.Empty;
-""");
+""", "form-state");
+        }
 
-        generated = ReplaceRequired(generated,
-            "    public int GridColumns => _gridColumns;\n",
-            """
+        if (!generated.Contains("public int ButtonCount => _buttons.Count;", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"public\s+int\s+GridColumns\s*=>\s*_gridColumns\s*;",
+                """
     public int GridColumns => _gridColumns;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
-""");
+""", "form-api");
+        }
 
-        generated = ReplaceRequired(generated,
-            "    public object? GetFieldValue(object? name)\n",
-            """
+        if (!generated.Contains("public void SetFieldLabel(object? name, object? label)", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"public\s+object\?\s+GetFieldValue\s*\(\s*object\?\s+name\s*\)",
+                """
     public void SetFieldLabel(object? name, object? label)
     {
         FindField(name).Label = XPScriptRuntime.CStr(label);
@@ -212,15 +229,17 @@ internal sealed class XPScriptUIForm
     }
 
     public object? GetFieldValue(object? name)
-""");
+""", "field-actions");
+        }
 
         return generated;
     }
 
-    private static string ReplaceRequired(string source, string oldValue, string newValue)
+    private static string ReplaceRequiredRegex(string source, string pattern, string replacement, string stage)
     {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm action model runtime extension.");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        var regex = new Regex(pattern, RegexOptions.CultureInvariant);
+        if (!regex.IsMatch(source))
+            throw new CompilerException($"Unable to install UIForm action model runtime extension ({stage}).");
+        return regex.Replace(source, replacement, 1);
     }
 }

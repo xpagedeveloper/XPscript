@@ -6,6 +6,8 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
+Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
+
 var parent = Path.Combine(Path.GetTempPath(), "xps-uiform-kestrel-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
@@ -58,7 +60,7 @@ try
         if (!response.Content.Headers.ContentType?.ToString().StartsWith("text/html", StringComparison.OrdinalIgnoreCase) ?? true)
             throw new Exception("UIForm Kestrel GET did not return HTML.");
         var body = await response.Content.ReadAsStringAsync();
-        if (!body.Contains("<h1>Contact form</h1>", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render title.");
+        if (!body.Contains(">Contact form</h1>", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render title.");
         if (!body.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not load existing JSON value.");
         if (!body.Contains("name=\"missing\" value=\"\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render missing JSON field as empty.");
     }

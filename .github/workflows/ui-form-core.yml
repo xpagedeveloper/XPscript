@@ -14,6 +14,7 @@ on:
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'tests/WebCompilerSmoke/**'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
       - 'samples/ui-list-view-*.xps'
@@ -33,6 +34,7 @@ on:
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'tests/WebCompilerSmoke/**'
       - 'samples/ui-form-*.xps'
       - 'samples/ui-layout-*.xps'
       - 'samples/ui-list-view-*.xps'
@@ -117,12 +119,15 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "UIListView output missing: $value" }
           }
-      - name: Compile UIListView desktop and web samples
+      - name: Compile UIListView desktop sample
         shell: pwsh
         run: |
           $extension = if ($IsWindows) { '.exe' } else { '' }
-          foreach ($sample in @('ui-list-view-desktop', 'ui-list-view-web', 'customer-form')) {
-            $program = "./out/$sample$extension"
-            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./samples/$sample.xps" -o $program --framework-dependent
-            if ($LASTEXITCODE -ne 0) { throw "$sample compilation failed." }
-          }
+          $program = "./out/ui-list-view-desktop$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-list-view-desktop.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'ui-list-view-desktop compilation failed.' }
+      - name: Compile web UI samples through XpsWebCompiler
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/WebCompilerSmoke/WebCompilerSmoke.csproj -c Release -- ./samples/ui-list-view-web.xps ./samples/customer-form.xps
+          if ($LASTEXITCODE -ne 0) { throw 'Web UI sample compilation failed.' }

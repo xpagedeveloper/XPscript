@@ -1,13 +1,24 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class UIFormEventDispatcherPostProcessor
 {
+    private const string InstalledSentinel = "internal string DispatchRegisteredEvent(string eventToken, string submittedValue)";
+
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+        if (generated.Contains(InstalledSentinel, StringComparison.Ordinal))
+            return generated;
 
-        generated = ReplaceRequired(generated,
-            "    public object? GetFieldValue(object? name)\n",
+        var regex = new Regex(
+            @"public\s+object\?\s+GetFieldValue\s*\(\s*object\?\s+name\s*\)",
+            RegexOptions.CultureInvariant);
+        if (!regex.IsMatch(generated))
+            throw new CompilerException("Unable to install UIForm event dispatcher runtime.");
+
+        return regex.Replace(generated,
             """
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
@@ -131,15 +142,6 @@ internal sealed class UIFormEventDispatcherPostProcessor
     }
 
     public object? GetFieldValue(object? name)
-""");
-
-        return generated;
-    }
-
-    private static string ReplaceRequired(string source, string oldValue, string newValue)
-    {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm event dispatcher runtime.");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+""", 1);
     }
 }

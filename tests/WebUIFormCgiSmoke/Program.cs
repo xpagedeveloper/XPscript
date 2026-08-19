@@ -32,7 +32,7 @@ try
     var get = await RunCgiAsync(root, scriptPath, "GET", null);
     if (!get.Contains("Content-Type: text/html; charset=utf-8\r\n", StringComparison.Ordinal))
         throw new Exception("UIForm CGI GET did not return HTML: " + get);
-    if (!get.Contains("<h1>Contact form</h1>", StringComparison.Ordinal))
+    if (!get.Contains(">Contact form</h1>", StringComparison.Ordinal))
         throw new Exception("UIForm CGI GET did not render the form title: " + get);
     if (!get.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal))
         throw new Exception("UIForm CGI GET did not load the existing JSON value: " + get);

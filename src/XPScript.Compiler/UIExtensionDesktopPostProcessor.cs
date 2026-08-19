@@ -5,6 +5,26 @@ namespace XPScript.Compiler;
 
 internal sealed class UIExtensionDesktopPostProcessor
 {
+    private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
+    private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
+    private const string BridgeLookupOld = "    private static Type? BridgeType => Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);";
+    private const string BridgeLookupNew = """
+    private static Type? BridgeType
+    {
+        get
+        {
+            var direct = Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);
+            if (direct is not null) return direct;
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var candidate = assembly.GetType("XPScript.Web.Runtime.XpsUIWebRuntimeBridge", throwOnError: false, ignoreCase: false);
+                if (candidate is not null) return candidate;
+            }
+            return null;
+        }
+    }
+""";
+
     private static readonly Regex ShowDialogPattern = new(
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
         RegexOptions.CultureInvariant);
@@ -42,16 +62,31 @@ internal sealed class UIExtensionDesktopPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+        generated = NormalizeLineEndings(generated);
+
+        if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
+            return generated;
+
+        if (!NeedsUiExtensions(generated))
+            return generated;
+
         var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
         if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
 
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
-            + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code
-            + Environment.NewLine + UIDialogRuntimeSource.Code
-            + Environment.NewLine + UIListViewRuntimeSource.Code
-            + Environment.NewLine;
+            + "\n" + UIExtensionDesktopRuntimeSource.Code
+            + "\n" + UIDialogRuntimeSource.Code
+            + "\n" + UIListViewRuntimeSource.Code
+            + "\n";
+
+        // Raw string runtime constants preserve the source file's newline style.
+        // A Windows build can therefore reintroduce CRLF after the first
+        // normalization. Normalize the complete appended runtime before every
+        // structural UIForm/UIListView postprocessor runs.
+        replaced = NormalizeLineEndings(replaced);
+
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
@@ -62,7 +97,40 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
         replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
         replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
-        return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        return HardenWebBridgeLookup(replaced);
+    }
+
+    private static string NormalizeLineEndings(string value)
+        => value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private static string HardenWebBridgeLookup(string generated)
+    {
+        if (generated.Contains(BridgeLookupNew, StringComparison.Ordinal)) return generated;
+        if (!generated.Contains(BridgeLookupOld, StringComparison.Ordinal))
+            throw new CompilerException("Unable to harden generated XPScript web UI bridge lookup.");
+        return generated.Replace(BridgeLookupOld, BridgeLookupNew, StringComparison.Ordinal);
+    }
+
+    private static bool NeedsUiExtensions(string generated)
+    {
+        var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
+        var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
+
+        if (scriptPart.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+            scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal))
+            return true;
+
+        foreach (var function in DialogFunctions)
+        {
+            if (Regex.IsMatch(
+                    scriptPart,
+                    $@"(?<![A-Za-z0-9_\.]){Regex.Escape(function)}\s*\(",
+                    RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string RewriteDialogCalls(string source)
