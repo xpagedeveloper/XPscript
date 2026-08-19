@@ -34,6 +34,9 @@ public sealed class XpsWebCompiler
 
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
         var parsed = new XpsWebRouteMetadataParser().Parse(source);
+        if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase))
+            return await CompileBrowserWasmAsync(fullSourcePath, fullSourceRoot, parsed, cancellationToken).ConfigureAwait(false);
+
         if (parsed.Routes.Count == 0) throw new XpsWebCompilationException("Web source must export at least one route using web route attributes.");
 
         var compilerSource = EnsureCompilerEntryPoint(NormalizeVariantSetAssignments(parsed.Source));
@@ -94,6 +97,64 @@ public sealed class XpsWebCompiler
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
     }
 
+    private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync(string sourcePath, string webRoot, XpsWebRouteParseResult parsed, CancellationToken cancellationToken)
+    {
+        var bundle = await new XpsBrowserWasmCompiler(webRoot).GetOrBuildAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD" };
+        var policy = new XpsRoutePolicy(true, methods, [], []);
+        var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Index"] = new("Index", policy),
+            [XpsWebPathResolver.BrowserWasmAssetRoute] = new(XpsWebPathResolver.BrowserWasmAssetRoute, policy)
+        };
+
+        return new XpsCompiledWebUnit(routes, parsed.PrecompileTargets, async (route, context) =>
+        {
+            var relativeAsset = "index.html";
+            if (route.Equals(XpsWebPathResolver.BrowserWasmAssetRoute, StringComparison.OrdinalIgnoreCase))
+            {
+                var path = context.Request.Path.Replace('\\', '/');
+                var marker = path.IndexOf(".xps/", StringComparison.OrdinalIgnoreCase);
+                if (marker < 0) throw new XpsWebRouteException("Invalid browser-wasm asset route.");
+                relativeAsset = path[(marker + 5)..];
+            }
+
+            string assetPath;
+            try { assetPath = bundle.ResolveAsset(relativeAsset); }
+            catch (XpsWebCompilationException) { WriteBrowserNotFound(context); return; }
+            if (!File.Exists(assetPath)) { WriteBrowserNotFound(context); return; }
+
+            var bytes = await File.ReadAllBytesAsync(assetPath, context.Request.CancellationToken).ConfigureAwait(false);
+            context.Response.Clear();
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = BrowserContentType(assetPath);
+            context.Response.SetHeader("Cache-Control", relativeAsset.Equals("index.html", StringComparison.OrdinalIgnoreCase) ? "no-cache" : "public, max-age=31536000, immutable");
+            if (!context.Request.Method.Equals("HEAD", StringComparison.OrdinalIgnoreCase)) context.Response.WriteBinary(bytes);
+            context.Response.Complete();
+        });
+    }
+
+    private static void WriteBrowserNotFound(XpsWebContext context)
+    {
+        context.Response.Clear();
+        context.Response.StatusCode = 404;
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        if (!context.Request.Method.Equals("HEAD", StringComparison.OrdinalIgnoreCase)) context.Response.Write("Not Found");
+        context.Response.Complete();
+    }
+
+    private static string BrowserContentType(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".html" => "text/html; charset=utf-8",
+        ".js" or ".mjs" => "text/javascript; charset=utf-8",
+        ".css" => "text/css; charset=utf-8",
+        ".wasm" => "application/wasm",
+        ".json" => "application/json; charset=utf-8",
+        ".dll" => "application/octet-stream",
+        ".pdb" => "application/octet-stream",
+        _ => "application/octet-stream"
+    };
+
     private static Assembly? ResolveSharedAssembly(AssemblyLoadContext context, AssemblyName name)
     {
         var runtimeAssembly = typeof(XpsWebContext).Assembly;
@@ -119,21 +180,11 @@ internal static class Script
 
     private static string NormalizeVariantSetAssignments(string source)
     {
-        var variantNames = VariantDeclaration.Matches(source)
-            .Select(match => match.Groups[1].Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var variantNames = VariantDeclaration.Matches(source).Select(match => match.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (variantNames.Length == 0) return source;
-
         var normalized = source;
         foreach (var name in variantNames)
-        {
-            normalized = Regex.Replace(
-                normalized,
-                $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$",
-                $"$1{name} = $2",
-                RegexOptions.CultureInvariant);
-        }
+            normalized = Regex.Replace(normalized, $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$", $"$1{name} = $2", RegexOptions.CultureInvariant);
         return normalized;
     }
 
@@ -170,10 +221,7 @@ internal static class Script
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="XPScript.Web.Runtime">
-      <HintPath>{{escapedPath}}</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="XPScript.Web.Runtime"><HintPath>{{escapedPath}}</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
 """;

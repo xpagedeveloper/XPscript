@@ -6,21 +6,13 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.Web.Compiler/**'
+      - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'tests/WebCompilerSmoke/**'
-      - '.github/workflows/web-compiler-target.yml'
-      - 'XPScriptCompiler.slnx'
-  push:
-    branches: ['todo-web-runtime-compiler-target']
-    paths:
-      - 'src/XPScript.Web.Runtime/**'
-      - 'src/XPScript.Web.Compiler/**'
-      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
-      - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
-      - 'src/XPScript.Compiler/CompilerDriver.cs'
-      - 'tests/WebCompilerSmoke/**'
+      - 'tests/WebBrowserWasmSmoke/**'
       - '.github/workflows/web-compiler-target.yml'
       - 'XPScriptCompiler.slnx'
   workflow_dispatch:
@@ -49,3 +41,15 @@ jobs:
 
       - name: Compile and invoke loadable web routes
         run: dotnet run --project ./tests/WebCompilerSmoke/WebCompilerSmoke.csproj -c Release
+
+  browser-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install WebAssembly build tools
+        run: dotnet workload install wasm-tools
+      - name: Run browser-wasm smoke
+        run: dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release

@@ -10,6 +10,9 @@ internal sealed class IncludeSourcePreprocessor
     private static readonly Regex IncludePattern = new(
         "^Include\\s+\"([^\"]+)\"\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex WebPlatformPattern = new(
+        @"^\[\s*Platform\s*:\s*browser-wasm\s*\]$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public Result Transform(string rootSource, string rootSourcePath)
     {
@@ -78,6 +81,16 @@ internal sealed class IncludeSourcePreprocessor
             {
                 var raw = lines[i];
                 var code = StripComment(raw).Trim();
+
+                // [Platform:browser-wasm] is web-server metadata. The normal compiler
+                // deliberately removes it so the exact same source can still be built
+                // for desktop or another explicit runtime target.
+                if (WebPlatformPattern.IsMatch(code))
+                {
+                    AddLine(output, map, string.Empty, sourcePath, i + 1);
+                    continue;
+                }
+
                 var match = IncludePattern.Match(code);
                 if (!match.Success)
                 {
