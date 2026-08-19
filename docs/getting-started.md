@@ -14,6 +14,7 @@
 - [CGI hosting](#cgi-hosting)
 - [CGI configuration](#cgi-configuration)
 - [Deployment packages](#deployment-packages)
+- [GitHub Actions artifacts](#github-actions-artifacts)
 - [Publish parameters](#publish-parameters)
 - [Which package to deploy](#which-package-to-deploy)
 
@@ -211,6 +212,20 @@ Create a self-contained package:
 ```
 
 Framework-dependent output requires the matching .NET runtime on the target machine. Self-contained output includes the .NET runtime for the selected RID. Web hosts that dynamically compile `.xps` files still need the SDK/toolchain required by the web compiler.
+
+## GitHub Actions artifacts
+
+The `Distribution Publish` workflow publishes five separate downloadable artifacts after a successful run:
+
+| Artifact | Contents |
+|---|---|
+| `xpscript-compiler` | Compiler distribution. |
+| `xpscript-desktop-runtime` | Desktop runtime distribution. |
+| `xpscript-cgi` | CGI host distribution. |
+| `xpscript-fastcgi` | FastCGI host distribution. |
+| `xpscript-kestrel` | Kestrel host distribution. |
+
+Artifacts are retained for 14 days. The workflow fails if a required distribution is missing or empty.
 
 ## Publish parameters
 
