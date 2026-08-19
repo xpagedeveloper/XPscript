@@ -3,7 +3,6 @@
 
 Sub Main()
     Dim form As New UIForm("Structural elements")
-    Dim grid As Object
 
     Call form.AddTextField("name", "Name")
     Call form.AddSeparator("customer_separator")
@@ -11,12 +10,12 @@ Sub Main()
     Call form.AddSpacer("actions_spacer")
     Call form.AddCheckBox("active", "Active")
 
-    Set grid = form.AddGridColumns(12)
-    Call grid.SetFieldPosition("name", 6)
-    Call grid.SetFieldPosition("customer_separator", 12)
-    Call grid.SetFieldPosition("email", 6)
-    Call grid.SetFieldPosition("actions_spacer", 12)
-    Call grid.SetFieldPosition("active", 12)
+    Call form.SetGridColumns(12)
+    Call form.SetFieldPosition("name", 1, 1, 6)
+    Call form.SetFieldPosition("customer_separator", 2, 1, 12)
+    Call form.SetFieldPosition("email", 3, 1, 6)
+    Call form.SetFieldPosition("actions_spacer", 4, 1, 12)
+    Call form.SetFieldPosition("active", 5, 1, 12)
 
     Print "FIELD_COUNT=" & form.FieldCount
 End Sub
