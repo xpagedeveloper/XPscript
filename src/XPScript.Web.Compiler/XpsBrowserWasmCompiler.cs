@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using XPScript.Compiler;
 using XPScript.UI.Browser;
 using XPScript.Web.Runtime;
@@ -11,6 +12,7 @@ namespace XPScript.Web.Compiler;
 public sealed class XpsBrowserWasmCompiler
 {
     private const string Platform = "browser-wasm";
+    private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
     private readonly string _webRoot;
     private readonly string _cacheRoot;
     private readonly SemaphoreSlim _buildGate = new(1, 1);
@@ -54,7 +56,7 @@ public sealed class XpsBrowserWasmCompiler
             Directory.CreateDirectory(workspace);
             Directory.CreateDirectory(publishRoot);
 
-            var browserSource = EnsureBrowserEntryPoint(parsed.Source, parsed.Routes);
+            var browserSource = EnsureBrowserEntryPoint(NormalizeVariantSetAssignments(parsed.Source), parsed.Routes);
             var generated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [_webRoot]);
             generated = generated.Replace(
                 "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop",
@@ -80,6 +82,26 @@ public sealed class XpsBrowserWasmCompiler
         }
     }
 
+    private static string NormalizeVariantSetAssignments(string source)
+    {
+        var variantNames = VariantDeclaration.Matches(source)
+            .Select(match => match.Groups[1].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (variantNames.Length == 0) return source;
+
+        var normalized = source;
+        foreach (var name in variantNames)
+        {
+            normalized = Regex.Replace(
+                normalized,
+                $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$",
+                $"$1{name} = $2",
+                RegexOptions.CultureInvariant);
+        }
+        return normalized;
+    }
+
     private void EnsureInsideWebRoot(string path)
     {
         var relative = Path.GetRelativePath(_webRoot, path);
@@ -89,7 +111,7 @@ public sealed class XpsBrowserWasmCompiler
 
     private static string EnsureBrowserEntryPoint(string source, IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
     {
-        if (System.Text.RegularExpressions.Regex.IsMatch(source, @"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+Main\b"))
+        if (Regex.IsMatch(source, @"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+Main\b"))
             return source;
         var entry = routes.ContainsKey("Index") ? "Index" : routes.Count == 1 ? routes.Keys.Single() : null;
         if (entry is null)
