@@ -134,7 +134,7 @@ public static class DesktopFormHost
                     if (fieldPanels.TryGetValue(name, out var fieldPanel) && state.TryGetProperty("visible", out var visible)) fieldPanel.IsVisible = visible.ValueKind != JsonValueKind.False;
                     if (state.TryGetProperty("enabled", out var enabled)) editor.IsEnabled = enabled.ValueKind != JsonValueKind.False;
                     if (editor is TextBox textBox && state.TryGetProperty("readOnly", out var readOnly)) textBox.IsReadOnly = readOnly.ValueKind == JsonValueKind.True;
-                    if (editor is TextBox hintBox && state.TryGetProperty("placeholder", out var placeholder)) hintBox.Watermark = placeholder.GetString() ?? string.Empty;
+                    if (editor is TextBox hintBox && state.TryGetProperty("placeholder", out var placeholder)) hintBox.PlaceholderText = placeholder.GetString() ?? string.Empty;
                     if (state.TryGetProperty("tooltip", out var tooltip))
                     {
                         var text = tooltip.GetString() ?? string.Empty;
@@ -314,7 +314,7 @@ public static class DesktopFormHost
     private static void ApplyFieldHints(DesktopFormField field, Control editor)
     {
         if (editor is TextBox textBox && field.Placeholder.Length > 0)
-            textBox.Watermark = field.Placeholder;
+            textBox.PlaceholderText = field.Placeholder;
         if (field.Tooltip.Length > 0)
             ToolTip.SetTip(editor, field.Tooltip);
     }
