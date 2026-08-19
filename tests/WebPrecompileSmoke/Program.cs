@@ -16,7 +16,8 @@ var pageRulePath = Path.Combine(sub, "page-rule.xps");
 var pageRuleNestedPath = Path.Combine(sub, "page-rule-nested.xps");
 
 await File.WriteAllTextAsync(indexPath, """
-[PreCompile:direct.xsp;/sub/rooted.xps]
+[PreCompile:direct;/sub/rooted.xsp;missing-precompile]
+[Anonmous]
 [Anonymous]
 [Get]
 Sub Index()
@@ -93,21 +94,26 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v3-one-hop-rules"
+        ConfigurationIdentity = "precompile-smoke-v4-forgiving-rules"
     });
 
     await using var dispatcher = new XpsWebDispatcher(root, cache);
 
-    // Startup warms index.xps and only its direct neighbours:
-    // two [PreCompile] targets plus two static href/src links.
+    // Startup warms index.xps and only its existing direct neighbours.
+    // The extensionless direct target resolves to direct.xps, .xsp normalizes to .xps,
+    // the missing target is skipped, and the misspelled [] rule is logged but ignored.
     if (cache.CompilationStarts != 5)
         throw new Exception($"Startup one-hop precompile expected 5 compilations, got {cache.CompilationStarts}.");
 
     await AssertAlreadyWarmAsync(cache, indexPath, root, "index.xps");
-    await AssertAlreadyWarmAsync(cache, directPath, root, "direct.xps from .xsp directive");
-    await AssertAlreadyWarmAsync(cache, rootedPath, root, "root-relative PreCompile target");
+    await AssertAlreadyWarmAsync(cache, directPath, root, "extensionless direct PreCompile target");
+    await AssertAlreadyWarmAsync(cache, rootedPath, root, "root-relative .xsp PreCompile target");
     await AssertAlreadyWarmAsync(cache, linkedPath, root, "relative static source link");
     await AssertAlreadyWarmAsync(cache, pagePath, root, "root-relative static source link");
+
+    var indexResponseAtStartup = await SendAsync(dispatcher, root, "/");
+    if (indexResponseAtStartup.StatusCode != 200)
+        throw new Exception($"Misspelled [] rule must not stop compilation; index returned {indexResponseAtStartup.StatusCode}.");
 
     // page.xps is warmed, but its own direct neighbours must wait until page.xps itself is loaded.
     var beforeColdPageNeighbours = cache.CompilationStarts;
@@ -125,7 +131,7 @@ try
         MaxSourceBytes = 1024 * 1024,
         IdleTtl = TimeSpan.FromMinutes(5),
         FailureBackoff = TimeSpan.FromSeconds(2),
-        ConfigurationIdentity = "precompile-smoke-v3-load-hop-rules"
+        ConfigurationIdentity = "precompile-smoke-v4-load-hop-rules"
     });
     await using var secondDispatcher = new XpsWebDispatcher(root, secondCache);
 
@@ -151,6 +157,30 @@ try
         if (secondCache.CompilationStarts != beforeNestedProbe + 1)
             throw new Exception("Nested PreCompile target was unexpectedly warmed recursively.");
     }
+
+    var originalError = Console.Error;
+    using var capturedError = new StringWriter();
+    try
+    {
+        Console.SetError(capturedError);
+        var parser = new XpsWebRouteMetadataParser();
+        var parsed = parser.Parse("""
+[DefinitelyNotARule]
+[Anonymous]
+[Get]
+Sub Index()
+End Sub
+""");
+        if (!parsed.Routes.ContainsKey("Index"))
+            throw new Exception("Unknown [] rule prevented route parsing.");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+
+    if (!capturedError.ToString().Contains("Unsupported web route attribute '[DefinitelyNotARule]'", StringComparison.Ordinal))
+        throw new Exception("Unknown [] rule did not produce a console error.");
 
     Console.WriteLine("WEB-PRECOMPILE-ONE-HOP=OK");
 }
