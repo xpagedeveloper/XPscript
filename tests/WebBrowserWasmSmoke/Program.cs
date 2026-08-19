@@ -33,6 +33,9 @@ Sub Main()
     Call form.AddSpacer("actions_spacer")
     Call form.SetRequired("name", True)
     Call form.SetLength("password", 8, 128)
+    Call form.SetFieldPlaceholder("name", "Enter your name")
+    Call form.SetFieldTooltip("name", "Customer display name")
+    Call form.SetFieldTooltip("country", "Select a country")
     Set grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.SetFieldPosition("password", 6)
@@ -63,7 +66,12 @@ End Sub
     if (index is null || dotnetJs is null || browserJs is null) throw new Exception("WASM publish output was not cached.");
 
     var browserModule = await File.ReadAllTextAsync(browserJs);
-    foreach (var requiredMarker in new[] { "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result", "multilistbox", "selectedOptions", "select.multiple" })
+    foreach (var requiredMarker in new[]
+    {
+        "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
+        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.tooltip",
+        "type === 'separator'", "type === 'spacer'"
+    })
     {
         if (!browserModule.Contains(requiredMarker, StringComparison.Ordinal))
             throw new Exception($"Browser UIForm renderer is missing parity marker '{requiredMarker}'.");
