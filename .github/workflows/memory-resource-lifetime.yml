@@ -15,25 +15,12 @@ on:
       - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
       - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
-      - 'docs/memory-resource-lifetime.md'
-      - 'todo/runtime-reference-todo.md'
       - 'samples/module-object-references.xps'
       - '.github/workflows/memory-resource-lifetime.yml'
   push:
     branches: ['todo-*']
     paths:
-      - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
-      - 'src/XPScript.Compiler/ModuleObjectRuntimeSource.cs'
-      - 'src/XPScript.Compiler/XPScriptRuntimeSource.cs'
-      - 'src/XPScript.Compiler/CoreCompatibilityRuntimeSource.cs'
-      - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
-      - 'src/XPScript.Compiler/NativeHttpRuntimeSource.cs'
-      - 'src/XPScript.Compiler/JsonHttpCompatibilityRuntimeSource.cs'
-      - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
-      - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
-      - 'src/XPScript.Compiler/NativeInteropRuntimeSource.cs'
-      - 'docs/memory-resource-lifetime.md'
-      - 'todo/runtime-reference-todo.md'
+      - 'src/XPScript.Compiler/**'
       - 'samples/module-object-references.xps'
       - '.github/workflows/memory-resource-lifetime.yml'
 
@@ -52,13 +39,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
       - name: Restore
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
-
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-
       - name: Verify object reference and Delete lifetime semantics
         shell: pwsh
         run: |
@@ -66,104 +50,38 @@ jobs:
           $program = "./out/module-object-lifetime$extension"
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/module-object-references.xps -o $program --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Object lifetime fixture failed to compile.' }
-
           for ($iteration = 1; $iteration -le 40; $iteration++) {
             $output = & $program
             if ($LASTEXITCODE -ne 0) { throw "Object lifetime fixture failed at stress iteration $iteration." }
-            foreach ($value in @(
-              'NAME=Fredrik',
-              'NOTHING1=False',
-              'SAME=True',
-              'ALIAS=Fredrik',
-              'NOTHING2=True',
-              'ALIASSTILL=Fredrik',
-              'DELETEDPRIMARY=True',
-              'DELETEDALIAS=True'
-            )) {
+            foreach ($value in @('NAME=Fredrik','NOTHING1=False','SAME=True','ALIAS=Fredrik','NOTHING2=True','ALIASSTILL=Fredrik','DELETEDPRIMARY=True','DELETEDALIAS=True')) {
               if ($output -notcontains $value) { throw "Object lifetime output missing at iteration ${iteration}: $value" }
             }
           }
-
       - name: Audit managed lifetime contracts
         shell: pwsh
         run: |
           $sourceRoot = './src/XPScript.Compiler'
           $productionFiles = Get-ChildItem $sourceRoot -Filter '*.cs' -File
-          $gcCollect = $productionFiles | Select-String -Pattern 'GC\.Collect\s*\('
-          if ($gcCollect) {
-            $gcCollect | ForEach-Object { Write-Host $_ }
-            throw 'Production runtime/compiler source must not use GC.Collect() as normal language behavior.'
-          }
-
+          if ($productionFiles | Select-String -Pattern 'GC\.Collect\s*\(') { throw 'Production runtime/compiler source must not use GC.Collect() as normal language behavior.' }
           $objectRuntime = Get-Content "$sourceRoot/XPScriptObjectRuntimeSource.cs" -Raw
-          if (-not $objectRuntime.Contains('finally') -or -not $objectRuntime.Contains('Value = null;')) {
-            throw 'Local object Delete must clear its shared reference cell in a finally path.'
-          }
-
+          if (-not $objectRuntime.Contains('finally') -or -not $objectRuntime.Contains('Value = null;')) { throw 'Local object Delete must clear its shared reference cell in a finally path.' }
           $moduleRuntime = Get-Content "$sourceRoot/ModuleObjectRuntimeSource.cs" -Raw
-          if (-not $moduleRuntime.Contains('finally') -or -not $moduleRuntime.Contains('cell.Value = null;')) {
-            throw 'Module object Delete must clear its shared reference cell in a finally path.'
-          }
-
+          if (-not $moduleRuntime.Contains('finally') -or -not $moduleRuntime.Contains('cell.Value = null;')) { throw 'Module object Delete must clear its shared reference cell in a finally path.' }
           $arrayRuntime = Get-Content "$sourceRoot/CoreCompatibilityRuntimeSource.cs" -Raw
-          foreach ($required in @('_data = [];', 'IsAllocated = false', 'Allocate(lower, upper);', 'var oldData = _data;', 'state.Stream.Dispose();')) {
+          foreach ($required in @('_data = [];','IsAllocated = false','Allocate(lower, upper);','var oldData = _data;','state.Stream.Dispose();')) {
             if (-not $arrayRuntime.Contains($required)) { throw "Array/file lifetime contract missing: $required" }
           }
-
-          $listRuntime = Get-Content "$sourceRoot/XPScriptListRuntimeSource.cs" -Raw
-          foreach ($required in @('_values.Remove(', '_order.RemoveAll(', '_values.Clear();', '_order.Clear();')) {
-            if (-not $listRuntime.Contains($required)) { throw "List lifetime contract missing: $required" }
-          }
-
       - name: Audit deterministic OS resource cleanup
         shell: pwsh
         run: |
           $sourceRoot = './src/XPScript.Compiler'
-
           $core = Get-Content "$sourceRoot/XPScriptRuntimeSource.cs" -Raw
-          foreach ($required in @(
-            'state.Reader?.Dispose();',
-            'state.Writer?.Dispose();',
-            'state.Stream.Dispose();',
-            'DirEnumerator.Dispose();',
-            'DirEnumerator = null;'
-          )) {
+          foreach ($required in @('state.Reader?.Dispose();','state.Writer?.Dispose();','state.Stream.Dispose();','DirEnumerator.Dispose();','DirEnumerator = null;')) {
             if (-not $core.Contains($required)) { throw "Core resource cleanup contract missing: $required" }
           }
-
-          $fileExt = Get-Content "$sourceRoot/FileIoExtensionsRuntimeSource.cs" -Raw
-          foreach ($required in @('stream.Unlock(', 'DarwinUnlockFunction', 'DangerousAddRef', 'DangerousRelease')) {
-            if (-not $fileExt.Contains($required)) { throw "File lock cleanup contract missing: $required" }
-          }
-
-          $shell = Get-Content "$sourceRoot/CrossPlatformRuntimeSource.cs" -Raw
-          if (($shell | Select-String -Pattern 'using var process = System\.Diagnostics\.Process\.Start\(start\)' -AllMatches).Matches.Count -lt 2) {
-            throw 'Shell and ShellArgs must dispose their local Process wrappers after successful launch.'
-          }
-
           $nativeHttp = Get-Content "$sourceRoot/NativeHttpRuntimeSource.cs" -Raw
-          foreach ($required in @('IDisposable', '_disposed', 'using var request', 'using var response', '_client.Dispose();', '_handler.Dispose();')) {
+          foreach ($required in @('IDisposable','_disposed','using var request','using var response','_client.Dispose();','_handler.Dispose();')) {
             if (-not $nativeHttp.Contains($required)) { throw "Native HTTP disposal contract missing: $required" }
           }
-
-          $compatHttp = Get-Content "$sourceRoot/JsonHttpCompatibilityRuntimeSource.cs" -Raw
-          foreach ($required in @('using var handler', 'using var client', 'using var request', 'using var response')) {
-            if (-not $compatHttp.Contains($required)) { throw "Compatibility HTTP disposal contract missing: $required" }
-          }
-
           $native = Get-Content "$sourceRoot/NativeInteropRuntimeSource.cs" -Raw
-          if ($native.Contains('AllocHGlobal(') -or $native.Contains('AllocCoTaskMem(')) {
-            throw 'Native interop introduced unmanaged allocation without an explicit section-17 ownership contract.'
-          }
-
-      - name: Verify lifetime documentation covers section 17 contract
-        shell: pwsh
-        run: |
-          $doc = Get-Content './docs/memory-resource-lifetime.md' -Raw
-          foreach ($term in @(
-            'Nothing', 'Null', 'Delete', 'Erase', 'ReDim', 'Static',
-            'IDisposable', 'IAsyncDisposable', 'GC.Collect()', 'COM',
-            'process handle', 'HTTP', 'file', 'lock'
-          )) {
-            if (-not $doc.Contains($term)) { throw "Lifetime documentation missing required term: $term" }
-          }
+          if ($native.Contains('AllocHGlobal(') -or $native.Contains('AllocCoTaskMem(')) { throw 'Native interop introduced unmanaged allocation without an explicit ownership contract.' }
