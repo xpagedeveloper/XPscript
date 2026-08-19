@@ -51,8 +51,10 @@ Sub Main()
     Call first.SetLength("notes", 0, 2000)
     Call first.SetLength("password", 8, 128)
     Call first.SetNumberRange("age", 0, 150)
+    Call first.SetRegexValidation("existing", "^[A-Za-z ]+$")
 
     Print "VALIDATION_CONFIGURED=True"
+    Print "REGEX_VALIDATION_CONFIGURED=True"
     Print "FIELD_COUNT=" & CStr(first.FieldCount)
     Print "BOUND_EXISTING=" & first.GetFieldValueString("existing")
     Print "BOUND_MISSING=" & first.GetFieldValueString("missing")
