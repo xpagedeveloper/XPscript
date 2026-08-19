@@ -6,6 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class UIExtensionDesktopPostProcessor
 {
     private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
+    private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
 
     private static readonly Regex ShowDialogPattern = new(
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
@@ -51,6 +52,14 @@ internal sealed class UIExtensionDesktopPostProcessor
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
 
+        // Core generated source contains the base UI runtime even for scripts that
+        // never use UI features. Only inspect the generated script portion before
+        // that runtime declaration. This prevents normal scripts (Evaluate, web
+        // runtime probes, CLI programs, etc.) from being forced through UIForm
+        // postprocessors whose structural markers are intentionally UI-specific.
+        if (!NeedsUiExtensions(generated))
+            return generated;
+
         var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
         if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
@@ -72,6 +81,27 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
         replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
         return new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+    }
+
+    private static bool NeedsUiExtensions(string generated)
+    {
+        var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
+        var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
+
+        if (scriptPart.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+            scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal))
+            return true;
+
+        foreach (var function in DialogFunctions)
+        {
+            if (Regex.IsMatch(
+                    scriptPart,
+                    $@"(?<![A-Za-z0-9_\.]){Regex.Escape(function)}\s*\(",
+                    RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string RewriteDialogCalls(string source)
