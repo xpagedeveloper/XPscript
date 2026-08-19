@@ -8,7 +8,8 @@ public sealed record XpsWebRouteDescriptor(string ProcedureName, XpsRoutePolicy 
 public sealed record XpsWebRouteParseResult(
     string Source,
     IReadOnlyDictionary<string, XpsWebRouteDescriptor> Routes,
-    IReadOnlyList<string> PrecompileTargets);
+    IReadOnlyList<string> PrecompileTargets,
+    string? Platform = null);
 
 public sealed class XpsWebRouteMetadataParser
 {
@@ -33,6 +34,7 @@ public sealed class XpsWebRouteMetadataParser
         var pending = new List<string>();
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase);
         var precompileTargets = new List<string>();
+        string? platform = null;
 
         foreach (var raw in lines)
         {
@@ -40,6 +42,25 @@ public sealed class XpsWebRouteMetadataParser
             if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
             {
                 var attribute = trimmed[1..^1].Trim();
+                if (attribute.StartsWith("Platform:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (pending.Count > 0)
+                        throw new XpsWebRouteMetadataException("Platform metadata must be declared at file level.");
+                    var value = attribute[9..].Trim();
+                    if (value.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (platform is not null)
+                            throw new XpsWebRouteMetadataException("A web source may declare [Platform:browser-wasm] only once.");
+                        platform = "browser-wasm";
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine($"error: Unsupported web platform '[Platform:{value}]'. Ignoring rule.");
+                    }
+                    output.AppendLine();
+                    continue;
+                }
+
                 if (attribute.StartsWith("PreCompile:", StringComparison.OrdinalIgnoreCase))
                 {
                     ParsePrecompileTargets(attribute[11..], precompileTargets);
@@ -87,7 +108,8 @@ public sealed class XpsWebRouteMetadataParser
         return new XpsWebRouteParseResult(
             output.ToString().TrimEnd('\r', '\n'),
             routes,
-            precompileTargets.AsReadOnly());
+            precompileTargets.AsReadOnly(),
+            platform);
     }
 
     private static void ParsePrecompileTargets(string value, List<string> targets)
@@ -162,10 +184,8 @@ public sealed class XpsWebRouteMetadataParser
             {
                 var rule = attribute[5..].Trim();
                 if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");
-                if (rule.StartsWith('!'))
-                    forbiddenRules.Add(NormalizeRule(rule[1..]));
-                else
-                    requiredRules.Add(NormalizeRule(rule));
+                if (rule.StartsWith('!')) forbiddenRules.Add(NormalizeRule(rule[1..]));
+                else requiredRules.Add(NormalizeRule(rule));
             }
         }
 
@@ -179,15 +199,9 @@ public sealed class XpsWebRouteMetadataParser
     {
         method = string.Empty;
         var candidate = attribute.Trim();
-
-        if (candidate.StartsWith("Method:", StringComparison.OrdinalIgnoreCase))
-            candidate = candidate[7..].Trim();
-        else if (!ShorthandHttpMethods.Contains(candidate))
-            return false;
-
-        if (!IsValidHttpToken(candidate))
-            throw new XpsWebRouteMetadataException($"Invalid HTTP method '{candidate}'.");
-
+        if (candidate.StartsWith("Method:", StringComparison.OrdinalIgnoreCase)) candidate = candidate[7..].Trim();
+        else if (!ShorthandHttpMethods.Contains(candidate)) return false;
+        if (!IsValidHttpToken(candidate)) throw new XpsWebRouteMetadataException($"Invalid HTTP method '{candidate}'.");
         method = candidate.ToUpperInvariant();
         return true;
     }
@@ -207,10 +221,8 @@ public sealed class XpsWebRouteMetadataParser
     private static string NormalizeRule(string value)
     {
         var normalized = value.Trim();
-        if (normalized.Length is 0 or > 128)
-            throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");
-        if (normalized.Any(char.IsControl))
-            throw new XpsWebRouteMetadataException("Rule name contains a control character.");
+        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");
+        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Rule name contains a control character.");
         return normalized;
     }
 }
