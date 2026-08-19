@@ -41,13 +41,15 @@ internal static class Program
             }
             return 0;
         }
-        catch (XpsCgiException)
+        catch (XpsCgiException ex)
         {
+            Console.Error.WriteLine(ex);
             await XpsCgiAdapter.WriteErrorAsync(stdout, 400, "Bad Request").ConfigureAwait(false);
             return 1;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.Error.WriteLine(ex);
             await XpsCgiAdapter.WriteErrorAsync(stdout, 500, "Internal Server Error").ConfigureAwait(false);
             return 1;
         }
