@@ -1,0 +1,99 @@
+name: Session Defaults Patch
+on:
+  push:
+    branches: [session-defaults-role-restoration]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[session-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: session-defaults-role-restoration
+      - shell: python
+        run: |
+          from pathlib import Path
+          def rw(path, fn):
+              p=Path(path); s=p.read_text(encoding='utf-8'); n=fn(s)
+              if n==s: raise SystemExit('no change: '+path)
+              p.write_text(n,encoding='utf-8')
+
+          def cli(s):
+              s=s.replace('    var enableSessions = false;\n    var sessionOptionSpecified = false;\n','    var enableSessions = true;\n')
+              s=s.replace('                sessionOptionSpecified = true;\n','')
+              s=s.replace('    if (sessionOptionSpecified && !enableSessions)\n        throw new ArgumentException("Session configuration options require --sessions.");\n','')
+              s=s.replace('        var sessions = enableSessions\n            ? new XpsSessionStore(new XpsSessionOptions\n            {\n                CookieName = sessionCookieName,\n                IdleTimeout = TimeSpan.FromSeconds(sessionIdleSeconds),\n                SameSite = sessionSameSite,\n                RequireSecureCookie = sessionSecure\n            })\n            : null;','        var sessions = new XpsSessionStore(new XpsSessionOptions\n        {\n            CookieName = sessionCookieName,\n            IdleTimeout = TimeSpan.FromSeconds(sessionIdleSeconds),\n            SameSite = sessionSameSite,\n            RequireSecureCookie = sessionSecure\n        });')
+              s=s.replace('        if (enableSessions)\n            Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");','        Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");')
+              s=s.replace('    await using var adapter = new XpsFastCgiAdapter(options, server, dispatcher);','    var sessions = new XpsSessionStore();\n    await using var adapter = new XpsFastCgiAdapter(options, server, dispatcher, sessions: sessions);')
+              s=s.replace('                [--health] [--metrics] [--sessions]\n','                [--health] [--metrics]\n')
+              return s
+          rw('src/XPScript.Cli/Program.cs',cli)
+
+          def cfg(s):
+              s=s.replace('        AddFlag(result, cliArgs, "--sessions", config.Sessions);\n','')
+              s=s.replace('        public bool? Sessions { get; init; }\n','')
+              return s
+          rw('src/XPScript.Cli/XpsHostConfig.cs',cfg)
+
+          def ctx(s):
+              s=s.replace('    IReadOnlyCollection<string> Rules { get; }\n','    IReadOnlyCollection<string> Rules { get; }\n    IReadOnlyCollection<string> Roles { get; }\n')
+              s=s.replace('    bool HasRule(string rule);\n','    bool HasRule(string rule);\n    void SetRole(string role);\n    string GetRole();\n    bool HasRole(string role);\n    bool RemoveRole(string role);\n')
+              return s
+          rw('src/XPScript.Web.Runtime/XpsWebContext.cs',ctx)
+
+          def state(s):
+              s=s.replace('    public const string RulesKey = "rules";\n','    public const string RulesKey = "rules";\n    public const string RolesKey = "roles";\n')
+              s=s.replace('    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);\n','    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);\n    public IReadOnlyCollection<string> Roles => ParseRoles(Get(RolesKey) as string);\n',1)
+              s=s.replace('    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n','''    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n    public void SetRole(string role) { var r=NormalizeRole(role); var v=Roles.ToList(); if (!v.Contains(r,StringComparer.OrdinalIgnoreCase)) v.Add(r); Set(RolesKey,string.Join(',',v)); }\n    public string GetRole() => string.Join(',', Roles);\n    public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);\n    public bool RemoveRole(string role) { var r=NormalizeRole(role); var before=Roles; var v=before.Where(x=>!x.Equals(r,StringComparison.OrdinalIgnoreCase)).ToArray(); if(v.Length==before.Count) return false; if(v.Length==0) RemoveIfPresent(RolesKey); else Set(RolesKey,string.Join(',',v)); return true; }\n''',1)
+              s=s.replace('        RemoveIfPresent(RulesKey);\n        RotateId();','        RemoveIfPresent(RulesKey);\n        RemoveIfPresent(RolesKey);\n        RotateId();',1)
+              marker='    private static IReadOnlyCollection<string> ParseRules(string? rules)\n'
+              roles='''    private static IReadOnlyCollection<string> ParseRoles(string? roles) { if(string.IsNullOrWhiteSpace(roles)) return Array.Empty<string>(); return roles.Split([',',';'],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries).Select(NormalizeRole).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); }\n    private static string NormalizeRole(string? role) { var v=(role??string.Empty).Trim(); if(v.Length is 0 or >128) throw new ArgumentException("Role name must contain 1 to 128 characters.",nameof(role)); if(v.Any(char.IsControl)) throw new ArgumentException("Role name contains a control character.",nameof(role)); return v; }\n'''
+              s=s.replace(marker,roles+marker,1)
+              return s
+          rw('src/XPScript.Web.Runtime/XpsWebState.cs',state)
+
+          def cgi_state(s):
+              s=s.replace('        public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);\n','        public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);\n        public IReadOnlyCollection<string> Roles => ParseRoles(Get(XpsWebSession.RolesKey) as string);\n',1)
+              s=s.replace('        public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n','''        public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n        public void SetRole(string role) { var r=NormalizeRole(role); var v=Roles.ToList(); if(!v.Contains(r,StringComparer.OrdinalIgnoreCase)) v.Add(r); Set(XpsWebSession.RolesKey,string.Join(',',v)); }\n        public string GetRole() => string.Join(',', Roles);\n        public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);\n        public bool RemoveRole(string role) { var r=NormalizeRole(role); var before=Roles; var v=before.Where(x=>!x.Equals(r,StringComparison.OrdinalIgnoreCase)).ToArray(); if(v.Length==before.Count) return false; if(v.Length==0) RemoveIfPresent(XpsWebSession.RolesKey); else Set(XpsWebSession.RolesKey,string.Join(',',v)); return true; }\n''',1)
+              s=s.replace('            RemoveIfPresent(XpsWebSession.RulesKey);\n            RotateId();','            RemoveIfPresent(XpsWebSession.RulesKey);\n            RemoveIfPresent(XpsWebSession.RolesKey);\n            RotateId();',1)
+              marker='        private static IReadOnlyCollection<string> ParseRules(string? rules)'
+              roles='''        private static IReadOnlyCollection<string> ParseRoles(string? roles) { if(string.IsNullOrWhiteSpace(roles)) return Array.Empty<string>(); return roles.Split([',',';'],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries).Select(NormalizeRole).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); }\n        private static string NormalizeRole(string? role) { var v=(role??string.Empty).Trim(); if(v.Length is 0 or >128) throw new ArgumentException("Role name must contain 1 to 128 characters.",nameof(role)); if(v.Any(char.IsControl)) throw new ArgumentException("Role name contains a control character.",nameof(role)); return v; }\n'''
+              s=s.replace(marker,roles+marker,1)
+              return s
+          rw('src/XPScript.Web.Cgi/XpsCgiPersistentState.cs',cgi_state)
+
+          def principal(s):
+              s=s.replace('        foreach (var rule in session.Rules) rules.Add(NormalizeRule(rule));','        foreach (var rule in session.Rules) rules.Add(NormalizeRule(rule));\n        foreach (var role in session.Roles) rules.Add(NormalizeRule("role:" + role));')
+              return s
+          rw('src/XPScript.Web.Runtime/XpsWebPrincipal.cs',principal)
+
+          def parser(s):
+              s=s.replace('            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))','            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||\n            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))')
+              needle='''            if (attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))\n            {'''
+              repl='''            if (attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))\n            {\n                var role = attribute[5..].Trim();\n                if (role.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires a role name.");\n                requiredRules.Add("role:" + NormalizeRule(role));\n                continue;\n            }\n\n            if (attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))\n            {'''
+              s=s.replace(needle,repl,1)
+              return s
+          rw('src/XPScript.Web.Runtime/XpsWebRouteMetadataParser.cs',parser)
+
+          def cgi(s):
+              s=s.replace('using System.Reflection;\n','using System.Reflection;\nusing System.Text.Json;\n')
+              s=s.replace('            var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");','            var stateRoot = ResolveSessionFolder(environment, root);')
+              helper='''\n    private static string? ResolveSessionFolder(IReadOnlyDictionary<string,string?> environment, string root)\n    {\n        var env=Value(environment,"XPSCRIPT_SESSION_FOLDER");\n        if(!string.IsNullOrWhiteSpace(env)) return Path.GetFullPath(env,root);\n        var cfg=Value(environment,"XPSCRIPT_CONFIG");\n        if(string.IsNullOrWhiteSpace(cfg)) cfg=Path.Combine(root,"web.cfg"); else cfg=Path.GetFullPath(cfg,root);\n        if(!File.Exists(cfg)) return null;\n        using var doc=JsonDocument.Parse(File.ReadAllText(cfg),new JsonDocumentOptions{AllowTrailingCommas=true,CommentHandling=JsonCommentHandling.Skip});\n        if(!doc.RootElement.TryGetProperty("cgi",out var c)||c.ValueKind!=JsonValueKind.Object) return null;\n        if(!c.TryGetProperty("sessionFolder",out var f)||f.ValueKind!=JsonValueKind.String||string.IsNullOrWhiteSpace(f.GetString())) return null;\n        return Path.GetFullPath(f.GetString()!,Path.GetDirectoryName(Path.GetFullPath(cfg))??root);\n    }\n'''
+              s=s.replace('    private static Dictionary<string, string?> ReadEnvironment()\n',helper+'\n    private static Dictionary<string, string?> ReadEnvironment()\n')
+              return s
+          rw('src/XPScript.Web.Cgi/Program.cs',cgi)
+
+          def docs(s):
+              s=s.replace('Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.','Sessions are enabled by default for Kestrel and FastCGI. CGI sessions are enabled only when `cgi.sessionFolder` is configured in `web.cfg`. If no session folder is configured, CGI has no Session object. The configured folder persists sessions across CGI processes.')
+              s+='''\n\n### Session roles\n\nUse `Session.SetRole(role)`, `Session.GetRole()`, `Session.HasRole(role)` and `Session.RemoveRole(role)`. Routes can require a role with `[Role:admin]`. `[Rule:name]` remains supported separately.\n\n```json\n{ "cgi": { "sessionFolder": "./sessions" } }\n```\n'''
+              return s
+          rw('docs/web.md',docs)
+      - shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src docs
+          git commit -m "Enable sessions by default and restore roles [session-patched]"
+          git push origin HEAD:session-defaults-role-restoration
