@@ -19,12 +19,15 @@ public sealed class XpsWebRequest
         string? remoteAddress,
         string protocol,
         IReadOnlyDictionary<string, string> cookies,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, string?>? cgiVariables = null)
     {
         Method = NormalizeMethod(method);
         Path = path ?? throw new ArgumentNullException(nameof(path));
         PathInfo = pathInfo ?? string.Empty;
         QueryString = queryString ?? string.Empty;
+        Query_String = QueryString;
+        Query_String_Decoded = DecodeRawQueryString(Query_String);
         Headers = FreezeMultiValue(headers);
         ContentType = contentType;
         ContentLength = contentLength;
@@ -35,6 +38,7 @@ public sealed class XpsWebRequest
         Protocol = protocol ?? string.Empty;
         Cookies = new ReadOnlyDictionary<string, string>(
             new Dictionary<string, string>(cookies ?? throw new ArgumentNullException(nameof(cookies)), StringComparer.OrdinalIgnoreCase));
+        CgiVariables = FreezeCgiVariables(cgiVariables);
         CancellationToken = cancellationToken;
     }
 
@@ -42,6 +46,8 @@ public sealed class XpsWebRequest
     public string Path { get; }
     public string PathInfo { get; }
     public string QueryString { get; }
+    public string Query_String { get; }
+    public string Query_String_Decoded { get; }
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Headers { get; }
     public string? ContentType { get; }
     public long? ContentLength { get; }
@@ -51,8 +57,15 @@ public sealed class XpsWebRequest
     public string? RemoteAddress { get; }
     public string Protocol { get; }
     public IReadOnlyDictionary<string, string> Cookies { get; }
+    public IReadOnlyDictionary<string, string?> CgiVariables { get; }
     public CancellationToken CancellationToken { get; }
     public bool IsCancellationRequested => CancellationToken.IsCancellationRequested;
+
+    public string? Cgi(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return CgiVariables.TryGetValue(name, out var value) ? value : null;
+    }
 
     public IReadOnlyList<string> Query(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
         GetValues(ParseUrlEncoded(QueryString, maxQueryChars, maxFields, "query string"), name);
@@ -200,6 +213,19 @@ public sealed class XpsWebRequest
             result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<string>)Array.AsReadOnly(pair.Value.ToArray()), StringComparer.OrdinalIgnoreCase));
     }
 
+    private static string DecodeRawQueryString(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        try
+        {
+            return Uri.UnescapeDataString(value.Replace('+', ' '));
+        }
+        catch (UriFormatException)
+        {
+            return value;
+        }
+    }
+
     private static string DecodeUrlComponent(string value)
     {
         try
@@ -228,6 +254,20 @@ public sealed class XpsWebRequest
                 throw new ArgumentException("HTTP method contains an invalid token character.", nameof(method));
         }
         return normalized;
+    }
+
+    private static IReadOnlyDictionary<string, string?> FreezeCgiVariables(IReadOnlyDictionary<string, string?>? values)
+    {
+        var copy = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (values is not null)
+        {
+            foreach (var pair in values)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key)) continue;
+                copy[pair.Key] = pair.Value;
+            }
+        }
+        return new ReadOnlyDictionary<string, string?>(copy);
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> FreezeMultiValue(

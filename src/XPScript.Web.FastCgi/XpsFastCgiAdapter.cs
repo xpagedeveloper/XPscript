@@ -237,8 +237,24 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         var scheme = IsHttps(parameters) ? "https" : "http";
         var protocol = parameters.TryGetValue("SERVER_PROTOCOL", out var p) ? p : "HTTP/1.1";
         var remoteAddress = parameters.TryGetValue("REMOTE_ADDR", out var remote) ? remote : null;
+        var cgiVariables = parameters.ToDictionary(pair => pair.Key, pair => (string?)pair.Value, StringComparer.OrdinalIgnoreCase);
 
-        return new XpsWebRequest(method, NormalizeRequestPath(scriptName, pathInfo), pathInfo, query, headers, contentType, contentLength, body, host, scheme, remoteAddress, protocol, cookies, cancellationToken);
+        return new XpsWebRequest(
+            method,
+            NormalizeRequestPath(scriptName, pathInfo),
+            pathInfo,
+            query,
+            headers,
+            contentType,
+            contentLength,
+            body,
+            host,
+            scheme,
+            remoteAddress,
+            protocol,
+            cookies,
+            cancellationToken,
+            cgiVariables);
     }
 
     private void ValidateScriptFilename(IReadOnlyDictionary<string, string> parameters)

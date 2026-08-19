@@ -16,6 +16,15 @@ public sealed class XpsWebRouteMetadataParser
         @"^\s*(?:Public\s+|Private\s+)?(?:Sub|Function)\s+([A-Za-z_]\w*)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    private static readonly HashSet<string> ShorthandHttpMethods = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH",
+        "ACL", "BASELINE-CONTROL", "BIND", "CHECKIN", "CHECKOUT", "COPY", "LABEL", "LINK", "LOCK",
+        "MERGE", "MKACTIVITY", "MKCALENDAR", "MKCOL", "MKREDIRECTREF", "MKWORKSPACE", "MOVE",
+        "ORDERPATCH", "PRI", "PROPFIND", "PROPPATCH", "REBIND", "REPORT", "SEARCH", "UNBIND",
+        "UNCHECKOUT", "UNLINK", "UNLOCK", "UPDATE", "UPDATEREDIRECTREF", "VERSION-CONTROL"
+    };
+
     public XpsWebRouteParseResult Parse(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -94,7 +103,11 @@ public sealed class XpsWebRouteMetadataParser
             if (string.IsNullOrEmpty(Path.GetExtension(target)))
                 target += ".xps";
             else if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
-                target = target[..^4] + ".xps";
+            {
+                var corrected = target[..^4] + ".xps";
+                Console.Error.WriteLine($"error: PreCompile target '{target}' uses the misspelled .xsp extension. Trying '{corrected}'.");
+                target = corrected;
+            }
             else if (!target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
             {
                 Console.Error.WriteLine($"error: PreCompile target '{target}' does not use the .xps extension. Ignoring target.");
@@ -114,14 +127,11 @@ public sealed class XpsWebRouteMetadataParser
     private static bool IsKnownRouteAttribute(string attribute)
     {
         if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
-            attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase))
+            attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        var method = attribute.ToUpperInvariant();
-        if (method is "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS")
-            return true;
-
-        return attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase);
+        return TryParseHttpMethodAttribute(attribute, out _);
     }
 
     private static XpsRoutePolicy BuildPolicy(IReadOnlyList<string> attributes)
@@ -142,8 +152,7 @@ public sealed class XpsWebRouteMetadataParser
                 attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var method = attribute.ToUpperInvariant();
-            if (method is "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS")
+            if (TryParseHttpMethodAttribute(attribute, out var method))
             {
                 methods.Add(method);
                 continue;
@@ -164,6 +173,35 @@ public sealed class XpsWebRouteMetadataParser
             throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
 
         return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules);
+    }
+
+    private static bool TryParseHttpMethodAttribute(string attribute, out string method)
+    {
+        method = string.Empty;
+        var candidate = attribute.Trim();
+
+        if (candidate.StartsWith("Method:", StringComparison.OrdinalIgnoreCase))
+            candidate = candidate[7..].Trim();
+        else if (!ShorthandHttpMethods.Contains(candidate))
+            return false;
+
+        if (!IsValidHttpToken(candidate))
+            throw new XpsWebRouteMetadataException($"Invalid HTTP method '{candidate}'.");
+
+        method = candidate.ToUpperInvariant();
+        return true;
+    }
+
+    private static bool IsValidHttpToken(string value)
+    {
+        if (value.Length is 0 or > 64) return false;
+        foreach (var c in value)
+        {
+            if (char.IsAsciiLetterOrDigit(c)) continue;
+            if (c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~') continue;
+            return false;
+        }
+        return true;
     }
 
     private static string NormalizeRule(string value)

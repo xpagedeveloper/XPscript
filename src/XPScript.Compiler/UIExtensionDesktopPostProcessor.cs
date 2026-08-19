@@ -70,6 +70,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         if (!NeedsUiExtensions(generated))
             return generated;
 
+        var needsListView = NeedsListView(generated);
+
         var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
         if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
@@ -81,10 +83,6 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n" + UIListViewRuntimeSource.Code
             + "\n";
 
-        // Raw string runtime constants preserve the source file's newline style.
-        // A Windows build can therefore reintroduce CRLF after the first
-        // normalization. Normalize the complete appended runtime before every
-        // structural UIForm/UIListView postprocessor runs.
         replaced = NormalizeLineEndings(replaced);
 
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
@@ -92,11 +90,16 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopLayoutMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopReactivePostProcessor().Transform(replaced);
-        replaced = new UIListViewDesktopPostProcessor().Transform(replaced);
-        replaced = new UIListViewEventPostProcessor().Transform(replaced);
-        replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
-        replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
-        replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
+
+        if (needsListView)
+        {
+            replaced = new UIListViewDesktopPostProcessor().Transform(replaced);
+            replaced = new UIListViewEventPostProcessor().Transform(replaced);
+            replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
+            replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
+            replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
+        }
+
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
@@ -131,6 +134,14 @@ internal sealed class UIExtensionDesktopPostProcessor
         }
 
         return false;
+    }
+
+    private static bool NeedsListView(string generated)
+    {
+        var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
+        var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
+        return scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
+               scriptPart.Contains("XPScriptUIListView", StringComparison.Ordinal);
     }
 
     private static string RewriteDialogCalls(string source)
