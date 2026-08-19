@@ -1,0 +1,22 @@
+' XPScript UIForm structural elements sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim form As New UIForm("Structural elements")
+    Dim grid As Variant
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddSeparator("customer_separator")
+    Call form.AddTextField("email", "Email")
+    Call form.AddSpacer("actions_spacer")
+    Call form.AddCheckBox("active", "Active")
+
+    Set grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("name", 6)
+    Call grid.SetFieldPosition("customer_separator", 12)
+    Call grid.SetFieldPosition("email", 6)
+    Call grid.SetFieldPosition("actions_spacer", 12)
+    Call grid.SetFieldPosition("active", 12)
+
+    Print "FIELD_COUNT=" & form.FieldCount
+End Sub
