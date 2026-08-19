@@ -68,8 +68,31 @@ public static class XpsUIDesktopRuntimeBridge
     public static DesktopFormRequest ParseRequest(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        return JsonSerializer.Deserialize<DesktopFormRequest>(json, JsonOptions)
+        var request = JsonSerializer.Deserialize<DesktopFormRequest>(json, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIForm request is empty.");
+
+        var fields = request.Fields.Select(field => field.Type switch
+        {
+            "Separator" => field with
+            {
+                Type = "RadioGroup",
+                Label = "────────────────────────────────────────",
+                Required = false,
+                ReadOnly = true,
+                Options = Array.Empty<string>()
+            },
+            "Spacer" => field with
+            {
+                Type = "RadioGroup",
+                Label = string.Empty,
+                Required = false,
+                ReadOnly = true,
+                Options = Array.Empty<string>()
+            },
+            _ => field
+        }).ToArray();
+
+        return request with { Fields = fields };
     }
 
     public static string SerializeResult(DesktopFormResult result)

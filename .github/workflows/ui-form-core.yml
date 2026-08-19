@@ -12,6 +12,7 @@ on:
       - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
+      - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'tests/WebCompilerSmoke/**'
@@ -33,6 +34,7 @@ on:
       - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
+      - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
       - 'tests/WebCompilerSmoke/**'
@@ -107,6 +109,17 @@ jobs:
           )) {
             if ($output -notcontains $value) { throw "UIForm list box output missing: $value" }
           }
+      - name: Compile and verify UIForm structural elements
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/ui-form-structural-elements$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-form-structural-elements.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'UIForm structural element compilation failed.' }
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "UIForm structural element runtime failed with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'FIELD_COUNT=5') { throw 'UIForm structural element count is incorrect.' }
       - name: Compile UIForm action and layout samples
         shell: pwsh
         run: |
