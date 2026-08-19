@@ -70,7 +70,7 @@ End Sub
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
-        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.tooltip",
+        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.tooltip",
         "type === 'separator'", "type === 'spacer'"
     })
     {
