@@ -52,17 +52,7 @@ internal sealed class UIListViewLiveUpdatePostProcessor
     private void InvokeRegisteredHandler(string handlerName)
 """, "event-state");
 
-        listView = ReplaceRequired(listView,
-            """
-                    DispatchRegisteredEvent(eventName, XPScriptUIWebAdapter.FormFirst("__xps_list_index"));
-                    XPScriptUIWebAdapter.WriteHtml("OK");
-                    return "Handled";
-""",
-            """
-                    var stateJson = DispatchRegisteredEvent(eventName, XPScriptUIWebAdapter.FormFirst("__xps_list_index"));
-                    XPScriptUIWebAdapter.WriteHtml(stateJson);
-                    return "Handled";
-""", "web-response");
+        listView = ReplaceEventResponseRequired(listView);
 
         listView = ReplaceRequired(listView,
             """
@@ -92,6 +82,34 @@ internal sealed class UIListViewLiveUpdatePostProcessor
 """, "sort-rebind");
 
         return prefix + listView + suffix;
+    }
+
+    private static string ReplaceEventResponseRequired(string source)
+    {
+        const string dispatch = "DispatchRegisteredEvent(eventName, XPScriptUIWebAdapter.FormFirst(\"__xps_list_index\"));";
+        const string handled = "return \"Handled\";";
+
+        var start = source.IndexOf(dispatch, StringComparison.Ordinal);
+        if (start < 0)
+            throw new CompilerException("Unable to install UIListView live update runtime (web-response:dispatch).");
+
+        var lineStart = source.LastIndexOf('\n', Math.Max(0, start - 1));
+        lineStart = lineStart < 0 ? 0 : lineStart + 1;
+
+        var end = source.IndexOf(handled, start, StringComparison.Ordinal);
+        if (end < 0)
+            throw new CompilerException("Unable to install UIListView live update runtime (web-response:handled).");
+        end += handled.Length;
+
+        var indentation = source[lineStart..start];
+        var replacement = string.Join("\n", new[]
+        {
+            indentation + "var stateJson = DispatchRegisteredEvent(eventName, XPScriptUIWebAdapter.FormFirst(\"__xps_list_index\"));",
+            indentation + "XPScriptUIWebAdapter.WriteHtml(stateJson);",
+            indentation + "return \"Handled\";"
+        });
+
+        return source[..lineStart] + replacement + source[end..];
     }
 
     private static (string Prefix, string ListView, string Suffix) SplitListViewClass(string source)
