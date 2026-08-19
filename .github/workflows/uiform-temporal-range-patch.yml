@@ -1,0 +1,139 @@
+name: UIForm Temporal Range Patch
+
+on:
+  push:
+    branches: [uiform-temporal-range-validation]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[temporal-range-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: uiform-temporal-range-validation
+      - name: Apply temporal range integration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old in text:
+                  p.write_text(text.replace(old, new, 1), encoding='utf-8')
+                  return
+              if new in text:
+                  return
+              raise SystemExit(f'{label} patch target not found in {path}')
+
+          replace_once(
+              'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs',
+              '        replaced = new UIFormDateRangeValidationPostProcessor().Transform(replaced);\n        replaced = new UIWebBootstrapPostProcessor().Transform(replaced);',
+              '        replaced = new UIFormDateRangeValidationPostProcessor().Transform(replaced);\n        replaced = new UIFormTemporalRangeValidationPostProcessor().Transform(replaced);\n        replaced = new UIWebBootstrapPostProcessor().Transform(replaced);',
+              'postprocessor wiring')
+
+          replace_once(
+              'src/XPScript.UI.Desktop/DesktopBridgeContracts.cs',
+              '    public string DateMaximum { get; init; } = string.Empty;\n    public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();',
+              '    public string DateMaximum { get; init; } = string.Empty;\n    public string TimeMinimum { get; init; } = string.Empty;\n    public string TimeMaximum { get; init; } = string.Empty;\n    public string DateTimeMinimum { get; init; } = string.Empty;\n    public string DateTimeMaximum { get; init; } = string.Empty;\n    public string MonthMinimum { get; init; } = string.Empty;\n    public string MonthMaximum { get; init; } = string.Empty;\n    public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();',
+              'desktop contract')
+
+          replace_once(
+              'src/XPScript.UI.Desktop/DesktopFormHost.cs',
+              '            case "TimeField": if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format."; break;',
+              '''            case "TimeField":
+                if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeValue))
+                    return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format.";
+                if (field.TimeMinimum.Length > 0 && TimeOnly.TryParseExact(field.TimeMinimum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMinimum) && timeValue < timeMinimum)
+                    return $"{field.LabelOrName()} must be at or after {field.TimeMinimum}.";
+                if (field.TimeMaximum.Length > 0 && TimeOnly.TryParseExact(field.TimeMaximum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMaximum) && timeValue > timeMaximum)
+                    return $"{field.LabelOrName()} must be at or before {field.TimeMaximum}.";
+                break;''',
+              'desktop time validation')
+
+          replace_once(
+              'src/XPScript.UI.Desktop/DesktopFormHost.cs',
+              '            case "DateTimeField": if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd\'T\'HH:mm", "yyyy-MM-dd\'T\'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid local date/time."; break;',
+              '''            case "DateTimeField":
+                if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
+                    return $"{field.LabelOrName()} must contain a valid local date/time.";
+                if (field.DateTimeMinimum.Length > 0 && DateTime.TryParseExact(field.DateTimeMinimum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMinimum) && dateTimeValue < dateTimeMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.DateTimeMinimum}.";
+                if (field.DateTimeMaximum.Length > 0 && DateTime.TryParseExact(field.DateTimeMaximum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMaximum) && dateTimeValue > dateTimeMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.DateTimeMaximum}.";
+                break;''',
+              'desktop datetime validation')
+
+          replace_once(
+              'src/XPScript.UI.Desktop/DesktopFormHost.cs',
+              '            case "MonthField": if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format."; break;',
+              '''            case "MonthField":
+                if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthValue))
+                    return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format.";
+                if (field.MonthMinimum.Length > 0 && DateTime.TryParseExact(field.MonthMinimum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMinimum) && monthValue < monthMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.MonthMinimum}.";
+                if (field.MonthMaximum.Length > 0 && DateTime.TryParseExact(field.MonthMaximum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMaximum) && monthValue > monthMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.MonthMaximum}.";
+                break;''',
+              'desktop month validation')
+
+          replace_once(
+              'src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs',
+              "  if (field.dateMaximum && 'max' in editor) editor.max = String(field.dateMaximum);\n  if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);",
+              "  if (field.dateMaximum && 'max' in editor) editor.max = String(field.dateMaximum);\n  if (field.timeMinimum && 'min' in editor) editor.min = String(field.timeMinimum);\n  if (field.timeMaximum && 'max' in editor) editor.max = String(field.timeMaximum);\n  if (field.dateTimeMinimum && 'min' in editor) editor.min = String(field.dateTimeMinimum);\n  if (field.dateTimeMaximum && 'max' in editor) editor.max = String(field.dateTimeMaximum);\n  if (field.monthMinimum && 'min' in editor) editor.min = String(field.monthMinimum);\n  if (field.monthMaximum && 'max' in editor) editor.max = String(field.monthMaximum);\n  if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);",
+              'browser temporal range')
+
+          replace_once(
+              'tests/WebBrowserWasmSmoke/Program.cs',
+              '    Call form.AddDateField("birthday", "Birthday")\n    Call form.AddSeparator("identity_separator")',
+              '    Call form.AddDateField("birthday", "Birthday")\n    Call form.AddTimeField("start_time", "Start time")\n    Call form.AddDateTimeField("meeting", "Meeting")\n    Call form.AddMonthField("billing_month", "Billing month")\n    Call form.AddSeparator("identity_separator")',
+              'browser temporal fields')
+          replace_once(
+              'tests/WebBrowserWasmSmoke/Program.cs',
+              '    Call form.SetDateRange("birthday", "2020-01-01", "2030-12-31")\n    Call form.SetFieldPlaceholder("name", "Enter your name")',
+              '    Call form.SetDateRange("birthday", "2020-01-01", "2030-12-31")\n    Call form.SetTimeRange("start_time", "08:00", "18:00")\n    Call form.SetDateTimeRange("meeting", "2026-01-01T08:00", "2026-12-31T18:00")\n    Call form.SetMonthRange("billing_month", "2026-01", "2026-12")\n    Call form.SetFieldPlaceholder("name", "Enter your name")',
+              'browser temporal API')
+          replace_once(
+              'tests/WebBrowserWasmSmoke/Program.cs',
+              '"field.dateMinimum", "field.dateMaximum", "field.tooltip",',
+              '"field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",',
+              'browser temporal markers')
+
+          replace_once(
+              'samples/ui-form-datetime-range.xps',
+              '    Call data.Set("volume", 50)\n    Call form.BindData(data)',
+              '    Call data.Set("volume", 50)\n    Call data.Set("start_time", "09:30")\n    Call data.Set("billing_month", "2026-08")\n    Call form.BindData(data)',
+              'sample data')
+          replace_once(
+              'samples/ui-form-datetime-range.xps',
+              '    Call form.AddDateTimeField("meeting", "Meeting")\n    Call form.AddRangeField("volume", "Volume")\n    Call form.SetNumberRange("volume", 0, 100)',
+              '    Call form.AddDateTimeField("meeting", "Meeting")\n    Call form.AddTimeField("start_time", "Start time")\n    Call form.AddMonthField("billing_month", "Billing month")\n    Call form.AddRangeField("volume", "Volume")\n    Call form.SetNumberRange("volume", 0, 100)\n    Call form.SetTimeRange("start_time", "08:00", "18:00")\n    Call form.SetDateTimeRange("meeting", "2026-01-01T00:00", "2026-12-31T23:59")\n    Call form.SetMonthRange("billing_month", "2026-01", "2026-12")',
+              'sample fields')
+          replace_once(
+              'samples/ui-form-datetime-range.xps',
+              '    Print "MEETING=" & form.GetFieldValueString("meeting")\n    Print "VOLUME=" & form.GetFieldValueString("volume")',
+              '    Print "MEETING=" & form.GetFieldValueString("meeting")\n    Print "START_TIME=" & form.GetFieldValueString("start_time")\n    Print "BILLING_MONTH=" & form.GetFieldValueString("billing_month")\n    Print "VOLUME=" & form.GetFieldValueString("volume")',
+              'sample output')
+
+          p = Path('docs/uiform.md')
+          text = p.read_text(encoding='utf-8')
+          marker = '## Grid layout\n'
+          section = '''## Date and time ranges\n\nUIForm supports range validation for date and time controls. The same rules are enforced by desktop, server-rendered web and browser-wasm.\n\n```xpscript\nCall form.SetDateRange("birthday", "2020-01-01", "2030-12-31")\nCall form.SetTimeRange("start_time", "08:00", "18:00")\nCall form.SetDateTimeRange("meeting", "2026-01-01T08:00", "2026-12-31T18:00")\nCall form.SetMonthRange("billing_month", "2026-01", "2026-12")\n```\n\n`SetDateRange` applies to `DateField` and uses `yyyy-MM-dd`. `SetTimeRange` applies to `TimeField` and accepts `HH:mm` or `HH:mm:ss`. `SetDateTimeRange` applies to `DateTimeField` and accepts local values in `yyyy-MM-ddTHH:mm` or `yyyy-MM-ddTHH:mm:ss`. `SetMonthRange` applies to `MonthField` and uses `yyyy-MM`.\n\nThe minimum value must not be greater than the maximum value. Server-side validation is authoritative. Web and browser-wasm also map the configured limits to native HTML `min` and `max` constraints for immediate client-side feedback.\n\n'''
+          if section not in text:
+              if marker not in text:
+                  raise SystemExit('documentation insertion point not found')
+              p.write_text(text.replace(marker, section + marker, 1), encoding='utf-8')
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs src/XPScript.UI.Desktop/DesktopBridgeContracts.cs src/XPScript.UI.Desktop/DesktopFormHost.cs src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs tests/WebBrowserWasmSmoke/Program.cs samples/ui-form-datetime-range.xps docs/uiform.md
+          git commit -m "Wire UIForm temporal range validation across runtimes [temporal-range-patched]"
+          git push origin HEAD:uiform-temporal-range-validation
