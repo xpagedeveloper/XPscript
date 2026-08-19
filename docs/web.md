@@ -90,7 +90,7 @@ End Sub
 
 ## Session
 
-Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
+Sessions are enabled by default for Kestrel and FastCGI. CGI sessions are enabled only when `cgi.sessionFolder` is configured in `web.cfg`. If no session folder is configured, CGI has no Session object. The configured folder persists sessions across CGI processes.
 
 ## Application
 
@@ -120,3 +120,12 @@ CGI and FastCGI transports populate CGI-compatible request variables. Use `Reque
 The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose `.xps` source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.
 
 See [Getting started](getting-started.md) for host setup and parameters and [UIForm](uiform.md) for forms.
+
+
+### Session roles
+
+Use `Session.SetRole(role)`, `Session.GetRole()`, `Session.HasRole(role)` and `Session.RemoveRole(role)`. Routes can require a role with `[Role:admin]`. `[Rule:name]` remains supported separately.
+
+```json
+{ "cgi": { "sessionFolder": "./sessions" } }
+```

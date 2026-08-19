@@ -150,7 +150,8 @@ public sealed class XpsWebRouteMetadataParser
     {
         if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
             attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
-            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))
+            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return TryParseHttpMethodAttribute(attribute, out _);
@@ -177,6 +178,14 @@ public sealed class XpsWebRouteMetadataParser
             if (TryParseHttpMethodAttribute(attribute, out var method))
             {
                 methods.Add(method);
+                continue;
+            }
+
+            if (attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
+            {
+                var role = attribute[5..].Trim();
+                if (role.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires a role name.");
+                requiredRules.Add("role:" + NormalizeRule(role));
                 continue;
             }
 

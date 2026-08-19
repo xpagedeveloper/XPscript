@@ -199,7 +199,6 @@ internal static class XpsHostConfig
         AddValue(result, cliArgs, "--https-cert-password-env", config.HttpsCertificatePasswordEnvironment);
         AddFlag(result, cliArgs, "--health", config.Health);
         AddFlag(result, cliArgs, "--metrics", config.Metrics);
-        AddFlag(result, cliArgs, "--sessions", config.Sessions);
         AddValue(result, cliArgs, "--session-cookie", config.SessionCookie);
         AddValue(result, cliArgs, "--session-timeout-seconds", config.SessionTimeoutSeconds);
         AddValue(result, cliArgs, "--session-same-site", config.SessionSameSite);
@@ -292,7 +291,6 @@ internal static class XpsHostConfig
         public string? HttpsCertificatePasswordEnvironment { get; init; }
         public bool? Health { get; init; }
         public bool? Metrics { get; init; }
-        public bool? Sessions { get; init; }
         public string? SessionCookie { get; init; }
         public int? SessionTimeoutSeconds { get; init; }
         public string? SessionSameSite { get; init; }

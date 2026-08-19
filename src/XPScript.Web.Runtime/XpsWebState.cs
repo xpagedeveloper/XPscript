@@ -317,6 +317,7 @@ public sealed class XpsWebSession : IXpsSession
     public const string UserIdKey = "userId";
     public const string UserNameKey = "userName";
     public const string RulesKey = "rules";
+    public const string RolesKey = "roles";
     private readonly XpsSessionStore _store;
     private readonly XpsSessionStore.SessionRecord _record;
     private readonly XpsWebResponse _response;
@@ -334,6 +335,7 @@ public sealed class XpsWebSession : IXpsSession
     public string? UserId => Get(UserIdKey) as string;
     public string? UserName => Get(UserNameKey) as string;
     public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);
+    public IReadOnlyCollection<string> Roles => ParseRoles(Get(RolesKey) as string);
     public string Start() => Id;
 
     public object? Get(string name)
@@ -394,6 +396,10 @@ public sealed class XpsWebSession : IXpsSession
     }
 
     public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
+    public void SetRole(string role) { var r=NormalizeRole(role); var v=Roles.ToList(); if (!v.Contains(r,StringComparer.OrdinalIgnoreCase)) v.Add(r); Set(RolesKey,string.Join(',',v)); }
+    public string GetRole() => string.Join(',', Roles);
+    public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);
+    public bool RemoveRole(string role) { var r=NormalizeRole(role); var before=Roles; var v=before.Where(x=>!x.Equals(r,StringComparison.OrdinalIgnoreCase)).ToArray(); if(v.Length==before.Count) return false; if(v.Length==0) RemoveIfPresent(RolesKey); else Set(RolesKey,string.Join(',',v)); return true; }
 
     public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
     {
@@ -413,6 +419,7 @@ public sealed class XpsWebSession : IXpsSession
         RemoveIfPresent(UserIdKey);
         RemoveIfPresent(UserNameKey);
         RemoveIfPresent(RulesKey);
+        RemoveIfPresent(RolesKey);
         RotateId();
     }
 
@@ -437,6 +444,8 @@ public sealed class XpsWebSession : IXpsSession
         string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("yes", StringComparison.OrdinalIgnoreCase) || s == "1",
         _ => false
     };
+    private static IReadOnlyCollection<string> ParseRoles(string? roles) { if(string.IsNullOrWhiteSpace(roles)) return Array.Empty<string>(); return roles.Split([',',';'],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries).Select(NormalizeRole).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); }
+    private static string NormalizeRole(string? role) { var v=(role??string.Empty).Trim(); if(v.Length is 0 or >128) throw new ArgumentException("Role name must contain 1 to 128 characters.",nameof(role)); if(v.Any(char.IsControl)) throw new ArgumentException("Role name contains a control character.",nameof(role)); return v; }
     private static IReadOnlyCollection<string> ParseRules(string? rules)
     {
         if (string.IsNullOrWhiteSpace(rules)) return Array.Empty<string>();

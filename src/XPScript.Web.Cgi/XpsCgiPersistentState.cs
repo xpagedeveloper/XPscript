@@ -385,6 +385,7 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
         public string? UserId => Get(XpsWebSession.UserIdKey) as string;
         public string? UserName => Get(XpsWebSession.UserNameKey) as string;
         public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);
+        public IReadOnlyCollection<string> Roles => ParseRoles(Get(XpsWebSession.RolesKey) as string);
         public string Start() => Id;
 
         public object? Get(string name)
@@ -430,6 +431,10 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
         }
 
         public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
+        public void SetRole(string role) { var r=NormalizeRole(role); var v=Roles.ToList(); if(!v.Contains(r,StringComparer.OrdinalIgnoreCase)) v.Add(r); Set(XpsWebSession.RolesKey,string.Join(',',v)); }
+        public string GetRole() => string.Join(',', Roles);
+        public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);
+        public bool RemoveRole(string role) { var r=NormalizeRole(role); var before=Roles; var v=before.Where(x=>!x.Equals(r,StringComparison.OrdinalIgnoreCase)).ToArray(); if(v.Length==before.Count) return false; if(v.Length==0) RemoveIfPresent(XpsWebSession.RolesKey); else Set(XpsWebSession.RolesKey,string.Join(',',v)); return true; }
 
         public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
         {
@@ -447,6 +452,7 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
             RemoveIfPresent(XpsWebSession.UserIdKey);
             RemoveIfPresent(XpsWebSession.UserNameKey);
             RemoveIfPresent(XpsWebSession.RulesKey);
+            RemoveIfPresent(XpsWebSession.RolesKey);
             RotateId();
         }
 

@@ -30,6 +30,7 @@ public sealed class XpsWebPrincipal
         if (session is null || !session.Started) return this;
         var rules = new HashSet<string>(_rules, StringComparer.OrdinalIgnoreCase);
         foreach (var rule in session.Rules) rules.Add(NormalizeRule(rule));
+        foreach (var role in session.Roles) rules.Add(NormalizeRule("role:" + role));
         return new XpsWebPrincipal(
             IsAuthenticated || session.IsAuthenticated,
             UserId ?? session.UserId,

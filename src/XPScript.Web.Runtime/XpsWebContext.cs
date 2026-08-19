@@ -83,6 +83,7 @@ public interface IXpsSession
     string? UserId { get; }
     string? UserName { get; }
     IReadOnlyCollection<string> Rules { get; }
+    IReadOnlyCollection<string> Roles { get; }
     string Start();
     object? Get(string name);
     void Set(string name, object? value);
@@ -91,6 +92,10 @@ public interface IXpsSession
     bool Unset(string name);
     void Clear();
     bool HasRule(string rule);
+    void SetRole(string role);
+    string GetRole();
+    bool HasRole(string role);
+    bool RemoveRole(string role);
     void Authenticate(string? userId = null, string? userName = null, string? rules = null);
     void SignOut();
     string RotateId();

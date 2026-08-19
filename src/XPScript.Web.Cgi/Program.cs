@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using System.Text.Json;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -22,7 +23,7 @@ internal static class Program
             var server = new XpsServerInfo(siteId, root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, version);
 
             await using var dispatcher = new XpsWebDispatcher(root);
-            var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");
+            var stateRoot = ResolveSessionFolder(environment, root);
             if (!string.IsNullOrWhiteSpace(stateRoot))
             {
                 await using var state = await XpsCgiPersistentState.OpenAsync(stateRoot, siteId).ConfigureAwait(false);
@@ -53,6 +54,20 @@ internal static class Program
             await XpsCgiAdapter.WriteErrorAsync(stdout, 500, "Internal Server Error").ConfigureAwait(false);
             return 1;
         }
+    }
+
+
+    private static string? ResolveSessionFolder(IReadOnlyDictionary<string,string?> environment, string root)
+    {
+        var env=Value(environment,"XPSCRIPT_SESSION_FOLDER");
+        if(!string.IsNullOrWhiteSpace(env)) return Path.GetFullPath(env,root);
+        var cfg=Value(environment,"XPSCRIPT_CONFIG");
+        if(string.IsNullOrWhiteSpace(cfg)) cfg=Path.Combine(root,"web.cfg"); else cfg=Path.GetFullPath(cfg,root);
+        if(!File.Exists(cfg)) return null;
+        using var doc=JsonDocument.Parse(File.ReadAllText(cfg),new JsonDocumentOptions{AllowTrailingCommas=true,CommentHandling=JsonCommentHandling.Skip});
+        if(!doc.RootElement.TryGetProperty("cgi",out var c)||c.ValueKind!=JsonValueKind.Object) return null;
+        if(!c.TryGetProperty("sessionFolder",out var f)||f.ValueKind!=JsonValueKind.String||string.IsNullOrWhiteSpace(f.GetString())) return null;
+        return Path.GetFullPath(f.GetString()!,Path.GetDirectoryName(Path.GetFullPath(cfg))??root);
     }
 
     private static Dictionary<string, string?> ReadEnvironment()
