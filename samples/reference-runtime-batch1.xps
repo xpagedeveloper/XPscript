@@ -3,6 +3,8 @@ Option Declare
 Sub Main()
     Dim users List As String
     Dim unknownValue As Variant
+    Dim regexMatches As Variant
+    Dim stringMatches() As String
     Dim d As Date
 
     users("admin") = "Alice"
@@ -26,6 +28,13 @@ Sub Main()
     Print "CVDATE=" & CStr(Year(d))
     Print "ISLIST=" & CStr(IsList(users))
     Print "ISUNKNOWN=" & CStr(IsUnknown(unknownValue))
+
+    regexMatches = RegexMatch("A12 B345 C7", "[0-9]+")
+    stringMatches = RegexMatch("X9 Y88", "[0-9]+")
+    Print "REGEXVALIDATE=" & CStr(RegexValidate("ABC-123", "^[A-Z]+-[0-9]+$"))
+    Print "REGEXINVALID=" & CStr(RegexValidate("ABC-X", "^[A-Z]+-[0-9]+$"))
+    Print "REGEXMATCHV=" & CStr(regexMatches(0)) & "," & CStr(regexMatches(1)) & "," & CStr(regexMatches(2))
+    Print "REGEXMATCHS=" & stringMatches(0) & "," & stringMatches(1)
 
     Print "B64ENC=" & Base64Encode("Fredrik", "utf-8")
     Print "B64DEC=" & Base64Decode("RnJlZHJpaw==", "utf-8")

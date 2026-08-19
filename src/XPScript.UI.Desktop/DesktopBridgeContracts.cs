@@ -28,6 +28,7 @@ public sealed record DesktopFormField(
     public bool ReadOnly { get; init; }
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
+    public string RegexPattern { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
 }
 

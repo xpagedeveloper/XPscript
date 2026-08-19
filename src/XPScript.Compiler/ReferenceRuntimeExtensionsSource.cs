@@ -6,6 +6,7 @@ internal static class ReferenceRuntimeExtensionsSource
 internal static class XPScriptReferenceRuntime
 {
     private static Encoding ByteEncoding => Encoding.Default;
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
     public static int InstrB(object? source, object? find) => InstrB(1, source, find);
 
@@ -193,6 +194,45 @@ internal static class XPScriptReferenceRuntime
     }
 
     public static bool IsUnknown(object? value) => value is null;
+
+    public static bool RegexValidate(object? source, object? pattern)
+    {
+        var regex = CompileRegex(pattern);
+        return regex.IsMatch(XPScriptRuntime.CStr(source));
+    }
+
+    public static LSArray RegexMatch(object? source, object? pattern)
+    {
+        var regex = CompileRegex(pattern);
+        var matches = regex.Matches(XPScriptRuntime.CStr(source));
+        if (matches.Count == 0)
+            return new LSArray("String", true);
+
+        var result = new LSArray("String", false, [0], [matches.Count - 1]);
+        for (var index = 0; index < matches.Count; index++)
+            result.Set(matches[index].Value, index);
+        return result;
+    }
+
+    private static System.Text.RegularExpressions.Regex CompileRegex(object? pattern)
+    {
+        var value = XPScriptRuntime.CStr(pattern);
+        if (value.Length > 4096)
+            throw new XPScriptRuntimeException(5, "Regex pattern must contain at most 4096 characters.");
+        if (value.Any(char.IsControl))
+            throw new XPScriptRuntimeException(5, "Regex pattern contains a control character.");
+        try
+        {
+            return new System.Text.RegularExpressions.Regex(
+                value,
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+                RegexTimeout);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Regex pattern is invalid: " + ex.Message);
+        }
+    }
 
     public static string Base64Encode(object? value) => XPScriptTextIO.ToBase64(value);
     public static string Base64Encode(object? value, object? charset) => XPScriptTextIO.ToBase64(value, charset);
