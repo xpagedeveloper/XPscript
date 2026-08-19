@@ -215,16 +215,22 @@ function applyFieldState(field, editor) {
 
 function createEditor(field) {
   const type = fieldType(field);
-  if (type === 'select') {
+  if (type === 'select' || type === 'listbox' || type === 'multilistbox') {
     const select = document.createElement('select');
     select.className = 'form-select';
+    if (type === 'listbox' || type === 'multilistbox') select.size = 6;
+    if (type === 'multilistbox') select.multiple = true;
+    const selectedValues = new Set((field.values || []).map(value => String(value)));
     for (const optionValue of field.options || []) {
       const option = document.createElement('option');
       option.value = String(optionValue);
       option.textContent = String(optionValue);
-      option.selected = field.value != null && String(field.value) === option.value;
+      option.selected = type === 'multilistbox'
+        ? selectedValues.has(option.value)
+        : field.value != null && String(field.value) === option.value;
       select.appendChild(option);
     }
+    applyFieldState(field, select);
     return select;
   }
 
@@ -280,6 +286,7 @@ function readFieldValue(field, editor) {
     const selected = editor.querySelector('input[type="radio"]:checked');
     return selected ? selected.value : '';
   }
+  if (type === 'multilistbox') return Array.from(editor.selectedOptions).map(option => option.value);
   if (type === 'numberfield' || type === 'rangefield') {
     if (editor.value === '') return '';
     const number = Number(editor.value);

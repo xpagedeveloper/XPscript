@@ -23,6 +23,7 @@ on:
   push:
     branches:
       - 'todo-ui-form-*'
+      - 'uiform-*'
     paths:
       - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
       - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
@@ -87,6 +88,24 @@ jobs:
             'SECOND_STILL_TITLE=Second'
           )) {
             if ($output -notcontains $value) { throw "UIForm output missing: $value" }
+          }
+      - name: Compile and verify UIForm list boxes
+        shell: pwsh
+        run: |
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $program = "./out/ui-form-listboxes$extension"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/ui-form-listboxes.xps -o $program --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'UIForm list box compilation failed.' }
+          $output = & $program
+          if ($LASTEXITCODE -ne 0) { throw "UIForm list box runtime failed with code $LASTEXITCODE." }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @(
+            'COUNTRY=NO',
+            'MARKET_COUNT=2',
+            'MARKET0=SE',
+            'MARKET1=DK'
+          )) {
+            if ($output -notcontains $value) { throw "UIForm list box output missing: $value" }
           }
       - name: Compile UIForm action and layout samples
         shell: pwsh

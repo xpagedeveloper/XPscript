@@ -15,7 +15,8 @@ internal static class XPScriptUIDesktopAdapter
         XPScriptUIForm form,
         IReadOnlyList<XPScriptUIField> fields,
         XPScriptJsonObject data,
-        Action<XPScriptUIField, string> apply)
+        Action<XPScriptUIField, string> apply,
+        Action<XPScriptUIField, IReadOnlyList<string>> applyMany)
     {
         var type = HostType ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is unavailable.");
         var method = type.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
@@ -33,9 +34,10 @@ internal static class XPScriptUIDesktopAdapter
                 label = field.Label,
                 type = field.Type,
                 required = field.Required,
-                value = field.Type == "PasswordField"
+                value = field.Type is "PasswordField" or "MultiListBox"
                     ? null
                     : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
+                values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength,
                 maxLength = field.MaxLength,
                 minimum = field.Minimum,
@@ -69,6 +71,17 @@ internal static class XPScriptUIDesktopAdapter
         {
             var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
             if (field is null) continue;
+            if (field.Type == "MultiListBox")
+            {
+                if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned an unsupported multi-value type.");
+                var submittedValues = property.Value.EnumerateArray()
+                    .Select(item => item.ValueKind == System.Text.Json.JsonValueKind.String ? item.GetString() ?? string.Empty : throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned a non-string list value."))
+                    .ToArray();
+                applyMany(field, submittedValues);
+                continue;
+            }
+
             var submitted = property.Value.ValueKind switch
             {
                 System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
@@ -82,6 +95,18 @@ internal static class XPScriptUIDesktopAdapter
         }
 
         return "OK";
+    }
+
+    private static string[] ReadValues(XPScriptJsonObject data, string fieldName)
+    {
+        if (!data.Contains(fieldName) || data.Get(fieldName) is not XPScriptJsonArray array) return Array.Empty<string>();
+        var values = new List<string>(array.Count);
+        for (var i = 0; i < array.Count; i++)
+        {
+            var value = XPScriptRuntime.CStr(array.Get(i));
+            if (value.Length > 0 && !values.Contains(value, StringComparer.Ordinal)) values.Add(value);
+        }
+        return values.ToArray();
     }
 }
 """;

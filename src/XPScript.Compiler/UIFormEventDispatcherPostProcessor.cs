@@ -33,7 +33,17 @@ internal sealed class UIFormEventDispatcherPostProcessor
         if (kind.Equals("change", StringComparison.OrdinalIgnoreCase))
         {
             var field = FindField(controlName);
-            ApplySubmittedValue(field, submittedValue);
+            if (field.Type == "MultiListBox")
+            {
+                var submittedValues = submittedValue.Length == 0
+                    ? Array.Empty<string>()
+                    : submittedValue.Split('\u001f', StringSplitOptions.RemoveEmptyEntries);
+                ApplySubmittedValues(field, submittedValues);
+            }
+            else
+            {
+                ApplySubmittedValue(field, submittedValue);
+            }
             handlerName = field.OnChangeHandler.Length > 0 ? field.OnChangeHandler : field.RefreshHandler;
             if (handlerName.Length == 0)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' has no registered change handler.");
@@ -63,6 +73,24 @@ internal sealed class UIFormEventDispatcherPostProcessor
         {
             var field = _fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
             if (field is null) continue;
+            if (field.Type == "MultiListBox")
+            {
+                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Null)
+                {
+                    ApplySubmittedValues(field, Array.Empty<string>());
+                    continue;
+                }
+                if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported multi-value event type.");
+                var submittedValues = property.Value.EnumerateArray()
+                    .Select(item => item.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? item.GetString() ?? string.Empty
+                        : throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted a non-string list value."))
+                    .ToArray();
+                ApplySubmittedValues(field, submittedValues);
+                continue;
+            }
+
             var submitted = property.Value.ValueKind switch
             {
                 System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
@@ -119,7 +147,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 enabled = field.Enabled,
                 readOnly = field.ReadOnly,
                 required = field.Required,
-                value = field.Type == "PasswordField" ? null : GetFieldValueString(field.Name),
+                value = field.Type is "PasswordField" or "MultiListBox" ? null : GetFieldValueString(field.Name),
+                values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
                 regionId = field.RegionId
             }).ToArray(),

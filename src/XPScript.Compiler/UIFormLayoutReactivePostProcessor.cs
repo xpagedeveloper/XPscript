@@ -159,8 +159,8 @@ internal sealed class XPScriptUIForm
     public void ClearOptions(object? name)
     {
         var field = FindField(name);
-        if (field.Type is not ("Select" or "RadioGroup"))
-            throw new XPScriptRuntimeException(5, "UIForm.ClearOptions is only supported for Select and RadioGroup fields.");
+        if (field.Type is not ("Select" or "RadioGroup" or "ListBox" or "MultiListBox"))
+            throw new XPScriptRuntimeException(5, "UIForm.ClearOptions is only supported for Select, RadioGroup, ListBox and MultiListBox fields.");
         field.Options.Clear();
     }
 

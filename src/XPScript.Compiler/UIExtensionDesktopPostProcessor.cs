@@ -38,7 +38,11 @@ internal sealed class UIExtensionDesktopPostProcessor
         {
             if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var field in _fields) ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+                foreach (var field in _fields)
+                {
+                    if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
+                    else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+                }
                 return "OK";
             }
             XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
@@ -47,7 +51,7 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         if (!XPScriptUIDesktopAdapter.IsAvailable)
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
-        return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue);
+        return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
     }
 
     private void ApplyDesktopValue(XPScriptUIField field, string submitted)
@@ -56,6 +60,9 @@ internal sealed class UIExtensionDesktopPostProcessor
             return;
         ApplySubmittedValue(field, submitted);
     }
+
+    private void ApplyDesktopValues(XPScriptUIField field, IReadOnlyList<string> submitted)
+        => ApplySubmittedValues(field, submitted);
 
 """;
 
