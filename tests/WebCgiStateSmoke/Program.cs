@@ -7,8 +7,6 @@ var stateRoot = Path.Combine(parent, "state");
 var noSessionRoot = Path.Combine(parent, "no-session-site");
 Directory.CreateDirectory(root);
 Directory.CreateDirectory(stateRoot);
-await File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), "{\"cgi\":{\"sessionFolder\":\"../state\"}}");
-await File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), "{\"cgi\":{\"sessionFolder\":\"../state\"}}");
 Directory.CreateDirectory(noSessionRoot);
 
 await File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), "{\"cgi\":{\"sessionFolder\":\"../state\"}}");
@@ -26,8 +24,6 @@ await File.WriteAllTextAsync(Path.Combine(root, "state.xps"), """
 Sub Login()
     Session.Set("cart", "alpha")
     Session.Authenticate("42", "Fredrik", "admin")
-    Call Session.SetRole("admin")
-    Call Session.SetRole("admin")
     Call Session.SetRole("admin")
     Application.Set("shared", "site-value")
     RequestScope.Set("temp", "request-one")
@@ -49,32 +45,6 @@ Sub Private()
     Response.Write("|")
     Response.Write(CStr(Session.HasRole("admin")))
 End Sub
-
-[Authenticated]
-[Get]
-Sub RemoveAdminRole()
-    Response.Write(Session.GetRole())
-    Response.Write("|")
-    Response.Write(CStr(Session.HasRole("admin")))
-    Response.Write("|")
-    Response.Write(CStr(Session.RemoveRole("admin")))
-    Response.Write("|")
-    Response.Write(CStr(Session.HasRole("admin")))
-End Sub
-
-
-[Authenticated]
-[Get]
-Sub RemoveAdminRole()
-    Response.Write(Session.GetRole())
-    Response.Write("|")
-    Response.Write(CStr(Session.HasRole("admin")))
-    Response.Write("|")
-    Response.Write(CStr(Session.RemoveRole("admin")))
-    Response.Write("|")
-    Response.Write(CStr(Session.HasRole("admin")))
-End Sub
-
 
 [Authenticated]
 [Get]
@@ -131,22 +101,6 @@ try
         throw new Exception("CGI session role API did not persist or remove the role correctly: " + Body(removeRole.Stdout));
 
     var deniedAfterRoleRemoval = await RunAsync(root, "/state/Private", cookie);
-    AssertStatus(deniedAfterRoleRemoval, 403);
-
-    var removeRole = await RunAsync(root, stateRoot, "/state/RemoveAdminRole", cookie);
-    AssertStatus(removeRole, 200);
-    if (Body(removeRole.Stdout) != "admin|True|True|False")
-        throw new Exception("CGI session role API did not persist or remove the role correctly: " + Body(removeRole.Stdout));
-
-    var deniedAfterRoleRemoval = await RunAsync(root, stateRoot, "/state/Private", cookie);
-    AssertStatus(deniedAfterRoleRemoval, 403);
-
-    var removeRole = await RunAsync(root, stateRoot, "/state/RemoveAdminRole", cookie);
-    AssertStatus(removeRole, 200);
-    if (Body(removeRole.Stdout) != "admin|True|True|False")
-        throw new Exception("CGI session role API did not persist or remove the role correctly: " + Body(removeRole.Stdout));
-
-    var deniedAfterRoleRemoval = await RunAsync(root, stateRoot, "/state/Private", cookie);
     AssertStatus(deniedAfterRoleRemoval, 403);
 
     var stateFiles = Directory.GetFiles(stateRoot, "*.json");
