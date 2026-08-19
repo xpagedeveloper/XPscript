@@ -2,6 +2,8 @@
 
 This file defines how XPScript documentation must be maintained. Treat it as part of the project contract whenever language syntax, runtime APIs, web behavior, UI APIs or command-line options change.
 
+All user-facing documentation in `docs/` must be written in English.
+
 ## Required top-level documents
 
 Keep the documentation small and navigable. The `docs` directory must contain these primary pages:
@@ -25,7 +27,7 @@ Documentation must describe implemented behavior. Verify syntax and parameters a
 
 ## When a language command changes
 
-Update `commands.md`. Include command name, accepted syntax, parameters, return value when applicable, behavior and a link to a runnable sample. If it is a core statement, also add or update its minimal runnable program in `command-examples.md`.
+For every new command, or when an existing command changes, update `commands.md`. Include command name, accepted syntax, parameters, return value when applicable, behavior and a link to a runnable sample. If it is a core statement, also add or update its minimal runnable program in `command-examples.md`.
 
 ## When a web feature changes
 
