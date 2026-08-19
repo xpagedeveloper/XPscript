@@ -5,6 +5,8 @@ namespace XPScript.Compiler;
 
 internal sealed class UIExtensionDesktopPostProcessor
 {
+    private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
+
     private static readonly Regex ShowDialogPattern = new(
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
         RegexOptions.CultureInvariant);
@@ -42,6 +44,13 @@ internal sealed class UIExtensionDesktopPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+
+        // Some compiler paths can run post-processing more than once. Once the
+        // desktop runtime is present, all UIForm/UIListView extensions below have
+        // already been installed and must not be appended/transformed again.
+        if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
+            return generated;
+
         var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
         if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
             throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
