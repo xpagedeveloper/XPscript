@@ -94,7 +94,11 @@ public sealed class XpsWebRouteMetadataParser
             if (string.IsNullOrEmpty(Path.GetExtension(target)))
                 target += ".xps";
             else if (target.EndsWith(".xsp", StringComparison.OrdinalIgnoreCase))
-                target = target[..^4] + ".xps";
+            {
+                var corrected = target[..^4] + ".xps";
+                Console.Error.WriteLine($"error: PreCompile target '{target}' uses the misspelled .xsp extension. Trying '{corrected}'.");
+                target = corrected;
+            }
             else if (!target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
             {
                 Console.Error.WriteLine($"error: PreCompile target '{target}' does not use the .xps extension. Ignoring target.");
