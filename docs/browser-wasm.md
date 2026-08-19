@@ -50,9 +50,17 @@ The `.xps` request returns the generated bootstrap page. Asset requests are reso
 
 ## UIForm
 
-Browser WebAssembly uses the same XPScript UIForm object model and grid metadata as desktop. The browser host maps the shared UI model to DOM controls. The initial browser renderer uses Bootstrap 5.3.8 for layout and control styling.
+Browser WebAssembly uses the same XPScript UIForm object model and layout metadata as desktop. The browser host maps the shared UI model to DOM controls and uses Bootstrap 5.3.8 styling.
 
-The browser build does not change the source-level UI API. `UIForm`, fields, grid columns and field spans remain the same.
+The browser renderer supports the shared grid row, column, column-span and row-span metadata. `AddGridColumns`, `SetFieldPosition` and explicit row breaks therefore use the same layout intent as desktop.
+
+The browser renderer also applies the shared field metadata for visibility, enabled state, read-only state, required fields, minimum and maximum length, numeric minimum and maximum values and bound field values.
+
+Supported browser controls include text fields, text areas, password fields, number and range fields, date, time, date-time, month, color, email and URL fields, check boxes, select lists and radio groups. Select and radio options come from the same UIForm option model used by desktop.
+
+Custom UIForm buttons are rendered with their shared visibility, enabled-state and style metadata. Browser-side form results are published as an `xpscript:form-result` DOM event and mirrored in `#xpscript-app` as `data-xpscript-result`. `ShowDialog()` itself remains non-blocking in browser-wasm and initially returns `Pending` because a browser cannot synchronously block the WebAssembly thread while waiting for user input.
+
+The browser build does not change the source-level UI API. The same UIForm source can still be compiled as a desktop application.
 
 ## Build requirement
 
