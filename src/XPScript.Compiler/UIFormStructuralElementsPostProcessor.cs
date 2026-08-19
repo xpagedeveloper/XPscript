@@ -11,7 +11,8 @@ internal sealed class UIFormStructuralElementsPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(InstalledSentinel, StringComparison.Ordinal) &&
             generated.Contains("var placeholder = field.Placeholder.Length > 0", StringComparison.Ordinal) &&
-            generated.Contains("if (field.Tooltip.Length > 0)", StringComparison.Ordinal))
+            generated.Contains("if (field.Tooltip.Length > 0)", StringComparison.Ordinal) &&
+            generated.Contains("e.placeholder=x.placeholder||''", StringComparison.Ordinal))
             return generated;
 
         if (!generated.Contains(InstalledSentinel, StringComparison.Ordinal))
@@ -116,6 +117,14 @@ foreach (var field in _fields)
             if (field.Type == "Separator")
 """,
                 "tooltip-render");
+        }
+
+        if (!generated.Contains("e.placeholder=x.placeholder||''", StringComparison.Ordinal))
+        {
+            generated = generated.Replace(
+                "if('required'in e)e.required=x.required===true;const l=",
+                "if('required'in e)e.required=x.required===true;if('placeholder'in e)e.placeholder=x.placeholder||'';e.title=x.tooltip||'';const l=",
+                StringComparison.Ordinal);
         }
 
         return generated;
