@@ -60,7 +60,8 @@ try
         if (!response.Content.Headers.ContentType?.ToString().StartsWith("text/html", StringComparison.OrdinalIgnoreCase) ?? true)
             throw new Exception("UIForm Kestrel GET did not return HTML.");
         var body = await response.Content.ReadAsStringAsync();
-        if (!body.Contains("<h1>Contact form</h1>", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render title.");
+        if (!body.Contains("<h1>Contact form</h1>", StringComparison.Ordinal))
+            throw new Exception($"UIForm Kestrel GET did not render title. Body: {body}");
         if (!body.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not load existing JSON value.");
         if (!body.Contains("name=\"missing\" value=\"\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render missing JSON field as empty.");
     }
