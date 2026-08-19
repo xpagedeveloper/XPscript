@@ -11,7 +11,8 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
         if (generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
-            generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal))
+            generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
+            generated.Contains("regexPattern = field.RegexPattern", StringComparison.Ordinal))
             return generated;
 
         const string pattern = """
@@ -59,7 +60,8 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 enabled = field.Enabled,
                 readOnly = field.ReadOnly,
                 placeholder = field.Placeholder,
-                tooltip = field.Tooltip
+                tooltip = field.Tooltip,
+                regexPattern = field.RegexPattern
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
             {
