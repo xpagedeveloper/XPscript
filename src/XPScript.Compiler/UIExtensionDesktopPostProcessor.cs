@@ -111,6 +111,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormStructuralElementsPostProcessor().Transform(replaced);
         replaced = new UIFormRegexValidationPostProcessor().Transform(replaced);
         replaced = new UIFormDateRangeValidationPostProcessor().Transform(replaced);
+        replaced = new UIFormTemporalRangeValidationPostProcessor().Transform(replaced);
         replaced = new UIWebBootstrapPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
