@@ -108,6 +108,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         }
 
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
+        replaced = new UIFormStructuralElementsPostProcessor().Transform(replaced);
         replaced = new UIWebBootstrapPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
