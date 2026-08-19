@@ -45,6 +45,20 @@ internal sealed class UIFormStructuralElementsPostProcessor
 """,
             "web-render");
 
+        generated = ReplaceRequired(
+            generated,
+            """
+            var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            if (field is null) continue;
+            if (field.Type == "MultiListBox")
+""",
+            """
+            var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            if (field is null || field.Type is "Separator" or "Spacer") continue;
+            if (field.Type == "MultiListBox")
+""",
+            "desktop-result");
+
         generated = Regex.Replace(
             generated,
             """foreach \(var field in _fields\)\n                \{\n                    if \(field.Type == \"MultiListBox\"\) ApplySubmittedValues\(field, XPScriptUIWebAdapter.FormValues\(field.Name\)\);\n                    else ApplySubmittedValue\(field, XPScriptUIWebAdapter.FormFirst\(field.Name\)\);\n                \}""",
