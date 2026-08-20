@@ -8,6 +8,7 @@ on:
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.Web.Kestrel/**'
       - 'tests/WebStateSmoke/**'
+      - 'tests/WebScopeSemanticsSmoke/**'
   pull_request:
     paths:
       - '.github/workflows/web-state.yml'
@@ -15,6 +16,7 @@ on:
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.Web.Kestrel/**'
       - 'tests/WebStateSmoke/**'
+      - 'tests/WebScopeSemanticsSmoke/**'
 
 jobs:
   verify:
@@ -30,3 +32,5 @@ jobs:
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
       - name: Run Session and Application regression
         run: dotnet run --project ./tests/WebStateSmoke/WebStateSmoke.csproj -c Release
+      - name: Run scope overwrite and concurrency regression
+        run: dotnet run --project ./tests/WebScopeSemanticsSmoke/WebScopeSemanticsSmoke.csproj -c Release
