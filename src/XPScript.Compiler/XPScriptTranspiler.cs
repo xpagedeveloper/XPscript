@@ -118,6 +118,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
 
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
