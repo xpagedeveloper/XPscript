@@ -69,11 +69,11 @@ public sealed class XPScriptTranspiler
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
-        source = new HclSelectedCompatibilityPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
