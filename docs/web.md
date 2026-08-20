@@ -78,13 +78,13 @@ Explicit REST routes are indexed across the web root. Duplicate route/method com
 
 ## JSON request body and models
 
-`Body` is a reserved web object. It gives direct access to request content:
+`Body` is a reserved XPScript runtime identifier for web request content. It cannot be used as a variable, parameter, procedure or class name. It gives direct access to request content:
 
 ```xpscript
 Response.OK(Body.Text())
 ```
 
-For typed JSON input, use a class and a parameter named `body`, or annotate the parameter with `[FromBody]`:
+For typed JSON input, use a class and bind a differently named parameter with `[FromBody]`. A complex model parameter is also treated as JSON body input when no explicit source is given.
 
 ```xpscript
 Class CreateUserRequest
@@ -103,8 +103,8 @@ End Class
 [Anonymous]
 [Post]
 [Route:/api/users]
-Sub CreateUser([FromBody] body As CreateUserRequest)
-    Response.OK(body)
+Sub CreateUser([FromBody] payload As CreateUserRequest)
+    Response.OK(payload)
 End Sub
 ```
 
