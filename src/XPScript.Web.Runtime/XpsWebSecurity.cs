@@ -61,7 +61,7 @@ public static class XpsWebSecurity
     {
         ArgumentNullException.ThrowIfNull(response);
         SetIfMissing(response, "X-Content-Type-Options", "nosniff");
-        SetIfMissing(response, "Referrer-Policy", "strict-origin-when-cross-origin");
+        SetIfMissing(response, "Referrer-Policy", "no-referrer");
         SetIfMissing(response, "X-Frame-Options", "DENY");
         SetIfMissing(response, "Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
