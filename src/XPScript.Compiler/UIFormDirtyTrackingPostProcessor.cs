@@ -8,14 +8,14 @@ internal sealed class UIFormDirtyTrackingPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        if (!generated.Contains("private XPScriptJsonObject? _dirtyBaseline;", StringComparison.Ordinal))
+        if (!generated.Contains("private XPScriptJsonObject _dirtyBaseline = XPScriptNativeJson.CreateObject();", StringComparison.Ordinal))
         {
             generated = ReplaceRequired(
                 generated,
                 @"private\s+XPScriptJsonObject\s+_data\s*=\s*XPScriptNativeJson\.CreateObject\(\)\s*;",
                 """
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
-    private XPScriptJsonObject? _dirtyBaseline;
+    private XPScriptJsonObject _dirtyBaseline = XPScriptNativeJson.CreateObject();
 """,
                 "baseline-state");
         }
@@ -27,7 +27,7 @@ internal sealed class UIFormDirtyTrackingPostProcessor
                 @"public\s+int\s+FieldCount\s*=>\s*_fields\.Count\s*;",
                 """
     public int FieldCount => _fields.Count;
-    public bool IsDirty => !System.Text.Json.Nodes.JsonNode.DeepEquals(_data.Node, _dirtyBaseline?.Node);
+    public bool IsDirty => !System.Text.Json.Nodes.JsonNode.DeepEquals(_data.Node, _dirtyBaseline.Node);
 
     public XPScriptJsonArray DirtyFields
     {
@@ -52,12 +52,12 @@ internal sealed class UIFormDirtyTrackingPostProcessor
     private bool IsFieldDirty(string fieldName)
     {
         var currentExists = _data.Contains(fieldName);
-        var baselineExists = _dirtyBaseline is not null && _dirtyBaseline.Contains(fieldName);
+        var baselineExists = _dirtyBaseline.Contains(fieldName);
         if (currentExists != baselineExists) return true;
         if (!currentExists) return false;
 
         var current = XPScriptNativeJson.ToNode(_data.Get(fieldName));
-        var baseline = XPScriptNativeJson.ToNode(_dirtyBaseline!.Get(fieldName));
+        var baseline = XPScriptNativeJson.ToNode(_dirtyBaseline.Get(fieldName));
         return !System.Text.Json.Nodes.JsonNode.DeepEquals(current, baseline);
     }
 """,
