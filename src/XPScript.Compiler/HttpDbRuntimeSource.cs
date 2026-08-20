@@ -32,8 +32,7 @@ internal sealed class XPScriptHttpDbSupabase
 
     public void SetSchema(object? schema)
     {
-        var value = RequiredIdentifier(schema, "Supabase schema");
-        _schema = value;
+        _schema = RequiredIdentifier(schema, "Supabase schema");
     }
 
     public void ConfigureCloudManagement(object? projectRef, object? accessToken)
@@ -50,6 +49,7 @@ internal sealed class XPScriptHttpDbSupabase
     }
 
     public XPScriptJsonDocument Select(object? table) => Select(table, "select=*");
+
     public XPScriptJsonDocument Select(object? table, object? query)
     {
         var response = SendData("GET", table, query, null, "");
@@ -70,15 +70,13 @@ internal sealed class XPScriptHttpDbSupabase
 
     public XPScriptJsonDocument Update(object? table, object? filter, object? data)
     {
-        var filterText = RequiredFilter(filter);
-        var response = SendData("PATCH", table, filterText, data, "return=representation");
+        var response = SendData("PATCH", table, RequiredFilter(filter), data, "return=representation");
         return ParseRequiredJson(response, "Supabase UPDATE");
     }
 
     public XPScriptJsonDocument Delete(object? table, object? filter)
     {
-        var filterText = RequiredFilter(filter);
-        var response = SendData("DELETE", table, filterText, null, "return=representation");
+        var response = SendData("DELETE", table, RequiredFilter(filter), null, "return=representation");
         return ParseRequiredJson(response, "Supabase DELETE");
     }
 
@@ -95,6 +93,7 @@ internal sealed class XPScriptHttpDbSupabase
     {
         if (_sqlEndpoint.Length == 0)
             throw new XPScriptRuntimeException(5, "Supabase SQL endpoint is not configured. Use ConfigureCloudManagement or ConfigureSqlEndpoint first.");
+
         var query = RequiredText(sql, "SQL query");
         var body = new System.Text.Json.Nodes.JsonObject { ["query"] = query };
         _http.ClearHeaders();
@@ -164,10 +163,7 @@ internal sealed class XPScriptHttpDbSupabase
     }
 
     private static string NormalizeBaseUrl(object? value)
-    {
-        var url = NormalizeAbsoluteUrl(value, "Supabase base URL").TrimEnd('/');
-        return url;
-    }
+        => NormalizeAbsoluteUrl(value, "Supabase base URL").TrimEnd('/');
 
     private static string NormalizeAbsoluteUrl(object? value, string label)
     {
@@ -324,8 +320,7 @@ internal sealed class XPScriptHttpDbDominoRest
         return ParseRequiredJson(response, "Domino list views");
     }
 
-    public XPScriptJsonDocument GetView(object? viewName)
-        => GetView(viewName, "");
+    public XPScriptJsonDocument GetView(object? viewName) => GetView(viewName, "");
 
     public XPScriptJsonDocument GetView(object? viewName, object? query)
     {
@@ -340,22 +335,19 @@ internal sealed class XPScriptHttpDbDominoRest
         return ParseRequiredJson(response, "Domino get view");
     }
 
-    public XPScriptJsonDocument Query(object? queryText)
-    {
-        var body = new System.Text.Json.Nodes.JsonObject
-        {
-            ["query"] = RequiredText(queryText, "Domino query"),
-            ["viewRefresh"] = true,
-            ["noViews"] = false
-        };
-        return Query(body);
-    }
-
     public XPScriptJsonDocument Query(object? queryPayload)
     {
+        object payload = queryPayload is string text
+            ? new System.Text.Json.Nodes.JsonObject
+            {
+                ["query"] = RequiredText(text, "Domino query"),
+                ["viewRefresh"] = true,
+                ["noViews"] = false
+            }
+            : queryPayload ?? throw new XPScriptRuntimeException(5, "Domino query payload cannot be empty.");
+
         ConfigureHeaders(contentType: true);
-        var url = DataUrl("/query") + "&action=execute";
-        var response = _http.Post(url, XPScriptNativeJson.Stringify(queryPayload));
+        var response = _http.Post(DataUrl("/query") + "&action=execute", XPScriptNativeJson.Stringify(payload));
         EnsureSuccess(response, "Domino query");
         return ParseRequiredJson(response, "Domino query");
     }
