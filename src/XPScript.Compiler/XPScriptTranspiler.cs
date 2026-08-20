@@ -48,6 +48,7 @@ public sealed class XPScriptTranspiler
         source = new SourceLineContinuationPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
+        source = new HclPrintFormattingPreprocessor().Transform(source);
         source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
@@ -69,7 +70,6 @@ public sealed class XPScriptTranspiler
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
         source = new HclSelectedCompatibilityPreprocessor().Transform(source);
-        source = new HclPrintFormattingPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
