@@ -39,7 +39,7 @@ try
     var getStream = new FragmentedDuplexStream(getInput, 3);
     await adapter.ProcessConnectionAsync(getStream);
     var getOutput = ParseResponse(getStream.Written);
-    if (!getOutput.Contains("Status: 201\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI status was not serialized.");
+    if (!getOutput.Contains("Status: 201 Created by XPScript\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI status code/message was not serialized.");
     if (!getOutput.Contains("METHOD=GET", StringComparison.Ordinal)) throw new Exception("FastCGI method mapping failed.");
     if (!getOutput.Contains("PATH=/index.xps", StringComparison.Ordinal)) throw new Exception("FastCGI path mapping failed.");
     if (!getOutput.Contains("QUERY=q=one&q=two", StringComparison.Ordinal)) throw new Exception("FastCGI query mapping failed.");
@@ -63,7 +63,7 @@ try
     var headStream = new FragmentedDuplexStream(headInput, 4);
     await adapter.ProcessConnectionAsync(headStream);
     var headOutput = ParseResponse(headStream.Written);
-    if (!headOutput.Contains("Status: 201\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI HEAD status was not serialized.");
+    if (!headOutput.Contains("Status: 201 Created by XPScript\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI HEAD status code/message was not serialized.");
     if (!headOutput.Contains("X-FastCGI: ok\r\n", StringComparison.Ordinal)) throw new Exception("FastCGI HEAD response headers were lost.");
     var headSeparator = headOutput.IndexOf("\r\n\r\n", StringComparison.Ordinal);
     if (headSeparator < 0) throw new Exception("FastCGI HEAD response did not contain a header terminator.");
@@ -216,7 +216,7 @@ sealed class EchoHandler : IXpsWebRequestHandler
 {
     public Task HandleAsync(XpsWebContext context)
     {
-        context.Response.StatusCode = 201;
+        context.Response.SetStatus(201, "Created by XPScript");
         context.Response.ContentType = "text/plain; charset=utf-8";
         context.Response.SetHeader("X-FastCGI", "ok");
         context.Response.Write("METHOD=" + context.Request.Method + "\n");
