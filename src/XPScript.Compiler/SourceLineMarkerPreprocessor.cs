@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -43,7 +44,8 @@ internal sealed class SourceLineMarkerPreprocessor
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
                     var sourceId = SafeSourceId(location.SourcePath, sourceName);
-                    output.Add(indent + $"Call XPSourceLineRuntime.SetMapped({location.Line}, \"{EscapeString(sourceId)}\")");
+                    var encodedSourceId = Convert.ToHexString(Encoding.UTF8.GetBytes(sourceId));
+                    output.Add(indent + $"Call XPSourceLineRuntime.__XPSOURCE_{location.Line}_{encodedSourceId}()");
                 }
 
                 output.Add(raw);
@@ -89,10 +91,6 @@ internal sealed class SourceLineMarkerPreprocessor
             }
         }
     }
-
-    private static string EscapeString(string value) =>
-        value.Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static bool IsProcedureStart(string code) =>
         Regex.IsMatch(code,
