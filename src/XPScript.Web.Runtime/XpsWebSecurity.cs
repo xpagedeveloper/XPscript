@@ -41,6 +41,7 @@ public static class XpsWebSecurity
             token = context.Request.FormFirst(CsrfFormFieldName);
         if (string.IsNullOrWhiteSpace(token)) return false;
 
+        using var scope = XpsWebContextAccessor.Push(context);
         return new XpsWebServer(context.Server).ValidateCsrfToken(token);
     }
 
