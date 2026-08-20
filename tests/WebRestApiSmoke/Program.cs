@@ -31,10 +31,21 @@ Function GetUser(ByVal id As Integer) As String
 End Function
 
 [Anonymous]
+[Get]
+[Route:/api/bind/{id}]
+Sub BindSources([FromRoute] id As Integer, [FromQuery] verbose As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String)
+    Response.Write(CStr(id))
+    Response.Write("|")
+    Response.Write(CStr(verbose))
+    Response.Write("|")
+    Response.Write(tenantId)
+End Sub
+
+[Anonymous]
 [Post]
 [Route:/api/users]
 [Cors:*]
-Sub CreateUser(ByVal body As CreateUserRequest)
+Sub CreateUser([FromBody] body As CreateUserRequest)
     Response.OK(body)
 End Sub
 
@@ -60,6 +71,8 @@ try
     if (parsed.Routes["GetUser"].RouteTemplate != "/api/users/{id}") throw new Exception("[Route] metadata was not retained.");
     if (parsed.Routes["GetUser"].Cors is null || parsed.Routes["GetUser"].RateLimit is null) throw new Exception("CORS or rate limit metadata was not retained.");
     if (parsed.Routes["CreateUser"].ValidationRules?.Count != 5) throw new Exception("Model validation metadata was not collected.");
+    if (parsed.Routes["BindSources"].ParameterBindings?.Count != 3) throw new Exception("Explicit parameter bindings were not retained.");
+    if (parsed.Source.Contains("[FromRoute]", StringComparison.OrdinalIgnoreCase)) throw new Exception("Parameter binding syntax was not stripped before compilation.");
 
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
@@ -68,6 +81,16 @@ try
     if (get.StatusCode != 200) throw new Exception($"REST GET returned {get.StatusCode}.");
     if (BodyText(get) != "\"user-42\"") throw new Exception("Function return value was not automatically serialized as JSON.");
     if (Header(get, "Access-Control-Allow-Origin") != "https://example.com") throw new Exception("CORS response header was missing.");
+
+    var binding = await SendAsync(
+        dispatcher,
+        app,
+        "GET",
+        "/api/bind/9",
+        queryString: "verbose=true",
+        extraHeaders: new Dictionary<string, string> { ["X-Tenant-ID"] = "tenant-1" });
+    if (binding.StatusCode != 200 || BodyText(binding) != "9|True|tenant-1")
+        throw new Exception("FromRoute/FromQuery/FromHeader binding failed: " + BodyText(binding));
 
     var preflight = await SendAsync(
         dispatcher,
@@ -140,7 +163,8 @@ static async Task<XpsWebResponse> SendAsync(
     string body = "",
     string? contentType = null,
     string? origin = null,
-    IReadOnlyDictionary<string, string>? extraHeaders = null)
+    IReadOnlyDictionary<string, string>? extraHeaders = null,
+    string queryString = "")
 {
     var headers = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
     if (origin is not null) headers["Origin"] = [origin];
@@ -151,7 +175,7 @@ static async Task<XpsWebResponse> SendAsync(
         method,
         path,
         "",
-        "",
+        queryString,
         headers,
         contentType,
         bytes.Length,
