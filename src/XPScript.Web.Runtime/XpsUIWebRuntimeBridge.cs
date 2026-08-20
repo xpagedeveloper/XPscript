@@ -37,6 +37,25 @@ public static class XpsUIWebRuntimeBridge
         return XpsWebContextAccessor.Current.Request.Form(name).ToArray();
     }
 
+    public static string FileJson(string name, long maxFileBytes, bool multiple)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (maxFileBytes < 1 || maxFileBytes > 64L * 1024 * 1024)
+            throw new ArgumentOutOfRangeException(nameof(maxFileBytes));
+        var files = XpsWebContextAccessor.Current.Request.Files(name, maxFileBytes: checked((int)maxFileBytes));
+        if (files.Count == 0) return string.Empty;
+        object Shape(XpsUploadedFile file) => new
+        {
+            fileName = file.FileName,
+            contentType = file.ContentType,
+            length = file.Length,
+            base64 = Convert.ToBase64String(file.Bytes())
+        };
+        return multiple
+            ? System.Text.Json.JsonSerializer.Serialize(files.Select(Shape).ToArray())
+            : System.Text.Json.JsonSerializer.Serialize(Shape(files[0]));
+    }
+
     public static void WriteHtml(string html)
     {
         ArgumentNullException.ThrowIfNull(html);

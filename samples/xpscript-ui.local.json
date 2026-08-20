@@ -1,0 +1,6 @@
+{
+  "tinyMce": {
+    "mode": "local",
+    "scriptUrl": "/assets/tinymce/tinymce.min.js"
+  }
+}

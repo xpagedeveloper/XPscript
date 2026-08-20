@@ -1,0 +1,47 @@
+' XPScript extended UIForm field regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim data As New JsonObject
+    Dim selected As New JsonArray
+    Dim form As New UIForm("Extended fields")
+
+    Call selected.Add("admin")
+    Call selected.Add("editor")
+    Call data.Set("roles", selected)
+    Call data.Set("amount", 123.45)
+    Call data.Set("price", 99.95)
+    Call data.Set("week", "2026-W34")
+    Call form.BindData(data)
+
+    Call form.AddFileField("attachment", "Attachment")
+    Call form.SetFileOptions("attachment", ".pdf,image/*", 8388608, True)
+
+    Call form.AddMultiSelect("roles", "Roles")
+    Call form.AddOption("roles", "admin")
+    Call form.AddOption("roles", "editor")
+    Call form.AddOption("roles", "user")
+
+    Call form.AddCheckBoxGroup("features", "Features")
+    Call form.AddOption("features", "api")
+    Call form.AddOption("features", "reports")
+
+    Call form.AddTelField("phone", "Phone")
+    Call form.SetLength("phone", 0, 64)
+    Call form.AddWeekField("week", "Week")
+    Call form.AddDecimalField("amount", "Amount")
+    Call form.SetNumberRange("amount", -1000000, 1000000)
+    Call form.AddCurrencyField("price", "Price", "SEK")
+    Call form.SetNumberRange("price", 0, 1000000)
+    Call form.AddRichTextField("description", "Description")
+    Call form.SetLength("description", 0, 100000)
+
+    Call form.AddLookupField("customerId", "Customer", "http://127.0.0.1:18083/lookup", "id", "name")
+    Call form.AddAutoCompleteField("productId", "Product", "http://127.0.0.1:18083/lookup", "id", "name")
+
+    Print "FIELD_COUNT=" & CStr(form.FieldCount)
+    Print "ROLE_COUNT=" & CStr(form.GetFieldValues("roles").Count)
+    Print "UIFORM_EXTENDED_FIELDS=OK"
+End Sub
