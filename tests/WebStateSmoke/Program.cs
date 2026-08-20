@@ -193,6 +193,43 @@ directAuthSession.Set("rules", "admin,blocked");
 if (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)
     throw new Exception("Forbidden [Rule:!name] policy did not evaluate session rules.");
 
+// Session roles are additive. A route with more than one required role accepts any matching role.
+directAuthSession.SetRole("admin;user");
+if (!directAuthSession.HasRole("ADMIN") || !directAuthSession.HasRole("user") || directAuthSession.GetRole().Length == 0)
+    throw new Exception("Session role helpers did not preserve multiple roles.");
+var rolePolicy = new XpsRoutePolicy(false, new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase), [], [])
+{
+    RequiredRoles = new[] { "manager", "admin" }
+};
+if (rolePolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Allowed)
+    throw new Exception("Role OR policy did not accept one matching session role.");
+if (!directAuthSession.RemoveRole("admin") || directAuthSession.HasRole("admin") || !directAuthSession.HasRole("user"))
+    throw new Exception("Session.RemoveRole removed the wrong role state.");
+if (rolePolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)
+    throw new Exception("Role OR policy accepted a session with no matching role.");
+
+var parsedRoleRoutes = new XpsWebRouteMetadataParser().Parse("""
+[Authenticated]
+[Role:admin;user]
+[Role:manager]
+[Get]
+Sub RoleRoute()
+End Sub
+""");
+var parsedRolePolicy = parsedRoleRoutes.Routes["RoleRoute"].Policy;
+if (parsedRolePolicy.RequiredRoles.Count != 3 ||
+    !parsedRolePolicy.RequiredRoles.Contains("admin", StringComparer.OrdinalIgnoreCase) ||
+    !parsedRolePolicy.RequiredRoles.Contains("user", StringComparer.OrdinalIgnoreCase) ||
+    !parsedRolePolicy.RequiredRoles.Contains("manager", StringComparer.OrdinalIgnoreCase))
+    throw new Exception("[Role] metadata did not combine repeated and delimited roles as one OR set.");
+
+var statusResponse = new XpsWebResponse();
+if (statusResponse.StatusCode != 200) throw new Exception("Response default status is not 200.");
+statusResponse.SetStatus(422, "Validation Failed");
+statusResponse.Complete();
+if (statusResponse.StatusCode != 422 || statusResponse.StatusMessage != "Validation Failed")
+    throw new Exception("Response.SetStatus did not retain status code/message.");
+
 var requestScopeApplication = new XpsApplicationState();
 var requestScopeSessions = new XpsSessionStore();
 var requestScopeSession = requestScopeSessions.Bind(Request(), new XpsWebResponse());
