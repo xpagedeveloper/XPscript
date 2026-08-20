@@ -185,7 +185,7 @@ public sealed class XpsWebResponse
 
     public void Complete()
     {
-        EnsureWritable();
+        if (Completed) return;
         if (StatusCode is < 100 or > 599) throw new InvalidOperationException("Response status code must be between 100 and 599.");
         if (ContentType is not null) ValidateHeaderValue(ContentType);
         XpsWebSecurity.ApplyResponseSecurityHeaders(this);
