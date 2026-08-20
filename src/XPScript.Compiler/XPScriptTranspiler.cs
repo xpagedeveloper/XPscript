@@ -48,6 +48,7 @@ public sealed class XPScriptTranspiler
         source = new SourceLineContinuationPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
+        source = new HclPrintFormattingPreprocessor().Transform(source);
         source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
@@ -72,6 +73,7 @@ public sealed class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
@@ -112,6 +114,11 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclSelectedCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
 
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
