@@ -51,7 +51,7 @@ Sub Main()
     If Implode(cleaned, "|") <> "one two|three" Then
         Error 5, "FullTrim array failed"
     End If
-    If FullTrim("  one   two  ") <> "one two" Then
+    If CStr(FullTrim("  one   two  ")) <> "one two" Then
         Error 5, "FullTrim string failed"
     End If
 
