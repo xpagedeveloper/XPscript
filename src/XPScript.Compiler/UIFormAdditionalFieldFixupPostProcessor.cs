@@ -12,6 +12,7 @@ internal sealed class UIFormAdditionalFieldFixupPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
         if (!generated.Contains("AddFileField", StringComparison.Ordinal)) return generated;
 
+        generated = new UIFormAdditionalFieldValidationRepairPostProcessor().Transform(generated);
         generated = generated.Replace(
             "XPScriptUIWebAdapter.FileJson(field.Name, field.MaxFileBytes)",
             "XPScriptUIFieldBridgeRuntime.FileJson(field.Name, field.MaxFileBytes, field.Multiple)",
