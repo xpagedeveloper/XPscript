@@ -62,6 +62,27 @@ Custom UIForm buttons are rendered with their shared visibility, enabled-state a
 
 The browser build does not change the source-level UI API. The same UIForm source can still be compiled as a desktop application.
 
+## CSRF protection
+
+Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.
+
+The browser-WASM `HttpClient` handles the CSRF challenge automatically for `POST`, `PUT`, `PATCH` and `DELETE`. Application code uses the normal HTTP methods:
+
+```xpscript
+Dim http As New HttpClient
+Dim payload As New JsonObject
+Dim result As HttpResponse
+
+Call payload.Set("name", "Example")
+Set result = http.PatchJson("/api/customer/42", payload)
+```
+
+If the server requires a token, it can answer the first unsafe request with HTTP 403 and a fresh `X-XPS-CSRF-Token` response header. The browser-WASM client retries the request once with that token. The Session cookie remains HttpOnly and is never read by the WebAssembly application.
+
+This automatic behavior applies to the built-in browser-WASM HTTP transport. If application code bypasses it and uses custom JavaScript `fetch`, the request must send `X-XPS-CSRF-Token` explicitly when Session cookies are used.
+
+See [CSRF protection](csrf.md) for UIForm, manual HTML forms, custom browser REST requests and bearer-token behavior.
+
 ## Build requirement
 
 The web-server machine needs the .NET WebAssembly build tools because the first request may need to publish a new browser application:
