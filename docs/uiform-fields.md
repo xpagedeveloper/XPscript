@@ -129,6 +129,8 @@ Rich-text HTML is application data. Treat it as untrusted HTML when rendering it
 
 LookupField loads its options from an HTTP endpoint. This is useful when the lookup data comes from an XPS file that in turn reads Supabase, Domino REST, or another REST API.
 
+Static lookup mode loads the option array when the form is created:
+
 ```xpscript
 Call form.AddLookupField( _
     "customerId", _
@@ -153,7 +155,41 @@ The fourth and fifth arguments select the JSON property used as the stored value
 Call form.AddLookupField("customerId", "Customer", url)
 ```
 
-Lookup endpoints must use an absolute HTTP or HTTPS URL. A response is limited to 5000 option rows. The web renderer uses a select control. Desktop currently uses its existing select control.
+Lookup endpoints must use an absolute HTTP or HTTPS URL. Static mode accepts up to 5000 option rows. The web renderer uses a select control. Desktop currently uses its existing select control.
+
+### Server-side lookup search
+
+For large datasets, pass `True` as the final argument. XPScript then does not preload the endpoint. The browser requests matching rows as the user types.
+
+```xpscript
+Call form.AddLookupField( _
+    "customerId", _
+    "Customer", _
+    "https://app.example.com/api/customer-options.xps", _
+    "id", _
+    "name", _
+    True)
+
+Call form.SetRemoteSearchOptions("customerId", "q", "value", 2, 25)
+```
+
+`SetRemoteSearchOptions` arguments are field name, search parameter, exact-value parameter, minimum number of typed characters and maximum results shown by the client.
+
+The browser searches with requests such as:
+
+```text
+GET /api/customer-options.xps?q=fred&limit=25
+```
+
+When the form is submitted, XPScript validates the selected value against the backend instead of trusting a value posted by the browser:
+
+```text
+GET /api/customer-options.xps?value=c123&limit=2
+```
+
+The endpoint must therefore support both the configured search parameter and exact-value parameter. The `limit` parameter is a requested upper bound. The endpoint should enforce its own maximum as well.
+
+The server-side search endpoint returns the same JSON-array format as static lookup mode. Server-side search is intended primarily for same-origin XPS endpoints. Cross-origin endpoints must allow the browser request through CORS.
 
 ## AutoCompleteField
 
@@ -168,26 +204,44 @@ Call form.AddAutoCompleteField( _
     "name")
 ```
 
-The web renderer uses an HTML datalist. The selected/stored value is the value property, not the display label. Desktop currently maps AutoCompleteField to the existing select control.
+Static mode uses an HTML datalist. The selected/stored value is the value property, not the display label. Desktop currently maps AutoCompleteField to the existing select control.
+
+Server-side autocomplete uses the same final `True` argument and remote-search settings:
+
+```xpscript
+Call form.AddAutoCompleteField( _
+    "productId", _
+    "Product", _
+    "https://app.example.com/api/product-options.xps", _
+    "id", _
+    "name", _
+    True)
+
+Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
+```
+
+The web renderer performs a debounced search after the configured minimum number of characters. The visible label and stored value remain separate. The posted value is validated server-side using the exact-value lookup before it is accepted.
 
 ## Example XPS lookup endpoint
 
-The endpoint can use any existing XPScript database or HTTP client.
+The endpoint can use any existing XPScript database or HTTP client. For server-side mode, inspect `Request.Query` and apply the filter to the backend instead of loading the complete table.
 
-```xpscript
-[Authenticated]
-[Get]
-[Route:/api/customer-options]
-Sub CustomerOptions()
-    Dim db As New HTTPDBSupabase("https://supabase.example.com", Application.Get("SUPABASE_KEY"))
-    Dim rows As JsonDocument
+Conceptually, the endpoint should implement these two request forms:
 
-    Set rows = db.Select("customers", "select=id,name&order=name.asc")
-    Response.OK(rows.Root.Value)
-End Sub
+```text
+?q=search text&limit=25
+?value=exact-id&limit=2
 ```
 
-A Domino-backed endpoint can use `HTTPDBDominoRest` instead and transform its result to the same JSON array contract.
+It should then return the same JSON array:
+
+```json
+[
+  { "id": "c1", "name": "Customer One" }
+]
+```
+
+The implementation can use `HTTPDBSupabase`, `HTTPDBDominoRest` or `HttpClient`. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.
 
 ## Dirty tracking
 
