@@ -21,10 +21,6 @@ internal sealed class SourceLineMarkerPreprocessor
             if (!inProcedure && IsProcedureStart(code))
             {
                 inProcedure = true;
-                // A procedure/property header may itself span several physical lines
-                // using XPScript's normal '_' continuation syntax. Track that state
-                // immediately so source markers are never injected into the logical
-                // declaration/parameter list before continuation normalization runs.
                 continuation = EndsWithContinuation(code);
                 output.Add(raw);
                 continue;
@@ -44,8 +40,10 @@ internal sealed class SourceLineMarkerPreprocessor
                 {
                     var indent = Regex.Match(raw, @"^\s*").Value;
                     var expandedLine = i + 1;
-                    var physicalLine = sourceMap?.Resolve(expandedLine, sourceName).Line ?? expandedLine;
-                    output.Add(indent + $"Call XPSourceLineRuntime.Set({physicalLine})");
+                    var location = sourceMap?.Resolve(expandedLine, sourceName)
+                        ?? new SourceMap.Location(sourceName, expandedLine, raw);
+                    var fileName = SafeSourceName(location.SourcePath);
+                    output.Add(indent + $"Call XPSourceLineRuntime.Set({location.Line}, \"{EscapeString(fileName)}\")");
                 }
 
                 output.Add(raw);
@@ -58,6 +56,23 @@ internal sealed class SourceLineMarkerPreprocessor
 
         return string.Join(Environment.NewLine, output);
     }
+
+    private static string SafeSourceName(string sourcePath)
+    {
+        try
+        {
+            var name = Path.GetFileName(sourcePath);
+            return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
+        }
+        catch
+        {
+            return "input.xps";
+        }
+    }
+
+    private static string EscapeString(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static bool IsProcedureStart(string code) =>
         Regex.IsMatch(code,
