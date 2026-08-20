@@ -1,0 +1,28 @@
+' XPScript UIForm dirty tracking sample
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New JsonObject
+    Dim form As New UIForm("Customer")
+
+    Call data.Set("name", "Alice")
+    Call data.Set("email", "alice@example.com")
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddEmailField("email", "Email")
+    Call form.BindData(data)
+
+    Print "INITIAL=" & CStr(form.IsDirty)
+
+    Call form.SetFieldValue("name", "Bob")
+    Print "DIRTY=" & CStr(form.IsDirty)
+    Print "COUNT=" & CStr(form.DirtyFields.Count)
+    Print "FIELD=" & CStr(form.DirtyFields.Get(0))
+
+    Call form.SetFieldValue("name", "Alice")
+    Print "REVERTED=" & CStr(form.IsDirty)
+
+    Call form.SetFieldValue("email", "bob@example.com")
+    Call form.MarkClean()
+    Print "CLEAN=" & CStr(form.IsDirty)
+End Sub

@@ -51,15 +51,33 @@ internal static class XPScriptHttpUiFormHelpers
     }
 
     public static XPScriptHttpResponse SaveForm(object? clientValue, object? formValue, object? url)
-        => PostJson(clientValue, url, Form(formValue).Data);
+    {
+        var form = Form(formValue);
+        var response = PostJson(clientValue, url, form.Data);
+        if (response.IsSuccess) MarkFormClean(form);
+        return response;
+    }
 
     public static XPScriptHttpResponse PutForm(object? clientValue, object? formValue, object? url)
-        => PutJson(clientValue, url, Form(formValue).Data);
+    {
+        var form = Form(formValue);
+        var response = PutJson(clientValue, url, form.Data);
+        if (response.IsSuccess) MarkFormClean(form);
+        return response;
+    }
 
     public static XPScriptJsonDocument ResponseJson(object? responseValue)
     {
         var response = Response(responseValue);
         return XPScriptNativeJson.Parse(response.Body);
+    }
+
+    private static void MarkFormClean(XPScriptUIForm form)
+    {
+        var method = form.GetType().GetMethod("MarkClean", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (method is null)
+            throw new XPScriptRuntimeException(5, "UIForm dirty tracking runtime is unavailable.");
+        method.Invoke(form, null);
     }
 
     private static XPScriptHttpResponse SendJson(XPScriptHttpClient client, string method, object? url, object? data)
