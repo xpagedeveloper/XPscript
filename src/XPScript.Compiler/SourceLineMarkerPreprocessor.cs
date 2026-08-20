@@ -43,7 +43,7 @@ internal sealed class SourceLineMarkerPreprocessor
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
                     var fileName = SafeSourceName(location.SourcePath);
-                    output.Add(indent + $"Call XPSourceLineRuntime.Set({location.Line}, \"{EscapeString(fileName)}\")");
+                    output.Add(indent + $"Call XPSourceLineRuntime.SetMapped({location.Line}, \"{EscapeString(fileName)}\")");
                 }
 
                 output.Add(raw);
