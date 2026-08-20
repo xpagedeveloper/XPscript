@@ -69,6 +69,7 @@ public sealed class XPScriptTranspiler
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
         source = new HclSelectedCompatibilityPreprocessor().Transform(source);
+        source = new HclPrintFormattingPreprocessor().Transform(source);
 
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
@@ -115,6 +116,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
         generated += "\n\n" + HclSelectedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
 
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
