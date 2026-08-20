@@ -1,6 +1,6 @@
 Option Declare
 
-Sub Assert(condition As Boolean, message As String)
+Sub Assert(ByVal condition As Boolean, ByVal message As String)
     If Not condition Then
         Error 5, message
     End If
@@ -49,7 +49,7 @@ Sub Main()
     Call Assert(UString(3, 65) = "AAA", "UString numeric code failed")
     Call Assert(UString(2, "xyz") = "xx", "UString string failed")
 
-    singleValue = 1.25
+    singleValue = CSng(1.25)
     Call Assert(Len(singleValue) = 4, "Len numeric storage size failed")
     Call Assert(LenB(singleValue) = 4, "LenB numeric storage size failed")
     Call Assert(LenB("alphabet") = 16, "LenB Unicode string size failed")
