@@ -50,8 +50,33 @@ public sealed class XpsRequestBody
         if (_request.ContentType is null ||
             (!_request.ContentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) && !_request.ContentType.Contains("+json", StringComparison.OrdinalIgnoreCase)))
             throw new XpsRestBindingException("Request Content-Type must be application/json.");
-        try { return JsonSerializer.Deserialize(_request.Body.Span, type, XpsRestJson.Options); }
+        try
+        {
+            if (IsXpsObjectReference(type))
+            {
+                var modelType = type.GetGenericArguments()[0];
+                var model = JsonSerializer.Deserialize(_request.Body.Span, modelType, XpsRestJson.Options)
+                    ?? throw new XpsRestBindingException("JSON body cannot be null.");
+                var create = type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static, [modelType])
+                    ?? throw new XpsRestBindingException($"Unable to construct XPScript object reference for {modelType.Name}.");
+                return create.Invoke(null, [model]);
+            }
+            return JsonSerializer.Deserialize(_request.Body.Span, type, XpsRestJson.Options);
+        }
         catch (JsonException ex) { throw new XpsRestBindingException("Request body contains invalid JSON.", ex); }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        { throw new XpsRestBindingException("Unable to construct XPScript request model.", ex.InnerException); }
+    }
+
+    internal static bool IsXpsObjectReference(Type type) =>
+        type.IsGenericType && string.Equals(type.GetGenericTypeDefinition().Name, "LSRef`1", StringComparison.Ordinal);
+
+    internal static object? UnwrapXpsObjectReference(object? value)
+    {
+        if (value is null) return null;
+        var type = value.GetType();
+        if (!IsXpsObjectReference(type)) return value;
+        return type.GetProperty("Value", BindingFlags.Instance | BindingFlags.Public)?.GetValue(value);
     }
 }
 
@@ -230,6 +255,7 @@ public static class XpsRestBinder
 
     private static void ValidateObject(object value, IReadOnlyList<XpsValidationRule> rules, Dictionary<string, List<string>> errors)
     {
+        value = XpsRequestBody.UnwrapXpsObjectReference(value) ?? value;
         var type = value.GetType();
         foreach (var rule in rules.Where(x => x.TypeName.Equals(type.Name, StringComparison.OrdinalIgnoreCase)))
         {
