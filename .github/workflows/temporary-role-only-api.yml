@@ -1,0 +1,111 @@
+name: Temporary role-only API migration
+on:
+  push:
+    branches: [web-session-roles-status]
+permissions:
+  contents: write
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: web-session-roles-status
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Migrate runtime and tests
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def sub(path, pattern, repl, count=0):
+              p=Path(path); s=p.read_text(encoding='utf-8')
+              n=0
+              if count:
+                  s2,n=re.subn(pattern,repl,s,count=count,flags=re.M|re.S)
+              else:
+                  s2,n=re.subn(pattern,repl,s,flags=re.M|re.S)
+              if n == 0:
+                  raise SystemExit(f'no match in {path}: {pattern[:100]}')
+              p.write_text(s2,encoding='utf-8')
+              return n
+
+          # In-memory session: remove rules, make GetRoles return a string array,
+          # and restrict every role token to lowercase a-z and digits.
+          path='src/XPScript.Web.Runtime/XpsWebState.cs'
+          p=Path(path); s=p.read_text()
+          s=s.replace('    public const string RulesKey = "rules";\n','')
+          s=s.replace('    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);\n','')
+          s=s.replace('        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");\n','')
+          s=s.replace('    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n','')
+          s=s.replace("    public string GetRole() => string.Join(';', Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));\n", "    public string[] GetRoles() => Roles.OrderBy(x => x, StringComparer.Ordinal).ToArray();\n")
+          s=re.sub(r'''    public void Authenticate\(string\? userId = null, string\? userName = null, string\? rules = null\)\n    \{.*?\n    \}\n\n    public void SignOut''', '''    public void Authenticate(string? userId = null, string? userName = null)\n    {\n        if (userId is not null) ValidateIdentityValue(userId, nameof(userId));\n        if (userName is not null) ValidateIdentityValue(userName, nameof(userName));\n        Set(AuthenticatedKey, true);\n        if (userId is not null) Set(UserIdKey, userId); else RemoveIfPresent(UserIdKey);\n        if (userName is not null) Set(UserNameKey, userName); else RemoveIfPresent(UserNameKey);\n        RotateId();\n    }\n\n    public void SignOut''', s, count=1, flags=re.S)
+          s=s.replace('        RemoveIfPresent(RulesKey);\n','')
+          s=re.sub(r'''    private static IReadOnlyCollection<string> ParseRules\(string\? rules\).*?    private static string NormalizeRule\(string\? rule\) \{.*?\}\n''','',s,count=1,flags=re.S)
+          s=s.replace('Distinct(StringComparer.OrdinalIgnoreCase).ToArray();', 'Distinct(StringComparer.Ordinal).ToArray();')
+          s=re.sub(r'''    private static string NormalizeRole\(string\? role\) \{.*?\}\n''', '''    private static string NormalizeRole(string? role)\n    {\n        var value = (role ?? string.Empty).Trim();\n        if (value.Length is 0 or > 128 || value.Any(c => !(c is >= 'a' and <= 'z' or >= '0' and <= '9')))\n            throw new ArgumentException("Role name may contain only a-z and 0-9.", nameof(role));\n        return value;\n    }\n''', s, count=1, flags=re.S)
+          p.write_text(s)
+
+          # Persistent CGI session parity.
+          path='src/XPScript.Web.Cgi/XpsCgiPersistentState.cs'
+          p=Path(path); s=p.read_text()
+          s=s.replace('        public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);\n','')
+          s=re.sub(r'''            if \(name\.Equals\(XpsWebSession\.RulesKey, StringComparison\.OrdinalIgnoreCase\).*?throw new InvalidOperationException\("Session 'rules' must be a comma- or semicolon-separated string\."\);\n''','',s,count=1,flags=re.S)
+          s=s.replace('        public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n','')
+          s=s.replace("        public string GetRole() => string.Join(';', Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));\n", "        public string[] GetRoles() => Roles.OrderBy(x => x, StringComparer.Ordinal).ToArray();\n")
+          s=re.sub(r'''        public void Authenticate\(string\? userId = null, string\? userName = null, string\? rules = null\)\n        \{.*?\n        \}\n\n        public void SignOut''', '''        public void Authenticate(string? userId = null, string? userName = null)\n        {\n            Set(XpsWebSession.AuthenticatedKey, true);\n            SetOrRemove(XpsWebSession.UserIdKey, userId);\n            SetOrRemove(XpsWebSession.UserNameKey, userName);\n            RotateId();\n        }\n\n        public void SignOut''', s, count=1, flags=re.S)
+          s=s.replace('            RemoveIfPresent(XpsWebSession.RulesKey);\n','')
+          s=re.sub(r'''    private static IReadOnlyCollection<string> ParseRules\(string\? value\).*?    private static string NormalizeRule\(string\? rule\).*?\n    \}\n\n''','',s,count=1,flags=re.S)
+          s=s.replace('Distinct(StringComparer.OrdinalIgnoreCase).ToArray();', 'Distinct(StringComparer.Ordinal).ToArray();')
+          s=re.sub(r'''    private static string NormalizeRole\(string\? role\)\n    \{.*?\n    \}\n''', '''    private static string NormalizeRole(string? role)\n    {\n        var value = (role ?? string.Empty).Trim();\n        if (value.Length is 0 or > 128 || value.Any(c => !(c is >= 'a' and <= 'z' or >= '0' and <= '9')))\n            throw new ArgumentException("Role name may contain only a-z and 0-9.", nameof(role));\n        return value;\n    }\n''', s, count=1, flags=re.S)
+          p.write_text(s)
+
+          # Existing compiler regression now uses roles only.
+          path='tests/WebCompilerSmoke/Program.cs'
+          p=Path(path); s=p.read_text()
+          s=s.replace('[Rule:admin]\n[Rule:!blocked]\n', '[Role:admin;user]\n')
+          s=s.replace('if (!save.Policy.RequiredRules.Contains("admin") || !save.Policy.ForbiddenRules.Contains("blocked")) throw new Exception("Route rule metadata mismatch.");', 'if (!save.Policy.RequiredRoles.Contains("admin") || !save.Policy.RequiredRoles.Contains("user")) throw new Exception("Route role metadata mismatch.");')
+          p.write_text(s)
+
+          # CGI state test uses roles and SetRole instead of Authenticate rules.
+          path='tests/WebCgiStateSmoke/Program.cs'
+          p=Path(path); s=p.read_text()
+          s=s.replace('    Session.Authenticate("42", "Fredrik", "admin")\n', '    Session.SetRole("admin")\n    Session.Authenticate("42", "Fredrik")\n')
+          s=s.replace('[Rule:admin]\n', '[Role:admin]\n')
+          s=s.replace('Session auth/rules did not persist across multiple CGI processes.', 'Session auth/roles did not persist across multiple CGI processes.')
+          p.write_text(s)
+
+          # WebState regression: remove legacy rule section and validate role API/OR semantics/GetRoles array.
+          path='tests/WebStateSmoke/Program.cs'
+          p=Path(path); s=p.read_text()
+          s=re.sub(r'''directAuthSession\.Authenticate\("42", "Fredrik", "admin"\);.*?throw new Exception\("Forbidden \[Rule:!name\] policy did not evaluate session rules\."\);\n''', '''directAuthSession.SetRole("admin;user");\ndirectAuthSession.Authenticate("42", "Fredrik");\n''', s, count=1, flags=re.S)
+          s=s.replace('if (!directAuthSession.HasRole("ADMIN") || !directAuthSession.HasRole("user") || directAuthSession.GetRole().Length == 0)', 'if (!directAuthSession.HasRole("admin") || !directAuthSession.HasRole("user") || directAuthSession.GetRoles().Length != 2)')
+          s=s.replace('var rolePolicy = new XpsRoutePolicy(false, new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase), [], [])\n{\n    RequiredRoles = new[] { "manager", "admin" }\n};', 'var rolePolicy = new XpsRoutePolicy(false, new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase), new[] { "manager", "admin" });')
+          p.write_text(s)
+
+          # Example uses GetRoles and no rule parameter on Authenticate.
+          path='samples/web-session-roles-status.xps'
+          p=Path(path); s=p.read_text().replace('    Response.Write(Session.GetRole())\n','    Response.Write(Join(Session.GetRoles(), ","))\n')
+          p.write_text(s)
+
+          # Remove temporary workflow from resulting tree.
+          Path('.github/workflows/temporary-role-only-api.yml').unlink()
+      - name: Restore and build
+        run: |
+          dotnet restore ./XPScriptCompiler.slnx
+          dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+      - name: Run focused regressions
+        run: |
+          dotnet run --project ./tests/WebStateSmoke/WebStateSmoke.csproj -c Release
+          dotnet run --project ./tests/WebCompilerSmoke/WebCompilerSmoke.csproj -c Release
+          dotnet run --project ./tests/WebCgiStateSmoke/WebCgiStateSmoke.csproj -c Release
+      - name: Commit migration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Replace rules with persistent session roles"
+          git push origin HEAD:web-session-roles-status
