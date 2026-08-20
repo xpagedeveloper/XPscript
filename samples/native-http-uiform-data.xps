@@ -1,0 +1,57 @@
+' XPScript HTTP JSON and UIForm data helper regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim http As New HttpClient
+    Dim response As HttpResponse
+    Dim document As JsonDocument
+    Dim obj As JsonObject
+    Dim nested As JsonObject
+    Dim formData As JsonObject
+    Dim form As New UIForm("Customer")
+    Dim url As String
+
+    Set document = http.GetJson("http://127.0.0.1:18081/customer")
+    Set obj = document.Root.AsObject()
+    Print "GETJSON_NAME=" & CStr(obj.Get("name"))
+
+    Call http.LoadForm(form, "http://127.0.0.1:18081/customer")
+    Print "LOADFORM_NAME=" & form.GetFieldValueString("name")
+    Call form.SetFieldValue("name", "Saved customer")
+
+    Set response = http.SaveForm(form, "http://127.0.0.1:18081/customer")
+    Print "SAVEFORM_STATUS=" & CStr(response.StatusCode)
+    Set document = response.Json()
+    Set obj = document.Root.AsObject()
+    Set nested = obj.Get("saved")
+    Print "SAVEFORM_NAME=" & CStr(nested.Get("name"))
+
+    Set response = http.PutForm(form, "http://127.0.0.1:18081/customer")
+    Print "PUTFORM_STATUS=" & CStr(response.StatusCode)
+
+    Set formData = New JsonObject
+    Call formData.Set("name", "JSON helper")
+    Call formData.Set("age", 51)
+    Set response = http.PostJson("http://127.0.0.1:18081/json", formData)
+    Set document = response.Json()
+    Set obj = document.Root.AsObject()
+    Set nested = obj.Get("saved")
+    Print "POSTJSON_NAME=" & CStr(nested.Get("name"))
+
+    Set response = http.PatchJson("http://127.0.0.1:18081/json", formData)
+    Print "PATCHJSON_STATUS=" & CStr(response.StatusCode)
+
+    url = http.AddQuery("http://127.0.0.1:18081/customer", "search", "a b")
+    Set document = http.GetJson(url)
+    Set obj = document.Root.AsObject()
+    Print "QUERY=" & CStr(obj.Get("query"))
+
+    Set response = http.PostForm("http://127.0.0.1:18081/form", formData)
+    Set document = response.Json()
+    Set obj = document.Root.AsObject()
+    Print "POSTFORM_BODY=" & CStr(obj.Get("body"))
+
+    Print "HTTP_UIFORM_HELPERS=OK"
+End Sub
