@@ -40,6 +40,7 @@ public sealed class XpsWebPrincipal
     public bool IsAuthenticated { get; }
     public string? UserId { get; }
     public string? Name { get; }
+    public string? UserName => Name;
     public IReadOnlyCollection<string> Rules => _rules;
     public IReadOnlyCollection<string> Roles => _roles;
 

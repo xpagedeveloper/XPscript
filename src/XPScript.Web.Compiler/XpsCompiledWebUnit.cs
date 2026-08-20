@@ -42,7 +42,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(procedureName);
         ArgumentNullException.ThrowIfNull(context);
-        if (!_routes.ContainsKey(procedureName))
+        if (!_routes.TryGetValue(procedureName, out var descriptor))
             throw new XpsWebRouteException($"Procedure '{procedureName}' is not exported as a web route.");
 
         if (_syntheticHandler is not null)
@@ -58,15 +58,34 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             procedureName,
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase)
             ?? throw new XpsWebRouteException($"Exported route procedure '{procedureName}' was not found in the compiled unit.");
-        if (method.GetParameters().Length != 0)
-            throw new XpsWebRouteException($"Web route procedure '{procedureName}' must not declare parameters in the initial web runtime.");
+
+        if (!XpsRestBinder.TryBind(method, context, descriptor, out var arguments, out var errors))
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
+                Console.Error.WriteLine($"REST binding failed for {procedureName}: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+            XpsWebResponseRestExtensions.Problem(
+                context.Response,
+                400,
+                "Validation failed",
+                "One or more request values are invalid.",
+                errors);
+            return;
+        }
 
         try
         {
             using (XpsWebContextAccessor.Push(context))
             {
-                var result = method.Invoke(null, null);
-                if (result is Task task) await task.ConfigureAwait(false);
+                var result = method.Invoke(null, arguments);
+                object? returnValue = result;
+                if (result is Task task)
+                {
+                    await task.ConfigureAwait(false);
+                    returnValue = TaskResult(task);
+                }
+
+                if (returnValue is not null && !context.Response.Completed && context.Response.Body.Length == 0)
+                    XpsWebResponseRestExtensions.OK(context.Response, returnValue);
             }
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
@@ -74,6 +93,13 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
             throw;
         }
+    }
+
+    private static object? TaskResult(Task task)
+    {
+        var type = task.GetType();
+        if (!type.IsGenericType) return null;
+        return type.GetProperty("Result", BindingFlags.Instance | BindingFlags.Public)?.GetValue(task);
     }
 
     public ValueTask DisposeAsync()

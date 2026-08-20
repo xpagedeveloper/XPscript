@@ -17,7 +17,8 @@ internal sealed class ReservedIdentifierPreprocessor
 
     private static readonly HashSet<string> ReservedValueNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Application"
+        "Application",
+        "Body"
     };
 
     public string Transform(string source)
@@ -48,8 +49,6 @@ internal sealed class ReservedIdentifierPreprocessor
         }
         else
         {
-            // Module variables may use Public/Private without Dim. Do not treat procedure,
-            // type or property declarations as variable lists.
             var moduleDeclaration = Regex.Match(code,
                 @"^(?:Public|Private)\s+(?!(?:Sub|Function|Class|Type|Enum|Property)\b)(.+)$",
                 RegexOptions.IgnoreCase);

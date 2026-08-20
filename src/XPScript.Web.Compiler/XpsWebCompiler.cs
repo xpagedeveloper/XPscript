@@ -275,6 +275,7 @@ internal static class Script
 {
     private static XPScript.Web.Runtime.XpsWebRequest Request => XPScript.Web.Runtime.XpsWebRuntimeObjects.Request;
     private static XPScript.Web.Runtime.XpsWebResponse Response => XPScript.Web.Runtime.XpsWebRuntimeObjects.Response;
+    private static XPScript.Web.Runtime.XpsRequestBody Body => XPScript.Web.Runtime.XpsWebRuntimeObjects.Body;
     private static XPScript.Web.Runtime.XpsWebServer Server => XPScript.Web.Runtime.XpsWebRuntimeObjects.Server;
     private static XPScript.Web.Runtime.IXpsRequestState RequestScope => XPScript.Web.Runtime.XpsWebRuntimeObjects.RequestScope;
     private static XPScript.Web.Runtime.IXpsSession Session => XPScript.Web.Runtime.XpsWebRuntimeObjects.Session;
@@ -310,7 +311,6 @@ internal static class Script
         {
             var method = script.GetMethod(route, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase);
             if (method is null) throw new XpsWebCompilationException($"Exported route '{route}' is missing from the compiled web assembly.");
-            if (method.GetParameters().Length != 0) throw new XpsWebCompilationException($"Web route '{route}' must not declare parameters in the initial web runtime.");
         }
     }
 
