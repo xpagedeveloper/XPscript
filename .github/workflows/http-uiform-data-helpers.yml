@@ -7,6 +7,8 @@ on:
       - 'src/XPScript.Compiler/HttpUiFormRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIFormActionModelPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIFormDirtyTrackingPostProcessor.cs'
       - 'samples/native-http-uiform-data.xps'
       - 'tests/native_http_uiform_server.py'
       - '.github/workflows/http-uiform-data-helpers.yml'
@@ -58,11 +60,27 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "HTTP UIForm helper regression failed.`n$output" }
           $output | ForEach-Object { Write-Host $_ }
           $required = @(
+            'NEW_DIRTY=False',
+            'NEW_DIRTY_COUNT=0',
             'GETJSON_NAME=Loaded customer',
             'LOADFORM_NAME=Loaded customer',
+            'LOADFORM_DIRTY=False',
+            'SAME_VALUE_DIRTY=False',
+            'CHANGED_DIRTY=True',
+            'DIRTY_COUNT=1',
+            'DIRTY_FIELD_0=name',
+            'REVERTED_DIRTY=False',
+            'REVERTED_DIRTY_COUNT=0',
             'SAVEFORM_STATUS=200',
+            'SAVEFORM_DIRTY=False',
+            'SAVEFORM_DIRTY_COUNT=0',
             'SAVEFORM_NAME=Saved customer',
+            'PUT_BEFORE_DIRTY=True',
             'PUTFORM_STATUS=200',
+            'PUTFORM_DIRTY=False',
+            'MANUAL_BEFORE_DIRTY=True',
+            'MANUAL_AFTER_DIRTY=False',
+            'MANUAL_AFTER_DIRTY_COUNT=0',
             'POSTJSON_NAME=JSON helper',
             'PATCHJSON_STATUS=200',
             'QUERY=search=a%20b',
