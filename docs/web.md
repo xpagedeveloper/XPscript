@@ -115,6 +115,12 @@ The runtime preserves other valid HTTP methods in `Request.Method` so applicatio
 
 CGI and FastCGI transports populate CGI-compatible request variables. Use `Request.Cgi("VARIABLE_NAME")` when you need a specific variable. Prefer normalized Request properties such as `Method`, `ContentType`, `RemoteAddress` and `Query_String` when an equivalent property exists.
 
+## IIS hosting
+
+On Windows Server, the recommended IIS topology is IIS as the public TLS endpoint and reverse proxy to an XPScript Kestrel process on loopback. Direct IIS CGI hosting is also supported for simpler deployments.
+
+See [Hosting XPScript on IIS](iis-hosting.md) for the full configuration, including ARR, URL Rewrite, `web.config`, CGI mappings, application pool settings, filesystem permissions and troubleshooting.
+
 ## Security boundaries
 
 The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose `.xps` source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.
