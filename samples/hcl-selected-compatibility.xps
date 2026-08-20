@@ -86,11 +86,21 @@ Sub Main()
     negativeB = Rnd(-99)
     Call Assert(negativeA = negativeB, "Rnd(negative) did not reseed deterministically")
 
+    Call Assert(Not IsDefined("SOME_UNKNOWN_XPSCRIPT_CONSTANT"), "IsDefined unknown constant failed")
     If Platform() = "Windows" Then
+        Call Assert(IsDefined("WINDOWS"), "IsDefined WINDOWS failed")
+        Call Assert(IsDefined("WIN32"), "IsDefined WIN32 failed")
+        Call Assert(IsDefined("OLE"), "IsDefined OLE failed")
+        Call Assert(Not IsDefined("UNIX"), "IsDefined UNIX failed on Windows")
         Call Assert(Len(CurDrive) = 2, "CurDrive failed on Windows")
         ole = CreateObject("Scripting.Dictionary")
         Call Assert(IsObject(ole), "CreateObject failed")
     Else
+        Call Assert(IsDefined("UNIX"), "IsDefined UNIX failed")
+        Call Assert(Not IsDefined("WINDOWS"), "IsDefined WINDOWS failed on Unix")
+        If Platform() = "Linux" Then
+            Call Assert(IsDefined("LINUX"), "IsDefined LINUX failed")
+        End If
         Call Assert(CurDrive = "", "CurDrive must be empty on non-Windows")
     End If
 
