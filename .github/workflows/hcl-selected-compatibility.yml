@@ -10,6 +10,7 @@ on:
       - 'src/XPScript.Compiler/HclPlatformStringRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclPrintFormattingRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclPrintFormattingPreprocessor.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/hcl-selected-compatibility.xps'
       - 'samples/hcl-print-formatting.xps'
