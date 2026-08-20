@@ -49,7 +49,7 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         if (foundMarker && !runtimeBoundaryInserted)
             throw new CompilerException("Unable to restore generated source line mapping before runtime code.");
 
-        return string.Join(Environment.NewLine, output);
+        return string.Join("\n", output);
     }
 
     private static string DecodeSourceId(string hex)
