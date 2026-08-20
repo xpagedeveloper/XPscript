@@ -343,7 +343,7 @@ public sealed class XpsWebRouteMetadataParser
     private static string NormalizeRouteTemplate(string value)
     {
         var route = value.Trim().Replace('\\', '/');
-        if (route.Length is < 1 or > 2048 || !route.StartsWith('/', StringComparison.Ordinal)) throw new XpsWebRouteMetadataException("Route must be an absolute path beginning with '/'.");
+        if (route.Length is < 1 or > 2048 || !route.StartsWith("/", StringComparison.Ordinal)) throw new XpsWebRouteMetadataException("Route must be an absolute path beginning with '/'.");
         if (route.Contains("//", StringComparison.Ordinal) || route.Any(char.IsControl) || route.Contains('?') || route.Contains('#')) throw new XpsWebRouteMetadataException("Route contains an invalid path character or empty segment.");
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var segment in route.Split('/', StringSplitOptions.RemoveEmptyEntries))
