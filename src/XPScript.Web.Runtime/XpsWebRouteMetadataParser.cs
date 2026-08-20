@@ -92,9 +92,21 @@ public sealed class XpsWebRouteMetadataParser
                     {
                         if (platform is not null) throw new XpsWebRouteMetadataException("A web source may declare [Platform:browser-wasm] only once.");
                         platform = "browser-wasm";
+                        output.AppendLine(raw);
                     }
-                    else Console.Error.WriteLine($"error: Unsupported web platform '[Platform:{value}]'. Ignoring rule.");
-                    output.AppendLine();
+                    else
+                    {
+                        Console.Error.WriteLine($"error: Unsupported web platform '[Platform:{value}]'. Ignoring rule.");
+                        output.AppendLine();
+                    }
+                    continue;
+                }
+
+                if (attribute.StartsWith("Compile:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (pending.Count > 0 || currentClass is not null)
+                        throw new XpsWebRouteMetadataException("Compile metadata must be declared at file level.");
+                    output.AppendLine(raw);
                     continue;
                 }
 
