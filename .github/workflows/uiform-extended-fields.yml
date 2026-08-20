@@ -6,9 +6,11 @@ on:
     paths:
       - 'src/XPScript.Compiler/UIFormAdditionalFieldsPostProcessor.cs'
       - 'src/XPScript.Compiler/UIFormAdditionalFieldFixupPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIFormRemoteSearchPostProcessor.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Web.Runtime/XpsUIWebRuntimeBridge.cs'
       - 'samples/uiform-extended-fields.xps'
+      - 'samples/uiform-remote-search.xps'
       - 'tests/uiform_extended_lookup_server.py'
       - '.github/workflows/uiform-extended-fields.yml'
   workflow_dispatch:
@@ -32,6 +34,19 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile and run remote-search sample without backend
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($IsWindows) { './out/uiform-remote-search.exe' } else { './out/uiform-remote-search' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Remote-search UIForm sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Remote-search UIForm sample failed. Server-side mode must not preload the backend.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($output -notcontains 'FIELD_COUNT=2') { throw "Unexpected remote-search field count.`n$output" }
+          if ($output -notcontains 'UIFORM_REMOTE_SEARCH=OK') { throw "Remote-search completion marker missing.`n$output" }
       - name: Start lookup API
         shell: pwsh
         run: |
