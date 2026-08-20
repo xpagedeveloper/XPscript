@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/HclSelectedCompatibilityRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclSelectedCompatibilityPreprocessor.cs'
+      - 'src/XPScript.Compiler/HclArrayReplaceRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclPlatformStringRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclPrintFormattingRuntimeSource.cs'
       - 'src/XPScript.Compiler/HclPrintFormattingPreprocessor.cs'
