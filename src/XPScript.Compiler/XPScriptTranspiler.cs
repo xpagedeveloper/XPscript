@@ -122,6 +122,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
 
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
+        generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 
         generated = generated.Replace(

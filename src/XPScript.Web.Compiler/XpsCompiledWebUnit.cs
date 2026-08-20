@@ -51,6 +51,14 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             return;
         }
 
+        if (!XpsWebSecurity.ValidateCsrf(context))
+        {
+            XpsWebSecurity.WriteCsrfFailure(context);
+            return;
+        }
+
+        XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
+
         var assembly = _assembly ?? throw new ObjectDisposedException(nameof(XpsCompiledWebUnit));
         var script = assembly.GetType("Script", throwOnError: true, ignoreCase: false)
             ?? throw new XpsWebRouteException("Generated Script type was not found.");
@@ -69,6 +77,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
                 "Validation failed",
                 "One or more request values are invalid.",
                 errors);
+            if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
             return;
         }
 
@@ -86,6 +95,8 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
                 if (returnValue is not null && !context.Response.Completed && context.Response.Body.Length == 0)
                     XpsWebResponseRestExtensions.OK(context.Response, returnValue);
+                if (!context.Response.Completed)
+                    XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
             }
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)

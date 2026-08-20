@@ -185,8 +185,10 @@ public sealed class XpsWebResponse
 
     public void Complete()
     {
+        if (Completed) return;
         if (StatusCode is < 100 or > 599) throw new InvalidOperationException("Response status code must be between 100 and 599.");
         if (ContentType is not null) ValidateHeaderValue(ContentType);
+        XpsWebSecurity.ApplyResponseSecurityHeaders(this);
         if (_headers.ContainsKey("Set-Cookie")) EnsureCookieResponseNoStore();
         Completed = true;
     }
