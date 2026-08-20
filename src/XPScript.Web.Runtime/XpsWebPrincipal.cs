@@ -51,12 +51,14 @@ public sealed class XpsWebPrincipal
         if (session is null || !session.Started) return this;
         var rules = new HashSet<string>(_rules, StringComparer.OrdinalIgnoreCase);
         foreach (var rule in session.Rules) rules.Add(NormalizeValue(rule, "Rule"));
+        var roles = new HashSet<string>(_roles, StringComparer.OrdinalIgnoreCase);
+        foreach (var role in session.Roles) roles.Add(NormalizeValue(role, "Role"));
         return new XpsWebPrincipal(
             IsAuthenticated || session.IsAuthenticated,
             UserId ?? session.UserId,
             Name ?? session.UserName,
             rules,
-            _roles);
+            roles);
     }
 
     private static string NormalizeValue(string? value, string kind)

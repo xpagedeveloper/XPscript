@@ -31,13 +31,30 @@ End Sub
 
 Supported HTTP method rules include the standard methods handled by the web runtime. `Request.Method` always contains the normalized actual HTTP method. A misspelled or unknown bracket rule is reported on the console but does not stop compilation. Conflicting `[Anonymous]` and `[Authenticated]` rules are reported, and `[Authenticated]` takes precedence.
 
+Role rules use OR semantics. A user needs any positive role declared for the route. A role prefixed with `!` is forbidden and overrides matching positive roles.
+
+```xpscript
+[Authenticated]
+[Get]
+[Role:admin;user]
+[Role:editor]
+[Role:!blocked]
+Sub Index()
+    Response.Write("Authorized")
+End Sub
+```
+
+The example allows `admin`, `user` or `editor`, but rejects a principal or session that also has `blocked`.
+
 ## PreCompile
 
 `[PreCompile:file.xps]` asks the web engine to warm another route. If the extension is omitted, the engine also tries `.xps`. A missing target is reported and skipped rather than stopping the server.
 
 Startup warms the default document and its direct precompile targets. Nested targets are not recursively warmed at startup. If `index.xps` precompiles `kalle.xps`, and `kalle.xps` declares `[PreCompile:nisse.xps]`, `nisse.xps` is warmed after the first real request to `kalle.xps`.
 
-Already compiled files are reused while their source/dependency snapshot remains unchanged. The response is allowed to complete before sublevel warmup runs in the background.
+Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side `.xps` pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives process restarts and is reused only when the source/dependency snapshot, runtime/compiler configuration, compiler build identity and web runtime build identity still match. Changed source or dependencies automatically invalidate the artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.
+
+`XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory.
 
 ## Request
 
@@ -92,6 +109,18 @@ End Sub
 
 Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
 
+Authenticated sessions can hold roles used directly by `[Role:...]` authorization. Authenticate first, then add roles:
+
+```xpscript
+Session.Authenticate("42", "Fredrik")
+Session.SetRole("admin")
+Session.SetRole("editor")
+```
+
+Available role methods are `Session.SetRole(role)`, `Session.GetRoles()`, `Session.HasRole(role)` and `Session.RemoveRole(role)`. Role names are case-insensitive, contain at most 128 characters and reject control characters. A session supports at most 128 distinct roles.
+
+Session roles are bound to the authenticated session identifier. Authentication rotates the identifier. Roles from an earlier login therefore do not become active for a later login unless the application assigns them again. Assign roles after `Session.Authenticate`.
+
 ## Application
 
 Web application state belongs to the configured site/runtime. Keep tenant and user data scoped explicitly. Do not use global application state as a substitute for authentication or authorization.
@@ -124,5 +153,7 @@ See [Hosting XPScript on IIS](iis-hosting.md) for the full configuration, includ
 ## Security boundaries
 
 The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose `.xps` source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.
+
+The persistent compiler cache contains executable .NET assemblies generated from trusted `.xps` source. Keep its directory writable only by the XPScript service identity or an equally trusted administrator.
 
 See [Getting started](getting-started.md) for host setup and parameters and [UIForm](uiform.md) for forms.

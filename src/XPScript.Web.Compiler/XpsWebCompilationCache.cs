@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using XPScript.Compiler;
 
 namespace XPScript.Web.Compiler;
@@ -10,6 +12,8 @@ public sealed class XpsWebCompilationCacheOptions
     public TimeSpan IdleTtl { get; init; } = TimeSpan.FromMinutes(20);
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(2);
     public string ConfigurationIdentity { get; init; } = "default";
+    public bool EnablePersistentCache { get; init; } = true;
+    public string? PersistentCacheDirectory { get; init; }
 
     internal void Validate()
     {
@@ -23,6 +27,8 @@ public sealed class XpsWebCompilationCacheOptions
             throw new ArgumentOutOfRangeException(nameof(FailureBackoff), "FailureBackoff must be between 100 ms and 5 minutes.");
         if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)
             throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));
+        if (PersistentCacheDirectory is not null && string.IsNullOrWhiteSpace(PersistentCacheDirectory))
+            throw new ArgumentException("PersistentCacheDirectory cannot be empty when specified.", nameof(PersistentCacheDirectory));
     }
 }
 
@@ -200,11 +206,19 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         string runtimeIdentifier,
         XPScriptCompilationSnapshot expectedSnapshot)
     {
+        var persistentCacheDirectory = ResolvePersistentCacheDirectory(fullSiteRoot);
+        if (persistentCacheDirectory is not null)
+        {
+            var persisted = await _compiler.TryLoadPersistentAsync(
+                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+            if (persisted is not null) return persisted;
+        }
+
         Interlocked.Increment(ref _compilationStarts);
         var started = Stopwatch.GetTimestamp();
         try
         {
-            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot).ConfigureAwait(false);
+            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
         }
         catch
         {
@@ -218,13 +232,29 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
     }
 
+    private string? ResolvePersistentCacheDirectory(string fullSiteRoot)
+    {
+        if (!_options.EnablePersistentCache) return null;
+        if (!string.IsNullOrWhiteSpace(_options.PersistentCacheDirectory))
+            return Path.GetFullPath(_options.PersistentCacheDirectory);
+
+        var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(fullSiteRoot)).Replace('\\', '/');
+        var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot))).ToLowerInvariant();
+        return Path.Combine(localData, "XPScript", "web-cache", siteHash);
+    }
+
     private async Task<XpsCompiledWebUnit> CompileAndVerifyAsync(
         string fullPath,
         string fullSiteRoot,
         string runtimeIdentifier,
-        XPScriptCompilationSnapshot expectedSnapshot)
+        XPScriptCompilationSnapshot expectedSnapshot,
+        string? persistentCacheDirectory)
     {
-        var unit = await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false);
+        var unit = persistentCacheDirectory is null
+            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false)
+            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
         try
         {
             var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, CancellationToken.None).ConfigureAwait(false);
@@ -325,7 +355,6 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
         catch
         {
-            // Failed compilations do not own a successfully loaded unit.
         }
     }
 
