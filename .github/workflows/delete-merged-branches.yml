@@ -47,10 +47,12 @@ jobs:
 
           owner="${REPOSITORY%%/*}"
 
-          # One-time allow-list for UI branches whose work was merged through
-          # replacement/squash PRs. These branch tips are not necessarily
+          # One-time allow-list for branches whose functionality was merged through
+          # replacement/consolidation work. Their original tips are not necessarily
           # ancestors of main, so normal merge ancestry cannot prove them merged.
-          superseded_ui_branches=(
+          superseded_branches=(
+            session-defaults-role-restoration
+            web-session-roles-status
             todo-ui-form-color-month-v1
             todo-ui-form-color-month-v2
             todo-ui-form-datetime-range-v1
@@ -71,10 +73,10 @@ jobs:
             todo-ui-list-view-v1
           )
 
-          is_explicitly_superseded_ui_branch() {
+          is_explicitly_superseded_branch() {
             local branch="$1"
             local candidate
-            for candidate in "${superseded_ui_branches[@]}"; do
+            for candidate in "${superseded_branches[@]}"; do
               if [[ "$branch" == "$candidate" ]]; then
                 return 0
               fi
@@ -148,7 +150,7 @@ jobs:
               merged_by_pr=true
             fi
 
-            if is_explicitly_superseded_ui_branch "$branch"; then
+            if is_explicitly_superseded_branch "$branch"; then
               explicitly_superseded=true
             fi
 
