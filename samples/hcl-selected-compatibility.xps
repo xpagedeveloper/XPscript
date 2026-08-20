@@ -11,6 +11,9 @@ Sub Main()
     Dim negativeA As Single
     Dim negativeB As Single
     Dim ole As Variant
+    Dim fileNumber As Integer
+    Dim inputText As String
+    Dim inputPath As String
 
     source = Array("alpha", "beta", "alpha")
     replaced = ArrayReplace(source, "alpha", "x")
@@ -36,6 +39,18 @@ Sub Main()
     If RightBP("ABCDE", 2) <> "DE" Then Error 5, "RightBP failed"
     If MidBP("ABCDE", 2, 3) <> "BCD" Then Error 5, "MidBP failed"
     If InStrBP("ABCDE", "CD") <> 3 Then Error 5, "InStrBP failed"
+
+    inputPath = "hcl-inputbp-regression.txt"
+    fileNumber = FreeFile
+    Open inputPath For Output As #fileNumber
+    Print #fileNumber, "ABCDE"
+    Close #fileNumber
+    fileNumber = FreeFile
+    Open inputPath For Binary As #fileNumber
+    inputText = InputBP(3, fileNumber)
+    Close #fileNumber
+    Kill inputPath
+    If inputText <> "ABC" Then Error 5, "InputBP file read failed"
 
     If LenC("A" & UChr(769) & "B") <> 2 Then Error 5, "LenC combining-character failed"
     If LeftC("A" & UChr(769) & "B", 1) <> "A" & UChr(769) Then Error 5, "LeftC failed"
