@@ -44,6 +44,8 @@ jobs:
         run: dotnet run --project ./tests/WebCompilerSmoke/WebCompilerSmoke.csproj -c Release
 
       - name: Run REST API route and binding smoke
+        env:
+          XPSCRIPT_WEB_CONSOLE_ERRORS: '1'
         run: dotnet run --project ./tests/WebRestApiSmoke/WebRestApiSmoke.csproj -c Release
 
   browser-wasm:
