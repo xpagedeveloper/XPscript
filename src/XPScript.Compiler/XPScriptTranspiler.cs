@@ -114,6 +114,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
         generated += "\n\n" + HclSelectedCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
 
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
