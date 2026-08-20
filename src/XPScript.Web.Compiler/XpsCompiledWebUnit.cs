@@ -51,6 +51,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             return;
         }
 
+        if (!XpsWebSecurity.ValidateCsrf(context))
+        {
+            XpsWebSecurity.WriteCsrfFailure(context);
+            return;
+        }
+
         var assembly = _assembly ?? throw new ObjectDisposedException(nameof(XpsCompiledWebUnit));
         var script = assembly.GetType("Script", throwOnError: true, ignoreCase: false)
             ?? throw new XpsWebRouteException("Generated Script type was not found.");
