@@ -61,6 +61,8 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
         if (!XpsRestBinder.TryBind(method, context, descriptor, out var arguments, out var errors))
         {
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
+                Console.Error.WriteLine($"REST binding failed for {procedureName}: {System.Text.Json.JsonSerializer.Serialize(errors)}");
             XpsWebResponseRestExtensions.Problem(
                 context.Response,
                 400,
