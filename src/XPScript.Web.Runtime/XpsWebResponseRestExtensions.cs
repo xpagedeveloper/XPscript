@@ -80,6 +80,7 @@ public static class XpsWebResponseRestExtensions
         string contentType)
     {
         ArgumentNullException.ThrowIfNull(response);
+        data = XPScript.Web.Runtime.XpsRequestBody.UnwrapXpsObjectReference(data);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(data, XPScript.Web.Runtime.XpsRestJson.Options);
         if (bytes.Length > response.MaxBodyBytes)
             throw new InvalidOperationException($"JSON response exceeds the configured {response.MaxBodyBytes} byte limit.");
