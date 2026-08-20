@@ -1,8 +1,26 @@
 Option Declare
 
 Sub Main()
+    Dim fileNumber As Integer
+    Dim text As String
+    Dim path As String
+
     Print "SPC:"; Spc(3); "X"
     Print "TAB:"; Tab(8); "X"
     Print "WRAP123"; Tab(3); "X"
+
+    path = "hcl-print-formatting.txt"
+    fileNumber = FreeFile
+    Open path For Output As #fileNumber
+    Print #fileNumber, "FILE"; Spc(2); "X"
+    Close #fileNumber
+
+    fileNumber = FreeFile
+    Open path For Input As #fileNumber
+    Line Input #fileNumber, text
+    Close #fileNumber
+    Kill path
+    If text <> "FILE  X" Then Error 5, "Print # Spc formatting failed"
+
     Print "HCL_PRINT_FORMATTING=OK"
 End Sub
