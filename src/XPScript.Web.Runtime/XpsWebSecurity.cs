@@ -18,10 +18,9 @@ public static class XpsWebSecurity
         ArgumentNullException.ThrowIfNull(context);
         if (!IsUnsafeMethod(context.Request.Method) || context.Session is null) return false;
 
-        var sessionCookie = context.Request.Cookie("XPSID");
+        var hasCookies = context.Request.Cookies.Count > 0;
         var authorization = context.Request.HeaderFirst("Authorization");
-        var bearerOnly = string.IsNullOrWhiteSpace(sessionCookie) &&
-                         authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
+        var bearerOnly = !hasCookies && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
         if (bearerOnly) return false;
 
         var contentType = context.Request.ContentType ?? string.Empty;
@@ -30,7 +29,7 @@ public static class XpsWebSecurity
         var browserOrigin = !string.IsNullOrWhiteSpace(context.Request.HeaderFirst("Origin")) ||
                             !string.IsNullOrWhiteSpace(context.Request.HeaderFirst("Referer"));
 
-        return !string.IsNullOrWhiteSpace(sessionCookie) ||
+        return hasCookies ||
                browserForm ||
                browserOrigin ||
                !string.IsNullOrWhiteSpace(context.Request.HeaderFirst(CsrfHeaderName));
