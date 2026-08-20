@@ -14,7 +14,7 @@ internal sealed class HclPrintFormattingPreprocessor
         {
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
-            if (line.Length == 0 || !ContainsSpcOrTab(line))
+            if (line.Length == 0 || !ContainsSpcOrTabOutsideStrings(line))
             {
                 output.Add(raw);
                 continue;
@@ -40,8 +40,30 @@ internal sealed class HclPrintFormattingPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private static bool ContainsSpcOrTab(string line) =>
-        Regex.IsMatch(line, @"(?<![\w.])(Spc|Tab)\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static bool ContainsSpcOrTabOutsideStrings(string line)
+    {
+        var inString = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"')
+            {
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+
+            foreach (var name in new[] { "Spc", "Tab" })
+            {
+                if (i + name.Length > line.Length || !line.AsSpan(i, name.Length).Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
+                var beforeOk = i == 0 || !(char.IsLetterOrDigit(line[i - 1]) || line[i - 1] == '_' || line[i - 1] == '.');
+                var p = i + name.Length;
+                while (p < line.Length && char.IsWhiteSpace(line[p])) p++;
+                if (beforeOk && p < line.Length && line[p] == '(') return true;
+            }
+        }
+        return false;
+    }
 
     private static string BuildParts(string body)
     {
