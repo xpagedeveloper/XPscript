@@ -15,6 +15,18 @@ internal sealed class HclSelectedCompatibilityPreprocessor
         source = ReplaceCall(source, "UString", "LSHclSelectedRuntime.UString", allowDollarSuffix: true);
         source = ReplaceCall(source, "Rnd", "LSHclSelectedRuntime.Rnd");
 
+        source = ReplaceCall(source, "InputBP", "LSHclPlatformStringRuntime.InputBP", allowDollarSuffix: true);
+        source = ReplaceCall(source, "InStrBP", "LSHclPlatformStringRuntime.InStrBP");
+        source = ReplaceCall(source, "InStrC", "LSHclPlatformStringRuntime.InStrC");
+        source = ReplaceCall(source, "LeftBP", "LSHclPlatformStringRuntime.LeftBP", allowDollarSuffix: true);
+        source = ReplaceCall(source, "LeftC", "LSHclPlatformStringRuntime.LeftC", allowDollarSuffix: true);
+        source = ReplaceCall(source, "LenBP", "LSHclPlatformStringRuntime.LenBP");
+        source = ReplaceCall(source, "LenC", "LSHclPlatformStringRuntime.LenC");
+        source = ReplaceCall(source, "MidBP", "LSHclPlatformStringRuntime.MidBP", allowDollarSuffix: true);
+        source = ReplaceCall(source, "MidC", "LSHclPlatformStringRuntime.MidC", allowDollarSuffix: true);
+        source = ReplaceCall(source, "RightBP", "LSHclPlatformStringRuntime.RightBP", allowDollarSuffix: true);
+        source = ReplaceCall(source, "RightC", "LSHclPlatformStringRuntime.RightC", allowDollarSuffix: true);
+
         source = Regex.Replace(
             source,
             @"(?<![\w.])Rnd\b(?!\s*\()",
@@ -32,8 +44,6 @@ internal sealed class HclSelectedCompatibilityPreprocessor
             "LSHclSelectedRuntime.CurDrive()",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        // XPScript Execute deliberately aliases Evaluate. It therefore gets the
-        // same isolation, argument bridge and safety rules as Evaluate.
         source = Regex.Replace(
             source,
             @"(?<![\w.])Execute\s*\(",
