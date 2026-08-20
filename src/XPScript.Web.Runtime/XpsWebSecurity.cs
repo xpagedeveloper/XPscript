@@ -5,7 +5,7 @@ public static class XpsWebSecurity
     public const string CsrfHeaderName = "X-XPS-CSRF-Token";
     public const string CsrfFormFieldName = "__xps_csrf";
 
-    private const string DefaultCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
+    private const string DefaultCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
 
     public static bool IsUnsafeMethod(string method) =>
         method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
@@ -62,7 +62,7 @@ public static class XpsWebSecurity
         ArgumentNullException.ThrowIfNull(response);
         SetIfMissing(response, "X-Content-Type-Options", "nosniff");
         SetIfMissing(response, "Referrer-Policy", "strict-origin-when-cross-origin");
-        SetIfMissing(response, "X-Frame-Options", "SAMEORIGIN");
+        SetIfMissing(response, "X-Frame-Options", "DENY");
         SetIfMissing(response, "Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
             SetIfMissing(response, "Content-Security-Policy", DefaultCsp);
