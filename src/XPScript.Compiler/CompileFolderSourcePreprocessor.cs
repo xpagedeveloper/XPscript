@@ -9,15 +9,11 @@ public sealed class CompileFolderSourcePreprocessor
     public sealed record Result(string Source, IReadOnlyList<string> Dependencies, IReadOnlyList<string> Modules, bool Enabled);
 
     private static readonly Regex CompilePattern = new(
-        @"^\s*\[\s*Compile\s*:\s*(?:\"(?<quoted>[^\"]+)\"|(?<plain>[^\]]+))\s*\]\s*$",
+        "^\\s*\\[\\s*Compile\\s*:\\s*(?:\"(?<quoted>[^\"]+)\"|(?<plain>[^\\]]+))\\s*\\]\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex IncludePattern = new(
         "^Include\\s+\"([^\"]+)\"\\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    private static readonly Regex MainPattern = new(
-        @"^(?<indent>\s*)(?<visibility>(?:Public|Private)\s+)?Sub\s+Main\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProcedurePattern = new(
@@ -37,7 +33,8 @@ public sealed class CompileFolderSourcePreprocessor
     public Result Transform(string rootSource, string rootSourcePath, bool enableModules)
     {
         ArgumentNullException.ThrowIfNull(rootSource);
-        if (string.IsNullOrWhiteSpace(rootSourcePath)) throw new CompilerException("Compile-folder processing requires a source file path.");
+        if (string.IsNullOrWhiteSpace(rootSourcePath))
+            throw new CompilerException("Compile-folder processing requires a source file path.");
 
         var rootPath = Path.GetFullPath(rootSourcePath);
         var rootDirectory = Path.GetDirectoryName(rootPath) ?? Environment.CurrentDirectory;
@@ -65,13 +62,13 @@ public sealed class CompileFolderSourcePreprocessor
             .Where(path => !includedPaths.Contains(PathKey(path)))
             .ToArray();
 
-        var sourceBuilder = new StringBuilder(strippedRoot.Length + moduleFiles.Length * 512);
+        var sourceBuilder = new StringBuilder(strippedRoot.Length + moduleFiles.Length * 1024);
         sourceBuilder.AppendLine(strippedRoot.TrimEnd('\r', '\n'));
 
         var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { rootPath };
         var modules = new List<ModuleEntry>
         {
-            new(rootPath, Path.GetFileName(rootPath), "Main", true)
+            new(Path.GetFileName(rootPath), "Main", true)
         };
 
         foreach (var path in moduleFiles)
@@ -81,18 +78,20 @@ public sealed class CompileFolderSourcePreprocessor
             var entry = ResolveEntryPoint(moduleSource, path);
             if (entry is not null)
             {
-                var generatedName = BuildGeneratedEntryName(Path.GetRelativePath(compileRoot, path));
+                var relativeName = Path.GetRelativePath(compileRoot, path).Replace('\\', '/');
+                var generatedName = BuildGeneratedEntryName(relativeName);
                 moduleSource = RenameProcedure(moduleSource, entry, generatedName);
-                modules.Add(new ModuleEntry(path, Path.GetRelativePath(compileRoot, path).Replace('\\', '/'), generatedName, false));
+                modules.Add(new ModuleEntry(relativeName, generatedName, false));
             }
 
+            moduleSource = RewriteModuleIncludes(moduleSource, path, rootDirectory);
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("' ----- compiled module: " + Path.GetRelativePath(compileRoot, path).Replace('\\', '/') + " -----");
             sourceBuilder.AppendLine(moduleSource.TrimEnd('\r', '\n'));
         }
 
         foreach (var include in includedPaths) dependencies.Add(include);
-        AppendNavigationDispatcher(sourceBuilder, rootPath, compileRoot, modules);
+        AppendNavigationDispatcher(sourceBuilder, rootPath, modules);
 
         return new Result(
             sourceBuilder.ToString(),
@@ -112,7 +111,8 @@ public sealed class CompileFolderSourcePreprocessor
             if (match.Success)
             {
                 var value = (match.Groups["quoted"].Success ? match.Groups["quoted"].Value : match.Groups["plain"].Value).Trim();
-                if (value.Length == 0) throw new CompilerException($"{Path.GetFileName(sourcePath)}({i + 1},1): Compile folder cannot be empty.");
+                if (value.Length == 0)
+                    throw new CompilerException($"{Path.GetFileName(sourcePath)}({i + 1},1): Compile folder cannot be empty.");
                 result.Add(value);
                 continue;
             }
@@ -136,12 +136,13 @@ public sealed class CompileFolderSourcePreprocessor
     private static string ResolveCompileRoot(string sourceDirectory, string declared)
     {
         var portable = declared.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(portable)) throw new CompilerException("Compile folder must be relative to the main .xps file.");
+        if (Path.IsPathRooted(portable))
+            throw new CompilerException("Compile folder must be relative to the main .xps file.");
+
         var resolved = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
-        var relative = Path.GetRelativePath(sourceDirectory, resolved);
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-            throw new CompilerException("Compile folder must remain inside the main .xps directory.");
-        if (!Directory.Exists(resolved)) throw new CompilerException("Compile folder was not found: " + Path.GetFileName(resolved));
+        EnsureInsideRoot(sourceDirectory, resolved, "Compile folder");
+        if (!Directory.Exists(resolved))
+            throw new CompilerException("Compile folder was not found: " + SafeName(declared));
         return resolved;
     }
 
@@ -156,18 +157,20 @@ public sealed class CompileFolderSourcePreprocessor
             if (!visited.Add(PathKey(full)) || !File.Exists(full)) return;
             var source = File.ReadAllText(full);
             var directory = Path.GetDirectoryName(full) ?? rootDirectory;
-            var lines = NormalizeLines(source);
-            for (var i = 0; i < lines.Length; i++)
+
+            foreach (var line in NormalizeLines(source))
             {
-                var code = StripComment(lines[i]).Trim();
-                var match = IncludePattern.Match(code);
+                var match = IncludePattern.Match(StripComment(line).Trim());
                 if (!match.Success) continue;
                 var declared = match.Groups[1].Value.Trim();
                 if (!declared.EndsWith(".xps", StringComparison.OrdinalIgnoreCase)) continue;
-                var resolved = Path.GetFullPath(declared, directory);
-                var relative = Path.GetRelativePath(rootDirectory, resolved);
-                if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                    continue;
+
+                string resolved;
+                try { resolved = Path.GetFullPath(declared, directory); }
+                catch { continue; }
+
+                try { EnsureInsideRoot(rootDirectory, resolved, "Include source"); }
+                catch (CompilerException) { continue; }
                 included.Add(PathKey(resolved));
                 Scan(resolved);
             }
@@ -178,16 +181,45 @@ public sealed class CompileFolderSourcePreprocessor
         return included;
     }
 
+    private static string RewriteModuleIncludes(string source, string modulePath, string rootDirectory)
+    {
+        var moduleDirectory = Path.GetDirectoryName(Path.GetFullPath(modulePath)) ?? rootDirectory;
+        var lines = NormalizeLines(source);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var code = StripComment(lines[i]).Trim();
+            var match = IncludePattern.Match(code);
+            if (!match.Success) continue;
+
+            var declared = match.Groups[1].Value.Trim();
+            string resolved;
+            try { resolved = Path.GetFullPath(declared, moduleDirectory); }
+            catch { throw new CompilerException($"{Path.GetFileName(modulePath)}({i + 1},1): Invalid Include path."); }
+
+            EnsureInsideRoot(rootDirectory, resolved, "Include source");
+            if (resolved.Contains('"'))
+                throw new CompilerException($"{Path.GetFileName(modulePath)}({i + 1},1): Include path contains an unsupported quote character.");
+
+            lines[i] = "Include \"" + resolved + "\"";
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
+
     private static string? ResolveEntryPoint(string source, string path)
     {
-        var lines = NormalizeLines(source);
-        if (lines.Any(line => MainPattern.IsMatch(line))) return "Main";
+        var procedures = NormalizeLines(source)
+            .Select(line => ProcedurePattern.Match(line))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["name"].Value)
+            .ToArray();
+
+        var main = procedures.FirstOrDefault(name => name.Equals("Main", StringComparison.OrdinalIgnoreCase));
+        if (main is not null) return main;
 
         var stem = Regex.Replace(Path.GetFileNameWithoutExtension(path), @"[^A-Za-z0-9_]", "_");
-        var procedures = lines.Select(line => ProcedurePattern.Match(line)).Where(match => match.Success)
-            .Select(match => match.Groups["name"].Value).ToArray();
         var byName = procedures.FirstOrDefault(name => name.Equals(stem, StringComparison.OrdinalIgnoreCase));
         if (byName is not null) return byName;
+
         var index = procedures.FirstOrDefault(name => name.Equals("Index", StringComparison.OrdinalIgnoreCase));
         if (index is not null) return index;
         return procedures.Length == 1 ? procedures[0] : null;
@@ -198,24 +230,20 @@ public sealed class CompileFolderSourcePreprocessor
         var pattern = new Regex(
             $@"(?im)^(?<indent>\s*)(?<visibility>(?:Public|Private)\s+)?Sub\s+{Regex.Escape(originalName)}\b",
             RegexOptions.CultureInvariant);
-        var replaced = false;
         return pattern.Replace(source, match =>
-        {
-            if (replaced) return match.Value;
-            replaced = true;
-            return match.Groups["indent"].Value + match.Groups["visibility"].Value + "Sub " + generatedName;
-        }, 1);
+            match.Groups["indent"].Value + match.Groups["visibility"].Value + "Sub " + generatedName, 1);
     }
 
     private static string BuildGeneratedEntryName(string relativePath)
     {
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(relativePath.Replace('\\', '/').ToLowerInvariant())))[..16];
+        var normalized = relativePath.Replace('\\', '/').ToLowerInvariant();
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..16];
         return "__XpsModule_" + hash;
     }
 
-    private static void AppendNavigationDispatcher(StringBuilder source, string rootPath, string compileRoot, IReadOnlyList<ModuleEntry> modules)
+    private static void AppendNavigationDispatcher(StringBuilder source, string rootPath, IReadOnlyList<ModuleEntry> modules)
     {
-        var aliases = BuildAliases(rootPath, compileRoot, modules);
+        var aliases = BuildAliases(rootPath, modules);
         source.AppendLine();
         source.AppendLine("Private Sub __XpsCompiledNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
         source.AppendLine("    Dim __xpsTarget As String");
@@ -243,10 +271,11 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine("End Sub");
     }
 
-    private static Dictionary<string, string> BuildAliases(string rootPath, string compileRoot, IReadOnlyList<ModuleEntry> modules)
+    private static Dictionary<string, string> BuildAliases(string rootPath, IReadOnlyList<ModuleEntry> modules)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var basenameCounts = modules.GroupBy(module => Path.GetFileName(module.RelativeName), StringComparer.OrdinalIgnoreCase)
+        var basenameCounts = modules
+            .GroupBy(module => Path.GetFileName(module.RelativeName), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
         foreach (var module in modules)
@@ -254,13 +283,15 @@ public sealed class CompileFolderSourcePreprocessor
             var relative = module.IsRoot ? Path.GetFileName(rootPath) : module.RelativeName;
             var normalized = relative.Replace('\\', '/').ToLowerInvariant();
             AddAlias(result, normalized, module.EntryProcedure);
-            if (normalized.EndsWith(".xps", StringComparison.Ordinal)) AddAlias(result, normalized[..^4], module.EntryProcedure);
+            if (normalized.EndsWith(".xps", StringComparison.Ordinal))
+                AddAlias(result, normalized[..^4], module.EntryProcedure);
 
             var basename = Path.GetFileName(normalized);
             if (basenameCounts.TryGetValue(Path.GetFileName(module.RelativeName), out var count) && count == 1)
             {
                 AddAlias(result, basename, module.EntryProcedure);
-                if (basename.EndsWith(".xps", StringComparison.Ordinal)) AddAlias(result, basename[..^4], module.EntryProcedure);
+                if (basename.EndsWith(".xps", StringComparison.Ordinal))
+                    AddAlias(result, basename[..^4], module.EntryProcedure);
             }
         }
         return result;
@@ -269,6 +300,21 @@ public sealed class CompileFolderSourcePreprocessor
     private static void AddAlias(Dictionary<string, string> aliases, string alias, string entry)
     {
         if (alias.Length > 0 && !aliases.ContainsKey(alias)) aliases[alias] = entry;
+    }
+
+    private static void EnsureInsideRoot(string rootDirectory, string path, string kind)
+    {
+        var root = Path.GetFullPath(rootDirectory);
+        var full = Path.GetFullPath(path);
+        var relative = Path.GetRelativePath(root, full);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            throw new CompilerException(kind + " must remain inside the main .xps directory.");
+    }
+
+    private static string SafeName(string value)
+    {
+        try { return Path.GetFileName(value.TrimEnd('/', '\\')); }
+        catch { return "<invalid-path>"; }
     }
 
     private static string EscapeXpsString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
@@ -291,5 +337,5 @@ public sealed class CompileFolderSourcePreprocessor
         return line;
     }
 
-    private sealed record ModuleEntry(string Path, string RelativeName, string EntryProcedure, bool IsRoot);
+    private sealed record ModuleEntry(string RelativeName, string EntryProcedure, bool IsRoot);
 }
