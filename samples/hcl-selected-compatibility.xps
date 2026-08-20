@@ -1,0 +1,51 @@
+Option Declare
+
+Sub Main()
+    Dim source As Variant
+    Dim replaced As Variant
+    Dim cleaned As Variant
+    Dim evaluated As Variant
+    Dim singleValue As Single
+    Dim firstRnd As Single
+    Dim repeatedRnd As Single
+    Dim negativeA As Single
+    Dim negativeB As Single
+    Dim ole As Variant
+
+    source = Array("alpha", "beta", "alpha")
+    replaced = ArrayReplace(source, "alpha", "x")
+    If Implode(replaced, ",") <> "x,beta,x" Then Error 5, "ArrayReplace/Implode failed"
+
+    cleaned = FullTrim(Array("  one   two  ", "", " three "))
+    If Implode(cleaned, "|") <> "one two|three" Then Error 5, "FullTrim array failed"
+    If FullTrim("  one   two  ") <> "one two" Then Error 5, "FullTrim string failed"
+
+    evaluated = Execute("Return 2 + 3")
+    If CInt(evaluated) <> 5 Then Error 5, "Execute alias failed"
+
+    If UString(3, 65) <> "AAA" Then Error 5, "UString numeric code failed"
+    If UString(2, "xyz") <> "xx" Then Error 5, "UString string failed"
+
+    singleValue = 1.25
+    If Len(singleValue) <> 4 Then Error 5, "Len numeric storage size failed"
+    If LenB(singleValue) <> 4 Then Error 5, "LenB numeric storage size failed"
+    If LenB("alphabet") <> 16 Then Error 5, "LenB Unicode string size failed"
+
+    Randomize 123
+    firstRnd = Rnd
+    repeatedRnd = Rnd(0)
+    If firstRnd <> repeatedRnd Then Error 5, "Rnd(0) did not return previous value"
+    negativeA = Rnd(-99)
+    negativeB = Rnd(-99)
+    If negativeA <> negativeB Then Error 5, "Rnd(negative) did not reseed deterministically"
+
+    If Platform() = "Windows" Then
+        If Len(CurDrive) <> 2 Then Error 5, "CurDrive failed on Windows"
+        ole = CreateObject("Scripting.Dictionary")
+        If Not IsObject(ole) Then Error 5, "CreateObject failed"
+    Else
+        If CurDrive <> "" Then Error 5, "CurDrive must be empty on non-Windows"
+    End If
+
+    Print "HCL_SELECTED_COMPATIBILITY=OK"
+End Sub
