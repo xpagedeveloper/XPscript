@@ -3,11 +3,13 @@ namespace XPScript.Compiler;
 internal sealed class UIFormAdditionalFieldFixupPostProcessor
 {
     private const string Sentinel = "internal static class XPScriptUIFieldBridgeRuntime";
+    private const string RenderMarker = "    private string RenderWebForm()";
+    private const string ReturnMarker = "        return html.ToString();";
+    private const string TinyMarker = "tinymce.init({selector:'textarea.xpscript-richtext'";
 
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
         if (!generated.Contains("AddFileField", StringComparison.Ordinal)) return generated;
 
         generated = generated.Replace(
@@ -18,8 +20,32 @@ internal sealed class UIFormAdditionalFieldFixupPostProcessor
             "var obj = document.Root.AsObject() ?? throw new XPScriptRuntimeException(13, \"UIForm uploaded file metadata is invalid.\");\n        _data.Set(field.Name, obj);",
             "_data.Set(field.Name, document.Root.Value);",
             StringComparison.Ordinal);
-        generated += "\n" + Runtime + "\n";
+
+        generated = InstallTinyMceInActualRenderer(generated);
+
+        if (!generated.Contains(Sentinel, StringComparison.Ordinal))
+            generated += "\n" + Runtime + "\n";
         return generated;
+    }
+
+    private static string InstallTinyMceInActualRenderer(string generated)
+    {
+        var renderIndex = generated.IndexOf(RenderMarker, StringComparison.Ordinal);
+        if (renderIndex < 0) throw new CompilerException("Unable to locate UIForm web renderer for rich-text finalization.");
+        var returnIndex = generated.IndexOf(ReturnMarker, renderIndex, StringComparison.Ordinal);
+        if (returnIndex < 0) throw new CompilerException("Unable to locate UIForm web renderer return for rich-text finalization.");
+
+        var renderSegment = generated[renderIndex..returnIndex];
+        if (renderSegment.Contains(TinyMarker, StringComparison.Ordinal)) return generated;
+
+        const string hook = """
+        if (_fields.Any(f => f.Type == "RichTextField"))
+        {
+            html.Append("<script src=\"https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js\" referrerpolicy=\"origin\"></script>");
+            html.Append("<script>tinymce.init({selector:'textarea.xpscript-richtext',plugins:'lists link table code',toolbar:'undo redo | blocks | bold italic | bullist numlist | link table | code'});</script>");
+        }
+""";
+        return generated.Insert(returnIndex, hook);
     }
 
     private const string Runtime = """
