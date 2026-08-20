@@ -164,9 +164,9 @@ Session support must be enabled by the host. The currently implemented Session s
 - `Session.HasRole(role)`
 - `Session.RemoveRole(role)`
 
-`Session.Add(name, value)` overwrites an existing value atomically. `Session.Get(name)` returns `Null` when the key does not exist. `Session.Remove(name)` does not throw when the key is missing and returns false in that case. `Set` remains supported as an alias-compatible state write operation.
+`Session.Add(name, value)` overwrites an existing value atomically. `Session.Get(name)` returns `Null` when the key does not exist. `Session.Remove(name)` does not throw when the key is missing and returns false in that case. `Set` remains supported as a state write operation.
 
-Session state is thread-safe inside a process. Concurrent requests for the same session serialize access through a per-session lock. Session-store mutations such as ID rotation are protected by the store lock together with the session lock.
+Session state is thread-safe inside a process. Concurrent requests for the same session serialize state access through a per-session lock. Session-store mutations such as ID rotation are protected by the store lock together with the session lock.
 
 ## Application scope
 
@@ -179,23 +179,21 @@ value = Application.Get("site-name")
 Application.Remove("site-name")
 ```
 
-Available members:
+The XPScript Application surface currently exposes:
 
-- `Application.Count`
-- `Application.Keys`
 - `Application.Add(name, value)`
 - `Application.Set(name, value)`
 - `Application.Get(name)`
-- `Application.Exists(name)`
 - `Application.Remove(name)`
-- `Application.Unset(name)`
 - `Application.Clear()`
 
 `Add` overwrites an existing value. `Get` returns `Null` for a missing key. `Remove` returns false without throwing when the key does not exist.
 
-Application scope is thread-safe inside a process. Reads, writes, removes, clear, count and key enumeration are protected by the same application-state lock. Concurrent writes do not corrupt state. When multiple concurrent requests write the same key, the last completed write wins.
+Application state is thread-safe inside a process. Reads, writes, removes and clear operations are protected by the application-state lock. Concurrent writes do not corrupt state. When multiple concurrent requests write the same key, the last completed write wins.
 
-Application state is process/runtime scoped. Do not use in-memory Application state as a distributed store across several server processes or nodes.
+The CGI persistent Application implementation uses its own synchronization around the persistent record and follows the same `Add`, `Get` and `Remove` semantics.
+
+Application state is process/runtime scoped unless the selected host provides persistent/shared state. Do not assume ordinary in-memory Application state is distributed across several server processes or nodes.
 
 ## Request scope
 
