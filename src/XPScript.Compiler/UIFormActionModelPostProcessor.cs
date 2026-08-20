@@ -260,7 +260,7 @@ internal sealed class XPScriptUIForm
 """, "field-actions");
         }
 
-        return generated;
+        return new UIFormDirtyTrackingPostProcessor().Transform(generated);
     }
 
     private static string ReplaceRequiredRegex(string source, string pattern, string replacement, string stage)
