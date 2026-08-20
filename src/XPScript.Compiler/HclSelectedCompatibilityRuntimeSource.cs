@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class HclSelectedCompatibilityRuntimeSource
 {
-    public const string Code = """
+    public static string Code => """
 internal static class LSHclSelectedRuntime
 {
     private static Random _random = new();
@@ -202,5 +202,5 @@ internal static class LSHclSelectedRuntime
         return new string(unit, count);
     }
 }
-""";
+""" + "\n" + HashFunctionsRuntimeSource.Code;
 }
