@@ -9,6 +9,12 @@ internal static class LSHclSelectedRuntime
     private static float _lastRandom;
     private static bool _hasLastRandom;
 
+    [System.Runtime.InteropServices.DllImport("ole32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int CLSIDFromProgID(string progId, out Guid clsid);
+
+    [System.Runtime.InteropServices.DllImport("oleaut32.dll")]
+    private static extern int GetActiveObject(ref Guid clsid, IntPtr reserved, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] out object? value);
+
     public static object ArrayReplace(object? sourceArray, object? compareArray, object? replaceArray)
     {
         if (sourceArray is LSArray source)
@@ -26,8 +32,7 @@ internal static class LSHclSelectedRuntime
             var lower = clr.GetLowerBound(0);
             var upper = clr.GetUpperBound(0);
             var output = new object?[upper - lower + 1];
-            for (var i = lower; i <= upper; i++)
-                output[i - lower] = ReplacementFor(clr.GetValue(i), compareArray, replaceArray);
+            for (var i = lower; i <= upper; i++) output[i - lower] = ReplacementFor(clr.GetValue(i), compareArray, replaceArray);
             return output;
         }
 
@@ -37,8 +42,7 @@ internal static class LSHclSelectedRuntime
     private static void CopyReplace(LSArray source, LSArray result, object? compareArray, object? replaceArray)
     {
         if (source.Rank != 1) throw new XPScriptRuntimeException(5, "ArrayReplace currently requires a one-dimensional source array.");
-        for (var i = source.LBound(); i <= source.UBound(); i++)
-            result.Set(ReplacementFor(source.Get(i), compareArray, replaceArray), i);
+        for (var i = source.LBound(); i <= source.UBound(); i++) result.Set(ReplacementFor(source.Get(i), compareArray, replaceArray), i);
     }
 
     private static object? ReplacementFor(object? value, object? compareArray, object? replaceArray)
@@ -72,11 +76,9 @@ internal static class LSHclSelectedRuntime
 
     private static bool ValuesEqual(object? left, object? right)
     {
-        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right))
-            return XPScriptNullRuntime.IsNull(left) && XPScriptNullRuntime.IsNull(right);
+        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.IsNull(left) && XPScriptNullRuntime.IsNull(right);
         if (left is null || right is null) return left is null && right is null;
-        if (XPScriptRuntime.IsNumeric(left) && XPScriptRuntime.IsNumeric(right))
-            return XPScriptRuntime.CDbl(left).Equals(XPScriptRuntime.CDbl(right));
+        if (XPScriptRuntime.IsNumeric(left) && XPScriptRuntime.IsNumeric(right)) return XPScriptRuntime.CDbl(left).Equals(XPScriptRuntime.CDbl(right));
         return string.Equals(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right), StringComparison.CurrentCulture);
     }
 
@@ -98,16 +100,11 @@ internal static class LSHclSelectedRuntime
             for (var i = 0; i < cleaned.Count; i++) result.Set(cleaned[i], i);
             return result;
         }
-        if (value is System.Array clr)
-        {
-            var cleaned = clr.Cast<object?>().Select(x => CollapseWhitespace(XPScriptRuntime.CStr(x))).Where(x => x.Length > 0).ToArray();
-            return cleaned;
-        }
+        if (value is System.Array clr) return clr.Cast<object?>().Select(x => CollapseWhitespace(XPScriptRuntime.CStr(x))).Where(x => x.Length > 0).ToArray();
         return CollapseWhitespace(XPScriptRuntime.CStr(value));
     }
 
-    private static string CollapseWhitespace(string value) =>
-        string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    private static string CollapseWhitespace(string value) => string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     public static string Implode(object? value, object? delimiter = null)
     {
@@ -119,8 +116,7 @@ internal static class LSHclSelectedRuntime
             for (var i = array.LBound(); i <= array.UBound(); i++) parts.Add(XPScriptRuntime.CStr(array.Get(i)));
             return string.Join(separator, parts);
         }
-        if (value is System.Collections.IEnumerable enumerable && value is not string)
-            return string.Join(separator, enumerable.Cast<object?>().Select(XPScriptRuntime.CStr));
+        if (value is System.Collections.IEnumerable enumerable && value is not string) return string.Join(separator, enumerable.Cast<object?>().Select(XPScriptRuntime.CStr));
         throw new XPScriptRuntimeException(13, "Implode requires an array.");
     }
 
@@ -138,15 +134,64 @@ internal static class LSHclSelectedRuntime
         if (progId.Length == 0) throw new XPScriptRuntimeException(5, "CreateObject requires an OLE ProgID.");
         try
         {
-            var type = Type.GetTypeFromProgID(progId, throwOnError: true)
-                ?? throw new COMException("OLE class was not found.");
-            return Activator.CreateInstance(type)
-                ?? throw new COMException("OLE object could not be created.");
+            var type = Type.GetTypeFromProgID(progId, throwOnError: true) ?? throw new COMException("OLE class was not found.");
+            return Activator.CreateInstance(type) ?? throw new COMException("OLE object could not be created.");
         }
         catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
             throw new XPScriptRuntimeException(5, "CreateObject failed for OLE class '" + progId + "': " + ex.Message);
         }
+    }
+
+    public static object? GetObject(object? pathName = null, object? className = null)
+    {
+        if (!OperatingSystem.IsWindows()) throw new XPScriptRuntimeException(5, "GetObject is supported only on Windows.");
+        var path = pathName is null ? "" : XPScriptRuntime.CStr(pathName).Trim();
+        var progId = className is null ? "" : XPScriptRuntime.CStr(className).Trim();
+        try
+        {
+            if (path.Length > 0) return System.Runtime.InteropServices.Marshal.BindToMoniker(path);
+            if (progId.Length == 0) throw new XPScriptRuntimeException(5, "GetObject requires a path name or class name.");
+            var hr = CLSIDFromProgID(progId, out var clsid);
+            if (hr < 0) System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(hr);
+            hr = GetActiveObject(ref clsid, IntPtr.Zero, out var active);
+            if (hr < 0) System.Runtime.InteropServices.Marshal.ThrowExceptionForHR(hr);
+            return active ?? throw new COMException("No active OLE object was returned.");
+        }
+        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        {
+            throw new XPScriptRuntimeException(5, "GetObject failed: " + ex.Message);
+        }
+    }
+
+    public static string InputBox(object? prompt, object? title = null, object? defaultValue = null)
+    {
+        var host = Type.GetType("XPScript.UI.Desktop.DesktopDialogHost, XPScript.UI.Desktop", throwOnError: false, ignoreCase: false);
+        var method = host?.GetMethod("ShowChoiceDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (method is not null)
+        {
+            var request = new
+            {
+                message = XPScriptRuntime.CStr(prompt),
+                title = title is null ? "XPScript" : XPScriptRuntime.CStr(title),
+                kind = "input",
+                options = new[] { defaultValue is null ? "" : XPScriptRuntime.CStr(defaultValue) }
+            };
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(request);
+                return Convert.ToString(method.Invoke(null, [json]), CultureInfo.InvariantCulture) ?? "";
+            }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                throw new XPScriptRuntimeException(5, "InputBox desktop dialog failed: " + ex.InnerException.Message);
+            }
+        }
+
+        if (title is not null && XPScriptRuntime.CStr(title).Length > 0) Console.Write("[" + XPScriptRuntime.CStr(title) + "] ");
+        Console.Write(XPScriptRuntime.CStr(prompt));
+        var input = Console.ReadLine();
+        return input ?? (defaultValue is null ? "" : XPScriptRuntime.CStr(defaultValue));
     }
 
     public static float Rnd() => NextRandom();
