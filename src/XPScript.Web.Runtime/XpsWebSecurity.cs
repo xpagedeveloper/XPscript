@@ -5,6 +5,8 @@ public static class XpsWebSecurity
     public const string CsrfHeaderName = "X-XPS-CSRF-Token";
     public const string CsrfFormFieldName = "__xps_csrf";
 
+    private const string DefaultCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
+
     public static bool IsUnsafeMethod(string method) =>
         method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
         method.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
@@ -45,6 +47,25 @@ public static class XpsWebSecurity
         return new XpsWebServer(context.Server).ValidateCsrfToken(token);
     }
 
+    public static string IssueCsrfToken(XpsWebContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.Session is null) return string.Empty;
+        using var scope = XpsWebContextAccessor.Push(context);
+        return new XpsWebServer(context.Server).CsrfToken();
+    }
+
+    public static void ApplyResponseSecurityHeaders(XpsWebResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        SetIfMissing(response, "X-Content-Type-Options", "nosniff");
+        SetIfMissing(response, "Referrer-Policy", "strict-origin-when-cross-origin");
+        SetIfMissing(response, "X-Frame-Options", "SAMEORIGIN");
+        SetIfMissing(response, "Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
+            SetIfMissing(response, "Content-Security-Policy", DefaultCsp);
+    }
+
     public static void WriteCsrfFailure(XpsWebContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -52,7 +73,13 @@ public static class XpsWebSecurity
         context.Response.StatusCode = 403;
         context.Response.ContentType = "application/problem+json; charset=utf-8";
         context.Response.SetHeader("Cache-Control", "no-store");
+        ApplyResponseSecurityHeaders(context.Response);
         context.Response.Write("{\"type\":\"about:blank\",\"title\":\"Forbidden\",\"status\":403,\"detail\":\"CSRF token is missing or invalid.\"}");
         context.Response.Complete();
+    }
+
+    private static void SetIfMissing(XpsWebResponse response, string name, string value)
+    {
+        if (!response.Headers.ContainsKey(name)) response.SetHeader(name, value);
     }
 }
