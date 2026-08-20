@@ -82,7 +82,6 @@ public interface IXpsSession
     bool IsAuthenticated { get; }
     string? UserId { get; }
     string? UserName { get; }
-    IReadOnlyCollection<string> Rules { get; }
     IReadOnlyCollection<string> Roles { get; }
     string Start();
     object? Get(string name);
@@ -91,12 +90,11 @@ public interface IXpsSession
     bool Remove(string name);
     bool Unset(string name);
     void Clear();
-    bool HasRule(string rule);
     void SetRole(string role);
-    string GetRole();
+    string[] GetRoles();
     bool HasRole(string role);
     bool RemoveRole(string role);
-    void Authenticate(string? userId = null, string? userName = null, string? rules = null);
+    void Authenticate(string? userId = null, string? userName = null);
     void SignOut();
     string RotateId();
     string RegenerateId();
