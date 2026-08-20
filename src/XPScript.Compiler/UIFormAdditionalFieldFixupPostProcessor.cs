@@ -42,7 +42,8 @@ internal sealed class UIFormAdditionalFieldFixupPostProcessor
         const string hook = """
         if (_fields.Any(f => f.Type == "RichTextField"))
         {
-            html.Append("<script src=\"https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js\" referrerpolicy=\"origin\"></script>");
+            var tinyMceUrl = XPScriptUIFieldBridgeRuntime.TinyMceScriptUrl();
+            html.Append("<script src=\"").Append(System.Net.WebUtility.HtmlEncode(tinyMceUrl)).Append("\" referrerpolicy=\"origin\"></script>");
             html.Append("<script>tinymce.init({selector:'textarea.xpscript-richtext',plugins:'lists link table code',toolbar:'undo redo | blocks | bold italic | bullist numlist | link table | code'});</script>");
         }
 """;
@@ -53,6 +54,69 @@ internal sealed class UIFormAdditionalFieldFixupPostProcessor
 internal static class XPScriptUIFieldBridgeRuntime
 {
     private const string BridgeTypeName = "XPScript.Web.Runtime.XpsUIWebRuntimeBridge, XPScript.Web.Runtime";
+    private const string DefaultTinyMceCloudUrl = "https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js";
+
+    public static string TinyMceScriptUrl()
+    {
+        var environmentMode = Environment.GetEnvironmentVariable("XPSCRIPT_TINYMCE_MODE");
+        var environmentUrl = Environment.GetEnvironmentVariable("XPSCRIPT_TINYMCE_SCRIPT_URL");
+        var configured = ReadTinyMceConfiguration();
+
+        var mode = string.IsNullOrWhiteSpace(environmentMode) ? configured.Mode : environmentMode.Trim();
+        var url = string.IsNullOrWhiteSpace(environmentUrl) ? configured.ScriptUrl : environmentUrl.Trim();
+        if (string.IsNullOrWhiteSpace(mode)) mode = "cloud";
+
+        if (!mode.Equals("cloud", StringComparison.OrdinalIgnoreCase) &&
+            !mode.Equals("local", StringComparison.OrdinalIgnoreCase))
+            throw new XPScriptRuntimeException(5, "TinyMCE mode must be 'cloud' or 'local'.");
+
+        if (mode.Equals("cloud", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(url))
+            url = DefaultTinyMceCloudUrl;
+
+        if (string.IsNullOrWhiteSpace(url))
+            throw new XPScriptRuntimeException(5, "TinyMCE local mode requires tinyMce.scriptUrl in xpscript-ui.json or XPSCRIPT_TINYMCE_SCRIPT_URL.");
+
+        url = url.Trim();
+        if (url.StartsWith("/", StringComparison.Ordinal)) return url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new XPScriptRuntimeException(5, "TinyMCE scriptUrl must be an HTTPS URL or an application-relative path beginning with '/'.");
+        return url;
+    }
+
+    private static (string Mode, string ScriptUrl) ReadTinyMceConfiguration()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(Environment.CurrentDirectory, "xpscript-ui.json"),
+            Path.Combine(AppContext.BaseDirectory, "xpscript-ui.json")
+        };
+        foreach (var path in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!File.Exists(path)) continue;
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+                if (!document.RootElement.TryGetProperty("tinyMce", out var tinyMce) || tinyMce.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    return (string.Empty, string.Empty);
+                var mode = tinyMce.TryGetProperty("mode", out var modeValue) && modeValue.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? modeValue.GetString() ?? string.Empty
+                    : string.Empty;
+                var scriptUrl = tinyMce.TryGetProperty("scriptUrl", out var urlValue) && urlValue.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? urlValue.GetString() ?? string.Empty
+                    : string.Empty;
+                return (mode.Trim(), scriptUrl.Trim());
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                throw new XPScriptRuntimeException(5, "Unable to parse xpscript-ui.json: " + ex.Message);
+            }
+            catch (IOException ex)
+            {
+                throw new XPScriptRuntimeException(5, "Unable to read xpscript-ui.json: " + ex.Message);
+            }
+        }
+        return (string.Empty, string.Empty);
+    }
 
     public static string FileJson(string name, long maxFileBytes, bool multiple)
     {
