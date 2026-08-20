@@ -1,0 +1,40 @@
+' XPScript hashing regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    If MD5("abc") <> "900150983cd24fb0d6963f7d28e17f72" Then
+        Error 5, "MD5 test vector failed"
+    End If
+
+    If SHA1("abc") <> "a9993e364706816aba3e25717850c26c9cd0d89d" Then
+        Error 5, "SHA1 test vector failed"
+    End If
+
+    If SHA256("abc") <> "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" Then
+        Error 5, "SHA256 test vector failed"
+    End If
+
+    If SHA384("abc") <> "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7" Then
+        Error 5, "SHA384 test vector failed"
+    End If
+
+    If SHA512("abc") <> "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f" Then
+        Error 5, "SHA512 test vector failed"
+    End If
+
+    If HMACSHA256("abc", "key") <> "9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab" Then
+        Error 5, "HMACSHA256 test vector failed"
+    End If
+
+    If HMACSHA384("abc", "key") <> "30ddb9c8f347cffbfb44e519d814f074cf4047a55d6f563324f1c6a33920e5edfb2a34bac60bdc96cd33a95623d7d638" Then
+        Error 5, "HMACSHA384 test vector failed"
+    End If
+
+    If HMACSHA512("abc", "key") <> "3926a207c8c42b0c41792cbd3e1a1aaaf5f7a25704f62dfc939c4987dd7ce060009c5bb1c2447355b3216f10b537e9afa7b64a4e5391b0d631172d07939e087a" Then
+        Error 5, "HMACSHA512 test vector failed"
+    End If
+
+    Print "HASH_FUNCTIONS=OK"
+End Sub
