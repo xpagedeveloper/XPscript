@@ -317,6 +317,7 @@ public sealed class XpsWebSession : IXpsSession
     public const string UserIdKey = "userId";
     public const string UserNameKey = "userName";
     public const string RulesKey = "rules";
+    public const string RolesKey = "roles";
     private readonly XpsSessionStore _store;
     private readonly XpsSessionStore.SessionRecord _record;
     private readonly XpsWebResponse _response;
@@ -334,6 +335,7 @@ public sealed class XpsWebSession : IXpsSession
     public string? UserId => Get(UserIdKey) as string;
     public string? UserName => Get(UserNameKey) as string;
     public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);
+    public IReadOnlyCollection<string> Roles => ParseRoles(Get(RolesKey) as string);
     public string Start() => Id;
 
     public object? Get(string name)
@@ -349,7 +351,7 @@ public sealed class XpsWebSession : IXpsSession
     public void Set(string name, object? value)
     {
         ValidateName(name);
-        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+        if ((name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) || name.Equals(RolesKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session '{name}' must be a comma- or semicolon-separated string.");
         if ((name.Equals(UserIdKey, StringComparison.OrdinalIgnoreCase) || name.Equals(UserNameKey, StringComparison.OrdinalIgnoreCase)) && value is not null and not string) throw new InvalidOperationException($"Session '{name}' must be a string.");
         var stateValue = StateValuePolicy.Create(value, _options.MaxValueBytes);
         lock (_record.Gate)
@@ -394,6 +396,25 @@ public sealed class XpsWebSession : IXpsSession
     }
 
     public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
+    public void SetRole(string role)
+    {
+        var normalized = NormalizeRole(role);
+        var values = Roles.ToList();
+        if (!values.Contains(normalized, StringComparer.OrdinalIgnoreCase)) values.Add(normalized);
+        if (values.Count > 128) throw new InvalidOperationException("Session roles cannot exceed 128 entries.");
+        Set(RolesKey, string.Join(',', values));
+    }
+    public string[] GetRoles() => Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+    public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);
+    public bool RemoveRole(string role)
+    {
+        var normalized = NormalizeRole(role);
+        var before = Roles;
+        var values = before.Where(x => !x.Equals(normalized, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (values.Length == before.Count) return false;
+        if (values.Length == 0) RemoveIfPresent(RolesKey); else Set(RolesKey, string.Join(',', values));
+        return true;
+    }
 
     public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
     {
@@ -404,6 +425,7 @@ public sealed class XpsWebSession : IXpsSession
         if (userId is not null) Set(UserIdKey, userId); else RemoveIfPresent(UserIdKey);
         if (userName is not null) Set(UserNameKey, userName); else RemoveIfPresent(UserNameKey);
         if (normalizedRules.Length > 0) Set(RulesKey, normalizedRules); else RemoveIfPresent(RulesKey);
+        RemoveIfPresent(RolesKey);
         RotateId();
     }
 
@@ -413,6 +435,7 @@ public sealed class XpsWebSession : IXpsSession
         RemoveIfPresent(UserIdKey);
         RemoveIfPresent(UserNameKey);
         RemoveIfPresent(RulesKey);
+        RemoveIfPresent(RolesKey);
         RotateId();
     }
 
@@ -437,6 +460,14 @@ public sealed class XpsWebSession : IXpsSession
         string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("yes", StringComparison.OrdinalIgnoreCase) || s == "1",
         _ => false
     };
+    private static IReadOnlyCollection<string> ParseRoles(string? roles)
+    {
+        if (string.IsNullOrWhiteSpace(roles)) return Array.Empty<string>();
+        var values = roles.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(NormalizeRole).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (values.Length > 128) throw new ArgumentException("Session roles cannot exceed 128 entries.", nameof(roles));
+        return values;
+    }
+    private static string NormalizeRole(string? role) { var value = (role ?? string.Empty).Trim(); if (value.Length is 0 or > 128) throw new ArgumentException("Role name must contain 1 to 128 characters.", nameof(role)); if (value.Any(char.IsControl)) throw new ArgumentException("Role name contains a control character.", nameof(role)); return value; }
     private static IReadOnlyCollection<string> ParseRules(string? rules)
     {
         if (string.IsNullOrWhiteSpace(rules)) return Array.Empty<string>();
