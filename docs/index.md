@@ -10,8 +10,9 @@ XPScript is a BASIC-style programming language implemented on .NET 10. Source fi
 4. [Evaluate](evaluate.md), dynamic XPScript evaluation.
 5. [Classes](classes.md), classes, constructors, properties, object references and module state.
 6. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
-7. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-8. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
+7. [Hosting on IIS](iis-hosting.md), production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
+8. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+9. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
 
 ## How XPScript runs
 
@@ -33,4 +34,4 @@ Compile it with:
 xpscriptc hello.xps -o hello
 ```
 
-For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md).
+For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md). For Windows Server deployment behind IIS, use [Hosting XPScript on IIS](iis-hosting.md).

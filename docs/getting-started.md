@@ -13,6 +13,7 @@
 - [FastCGI parameters](#fastcgi-parameters)
 - [CGI hosting](#cgi-hosting)
 - [CGI configuration](#cgi-configuration)
+- [IIS hosting](#iis-hosting)
 - [Deployment packages](#deployment-packages)
 - [GitHub Actions artifacts](#github-actions-artifacts)
 - [Publish parameters](#publish-parameters)
@@ -166,6 +167,12 @@ CGI is process-per-request. Prefer Kestrel or FastCGI for persistent workers and
 The CGI host reads its routing information from CGI environment variables. Configure `XPSCRIPT_WEB_ROOT` explicitly when possible. If it is absent, `DOCUMENT_ROOT` can provide the root. `SCRIPT_FILENAME` is used only as a final root-discovery fallback.
 
 Important CGI values include `REQUEST_METHOD`, `QUERY_STRING`, `CONTENT_TYPE`, `CONTENT_LENGTH`, `SCRIPT_NAME`, `PATH_INFO`, `SCRIPT_FILENAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR` and `HTTPS`.
+
+## IIS hosting
+
+For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an XPScript Kestrel process bound to `127.0.0.1`. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.
+
+See [Hosting XPScript on IIS](iis-hosting.md) for the complete IIS setup, including ARR and URL Rewrite, `web.config`, application pool settings, permissions, CGI handler mapping, TLS, updates and troubleshooting.
 
 ## Deployment packages
 

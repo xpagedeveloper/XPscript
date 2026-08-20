@@ -43,6 +43,25 @@ try
     if (save.Policy.AllowAnonymous || !save.Policy.Methods.Contains("POST")) throw new Exception("Authenticated POST metadata mismatch.");
     if (!save.Policy.RequiredRules.Contains("admin") || !save.Policy.ForbiddenRules.Contains("blocked")) throw new Exception("Route rule metadata mismatch.");
 
+    var roleParsed = parser.Parse("""
+[Authenticated]
+[Get]
+[Role:admin;user]
+[Role:editor]
+[Role:!blocked]
+Sub RoleProtected()
+End Sub
+""");
+    if (!roleParsed.Routes.TryGetValue("RoleProtected", out var roleProtected))
+        throw new Exception("Role route metadata missing.");
+    if (roleProtected.Policy.RequiredRoles is null ||
+        !roleProtected.Policy.RequiredRoles.Contains("admin") ||
+        !roleProtected.Policy.RequiredRoles.Contains("user") ||
+        !roleProtected.Policy.RequiredRoles.Contains("editor"))
+        throw new Exception("Required role metadata mismatch.");
+    if (roleProtected.Policy.ForbiddenRoles is null || !roleProtected.Policy.ForbiddenRoles.Contains("blocked"))
+        throw new Exception("Forbidden role metadata mismatch.");
+
     var originalError = Console.Error;
     using var conflictError = new StringWriter();
     try
