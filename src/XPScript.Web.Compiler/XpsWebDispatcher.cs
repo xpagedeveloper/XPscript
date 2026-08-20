@@ -9,6 +9,8 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private const int MaxPrecompileTargetsPerScript = 256;
 
     private readonly XpsWebPathResolver _resolver;
+    private readonly XpsRestRouteIndex _restRoutes;
+    private readonly XpsFixedWindowRateLimiter _rateLimiter = new();
     private readonly XpsWebCompilationCache _cache;
     private readonly bool _ownsCache;
     private readonly StringComparer _pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -23,6 +25,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         string defaultDocumentName = "index.xps")
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
+        _restRoutes = new XpsRestRouteIndex(_resolver.Root);
         _cache = new XpsWebCompilationCache(new XpsWebCompiler(), cacheOptions);
         _ownsCache = true;
         _activatedPrecompileSources = new HashSet<string>(_pathComparer);
@@ -36,6 +39,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         string defaultDocumentName = "index.xps")
     {
         _resolver = new XpsWebPathResolver(webRoot, defaultDocumentName);
+        _restRoutes = new XpsRestRouteIndex(_resolver.Root);
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _activatedPrecompileSources = new HashSet<string>(_pathComparer);
         WriteConsole("XPScript web engine starting. Root: /");
@@ -46,33 +50,56 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     {
         ArgumentNullException.ThrowIfNull(context);
         var cancellationToken = context.Request.CancellationToken;
-
-        XpsRouteResolution resolution;
-        try
-        {
-            resolution = _resolver.Resolve(context.Request.Path);
-        }
-        catch (XpsWebPathException)
-        {
-            WriteTerminalResponse(context.Response, 400, "Bad Request", context.Request.Method);
-            return;
-        }
-
-        if (!resolution.Found || resolution.ScriptPath is null)
-        {
-            WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
-            return;
-        }
+        string? scriptPath = null;
+        string? requestedRoute = null;
+        XpsExplicitRouteMatch? explicitMatch = null;
 
         try
         {
-            await using var lease = await _cache.AcquireAsync(resolution.ScriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
+            explicitMatch = _restRoutes.Match(context.Request.Path, context.Request.Method);
+            if (explicitMatch is not null)
+            {
+                scriptPath = explicitMatch.ScriptPath;
+                requestedRoute = explicitMatch.ProcedureName;
+                context.SetRouteValues(explicitMatch.RouteValues);
+            }
+            else
+            {
+                XpsRouteResolution resolution;
+                try
+                {
+                    resolution = _resolver.Resolve(context.Request.Path);
+                }
+                catch (XpsWebPathException)
+                {
+                    WriteTerminalResponse(context.Response, 400, "Bad Request", context.Request.Method);
+                    return;
+                }
+
+                if (!resolution.Found || resolution.ScriptPath is null)
+                {
+                    WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
+                    return;
+                }
+
+                scriptPath = resolution.ScriptPath;
+                requestedRoute = resolution.RouteFunction;
+                context.SetRouteValues(null);
+            }
+
+            await using var lease = await _cache.AcquireAsync(scriptPath, _resolver.Root, cancellationToken).ConfigureAwait(false);
             var unit = lease.Unit;
 
-            var routeName = SelectRoute(unit.Routes, resolution.RouteFunction);
+            var routeName = SelectRoute(unit.Routes, requestedRoute);
             if (routeName is null || !unit.Routes.TryGetValue(routeName, out var descriptor))
             {
                 WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
+                return;
+            }
+
+            if (descriptor.Cors is not null && IsCorsPreflight(context.Request))
+            {
+                WriteCorsPreflight(context, descriptor);
                 return;
             }
 
@@ -80,14 +107,37 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             if (authorization != XpsRouteAuthorizationResult.Allowed)
             {
                 WriteAuthorizationResponse(context, descriptor.Policy, authorization);
+                ApplyCorsHeaders(context, descriptor);
+                if (!context.Response.Completed) context.Response.Complete();
                 return;
             }
 
+            if (descriptor.RateLimit is not null)
+            {
+                var principalKey = context.Session?.IsAuthenticated == true
+                    ? context.Session.UserId ?? context.Session.UserName
+                    : context.Principal.IsAuthenticated ? context.Principal.UserId ?? context.Principal.UserName : null;
+                var clientKey = principalKey ?? context.Request.RemoteAddress ?? "unknown";
+                var limiterKey = scriptPath + "\0" + descriptor.ProcedureName + "\0" + clientKey;
+                if (!_rateLimiter.TryAcquire(limiterKey, descriptor.RateLimit, DateTimeOffset.UtcNow, out var retryAfter))
+                {
+                    XpsWebResponseRestExtensions.Problem(context.Response, 429, "Too Many Requests", "The route rate limit has been exceeded.");
+                    context.Response.SetHeader("Retry-After", Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture));
+                    ApplyCorsHeaders(context, descriptor);
+                    context.Response.Complete();
+                    return;
+                }
+            }
+
             await unit.InvokeAsync(descriptor.ProcedureName, context).ConfigureAwait(false);
-            if (!context.Response.Completed) context.Response.Complete();
+            if (!context.Response.Completed)
+            {
+                ApplyCorsHeaders(context, descriptor);
+                context.Response.Complete();
+            }
 
             QueueBackgroundPrecompile(
-                resolution.ScriptPath,
+                scriptPath,
                 unit.PrecompileTargets.ToArray(),
                 context.Response);
         }
@@ -101,7 +151,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
         catch (Exception ex)
         {
-            XpsWebConsoleErrorFallback.Write(ex, ToWebPath(resolution.ScriptPath), context.Request.Path);
+            XpsWebConsoleErrorFallback.Write(ex, ToWebPath(scriptPath), context.Request.Path);
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
@@ -311,6 +361,47 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
     }
 
+    private static bool IsCorsPreflight(XpsWebRequest request) =>
+        request.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase) &&
+        request.HeaderFirst("Origin").Length > 0 &&
+        request.HeaderFirst("Access-Control-Request-Method").Length > 0;
+
+    private static void WriteCorsPreflight(XpsWebContext context, XpsWebRouteDescriptor descriptor)
+    {
+        var requestedMethod = context.Request.HeaderFirst("Access-Control-Request-Method");
+        if (!descriptor.Policy.Methods.Contains(requestedMethod, StringComparer.OrdinalIgnoreCase))
+        {
+            context.Response.Clear();
+            context.Response.StatusCode = 405;
+            context.Response.SetHeader("Allow", string.Join(", ", descriptor.Policy.Methods.OrderBy(x => x, StringComparer.Ordinal)));
+            context.Response.Complete();
+            return;
+        }
+
+        context.Response.Clear();
+        context.Response.StatusCode = 204;
+        context.Response.ContentType = null;
+        ApplyCorsHeaders(context, descriptor);
+        context.Response.SetHeader("Access-Control-Allow-Methods", string.Join(", ", descriptor.Policy.Methods.OrderBy(x => x, StringComparer.Ordinal)));
+        var requestedHeaders = context.Request.HeaderFirst("Access-Control-Request-Headers");
+        if (!string.IsNullOrWhiteSpace(requestedHeaders))
+        {
+            XpsWebResponse.ValidateHeaderValue(requestedHeaders);
+            context.Response.SetHeader("Access-Control-Allow-Headers", requestedHeaders);
+        }
+        context.Response.Complete();
+    }
+
+    private static void ApplyCorsHeaders(XpsWebContext context, XpsWebRouteDescriptor descriptor)
+    {
+        var cors = descriptor.Cors;
+        if (cors is null) return;
+        var origin = context.Request.HeaderFirst("Origin");
+        if (origin.Length == 0 || !cors.Allows(origin)) return;
+        context.Response.SetHeader("Access-Control-Allow-Origin", cors.AllowsAnyOrigin ? "*" : origin);
+        if (!cors.AllowsAnyOrigin) context.Response.AppendHeader("Vary", "Origin");
+    }
+
     private static void WriteConsole(string message)
         => Console.Error.WriteLine(message);
 
@@ -352,13 +443,16 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
                 if (policy.Methods.Count > 0)
                     context.Response.SetHeader("Allow", string.Join(", ", policy.Methods.OrderBy(x => x, StringComparer.Ordinal)));
                 WriteBodyUnlessHead(context, "Method Not Allowed");
-                context.Response.Complete();
                 break;
             case XpsRouteAuthorizationResult.AuthenticationRequired:
-                WriteTerminalResponse(context.Response, 401, "Unauthorized", context.Request.Method);
+                context.Response.Clear();
+                context.Response.StatusCode = 401;
+                WriteBodyUnlessHead(context, "Unauthorized");
                 break;
             case XpsRouteAuthorizationResult.Forbidden:
-                WriteTerminalResponse(context.Response, 403, "Forbidden", context.Request.Method);
+                context.Response.Clear();
+                context.Response.StatusCode = 403;
+                WriteBodyUnlessHead(context, "Forbidden");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(authorization));
