@@ -117,6 +117,21 @@ try
     if (rolePolicy.Authorize(request, blockedRole) != XpsRouteAuthorizationResult.Forbidden)
         throw new Exception("Negated role must override an allowed role.");
 
+    var sessionStore = new XpsSessionStore();
+    var sessionResponse = new XpsWebResponse();
+    var session = sessionStore.Bind(request, sessionResponse);
+    session.Authenticate("49", "session-role-user");
+    session.SetRole("user");
+    if (!session.HasRole("USER") || !session.GetRoles().Contains("user", StringComparer.OrdinalIgnoreCase))
+        throw new Exception("Session role API did not preserve role membership.");
+    if (rolePolicy.Authorize(request, anonymous, session) != XpsRouteAuthorizationResult.Allowed)
+        throw new Exception("Session role did not satisfy route role authorization.");
+    session.SetRole("blocked");
+    if (rolePolicy.Authorize(request, anonymous, session) != XpsRouteAuthorizationResult.Forbidden)
+        throw new Exception("Forbidden session role did not override an allowed session role.");
+    if (!session.RemoveRole("blocked") || session.HasRole("blocked"))
+        throw new Exception("Session.RemoveRole did not remove the role.");
+
     var wrongMethod = new XpsWebRequest(
         "GET", "/foo/save", "/save", "",
         new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
