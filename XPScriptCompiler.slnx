@@ -9,4 +9,5 @@
   <Project Path="src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
   <Project Path="tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj" />
   <Project Path="tests/WebRestApiSmoke/WebRestApiSmoke.csproj" />
+  <Project Path="tests/CompileFolderProbe/CompileFolderProbe.csproj" />
 </Solution>

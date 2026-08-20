@@ -63,6 +63,19 @@ internal static class XPScriptUIDesktopAdapter
         var result = root.TryGetProperty("result", out var resultElement)
             ? resultElement.GetString() ?? "Cancel"
             : "Cancel";
+
+        if (result.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!root.TryGetProperty("values", out var navigationValues) || navigationValues.ValueKind != System.Text.Json.JsonValueKind.Object)
+                throw new XPScriptRuntimeException(5, "Desktop UIForm navigation result is missing its target.");
+
+            var target = ReadNavigationValue(navigationValues, "__xps_navigation_target");
+            var parameterName = ReadNavigationValue(navigationValues, "__xps_navigation_parameter_name");
+            var parameterValue = ReadNavigationValue(navigationValues, "__xps_navigation_parameter_value");
+            DispatchCompiledNavigation(target, parameterName, parameterValue);
+            return "Navigate";
+        }
+
         if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
         if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object)
             return "OK";
@@ -95,6 +108,31 @@ internal static class XPScriptUIDesktopAdapter
         }
 
         return "OK";
+    }
+
+    private static string ReadNavigationValue(System.Text.Json.JsonElement values, string name)
+        => values.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
+            ? value.GetString() ?? string.Empty
+            : string.Empty;
+
+    private static void DispatchCompiledNavigation(string target, string parameterName, string parameterValue)
+    {
+        if (string.IsNullOrWhiteSpace(target))
+            throw new XPScriptRuntimeException(5, "Desktop UIForm navigation target is empty.");
+
+        var method = typeof(Script).GetMethod(
+            "__XpsCompiledNavigationDispatch",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
+            ?? throw new XPScriptRuntimeException(5, "Navigation requires the target to be part of a [Compile:folder] desktop application.");
+
+        try
+        {
+            method.Invoke(null, [target, parameterName, parameterValue]);
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XPScriptRuntimeException(5, "Navigation failed: " + ex.InnerException.Message);
+        }
     }
 
     private static string[] ReadValues(XPScriptJsonObject data, string fieldName)
