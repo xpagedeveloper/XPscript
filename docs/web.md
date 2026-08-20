@@ -46,6 +46,123 @@ End Sub
 
 The example allows `admin`, `user` or `editor`, but rejects a principal or session that also has `blocked`.
 
+## REST API routes
+
+`[Route:/path]` creates an explicit REST route that is independent of the `.xps` filename. Route parameters use `{name}` and bind to procedure parameters by name.
+
+```xpscript
+[Anonymous]
+[Get]
+[Route:/api/users/{id}]
+Function GetUser(ByVal id As Integer) As String
+    GetUser = "user-" + id
+End Function
+```
+
+`GET /api/users/42` binds `id` to the integer `42`. Invalid scalar conversion returns HTTP 400 instead of invoking the procedure. Returning a value from a Function automatically serializes that value as JSON when the route has not already written a response.
+
+Explicit parameter sources can be combined with `[Route]`:
+
+```xpscript
+[Anonymous]
+[Get]
+[Route:/api/orders/{id}]
+Sub GetOrder([FromRoute] id As Integer, [FromQuery] details As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String)
+    Response.OK(id)
+End Sub
+```
+
+Supported parameter bindings are `[FromRoute]`, `[FromQuery]`, `[FromHeader]`, `[FromHeader:"Header-Name"]` and `[FromBody]`. Route, query and header values are converted to the declared parameter type. Without an explicit binding, the runtime first checks a matching route parameter, then query string, then JSON body for a complex type.
+
+Explicit REST routes are indexed across the web root. Duplicate route/method combinations are rejected. Parameter names in templates do not make otherwise identical templates unique, so `/api/users/{id}` and `/api/users/{name}` conflict when they use the same HTTP method.
+
+## JSON request body and models
+
+`Body` is a reserved web object. It gives direct access to request content:
+
+```xpscript
+Response.OK(Body.Text())
+```
+
+For typed JSON input, use a class and a parameter named `body`, or annotate the parameter with `[FromBody]`:
+
+```xpscript
+Class CreateUserRequest
+    [Required]
+    [MaxLength:100]
+    Public Name As String
+
+    [Required]
+    [Email]
+    Public Email As String
+
+    [Range:18;120]
+    Public Age As Integer
+End Class
+
+[Anonymous]
+[Post]
+[Route:/api/users]
+Sub CreateUser([FromBody] body As CreateUserRequest)
+    Response.OK(body)
+End Sub
+```
+
+JSON binding accepts `application/json` and structured `+json` media types. Property matching is case-insensitive. The default JSON body limit is 4 MiB.
+
+Model validation rules are `[Required]`, `[MaxLength:n]`, `[Email]` and `[Range:min;max]`. Validation failures return HTTP 400 using `application/problem+json` and include an `errors` object keyed by field name.
+
+## REST response helpers
+
+REST helpers are methods on `Response`. They serialize data with the shared JSON configuration.
+
+```xpscript
+Response.OK(data)
+Response.Json(data)
+Response.Created("/api/users/42", data)
+Response.NoContent()
+Response.BadRequest("Invalid input")
+Response.NotFound("User not found")
+Response.Unauthorized()
+Response.Forbidden()
+Response.Conflict("Already exists")
+Response.problem(400, "Invalid request", "Email is required")
+```
+
+`Response.OK(data)` returns HTTP 200 and JSON. `Response.Created(location, data)` returns HTTP 201 and a `Location` header. `Response.NoContent()` returns HTTP 204. Problem helpers use the RFC Problem Details shape with `type`, `title`, `status` and `detail`.
+
+## CORS route rule
+
+CORS is opt-in per route. `[Cors]` and `[Cors:*]` allow any origin. Use one or more explicit origins separated by semicolons when the route should be restricted.
+
+```xpscript
+[Anonymous]
+[Get]
+[Route:/api/public]
+[Cors:https://app.example.com;https://admin.example.com]
+Sub PublicApi()
+    Response.OK("ok")
+End Sub
+```
+
+The runtime handles CORS preflight `OPTIONS` requests for CORS-enabled REST routes and emits `Access-Control-Allow-Origin`, allowed methods and requested headers. Explicit origins use `Vary: Origin`.
+
+## Rate limiting route rule
+
+`[RateLimit:requests;window]` applies a fixed-window limit to one procedure. Windows support seconds, minutes, hours and days.
+
+```xpscript
+[Anonymous]
+[Get]
+[Route:/api/search]
+[RateLimit:100;1m]
+Sub Search()
+    Response.OK("ok")
+End Sub
+```
+
+Examples are `10;30s`, `100;1m`, `1000;1h` and `5000;1d`. An authenticated request is keyed by its user identity when available. Anonymous requests use the remote address. Exceeding the limit returns HTTP 429 as Problem Details and includes `Retry-After`.
+
 ## PreCompile
 
 `[PreCompile:file.xps]` asks the web engine to warm another route. If the extension is omitted, the engine also tries `.xps`. A missing target is reported and skipped rather than stopping the server.
@@ -105,6 +222,8 @@ Sub Index()
 End Sub
 ```
 
+For REST APIs prefer the typed response helpers described above instead of constructing JSON strings manually.
+
 ## Session
 
 Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
@@ -155,5 +274,7 @@ See [Hosting XPScript on IIS](iis-hosting.md) for the full configuration, includ
 The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose `.xps` source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.
 
 The persistent compiler cache contains executable .NET assemblies generated from trusted `.xps` source. Keep its directory writable only by the XPScript service identity or an equally trusted administrator.
+
+REST endpoints should use explicit CORS origins when browser callers are known. Do not use `[Cors:*]` for credentialed or sensitive APIs. Rate limits complement authentication and authorization but do not replace them.
 
 See [Getting started](getting-started.md) for host setup and parameters and [UIForm](uiform.md) for forms.
