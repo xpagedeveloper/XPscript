@@ -42,8 +42,8 @@ internal sealed class SourceLineMarkerPreprocessor
                     var expandedLine = i + 1;
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
-                    var fileName = SafeSourceName(location.SourcePath);
-                    output.Add(indent + $"Call XPSourceLineRuntime.SetMapped({location.Line}, \"{EscapeString(fileName)}\")");
+                    var sourceId = SafeSourceId(location.SourcePath, sourceName);
+                    output.Add(indent + $"Call XPSourceLineRuntime.SetMapped({location.Line}, \"{EscapeString(sourceId)}\")");
                 }
 
                 output.Add(raw);
@@ -57,16 +57,36 @@ internal sealed class SourceLineMarkerPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private static string SafeSourceName(string sourcePath)
+    private static string SafeSourceId(string sourcePath, string rootSourcePath)
     {
         try
         {
-            var name = Path.GetFileName(sourcePath);
+            var sourceFull = Path.GetFullPath(sourcePath);
+            var rootFull = Path.GetFullPath(rootSourcePath);
+            var rootDirectory = Path.GetDirectoryName(rootFull) ?? Environment.CurrentDirectory;
+            var relative = Path.GetRelativePath(rootDirectory, sourceFull);
+            if (!Path.IsPathRooted(relative) &&
+                !relative.Equals("..", StringComparison.Ordinal) &&
+                !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
+                !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+            {
+                return relative.Replace('\\', '/');
+            }
+
+            var name = Path.GetFileName(sourceFull);
             return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
         }
         catch
         {
-            return "input.xps";
+            try
+            {
+                var name = Path.GetFileName(sourcePath);
+                return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
+            }
+            catch
+            {
+                return "input.xps";
+            }
         }
     }
 
