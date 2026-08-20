@@ -45,8 +45,8 @@ End Sub
 [Post]
 [Route:/api/users]
 [Cors:*]
-Sub CreateUser([FromBody] body As CreateUserRequest)
-    Response.OK(body)
+Sub CreateUser([FromBody] payload As CreateUserRequest)
+    Response.OK(payload)
 End Sub
 
 [Anonymous]
