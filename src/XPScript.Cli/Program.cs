@@ -43,8 +43,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var allowedHosts = new List<string>();
     var enableHealth = false;
     var enableMetrics = false;
-    var enableSessions = false;
-    var sessionOptionSpecified = false;
+    var enableSessions = true;
     var sessionCookieName = "XPSID";
     var sessionIdleSeconds = 20 * 60;
     var sessionSameSite = "Lax";
@@ -97,19 +96,15 @@ static async Task<int> RunWebAsync(string[] commandArgs)
                 enableSessions = true;
                 break;
             case "--session-cookie":
-                sessionOptionSpecified = true;
                 sessionCookieName = RequireValue(commandArgs, ref i);
                 break;
             case "--session-timeout-seconds":
-                sessionOptionSpecified = true;
                 sessionIdleSeconds = ParsePositiveInt(RequireValue(commandArgs, ref i), "--session-timeout-seconds", 10, 30 * 24 * 60 * 60);
                 break;
             case "--session-same-site":
-                sessionOptionSpecified = true;
                 sessionSameSite = RequireValue(commandArgs, ref i);
                 break;
             case "--session-secure":
-                sessionOptionSpecified = true;
                 sessionSecure = true;
                 break;
             case "--operational-external":
@@ -135,8 +130,6 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         throw new ArgumentException("--https-cert-password-env requires --https-cert.");
     if (staticMaxBytes is not null && !enableStaticFiles)
         throw new ArgumentException("--static-max-bytes requires --static-files.");
-    if (sessionOptionSpecified && !enableSessions)
-        throw new ArgumentException("Session configuration options require --sessions.");
 
     string? httpsCertificatePassword = null;
     if (httpsCertificatePasswordEnvironment is not null)
@@ -419,7 +412,7 @@ Usage:
   xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
   xpscript web [--config FILE] --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
-                [--health] [--metrics] [--sessions]
+                [--health] [--metrics]
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]

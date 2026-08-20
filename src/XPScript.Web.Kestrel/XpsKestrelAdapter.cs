@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging;
 using XPScript.Web.Runtime;
@@ -37,6 +38,7 @@ public static class XpsKestrelAdapter
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentNullException.ThrowIfNull(application);
         options.Validate();
+        sessions ??= new XpsSessionStore();
 
         var runtimeTelemetry = telemetry ??
             (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
@@ -329,6 +331,11 @@ public static class XpsKestrelAdapter
     private static async Task WriteResponseAsync(HttpContext http, XpsWebResponse response)
     {
         http.Response.StatusCode = response.StatusCode;
+        if (!string.IsNullOrWhiteSpace(response.StatusMessage))
+        {
+            var feature = http.Features.Get<IHttpResponseFeature>();
+            if (feature is not null) feature.ReasonPhrase = response.StatusMessage;
+        }
         if (!string.IsNullOrWhiteSpace(response.ContentType)) http.Response.ContentType = response.ContentType;
         foreach (var pair in response.Headers)
             http.Response.Headers[pair.Key] = pair.Value.ToArray();

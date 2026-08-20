@@ -29,6 +29,7 @@ public sealed class XpsWebResponse
     }
 
     public int StatusCode { get; set; } = 200;
+    public string? StatusMessage { get; set; }
     public string? ContentType { get; set; } = "text/html; charset=utf-8";
     public bool Completed { get; private set; }
     public int MaxBodyBytes => _maxBodyBytes;
@@ -169,7 +170,17 @@ public sealed class XpsWebResponse
         _body.SetLength(0);
         _headers.Clear();
         StatusCode = 200;
+        StatusMessage = null;
         ContentType = "text/html; charset=utf-8";
+    }
+
+    public void SetStatus(int statusCode, string? statusMessage = null)
+    {
+        EnsureWritable();
+        if (statusCode is < 100 or > 599) throw new ArgumentOutOfRangeException(nameof(statusCode), "Response status code must be between 100 and 599.");
+        if (statusMessage is not null) ValidateStatusMessage(statusMessage);
+        StatusCode = statusCode;
+        StatusMessage = string.IsNullOrWhiteSpace(statusMessage) ? null : statusMessage.Trim();
     }
 
     public void Redirect(string url, int statusCode = 302)
@@ -187,6 +198,7 @@ public sealed class XpsWebResponse
     {
         if (StatusCode is < 100 or > 599) throw new InvalidOperationException("Response status code must be between 100 and 599.");
         if (ContentType is not null) ValidateHeaderValue(ContentType);
+        if (StatusMessage is not null) ValidateStatusMessage(StatusMessage);
         if (_headers.ContainsKey("Set-Cookie")) EnsureCookieResponseNoStore();
         Completed = true;
     }
@@ -278,6 +290,27 @@ public sealed class XpsWebResponse
         if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
             throw new ArgumentException("Header value contains a prohibited control character.", nameof(value));
     }
+
+    public static void ValidateStatusMessage(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Length > 256 || value.IndexOfAny(['\r', '\n', '\0']) >= 0 || value.Any(c => char.IsControl(c) && c != '\t'))
+            throw new ArgumentException("Response status message is invalid.", nameof(value));
+    }
+
+    public static string ReasonPhrase(int statusCode) => statusCode switch
+    {
+        100 => "Continue", 101 => "Switching Protocols", 200 => "OK", 201 => "Created", 202 => "Accepted", 204 => "No Content",
+        206 => "Partial Content", 300 => "Multiple Choices", 301 => "Moved Permanently", 302 => "Found", 303 => "See Other", 304 => "Not Modified",
+        307 => "Temporary Redirect", 308 => "Permanent Redirect", 400 => "Bad Request", 401 => "Unauthorized", 402 => "Payment Required",
+        403 => "Forbidden", 404 => "Not Found", 405 => "Method Not Allowed", 406 => "Not Acceptable", 408 => "Request Timeout", 409 => "Conflict",
+        410 => "Gone", 411 => "Length Required", 412 => "Precondition Failed", 413 => "Payload Too Large", 414 => "URI Too Long",
+        415 => "Unsupported Media Type", 416 => "Range Not Satisfiable", 418 => "I'm a teapot", 422 => "Unprocessable Content",
+        423 => "Locked", 424 => "Failed Dependency", 425 => "Too Early", 426 => "Upgrade Required", 428 => "Precondition Required",
+        429 => "Too Many Requests", 431 => "Request Header Fields Too Large", 451 => "Unavailable For Legal Reasons", 500 => "Internal Server Error",
+        501 => "Not Implemented", 502 => "Bad Gateway", 503 => "Service Unavailable", 504 => "Gateway Timeout", 505 => "HTTP Version Not Supported",
+        507 => "Insufficient Storage", 508 => "Loop Detected", 510 => "Not Extended", 511 => "Network Authentication Required", _ => "Status"
+    };
 
     private static void ValidateCookieName(string name)
     {

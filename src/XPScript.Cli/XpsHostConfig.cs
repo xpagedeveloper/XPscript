@@ -199,7 +199,6 @@ internal static class XpsHostConfig
         AddValue(result, cliArgs, "--https-cert-password-env", config.HttpsCertificatePasswordEnvironment);
         AddFlag(result, cliArgs, "--health", config.Health);
         AddFlag(result, cliArgs, "--metrics", config.Metrics);
-        AddFlag(result, cliArgs, "--sessions", config.Sessions);
         AddValue(result, cliArgs, "--session-cookie", config.SessionCookie);
         AddValue(result, cliArgs, "--session-timeout-seconds", config.SessionTimeoutSeconds);
         AddValue(result, cliArgs, "--session-same-site", config.SessionSameSite);
@@ -277,6 +276,7 @@ internal static class XpsHostConfig
     {
         public WebConfig? Web { get; init; }
         public FastCgiConfig? FastCgi { get; init; }
+        public CgiConfig? Cgi { get; init; }
     }
 
     public sealed class WebConfig
@@ -301,6 +301,11 @@ internal static class XpsHostConfig
         public string? StructuredLog { get; init; }
         public bool? StaticFiles { get; init; }
         public long? StaticMaxBytes { get; init; }
+    }
+
+    public sealed class CgiConfig
+    {
+        public string? SessionFolder { get; init; }
     }
 
     public sealed class FastCgiConfig

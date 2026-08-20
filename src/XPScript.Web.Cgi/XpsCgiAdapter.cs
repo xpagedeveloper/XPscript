@@ -241,7 +241,7 @@ public sealed class XpsCgiAdapter
         builder.Append("Status: ")
             .Append(response.StatusCode.ToString(CultureInfo.InvariantCulture))
             .Append(' ')
-            .Append(ReasonPhrase(response.StatusCode))
+            .Append(string.IsNullOrWhiteSpace(response.StatusMessage) ? XpsWebResponse.ReasonPhrase(response.StatusCode) : response.StatusMessage)
             .Append("\r\n");
         if (!string.IsNullOrWhiteSpace(response.ContentType))
             builder.Append("Content-Type: ").Append(response.ContentType).Append("\r\n");

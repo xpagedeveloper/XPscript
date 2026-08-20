@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using System.Text.Json;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -22,16 +23,18 @@ internal static class Program
             var server = new XpsServerInfo(siteId, root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, version);
 
             await using var dispatcher = new XpsWebDispatcher(root);
+            var sessionRoot = ResolveSessionRoot(environment, root);
             var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");
-            if (!string.IsNullOrWhiteSpace(stateRoot))
+            if (!string.IsNullOrWhiteSpace(sessionRoot))
+            {
+                await using var state = await XpsCgiPersistentState.OpenAsync(sessionRoot, siteId).ConfigureAwait(false);
+                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher, application: state.Application, sessionFactory: state.BindSession);
+                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);
+            }
+            else if (!string.IsNullOrWhiteSpace(stateRoot))
             {
                 await using var state = await XpsCgiPersistentState.OpenAsync(stateRoot, siteId).ConfigureAwait(false);
-                var adapter = new XpsCgiAdapter(
-                    new XpsCgiOptions(),
-                    server,
-                    dispatcher,
-                    application: state.Application,
-                    sessionFactory: state.BindSession);
+                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher, application: state.Application);
                 await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);
             }
             else
@@ -91,6 +94,25 @@ internal static class Program
         environment["SCRIPT_NAME"] = requestPath;
         environment["PATH_INFO"] = string.Empty;
         environment["SCRIPT_FILENAME"] = Path.Combine(root, relative);
+    }
+
+    private static string? ResolveSessionRoot(IReadOnlyDictionary<string, string?> environment, string root)
+    {
+        var explicitConfig = Value(environment, "XPSCRIPT_CONFIG");
+        var configPath = !string.IsNullOrWhiteSpace(explicitConfig)
+            ? Path.GetFullPath(explicitConfig)
+            : Path.Combine(root, "web.cfg");
+        if (!File.Exists(configPath)) return null;
+
+        using var stream = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var document = JsonDocument.Parse(stream, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+        if (!document.RootElement.TryGetProperty("cgi", out var cgi) || cgi.ValueKind != JsonValueKind.Object) return null;
+        if (!cgi.TryGetProperty("sessionFolder", out var folder) || folder.ValueKind == JsonValueKind.Null) return null;
+        if (folder.ValueKind != JsonValueKind.String) throw new XpsCgiException("cgi.sessionFolder must be a string.");
+        var value = folder.GetString();
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var configDirectory = Path.GetDirectoryName(configPath) ?? root;
+        return Path.GetFullPath(value, configDirectory);
     }
 
     private static string? Value(IReadOnlyDictionary<string, string?> environment, string name) =>

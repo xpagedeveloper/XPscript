@@ -32,7 +32,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         _serverInfo = serverInfo ?? throw new ArgumentNullException(nameof(serverInfo));
         _handler = handler ?? throw new ArgumentNullException(nameof(handler));
         _application = application ?? new XpsApplicationState();
-        _sessions = sessions;
+        _sessions = sessions ?? new XpsSessionStore();
         _principalFactory = principalFactory;
         _connections = new SemaphoreSlim(_options.MaxConcurrentConnections, _options.MaxConcurrentConnections);
     }
@@ -332,7 +332,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
 
     private static byte[] BuildResponseBytes(XpsWebResponse response, string requestMethod)
     {
-        var builder = new StringBuilder().Append("Status: ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append("\r\n");
+        var builder = new StringBuilder().Append("Status: ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append(' ').Append(string.IsNullOrWhiteSpace(response.StatusMessage) ? XpsWebResponse.ReasonPhrase(response.StatusCode) : response.StatusMessage).Append("\r\n");
         if (!string.IsNullOrWhiteSpace(response.ContentType)) builder.Append("Content-Type: ").Append(response.ContentType).Append("\r\n");
         foreach (var header in response.Headers)
             foreach (var value in header.Value) builder.Append(header.Key).Append(": ").Append(value).Append("\r\n");

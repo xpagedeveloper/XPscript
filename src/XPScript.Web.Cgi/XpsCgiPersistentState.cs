@@ -385,6 +385,7 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
         public string? UserId => Get(XpsWebSession.UserIdKey) as string;
         public string? UserName => Get(XpsWebSession.UserNameKey) as string;
         public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);
+        public IReadOnlyCollection<string> Roles => ParseRoles(Get(XpsWebSession.RolesKey) as string);
         public string Start() => Id;
 
         public object? Get(string name)
@@ -399,6 +400,8 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
             ValidateName(name);
             if (name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)
                 throw new InvalidOperationException("Session 'rules' must be a comma- or semicolon-separated string.");
+            if (name.Equals(XpsWebSession.RolesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)
+                throw new InvalidOperationException("Session 'roles' must be a comma- or semicolon-separated string.");
             var encoded = PersistentValue.FromObject(value, _options.MaxValueBytes);
             Ensure();
             if (!_record.Values.ContainsKey(name) && _record.Values.Count >= _options.MaxEntriesPerSession)
@@ -431,6 +434,27 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
 
         public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);
 
+        public void SetRole(string role)
+        {
+            var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);
+            foreach (var value in ParseRoles(role)) roles.Add(value);
+            if (roles.Count > 0) Set(XpsWebSession.RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+        }
+
+        public string GetRole() => string.Join(';', Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);
+
+        public bool RemoveRole(string role)
+        {
+            var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);
+            var removed = false;
+            foreach (var value in ParseRoles(role)) removed |= roles.Remove(value);
+            if (!removed) return false;
+            if (roles.Count == 0) RemoveIfPresent(XpsWebSession.RolesKey);
+            else Set(XpsWebSession.RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+            return true;
+        }
+
         public void Authenticate(string? userId = null, string? userName = null, string? rules = null)
         {
             Set(XpsWebSession.AuthenticatedKey, true);
@@ -447,6 +471,7 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
             RemoveIfPresent(XpsWebSession.UserIdKey);
             RemoveIfPresent(XpsWebSession.UserNameKey);
             RemoveIfPresent(XpsWebSession.RulesKey);
+            RemoveIfPresent(XpsWebSession.RolesKey);
             RotateId();
         }
 
@@ -500,6 +525,22 @@ public sealed class XpsCgiPersistentState : IAsyncDisposable
     {
         var value = (rule ?? string.Empty).Trim();
         if (value.Length > 128 || value.Any(char.IsControl)) throw new ArgumentException("Invalid session rule.", nameof(rule));
+        return value;
+    }
+
+    private static IReadOnlyCollection<string> ParseRoles(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<string>();
+        var roles = value.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeRole).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (roles.Length > 128) throw new ArgumentException("Session roles cannot exceed 128 entries.", nameof(value));
+        return roles;
+    }
+
+    private static string NormalizeRole(string? role)
+    {
+        var value = (role ?? string.Empty).Trim();
+        if (value.Length is 0 or > 128 || value.Any(char.IsControl)) throw new ArgumentException("Invalid session role.", nameof(role));
         return value;
     }
 

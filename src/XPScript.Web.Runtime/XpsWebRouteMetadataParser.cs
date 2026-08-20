@@ -150,7 +150,8 @@ public sealed class XpsWebRouteMetadataParser
     {
         if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
             attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
-            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))
+            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return TryParseHttpMethodAttribute(attribute, out _);
@@ -167,6 +168,7 @@ public sealed class XpsWebRouteMetadataParser
         var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var requiredRules = new List<string>();
         var forbiddenRules = new List<string>();
+        var requiredRoles = new List<string>();
 
         foreach (var attribute in attributes)
         {
@@ -186,13 +188,25 @@ public sealed class XpsWebRouteMetadataParser
                 if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");
                 if (rule.StartsWith('!')) forbiddenRules.Add(NormalizeRule(rule[1..]));
                 else requiredRules.Add(NormalizeRule(rule));
+                continue;
+            }
+
+            if (attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
+            {
+                var roleText = attribute[5..].Trim();
+                if (roleText.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires at least one role name.");
+                foreach (var role in roleText.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var normalized = NormalizeRole(role);
+                    if (!requiredRoles.Contains(normalized, StringComparer.OrdinalIgnoreCase)) requiredRoles.Add(normalized);
+                }
             }
         }
 
         if (methods.Count == 0)
             throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
 
-        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules);
+        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules) { RequiredRoles = requiredRoles.AsReadOnly() };
     }
 
     private static bool TryParseHttpMethodAttribute(string attribute, out string method)
@@ -223,6 +237,14 @@ public sealed class XpsWebRouteMetadataParser
         var normalized = value.Trim();
         if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");
         if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Rule name contains a control character.");
+        return normalized;
+    }
+
+    private static string NormalizeRole(string value)
+    {
+        var normalized = value.Trim();
+        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Role name must contain 1 to 128 characters.");
+        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Role name contains a control character.");
         return normalized;
     }
 }
