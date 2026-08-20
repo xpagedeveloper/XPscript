@@ -107,6 +107,7 @@ internal sealed class UIExtensionDesktopPostProcessor
             replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
         }
 
+        replaced = new UIFormAdditionalFieldsPostProcessor().Transform(replaced);
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
         replaced = new UIFormStructuralElementsPostProcessor().Transform(replaced);
         replaced = new UIFormRegexValidationPostProcessor().Transform(replaced);
