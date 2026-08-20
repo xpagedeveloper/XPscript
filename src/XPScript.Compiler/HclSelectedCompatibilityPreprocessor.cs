@@ -6,7 +6,7 @@ internal sealed class HclSelectedCompatibilityPreprocessor
 {
     public string Transform(string source)
     {
-        source = ReplaceCall(source, "ArrayReplace", "LSHclSelectedRuntime.ArrayReplace");
+        source = ReplaceCall(source, "ArrayReplace", "LSHclArrayRuntime.ArrayReplace");
         source = ReplaceCall(source, "CreateObject", "LSHclSelectedRuntime.CreateObject");
         source = ReplaceCall(source, "GetObject", "LSHclSelectedRuntime.GetObject");
         source = ReplaceCall(source, "InputBox", "LSHclSelectedRuntime.InputBox");
