@@ -1,0 +1,31 @@
+name: Temporary add session role regression
+on:
+  push:
+    branches: [web-session-roles-status]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: web-session-roles-status
+      - shell: python
+        run: |
+          from pathlib import Path
+          p=Path('tests/WebStateSmoke/Program.cs')
+          s=p.read_text()
+          marker='''directAuthSession.Set("rules", "admin,blocked");\nif (directPolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)\n    throw new Exception("Forbidden [Rule:!name] policy did not evaluate session rules.");\n'''
+          addition=marker+'''\n// Session roles are additive. A route with more than one required role accepts any matching role.\ndirectAuthSession.SetRole("admin;user");\nif (!directAuthSession.HasRole("ADMIN") || !directAuthSession.HasRole("user") || directAuthSession.GetRole().Length == 0)\n    throw new Exception("Session role helpers did not preserve multiple roles.");\nvar rolePolicy = new XpsRoutePolicy(false, new HashSet<string>(["GET"], StringComparer.OrdinalIgnoreCase), [], [])\n{\n    RequiredRoles = new[] { "manager", "admin" }\n};\nif (rolePolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Allowed)\n    throw new Exception("Role OR policy did not accept one matching session role.");\nif (!directAuthSession.RemoveRole("admin") || directAuthSession.HasRole("admin") || !directAuthSession.HasRole("user"))\n    throw new Exception("Session.RemoveRole removed the wrong role state.");\nif (rolePolicy.Authorize(Request(), new XpsWebPrincipal(false), directAuthSession) != XpsRouteAuthorizationResult.Forbidden)\n    throw new Exception("Role OR policy accepted a session with no matching role.");\n\nvar parsedRoleRoutes = new XpsWebRouteMetadataParser().Parse("""\n[Authenticated]\n[Role:admin;user]\n[Role:manager]\n[Get]\nSub RoleRoute()\nEnd Sub\n""");\nvar parsedRolePolicy = parsedRoleRoutes.Routes["RoleRoute"].Policy;\nif (parsedRolePolicy.RequiredRoles.Count != 3 ||\n    !parsedRolePolicy.RequiredRoles.Contains("admin", StringComparer.OrdinalIgnoreCase) ||\n    !parsedRolePolicy.RequiredRoles.Contains("user", StringComparer.OrdinalIgnoreCase) ||\n    !parsedRolePolicy.RequiredRoles.Contains("manager", StringComparer.OrdinalIgnoreCase))\n    throw new Exception("[Role] metadata did not combine repeated and delimited roles as one OR set.");\n\nvar statusResponse = new XpsWebResponse();\nif (statusResponse.StatusCode != 200) throw new Exception("Response default status is not 200.");\nstatusResponse.SetStatus(422, "Validation Failed");\nstatusResponse.Complete();\nif (statusResponse.StatusCode != 422 || statusResponse.StatusMessage != "Validation Failed")\n    throw new Exception("Response.SetStatus did not retain status code/message.");\n'''
+          if s.count(marker)!=1:
+              raise SystemExit('role regression insertion marker not found exactly once')
+          p.write_text(s.replace(marker,addition,1))
+          Path('.github/workflows/temporary-add-role-regression.yml').unlink()
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Add session role and response status regressions"
+          git push origin HEAD:web-session-roles-status
