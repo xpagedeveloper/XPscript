@@ -24,6 +24,10 @@ internal sealed class IncludeSourcePreprocessor
             return new Result(rootSource, prepared.Map, [Path.GetFullPath(rootSourcePath)]);
 
         var rootPath = Path.GetFullPath(rootSourcePath);
+        var compileEnabled = IsBrowserWasmSource(rootSource) || CompileFolderSourcePreprocessor.IsDesktopProject(rootSource);
+        var compileResult = new CompileFolderSourcePreprocessor().Transform(rootSource, rootPath, compileEnabled);
+        rootSource = compileResult.Source;
+
         IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
 
         var pathIdentity = new FileSystemPathIdentity();
@@ -33,6 +37,12 @@ internal sealed class IncludeSourcePreprocessor
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
         Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map);
+
+        foreach (var dependency in compileResult.Dependencies)
+        {
+            var full = Path.GetFullPath(dependency);
+            if (!dependencies.Contains(full, StringComparer.OrdinalIgnoreCase)) dependencies.Add(full);
+        }
 
         var expanded = new Result(string.Join(Environment.NewLine, output), new SourceMap(map), dependencies.ToArray());
         var specifications = SourcePreprocessorConfigurationContext.Current;
@@ -152,6 +162,9 @@ internal sealed class IncludeSourcePreprocessor
             stack.RemoveAt(stack.Count - 1);
         }
     }
+
+    private static bool IsBrowserWasmSource(string source)
+        => NormalizeLines(source).Any(line => WebPlatformPattern.IsMatch(StripComment(line).Trim()));
 
     private static void AddLine(List<string> output, List<SourceMap.Location> map, string text, string path, int line)
     {
