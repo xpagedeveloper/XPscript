@@ -64,7 +64,7 @@ internal sealed class HclSelectedCompatibilityPreprocessor
             "${indent}Call LSHclSelectedRuntime.Randomize(${seed})",
             RegexOptions.CultureInvariant);
 
-        return source;
+        return new HashFunctionsPreprocessor().Transform(source);
     }
 
     private static string ReplaceCall(string source, string name, string target, bool allowDollarSuffix = false)
