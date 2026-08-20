@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class CompilerSourceLineDirectivePostProcessor
 {
     private static readonly Regex MarkerPattern = new(
-        @"(?m)^(?<indent>[ \t]*)XPSourceLineRuntime\.__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-F]+)\(\);\s*$",
+        @"XPSourceLineRuntime\.__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-F]+)\(\)",
         RegexOptions.CultureInvariant);
 
     private const string RuntimeBoundary = "internal static class LSControlRuntime";
@@ -15,27 +15,41 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
     {
         if (string.IsNullOrEmpty(generated)) return generated;
 
+        var lines = generated.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var output = new List<string>(lines.Length + 32);
         var foundMarker = false;
-        var rewritten = MarkerPattern.Replace(generated, match =>
+        var runtimeBoundaryInserted = false;
+
+        foreach (var rawLine in lines)
         {
+            if (!runtimeBoundaryInserted && rawLine.Contains(RuntimeBoundary, StringComparison.Ordinal))
+            {
+                if (foundMarker) output.Add("#line default");
+                runtimeBoundaryInserted = true;
+            }
+
+            var match = MarkerPattern.Match(rawLine);
+            if (!match.Success)
+            {
+                output.Add(rawLine);
+                continue;
+            }
+
             foundMarker = true;
-            var indent = match.Groups["indent"].Value;
-            var line = match.Groups["line"].Value;
+            var indent = Regex.Match(rawLine, @"^\s*").Value;
+            var sourceLine = match.Groups["line"].Value;
             var sourceId = DecodeSourceId(match.Groups["source"].Value);
             var directiveSource = EscapeDirectiveString(sourceId);
-            return string.Join(Environment.NewLine,
-                indent + "// XPSOURCE|" + sourceId + "|" + line,
-                indent + "#line " + line + " \"" + directiveSource + "\"",
-                indent + "XPSourceLineRuntime.Set(" + line + ");");
-        });
 
-        if (!foundMarker) return rewritten;
+            output.Add(indent + "// XPSOURCE|" + sourceId + "|" + sourceLine);
+            output.Add(indent + "#line " + sourceLine + " \"" + directiveSource + "\"");
+            output.Add(MarkerPattern.Replace(rawLine, "XPSourceLineRuntime.Set(" + sourceLine + ")", 1));
+        }
 
-        var boundary = rewritten.IndexOf(RuntimeBoundary, StringComparison.Ordinal);
-        if (boundary < 0)
+        if (foundMarker && !runtimeBoundaryInserted)
             throw new CompilerException("Unable to restore generated source line mapping before runtime code.");
 
-        return rewritten.Insert(boundary, "#line default" + Environment.NewLine);
+        return string.Join(Environment.NewLine, output);
     }
 
     private static string DecodeSourceId(string hex)
