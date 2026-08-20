@@ -4,6 +4,8 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
+    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest";
+
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
@@ -16,7 +18,7 @@ internal sealed class NativeHttpJsonPreprocessor
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
-            var dimNew = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(HttpClient|JsonDocument|JsonObject|JsonArray|JsonElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var dimNew = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+({NativeTypePattern})\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNew.Success)
             {
                 var name = dimNew.Groups[1].Value;
@@ -28,7 +30,7 @@ internal sealed class NativeHttpJsonPreprocessor
                 continue;
             }
 
-            var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+(HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement)\s*$", RegexOptions.IgnoreCase);
+            var dim = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+({NativeTypePattern})\s*$", RegexOptions.IgnoreCase);
             if (dim.Success)
             {
                 var name = dim.Groups[1].Value;
@@ -50,6 +52,8 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBSupabase\s*\((.*)\)", "new XPScriptHttpDbSupabase($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBDominoRest\s*\((.*)\)", "new XPScriptHttpDbDominoRest($1)", RegexOptions.IgnoreCase);
 
             foreach (var pair in nativeTypes)
             {
@@ -76,7 +80,7 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
@@ -93,6 +97,16 @@ internal sealed class NativeHttpJsonPreprocessor
         if (type.Equals("JsonObject", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateObject()";
         if (type.Equals("JsonArray", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateArray()";
         if (type.Equals("JsonElement", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateElement()";
+        if (type.Equals("HTTPDBSupabase", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("HTTPDBSupabase requires baseUrl and apiKey arguments.");
+            return $"new XPScriptHttpDbSupabase({args})";
+        }
+        if (type.Equals("HTTPDBDominoRest", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("HTTPDBDominoRest requires baseUrl, bearerToken and dataSource arguments.");
+            return $"new XPScriptHttpDbDominoRest({args})";
+        }
         throw new CompilerException("Unsupported native runtime type: " + type);
     }
 }
