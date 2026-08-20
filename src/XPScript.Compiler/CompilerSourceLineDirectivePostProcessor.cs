@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -5,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class CompilerSourceLineDirectivePostProcessor
 {
     private static readonly Regex MarkerPattern = new(
-        "(?m)^(?<indent>[ \\t]*)XPSourceLineRuntime\\.SetMapped\\((?<line>\\d+),\\s*\\\"(?<file>[^\\\"]+)\\\"\\);\\s*$",
+        @"(?m)^(?<indent>[ \t]*)XPSourceLineRuntime\.__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-F]+)\(\);\s*$",
         RegexOptions.CultureInvariant);
 
     private const string RuntimeBoundary = "internal static class LSControlRuntime";
@@ -20,10 +21,11 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
             foundMarker = true;
             var indent = match.Groups["indent"].Value;
             var line = match.Groups["line"].Value;
-            var file = match.Groups["file"].Value;
+            var sourceId = DecodeSourceId(match.Groups["source"].Value);
+            var directiveSource = EscapeDirectiveString(sourceId);
             return string.Join(Environment.NewLine,
-                indent + "// XPSOURCE|" + file + "|" + line,
-                indent + "#line " + line + " \"" + file + "\"",
+                indent + "// XPSOURCE|" + sourceId + "|" + line,
+                indent + "#line " + line + " \"" + directiveSource + "\"",
                 indent + "XPSourceLineRuntime.Set(" + line + ");");
         });
 
@@ -35,4 +37,20 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
 
         return rewritten.Insert(boundary, "#line default" + Environment.NewLine);
     }
+
+    private static string DecodeSourceId(string hex)
+    {
+        try
+        {
+            return Encoding.UTF8.GetString(Convert.FromHexString(hex));
+        }
+        catch (Exception ex)
+        {
+            throw new CompilerException("Invalid generated XPScript source mapping marker: " + ex.Message);
+        }
+    }
+
+    private static string EscapeDirectiveString(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal);
 }
