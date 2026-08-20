@@ -91,7 +91,8 @@ internal sealed class UIFormRemoteSearchPostProcessor
             case "LookupField":
             case "AutoCompleteField":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, string.Empty); return; }
-                if (!field.Options.Contains(submitted, StringComparer.Ordinal)) throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' contains an unsupported lookup value.");
+                if (!field.Options.Contains(submitted, StringComparer.Ordinal))
+                    throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' contains an unsupported lookup value.");
                 _data.Set(field.Name, submitted);
                 return;
 """;
