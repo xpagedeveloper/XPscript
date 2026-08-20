@@ -10,12 +10,14 @@ XPScript is a BASIC-style programming language implemented on .NET 10. Source fi
 4. [Evaluate](evaluate.md), dynamic XPScript evaluation.
 5. [Classes](classes.md), classes, constructors, properties, object references and module state.
 6. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
-7. [Hosting on IIS](iis-hosting.md), production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
-8. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-9. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
-10. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
-11. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
-12. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
+7. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
+8. [Hosting on IIS](iis-hosting.md), production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
+9. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+10. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
+11. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
+12. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
+13. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+14. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
 
 ## How XPScript runs
 
@@ -37,4 +39,4 @@ Compile it with:
 xpscriptc hello.xps -o hello
 ```
 
-For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md). For Windows Server deployment behind IIS, use [Hosting XPScript on IIS](iis-hosting.md). For UIForm field types and data-bound lookup controls, use [Extended UIForm fields](uiform-fields.md). For calling REST services or loading and saving UIForm data, use [HTTP client](http-client.md). For direct Supabase or Domino REST API data access, use [HTTP database clients](httpdb.md).
+For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md). For browser form security, read [CSRF protection](csrf.md). For Windows Server deployment behind IIS, use [Hosting XPScript on IIS](iis-hosting.md). For UIForm field types and data-bound lookup controls, use [Extended UIForm fields](uiform-fields.md). For calling REST services or loading and saving UIForm data, use [HTTP client](http-client.md). For direct Supabase or Domino REST API data access, use [HTTP database clients](httpdb.md).
