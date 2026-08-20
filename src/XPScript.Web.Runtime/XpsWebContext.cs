@@ -75,6 +75,9 @@ public interface IXpsRequestState
 
 public interface IXpsSession
 {
+    private const string RolesKey = "roles";
+    private const string RolesSessionIdKey = "roles-session-id";
+
     string Id { get; }
     bool Started { get; }
     int Count { get; }
@@ -83,7 +86,16 @@ public interface IXpsSession
     string? UserId { get; }
     string? UserName { get; }
     IReadOnlyCollection<string> Rules { get; }
-    IReadOnlyCollection<string> Roles => ParseRoles(Get("roles") as string);
+    IReadOnlyCollection<string> Roles
+    {
+        get
+        {
+            if (!Started || !IsAuthenticated) return Array.Empty<string>();
+            var boundSessionId = Get(RolesSessionIdKey) as string;
+            if (!string.Equals(boundSessionId, Id, StringComparison.Ordinal)) return Array.Empty<string>();
+            return ParseRoles(Get(RolesKey) as string);
+        }
+    }
     string Start();
     object? Get(string name);
     void Set(string name, object? value);
@@ -94,10 +106,13 @@ public interface IXpsSession
     bool HasRule(string rule);
     void SetRole(string role)
     {
+        if (!Started || !IsAuthenticated)
+            throw new InvalidOperationException("Session roles require an authenticated session. Call Session.Authenticate before Session.SetRole.");
         var normalized = NormalizeRole(role);
         var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase) { normalized };
         if (roles.Count > 128) throw new InvalidOperationException("Session roles cannot exceed 128 entries.");
-        Set("roles", string.Join(',', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+        Set(RolesKey, string.Join(',', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+        Set(RolesSessionIdKey, Id);
     }
     string[] GetRoles() => Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
     bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);
@@ -108,11 +123,13 @@ public interface IXpsSession
         if (!roles.Remove(normalized)) return false;
         if (roles.Count == 0)
         {
-            if (Exists("roles")) Remove("roles");
+            if (Exists(RolesKey)) Remove(RolesKey);
+            if (Exists(RolesSessionIdKey)) Remove(RolesSessionIdKey);
         }
         else
         {
-            Set("roles", string.Join(',', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+            Set(RolesKey, string.Join(',', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));
+            Set(RolesSessionIdKey, Id);
         }
         return true;
     }
