@@ -1,0 +1,32 @@
+[Anonymous]
+[Get]
+Sub Login()
+    Session.SetRole("admin")
+    Session.SetRole("user")
+    Session.Authenticate("42", "Example User")
+    Response.SetStatus(200, "Signed In")
+    Response.Write(Session.GetRole())
+End Sub
+
+[Authenticated]
+[Role:admin;user]
+[Get]
+Sub Account()
+    Response.SetStatus(200)
+    Response.Write("role accepted")
+End Sub
+
+[Authenticated]
+[Role:manager]
+[Role:admin]
+[Get]
+Sub Management()
+    Response.Write("manager or admin")
+End Sub
+
+[Anonymous]
+[Post]
+Sub Validate()
+    Response.SetStatus(422, "Validation Failed")
+    Response.Write("invalid input")
+End Sub
