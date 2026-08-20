@@ -20,10 +20,24 @@ Sub Main()
     Dim fileNumber As Integer
     Dim inputText As String
     Dim inputPath As String
+    Dim matrix(1 To 2, 3 To 4) As String
+    Dim matrixResult As Variant
 
     source = Array("alpha", "beta", "alpha")
     replaced = ArrayReplace(source, "alpha", "x")
     Call Assert(Implode(replaced, ",") = "x,beta,x", "ArrayReplace/Implode failed")
+
+    matrix(1, 3) = "a"
+    matrix(1, 4) = "b"
+    matrix(2, 3) = "a"
+    matrix(2, 4) = "c"
+    matrixResult = ArrayReplace(matrix, "a", "z")
+    Call Assert(LBound(matrixResult, 1) = 1, "ArrayReplace lower bound dimension 1 failed")
+    Call Assert(UBound(matrixResult, 1) = 2, "ArrayReplace upper bound dimension 1 failed")
+    Call Assert(LBound(matrixResult, 2) = 3, "ArrayReplace lower bound dimension 2 failed")
+    Call Assert(UBound(matrixResult, 2) = 4, "ArrayReplace upper bound dimension 2 failed")
+    Call Assert(matrixResult(1, 3) = "z", "ArrayReplace multidimensional replacement failed")
+    Call Assert(matrixResult(2, 4) = "c", "ArrayReplace multidimensional preservation failed")
 
     cleaned = FullTrim(Array("  one   two  ", "", " three "))
     Call Assert(Implode(cleaned, "|") = "one two|three", "FullTrim array failed")
