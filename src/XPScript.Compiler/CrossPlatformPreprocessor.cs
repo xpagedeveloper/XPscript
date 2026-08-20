@@ -45,7 +45,7 @@ internal sealed class CrossPlatformPreprocessor
         source = Regex.Replace(
             source,
             @"(?<![\w.])Shellid\s*\(",
-            "XPCrossPlatformRuntime.ShellId(",
+            "XPShellIdRuntime.ShellId(",
             RegexOptions.IgnoreCase);
 
         source = Regex.Replace(
