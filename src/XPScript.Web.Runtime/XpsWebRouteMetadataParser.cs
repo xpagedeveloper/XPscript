@@ -1,9 +1,16 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Web.Runtime;
 
-public sealed record XpsWebRouteDescriptor(string ProcedureName, XpsRoutePolicy Policy);
+public sealed record XpsWebRouteDescriptor(
+    string ProcedureName,
+    XpsRoutePolicy Policy,
+    string? RouteTemplate = null,
+    XpsCorsRule? Cors = null,
+    XpsRateLimitRule? RateLimit = null,
+    IReadOnlyList<XpsValidationRule>? ValidationRules = null);
 
 public sealed record XpsWebRouteParseResult(
     string Source,
@@ -15,6 +22,14 @@ public sealed class XpsWebRouteMetadataParser
 {
     private static readonly Regex ProcedurePattern = new(
         @"^\s*(?:Public\s+|Private\s+)?(?:Sub|Function)\s+([A-Za-z_]\w*)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ClassPattern = new(
+        @"^\s*(?:Public\s+|Private\s+)?Class\s+([A-Za-z_]\w*)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex FieldPattern = new(
+        @"^\s*(?:Public\s+|Private\s+)?([A-Za-z_]\w*)\s+As\s+[A-Za-z_]\w*\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly HashSet<string> ShorthandHttpMethods = new(StringComparer.OrdinalIgnoreCase)
@@ -32,13 +47,35 @@ public sealed class XpsWebRouteMetadataParser
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new StringBuilder(source.Length);
         var pending = new List<string>();
+        var pendingValidation = new List<string>();
+        var validationRules = new List<XpsValidationRule>();
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase);
         var precompileTargets = new List<string>();
         string? platform = null;
+        string? currentClass = null;
 
         foreach (var raw in lines)
         {
             var trimmed = raw.Trim();
+
+            var classMatch = ClassPattern.Match(raw);
+            if (classMatch.Success)
+            {
+                if (pending.Count > 0) throw new XpsWebRouteMetadataException("Web route attributes cannot be applied to a Class declaration.");
+                if (pendingValidation.Count > 0) throw new XpsWebRouteMetadataException("Validation attributes must immediately precede a class field.");
+                currentClass = classMatch.Groups[1].Value;
+                output.AppendLine(raw);
+                continue;
+            }
+
+            if (trimmed.Equals("End Class", StringComparison.OrdinalIgnoreCase))
+            {
+                if (pendingValidation.Count > 0) throw new XpsWebRouteMetadataException("Validation attributes are not followed by a class field.");
+                currentClass = null;
+                output.AppendLine(raw);
+                continue;
+            }
+
             if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
             {
                 var attribute = trimmed[1..^1].Trim();
@@ -68,6 +105,13 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                if (currentClass is not null && IsValidationAttribute(attribute))
+                {
+                    pendingValidation.Add(attribute);
+                    output.AppendLine();
+                    continue;
+                }
+
                 if (!IsKnownRouteAttribute(attribute))
                 {
                     Console.Error.WriteLine($"error: Unsupported web route attribute '[{attribute}]'. Ignoring rule.");
@@ -75,9 +119,33 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                if (currentClass is not null)
+                    throw new XpsWebRouteMetadataException("Web route attributes cannot be declared inside a Class.");
+
                 pending.Add(attribute);
                 output.AppendLine();
                 continue;
+            }
+
+            if (pendingValidation.Count > 0)
+            {
+                if (trimmed.Length == 0 || trimmed.StartsWith("'", StringComparison.Ordinal))
+                {
+                    output.AppendLine(raw);
+                    continue;
+                }
+
+                if (currentClass is null)
+                    throw new XpsWebRouteMetadataException("Validation attributes may only be used on fields inside a Class.");
+
+                var field = FieldPattern.Match(raw);
+                if (!field.Success)
+                    throw new XpsWebRouteMetadataException("Validation attributes must immediately precede a class field declaration.");
+
+                var memberName = field.Groups[1].Value;
+                foreach (var validation in pendingValidation)
+                    validationRules.Add(ParseValidationRule(currentClass, memberName, validation));
+                pendingValidation.Clear();
             }
 
             if (pending.Count > 0)
@@ -93,8 +161,8 @@ public sealed class XpsWebRouteMetadataParser
                     throw new XpsWebRouteMetadataException("Web route attributes must immediately precede a Sub or Function declaration.");
 
                 var name = procedure.Groups[1].Value;
-                var policy = BuildPolicy(pending);
-                if (!routes.TryAdd(name, new XpsWebRouteDescriptor(name, policy)))
+                var descriptor = BuildDescriptor(name, pending);
+                if (!routes.TryAdd(name, descriptor))
                     throw new XpsWebRouteMetadataException($"Duplicate web route metadata for procedure '{name}'.");
                 pending.Clear();
             }
@@ -104,6 +172,14 @@ public sealed class XpsWebRouteMetadataParser
 
         if (pending.Count > 0)
             throw new XpsWebRouteMetadataException("Web route attributes are not followed by a Sub or Function declaration.");
+        if (pendingValidation.Count > 0)
+            throw new XpsWebRouteMetadataException("Validation attributes are not followed by a class field.");
+
+        var frozenValidation = (IReadOnlyList<XpsValidationRule>)validationRules.AsReadOnly();
+        foreach (var key in routes.Keys.ToArray())
+            routes[key] = routes[key] with { ValidationRules = frozenValidation };
+
+        ValidateExplicitRouteDuplicates(routes.Values);
 
         return new XpsWebRouteParseResult(
             output.ToString().TrimEnd('\r', '\n'),
@@ -151,13 +227,49 @@ public sealed class XpsWebRouteMetadataParser
         if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
             attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
             attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||
-            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
+            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("Route:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.Equals("Cors", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("Cors:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("RateLimit:", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return TryParseHttpMethodAttribute(attribute, out _);
     }
 
-    private static XpsRoutePolicy BuildPolicy(IReadOnlyList<string> attributes)
+    private static bool IsValidationAttribute(string attribute) =>
+        attribute.Equals("Required", StringComparison.OrdinalIgnoreCase) ||
+        attribute.Equals("Email", StringComparison.OrdinalIgnoreCase) ||
+        attribute.StartsWith("MaxLength:", StringComparison.OrdinalIgnoreCase) ||
+        attribute.StartsWith("Range:", StringComparison.OrdinalIgnoreCase);
+
+    private static XpsValidationRule ParseValidationRule(string typeName, string memberName, string attribute)
+    {
+        if (attribute.Equals("Required", StringComparison.OrdinalIgnoreCase))
+            return new XpsValidationRule(typeName, memberName, "Required");
+        if (attribute.Equals("Email", StringComparison.OrdinalIgnoreCase))
+            return new XpsValidationRule(typeName, memberName, "Email");
+        if (attribute.StartsWith("MaxLength:", StringComparison.OrdinalIgnoreCase))
+        {
+            var raw = attribute[10..].Trim();
+            if (!int.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var max) || max < 1 || max > 1_000_000)
+                throw new XpsWebRouteMetadataException("MaxLength must contain an integer between 1 and 1000000.");
+            return new XpsValidationRule(typeName, memberName, "MaxLength", max.ToString(CultureInfo.InvariantCulture));
+        }
+        if (attribute.StartsWith("Range:", StringComparison.OrdinalIgnoreCase))
+        {
+            var values = attribute[6..].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (values.Length != 2 ||
+                !decimal.TryParse(values[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var min) ||
+                !decimal.TryParse(values[1], NumberStyles.Number, CultureInfo.InvariantCulture, out var max) ||
+                min > max)
+                throw new XpsWebRouteMetadataException("Range must use [Range:min;max] with numeric values and min <= max.");
+            return new XpsValidationRule(typeName, memberName, "Range", min.ToString(CultureInfo.InvariantCulture), max.ToString(CultureInfo.InvariantCulture));
+        }
+        throw new XpsWebRouteMetadataException($"Unsupported validation attribute '[{attribute}]'.");
+    }
+
+    private static XpsWebRouteDescriptor BuildDescriptor(string procedureName, IReadOnlyList<string> attributes)
     {
         var hasAnonymous = attributes.Any(x => x.Equals("Anonymous", StringComparison.OrdinalIgnoreCase));
         var hasAuthenticated = attributes.Any(x => x.Equals("Authenticated", StringComparison.OrdinalIgnoreCase));
@@ -170,6 +282,9 @@ public sealed class XpsWebRouteMetadataParser
         var forbiddenRules = new List<string>();
         var requiredRoles = new List<string>();
         var forbiddenRoles = new List<string>();
+        string? routeTemplate = null;
+        XpsCorsRule? cors = null;
+        XpsRateLimitRule? rateLimit = null;
 
         foreach (var attribute in attributes)
         {
@@ -195,13 +310,119 @@ public sealed class XpsWebRouteMetadataParser
             if (attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
             {
                 ParseRoles(attribute[5..], requiredRoles, forbiddenRoles);
+                continue;
+            }
+
+            if (attribute.StartsWith("Route:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (routeTemplate is not null)
+                    throw new XpsWebRouteMetadataException("A web route may declare only one [Route:...] attribute.");
+                routeTemplate = NormalizeRouteTemplate(attribute[6..]);
+                continue;
+            }
+
+            if (attribute.Equals("Cors", StringComparison.OrdinalIgnoreCase) || attribute.StartsWith("Cors:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (cors is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [Cors] rule.");
+                cors = ParseCors(attribute);
+                continue;
+            }
+
+            if (attribute.StartsWith("RateLimit:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (rateLimit is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [RateLimit:...] rule.");
+                rateLimit = ParseRateLimit(attribute[10..]);
             }
         }
 
         if (methods.Count == 0)
             throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
 
-        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles);
+        return new XpsWebRouteDescriptor(
+            procedureName,
+            new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles),
+            routeTemplate,
+            cors,
+            rateLimit);
+    }
+
+    private static XpsCorsRule ParseCors(string attribute)
+    {
+        if (attribute.Equals("Cors", StringComparison.OrdinalIgnoreCase))
+            return new XpsCorsRule(["*"]);
+        var value = attribute[5..].Trim();
+        var origins = value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (origins.Length == 0) throw new XpsWebRouteMetadataException("Cors requires at least one origin or '*'.");
+        if (origins.Length > 32) throw new XpsWebRouteMetadataException("Cors may contain at most 32 origins.");
+        foreach (var origin in origins)
+        {
+            if (origin == "*") continue;
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) || uri.AbsolutePath != "/")
+                throw new XpsWebRouteMetadataException($"Cors origin '{origin}' must be an absolute http/https origin without a path.");
+        }
+        return new XpsCorsRule(origins);
+    }
+
+    private static XpsRateLimitRule ParseRateLimit(string value)
+    {
+        var parts = value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var permits) || permits is < 1 or > 1_000_000)
+            throw new XpsWebRouteMetadataException("RateLimit must use [RateLimit:requests;window], for example [RateLimit:100;1m].");
+        return new XpsRateLimitRule(permits, ParseDuration(parts[1]));
+    }
+
+    private static TimeSpan ParseDuration(string value)
+    {
+        if (value.Length < 2) throw new XpsWebRouteMetadataException("RateLimit window is invalid.");
+        var suffix = char.ToLowerInvariant(value[^1]);
+        if (!double.TryParse(value[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+            throw new XpsWebRouteMetadataException("RateLimit window is invalid.");
+        var result = suffix switch
+        {
+            's' => TimeSpan.FromSeconds(amount),
+            'm' => TimeSpan.FromMinutes(amount),
+            'h' => TimeSpan.FromHours(amount),
+            'd' => TimeSpan.FromDays(amount),
+            _ => throw new XpsWebRouteMetadataException("RateLimit window suffix must be s, m, h or d.")
+        };
+        if (result < TimeSpan.FromSeconds(1) || result > TimeSpan.FromDays(30))
+            throw new XpsWebRouteMetadataException("RateLimit window must be between 1 second and 30 days.");
+        return result;
+    }
+
+    private static string NormalizeRouteTemplate(string value)
+    {
+        var route = value.Trim().Replace('\\', '/');
+        if (route.Length is < 1 or > 2048 || !route.StartsWith('/', StringComparison.Ordinal))
+            throw new XpsWebRouteMetadataException("Route must be an absolute path beginning with '/'.");
+        if (route.Contains("//", StringComparison.Ordinal) || route.Any(char.IsControl) || route.Contains('?') || route.Contains('#'))
+            throw new XpsWebRouteMetadataException("Route contains an invalid path character or empty segment.");
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var segment in route.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!segment.StartsWith('{') && !segment.EndsWith('}')) continue;
+            if (!(segment.StartsWith('{') && segment.EndsWith('}')))
+                throw new XpsWebRouteMetadataException("Route parameters must occupy a complete path segment, for example {id}.");
+            var name = segment[1..^1].Trim();
+            if (name.Length == 0 || !Regex.IsMatch(name, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant))
+                throw new XpsWebRouteMetadataException($"Invalid route parameter '{{{name}}}'.");
+            if (!names.Add(name)) throw new XpsWebRouteMetadataException($"Duplicate route parameter '{{{name}}}'.");
+        }
+        return route.Length > 1 ? route.TrimEnd('/') : route;
+    }
+
+    private static void ValidateExplicitRouteDuplicates(IEnumerable<XpsWebRouteDescriptor> routes)
+    {
+        var explicitRoutes = routes.Where(x => x.RouteTemplate is not null).ToArray();
+        for (var i = 0; i < explicitRoutes.Length; i++)
+        {
+            for (var j = i + 1; j < explicitRoutes.Length; j++)
+            {
+                if (!string.Equals(explicitRoutes[i].RouteTemplate, explicitRoutes[j].RouteTemplate, StringComparison.OrdinalIgnoreCase)) continue;
+                if (explicitRoutes[i].Policy.Methods.Intersect(explicitRoutes[j].Policy.Methods, StringComparer.OrdinalIgnoreCase).Any())
+                    throw new XpsWebRouteMetadataException($"Duplicate explicit route '{explicitRoutes[i].RouteTemplate}' has overlapping HTTP methods.");
+            }
+        }
     }
 
     private static void ParseRoles(string value, List<string> requiredRoles, List<string> forbiddenRoles)
