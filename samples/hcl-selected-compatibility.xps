@@ -31,6 +31,18 @@ Sub Main()
     If LenB(singleValue) <> 4 Then Error 5, "LenB numeric storage size failed"
     If LenB("alphabet") <> 16 Then Error 5, "LenB Unicode string size failed"
 
+    If LenBP("ABCDE") <> 5 Then Error 5, "LenBP failed"
+    If LeftBP("ABCDE", 2) <> "AB" Then Error 5, "LeftBP failed"
+    If RightBP("ABCDE", 2) <> "DE" Then Error 5, "RightBP failed"
+    If MidBP("ABCDE", 2, 3) <> "BCD" Then Error 5, "MidBP failed"
+    If InStrBP("ABCDE", "CD") <> 3 Then Error 5, "InStrBP failed"
+
+    If LenC("A" & UChr(769) & "B") <> 2 Then Error 5, "LenC combining-character failed"
+    If LeftC("A" & UChr(769) & "B", 1) <> "A" & UChr(769) Then Error 5, "LeftC failed"
+    If RightC("A" & UChr(769) & "B", 1) <> "B" Then Error 5, "RightC failed"
+    If MidC("A" & UChr(769) & "BC", 2, 2) <> "BC" Then Error 5, "MidC failed"
+    If InStrC("A" & UChr(769) & "BC", "B") <> 2 Then Error 5, "InStrC failed"
+
     Randomize 123
     firstRnd = Rnd
     repeatedRnd = Rnd(0)
