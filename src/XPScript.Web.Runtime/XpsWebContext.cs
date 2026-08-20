@@ -172,6 +172,8 @@ public interface IXpsApplicationState
 
 public sealed class XpsWebContext
 {
+    private IReadOnlyDictionary<string, string> _routeValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
     public XpsWebContext(
         XpsWebRequest request,
         XpsWebResponse response,
@@ -197,6 +199,20 @@ public sealed class XpsWebContext
     public IXpsApplicationState Application { get; }
     public IXpsSession? Session { get; }
     public IXpsRequestState RequestScope { get; }
+    public IReadOnlyDictionary<string, string> RouteValues => _routeValues;
+
+    public string Route(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return _routeValues.TryGetValue(name, out var value) ? value : string.Empty;
+    }
+
+    public void SetRouteValues(IReadOnlyDictionary<string, string>? values)
+    {
+        _routeValues = values is null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(values, StringComparer.OrdinalIgnoreCase);
+    }
 }
 
 public static class XpsWebContextAccessor
