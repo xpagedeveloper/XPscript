@@ -1,0 +1,82 @@
+name: HTTP UIForm Data Helpers
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/HttpUiFormRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/IncrementRuntimeSource.cs'
+      - 'samples/native-http-uiform-data.xps'
+      - 'tests/native_http_uiform_server.py'
+      - '.github/workflows/http-uiform-data-helpers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Start helper API
+        shell: pwsh
+        run: |
+          $server = Start-Process python -ArgumentList './tests/native_http_uiform_server.py' -PassThru
+          $server.Id | Set-Content ./http-uiform-server.pid
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $client = [System.Net.Sockets.TcpClient]::new('127.0.0.1', 18081)
+              $client.Dispose()
+              exit 0
+            } catch {
+              Start-Sleep -Milliseconds 200
+            }
+          }
+          throw 'HTTP UIForm helper server did not start.'
+      - name: Compile and run helper sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($IsWindows) { './out/http-uiform-data.exe' } else { './out/http-uiform-data' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-http-uiform-data.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'HTTP UIForm helper sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "HTTP UIForm helper regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          $required = @(
+            'GETJSON_NAME=Loaded customer',
+            'LOADFORM_NAME=Loaded customer',
+            'SAVEFORM_STATUS=200',
+            'SAVEFORM_NAME=Saved customer',
+            'PUTFORM_STATUS=200',
+            'POSTJSON_NAME=JSON helper',
+            'PATCHJSON_STATUS=200',
+            'QUERY=search=a%20b',
+            'POSTFORM_BODY=name=JSON%20helper&age=51',
+            'HTTP_UIFORM_HELPERS=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "HTTP UIForm helper output missing: $value`n$output" }
+          }
+      - name: Stop helper API
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path ./http-uiform-server.pid) {
+            $pidValue = [int](Get-Content ./http-uiform-server.pid)
+            Stop-Process -Id $pidValue -Force -ErrorAction SilentlyContinue
+          }
