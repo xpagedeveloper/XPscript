@@ -1,0 +1,8 @@
+Option Declare
+
+Sub Main()
+    Print "SPC:"; Spc(3); "X"
+    Print "TAB:"; Tab(8); "X"
+    Print "WRAP123"; Tab(3); "X"
+    Print "HCL_PRINT_FORMATTING=OK"
+End Sub
