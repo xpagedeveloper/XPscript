@@ -55,12 +55,12 @@ internal sealed class HclSelectedCompatibilityPreprocessor
 
         source = Regex.Replace(
             source,
-            @"(?im)^(?<indent>\s*)Randomize\s*$",
+            @"(?im)^(?<indent>[ \t]*)Randomize[ \t]*$",
             "${indent}Call LSHclSelectedRuntime.Randomize()",
             RegexOptions.CultureInvariant);
         source = Regex.Replace(
             source,
-            @"(?im)^(?<indent>\s*)Randomize\s+(?<seed>.+)$",
+            @"(?im)^(?<indent>[ \t]*)Randomize[ \t]+(?<seed>[^\r\n]+)[ \t]*$",
             "${indent}Call LSHclSelectedRuntime.Randomize(${seed})",
             RegexOptions.CultureInvariant);
 
