@@ -34,7 +34,7 @@ public sealed class XpsWebRouteMetadataParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly Regex ParameterBindingPattern = new(
-        @"\[(FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\"([^\"]+)\"|([^\]]+)))?\]\s*(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)",
+        "\\[(FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\"([^\"]+)\"|([^\\]]+)))?\\]\\s*(?:(ByVal|ByRef)\\s+)?([A-Za-z_]\\w*)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly HashSet<string> ShorthandHttpMethods = new(StringComparer.OrdinalIgnoreCase)
