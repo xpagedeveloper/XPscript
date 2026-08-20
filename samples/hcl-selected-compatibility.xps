@@ -1,5 +1,11 @@
 Option Declare
 
+Sub Assert(condition As Boolean, message As String)
+    If Not condition Then
+        Error 5, message
+    End If
+End Sub
+
 Sub Main()
     Dim source As Variant
     Dim replaced As Variant
@@ -17,28 +23,28 @@ Sub Main()
 
     source = Array("alpha", "beta", "alpha")
     replaced = ArrayReplace(source, "alpha", "x")
-    If Implode(replaced, ",") <> "x,beta,x" Then Error 5, "ArrayReplace/Implode failed"
+    Call Assert(Implode(replaced, ",") = "x,beta,x", "ArrayReplace/Implode failed")
 
     cleaned = FullTrim(Array("  one   two  ", "", " three "))
-    If Implode(cleaned, "|") <> "one two|three" Then Error 5, "FullTrim array failed"
-    If FullTrim("  one   two  ") <> "one two" Then Error 5, "FullTrim string failed"
+    Call Assert(Implode(cleaned, "|") = "one two|three", "FullTrim array failed")
+    Call Assert(FullTrim("  one   two  ") = "one two", "FullTrim string failed")
 
     evaluated = Execute("Return 2 + 3")
-    If CInt(evaluated) <> 5 Then Error 5, "Execute alias failed"
+    Call Assert(CInt(evaluated) = 5, "Execute alias failed")
 
-    If UString(3, 65) <> "AAA" Then Error 5, "UString numeric code failed"
-    If UString(2, "xyz") <> "xx" Then Error 5, "UString string failed"
+    Call Assert(UString(3, 65) = "AAA", "UString numeric code failed")
+    Call Assert(UString(2, "xyz") = "xx", "UString string failed")
 
     singleValue = 1.25
-    If Len(singleValue) <> 4 Then Error 5, "Len numeric storage size failed"
-    If LenB(singleValue) <> 4 Then Error 5, "LenB numeric storage size failed"
-    If LenB("alphabet") <> 16 Then Error 5, "LenB Unicode string size failed"
+    Call Assert(Len(singleValue) = 4, "Len numeric storage size failed")
+    Call Assert(LenB(singleValue) = 4, "LenB numeric storage size failed")
+    Call Assert(LenB("alphabet") = 16, "LenB Unicode string size failed")
 
-    If LenBP("ABCDE") <> 5 Then Error 5, "LenBP failed"
-    If LeftBP("ABCDE", 2) <> "AB" Then Error 5, "LeftBP failed"
-    If RightBP("ABCDE", 2) <> "DE" Then Error 5, "RightBP failed"
-    If MidBP("ABCDE", 2, 3) <> "BCD" Then Error 5, "MidBP failed"
-    If InStrBP("ABCDE", "CD") <> 3 Then Error 5, "InStrBP failed"
+    Call Assert(LenBP("ABCDE") = 5, "LenBP failed")
+    Call Assert(LeftBP("ABCDE", 2) = "AB", "LeftBP failed")
+    Call Assert(RightBP("ABCDE", 2) = "DE", "RightBP failed")
+    Call Assert(MidBP("ABCDE", 2, 3) = "BCD", "MidBP failed")
+    Call Assert(InStrBP("ABCDE", "CD") = 3, "InStrBP failed")
 
     inputPath = "hcl-inputbp-regression.txt"
     fileNumber = FreeFile
@@ -50,28 +56,28 @@ Sub Main()
     inputText = InputBP(3, fileNumber)
     Close #fileNumber
     Kill inputPath
-    If inputText <> "ABC" Then Error 5, "InputBP file read failed"
+    Call Assert(inputText = "ABC", "InputBP file read failed")
 
-    If LenC("A" & UChr(769) & "B") <> 2 Then Error 5, "LenC combining-character failed"
-    If LeftC("A" & UChr(769) & "B", 1) <> "A" & UChr(769) Then Error 5, "LeftC failed"
-    If RightC("A" & UChr(769) & "B", 1) <> "B" Then Error 5, "RightC failed"
-    If MidC("A" & UChr(769) & "BC", 2, 2) <> "BC" Then Error 5, "MidC failed"
-    If InStrC("A" & UChr(769) & "BC", "B") <> 2 Then Error 5, "InStrC failed"
+    Call Assert(LenC("A" & UChr(769) & "B") = 2, "LenC combining-character failed")
+    Call Assert(LeftC("A" & UChr(769) & "B", 1) = "A" & UChr(769), "LeftC failed")
+    Call Assert(RightC("A" & UChr(769) & "B", 1) = "B", "RightC failed")
+    Call Assert(MidC("A" & UChr(769) & "BC", 2, 2) = "BC", "MidC failed")
+    Call Assert(InStrC("A" & UChr(769) & "BC", "B") = 2, "InStrC failed")
 
     Randomize 123
     firstRnd = Rnd
     repeatedRnd = Rnd(0)
-    If firstRnd <> repeatedRnd Then Error 5, "Rnd(0) did not return previous value"
+    Call Assert(firstRnd = repeatedRnd, "Rnd(0) did not return previous value")
     negativeA = Rnd(-99)
     negativeB = Rnd(-99)
-    If negativeA <> negativeB Then Error 5, "Rnd(negative) did not reseed deterministically"
+    Call Assert(negativeA = negativeB, "Rnd(negative) did not reseed deterministically")
 
     If Platform() = "Windows" Then
-        If Len(CurDrive) <> 2 Then Error 5, "CurDrive failed on Windows"
+        Call Assert(Len(CurDrive) = 2, "CurDrive failed on Windows")
         ole = CreateObject("Scripting.Dictionary")
-        If Not IsObject(ole) Then Error 5, "CreateObject failed"
+        Call Assert(IsObject(ole), "CreateObject failed")
     Else
-        If CurDrive <> "" Then Error 5, "CurDrive must be empty on non-Windows"
+        Call Assert(CurDrive = "", "CurDrive must be empty on non-Windows")
     End If
 
     Print "HCL_SELECTED_COMPATIBILITY=OK"
