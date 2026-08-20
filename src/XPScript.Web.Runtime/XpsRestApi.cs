@@ -73,6 +73,9 @@ public sealed class XpsRestBindingException : Exception
 
 public static class XpsRestBinder
 {
+    private const string ByValPrefix = "__xps_byval_";
+    private const string ByRefPrefix = "__xps_byref_";
+
     public static bool TryBind(MethodInfo method, XpsWebContext context, XpsWebRouteDescriptor descriptor, out object?[] arguments, out IReadOnlyDictionary<string, string[]> errors)
     {
         ArgumentNullException.ThrowIfNull(method);
@@ -88,7 +91,7 @@ public static class XpsRestBinder
             for (var i = 0; i < parameters.Length; i++)
             {
                 var parameter = parameters[i];
-                var name = parameter.Name ?? string.Empty;
+                var name = SourceParameterName(parameter);
                 var explicitBinding = descriptor.ParameterBindings?.FirstOrDefault(x => x.ParameterName.Equals(name, StringComparison.OrdinalIgnoreCase));
                 if (explicitBinding is not null)
                 {
@@ -101,26 +104,27 @@ public static class XpsRestBinder
 
                 if (context.RouteValues.TryGetValue(name, out var routeValue))
                 {
-                    arguments[i] = ConvertScalar(routeValue, parameter.ParameterType, name);
+                    arguments[i] = ConvertScalar(routeValue, ValueParameterType(parameter), name);
                     continue;
                 }
 
                 var queryValues = context.Request.Query(name);
                 if (queryValues.Count > 0)
                 {
-                    arguments[i] = ConvertScalar(queryValues[0], parameter.ParameterType, name);
+                    arguments[i] = ConvertScalar(queryValues[0], ValueParameterType(parameter), name);
                     continue;
                 }
 
-                if (name.Equals("body", StringComparison.OrdinalIgnoreCase) || IsComplexBodyType(parameter.ParameterType))
+                var valueType = ValueParameterType(parameter);
+                if (name.Equals("body", StringComparison.OrdinalIgnoreCase) || IsComplexBodyType(valueType))
                 {
-                    bodyObject = new XpsRequestBody(context.Request).Json(parameter.ParameterType);
+                    bodyObject = new XpsRequestBody(context.Request).Json(valueType);
                     arguments[i] = bodyObject;
                     continue;
                 }
 
                 if (parameter.HasDefaultValue) { arguments[i] = parameter.DefaultValue; continue; }
-                if (Nullable.GetUnderlyingType(parameter.ParameterType) is not null || !parameter.ParameterType.IsValueType) { arguments[i] = null; continue; }
+                if (Nullable.GetUnderlyingType(valueType) is not null || !valueType.IsValueType) { arguments[i] = null; continue; }
                 AddError(validationErrors, name, $"Required parameter '{name}' is missing.");
             }
 
@@ -139,26 +143,27 @@ public static class XpsRestBinder
         value = null;
         error = null;
         var sourceName = string.IsNullOrWhiteSpace(binding.SourceName) ? binding.ParameterName : binding.SourceName!;
+        var parameterType = ValueParameterType(parameter);
         try
         {
             switch (binding.Source.ToUpperInvariant())
             {
                 case "ROUTE":
                     if (!context.RouteValues.TryGetValue(sourceName, out var routeValue)) { error = $"Route parameter '{sourceName}' is missing."; return false; }
-                    value = ConvertScalar(routeValue, parameter.ParameterType, binding.ParameterName);
+                    value = ConvertScalar(routeValue, parameterType, binding.ParameterName);
                     return true;
                 case "QUERY":
                     var queryValues = context.Request.Query(sourceName);
-                    if (queryValues.Count == 0) return OptionalOrMissing(parameter, binding.ParameterName, out value, out error);
-                    value = ConvertScalar(queryValues[0], parameter.ParameterType, binding.ParameterName);
+                    if (queryValues.Count == 0) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
+                    value = ConvertScalar(queryValues[0], parameterType, binding.ParameterName);
                     return true;
                 case "HEADER":
                     var headerValues = context.Request.Header(sourceName);
-                    if (headerValues.Count == 0) return OptionalOrMissing(parameter, binding.ParameterName, out value, out error);
-                    value = ConvertScalar(headerValues[0], parameter.ParameterType, binding.ParameterName);
+                    if (headerValues.Count == 0) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
+                    value = ConvertScalar(headerValues[0], parameterType, binding.ParameterName);
                     return true;
                 case "BODY":
-                    bodyObject = new XpsRequestBody(context.Request).Json(parameter.ParameterType);
+                    bodyObject = new XpsRequestBody(context.Request).Json(parameterType);
                     value = bodyObject;
                     return true;
                 default:
@@ -169,13 +174,27 @@ public static class XpsRestBinder
         catch (XpsRestBindingException ex) { error = ex.Message; return false; }
     }
 
-    private static bool OptionalOrMissing(ParameterInfo parameter, string name, out object? value, out string? error)
+    private static bool OptionalOrMissing(ParameterInfo parameter, Type valueType, string name, out object? value, out string? error)
     {
         if (parameter.HasDefaultValue) { value = parameter.DefaultValue; error = null; return true; }
-        if (Nullable.GetUnderlyingType(parameter.ParameterType) is not null || !parameter.ParameterType.IsValueType) { value = null; error = null; return true; }
+        if (Nullable.GetUnderlyingType(valueType) is not null || !valueType.IsValueType) { value = null; error = null; return true; }
         value = null;
         error = $"Required parameter '{name}' is missing.";
         return false;
+    }
+
+    private static string SourceParameterName(ParameterInfo parameter)
+    {
+        var name = parameter.Name ?? string.Empty;
+        if (name.StartsWith(ByValPrefix, StringComparison.Ordinal)) return name[ByValPrefix.Length..];
+        if (name.StartsWith(ByRefPrefix, StringComparison.Ordinal)) return name[ByRefPrefix.Length..];
+        return name;
+    }
+
+    private static Type ValueParameterType(ParameterInfo parameter)
+    {
+        var type = parameter.ParameterType;
+        return type.IsByRef ? type.GetElementType() ?? type : type;
     }
 
     private static object? ConvertScalar(string value, Type targetType, string parameterName)
