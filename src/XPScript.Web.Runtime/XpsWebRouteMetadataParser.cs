@@ -150,7 +150,6 @@ public sealed class XpsWebRouteMetadataParser
     {
         if (attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
             attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
-            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||
             attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))
             return true;
 
@@ -166,8 +165,6 @@ public sealed class XpsWebRouteMetadataParser
 
         var allowAnonymous = hasAnonymous && !hasAuthenticated;
         var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var requiredRules = new List<string>();
-        var forbiddenRules = new List<string>();
         var requiredRoles = new List<string>();
 
         foreach (var attribute in attributes)
@@ -179,15 +176,6 @@ public sealed class XpsWebRouteMetadataParser
             if (TryParseHttpMethodAttribute(attribute, out var method))
             {
                 methods.Add(method);
-                continue;
-            }
-
-            if (attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))
-            {
-                var rule = attribute[5..].Trim();
-                if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");
-                if (rule.StartsWith('!')) forbiddenRules.Add(NormalizeRule(rule[1..]));
-                else requiredRules.Add(NormalizeRule(rule));
                 continue;
             }
 
@@ -206,7 +194,7 @@ public sealed class XpsWebRouteMetadataParser
         if (methods.Count == 0)
             throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
 
-        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules) { RequiredRoles = requiredRoles.AsReadOnly() };
+        return new XpsRoutePolicy(allowAnonymous, methods, requiredRoles.AsReadOnly());
     }
 
     private static bool TryParseHttpMethodAttribute(string attribute, out string method)
@@ -230,14 +218,6 @@ public sealed class XpsWebRouteMetadataParser
             return false;
         }
         return true;
-    }
-
-    private static string NormalizeRule(string value)
-    {
-        var normalized = value.Trim();
-        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");
-        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Rule name contains a control character.");
-        return normalized;
     }
 
     private static string NormalizeRole(string value)
