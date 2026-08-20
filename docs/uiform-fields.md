@@ -84,7 +84,44 @@ Call form.AddRichTextField("description", "Description")
 Call form.SetLength("description", 0, 100000)
 ```
 
-On the web, RichTextField stores HTML and is rendered with TinyMCE 7. The generated form loads TinyMCE from Tiny Cloud using the `no-api-key` URL. Desktop falls back to a multiline text editor.
+On the web, RichTextField stores HTML and is rendered with TinyMCE 7. Desktop falls back to a multiline text editor.
+
+TinyMCE can use Tiny Cloud or a locally hosted TinyMCE installation. Configuration is read from `xpscript-ui.json` in the current application directory or beside the executable.
+
+Tiny Cloud, default configuration:
+
+```json
+{
+  "tinyMce": {
+    "mode": "cloud",
+    "scriptUrl": "https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js"
+  }
+}
+```
+
+`scriptUrl` may be omitted in cloud mode. XPScript then uses the default Tiny Cloud URL above. A Tiny Cloud API-key URL can be supplied instead.
+
+Local/self-hosted TinyMCE:
+
+```json
+{
+  "tinyMce": {
+    "mode": "local",
+    "scriptUrl": "/assets/tinymce/tinymce.min.js"
+  }
+}
+```
+
+The local URL must be an application-relative path beginning with `/`, or an absolute HTTPS URL. The application is responsible for actually serving the configured local TinyMCE files.
+
+Environment variables override the JSON file. This is useful for IIS, containers and deployment pipelines:
+
+```text
+XPSCRIPT_TINYMCE_MODE=local
+XPSCRIPT_TINYMCE_SCRIPT_URL=/assets/tinymce/tinymce.min.js
+```
+
+Allowed modes are `cloud` and `local`. Local mode requires a script URL. Invalid modes or URLs fail explicitly instead of silently falling back to another source.
 
 Rich-text HTML is application data. Treat it as untrusted HTML when rendering it outside the editor. Apply an allow-list HTML sanitizer before placing stored HTML into pages where arbitrary HTML execution would be unsafe.
 
