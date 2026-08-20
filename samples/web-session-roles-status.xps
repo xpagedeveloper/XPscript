@@ -1,3 +1,4 @@
+' Session roles are additive. Repeated Role attributes and delimited roles use OR semantics.
 [Anonymous]
 [Get]
 Sub Login()
