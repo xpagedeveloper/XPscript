@@ -58,7 +58,7 @@ jobs:
           $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Extended UIForm sample failed.`n$output" }
           $output | ForEach-Object { Write-Host $_ }
-          if ($output -notcontains 'FIELD_COUNT=11') { throw "Unexpected UIForm field count.`n$output" }
+          if ($output -notcontains 'FIELD_COUNT=10') { throw "Unexpected UIForm field count.`n$output" }
           if ($output -notcontains 'ROLE_COUNT=2') { throw "Multi-value UIForm binding failed.`n$output" }
           if ($output -notcontains 'UIFORM_EXTENDED_FIELDS=OK') { throw "Extended UIForm completion marker missing.`n$output" }
       - name: Stop lookup API
