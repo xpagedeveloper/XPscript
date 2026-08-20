@@ -20,7 +20,9 @@ Sub Main()
     Line Input #fileNumber, text
     Close #fileNumber
     Kill path
-    If text <> "FILE  X" Then Error 5, "Print # Spc formatting failed"
+    If text <> "FILE  X" Then
+        Error 5, "Print # Spc formatting failed"
+    End If
 
     Print "HCL_PRINT_FORMATTING=OK"
 End Sub
