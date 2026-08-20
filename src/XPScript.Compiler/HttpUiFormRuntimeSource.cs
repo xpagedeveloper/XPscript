@@ -51,10 +51,20 @@ internal static class XPScriptHttpUiFormHelpers
     }
 
     public static XPScriptHttpResponse SaveForm(object? clientValue, object? formValue, object? url)
-        => PostJson(clientValue, url, Form(formValue).Data);
+    {
+        var form = Form(formValue);
+        var response = PostJson(clientValue, url, form.Data);
+        if (response.IsSuccess) form.MarkClean();
+        return response;
+    }
 
     public static XPScriptHttpResponse PutForm(object? clientValue, object? formValue, object? url)
-        => PutJson(clientValue, url, Form(formValue).Data);
+    {
+        var form = Form(formValue);
+        var response = PutJson(clientValue, url, form.Data);
+        if (response.IsSuccess) form.MarkClean();
+        return response;
+    }
 
     public static XPScriptJsonDocument ResponseJson(object? responseValue)
     {
