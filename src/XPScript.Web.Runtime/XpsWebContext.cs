@@ -75,8 +75,8 @@ public interface IXpsRequestState
 
 public interface IXpsSession
 {
-    private const string RolesKey = "roles";
-    private const string RolesSessionIdKey = "roles-session-id";
+    private static string RolesKey => "roles";
+    private static string RolesSessionIdKey => "roles-session-id";
 
     string Id { get; }
     bool Started { get; }
