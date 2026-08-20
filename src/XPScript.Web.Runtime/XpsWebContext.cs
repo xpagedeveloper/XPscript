@@ -67,6 +67,7 @@ public interface IXpsRequestState
     IReadOnlyList<string> Keys { get; }
     object? Get(string name);
     void Set(string name, object? value);
+    void Add(string name, object? value) => Set(name, value);
     bool Exists(string name);
     bool Remove(string name);
     bool Unset(string name);
@@ -99,6 +100,7 @@ public interface IXpsSession
     string Start();
     object? Get(string name);
     void Set(string name, object? value);
+    void Add(string name, object? value) => Set(name, value);
     bool Exists(string name);
     bool Remove(string name);
     bool Unset(string name);
@@ -164,9 +166,14 @@ public interface IXpsSession
 
 public interface IXpsApplicationState
 {
+    int Count { get; }
+    IReadOnlyList<string> Keys { get; }
     object? Get(string name);
     void Set(string name, object? value);
+    void Add(string name, object? value) => Set(name, value);
+    bool Exists(string name);
     bool Remove(string name);
+    bool Unset(string name);
     void Clear();
 }
 
