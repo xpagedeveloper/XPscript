@@ -18,6 +18,18 @@ End Sub
 Sub Invalid()
     Response.Write(Server.ValidateCsrfToken("invalid"))
 End Sub
+
+[Anonymous]
+[Post]
+Sub Submit()
+    Response.Write("EXECUTED")
+End Sub
+
+[Anonymous]
+[Get]
+Sub EvalGuard()
+    Response.Write(Evaluate("Shell(""whoami"")"))
+End Sub
 """);
 
 try
@@ -46,7 +58,17 @@ try
         var publicPayload = Encoding.UTF8.GetBytes("xps-csrf-v2\0" + info.SiteId + "\0" + session.Id);
         var forgeablePublicHash = Convert.ToBase64String(SHA256.HashData(publicPayload)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         if (forgeablePublicHash == token) throw new Exception("CSRF token can be derived from public site/session data without a server secret.");
+
+        if (server.HtmlEncode("<script>alert(1)</script>").Contains("<script>", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Server.HtmlEncode did not neutralize HTML markup.");
     }
+
+    var headerResponse = new XpsWebResponse { ContentType = "text/html; charset=utf-8" };
+    XpsWebSecurity.ApplyResponseSecurityHeaders(headerResponse);
+    if (!headerResponse.Headers.ContainsKey("Content-Security-Policy"))
+        throw new Exception("HTML response did not receive a Content-Security-Policy header.");
+    if (!headerResponse.Headers.TryGetValue("X-Content-Type-Options", out var nosniff) || !nosn.Contains("nosniff"))
+        throw new Exception("HTML response did not receive nosniff protection.");
 
     var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
     var independentContext = new XpsWebContext(request, new XpsWebResponse(), independentInfo, new XpsWebPrincipal(false), new XpsApplicationState(), session);
@@ -89,22 +111,107 @@ try
     if (!Encoding.UTF8.GetString(invalidResponse.Body.Span).Equals("False", StringComparison.OrdinalIgnoreCase))
         throw new Exception("XPScript Server.ValidateCsrfToken accepted an invalid token.");
 
+    var csrfCookie = new Dictionary<string, string> { ["XPSID"] = scriptSession.Id };
+    var noTokenResponse = new XpsWebResponse();
+    var noTokenRequest = Request(
+        method: "POST",
+        cookies: csrfCookie,
+        headers: new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Origin"] = new[] { "https://example.test" }
+        },
+        contentType: "application/json; charset=utf-8",
+        body: "{}");
+    var noTokenSession = store.Bind(noTokenRequest, noTokenResponse);
+    var noTokenContext = new XpsWebContext(noTokenRequest, noTokenResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), noTokenSession);
+    await unit.InvokeAsync("Submit", noTokenContext);
+    if (noTokenResponse.StatusCode != 403) throw new Exception("Unsafe session request without CSRF token was not rejected.");
+    if (Encoding.UTF8.GetString(noTokenResponse.Body.Span).Contains("EXECUTED", StringComparison.Ordinal))
+        throw new Exception("Protected route executed before CSRF validation.");
+    if (!noTokenResponse.Headers.TryGetValue(XpsWebSecurity.CsrfHeaderName, out var challengeValues))
+        throw new Exception("CSRF challenge did not return a retry token.");
+    var challengeToken = challengeValues.FirstOrDefault() ?? string.Empty;
+    if (challengeToken.Length == 0) throw new Exception("CSRF challenge token was empty.");
+
+    var badTokenResponse = new XpsWebResponse();
+    var badTokenRequest = Request(
+        method: "POST",
+        cookies: csrfCookie,
+        headers: new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [XpsWebSecurity.CsrfHeaderName] = new[] { challengeToken[..^1] + (challengeToken[^1] == 'A' ? 'B' : 'A') }
+        },
+        contentType: "application/json; charset=utf-8",
+        body: "{}");
+    var badTokenContext = new XpsWebContext(badTokenRequest, badTokenResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), store.Bind(badTokenRequest, badTokenResponse));
+    await unit.InvokeAsync("Submit", badTokenContext);
+    if (badTokenResponse.StatusCode != 403) throw new Exception("Modified CSRF token was accepted by route protection.");
+
+    var goodTokenResponse = new XpsWebResponse();
+    var goodTokenRequest = Request(
+        method: "POST",
+        cookies: csrfCookie,
+        headers: new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [XpsWebSecurity.CsrfHeaderName] = new[] { challengeToken }
+        },
+        contentType: "application/json; charset=utf-8",
+        body: "{}");
+    var goodTokenContext = new XpsWebContext(goodTokenRequest, goodTokenResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), store.Bind(goodTokenRequest, goodTokenResponse));
+    await unit.InvokeAsync("Submit", goodTokenContext);
+    if (goodTokenResponse.StatusCode != 200 || !Encoding.UTF8.GetString(goodTokenResponse.Body.Span).Contains("EXECUTED", StringComparison.Ordinal))
+        throw new Exception("Valid CSRF token did not allow the protected route.");
+
+    var bearerRequest = Request(
+        method: "POST",
+        headers: new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Authorization"] = new[] { "Bearer api-token" }
+        },
+        contentType: "application/json; charset=utf-8",
+        body: "{}");
+    var bearerResponse = new XpsWebResponse();
+    var bearerContext = new XpsWebContext(bearerRequest, bearerResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), store.Bind(bearerRequest, bearerResponse));
+    if (XpsWebSecurity.RequiresCsrfProtection(bearerContext))
+        throw new Exception("Bearer-only API request was incorrectly forced through browser CSRF validation.");
+
+    var evalGuarded = false;
+    var evalResponse = new XpsWebResponse();
+    var evalContext = new XpsWebContext(Request(), evalResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), scriptSession);
+    try
+    {
+        await unit.InvokeAsync("EvalGuard", evalContext);
+    }
+    catch (Exception ex)
+    {
+        evalGuarded = ex.Message.Contains("Unsupported Evaluate function", StringComparison.OrdinalIgnoreCase) ||
+                      ex.Message.Contains("Evaluate", StringComparison.OrdinalIgnoreCase);
+    }
+    if (!evalGuarded) throw new Exception("Evaluate unexpectedly allowed server-side Shell execution.");
+
     Console.WriteLine("WEB-CSRF-SMOKE=OK");
+    Console.WriteLine("WEB-XSS-SMOKE=OK");
+    Console.WriteLine("WEB-SERVER-SCRIPT-GUARD=OK");
 }
 finally
 {
     Directory.Delete(root, recursive: true);
 }
 
-static XpsWebRequest Request(IReadOnlyDictionary<string, string>? cookies = null) => new(
-    "GET",
+static XpsWebRequest Request(
+    string method = "GET",
+    IReadOnlyDictionary<string, string>? cookies = null,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? headers = null,
+    string? contentType = null,
+    string body = "") => new(
+    method,
     "/",
     "",
     "",
-    new Dictionary<string, IReadOnlyList<string>>(),
-    null,
-    0,
-    ReadOnlyMemory<byte>.Empty,
+    headers ?? new Dictionary<string, IReadOnlyList<string>>(),
+    contentType,
+    Encoding.UTF8.GetByteCount(body),
+    Encoding.UTF8.GetBytes(body),
     "localhost",
     "http",
     "127.0.0.1",
