@@ -108,6 +108,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         }
 
         replaced = new UIFormAdditionalFieldsPostProcessor().Transform(replaced);
+        replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
         replaced = new UIFormStructuralElementsPostProcessor().Transform(replaced);
         replaced = new UIFormRegexValidationPostProcessor().Transform(replaced);
