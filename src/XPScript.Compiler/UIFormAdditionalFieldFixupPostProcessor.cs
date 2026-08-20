@@ -26,6 +26,8 @@ internal sealed class UIFormAdditionalFieldFixupPostProcessor
 
         if (!generated.Contains(Sentinel, StringComparison.Ordinal))
             generated += "\n" + Runtime + "\n";
+
+        generated = new UIFormRemoteSearchPostProcessor().Transform(generated);
         return generated;
     }
 
