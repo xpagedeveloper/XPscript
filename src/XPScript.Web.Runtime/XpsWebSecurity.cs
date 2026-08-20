@@ -27,9 +27,12 @@ public static class XpsWebSecurity
         var contentType = context.Request.ContentType ?? string.Empty;
         var browserForm = contentType.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase) ||
                           contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase);
+        var browserOrigin = !string.IsNullOrWhiteSpace(context.Request.HeaderFirst("Origin")) ||
+                            !string.IsNullOrWhiteSpace(context.Request.HeaderFirst("Referer"));
 
         return !string.IsNullOrWhiteSpace(sessionCookie) ||
                browserForm ||
+               browserOrigin ||
                !string.IsNullOrWhiteSpace(context.Request.HeaderFirst(CsrfHeaderName));
     }
 
@@ -69,10 +72,11 @@ public static class XpsWebSecurity
     public static void WriteCsrfFailure(XpsWebContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        context.Response.Clear();
         context.Response.StatusCode = 403;
         context.Response.ContentType = "application/problem+json; charset=utf-8";
         context.Response.SetHeader("Cache-Control", "no-store");
+        var token = IssueCsrfToken(context);
+        if (token.Length > 0) context.Response.SetHeader(CsrfHeaderName, token);
         ApplyResponseSecurityHeaders(context.Response);
         context.Response.Write("{\"type\":\"about:blank\",\"title\":\"Forbidden\",\"status\":403,\"detail\":\"CSRF token is missing or invalid.\"}");
         context.Response.Complete();
