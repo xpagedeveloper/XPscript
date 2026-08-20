@@ -5,7 +5,7 @@ namespace XPScript.Compiler;
 internal sealed class CompilerSourceLineDirectivePostProcessor
 {
     private static readonly Regex MarkerPattern = new(
-        @"(?m)^(?<indent>[ \t]*)XPSourceLineRuntime\.Set\((?<line>\d+),\s*\"(?<file>(?:\\.|[^\"])*)\"\);\s*$",
+        "(?m)^(?<indent>[ \\t]*)XPSourceLineRuntime\\.Set\\((?<line>\\d+),\\s*\\\"(?<file>[^\\\"]+)\\\"\\);\\s*$",
         RegexOptions.CultureInvariant);
 
     public string Transform(string generated)
