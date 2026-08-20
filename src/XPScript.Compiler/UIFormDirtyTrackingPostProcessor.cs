@@ -34,9 +34,9 @@ internal sealed class UIFormDirtyTrackingPostProcessor
         get
         {
             var result = XPScriptNativeJson.CreateArray();
-            foreach (var field in _fields)
+            foreach (var uiField in _fields)
             {
-                if (IsFieldDirty(field.Name)) result.Add(field.Name);
+                if (IsFieldDirty(uiField.Name)) result.Add(uiField.Name);
             }
             return result;
         }
