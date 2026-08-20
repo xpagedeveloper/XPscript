@@ -1,0 +1,173 @@
+name: Temporary web session role status patch
+on:
+  push:
+    branches: [web-session-roles-status]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: web-session-roles-status
+      - name: Apply implementation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path, old, new, count=1):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              actual = s.count(old)
+              if actual != count:
+                  raise SystemExit(f'{path}: expected {count} occurrence(s), found {actual}: {old[:100]!r}')
+              p.write_text(s.replace(old, new, count), encoding='utf-8')
+
+          # Session role storage, helpers and sign-out cleanup.
+          path = 'src/XPScript.Web.Runtime/XpsWebState.cs'
+          patch(path,
+              '    public const string RulesKey = "rules";\n',
+              '    public const string RulesKey = "rules";\n    public const string RolesKey = "roles";\n')
+          patch(path,
+              '    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);\n',
+              '    public IReadOnlyCollection<string> Rules => ParseRules(Get(RulesKey) as string);\n    public IReadOnlyCollection<string> Roles => ParseRoles(Get(RolesKey) as string);\n')
+          patch(path,
+              '        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");\n',
+              '        if (name.Equals(RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");\n        if (name.Equals(RolesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string) throw new InvalidOperationException("Session \'roles\' must be a comma- or semicolon-separated string.");\n')
+          patch(path,
+              '    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n',
+              '''    public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n    public void SetRole(string role)\n    {\n        var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);\n        foreach (var value in ParseRoles(role)) roles.Add(value);\n        if (roles.Count == 0) return;\n        Set(RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));\n    }\n\n    public string GetRole() => string.Join(';', Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));\n\n    public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);\n\n    public bool RemoveRole(string role)\n    {\n        var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);\n        var removed = false;\n        foreach (var value in ParseRoles(role)) removed |= roles.Remove(value);\n        if (!removed) return false;\n        if (roles.Count == 0) RemoveIfPresent(RolesKey);\n        else Set(RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));\n        return true;\n    }\n\n''')
+          patch(path,
+              '        RemoveIfPresent(RulesKey);\n        RotateId();\n',
+              '        RemoveIfPresent(RulesKey);\n        RemoveIfPresent(RolesKey);\n        RotateId();\n')
+          patch(path,
+              '    private static string NormalizeRule(string? rule) { var value = (rule ?? string.Empty).Trim(); if (value.Length > 128) throw new ArgumentException("Rule name exceeds 128 characters.", nameof(rule)); if (value.Any(char.IsControl)) throw new ArgumentException("Rule name contains a control character.", nameof(rule)); return value; }\n',
+              '''    private static string NormalizeRule(string? rule) { var value = (rule ?? string.Empty).Trim(); if (value.Length > 128) throw new ArgumentException("Rule name exceeds 128 characters.", nameof(rule)); if (value.Any(char.IsControl)) throw new ArgumentException("Rule name contains a control character.", nameof(rule)); return value; }\n    private static IReadOnlyCollection<string> ParseRoles(string? roles)\n    {\n        if (string.IsNullOrWhiteSpace(roles)) return Array.Empty<string>();\n        var values = roles.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(NormalizeRole).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();\n        if (values.Length > 128) throw new ArgumentException("Session roles cannot exceed 128 entries.", nameof(roles));\n        return values;\n    }\n    private static string NormalizeRole(string? role) { var value = (role ?? string.Empty).Trim(); if (value.Length is 0 or > 128) throw new ArgumentException("Role name must contain 1 to 128 characters.", nameof(role)); if (value.Any(char.IsControl)) throw new ArgumentException("Role name contains a control character.", nameof(role)); return value; }\n''')
+
+          # Persistent CGI session role parity.
+          path = 'src/XPScript.Web.Cgi/XpsCgiPersistentState.cs'
+          patch(path,
+              '        public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);\n',
+              '        public IReadOnlyCollection<string> Rules => ParseRules(Get(XpsWebSession.RulesKey) as string);\n        public IReadOnlyCollection<string> Roles => ParseRoles(Get(XpsWebSession.RolesKey) as string);\n')
+          patch(path,
+              '            if (name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)\n                throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");\n',
+              '            if (name.Equals(XpsWebSession.RulesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)\n                throw new InvalidOperationException("Session \'rules\' must be a comma- or semicolon-separated string.");\n            if (name.Equals(XpsWebSession.RolesKey, StringComparison.OrdinalIgnoreCase) && value is not null and not string)\n                throw new InvalidOperationException("Session \'roles\' must be a comma- or semicolon-separated string.");\n')
+          patch(path,
+              '        public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n',
+              '''        public bool HasRule(string rule) => Rules.Contains(NormalizeRule(rule), StringComparer.OrdinalIgnoreCase);\n\n        public void SetRole(string role)\n        {\n            var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);\n            foreach (var value in ParseRoles(role)) roles.Add(value);\n            if (roles.Count > 0) Set(XpsWebSession.RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));\n        }\n\n        public string GetRole() => string.Join(';', Roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));\n        public bool HasRole(string role) => Roles.Contains(NormalizeRole(role), StringComparer.OrdinalIgnoreCase);\n\n        public bool RemoveRole(string role)\n        {\n            var roles = new HashSet<string>(Roles, StringComparer.OrdinalIgnoreCase);\n            var removed = false;\n            foreach (var value in ParseRoles(role)) removed |= roles.Remove(value);\n            if (!removed) return false;\n            if (roles.Count == 0) RemoveIfPresent(XpsWebSession.RolesKey);\n            else Set(XpsWebSession.RolesKey, string.Join(';', roles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)));\n            return true;\n        }\n\n''')
+          patch(path,
+              '            RemoveIfPresent(XpsWebSession.RulesKey);\n            RotateId();\n',
+              '            RemoveIfPresent(XpsWebSession.RulesKey);\n            RemoveIfPresent(XpsWebSession.RolesKey);\n            RotateId();\n')
+          patch(path,
+              '''    private static string NormalizeRule(string? rule)\n    {\n        var value = (rule ?? string.Empty).Trim();\n        if (value.Length > 128 || value.Any(char.IsControl)) throw new ArgumentException("Invalid session rule.", nameof(rule));\n        return value;\n    }\n''',
+              '''    private static string NormalizeRule(string? rule)\n    {\n        var value = (rule ?? string.Empty).Trim();\n        if (value.Length > 128 || value.Any(char.IsControl)) throw new ArgumentException("Invalid session rule.", nameof(rule));\n        return value;\n    }\n\n    private static IReadOnlyCollection<string> ParseRoles(string? value)\n    {\n        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<string>();\n        var roles = value.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)\n            .Select(NormalizeRole).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();\n        if (roles.Length > 128) throw new ArgumentException("Session roles cannot exceed 128 entries.", nameof(value));\n        return roles;\n    }\n\n    private static string NormalizeRole(string? role)\n    {\n        var value = (role ?? string.Empty).Trim();\n        if (value.Length is 0 or > 128 || value.Any(char.IsControl)) throw new ArgumentException("Invalid session role.", nameof(role));\n        return value;\n    }\n''')
+
+          # [Role:...] metadata. Multiple role lines and semicolon/comma values are one OR set.
+          path = 'src/XPScript.Web.Runtime/XpsWebRouteMetadataParser.cs'
+          patch(path,
+              '            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))\n',
+              '            attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase) ||\n            attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))\n')
+          patch(path,
+              '        var forbiddenRules = new List<string>();\n',
+              '        var forbiddenRules = new List<string>();\n        var requiredRoles = new List<string>();\n')
+          patch(path,
+              '''            if (attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))\n            {\n                var rule = attribute[5..].Trim();\n                if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");\n                if (rule.StartsWith('!')) forbiddenRules.Add(NormalizeRule(rule[1..]));\n                else requiredRules.Add(NormalizeRule(rule));\n            }\n''',
+              '''            if (attribute.StartsWith("Rule:", StringComparison.OrdinalIgnoreCase))\n            {\n                var rule = attribute[5..].Trim();\n                if (rule.Length == 0) throw new XpsWebRouteMetadataException("Rule attribute requires a rule name.");\n                if (rule.StartsWith('!')) forbiddenRules.Add(NormalizeRule(rule[1..]));\n                else requiredRules.Add(NormalizeRule(rule));\n                continue;\n            }\n\n            if (attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase))\n            {\n                var roleText = attribute[5..].Trim();\n                if (roleText.Length == 0) throw new XpsWebRouteMetadataException("Role attribute requires at least one role name.");\n                foreach (var role in roleText.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))\n                {\n                    var normalized = NormalizeRole(role);\n                    if (!requiredRoles.Contains(normalized, StringComparer.OrdinalIgnoreCase)) requiredRoles.Add(normalized);\n                }\n            }\n''')
+          patch(path,
+              '        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules);\n',
+              '        return new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules) { RequiredRoles = requiredRoles.AsReadOnly() };\n')
+          patch(path,
+              '''    private static string NormalizeRule(string value)\n    {\n        var normalized = value.Trim();\n        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");\n        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Rule name contains a control character.");\n        return normalized;\n    }\n''',
+              '''    private static string NormalizeRule(string value)\n    {\n        var normalized = value.Trim();\n        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Rule name must contain 1 to 128 characters.");\n        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Rule name contains a control character.");\n        return normalized;\n    }\n\n    private static string NormalizeRole(string value)\n    {\n        var normalized = value.Trim();\n        if (normalized.Length is 0 or > 128) throw new XpsWebRouteMetadataException("Role name must contain 1 to 128 characters.");\n        if (normalized.Any(char.IsControl)) throw new XpsWebRouteMetadataException("Role name contains a control character.");\n        return normalized;\n    }\n''')
+
+          # Response status code and optional custom status message.
+          path = 'src/XPScript.Web.Runtime/XpsWebResponse.cs'
+          patch(path,
+              '    public int StatusCode { get; set; } = 200;\n',
+              '    public int StatusCode { get; set; } = 200;\n    public string? StatusMessage { get; set; }\n')
+          patch(path,
+              '''    public void Redirect(string url, int statusCode = 302)\n    {\n''',
+              '''    public void SetStatus(int statusCode, string? statusMessage = null)\n    {\n        EnsureWritable();\n        if (statusCode is < 100 or > 599) throw new ArgumentOutOfRangeException(nameof(statusCode), "Response status code must be between 100 and 599.");\n        if (statusMessage is not null) ValidateStatusMessage(statusMessage);\n        StatusCode = statusCode;\n        StatusMessage = string.IsNullOrWhiteSpace(statusMessage) ? null : statusMessage.Trim();\n    }\n\n    public void Redirect(string url, int statusCode = 302)\n    {\n''')
+          patch(path,
+              '        StatusCode = 200;\n        ContentType = "text/html; charset=utf-8";\n',
+              '        StatusCode = 200;\n        StatusMessage = null;\n        ContentType = "text/html; charset=utf-8";\n')
+          patch(path,
+              '        if (ContentType is not null) ValidateHeaderValue(ContentType);\n',
+              '        if (ContentType is not null) ValidateHeaderValue(ContentType);\n        if (StatusMessage is not null) ValidateStatusMessage(StatusMessage);\n')
+          patch(path,
+              '''    public static void ValidateHeaderValue(string value)\n    {\n        ArgumentNullException.ThrowIfNull(value);\n        if (value.IndexOfAny(['\\r', '\\n', '\\0']) >= 0)\n            throw new ArgumentException("Header value contains a prohibited control character.", nameof(value));\n    }\n''',
+              '''    public static void ValidateHeaderValue(string value)\n    {\n        ArgumentNullException.ThrowIfNull(value);\n        if (value.IndexOfAny(['\\r', '\\n', '\\0']) >= 0)\n            throw new ArgumentException("Header value contains a prohibited control character.", nameof(value));\n    }\n\n    public static void ValidateStatusMessage(string value)\n    {\n        ArgumentNullException.ThrowIfNull(value);\n        if (value.Length > 256 || value.IndexOfAny(['\\r', '\\n', '\\0']) >= 0 || value.Any(c => char.IsControl(c) && c != '\\t'))\n            throw new ArgumentException("Response status message is invalid.", nameof(value));\n    }\n\n    public static string ReasonPhrase(int statusCode) => statusCode switch\n    {\n        100 => "Continue", 101 => "Switching Protocols", 200 => "OK", 201 => "Created", 202 => "Accepted", 204 => "No Content",\n        206 => "Partial Content", 300 => "Multiple Choices", 301 => "Moved Permanently", 302 => "Found", 303 => "See Other", 304 => "Not Modified",\n        307 => "Temporary Redirect", 308 => "Permanent Redirect", 400 => "Bad Request", 401 => "Unauthorized", 402 => "Payment Required",\n        403 => "Forbidden", 404 => "Not Found", 405 => "Method Not Allowed", 406 => "Not Acceptable", 408 => "Request Timeout", 409 => "Conflict",\n        410 => "Gone", 411 => "Length Required", 412 => "Precondition Failed", 413 => "Payload Too Large", 414 => "URI Too Long",\n        415 => "Unsupported Media Type", 416 => "Range Not Satisfiable", 418 => "I'm a teapot", 422 => "Unprocessable Content",\n        423 => "Locked", 424 => "Failed Dependency", 425 => "Too Early", 426 => "Upgrade Required", 428 => "Precondition Required",\n        429 => "Too Many Requests", 431 => "Request Header Fields Too Large", 451 => "Unavailable For Legal Reasons", 500 => "Internal Server Error",\n        501 => "Not Implemented", 502 => "Bad Gateway", 503 => "Service Unavailable", 504 => "Gateway Timeout", 505 => "HTTP Version Not Supported",\n        507 => "Insufficient Storage", 508 => "Loop Detected", 510 => "Not Extended", 511 => "Network Authentication Required", _ => "Status"\n    };\n''')
+
+          # CGI custom/default reason phrase.
+          path = 'src/XPScript.Web.Cgi/XpsCgiAdapter.cs'
+          patch(path,
+              '.Append(ReasonPhrase(response.StatusCode))\n',
+              '.Append(string.IsNullOrWhiteSpace(response.StatusMessage) ? XpsWebResponse.ReasonPhrase(response.StatusCode) : response.StatusMessage)\n')
+
+          # FastCGI status reason phrase.
+          path = 'src/XPScript.Web.FastCgi/XpsFastCgiAdapter.cs'
+          patch(path,
+              '        var builder = new StringBuilder().Append("Status: ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append("\\r\\n");\n',
+              '        var builder = new StringBuilder().Append("Status: ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append(\' \').Append(string.IsNullOrWhiteSpace(response.StatusMessage) ? XpsWebResponse.ReasonPhrase(response.StatusCode) : response.StatusMessage).Append("\\r\\n");\n')
+          # FastCGI always has an in-memory session store unless explicitly supplied.
+          patch(path,
+              '        _sessions = sessions;\n',
+              '        _sessions = sessions ?? new XpsSessionStore();\n')
+
+          # Kestrel always has sessions, and forwards optional HTTP/1 reason phrase.
+          path = 'src/XPScript.Web.Kestrel/XpsKestrelAdapter.cs'
+          patch(path,
+              'using Microsoft.AspNetCore.HttpOverrides;\n',
+              'using Microsoft.AspNetCore.HttpOverrides;\nusing Microsoft.AspNetCore.Http.Features;\n')
+          patch(path,
+              '        options.Validate();\n\n        var runtimeTelemetry',
+              '        options.Validate();\n        sessions ??= new XpsSessionStore();\n\n        var runtimeTelemetry')
+          patch(path,
+              '        http.Response.StatusCode = response.StatusCode;\n',
+              '        http.Response.StatusCode = response.StatusCode;\n        if (!string.IsNullOrWhiteSpace(response.StatusMessage))\n        {\n            var feature = http.Features.Get<IHttpResponseFeature>();\n            if (feature is not null) feature.ReasonPhrase = response.StatusMessage;\n        }\n')
+
+          # CLI web sessions enabled by default. --sessions remains accepted for compatibility.
+          path = 'src/XPScript.Cli/Program.cs'
+          patch(path, '    var enableSessions = false;\n', '    var enableSessions = true;\n')
+          patch(path, '    var sessionOptionSpecified = false;\n', '')
+          patch(path, '                sessionOptionSpecified = true;\n', '', count=4)
+          patch(path,
+              '    if (sessionOptionSpecified && !enableSessions)\n        throw new ArgumentException("Session configuration options require --sessions.");\n',
+              '')
+          patch(path,
+              '                [--health] [--metrics] [--sessions]\n',
+              '                [--health] [--metrics]\n')
+
+          # Config keeps the legacy Sessions member readable but no longer uses it to enable sessions.
+          path = 'src/XPScript.Cli/XpsHostConfig.cs'
+          patch(path, '        AddFlag(result, cliArgs, "--sessions", config.Sessions);\n', '')
+          patch(path,
+              '        public FastCgiConfig? FastCgi { get; init; }\n',
+              '        public FastCgiConfig? FastCgi { get; init; }\n        public CgiConfig? Cgi { get; init; }\n')
+          patch(path,
+              '''    public sealed class FastCgiConfig\n    {\n''',
+              '''    public sealed class CgiConfig\n    {\n        public string? SessionFolder { get; init; }\n    }\n\n    public sealed class FastCgiConfig\n    {\n''')
+
+          # CGI: sessions only when cgi.sessionFolder is configured. Legacy state root may persist Application but no session.
+          path = 'src/XPScript.Web.Cgi/Program.cs'
+          patch(path,
+              'using System.Reflection;\n',
+              'using System.Reflection;\nusing System.Text.Json;\n')
+          old = '''            var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");\n            if (!string.IsNullOrWhiteSpace(stateRoot))\n            {\n                await using var state = await XpsCgiPersistentState.OpenAsync(stateRoot, siteId).ConfigureAwait(false);\n                var adapter = new XpsCgiAdapter(\n                    new XpsCgiOptions(),\n                    server,\n                    dispatcher,\n                    application: state.Application,\n                    sessionFactory: state.BindSession);\n                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);\n            }\n            else\n            {\n                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher);\n                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);\n            }\n'''
+          new = '''            var sessionRoot = ResolveSessionRoot(environment, root);\n            var stateRoot = Value(environment, "XPSCRIPT_STATE_ROOT");\n            if (!string.IsNullOrWhiteSpace(sessionRoot))\n            {\n                await using var state = await XpsCgiPersistentState.OpenAsync(sessionRoot, siteId).ConfigureAwait(false);\n                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher, application: state.Application, sessionFactory: state.BindSession);\n                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);\n            }\n            else if (!string.IsNullOrWhiteSpace(stateRoot))\n            {\n                await using var state = await XpsCgiPersistentState.OpenAsync(stateRoot, siteId).ConfigureAwait(false);\n                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher, application: state.Application);\n                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);\n            }\n            else\n            {\n                var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, dispatcher);\n                await adapter.RunAsync(Console.OpenStandardInput(), stdout, environment).ConfigureAwait(false);\n            }\n'''
+          patch(path, old, new)
+          patch(path,
+              '''    private static string? Value(IReadOnlyDictionary<string, string?> environment, string name) =>\n        environment.TryGetValue(name, out var value) ? value : null;\n''',
+              '''    private static string? ResolveSessionRoot(IReadOnlyDictionary<string, string?> environment, string root)\n    {\n        var explicitConfig = Value(environment, "XPSCRIPT_CONFIG");\n        var configPath = !string.IsNullOrWhiteSpace(explicitConfig)\n            ? Path.GetFullPath(explicitConfig)\n            : Path.Combine(root, "web.cfg");\n        if (!File.Exists(configPath)) return null;\n\n        using var stream = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.Read);\n        using var document = JsonDocument.Parse(stream, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });\n        if (!document.RootElement.TryGetProperty("cgi", out var cgi) || cgi.ValueKind != JsonValueKind.Object) return null;\n        if (!cgi.TryGetProperty("sessionFolder", out var folder) || folder.ValueKind == JsonValueKind.Null) return null;\n        if (folder.ValueKind != JsonValueKind.String) throw new XpsCgiException("cgi.sessionFolder must be a string.");\n        var value = folder.GetString();\n        if (string.IsNullOrWhiteSpace(value)) return null;\n        var configDirectory = Path.GetDirectoryName(configPath) ?? root;\n        return Path.GetFullPath(value, configDirectory);\n    }\n\n    private static string? Value(IReadOnlyDictionary<string, string?> environment, string name) =>\n        environment.TryGetValue(name, out var value) ? value : null;\n''')
+
+          # Remove temporary workflow from the resulting implementation commit.
+          Path('.github/workflows/temporary-web-session-roles-status.yml').unlink()
+      - name: Commit implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Implement default web sessions roles and response status"
+          git push origin HEAD:web-session-roles-status
