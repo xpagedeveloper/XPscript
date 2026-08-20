@@ -93,6 +93,30 @@ try
     if (policy.Authorize(request, anonymous) != XpsRouteAuthorizationResult.AuthenticationRequired)
         throw new Exception("Anonymous route authorization mismatch.");
 
+    var rolePolicy = new XpsRoutePolicy(
+        false,
+        new HashSet<string>(["POST"], StringComparer.OrdinalIgnoreCase),
+        [],
+        [],
+        ["admin", "user", "editor"],
+        ["blocked"]);
+    var adminRole = new XpsWebPrincipal(true, "44", "admin-role", roles: ["admin"]);
+    var userRole = new XpsWebPrincipal(true, "45", "user-role", roles: ["user"]);
+    var editorRole = new XpsWebPrincipal(true, "46", "editor-role", roles: ["editor"]);
+    var noMatchingRole = new XpsWebPrincipal(true, "47", "other-role", roles: ["viewer"]);
+    var blockedRole = new XpsWebPrincipal(true, "48", "blocked-role", roles: ["admin", "blocked"]);
+
+    if (rolePolicy.Authorize(request, adminRole) != XpsRouteAuthorizationResult.Allowed)
+        throw new Exception("Admin role should satisfy OR role policy.");
+    if (rolePolicy.Authorize(request, userRole) != XpsRouteAuthorizationResult.Allowed)
+        throw new Exception("User role should satisfy OR role policy.");
+    if (rolePolicy.Authorize(request, editorRole) != XpsRouteAuthorizationResult.Allowed)
+        throw new Exception("Role from a separate role line should satisfy OR role policy.");
+    if (rolePolicy.Authorize(request, noMatchingRole) != XpsRouteAuthorizationResult.Forbidden)
+        throw new Exception("Principal without any required role should be forbidden.");
+    if (rolePolicy.Authorize(request, blockedRole) != XpsRouteAuthorizationResult.Forbidden)
+        throw new Exception("Negated role must override an allowed role.");
+
     var wrongMethod = new XpsWebRequest(
         "GET", "/foo/save", "/save", "",
         new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
