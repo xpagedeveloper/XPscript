@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using XPScript.Compiler;
 using XPScript.Web.Runtime;
@@ -22,7 +24,60 @@ public sealed class XpsWebCompiler
         return CompileAsync(fullSourcePath, defaultRoot, cancellationToken);
     }
 
-    public async Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, string allowedSourceRoot, CancellationToken cancellationToken = default)
+    public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, string allowedSourceRoot, CancellationToken cancellationToken = default)
+        => CompileCoreAsync(sourcePath, allowedSourceRoot, null, null, cancellationToken);
+
+    internal Task<XpsCompiledWebUnit> CompileAndPersistAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string snapshotIdentity,
+        string persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
+        => CompileCoreAsync(sourcePath, allowedSourceRoot, snapshotIdentity, persistentCacheDirectory, cancellationToken);
+
+    internal async Task<XpsCompiledWebUnit?> TryLoadPersistentAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string snapshotIdentity,
+        string persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshotIdentity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(persistentCacheDirectory);
+
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var fullSourceRoot = Path.GetFullPath(allowedSourceRoot);
+        if (!File.Exists(fullSourcePath)) return null;
+        var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
+        var parsed = new XpsWebRouteMetadataParser().Parse(source);
+        if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase) || parsed.Routes.Count == 0) return null;
+
+        var artifactDirectory = PersistentArtifactDirectory(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity);
+        var assemblyPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.dll");
+        if (!File.Exists(assemblyPath)) return null;
+
+        try
+        {
+            var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
+            var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
+            var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
+        {
+            try { Directory.Delete(artifactDirectory, recursive: true); } catch { }
+            return null;
+        }
+    }
+
+    private async Task<XpsCompiledWebUnit> CompileCoreAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string? snapshotIdentity,
+        string? persistentCacheDirectory,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
@@ -72,29 +127,81 @@ public sealed class XpsWebCompiler
             var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
 
-            var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
-            loadContext.Resolving += ResolveSharedAssembly;
-            try
-            {
-                using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
-                Assembly assembly;
-                if (pdbBytes is not null)
-                {
-                    using var pdbStream = new MemoryStream(pdbBytes, writable: false);
-                    assembly = loadContext.LoadFromStream(assemblyStream, pdbStream);
-                }
-                else assembly = loadContext.LoadFromStream(assemblyStream);
-                ValidateCompiledRoutes(assembly, parsed.Routes);
-                return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
-            }
-            catch
-            {
-                loadContext.Resolving -= ResolveSharedAssembly;
-                loadContext.Unload();
-                throw;
-            }
+            if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
+                await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, cancellationToken).ConfigureAwait(false);
+
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
         }
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
+    }
+
+    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed)
+    {
+        var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+        loadContext.Resolving += ResolveSharedAssembly;
+        try
+        {
+            using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
+            Assembly assembly;
+            if (pdbBytes is not null)
+            {
+                using var pdbStream = new MemoryStream(pdbBytes, writable: false);
+                assembly = loadContext.LoadFromStream(assemblyStream, pdbStream);
+            }
+            else assembly = loadContext.LoadFromStream(assemblyStream);
+            ValidateCompiledRoutes(assembly, parsed.Routes);
+            return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
+        }
+        catch
+        {
+            loadContext.Resolving -= ResolveSharedAssembly;
+            loadContext.Unload();
+            throw;
+        }
+    }
+
+    private static string PersistentArtifactDirectory(string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity)
+    {
+        var sourceKey = HashText(Path.GetFullPath(siteRoot) + "\0" + Path.GetFullPath(sourcePath));
+        var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var runtimeIdentity = typeof(XpsWebContext).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var identityKey = HashText(snapshotIdentity + "\0" + compilerIdentity + "\0" + runtimeIdentity);
+        return Path.Combine(Path.GetFullPath(cacheRoot), sourceKey, identityKey);
+    }
+
+    private static string HashText(string value)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private static async Task PersistArtifactAsync(
+        string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, CancellationToken cancellationToken)
+    {
+        var artifactDirectory = PersistentArtifactDirectory(cacheRoot, siteRoot, sourcePath, snapshotIdentity);
+        Directory.CreateDirectory(artifactDirectory);
+        await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.dll"), assemblyBytes, cancellationToken).ConfigureAwait(false);
+        if (pdbBytes is not null)
+            await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb"), pdbBytes, cancellationToken).ConfigureAwait(false);
+
+        var sourceDirectory = Directory.GetParent(artifactDirectory)?.FullName;
+        if (sourceDirectory is null) return;
+        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory))
+        {
+            if (Path.GetFullPath(directory).Equals(Path.GetFullPath(artifactDirectory), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
+            try { Directory.Delete(directory, recursive: true); } catch { }
+        }
+    }
+
+    private static async Task WriteAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken)
+    {
+        var temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllBytesAsync(temp, bytes, cancellationToken).ConfigureAwait(false);
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+        }
     }
 
     private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync(string sourcePath, string webRoot, XpsWebRouteParseResult parsed, CancellationToken cancellationToken)
