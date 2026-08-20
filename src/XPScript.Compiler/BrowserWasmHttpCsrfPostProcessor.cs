@@ -14,6 +14,7 @@ internal sealed class BrowserWasmHttpCsrfPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+        generated = new EvaluateSecurityPostProcessor().Transform(generated);
         if (!_runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) return generated;
         if (!generated.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal)) return generated;
         if (generated.Contains("__xpscriptCsrfRetryToken", StringComparison.Ordinal)) return generated;
