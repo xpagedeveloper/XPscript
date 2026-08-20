@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
@@ -21,10 +22,6 @@ internal sealed class SourceLineMarkerPreprocessor
             if (!inProcedure && IsProcedureStart(code))
             {
                 inProcedure = true;
-                // A procedure/property header may itself span several physical lines
-                // using XPScript's normal '_' continuation syntax. Track that state
-                // immediately so source markers are never injected into the logical
-                // declaration/parameter list before continuation normalization runs.
                 continuation = EndsWithContinuation(code);
                 output.Add(raw);
                 continue;
@@ -44,8 +41,11 @@ internal sealed class SourceLineMarkerPreprocessor
                 {
                     var indent = Regex.Match(raw, @"^\s*").Value;
                     var expandedLine = i + 1;
-                    var physicalLine = sourceMap?.Resolve(expandedLine, sourceName).Line ?? expandedLine;
-                    output.Add(indent + $"Call XPSourceLineRuntime.Set({physicalLine})");
+                    var location = sourceMap?.Resolve(expandedLine, sourceName)
+                        ?? new SourceMap.Location(sourceName, expandedLine, raw);
+                    var sourceId = SafeSourceId(location.SourcePath, sourceName);
+                    var encodedSourceId = Convert.ToHexString(Encoding.UTF8.GetBytes(sourceId));
+                    output.Add(indent + $"Call XPSourceLineRuntime.__XPSOURCE_{location.Line}_{encodedSourceId}()");
                 }
 
                 output.Add(raw);
@@ -57,6 +57,39 @@ internal sealed class SourceLineMarkerPreprocessor
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static string SafeSourceId(string sourcePath, string rootSourcePath)
+    {
+        try
+        {
+            var sourceFull = Path.GetFullPath(sourcePath);
+            var rootFull = Path.GetFullPath(rootSourcePath);
+            var rootDirectory = Path.GetDirectoryName(rootFull) ?? Environment.CurrentDirectory;
+            var relative = Path.GetRelativePath(rootDirectory, sourceFull);
+            if (!Path.IsPathRooted(relative) &&
+                !relative.Equals("..", StringComparison.Ordinal) &&
+                !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
+                !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+            {
+                return relative.Replace('\\', '/');
+            }
+
+            var name = Path.GetFileName(sourceFull);
+            return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
+        }
+        catch
+        {
+            try
+            {
+                var name = Path.GetFileName(sourcePath);
+                return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
+            }
+            catch
+            {
+                return "input.xps";
+            }
+        }
     }
 
     private static bool IsProcedureStart(string code) =>
