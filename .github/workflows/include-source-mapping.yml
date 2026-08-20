@@ -7,9 +7,14 @@ on:
       - todo-include-source-mapping
       - todo-include-diagnostic-source-lines
       - todo-include-erl-source-lines
+      - compiler-source-line-mapping
     paths:
       - 'src/XPScript.Compiler/Include*.cs'
       - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/SourceLineMarkerPreprocessor.cs'
+      - 'src/XPScript.Compiler/SourceLineRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompilerSourceLineDirectivePostProcessor.cs'
+      - 'src/XPScript.Compiler/BrowserWasmHttpCsrfPostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source-map/**'
       - 'samples/include-erl/**'
@@ -20,6 +25,10 @@ on:
     paths:
       - 'src/XPScript.Compiler/Include*.cs'
       - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
+      - 'src/XPScript.Compiler/SourceLineMarkerPreprocessor.cs'
+      - 'src/XPScript.Compiler/SourceLineRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompilerSourceLineDirectivePostProcessor.cs'
+      - 'src/XPScript.Compiler/BrowserWasmHttpCsrfPostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'samples/include-source-map/**'
       - 'samples/include-erl/**'
