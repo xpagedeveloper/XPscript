@@ -1,0 +1,90 @@
+' XPScript HTTPDB Supabase and Domino REST regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim supa As New HTTPDBSupabase("http://127.0.0.1:18082", "test-key")
+    Dim domino As New HTTPDBDominoRest("http://127.0.0.1:18082", "", "demo")
+    Dim data As New JsonObject
+    Dim args As New JsonObject
+    Dim doc As JsonDocument
+    Dim obj As JsonObject
+    Dim filter As String
+    Dim token As String
+    Dim unid As String
+
+    Call supa.SetBearerToken("user-token")
+    Call supa.SetSchema("public")
+    filter = supa.Eq("id", 42)
+    Print "SUPA_EQ=" & filter
+
+    Set doc = supa.Select("customers", "select=*&id=eq.42")
+    Print "SUPA_SELECT_TYPE=" & doc.Root.Type
+
+    Call data.Set("id", 42)
+    Call data.Set("name", "Ada")
+    Set doc = supa.Insert("customers", data)
+    Print "SUPA_INSERT_TYPE=" & doc.Root.Type
+
+    Call data.Set("name", "Ada Updated")
+    Set doc = supa.Update("customers", filter, data)
+    Print "SUPA_UPDATE_TYPE=" & doc.Root.Type
+
+    Set doc = supa.Upsert("customers", data)
+    Print "SUPA_UPSERT_TYPE=" & doc.Root.Type
+
+    Call args.Set("name", "Ada")
+    Set doc = supa.Rpc("hello", args)
+    Print "SUPA_RPC_TYPE=" & doc.Root.Type
+
+    Set doc = supa.Delete("customers", filter)
+    Print "SUPA_DELETE_TYPE=" & doc.Root.Type
+
+    Call supa.ConfigureSqlEndpoint("http://127.0.0.1:18082/sql", "admin-token")
+    Set doc = supa.ExecuteSql("select 1 as ok")
+    Set obj = doc.Root.AsObject()
+    Print "SUPA_SQL=" & CStr(obj.Get("query"))
+
+    Set doc = supa.CreateTable("create table demo(id int)")
+    Set obj = doc.Root.AsObject()
+    Print "SUPA_DDL=" & CStr(obj.Get("query"))
+
+    token = domino.Login("CN=Test User/O=Example", "secret")
+    Print "DOMINO_LOGIN=" & token
+
+    Set data = New JsonObject
+    Call data.Set("Form", "Customer")
+    Call data.Set("name", "Ada")
+    Set doc = domino.CreateDocument(data)
+    Set obj = doc.Root.AsObject()
+    Print "DOMINO_CREATE_FORM=" & CStr(obj.Get("Form"))
+
+    unid = "0123456789ABCDEF0123456789ABCDEF"
+    Set doc = domino.GetDocument(unid)
+    Set obj = doc.Root.AsObject()
+    Print "DOMINO_GET_FORM=" & CStr(obj.Get("Form"))
+
+    Call data.Set("name", "Updated")
+    Set doc = domino.UpdateDocument(unid, data)
+    Print "DOMINO_UPDATE_TYPE=" & doc.Root.Type
+
+    Set doc = domino.PatchDocument(unid, data)
+    Print "DOMINO_PATCH_TYPE=" & doc.Root.Type
+
+    Set doc = domino.ListViews()
+    Print "DOMINO_VIEWS_TYPE=" & doc.Root.Type
+
+    Set doc = domino.GetView("People", "count=10")
+    Print "DOMINO_VIEW_TYPE=" & doc.Root.Type
+
+    Set doc = domino.Query("Form = 'Customer'")
+    Print "DOMINO_QUERY_TYPE=" & doc.Root.Type
+
+    Set doc = domino.ListForms()
+    Print "DOMINO_FORMS_TYPE=" & doc.Root.Type
+
+    Print "DOMINO_DELETE=" & CStr(domino.DeleteDocument(unid))
+    Call domino.Logout()
+    Print "HTTPDB_CLIENTS=OK"
+End Sub
