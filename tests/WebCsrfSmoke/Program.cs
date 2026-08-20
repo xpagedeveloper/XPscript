@@ -67,7 +67,7 @@ try
     XpsWebSecurity.ApplyResponseSecurityHeaders(headerResponse);
     if (!headerResponse.Headers.ContainsKey("Content-Security-Policy"))
         throw new Exception("HTML response did not receive a Content-Security-Policy header.");
-    if (!headerResponse.Headers.TryGetValue("X-Content-Type-Options", out var nosniff) || !nosn.Contains("nosniff"))
+    if (!headerResponse.Headers.TryGetValue("X-Content-Type-Options", out var nosniff) || !nosniff.Contains("nosniff"))
         throw new Exception("HTML response did not receive nosniff protection.");
 
     var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
