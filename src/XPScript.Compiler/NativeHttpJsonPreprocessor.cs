@@ -9,6 +9,7 @@ internal sealed class NativeHttpJsonPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var nativeTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var raw in lines)
         {
@@ -21,6 +22,7 @@ internal sealed class NativeHttpJsonPreprocessor
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
                 nativeVariables.Add(name);
+                nativeTypes[name] = type;
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
                 continue;
@@ -29,8 +31,11 @@ internal sealed class NativeHttpJsonPreprocessor
             var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+(HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement)\s*$", RegexOptions.IgnoreCase);
             if (dim.Success)
             {
-                nativeVariables.Add(dim.Groups[1].Value);
-                output.Add(indent + $"Dim {dim.Groups[1].Value} As Variant");
+                var name = dim.Groups[1].Value;
+                var type = dim.Groups[2].Value;
+                nativeVariables.Add(name);
+                nativeTypes[name] = type;
+                output.Add(indent + $"Dim {name} As Variant");
                 continue;
             }
 
@@ -46,8 +51,32 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
 
+            foreach (var pair in nativeTypes)
+            {
+                var escapedName = Regex.Escape(pair.Key);
+                if (pair.Value.Equals("HttpClient", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "GetJson", "PostJson", "PutJson", "PatchJson", "PostForm", "AddQuery", "LoadForm", "SaveForm", "PutForm" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptHttpUiFormHelpers.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                }
+                else if (pair.Value.Equals("HttpResponse", StringComparison.OrdinalIgnoreCase))
+                {
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.Json\s*\(\s*\)",
+                        $"XPScriptHttpUiFormHelpers.ResponseJson({pair.Key})",
+                        RegexOptions.IgnoreCase);
+                }
+            }
+
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
