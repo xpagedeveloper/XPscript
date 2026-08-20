@@ -16,13 +16,18 @@ public sealed record XpsCorsRule(IReadOnlyList<string> Origins)
         AllowsAnyOrigin || Origins.Contains(origin, StringComparer.OrdinalIgnoreCase);
 }
 
-public sealed record XpsRateLimitRule(int PermitLimit, TimeSpan Window)
+public sealed record XpsRateLimitRule
 {
-    public XpsRateLimitRule
+    public XpsRateLimitRule(int permitLimit, TimeSpan window)
     {
-        if (PermitLimit < 1) throw new ArgumentOutOfRangeException(nameof(PermitLimit));
-        if (Window <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(Window));
+        if (permitLimit < 1) throw new ArgumentOutOfRangeException(nameof(permitLimit));
+        if (window <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(window));
+        PermitLimit = permitLimit;
+        Window = window;
     }
+
+    public int PermitLimit { get; }
+    public TimeSpan Window { get; }
 }
 
 public sealed class XpsRequestBody
@@ -142,7 +147,7 @@ public static class XpsRestBinder
             }
 
             if (bodyObject is not null)
-                ValidateObject(bodyObject, descriptor.ValidationRules, validationErrors);
+                ValidateObject(bodyObject, descriptor.ValidationRules ?? Array.Empty<XpsValidationRule>(), validationErrors);
         }
         catch (XpsRestBindingException ex)
         {
@@ -266,30 +271,27 @@ public sealed class XpsFixedWindowRateLimiter
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(rule);
 
-        while (true)
+        var current = _windows.GetOrAdd(key, _ => new WindowState(now, 0));
+        lock (current.Gate)
         {
-            var current = _windows.GetOrAdd(key, _ => new WindowState(now, 0));
-            lock (current.Gate)
+            if (now - current.Start >= rule.Window)
             {
-                if (now - current.Start >= rule.Window)
-                {
-                    current.Start = now;
-                    current.Count = 1;
-                    retryAfter = TimeSpan.Zero;
-                    return true;
-                }
-
-                if (current.Count < rule.PermitLimit)
-                {
-                    current.Count++;
-                    retryAfter = TimeSpan.Zero;
-                    return true;
-                }
-
-                retryAfter = rule.Window - (now - current.Start);
-                if (retryAfter < TimeSpan.Zero) retryAfter = TimeSpan.Zero;
-                return false;
+                current.Start = now;
+                current.Count = 1;
+                retryAfter = TimeSpan.Zero;
+                return true;
             }
+
+            if (current.Count < rule.PermitLimit)
+            {
+                current.Count++;
+                retryAfter = TimeSpan.Zero;
+                return true;
+            }
+
+            retryAfter = rule.Window - (now - current.Start);
+            if (retryAfter < TimeSpan.Zero) retryAfter = TimeSpan.Zero;
+            return false;
         }
     }
 
