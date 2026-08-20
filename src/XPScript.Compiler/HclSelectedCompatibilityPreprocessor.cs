@@ -11,6 +11,7 @@ internal sealed class HclSelectedCompatibilityPreprocessor
         source = ReplaceCall(source, "GetObject", "LSHclSelectedRuntime.GetObject");
         source = ReplaceCall(source, "InputBox", "LSHclSelectedRuntime.InputBox");
         source = ReplaceCall(source, "Implode", "LSHclSelectedRuntime.Implode");
+        source = ReplaceCall(source, "IsDefined", "LSHclPlatformConstantRuntime.IsDefined");
         source = ReplaceCall(source, "FullTrim", "LSHclSelectedRuntime.FullTrim");
         source = ReplaceCall(source, "LenB", "LSHclSelectedRuntime.LenB");
         source = ReplaceCall(source, "Len", "LSHclSelectedRuntime.Len");
