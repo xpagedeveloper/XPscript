@@ -7,6 +7,14 @@ var stateRoot = Path.Combine(parent, "state");
 Directory.CreateDirectory(root);
 Directory.CreateDirectory(stateRoot);
 
+await File.WriteAllTextAsync(Path.Combine(root, "web.cfg"), """
+{
+  "cgi": {
+    "sessionFolder": "../state"
+  }
+}
+""");
+
 await File.WriteAllTextAsync(Path.Combine(root, "state.xps"), """
 [Anonymous]
 [Get]
