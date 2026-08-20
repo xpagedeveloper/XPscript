@@ -2,6 +2,8 @@
 
 XPScript web applications use the same `.xps` language and a shared dispatcher across Kestrel, FastCGI and CGI.
 
+For the complete verified REST API, Response, Session, Application and RequestScope reference, see [REST API development](rest-api.md).
+
 ## Route files
 
 A site is a directory of `.xps` files:
@@ -76,6 +78,8 @@ Supported parameter bindings are `[FromRoute]`, `[FromQuery]`, `[FromHeader]`, `
 
 Explicit REST routes are indexed across the web root. Duplicate route/method combinations are rejected. Parameter names in templates do not make otherwise identical templates unique, so `/api/users/{id}` and `/api/users/{name}` conflict when they use the same HTTP method.
 
+See [REST API development](rest-api.md) for the complete route, validation, CORS, rate-limit and response-helper reference.
+
 ## JSON request body and models
 
 `Body` is a reserved XPScript runtime identifier for web request content. It cannot be used as a variable, parameter, procedure or class name. It gives direct access to request content:
@@ -87,7 +91,7 @@ Response.OK(Body.Text())
 For typed JSON input, use a class and bind a differently named parameter with `[FromBody]`. A complex model parameter is also treated as JSON body input when no explicit source is given.
 
 ```xpscript
-Class CreateUserRequest
+Public Class CreateUserRequest
     [Required]
     [MaxLength:100]
     Public Name As String
@@ -110,7 +114,7 @@ End Sub
 
 JSON binding accepts `application/json` and structured `+json` media types. Property matching is case-insensitive. The default JSON body limit is 4 MiB.
 
-Model validation rules are `[Required]`, `[MaxLength:n]`, `[Email]` and `[Range:min;max]`. Validation failures return HTTP 400 using `application/problem+json` and include an `errors` object keyed by field name.
+Model validation rules are `[Required]`, `[MaxLength:n]`, `[Email]` and `[Range:min;max]`. These rules apply to REST request model fields. Validation failures return HTTP 400 using `application/problem+json` and include an `errors` object keyed by field name.
 
 ## REST response helpers
 
@@ -130,6 +134,8 @@ Response.problem(400, "Invalid request", "Email is required")
 ```
 
 `Response.OK(data)` returns HTTP 200 and JSON. `Response.Created(location, data)` returns HTTP 201 and a `Location` header. `Response.NoContent()` returns HTTP 204. Problem helpers use the RFC Problem Details shape with `type`, `title`, `status` and `detail`.
+
+The complete Response member list is maintained in [REST API development](rest-api.md#response-object).
 
 ## CORS route rule
 
@@ -197,38 +203,19 @@ Methods include `Query(name)`, `QueryFirst(name)`, `Header(name)`, `HeaderFirst(
 
 All CGI variables supplied by the transport are available through the Request object.
 
-Example:
-
-```xpscript
-[Anonymous]
-[Get]
-Sub Index()
-    Response.ContentType = "text/plain; charset=utf-8"
-    Response.Write("method=" + Request.Method)
-    Response.Write(" query=" + Request.Query_String_Decoded)
-End Sub
-```
-
 ## Response
 
-`Response` represents the outgoing HTTP response. Set `Response.ContentType` before writing when a specific media type is required. Use `Response.Write(value)` to append response content. UIForm also writes its generated web UI through the current response.
+`Response` represents the outgoing HTTP response. Set `Response.ContentType` before writing when a specific media type is required. Use `Response.Write(value)` to append response content. For REST APIs prefer typed response helpers instead of constructing JSON strings manually.
 
-```xpscript
-[Anonymous]
-[Get]
-Sub Index()
-    Response.ContentType = "application/json; charset=utf-8"
-    Response.Write("{\"ok\":true}")
-End Sub
-```
-
-For REST APIs prefer the typed response helpers described above instead of constructing JSON strings manually.
+See [Response object](rest-api.md#response-object) for the verified complete member list.
 
 ## Session
 
 Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
 
-Authenticated sessions can hold roles used directly by `[Role:...]` authorization. Authenticate first, then add roles:
+Session state supports `Add`, `Set`, `Get`, `Exists`, `Remove`, `Unset` and `Clear`. `Add` overwrites an existing value. `Get` returns `Null` when the key does not exist. `Remove` returns false without throwing when a key does not exist.
+
+Authenticated sessions can hold roles used directly by `[Role:...]` authorization:
 
 ```xpscript
 Session.Authenticate("42", "Fredrik")
@@ -236,13 +223,25 @@ Session.SetRole("admin")
 Session.SetRole("editor")
 ```
 
-Available role methods are `Session.SetRole(role)`, `Session.GetRoles()`, `Session.HasRole(role)` and `Session.RemoveRole(role)`. Role names are case-insensitive, contain at most 128 characters and reject control characters. A session supports at most 128 distinct roles.
+Session state is thread-safe inside one runtime process. Concurrent requests using the same session serialize session state mutations through the session record lock.
 
-Session roles are bound to the authenticated session identifier. Authentication rotates the identifier. Roles from an earlier login therefore do not become active for a later login unless the application assigns them again. Assign roles after `Session.Authenticate`.
+See [Session object](rest-api.md#session-object) for all implemented Session members.
 
-## Application
+## Application and Request scopes
 
-Web application state belongs to the configured site/runtime. Keep tenant and user data scoped explicitly. Do not use global application state as a substitute for authentication or authorization.
+Application scope is shared by requests in one application runtime instance. RequestScope exists only for one request.
+
+```xpscript
+Application.Add("site", "example")
+Session.Add("cart", "123")
+RequestScope.Add("temporary", "value")
+```
+
+For all three scopes, `Add(name, value)` overwrites an existing key, `Get(name)` returns `Null` for a missing key, and `Remove(name)` is safe for missing keys and returns false.
+
+Application scope is thread-safe inside one runtime process. RequestScope is also internally synchronized. In-memory Application state is not a distributed store across multiple processes or servers.
+
+See [Application scope](rest-api.md#application-scope) and [Request scope](rest-api.md#request-scope) for the complete API and lifetime rules.
 
 ## HTTP methods
 
