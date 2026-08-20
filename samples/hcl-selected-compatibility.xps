@@ -1,11 +1,5 @@
 Option Declare
 
-Sub Assert(ByVal condition As Boolean, ByVal message As String)
-    If Not condition Then
-        Error 5, message
-    End If
-End Sub
-
 Sub Main()
     Dim source As Variant
     Dim replaced As Variant
@@ -25,40 +19,80 @@ Sub Main()
 
     source = Array("alpha", "beta", "alpha")
     replaced = ArrayReplace(source, "alpha", "x")
-    Call Assert(Implode(replaced, ",") = "x,beta,x", "ArrayReplace/Implode failed")
+    If Implode(replaced, ",") <> "x,beta,x" Then
+        Error 5, "ArrayReplace/Implode failed"
+    End If
 
     matrix(1, 3) = "a"
     matrix(1, 4) = "b"
     matrix(2, 3) = "a"
     matrix(2, 4) = "c"
     matrixResult = ArrayReplace(matrix, "a", "z")
-    Call Assert(LBound(matrixResult, 1) = 1, "ArrayReplace lower bound dimension 1 failed")
-    Call Assert(UBound(matrixResult, 1) = 2, "ArrayReplace upper bound dimension 1 failed")
-    Call Assert(LBound(matrixResult, 2) = 3, "ArrayReplace lower bound dimension 2 failed")
-    Call Assert(UBound(matrixResult, 2) = 4, "ArrayReplace upper bound dimension 2 failed")
-    Call Assert(matrixResult(1, 3) = "z", "ArrayReplace multidimensional replacement failed")
-    Call Assert(matrixResult(2, 4) = "c", "ArrayReplace multidimensional preservation failed")
+    If LBound(matrixResult, 1) <> 1 Then
+        Error 5, "ArrayReplace lower bound dimension 1 failed"
+    End If
+    If UBound(matrixResult, 1) <> 2 Then
+        Error 5, "ArrayReplace upper bound dimension 1 failed"
+    End If
+    If LBound(matrixResult, 2) <> 3 Then
+        Error 5, "ArrayReplace lower bound dimension 2 failed"
+    End If
+    If UBound(matrixResult, 2) <> 4 Then
+        Error 5, "ArrayReplace upper bound dimension 2 failed"
+    End If
+    If matrixResult(1, 3) <> "z" Then
+        Error 5, "ArrayReplace multidimensional replacement failed"
+    End If
+    If matrixResult(2, 4) <> "c" Then
+        Error 5, "ArrayReplace multidimensional preservation failed"
+    End If
 
     cleaned = FullTrim(Array("  one   two  ", "", " three "))
-    Call Assert(Implode(cleaned, "|") = "one two|three", "FullTrim array failed")
-    Call Assert(FullTrim("  one   two  ") = "one two", "FullTrim string failed")
+    If Implode(cleaned, "|") <> "one two|three" Then
+        Error 5, "FullTrim array failed"
+    End If
+    If FullTrim("  one   two  ") <> "one two" Then
+        Error 5, "FullTrim string failed"
+    End If
 
     evaluated = Execute("Return 2 + 3")
-    Call Assert(CInt(evaluated) = 5, "Execute alias failed")
+    If CInt(evaluated) <> 5 Then
+        Error 5, "Execute alias failed"
+    End If
 
-    Call Assert(UString(3, 65) = "AAA", "UString numeric code failed")
-    Call Assert(UString(2, "xyz") = "xx", "UString string failed")
+    If UString(3, 65) <> "AAA" Then
+        Error 5, "UString numeric code failed"
+    End If
+    If UString(2, "xyz") <> "xx" Then
+        Error 5, "UString string failed"
+    End If
 
     singleValue = CSng(1.25)
-    Call Assert(Len(singleValue) = 4, "Len numeric storage size failed")
-    Call Assert(LenB(singleValue) = 4, "LenB numeric storage size failed")
-    Call Assert(LenB("alphabet") = 16, "LenB Unicode string size failed")
+    If Len(singleValue) <> 4 Then
+        Error 5, "Len numeric storage size failed"
+    End If
+    If LenB(singleValue) <> 4 Then
+        Error 5, "LenB numeric storage size failed"
+    End If
+    If LenB("alphabet") <> 16 Then
+        Error 5, "LenB Unicode string size failed"
+    End If
 
-    Call Assert(LenBP("ABCDE") = 5, "LenBP failed")
-    Call Assert(LeftBP("ABCDE", 2) = "AB", "LeftBP failed")
-    Call Assert(RightBP("ABCDE", 2) = "DE", "RightBP failed")
-    Call Assert(MidBP("ABCDE", 2, 3) = "BCD", "MidBP failed")
-    Call Assert(InStrBP("ABCDE", "CD") = 3, "InStrBP failed")
+    If LenBP("ABCDE") <> 5 Then
+        Error 5, "LenBP failed"
+    End If
+    If LeftBP("ABCDE", 2) <> "AB" Then
+        Error 5, "LeftBP failed"
+    End If
+    If RightBP("ABCDE", 2) <> "DE" Then
+        Error 5, "RightBP failed"
+    End If
+    If MidBP("ABCDE", 2, 3) <> "BCD" Then
+        Error 5, "MidBP failed"
+    End If
+    If InStrBP("ABCDE", "CD") <> 3 Then
+        Error 5, "InStrBP failed"
+    End If
 
     inputPath = "hcl-inputbp-regression.txt"
     fileNumber = FreeFile
@@ -70,38 +104,76 @@ Sub Main()
     inputText = InputBP(3, fileNumber)
     Close #fileNumber
     Kill inputPath
-    Call Assert(inputText = "ABC", "InputBP file read failed")
+    If inputText <> "ABC" Then
+        Error 5, "InputBP file read failed"
+    End If
 
-    Call Assert(LenC("A" & UChr(769) & "B") = 2, "LenC combining-character failed")
-    Call Assert(LeftC("A" & UChr(769) & "B", 1) = "A" & UChr(769), "LeftC failed")
-    Call Assert(RightC("A" & UChr(769) & "B", 1) = "B", "RightC failed")
-    Call Assert(MidC("A" & UChr(769) & "BC", 2, 2) = "BC", "MidC failed")
-    Call Assert(InStrC("A" & UChr(769) & "BC", "B") = 2, "InStrC failed")
+    If LenC("A" & UChr(769) & "B") <> 2 Then
+        Error 5, "LenC combining-character failed"
+    End If
+    If LeftC("A" & UChr(769) & "B", 1) <> "A" & UChr(769) Then
+        Error 5, "LeftC failed"
+    End If
+    If RightC("A" & UChr(769) & "B", 1) <> "B" Then
+        Error 5, "RightC failed"
+    End If
+    If MidC("A" & UChr(769) & "BC", 2, 2) <> "BC" Then
+        Error 5, "MidC failed"
+    End If
+    If InStrC("A" & UChr(769) & "BC", "B") <> 2 Then
+        Error 5, "InStrC failed"
+    End If
 
     Randomize 123
     firstRnd = Rnd
     repeatedRnd = Rnd(0)
-    Call Assert(firstRnd = repeatedRnd, "Rnd(0) did not return previous value")
+    If firstRnd <> repeatedRnd Then
+        Error 5, "Rnd(0) did not return previous value"
+    End If
     negativeA = Rnd(-99)
     negativeB = Rnd(-99)
-    Call Assert(negativeA = negativeB, "Rnd(negative) did not reseed deterministically")
+    If negativeA <> negativeB Then
+        Error 5, "Rnd(negative) did not reseed deterministically"
+    End If
 
-    Call Assert(Not IsDefined("SOME_UNKNOWN_XPSCRIPT_CONSTANT"), "IsDefined unknown constant failed")
+    If IsDefined("SOME_UNKNOWN_XPSCRIPT_CONSTANT") Then
+        Error 5, "IsDefined unknown constant failed"
+    End If
     If Platform() = "Windows" Then
-        Call Assert(IsDefined("WINDOWS"), "IsDefined WINDOWS failed")
-        Call Assert(IsDefined("WIN32"), "IsDefined WIN32 failed")
-        Call Assert(IsDefined("OLE"), "IsDefined OLE failed")
-        Call Assert(Not IsDefined("UNIX"), "IsDefined UNIX failed on Windows")
-        Call Assert(Len(CurDrive) = 2, "CurDrive failed on Windows")
-        ole = CreateObject("Scripting.Dictionary")
-        Call Assert(IsObject(ole), "CreateObject failed")
-    Else
-        Call Assert(IsDefined("UNIX"), "IsDefined UNIX failed")
-        Call Assert(Not IsDefined("WINDOWS"), "IsDefined WINDOWS failed on Unix")
-        If Platform() = "Linux" Then
-            Call Assert(IsDefined("LINUX"), "IsDefined LINUX failed")
+        If Not IsDefined("WINDOWS") Then
+            Error 5, "IsDefined WINDOWS failed"
         End If
-        Call Assert(CurDrive = "", "CurDrive must be empty on non-Windows")
+        If Not IsDefined("WIN32") Then
+            Error 5, "IsDefined WIN32 failed"
+        End If
+        If Not IsDefined("OLE") Then
+            Error 5, "IsDefined OLE failed"
+        End If
+        If IsDefined("UNIX") Then
+            Error 5, "IsDefined UNIX failed on Windows"
+        End If
+        If Len(CurDrive) <> 2 Then
+            Error 5, "CurDrive failed on Windows"
+        End If
+        ole = CreateObject("Scripting.Dictionary")
+        If Not IsObject(ole) Then
+            Error 5, "CreateObject failed"
+        End If
+    Else
+        If Not IsDefined("UNIX") Then
+            Error 5, "IsDefined UNIX failed"
+        End If
+        If IsDefined("WINDOWS") Then
+            Error 5, "IsDefined WINDOWS failed on Unix"
+        End If
+        If Platform() = "Linux" Then
+            If Not IsDefined("LINUX") Then
+                Error 5, "IsDefined LINUX failed"
+            End If
+        End If
+        If CurDrive <> "" Then
+            Error 5, "CurDrive must be empty on non-Windows"
+        End If
     End If
 
     Print "HCL_SELECTED_COMPATIBILITY=OK"
