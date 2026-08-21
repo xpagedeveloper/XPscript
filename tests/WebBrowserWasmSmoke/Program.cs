@@ -53,6 +53,7 @@ Sub Main()
     Call grid.SetFieldPosition("office", 4)
     Call grid.SetFieldPosition("markets", 4)
     Call grid.SetFieldPosition("actions_spacer", 12)
+    Call form.Navigate("page2")
     Call form.ShowDialog()
 End Sub
 """);
