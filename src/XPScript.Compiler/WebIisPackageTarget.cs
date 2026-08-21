@@ -13,10 +13,11 @@ internal static class WebIisPackageTarget
             return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "webiis target requires main.xps as the application entry file." }]);
 
         var root = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
-        outputPath ??= Path.Combine(root, "publish-webiis");
+        var rootParent = Path.GetDirectoryName(root) ?? root;
+        outputPath ??= Path.Combine(rootParent, Path.GetFileName(root) + "-webiis");
         outputPath = Path.GetFullPath(outputPath);
         if (IsInside(outputPath, root))
-            return CompileResult.Error([new CompileDiagnostic { Description = "webiis output directory must be outside the application source directory." }]);
+            return CompileResult.Error([new CompileDiagnostic { Description = "webiis output directory must be outside the application source directory to prevent deployment artifacts from being copied into the package." }]);
 
         if (Directory.Exists(outputPath)) Directory.Delete(outputPath, true);
         Directory.CreateDirectory(outputPath);
@@ -48,7 +49,6 @@ internal static class WebIisPackageTarget
         if (project is null)
             throw new CompilerException("Unable to locate src/XPScript.Cli/XPScript.Cli.csproj required to create a webiis package.");
 
-        var rid = "win-x64";
         var args = new List<string>
         {
             "publish", project, "-c", "Release", "-o", destination,
@@ -57,7 +57,7 @@ internal static class WebIisPackageTarget
         if (selfContained)
         {
             args.Add("-r");
-            args.Add(rid);
+            args.Add("win-x64");
         }
 
         var start = new System.Diagnostics.ProcessStartInfo("dotnet")
@@ -188,7 +188,8 @@ Manual installation:
 2. Extract the site directory to the IIS physical path.
 3. Give the application pool identity read access to the directory.
 4. Use an application pool with No Managed Code.
-5. Start the site.
+5. Configure the application's hostname as an allowed XPscript web host before exposing it externally.
+6. Start the site.
 
 Web Deploy:
   deploy.cmd "Default Web Site/MyApp"
