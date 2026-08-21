@@ -4,7 +4,7 @@
 
 ## Build
 
-The application entry file must be named `main.xps`.
+The application build entry file must be named `main.xps`.
 
 Self-contained Windows package:
 
@@ -26,6 +26,18 @@ xpscript compile main.xps --target webiis --framework-dependent -o C:\deploy\mya
 
 The output directory must be outside the XPscript source directory.
 
+`main.xps` is the build entry. It is not the HTTP default document.
+
+The HTTP default document is `index.xps`.
+
+A request for `/` resolves to `index.xps`. The same rule applies to directories, so `/admin/` resolves to `/admin/index.xps` when that file exists.
+
+`index.xps` can be any supported web application type:
+
+- normal server-side XPscript
+- server-side UIForm
+- `[Platform:browser-wasm]`
+
 ## Output
 
 A build creates an IIS deployment directory and a ZIP package.
@@ -34,6 +46,7 @@ A build creates an IIS deployment directory and a ZIP package.
 myapp\
   site\
     main.xps
+    index.xps
     ...other .xps and static files...
     host\
       xpscript.dll or xpscript.exe
@@ -65,12 +78,22 @@ A WebIIS package can contain all current XPscript web application types in the s
 
 Normal server-side routes and UIForm routes are handled by the persistent XPscript host behind IIS.
 
-A browser-WASM route is compiled and published when it is first requested unless its existing cache can be reused. Its bootstrap document and `_framework` assets are still served through the owning XPscript route, for example:
+A browser-WASM route is compiled and published when it is first requested unless its existing cache can be reused. Its bootstrap document and `_framework` assets are served through the owning XPscript route, for example:
 
 ```text
-/wasm.xps
-/wasm.xps/_framework/dotnet.js
+/customer.xps
+/customer.xps/_framework/dotnet.js
 ```
+
+When `index.xps` is browser-WASM and requested as `/`, the generated bootstrap document sets its base route to `index.xps/`. Browser assets therefore continue through the owning XPscript route:
+
+```text
+/
+/index.xps/main.js
+/index.xps/_framework/dotnet.js
+```
+
+This also works when the WebIIS package is installed as an IIS application below a parent site because the browser base route is relative to the current application URL.
 
 ## Server requirements
 
@@ -127,7 +150,9 @@ All `.xps` files and static application assets under the directory containing `m
 
 The generated IIS `web.config` replaces any source `web.config` in the application directory.
 
-`main.xps` is configured as the default XPscript document.
+`main.xps` remains the mandatory build entry for the WebIIS compiler target.
+
+`index.xps` is the HTTP default document. A request for `/` or for a directory path executes that directory's `index.xps` when present, regardless of whether it is server-side XPscript, server-side UIForm or browser-WASM.
 
 ## Sessions and state
 
@@ -154,6 +179,8 @@ The application-pool identity needs Modify permission on `.xpscript-cache` when 
 
 The cache is not a public IIS static directory. XPscript resolves browser-WASM assets through the corresponding `.xps` route.
 
+The browser-WASM cache identity includes the XPscript browser compiler identity. Updating the compiler therefore creates a new publish bundle even when the `.xps` source itself has not changed.
+
 If browser-WASM applications are precompiled as part of a deployment pipeline in the future, production servers can avoid SDK and write-permission requirements for those already-published applications.
 
 ## Updating an application
@@ -171,10 +198,13 @@ The `WebIIS IIS E2E` GitHub Actions workflow provisions a real IIS instance on `
 - normal XPscript HTTP routing
 - routes with and without `.xps`
 - case-insensitive route matching
+- directory `index.xps` resolution
+- `/` resolving to a browser-WASM `index.xps`
 - `Application.State`, `Process.State`, `Session.State` and `Request.State` behavior over real HTTP sessions
 - server-side UIForm HTML rendering
 - browser-WASM bootstrap generation
-- browser-WASM `_framework/dotnet.js` delivery through IIS
+- browser-WASM `main.js` and `_framework/dotnet.js` delivery through IIS
+- actual browser-WASM execution in headless Chromium until UIForm fields are present in the DOM
 
 ## Security
 
