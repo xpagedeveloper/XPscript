@@ -16,12 +16,26 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
             throw new XPScriptRuntimeException(5, "UIForm navigation target must be a relative local XPS module path with an optional .xps extension.");
 """;
 
+    private const string ParameterOverload = """
+
+    public void Navigate(object? target, object? parameterName, object? parameterValue)
+        => SetNavigation(target, XPScriptRuntime.CStr(parameterName), XPScriptRuntime.CStr(parameterValue));
+""";
+
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (generated.Contains(NewValidation, StringComparison.Ordinal)) return generated;
-        if (!generated.Contains(OldValidation, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm compiled-navigation compatibility.");
-        return generated.Replace(OldValidation, NewValidation, StringComparison.Ordinal);
+
+        if (!generated.Contains(NewValidation, StringComparison.Ordinal))
+        {
+            if (!generated.Contains(OldValidation, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install UIForm compiled-navigation compatibility.");
+            generated = generated.Replace(OldValidation, NewValidation, StringComparison.Ordinal);
+        }
+
+        if (generated.Contains(ParameterOverload, StringComparison.Ordinal))
+            generated = generated.Replace(ParameterOverload, string.Empty, StringComparison.Ordinal);
+
+        return generated;
     }
 }
