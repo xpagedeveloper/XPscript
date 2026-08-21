@@ -40,8 +40,12 @@ Sub Main()
     Application.Icon = "missing.ico"
 End Sub
 """);
-    RequireThrows<CompilerException>(
-        () => new XPScriptTranspiler().Transpile(File.ReadAllText(missingIconPath), missingIconPath, CompilerDriver.CurrentRuntimeIdentifier()),
+    await RequireThrowsAsync<CompilerException>(
+        () => new CompilerDriver().CompileAsync(
+            missingIconPath,
+            Path.Combine(root, OperatingSystem.IsWindows() ? "missing-icon.exe" : "missing-icon"),
+            selfContained: false,
+            runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier()),
         "Application.Icon file was not found");
 
     var emptyIconPath = Path.Combine(root, "empty-icon.xps");
@@ -78,11 +82,11 @@ static void Require(bool condition, string message)
     if (!condition) throw new InvalidOperationException(message);
 }
 
-static void RequireThrows<T>(Action action, string messagePart) where T : Exception
+static async Task RequireThrowsAsync<T>(Func<Task> action, string messagePart) where T : Exception
 {
     try
     {
-        action();
+        await action();
     }
     catch (T ex)
     {
