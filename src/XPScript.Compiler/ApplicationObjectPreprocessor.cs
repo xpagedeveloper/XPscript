@@ -6,6 +6,8 @@ internal sealed class ApplicationObjectPreprocessor
 {
     private const string TitleStateKey = "__xps_application_title";
     private const string IconStateKey = "__xps_application_icon";
+    private const string WidthStateKey = "__xps_application_width";
+    private const string HeightStateKey = "__xps_application_height";
     internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
 
     public string Transform(string source)
@@ -14,6 +16,8 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey, false);
         source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, true);
+        source = RewriteWritableApplicationProperty(source, "Width", WidthStateKey, false);
+        source = RewriteWritableApplicationProperty(source, "Height", HeightStateKey, false);
 
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
