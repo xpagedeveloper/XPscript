@@ -40,9 +40,8 @@ public static class XpsKestrelAdapter
 
         var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
         var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
-        var iisPort = 0;
         var iisOutOfProcess = !string.IsNullOrWhiteSpace(iisToken) &&
-                              int.TryParse(iisPortText, out iisPort) &&
+                              int.TryParse(iisPortText, out var iisPort) &&
                               iisPort is > 0 and <= 65535;
         var listenAddress = iisOutOfProcess ? IPAddress.Loopback : options.Address;
         var listenPort = iisOutOfProcess ? iisPort : options.Port;
@@ -205,15 +204,6 @@ public static class XpsKestrelAdapter
                 }
 
                 var rawPath = http.Request.Path.Value ?? string.Empty;
-                // Paths below a .xps module are virtual browser-WASM assets. They must
-                // reach the XPscript dispatcher instead of being treated as physical
-                // static files under the site root.
-                if (rawPath.Contains(".xps/", StringComparison.OrdinalIgnoreCase))
-                {
-                    await next();
-                    return;
-                }
-
                 if (!TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType))
                 {
                     await next();
@@ -327,18 +317,21 @@ public static class XpsKestrelAdapter
             http.RequestAborted);
     }
 
-    private static async Task<ReadOnlyMemory<byte>> ReadBoundedBodyAsync(Stream body, long maxBodyBytes, CancellationToken cancellationToken)
+    private static async Task<ReadOnlyMemory<byte>> ReadBoundedBodyAsync(Stream source, long maxBytes, CancellationToken cancellationToken)
     {
-        using var buffer = new MemoryStream();
-        var bytes = new byte[81920];
+        if (maxBytes > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(maxBytes), "In-memory request body limit cannot exceed Int32.MaxValue.");
+        using var output = new MemoryStream();
+        var buffer = new byte[16 * 1024];
+        long total = 0;
         while (true)
         {
-            var read = await body.ReadAsync(bytes.AsMemory(0, bytes.Length), cancellationToken);
+            var read = await source.ReadAsync(buffer, cancellationToken);
             if (read == 0) break;
-            if (buffer.Length + read > maxBodyBytes) throw new RequestBodyTooLargeException();
-            buffer.Write(bytes, 0, read);
+            total = checked(total + read);
+            if (total > maxBytes) throw new RequestBodyTooLargeException();
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
         }
-        return buffer.ToArray();
+        return output.ToArray();
     }
 
     private static async Task WriteResponseAsync(HttpContext http, XpsWebResponse response)
@@ -346,37 +339,62 @@ public static class XpsKestrelAdapter
         http.Response.StatusCode = response.StatusCode;
         if (!string.IsNullOrWhiteSpace(response.ContentType)) http.Response.ContentType = response.ContentType;
         foreach (var pair in response.Headers)
-            http.Response.Headers[pair.Key] = pair.Value;
-        if (response.Body.Length > 0 && !HttpMethods.IsHead(http.Request.Method))
+            http.Response.Headers[pair.Key] = pair.Value.ToArray();
+        if (!HttpMethods.IsHead(http.Request.Method) && response.Body.Length > 0)
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
     }
 
-    private static bool HostAllowed(string host, IReadOnlyList<string> allowedHosts)
-    {
-        if (allowedHosts.Count == 0) return true;
-        if (string.IsNullOrWhiteSpace(host)) return false;
-        return allowedHosts.Any(allowed => string.Equals(host, allowed, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool IsLoopback(IPAddress? address) => address is not null && IPAddress.IsLoopback(address);
-
     private static bool TryGetStaticPath(
-        string rawPath,
+        string requestPath,
         IReadOnlyDictionary<string, string> contentTypes,
         out string relativePath,
         out string contentType)
     {
         relativePath = string.Empty;
         contentType = string.Empty;
-        if (string.IsNullOrWhiteSpace(rawPath) || rawPath == "/") return false;
-        if (rawPath.IndexOf('%') >= 0) return false;
-        if (rawPath.Contains('\0') || rawPath.Contains('\\')) return false;
-        var decoded = Uri.UnescapeDataString(rawPath).Replace('\\', '/').TrimStart('/');
-        if (decoded.Length == 0 || decoded.Split('/').Any(part => part.Length == 0 || part is "." or ".." || part.StartsWith('.', StringComparison.Ordinal))) return false;
-        var extension = Path.GetExtension(decoded);
-        if (string.IsNullOrWhiteSpace(extension) || !contentTypes.TryGetValue(extension, out var mapped)) return false;
-        relativePath = decoded;
-        contentType = mapped;
+        if (string.IsNullOrWhiteSpace(requestPath) || requestPath.EndsWith("/", StringComparison.Ordinal)) return false;
+
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(requestPath); }
+        catch (UriFormatException) { return false; }
+        if (decoded.IndexOf('\0') >= 0 || decoded.Any(char.IsControl)) return false;
+        if (ContainsPercentEscape(decoded)) return false;
+
+        var normalized = decoded.Replace('\\', '/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0 || segments.Any(segment => segment is "." or ".." || segment.StartsWith(".", StringComparison.Ordinal))) return false;
+
+        var extension = Path.GetExtension(segments[^1]);
+        if (string.IsNullOrWhiteSpace(extension) || extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!contentTypes.TryGetValue(extension, out contentType!)) return false;
+
+        relativePath = string.Join('/', segments);
         return true;
     }
+
+    private static bool ContainsPercentEscape(string value)
+    {
+        for (var i = 0; i + 2 < value.Length; i++)
+        {
+            if (value[i] == '%' && Uri.IsHexDigit(value[i + 1]) && Uri.IsHexDigit(value[i + 2])) return true;
+        }
+        return false;
+    }
+
+    private static bool HostAllowed(string host, IReadOnlyList<string> allowedHosts)
+    {
+        if (string.IsNullOrWhiteSpace(host)) return false;
+        return allowedHosts.Any(allowed => string.Equals(host, NormalizeAllowedHost(allowed), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeAllowedHost(string host)
+    {
+        var value = host.Trim();
+        if (value.StartsWith('[') && value.EndsWith(']')) return value[1..^1];
+        return value;
+    }
+
+    private static bool IsLoopback(IPAddress? address) => address is not null && IPAddress.IsLoopback(address);
+
+    private sealed class RequestBodyTooLargeException : Exception { }
 }
