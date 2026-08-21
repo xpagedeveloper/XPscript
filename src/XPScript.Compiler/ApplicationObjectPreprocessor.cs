@@ -8,6 +8,9 @@ internal sealed class ApplicationObjectPreprocessor
     {
         RejectWrites(source);
 
+        source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
+
         source = Regex.Replace(
             source,
             @"\bApplication\.Args\s*\(((?:[^()]|\([^()]*\))*)\)",
