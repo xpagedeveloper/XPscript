@@ -241,9 +241,10 @@ const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i
         if (result.Equals("Open", StringComparison.OrdinalIgnoreCase))
 """);
 
-        if (generated.Contains("ParameterName", StringComparison.Ordinal) ||
-            generated.Contains("parameterName", StringComparison.Ordinal) ||
-            generated.Contains("parameterValue", StringComparison.Ordinal))
+        if (generated.Contains("_rowActionParameterName", StringComparison.Ordinal) ||
+            generated.Contains("public string ParameterName { get; init; }", StringComparison.Ordinal) ||
+            generated.Contains("AddRowNavigationButton(object? name, object? label, object? targetScript, object? valueField", StringComparison.Ordinal) ||
+            generated.Contains("SetRowAction(object? targetScript, object? valueField", StringComparison.Ordinal))
             throw new CompilerException("UIListView row navigation parameter cleanup was incomplete.");
 
         return generated;
