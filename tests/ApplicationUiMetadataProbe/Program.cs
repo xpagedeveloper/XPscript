@@ -24,7 +24,7 @@ End Sub
     Require(generated.Contains("__xps_application_icon", StringComparison.Ordinal), "Application.Icon was not mapped to application state");
     Require(generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal), "application title was not added to UI bridge metadata");
     Require(generated.Contains("applicationIcon = XPScriptRuntime.CStr", StringComparison.Ordinal), "application icon was not added to UI bridge metadata");
-    Require(generated.Contains("RenderApplicationWebMetadata", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
+    Require(generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
     Require(generated.Contains("__XPSCRIPT_APPLICATION_ICON_BUILD__=", StringComparison.Ordinal), "Windows executable icon build marker was not emitted");
 
     if (OperatingSystem.IsWindows())
