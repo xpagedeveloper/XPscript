@@ -62,6 +62,114 @@ internal sealed class XPScriptStateScope
     }
 }
 
+internal sealed class XPScriptStateProxy
+{
+    private readonly Func<object?> _externalProvider;
+    private readonly XPScriptStateScope? _local;
+    private readonly string _unavailableMessage;
+
+    public XPScriptStateProxy(Func<object?> externalProvider, XPScriptStateScope? local, string unavailableMessage)
+    {
+        _externalProvider = externalProvider;
+        _local = local;
+        _unavailableMessage = unavailableMessage;
+    }
+
+    public int Count
+    {
+        get
+        {
+            var target = Target();
+            if (target is XPScriptStateScope local) return local.Count;
+            return Convert.ToInt32(GetProperty(target, "Count"), System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    public object Keys
+    {
+        get
+        {
+            var target = Target();
+            if (target is XPScriptStateScope local) return local.Keys;
+            return GetProperty(target, "Keys") ?? Array.Empty<string>();
+        }
+    }
+
+    public object? Get(object? name)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) return local.Get(name);
+        return Invoke(target, "Get", XPScriptRuntime.CStr(name));
+    }
+
+    public void Set(object? name, object? value)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) { local.Set(name, value); return; }
+        Invoke(target, "Set", XPScriptRuntime.CStr(name), value);
+    }
+
+    public void Add(object? name, object? value)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) { local.Add(name, value); return; }
+        Invoke(target, "Add", XPScriptRuntime.CStr(name), value);
+    }
+
+    public bool Exists(object? name)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) return local.Exists(name);
+        return Convert.ToBoolean(Invoke(target, "Exists", XPScriptRuntime.CStr(name)), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public bool Remove(object? name)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) return local.Remove(name);
+        return Convert.ToBoolean(Invoke(target, "Remove", XPScriptRuntime.CStr(name)), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public bool Unset(object? name)
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) return local.Unset(name);
+        return Convert.ToBoolean(Invoke(target, "Unset", XPScriptRuntime.CStr(name)), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public void Clear()
+    {
+        var target = Target();
+        if (target is XPScriptStateScope local) { local.Clear(); return; }
+        Invoke(target, "Clear");
+    }
+
+    private object Target()
+    {
+        var external = _externalProvider();
+        if (external is not null) return external;
+        if (_local is not null) return _local;
+        throw new XPScriptRuntimeException(5, _unavailableMessage);
+    }
+
+    private static object? GetProperty(object target, string name)
+    {
+        var property = target.GetType().GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (property is null) throw new MissingMemberException(target.GetType().FullName, name);
+        try { return property.GetValue(target); }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw ex.InnerException; }
+    }
+
+    private static object? Invoke(object target, string name, params object?[] args)
+    {
+        var method = target.GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.Ordinal) && m.GetParameters().Length == args.Length);
+        if (method is null) throw new MissingMethodException(target.GetType().FullName, name);
+        try { return method.Invoke(target, args); }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw ex.InnerException; }
+    }
+}
+
 internal static class XPScriptExternalStateBridge
 {
     private const string RuntimeObjectsTypeName = "XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime";
@@ -82,37 +190,27 @@ internal static class XPScriptExternalStateBridge
     {
         var runtimeType = System.Type.GetType(RuntimeObjectsTypeName, throwOnError: false);
         if (runtimeType is null) return null;
-        var property = runtimeType.GetProperty(
-            propertyName,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        var property = runtimeType.GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
         if (property is null) return null;
-        try
-        {
-            return property.GetValue(null);
-        }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            throw ex.InnerException;
-        }
+        try { return property.GetValue(null); }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw ex.InnerException; }
     }
 }
 
 internal static class XPScriptProcessRuntime
 {
     private static readonly XPScriptStateScope LocalState = new();
-    public static dynamic State => XPScriptExternalStateBridge.ProcessState() ?? LocalState;
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.ProcessState, LocalState, "Process.State is unavailable.");
 }
 
 internal static class XPScriptSessionRuntime
 {
-    public static dynamic State => XPScriptExternalStateBridge.SessionState()
-        ?? throw new XPScriptRuntimeException(5, "Session.State is only available in a web request with sessions enabled.");
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.SessionState, null, "Session.State is only available in a web request with sessions enabled.");
 }
 
 internal static class XPScriptRequestRuntime
 {
-    public static dynamic State => XPScriptExternalStateBridge.RequestState()
-        ?? throw new XPScriptRuntimeException(5, "Request.State is only available while handling a web request.");
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.RequestState, null, "Request.State is only available while handling a web request.");
 }
 
 internal static class XPScriptApplicationRuntime
@@ -121,7 +219,7 @@ internal static class XPScriptApplicationRuntime
     private static readonly XPScriptStateScope LocalState = new();
     private static string[] _args = [];
 
-    public static dynamic State => XPScriptExternalStateBridge.ApplicationState() ?? LocalState;
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.ApplicationState, LocalState, "Application.State is unavailable.");
 
     public static void SetArgs(string[]? args)
     {
