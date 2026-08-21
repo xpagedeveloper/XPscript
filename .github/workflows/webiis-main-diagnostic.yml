@@ -12,12 +12,19 @@ permissions:
 jobs:
   diagnose:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Install WebAssembly build tools
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet workload install wasm-tools
+          if ($LASTEXITCODE -ne 0) { throw "wasm-tools installation failed: $LASTEXITCODE" }
 
       - name: Enable IIS
         shell: powershell
@@ -54,7 +61,14 @@ jobs:
               Response.Write("MAIN-OK")
           End Sub
           '@ | Set-Content -Path (Join-Path $app 'main.xps') -Encoding utf8
-          Copy-Item (Join-Path $app 'main.xps') (Join-Path $app 'index.xps')
+          @'
+          [Platform:browser-wasm]
+          Sub Main()
+              Dim form As New UIForm("IIS WASM Diagnostic")
+              Call form.AddTextField("name", "Name")
+              Call form.ShowDialog()
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'index.xps') -Encoding utf8
           dotnet run --project .\src\XPScript.Cli\XPScript.Cli.csproj -c Release -- compile (Join-Path $app 'main.xps') --target webiis --output $output
           if ($LASTEXITCODE -ne 0) { throw "WebIIS build failed: $LASTEXITCODE" }
           $site = Join-Path $output 'site'
@@ -90,17 +104,35 @@ jobs:
             Start-WebAppPool $pool
             Start-Website $name
             Start-Sleep 3
-            $r = Invoke-WebRequest "http://127.0.0.1:$port/main" -UseBasicParsing -TimeoutSec 60
-            Write-Host "STATUS=$($r.StatusCode) BODY=$($r.Content)"
-            if ($r.StatusCode -ne 200 -or $r.Content -ne 'MAIN-OK') {
-              throw "Unexpected IIS diagnostic response: status=$($r.StatusCode) body='$($r.Content)'"
+
+            $main = Invoke-WebRequest "http://127.0.0.1:$port/main" -UseBasicParsing -TimeoutSec 60
+            Write-Host "MAIN STATUS=$($main.StatusCode) BODY=$($main.Content)"
+            if ($main.StatusCode -ne 200 -or $main.Content -ne 'MAIN-OK') {
+              throw "Unexpected IIS diagnostic response: status=$($main.StatusCode) body='$($main.Content)'"
+            }
+
+            $root = Invoke-WebRequest "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 300
+            Write-Host "ROOT STATUS=$($root.StatusCode)"
+            if ($root.StatusCode -ne 200 -or $root.Content -notmatch 'xpscript-app') { throw 'browser-WASM root bootstrap failed.' }
+
+            Write-Host '=== exact WASM bootstrap files ==='
+            Get-ChildItem (Join-Path $path '.xpscript-cache\wasm') -Recurse -File -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -in @('main.js','xpscript-browser.js','dotnet.js','index.html','source.sha256') } |
+              ForEach-Object { Write-Host ("FILE=" + $_.FullName + " LENGTH=" + $_.Length) }
+
+            try {
+              $asset = Invoke-WebRequest "http://127.0.0.1:$port/index.xps/main.js" -UseBasicParsing -TimeoutSec 60
+              Write-Host "MAINJS STATUS=$($asset.StatusCode) LENGTH=$($asset.Content.Length)"
+              if ($asset.StatusCode -ne 200 -or [string]::IsNullOrWhiteSpace($asset.Content)) { throw 'browser-WASM main.js was not served.' }
+            }
+            catch {
+              Write-Host ("MAINJS ERROR=" + $_.Exception.Message)
+              throw
             }
           }
           finally {
             Write-Host '=== stdout logs ==='
             Get-ChildItem (Join-Path $path 'logs') -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.FullName) ---"; Get-Content $_.FullName -Raw }
-            Write-Host '=== compilation cache ==='
-            Get-ChildItem (Join-Path $path '.xpscript-cache') -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
             if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
             if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
           }
