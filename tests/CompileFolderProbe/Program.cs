@@ -33,7 +33,8 @@ Sub Main()
     Print Session.State.Get("session")
     Print Request.State.Get("request")
     Request.State.Set("request", "customers")
-    Call Navigate("nested/orders", "customerId", "42")
+    Request.State.Set("customerId", "42")
+    Call Navigate("nested/orders")
 End Sub
 """);
 
@@ -67,8 +68,9 @@ End Sub
     Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"nested/orders\"", StringComparison.Ordinal), "nested extensionless navigation alias is missing");
     Require(result.Source.Contains("LCase(Trim(target))", StringComparison.Ordinal), "navigation matching is not case-insensitive");
     Require(result.Source.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
-    Require(result.Source.Contains("Request.State.Set(parameterName, parameterValue)", StringComparison.Ordinal), "navigation parameters are not copied into Request.State");
-    Require(result.Source.Contains("Public Sub Navigate(target As String, Optional parameterName As String", StringComparison.Ordinal), "Navigate optional parameter support is missing");
+    Require(result.Source.Contains("Public Sub Navigate(target As String)", StringComparison.Ordinal), "single-target Navigate API is missing");
+    Require(!result.Source.Contains("parameterName", StringComparison.OrdinalIgnoreCase), "compiled navigation still contains parameter support");
+    Require(!result.Source.Contains("parameterValue", StringComparison.OrdinalIgnoreCase), "compiled navigation still contains parameter support");
     var targetIndex = result.Source.IndexOf("xpsCompilerGeneratedTarget = \"customers\"", StringComparison.Ordinal);
     var boundaryIndex = result.Source.IndexOf("XPScriptRequestRuntime.BeforeCompiledNavigation()", targetIndex, StringComparison.Ordinal);
     Require(targetIndex >= 0 && boundaryIndex > targetIndex, "Request.State boundary runs before a navigation target has matched");
