@@ -36,6 +36,7 @@ public static class XPScriptCompilerCommandLine
         var selfContained = true;
         var resultFormat = "text";
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+        string? target = null;
         var restricted = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
@@ -48,6 +49,8 @@ public static class XPScriptCompilerCommandLine
                     outputPath = Path.GetFullPath(args[++i]);
                 else if ((args[i] == "--runtime" || args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
+                else if (args[i] == "--target" && i + 1 < args.Length)
+                    target = args[++i].ToLowerInvariant();
                 else if (args[i] == "--framework-dependent")
                     selfContained = false;
                 else if (args[i] == "--result-format" && i + 1 < args.Length)
@@ -67,6 +70,15 @@ public static class XPScriptCompilerCommandLine
 
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
+            if (target is not null && target != "webiis")
+                throw new ArgumentException("--target currently supports webiis.");
+
+            if (target == "webiis")
+            {
+                var targetResult = await WebIisPackageTarget.BuildAsync(sourcePath, outputPath, selfContained, resultFormat).ConfigureAwait(false);
+                WriteResult(targetResult, resultFormat);
+                return targetResult.Success ? 0 : 2;
+            }
 
             if (restricted && sourceRoots.Count == 0)
                 sourceRoots.Add(Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory);
@@ -302,13 +314,17 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   {runCommand} <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
 
+Compiler targets:
+  webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
+
 If --runtime is omitted, XPScript targets the current operating system and process architecture.
+For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle dependent package. The default is self-contained win-x64.
 --restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
 --source-root may be repeated and automatically enables restricted Include processing.
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
