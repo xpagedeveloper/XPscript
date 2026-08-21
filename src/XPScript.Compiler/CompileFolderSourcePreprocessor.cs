@@ -295,7 +295,7 @@ public sealed class CompileFolderSourcePreprocessor
     {
         var aliases = BuildAliases(rootPath, modules);
         source.AppendLine();
-        source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
+        source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String)");
         source.AppendLine("    Dim xpsCompilerGeneratedTarget As String");
         source.AppendLine("    xpsCompilerGeneratedTarget = LCase(Trim(target))");
 
@@ -305,7 +305,6 @@ public sealed class CompileFolderSourcePreprocessor
             source.Append("    ").Append(first ? "If " : "ElseIf ")
                 .Append("xpsCompilerGeneratedTarget = \"").Append(EscapeXpsString(pair.Key)).AppendLine("\" Then");
             source.AppendLine("        Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
-            source.AppendLine("        If Len(Trim(parameterName)) > 0 Then Call Request.State.Set(parameterName, parameterValue)");
             source.Append("        Call ").Append(pair.Value).AppendLine("()");
             first = false;
         }
@@ -318,8 +317,8 @@ public sealed class CompileFolderSourcePreprocessor
         }
         source.AppendLine("End Sub");
         source.AppendLine();
-        source.AppendLine("Public Sub Navigate(target As String, Optional parameterName As String = \"\", Optional parameterValue As String = \"\")");
-        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, parameterName, parameterValue)");
+        source.AppendLine("Public Sub Navigate(target As String)");
+        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target)");
         source.AppendLine("End Sub");
     }
 
