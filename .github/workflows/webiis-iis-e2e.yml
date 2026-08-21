@@ -106,6 +106,17 @@ jobs:
           '@ | Set-Content -Path (Join-Path $app 'index.xps') -Encoding utf8
 
           @'
+          [Platform:browser-wasm]
+
+          Sub Main()
+              Dim form As New UIForm("IIS Browser WASM Navigation Test")
+              Call form.AddTextField("marker", "Marker")
+              Call form.ShowDialog()
+              Call form.Navigate("page2")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'navigate.xps') -Encoding utf8
+
+          @'
           [Anonymous]
           [Get]
           Sub Index()
@@ -175,6 +186,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "WebIIS compilation failed with exit code $LASTEXITCODE." }
           if (-not (Test-Path (Join-Path $output 'site\web.config'))) { throw 'web.config was not generated.' }
           if (-not (Test-Path (Join-Path $output 'site\index.xps'))) { throw 'index.xps was not packaged.' }
+          if (-not (Test-Path (Join-Path $output 'site\navigate.xps'))) { throw 'navigate.xps was not packaged.' }
           if (-not (Test-Path (Join-Path $output 'site\uiform.xps'))) { throw 'UIForm source was not packaged.' }
           if (-not (Test-Path (Join-Path $output 'site\ordinary\index.xps'))) { throw 'nested server-side index.xps was not packaged.' }
           if (-not (Test-Path "$output.zip")) { throw 'WebIIS ZIP was not generated.' }
@@ -331,8 +343,16 @@ jobs:
             const body = await page.textContent('body');
             if (!body || !body.includes('IIS Browser WASM Index Test')) throw new Error('WASM UIForm title was not rendered.');
             if (failures.length) throw new Error(failures.join('\n'));
+
+            await page.goto(process.env.XPS_E2E_URL + '/navigate', { waitUntil: 'domcontentloaded', timeout: 300000 });
+            await page.waitForURL(url => url.pathname.toLowerCase() === '/page2', { timeout: 180000 });
+            if (new URL(page.url()).pathname.toLowerCase() !== '/page2') throw new Error('WASM Navigate did not update the browser URL to /page2. Current URL: ' + page.url());
+            const targetBody = await page.textContent('body');
+            if (!targetBody || !targetBody.includes('PAGE2-OK')) throw new Error('WASM Navigate did not load page2.xps through IIS.');
+
             await browser.close();
             console.log('WEBIIS-BROWSER-WASM-CHROMIUM=OK');
+            console.log('WEBIIS-BROWSER-WASM-NAVIGATION=OK');
           })().catch(error => { console.error(error); process.exit(1); });
           '@ | Set-Content -Path $script -Encoding utf8
           Push-Location $env:XPS_PLAYWRIGHT
