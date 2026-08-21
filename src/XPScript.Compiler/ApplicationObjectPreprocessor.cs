@@ -4,9 +4,15 @@ namespace XPScript.Compiler;
 
 internal sealed class ApplicationObjectPreprocessor
 {
+    private const string TitleStateKey = "__xps_application_title";
+    private const string IconStateKey = "__xps_application_icon";
+
     public string Transform(string source)
     {
         RejectWrites(source);
+
+        source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey);
+        source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey);
 
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
@@ -36,6 +42,21 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.Path\b", "XPScriptApplicationRuntime.Path", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.FileName\b", "XPScriptApplicationRuntime.FileName", RegexOptions.IgnoreCase);
         return source;
+    }
+
+    private static string RewriteWritableApplicationProperty(string source, string propertyName, string stateKey)
+    {
+        source = Regex.Replace(
+            source,
+            $@"(?im)^(?<indent>\s*)Application\.{Regex.Escape(propertyName)}\s*=\s*(?<value>.+?)\s*$",
+            m => m.Groups["indent"].Value + $"Call XPScriptApplicationRuntime.State.Set(\"{stateKey}\", " + m.Groups["value"].Value + ")",
+            RegexOptions.CultureInvariant);
+
+        return Regex.Replace(
+            source,
+            $@"\bApplication\.{Regex.Escape(propertyName)}\b",
+            $"XPScriptApplicationRuntime.State.Get(\"{stateKey}\")",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static void RejectWrites(string source)
