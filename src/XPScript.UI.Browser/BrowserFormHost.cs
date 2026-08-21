@@ -14,6 +14,24 @@ public static partial class BrowserFormHost
         return RenderForm(normalized);
     }
 
+    public static void Navigate(string target)
+    {
+        if (string.IsNullOrWhiteSpace(target))
+            throw new ArgumentException("Browser navigation target is required.", nameof(target));
+
+        var path = target.Trim().Replace('\\', '/');
+        var extension = Path.GetExtension(path);
+        if (path.Length > 512 || path.StartsWith('/') || path.Contains("..", StringComparison.Ordinal) ||
+            Uri.TryCreate(path, UriKind.Absolute, out _) ||
+            (extension.Length > 0 && !extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("Browser navigation target must be a relative local XPS module path with an optional .xps extension.", nameof(target));
+
+        var url = path.EndsWith(".xps", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : path + ".xps";
+        Eval("window.location.href = " + JsonSerializer.Serialize(url) + ";");
+    }
+
     private static void ApplyApplicationMetadata(string requestJson)
     {
         var root = JsonNode.Parse(requestJson)?.AsObject();
