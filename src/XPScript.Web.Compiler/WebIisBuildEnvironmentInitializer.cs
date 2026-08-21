@@ -12,9 +12,11 @@ internal static class WebIisBuildEnvironmentInitializer
         var configuredCache = Environment.GetEnvironmentVariable(CacheEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(configuredCache)) return;
 
+        var applicationRoot = Directory.GetParent(Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory))?.FullName
+            ?? Environment.CurrentDirectory;
         var cacheRoot = Path.IsPathRooted(configuredCache)
             ? Path.GetFullPath(configuredCache)
-            : Path.GetFullPath(configuredCache, Environment.CurrentDirectory);
+            : Path.GetFullPath(configuredCache, applicationRoot);
 
         Directory.CreateDirectory(cacheRoot);
 
