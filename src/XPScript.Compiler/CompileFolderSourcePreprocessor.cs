@@ -30,6 +30,44 @@ public sealed class CompileFolderSourcePreprocessor
     public static bool IsDesktopProject(string source)
         => DesktopUiPattern.IsMatch(source);
 
+    public static bool IsDesktopProject(string source, string rootSourcePath)
+    {
+        if (IsDesktopProject(source)) return true;
+        if (string.IsNullOrWhiteSpace(rootSourcePath)) return false;
+
+        try
+        {
+            var match = NormalizeLines(source)
+                .Select(line => CompilePattern.Match(StripComment(line).Trim()))
+                .FirstOrDefault(candidate => candidate.Success);
+            if (match is null || !match.Success) return false;
+
+            var declared = (match.Groups["quoted"].Success ? match.Groups["quoted"].Value : match.Groups["plain"].Value).Trim();
+            if (declared.Length == 0) return false;
+            var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(rootSourcePath)) ?? Environment.CurrentDirectory;
+            var portable = declared.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            if (Path.IsPathRooted(portable)) return false;
+            var compileRoot = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
+            var relative = Path.GetRelativePath(sourceDirectory, compileRoot);
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !Directory.Exists(compileRoot))
+                return false;
+
+            foreach (var path in Directory.EnumerateFiles(compileRoot, "*.xps", SearchOption.AllDirectories))
+            {
+                string moduleSource;
+                try { moduleSource = File.ReadAllText(path); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+                if (DesktopUiPattern.IsMatch(moduleSource)) return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
     public Result Transform(string rootSource, string rootSourcePath, bool enableModules)
     {
         ArgumentNullException.ThrowIfNull(rootSource);
@@ -50,7 +88,7 @@ public sealed class CompileFolderSourcePreprocessor
         if (declarations.Count != 1)
             throw new CompilerException($"{Path.GetFileName(rootPath)}: A desktop or browser-wasm source may declare exactly one [Compile:folder] rule.");
 
-        if (IsDesktopProject(rootSource))
+        if (IsDesktopProject(rootSource, rootPath))
             ValidateDesktopMain(rootPath, rootDirectory);
 
         var compileRoot = ResolveCompileRoot(rootDirectory, declarations[0]);
