@@ -11,7 +11,7 @@ Sub Main()
     Dim customerId As String
     Dim result As String
 
-    customerId = Request.State.Get("customerId")
+    customerId = CStr(Request.State.Get("customerId"))
     If customerId = "" Then
         customerId = "new"
     End If
