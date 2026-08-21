@@ -9,7 +9,7 @@ on:
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
-      - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListView*PostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.UI.Browser/**'
@@ -23,6 +23,7 @@ on:
       - '.github/workflows/ui-form-core.yml'
   push:
     branches:
+      - main
       - 'todo-ui-form-*'
       - 'uiform-*'
     paths:
@@ -31,7 +32,7 @@ on:
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'src/XPScript.Compiler/UIForm*PostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
-      - 'src/XPScript.Compiler/UIListViewDesktopPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListView*PostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.UI.Browser/**'
