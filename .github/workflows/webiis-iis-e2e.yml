@@ -1,0 +1,237 @@
+name: WebIIS IIS E2E
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  iis-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Enable IIS
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Enable-WindowsOptionalFeature -Online -NoRestart -All -FeatureName `
+            IIS-WebServerRole, `
+            IIS-WebServer, `
+            IIS-CommonHttpFeatures, `
+            IIS-DefaultDocument, `
+            IIS-StaticContent, `
+            IIS-HttpErrors, `
+            IIS-HttpLogging, `
+            IIS-RequestFiltering, `
+            IIS-ApplicationDevelopment, `
+            IIS-ManagementConsole, `
+            IIS-ManagementScriptingTools
+          Start-Service W3SVC
+
+      - name: Install ASP.NET Core Hosting Bundle when needed
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $module = Join-Path $env:ProgramFiles 'IIS\Asp.Net Core Module\V2\aspnetcorev2.dll'
+          if (-not (Test-Path $module)) {
+            $installer = Join-Path $env:RUNNER_TEMP 'dotnet-hosting-10.exe'
+            Invoke-WebRequest 'https://aka.ms/dotnet/10.0/dotnet-hosting-win.exe' -OutFile $installer
+            $process = Start-Process $installer -ArgumentList '/install','/quiet','/norestart' -Wait -PassThru
+            if ($process.ExitCode -notin 0, 3010) {
+              throw "Hosting Bundle installer failed with exit code $($process.ExitCode)."
+            }
+          }
+          if (-not (Test-Path $module)) {
+            throw "ASP.NET Core Module V2 was not installed at $module."
+          }
+          & "$env:windir\system32\inetsrv\appcmd.exe" stop apppool /apppool.name:DefaultAppPool 2>$null | Out-Null
+          Restart-Service W3SVC
+
+      - name: Build WebIIS deployment package
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $app = Join-Path $env:RUNNER_TEMP 'xps-webiis-e2e-app'
+          $output = Join-Path $env:RUNNER_TEMP 'xps-webiis-e2e-deploy'
+          Remove-Item $app,$output,"$output.zip" -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $app -Force | Out-Null
+
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.Write("MAIN-OK")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'main.xps') -Encoding utf8
+
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.Write("PAGE2-OK")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'page2.xps') -Encoding utf8
+
+          @'
+          [Anonymous]
+          [Get]
+          Sub WriteA()
+              Application.State.Set("shared", "application-a")
+              Process.State.Set("shared", "process-a")
+              Session.State.Set("private", "session-a")
+              Request.State.Set("temporary", "request-a")
+              Response.Write("WRITE-A|")
+              Response.Write(Request.State.Get("temporary"))
+          End Sub
+
+          [Anonymous]
+          [Get]
+          Sub Read()
+              Response.Write(Application.State.Get("shared"))
+              Response.Write("|")
+              Response.Write(Process.State.Get("shared"))
+              Response.Write("|")
+              Response.Write(Session.State.Get("private"))
+              Response.Write("|")
+              Response.Write(Request.State.Get("temporary"))
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'state.xps') -Encoding utf8
+
+          @'
+          [Anonymous]
+          [Get]
+          Sub WriteB()
+              Application.State.Set("shared", "application-b")
+              Process.State.Set("shared", "process-b")
+              Session.State.Set("private", "session-b")
+              Response.Write("WRITE-B")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'stateb.xps') -Encoding utf8
+
+          dotnet run --project .\src\XPScript.Cli\XPScript.Cli.csproj -c Release -- compile (Join-Path $app 'main.xps') --target webiis --output $output
+          if ($LASTEXITCODE -ne 0) { throw "WebIIS compilation failed with exit code $LASTEXITCODE." }
+          if (-not (Test-Path (Join-Path $output 'site\web.config'))) { throw 'web.config was not generated.' }
+          if (-not (Test-Path "$output.zip")) { throw 'WebIIS ZIP was not generated.' }
+
+          "XPS_E2E_APP=$app" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "XPS_E2E_OUTPUT=$output" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install package into IIS
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module WebAdministration
+          $siteName = 'XPscript-WebIIS-E2E'
+          $poolName = 'XPscript-WebIIS-E2E-Pool'
+          $port = 50837
+          $physicalPath = Join-Path $env:XPS_E2E_OUTPUT 'site'
+
+          if (Test-Path "IIS:\Sites\$siteName") { Remove-Website -Name $siteName }
+          if (Test-Path "IIS:\AppPools\$poolName") { Remove-WebAppPool -Name $poolName }
+
+          New-WebAppPool -Name $poolName | Out-Null
+          Set-ItemProperty "IIS:\AppPools\$poolName" -Name managedRuntimeVersion -Value ''
+          Set-ItemProperty "IIS:\AppPools\$poolName" -Name processModel.identityType -Value 4
+          New-Website -Name $siteName -Port $port -IPAddress '127.0.0.1' -PhysicalPath $physicalPath -ApplicationPool $poolName | Out-Null
+
+          & icacls $physicalPath /grant "IIS AppPool\${poolName}:(OI)(CI)RX" /T /C | Out-Null
+          Start-WebAppPool -Name $poolName
+          Start-Website -Name $siteName
+
+          "XPS_E2E_SITE=$siteName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "XPS_E2E_POOL=$poolName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "XPS_E2E_URL=http://127.0.0.1:$port" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify real IIS HTTP routing and state scopes
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = $env:XPS_E2E_URL
+
+          $lastError = $null
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $probe = Invoke-WebRequest "$base/" -UseBasicParsing -TimeoutSec 5
+              if ($probe.StatusCode -eq 200) { break }
+            }
+            catch { $lastError = $_ }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $probe -or $probe.StatusCode -ne 200) {
+            throw "IIS site did not become ready. Last error: $lastError"
+          }
+          if ($probe.Content -ne 'MAIN-OK') { throw "Unexpected root response: '$($probe.Content)'" }
+
+          $extensionless = Invoke-WebRequest "$base/page2" -UseBasicParsing
+          if ($extensionless.Content -ne 'PAGE2-OK') { throw "Extensionless route failed: '$($extensionless.Content)'" }
+
+          $withExtension = Invoke-WebRequest "$base/page2.xps" -UseBasicParsing
+          if ($withExtension.Content -ne 'PAGE2-OK') { throw "Explicit .xps route failed: '$($withExtension.Content)'" }
+
+          $caseInsensitive = Invoke-WebRequest "$base/PAGE2" -UseBasicParsing
+          if ($caseInsensitive.Content -ne 'PAGE2-OK') { throw "Case-insensitive route failed: '$($caseInsensitive.Content)'" }
+
+          $userA = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          $userB = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+
+          $writeA = Invoke-WebRequest "$base/state/WriteA" -WebSession $userA -UseBasicParsing
+          if ($writeA.Content -ne 'WRITE-A|request-a') { throw "User A state write failed: '$($writeA.Content)'" }
+
+          $readA = Invoke-WebRequest "$base/state/Read" -WebSession $userA -UseBasicParsing
+          if ($readA.Content -ne 'application-a|process-a|session-a|') {
+            throw "User A state read failed or Request.State leaked: '$($readA.Content)'"
+          }
+
+          $readB = Invoke-WebRequest "$base/state/Read" -WebSession $userB -UseBasicParsing
+          if ($readB.Content -ne 'application-a|process-a||') {
+            throw "User B did not share Application/Process state or Session.State leaked: '$($readB.Content)'"
+          }
+
+          $writeB = Invoke-WebRequest "$base/stateb/WriteB" -WebSession $userB -UseBasicParsing
+          if ($writeB.Content -ne 'WRITE-B') { throw "User B state write failed: '$($writeB.Content)'" }
+
+          $readAAfterB = Invoke-WebRequest "$base/state/Read" -WebSession $userA -UseBasicParsing
+          if ($readAAfterB.Content -ne 'application-b|process-b|session-a|') {
+            throw "User A did not see User B Application/Process update or lost its own Session.State: '$($readAAfterB.Content)'"
+          }
+
+          $readBAfterB = Invoke-WebRequest "$base/state/Read" -WebSession $userB -UseBasicParsing
+          if ($readBAfterB.Content -ne 'application-b|process-b|session-b|') {
+            throw "User B Session.State was not preserved: '$($readBAfterB.Content)'"
+          }
+
+          Write-Host 'WEBIIS-IIS-E2E=OK'
+
+      - name: Collect IIS diagnostics on failure
+        if: failure()
+        shell: powershell
+        run: |
+          Write-Host '=== web.config ==='
+          Get-Content (Join-Path $env:XPS_E2E_OUTPUT 'site\web.config') -ErrorAction SilentlyContinue
+          Write-Host '=== IIS sites ==='
+          & "$env:windir\system32\inetsrv\appcmd.exe" list site
+          Write-Host '=== IIS app pools ==='
+          & "$env:windir\system32\inetsrv\appcmd.exe" list apppool
+          Write-Host '=== recent Application event log ==='
+          Get-WinEvent -LogName Application -MaxEvents 50 -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -match 'IIS|IIS AspNetCore Module|ASP.NET Core|WAS|W3SVC' } |
+            Format-List TimeCreated,ProviderName,Id,LevelDisplayName,Message
+
+      - name: Remove IIS test site
+        if: always()
+        shell: powershell
+        run: |
+          Import-Module WebAdministration -ErrorAction SilentlyContinue
+          if ($env:XPS_E2E_SITE -and (Test-Path "IIS:\Sites\$env:XPS_E2E_SITE")) {
+            Remove-Website -Name $env:XPS_E2E_SITE
+          }
+          if ($env:XPS_E2E_POOL -and (Test-Path "IIS:\AppPools\$env:XPS_E2E_POOL")) {
+            Remove-WebAppPool -Name $env:XPS_E2E_POOL
+          }
