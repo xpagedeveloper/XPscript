@@ -104,6 +104,9 @@ End Sub
     Require(generated.Contains("XPScriptRequestRuntime.State", StringComparison.Ordinal), "Request.State was not mapped for a compiled desktop/WASM application");
     Require(generated.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
     Require(generated.Contains("optional .xps extension", StringComparison.Ordinal), "UIForm navigation still requires an explicit .xps extension");
+    Require(!generated.Contains("_navigationParameterName", StringComparison.Ordinal), "generated UIForm runtime still contains navigation parameter-name state");
+    Require(!generated.Contains("_navigationParameterValue", StringComparison.Ordinal), "generated UIForm runtime still contains navigation parameter-value state");
+    Require(!generated.Contains("Navigate(object? target, object? parameterName", StringComparison.Ordinal), "generated UIForm runtime still exposes the removed navigation parameter overload");
 
     var missingMainRoot = Path.Combine(root, "missing-main");
     var missingMainApp = Path.Combine(missingMainRoot, "app");
