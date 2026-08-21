@@ -70,7 +70,13 @@ internal sealed class ApplicationObjectPreprocessor
                 {
                     var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
                     var resolved = Path.IsPathRooted(literal) ? Path.GetFullPath(literal) : Path.GetFullPath(literal, baseDirectory);
+                    if (Path.GetExtension(resolved).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(resolved))
+                        throw new CompilerException($"Application.Icon file was not found: {literal}");
                     return indent + "' " + BuildIconMarker + resolved + Environment.NewLine + assignment;
+                }
+                catch (CompilerException)
+                {
+                    throw;
                 }
                 catch
                 {
