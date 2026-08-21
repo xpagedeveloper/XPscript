@@ -187,18 +187,21 @@ Requirements:
 - IIS with ASP.NET Core Module V2.
 - For framework-dependent packages, install the .NET 10 Hosting Bundle.
 - Web Deploy is required only when using deploy.cmd.
+- If the application contains [Platform:browser-wasm] files and uses on-demand WASM compilation, install the matching .NET SDK and run: dotnet workload install wasm-tools
 
 Manual installation:
 1. Create or select an IIS site/application.
 2. Extract the site directory to the IIS physical path.
-3. Give the application pool identity read access to the directory.
+3. Give the application pool identity read and execute access to the site directory.
 4. Use an application pool with No Managed Code.
-5. Configure HTTP/HTTPS host bindings in IIS.
-6. Start the site.
+5. For browser-WASM on-demand compilation, create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory.
+6. Configure HTTP/HTTPS host bindings in IIS.
+7. Start the site.
 
 Web Deploy:
   deploy.cmd "Default Web Site/MyApp"
 
 IIS bindings control the public hostnames. ASP.NET Core Module V2 starts XPscript and forwards requests to its private loopback Kestrel endpoint.
+Normal server-side XPscript routes, server-rendered UIForm routes and browser-WASM routes can coexist in the same WebIIS application.
 """;
 }
