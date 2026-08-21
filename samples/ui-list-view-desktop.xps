@@ -30,9 +30,9 @@ Sub Main()
     Call list.SetKeyField("id")
     Call list.SetOnSelect("CustomerSelected")
     Call list.SetOnDoubleClick("CustomerDoubleClicked")
-    Call list.AddRowNavigationButton("edit", "Edit", "customer-form.xps", "id", "customerId")
+    Call list.AddRowNavigationButton("edit", "Edit", "customer-form")
     Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
-    Call list.SetRowAction("customer-form.xps", "id", "customerId")
+    Call list.SetRowAction("customer-form")
 
     result = list.ShowDialog()
     Print "RESULT=" & result
