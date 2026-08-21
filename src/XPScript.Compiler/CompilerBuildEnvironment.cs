@@ -102,7 +102,7 @@ internal static class CompilerBuildEnvironment
         var valueStart = markerIndex + ApplicationObjectPreprocessor.BuildIconMarker.Length;
         var valueEnd = generatedSource.IndexOfAny(['\r', '\n'], valueStart);
         var path = (valueEnd < 0 ? generatedSource[valueStart..] : generatedSource[valueStart..valueEnd]).Trim();
-        path = path.TrimEnd('"', '\'', '/', '*', ' ');
+        path = path.TrimEnd('"', '\'', '/', '*', ' ', ';', ')');
         if (path.Length == 0) return null;
         if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("Application.Icon must reference an .ico file when building a Windows executable.");
