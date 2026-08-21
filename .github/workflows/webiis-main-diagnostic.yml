@@ -1,0 +1,102 @@
+name: WebIIS Main Diagnostic
+
+on:
+  push:
+    branches: [ fix-navigation-state-handoff ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Enable IIS
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Enable-WindowsOptionalFeature -Online -NoRestart -All -FeatureName IIS-WebServerRole,IIS-WebServer,IIS-CommonHttpFeatures,IIS-DefaultDocument,IIS-StaticContent,IIS-HttpErrors,IIS-RequestFiltering,IIS-ManagementScriptingTools
+          Start-Service W3SVC
+
+      - name: Ensure ASP.NET Core Hosting Bundle
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $module = Join-Path $env:ProgramFiles 'IIS\Asp.Net Core Module\V2\aspnetcorev2.dll'
+          if (-not (Test-Path $module)) {
+            $installer = Join-Path $env:RUNNER_TEMP 'dotnet-hosting-10.exe'
+            Invoke-WebRequest 'https://aka.ms/dotnet/10.0/dotnet-hosting-win.exe' -OutFile $installer
+            $process = Start-Process $installer -ArgumentList '/install','/quiet','/norestart' -Wait -PassThru
+            if ($process.ExitCode -notin 0,3010) { throw "Hosting Bundle install failed: $($process.ExitCode)" }
+          }
+          Restart-Service W3SVC
+
+      - name: Build package with stdout diagnostics
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $app = Join-Path $env:RUNNER_TEMP 'xps-iis-main-diag-app'
+          $output = Join-Path $env:RUNNER_TEMP 'xps-iis-main-diag-output'
+          Remove-Item $app,$output,"$output.zip" -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $app -Force | Out-Null
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.Write("MAIN-OK")
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'main.xps') -Encoding utf8
+          Copy-Item (Join-Path $app 'main.xps') (Join-Path $app 'index.xps')
+          dotnet run --project .\src\XPScript.Cli\XPScript.Cli.csproj -c Release -- compile (Join-Path $app 'main.xps') --target webiis --output $output
+          if ($LASTEXITCODE -ne 0) { throw "WebIIS build failed: $LASTEXITCODE" }
+          $site = Join-Path $output 'site'
+          $config = Join-Path $site 'web.config'
+          $text = Get-Content $config -Raw
+          $text = $text.Replace('stdoutLogEnabled="false"','stdoutLogEnabled="true"')
+          Set-Content $config $text -Encoding utf8
+          New-Item -ItemType Directory -Path (Join-Path $site 'logs') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $site '.xpscript-cache') -Force | Out-Null
+          "XPS_DIAG_SITE_PATH=$site" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install and probe IIS site
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Import-Module WebAdministration
+          $name = 'XPscript-IIS-Main-Diag'
+          $pool = 'XPscript-IIS-Main-Diag-Pool'
+          $port = 50839
+          $path = $env:XPS_DIAG_SITE_PATH
+          if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
+          if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
+          New-WebAppPool $pool | Out-Null
+          Set-ItemProperty "IIS:\AppPools\$pool" -Name managedRuntimeVersion -Value ''
+          Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.identityType -Value 4
+          New-Website -Name $name -Port $port -IPAddress '127.0.0.1' -PhysicalPath $path -ApplicationPool $pool | Out-Null
+          & icacls $path /grant "IIS AppPool\${pool}:(OI)(CI)RX" /T /C | Out-Null
+          & icacls (Join-Path $path '.xpscript-cache') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
+          & icacls (Join-Path $path 'logs') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
+          Start-WebAppPool $pool
+          Start-Website $name
+          Start-Sleep 3
+          try {
+            $r = Invoke-WebRequest "http://127.0.0.1:$port/main" -UseBasicParsing -TimeoutSec 60
+            Write-Host "STATUS=$($r.StatusCode) BODY=$($r.Content)"
+          } catch {
+            Write-Host "REQUEST-ERROR=$($_.Exception.Message)"
+            if ($_.ErrorDetails.Message) { Write-Host "REQUEST-BODY=$($_.ErrorDetails.Message)" }
+          }
+          Start-Sleep 2
+          Write-Host '=== stdout logs ==='
+          Get-ChildItem (Join-Path $path 'logs') -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.FullName) ---"; Get-Content $_.FullName -Raw }
+          Write-Host '=== compilation cache ==='
+          Get-ChildItem (Join-Path $path '.xpscript-cache') -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
+          if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
+          if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
