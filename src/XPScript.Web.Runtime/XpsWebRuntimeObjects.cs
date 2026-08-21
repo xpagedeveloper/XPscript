@@ -15,4 +15,7 @@ public static class XpsWebRuntimeObjects
     public static IXpsSession Session =>
         XpsWebContextAccessor.Current.Session ??
         throw new InvalidOperationException("Session support is not enabled for this XPScript site.");
+
+    public static void StageRequestStateForNavigation()
+        => XpsNavigationStateHandoff.StageCurrent();
 }
