@@ -147,7 +147,11 @@ internal static class WebIisPackageTarget
       <handlers>
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
-      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess" />
+      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess">
+        <environmentVariables>
+          <environmentVariable name="XPSCRIPT_WEB_CACHE_DIRECTORY" value=".\\.xpscript-cache" />
+        </environmentVariables>
+      </aspNetCore>
     </system.webServer>
   </location>
 </configuration>
@@ -196,7 +200,7 @@ Manual installation:
 2. Extract the site directory to the IIS physical path.
 3. Give the application pool identity read and execute access to the site directory.
 4. Use an application pool with No Managed Code.
-5. For browser-WASM on-demand compilation, create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory.
+5. Create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory. XPscript uses it for server-side compiled units and browser-WASM on-demand compilation.
 6. Configure HTTP/HTTPS host bindings in IIS.
 7. Start the site.
 
