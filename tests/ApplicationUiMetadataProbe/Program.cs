@@ -34,11 +34,35 @@ End Sub
     Require(generated.Contains("ReadApplicationDimension(\"__xps_application_height\"", StringComparison.Ordinal), "application default height was not added to desktop UI metadata");
     Require(generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
 
+    var missingIconPath = Path.Combine(root, "missing-icon.xps");
+    File.WriteAllText(missingIconPath, """
+Sub Main()
+    Application.Icon = "missing.ico"
+End Sub
+""");
+    RequireThrows<CompilerException>(
+        () => new XPScriptTranspiler().Transpile(File.ReadAllText(missingIconPath), missingIconPath, CompilerDriver.CurrentRuntimeIdentifier()),
+        "Application.Icon file was not found");
+
+    var emptyIconPath = Path.Combine(root, "empty-icon.xps");
+    File.WriteAllText(emptyIconPath, """
+Sub Main()
+    Application.Icon = ""
+    Print Application.Icon
+End Sub
+""");
+    var emptyGenerated = new XPScriptTranspiler().Transpile(File.ReadAllText(emptyIconPath), emptyIconPath, CompilerDriver.CurrentRuntimeIdentifier());
+    Require(emptyGenerated.Contains("__xps_application_icon", StringComparison.Ordinal), "empty Application.Icon did not compile to application state");
+
     if (OperatingSystem.IsWindows())
     {
         var output = Path.Combine(root, "probe.exe");
         await new CompilerDriver().CompileAsync(sourcePath, output, selfContained: false, runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier());
         Require(File.Exists(output), "Windows executable was not produced with Application.Icon configured");
+
+        var emptyOutput = Path.Combine(root, "empty.exe");
+        await new CompilerDriver().CompileAsync(emptyIconPath, emptyOutput, selfContained: false, runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier());
+        Require(File.Exists(emptyOutput), "Windows executable was not produced with an empty Application.Icon");
     }
 
     Console.WriteLine("APPLICATION-UI-METADATA=OK");
@@ -52,6 +76,21 @@ finally
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static void RequireThrows<T>(Action action, string messagePart) where T : Exception
+{
+    try
+    {
+        action();
+    }
+    catch (T ex)
+    {
+        if (!ex.Message.Contains(messagePart, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Expected error containing '{messagePart}', got '{ex.Message}'.");
+        return;
+    }
+    throw new InvalidOperationException($"Expected {typeof(T).Name} containing '{messagePart}'.");
 }
 
 static byte[] CreateTinyIco()
