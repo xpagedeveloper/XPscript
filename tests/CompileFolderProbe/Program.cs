@@ -33,6 +33,7 @@ Sub Main()
     Print Session.State.Get("session")
     Print Request.State.Get("request")
     Request.State.Set("request", "customers")
+    Request.State.Set("customerId", "42")
     Call Navigate("nested/orders")
 End Sub
 """);
@@ -43,6 +44,7 @@ Sub Orders()
     Print Process.State.Get("process")
     Print Session.State.Get("session")
     Print Request.State.Get("request")
+    Print Request.State.Get("customerId")
 End Sub
 """);
 
@@ -62,8 +64,16 @@ End Sub
     Require(result.Dependencies.Any(x => Path.GetFileName(x).Equals("common.xps", StringComparison.OrdinalIgnoreCase)), "Include dependency was not tracked");
     Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"customers.xps\"", StringComparison.Ordinal), "navigation alias with .xps is missing");
     Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"customers\"", StringComparison.Ordinal), "extensionless navigation alias is missing");
+    Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"nested/orders.xps\"", StringComparison.Ordinal), "nested navigation alias with .xps is missing");
+    Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"nested/orders\"", StringComparison.Ordinal), "nested extensionless navigation alias is missing");
     Require(result.Source.Contains("LCase(Trim(target))", StringComparison.Ordinal), "navigation matching is not case-insensitive");
     Require(result.Source.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
+    Require(result.Source.Contains("Public Sub Navigate(target As String)", StringComparison.Ordinal), "single-target Navigate API is missing");
+    Require(!result.Source.Contains("parameterName", StringComparison.OrdinalIgnoreCase), "compiled navigation still contains parameter support");
+    Require(!result.Source.Contains("parameterValue", StringComparison.OrdinalIgnoreCase), "compiled navigation still contains parameter support");
+    var targetIndex = result.Source.IndexOf("xpsCompilerGeneratedTarget = \"customers\"", StringComparison.Ordinal);
+    var boundaryIndex = result.Source.IndexOf("XPScriptRequestRuntime.BeforeCompiledNavigation()", targetIndex, StringComparison.Ordinal);
+    Require(targetIndex >= 0 && boundaryIndex > targetIndex, "Request.State boundary runs before a navigation target has matched");
 
     var ignored = preprocessor.Transform("""
 [Compile:app]
@@ -93,6 +103,75 @@ End Sub
     Require(generated.Contains("XPScriptSessionRuntime.State", StringComparison.Ordinal), "Session.State was not mapped for a compiled desktop/WASM application");
     Require(generated.Contains("XPScriptRequestRuntime.State", StringComparison.Ordinal), "Request.State was not mapped for a compiled desktop/WASM application");
     Require(generated.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
+    Require(generated.Contains("optional .xps extension", StringComparison.Ordinal), "UIForm navigation still requires an explicit .xps extension");
+
+    var missingMainRoot = Path.Combine(root, "missing-main");
+    var missingMainApp = Path.Combine(missingMainRoot, "app");
+    Directory.CreateDirectory(missingMainApp);
+    var startPath = Path.Combine(missingMainRoot, "start.xps");
+    var desktopWithoutMain = """
+[Compile:app]
+Sub Main()
+    Dim form As New UIForm("Missing main")
+End Sub
+""";
+    File.WriteAllText(startPath, desktopWithoutMain);
+    File.WriteAllText(Path.Combine(missingMainApp, "page.xps"), "Sub Main()\nEnd Sub\n");
+    RequireThrows<CompilerException>(
+        () => preprocessor.Transform(desktopWithoutMain, startPath, enableModules: true),
+        "require main.xps");
+
+    var wrongEntryRoot = Path.Combine(root, "wrong-entry");
+    var wrongEntryApp = Path.Combine(wrongEntryRoot, "app");
+    Directory.CreateDirectory(wrongEntryApp);
+    File.WriteAllText(Path.Combine(wrongEntryRoot, "main.xps"), "Sub Main()\nEnd Sub\n");
+    var otherPath = Path.Combine(wrongEntryRoot, "other.xps");
+    var otherSource = """
+[Compile:app]
+Sub Main()
+    Dim form As New UIForm("Wrong entry")
+End Sub
+""";
+    File.WriteAllText(otherPath, otherSource);
+    RequireThrows<CompilerException>(
+        () => preprocessor.Transform(otherSource, otherPath, enableModules: true),
+        "compiled from main.xps");
+
+    var moduleDetectedRoot = Path.Combine(root, "module-detected-desktop");
+    var moduleDetectedApp = Path.Combine(moduleDetectedRoot, "app");
+    Directory.CreateDirectory(moduleDetectedApp);
+    var moduleDetectedMainPath = Path.Combine(moduleDetectedRoot, "main.xps");
+    var moduleDetectedMain = """
+[Compile:app]
+Sub Main()
+    Call Navigate("page")
+End Sub
+""";
+    File.WriteAllText(moduleDetectedMainPath, moduleDetectedMain);
+    File.WriteAllText(Path.Combine(moduleDetectedApp, "page.xps"), """
+Sub Main()
+    Dim form As New UIForm("Page")
+End Sub
+""");
+    Require(CompileFolderSourcePreprocessor.IsDesktopProject(moduleDetectedMain, moduleDetectedMainPath), "desktop UI in a compiled module was not detected");
+    var moduleDetectedGenerated = new XPScriptTranspiler().Transpile(moduleDetectedMain, moduleDetectedMainPath, CompilerDriver.CurrentRuntimeIdentifier());
+    Require(moduleDetectedGenerated.Contains("XpsCompilerGeneratedNavigationDispatch", StringComparison.Ordinal), "compile-folder was ignored when desktop UI existed only in a child module");
+
+    var ambiguousRoot = Path.Combine(root, "ambiguous-entry");
+    var ambiguousApp = Path.Combine(ambiguousRoot, "app");
+    Directory.CreateDirectory(ambiguousApp);
+    var ambiguousMainPath = Path.Combine(ambiguousRoot, "main.xps");
+    var ambiguousMain = """
+[Compile:app]
+Sub Main()
+    Dim form As New UIForm("Ambiguous")
+End Sub
+""";
+    File.WriteAllText(ambiguousMainPath, ambiguousMain);
+    File.WriteAllText(Path.Combine(ambiguousApp, "ambiguous.xps"), "Sub First()\nEnd Sub\nSub Second()\nEnd Sub\n");
+    RequireThrows<CompilerException>(
+        () => preprocessor.Transform(ambiguousMain, ambiguousMainPath, enableModules: true),
+        "requires one navigable entry point");
 
     Console.WriteLine("CompileFolderProbe OK");
     return 0;
@@ -105,4 +184,19 @@ finally
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static void RequireThrows<T>(Action action, string messagePart) where T : Exception
+{
+    try
+    {
+        action();
+    }
+    catch (T ex)
+    {
+        if (!ex.Message.Contains(messagePart, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Expected error containing '{messagePart}', got '{ex.Message}'.");
+        return;
+    }
+    throw new InvalidOperationException($"Expected {typeof(T).Name} containing '{messagePart}'.");
 }

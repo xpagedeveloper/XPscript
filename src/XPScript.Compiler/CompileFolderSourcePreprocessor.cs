@@ -30,6 +30,44 @@ public sealed class CompileFolderSourcePreprocessor
     public static bool IsDesktopProject(string source)
         => DesktopUiPattern.IsMatch(source);
 
+    public static bool IsDesktopProject(string source, string rootSourcePath)
+    {
+        if (IsDesktopProject(source)) return true;
+        if (string.IsNullOrWhiteSpace(rootSourcePath)) return false;
+
+        try
+        {
+            var match = NormalizeLines(source)
+                .Select(line => CompilePattern.Match(StripComment(line).Trim()))
+                .FirstOrDefault(candidate => candidate.Success);
+            if (match is null || !match.Success) return false;
+
+            var declared = (match.Groups["quoted"].Success ? match.Groups["quoted"].Value : match.Groups["plain"].Value).Trim();
+            if (declared.Length == 0) return false;
+            var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(rootSourcePath)) ?? Environment.CurrentDirectory;
+            var portable = declared.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            if (Path.IsPathRooted(portable)) return false;
+            var compileRoot = Path.GetFullPath(Path.Combine(sourceDirectory, portable));
+            var relative = Path.GetRelativePath(sourceDirectory, compileRoot);
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !Directory.Exists(compileRoot))
+                return false;
+
+            foreach (var path in Directory.EnumerateFiles(compileRoot, "*.xps", SearchOption.AllDirectories))
+            {
+                string moduleSource;
+                try { moduleSource = File.ReadAllText(path); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+                if (DesktopUiPattern.IsMatch(moduleSource)) return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
     public Result Transform(string rootSource, string rootSourcePath, bool enableModules)
     {
         ArgumentNullException.ThrowIfNull(rootSource);
@@ -49,6 +87,9 @@ public sealed class CompileFolderSourcePreprocessor
 
         if (declarations.Count != 1)
             throw new CompilerException($"{Path.GetFileName(rootPath)}: A desktop or browser-wasm source may declare exactly one [Compile:folder] rule.");
+
+        if (IsDesktopProject(rootSource, rootPath))
+            ValidateDesktopMain(rootPath, rootDirectory);
 
         var compileRoot = ResolveCompileRoot(rootDirectory, declarations[0]);
         var candidates = Directory.EnumerateFiles(compileRoot, "*.xps", SearchOption.AllDirectories)
@@ -75,18 +116,18 @@ public sealed class CompileFolderSourcePreprocessor
         {
             var moduleSource = File.ReadAllText(path);
             dependencies.Add(path);
+            var relativeName = Path.GetRelativePath(compileRoot, path).Replace('\\', '/');
             var entry = ResolveEntryPoint(moduleSource, path);
-            if (entry is not null)
-            {
-                var relativeName = Path.GetRelativePath(compileRoot, path).Replace('\\', '/');
-                var generatedName = BuildGeneratedEntryName(relativeName);
-                moduleSource = RenameProcedure(moduleSource, entry, generatedName);
-                modules.Add(new ModuleEntry(relativeName, generatedName, false));
-            }
+            if (entry is null)
+                throw new CompilerException($"{relativeName}: Compiled XPS module requires one navigable entry point named Main, Index, or matching the file name, or exactly one Sub.");
+
+            var generatedName = BuildGeneratedEntryName(relativeName);
+            moduleSource = RenameProcedure(moduleSource, entry, generatedName);
+            modules.Add(new ModuleEntry(relativeName, generatedName, false));
 
             moduleSource = RewriteModuleIncludes(moduleSource, path, rootDirectory);
             sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("' ----- compiled module: " + Path.GetRelativePath(compileRoot, path).Replace('\\', '/') + " -----");
+            sourceBuilder.AppendLine("' ----- compiled module: " + relativeName + " -----");
             sourceBuilder.AppendLine(moduleSource.TrimEnd('\r', '\n'));
         }
 
@@ -98,6 +139,15 @@ public sealed class CompileFolderSourcePreprocessor
             dependencies.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
             modules.Select(x => x.RelativeName).ToArray(),
             true);
+    }
+
+    private static void ValidateDesktopMain(string rootPath, string rootDirectory)
+    {
+        var expectedMain = Path.Combine(rootDirectory, "main.xps");
+        if (!File.Exists(expectedMain))
+            throw new CompilerException("Desktop [Compile:folder] projects require main.xps in the application root.");
+        if (!PathEquals(rootPath, expectedMain))
+            throw new CompilerException("Desktop [Compile:folder] projects must be compiled from main.xps.");
     }
 
     private static List<string> ParseCompileDeclarations(string source, string sourcePath)
@@ -245,9 +295,8 @@ public sealed class CompileFolderSourcePreprocessor
     {
         var aliases = BuildAliases(rootPath, modules);
         source.AppendLine();
-        source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
+        source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String)");
         source.AppendLine("    Dim xpsCompilerGeneratedTarget As String");
-        source.AppendLine("    Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
         source.AppendLine("    xpsCompilerGeneratedTarget = LCase(Trim(target))");
 
         var first = true;
@@ -255,6 +304,7 @@ public sealed class CompileFolderSourcePreprocessor
         {
             source.Append("    ").Append(first ? "If " : "ElseIf ")
                 .Append("xpsCompilerGeneratedTarget = \"").Append(EscapeXpsString(pair.Key)).AppendLine("\" Then");
+            source.AppendLine("        Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
             source.Append("        Call ").Append(pair.Value).AppendLine("()");
             first = false;
         }
@@ -268,7 +318,7 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine("End Sub");
         source.AppendLine();
         source.AppendLine("Public Sub Navigate(target As String)");
-        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, \"\", \"\")");
+        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target)");
         source.AppendLine("End Sub");
     }
 
