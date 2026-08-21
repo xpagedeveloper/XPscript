@@ -22,6 +22,20 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
         => SetNavigation(target, XPScriptRuntime.CStr(parameterName), XPScriptRuntime.CStr(parameterValue));
 """;
 
+    private const string NavigationAssignment = "        _navigationTarget = path;";
+
+    private const string BrowserNavigationAssignment = """
+        _navigationTarget = path;
+        if (OperatingSystem.IsBrowser())
+        {
+            var browserHost = Type.GetType("XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", throwOnError: false, ignoreCase: false);
+            var navigateMethod = browserHost?.GetMethod("Navigate", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (navigateMethod is null)
+                throw new XPScriptRuntimeException(5, "Browser UI navigation backend is unavailable.");
+            navigateMethod.Invoke(null, [path]);
+        }
+""";
+
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
@@ -35,6 +49,13 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
 
         if (generated.Contains(ParameterOverload, StringComparison.Ordinal))
             generated = generated.Replace(ParameterOverload, string.Empty, StringComparison.Ordinal);
+
+        if (!generated.Contains(BrowserNavigationAssignment, StringComparison.Ordinal))
+        {
+            if (!generated.Contains(NavigationAssignment, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install browser UIForm navigation compatibility.");
+            generated = generated.Replace(NavigationAssignment, BrowserNavigationAssignment, StringComparison.Ordinal);
+        }
 
         return generated;
     }
