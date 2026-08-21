@@ -6,8 +6,10 @@ internal static class WebIisBuildEnvironmentInitializer
 {
     private const string CacheEnvironmentVariable = "XPSCRIPT_WEB_CACHE_DIRECTORY";
 
+#pragma warning disable CA2255 // Intentional: initialize the WebIIS build environment when this runtime module is loaded.
     [ModuleInitializer]
     internal static void Initialize()
+#pragma warning restore CA2255
     {
         var configuredCache = Environment.GetEnvironmentVariable(CacheEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(configuredCache)) return;
