@@ -16,7 +16,7 @@ internal static class CompilerBuildEnvironment
         var cliHome = CreatePrivateDirectory(root, "dotnet-home");
         var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
 
-        ConfigureDesktopUiDependencies(root);
+        ConfigureDesktopUiDependencies(startInfo, root);
 
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
@@ -37,7 +37,7 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
     }
 
-    private static void ConfigureDesktopUiDependencies(string root)
+    private static void ConfigureDesktopUiDependencies(ProcessStartInfo startInfo, string root)
     {
         var generatedSource = Path.Combine(root, "Program.cs");
         if (!File.Exists(generatedSource)) return;
@@ -46,17 +46,34 @@ internal static class CompilerBuildEnvironment
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
-        if (!usesUiForm && !usesUiListView && !usesDesktopDialog) return;
+        var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
+        var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
 
-        var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
-        if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly))
-            throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
+        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && stagedIconName is null) return;
 
-        var escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly))
-            ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
+        string? escapedAssembly = null;
+        if (usesUiForm || usesUiListView || usesDesktopDialog)
+        {
+            var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
+            if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly))
+                throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
+
+            escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly))
+                ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
+        }
+
         var propsPath = Path.Combine(root, "Directory.Build.props");
-        var props = $"""
-<Project>
+        var propertyGroup = stagedIconName is null
+            ? string.Empty
+            : $"""
+  <PropertyGroup>
+    <ApplicationIcon>{SecurityElement.Escape(stagedIconName)}</ApplicationIcon>
+  </PropertyGroup>
+""";
+
+        var itemGroup = escapedAssembly is null
+            ? string.Empty
+            : $"""
   <ItemGroup>
     <Reference Include="XPScript.UI.Desktop">
       <HintPath>{escapedAssembly}</HintPath>
@@ -66,10 +83,46 @@ internal static class CompilerBuildEnvironment
     <PackageReference Include="Avalonia.Desktop" Version="{AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />
   </ItemGroup>
-</Project>
+""";
+
+        var props = $"""
+<Project>
+{propertyGroup}{itemGroup}</Project>
 """;
         File.WriteAllText(propsPath, props);
         CompilerPathSecurity.HardenTemporaryFile(propsPath);
+    }
+
+    private static string? StageApplicationIcon(string generatedSource, string root, string runtimeIdentifier)
+    {
+        if (!runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase)) return null;
+
+        var markerIndex = generatedSource.IndexOf(ApplicationObjectPreprocessor.BuildIconMarker, StringComparison.Ordinal);
+        if (markerIndex < 0) return null;
+        var valueStart = markerIndex + ApplicationObjectPreprocessor.BuildIconMarker.Length;
+        var valueEnd = generatedSource.IndexOfAny(['\r', '\n'], valueStart);
+        var path = (valueEnd < 0 ? generatedSource[valueStart..] : generatedSource[valueStart..valueEnd]).Trim();
+        path = path.TrimEnd('"', '\'', '/', '*', ' ', ';', ')');
+        if (path.Length == 0) return null;
+        if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("Application.Icon must reference an .ico file when building a Windows executable.");
+        if (!File.Exists(path))
+            throw new CompilerException("Application.Icon file was not found: " + Path.GetFileName(path));
+
+        var staged = Path.Combine(root, "application.ico");
+        CompilerSecureFileCopy.CopyValidatedRegularFile(path, staged, "Application.Icon");
+        CompilerPathSecurity.HardenTemporaryFile(staged);
+        return Path.GetFileName(staged);
+    }
+
+    private static string ReadRuntimeIdentifier(ProcessStartInfo startInfo)
+    {
+        for (var i = 0; i + 1 < startInfo.ArgumentList.Count; i++)
+        {
+            if (startInfo.ArgumentList[i] is "-r" or "--runtime")
+                return startInfo.ArgumentList[i + 1] ?? string.Empty;
+        }
+        return string.Empty;
     }
 
     private static string CreatePrivateDirectory(string root, string name)

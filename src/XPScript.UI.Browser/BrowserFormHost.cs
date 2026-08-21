@@ -9,7 +9,26 @@ public static partial class BrowserFormHost
     public static string ShowDialog(string requestJson)
     {
         ArgumentNullException.ThrowIfNull(requestJson);
-        return RenderForm(NormalizeStructuralElements(requestJson));
+        var normalized = NormalizeStructuralElements(requestJson);
+        ApplyApplicationMetadata(normalized);
+        return RenderForm(normalized);
+    }
+
+    private static void ApplyApplicationMetadata(string requestJson)
+    {
+        var root = JsonNode.Parse(requestJson)?.AsObject();
+        if (root is null) return;
+
+        var title = root["applicationTitle"]?.GetValue<string>() ?? string.Empty;
+        if (title.Length > 0)
+            Eval("document.title = " + JsonSerializer.Serialize(title) + ";");
+
+        var icon = root["applicationIcon"]?.GetValue<string>() ?? string.Empty;
+        if (icon.Length > 0)
+        {
+            var encoded = JsonSerializer.Serialize(icon);
+            Eval("(() => { let link = document.querySelector('link[rel~=\"icon\"]'); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); } link.href = " + encoded + "; })();");
+        }
     }
 
     private static string NormalizeStructuralElements(string requestJson)
@@ -45,4 +64,7 @@ public static partial class BrowserFormHost
 
     [JSImport("renderForm", "xpscript-browser")]
     private static partial string RenderForm(string requestJson);
+
+    [JSImport("eval", "globalThis")]
+    private static partial void Eval(string script);
 }
