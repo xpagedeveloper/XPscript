@@ -3,14 +3,14 @@ using XPScript.Web.Runtime;
 var application = new XpsApplicationState();
 var server = new XpsServerInfo("handoff-probe", "/tmp", XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
 
-var sourceRequest = Request();
+var sourceRequest = Request(path: "/customers");
 var sourceResponse = new XpsWebResponse();
 var sourceContext = new XpsWebContext(sourceRequest, sourceResponse, server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(sourceContext))
 {
     XpsWebRuntimeObjects.RequestScope.Set("customerId", "1001");
     XpsWebRuntimeObjects.RequestScope.Set("count", 42);
-    XpsWebRuntimeObjects.StageRequestStateForNavigation();
+    XpsWebRuntimeObjects.StageRequestStateForNavigation("customer-form.xps");
 }
 
 var setCookie = RequireNavigationCookie(sourceResponse);
@@ -21,7 +21,23 @@ if (!setCookie.Contains("Path=/", StringComparison.Ordinal))
 var token = CookieValue(setCookie, XpsNavigationStateHandoff.CookieName);
 if (token.Length < 40) throw new Exception("Navigation handoff token is too short.");
 
-var targetRequest = Request(new Dictionary<string, string> { [XpsNavigationStateHandoff.CookieName] = token });
+var unrelatedRequest = Request(
+    new Dictionary<string, string> { [XpsNavigationStateHandoff.CookieName] = token },
+    path: "/telemetry");
+var unrelatedResponse = new XpsWebResponse();
+var unrelatedContext = new XpsWebContext(unrelatedRequest, unrelatedResponse, server, new XpsWebPrincipal(false), application);
+using (XpsWebContextAccessor.Push(unrelatedContext))
+{
+    if (XpsWebRuntimeObjects.RequestScope.Get("customerId") is not null)
+        throw new Exception("A non-target request consumed navigation Request.State.");
+}
+if (unrelatedResponse.Headers.TryGetValue("Set-Cookie", out var unrelatedCookies) &&
+    unrelatedCookies.Any(value => value.StartsWith(XpsNavigationStateHandoff.CookieName + "=", StringComparison.Ordinal) && value.Contains("Max-Age=0", StringComparison.Ordinal)))
+    throw new Exception("A non-target request cleared the navigation handoff cookie.");
+
+var targetRequest = Request(
+    new Dictionary<string, string> { [XpsNavigationStateHandoff.CookieName] = token },
+    path: "/customer-form");
 var targetResponse = new XpsWebResponse();
 var targetContext = new XpsWebContext(targetRequest, targetResponse, server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(targetContext))
@@ -34,9 +50,11 @@ using (XpsWebContextAccessor.Push(targetContext))
 
 if (!targetResponse.Headers.TryGetValue("Set-Cookie", out var clearCookies) ||
     !clearCookies.Any(value => value.StartsWith(XpsNavigationStateHandoff.CookieName + "=", StringComparison.Ordinal) && value.Contains("Max-Age=0", StringComparison.Ordinal)))
-    throw new Exception("Navigation handoff cookie was not expired after consumption.");
+    throw new Exception("Navigation handoff cookie was not expired after target consumption.");
 
-var replayRequest = Request(new Dictionary<string, string> { [XpsNavigationStateHandoff.CookieName] = token });
+var replayRequest = Request(
+    new Dictionary<string, string> { [XpsNavigationStateHandoff.CookieName] = token },
+    path: "/customer-form.xps");
 var replayResponse = new XpsWebResponse();
 var replayContext = new XpsWebContext(replayRequest, replayResponse, server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(replayContext))
@@ -45,7 +63,7 @@ using (XpsWebContextAccessor.Push(replayContext))
         throw new Exception("Navigation handoff token could be replayed.");
 }
 
-var plainContext = new XpsWebContext(Request(), new XpsWebResponse(), server, new XpsWebPrincipal(false), application);
+var plainContext = new XpsWebContext(Request(path: "/customer-form"), new XpsWebResponse(), server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(plainContext))
 {
     if (XpsWebRuntimeObjects.RequestScope.Get("customerId") is not null)
@@ -53,11 +71,11 @@ using (XpsWebContextAccessor.Push(plainContext))
 }
 
 var subAppResponse = new XpsWebResponse();
-var subAppContext = new XpsWebContext(Request(pathInfo: "/apps/orders"), subAppResponse, server, new XpsWebPrincipal(false), application);
+var subAppContext = new XpsWebContext(Request(path: "/customers", pathInfo: "/apps/orders"), subAppResponse, server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(subAppContext))
 {
     XpsWebRuntimeObjects.RequestScope.Set("scope", "subapp");
-    XpsWebRuntimeObjects.StageRequestStateForNavigation();
+    XpsWebRuntimeObjects.StageRequestStateForNavigation("customer-form");
 }
 var subAppCookie = RequireNavigationCookie(subAppResponse);
 if (!subAppCookie.Contains("Path=/apps/orders/", StringComparison.Ordinal))
@@ -69,11 +87,11 @@ var fastCgiVariables = new Dictionary<string, string?>(StringComparer.OrdinalIgn
     ["PATH_INFO"] = "/details"
 };
 var fastCgiResponse = new XpsWebResponse();
-var fastCgiContext = new XpsWebContext(Request(pathInfo: "/details", cgiVariables: fastCgiVariables), fastCgiResponse, server, new XpsWebPrincipal(false), application);
+var fastCgiContext = new XpsWebContext(Request(path: "/apps/list.xps/details", pathInfo: "/details", cgiVariables: fastCgiVariables), fastCgiResponse, server, new XpsWebPrincipal(false), application);
 using (XpsWebContextAccessor.Push(fastCgiContext))
 {
     XpsWebRuntimeObjects.RequestScope.Set("scope", "fastcgi");
-    XpsWebRuntimeObjects.StageRequestStateForNavigation();
+    XpsWebRuntimeObjects.StageRequestStateForNavigation("customer-form");
 }
 var fastCgiCookie = RequireNavigationCookie(fastCgiResponse);
 if (!fastCgiCookie.Contains("Path=/apps/", StringComparison.Ordinal))
@@ -86,10 +104,11 @@ return 0;
 
 static XpsWebRequest Request(
     IReadOnlyDictionary<string, string>? cookies = null,
+    string path = "/customer-form",
     string pathInfo = "",
     IReadOnlyDictionary<string, string?>? cgiVariables = null) => new(
     "GET",
-    "/customer-form",
+    path,
     pathInfo,
     string.Empty,
     new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase),
