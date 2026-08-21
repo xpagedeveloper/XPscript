@@ -24,7 +24,7 @@ internal sealed class IncludeSourcePreprocessor
             return new Result(rootSource, prepared.Map, [Path.GetFullPath(rootSourcePath)]);
 
         var rootPath = Path.GetFullPath(rootSourcePath);
-        var compileEnabled = IsBrowserWasmSource(rootSource) || CompileFolderSourcePreprocessor.IsDesktopProject(rootSource);
+        var compileEnabled = IsBrowserWasmSource(rootSource) || CompileFolderSourcePreprocessor.IsDesktopProject(rootSource, rootPath);
         var compileResult = new CompileFolderSourcePreprocessor().Transform(rootSource, rootPath, compileEnabled);
         rootSource = compileResult.Source;
 
@@ -92,9 +92,6 @@ internal sealed class IncludeSourcePreprocessor
                 var raw = lines[i];
                 var code = StripComment(raw).Trim();
 
-                // [Platform:browser-wasm] is web-server metadata. The normal compiler
-                // deliberately removes it so the exact same source can still be built
-                // for desktop or another explicit runtime target.
                 if (WebPlatformPattern.IsMatch(code))
                 {
                     AddLine(output, map, string.Empty, sourcePath, i + 1);
