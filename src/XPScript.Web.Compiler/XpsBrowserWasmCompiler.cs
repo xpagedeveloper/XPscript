@@ -38,7 +38,8 @@ public sealed class XpsBrowserWasmCompiler
         if (!string.Equals(parsed.Platform, Platform, StringComparison.OrdinalIgnoreCase))
             throw new XpsWebCompilationException("Source is not marked [Platform:browser-wasm].");
 
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source)));
+        var compilerIdentity = typeof(XpsBrowserWasmCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity)));
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
         var publishRoot = Path.Combine(bundleRoot, "publish");
@@ -67,7 +68,7 @@ public sealed class XpsBrowserWasmCompiler
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), IndexHtml, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
 
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
@@ -80,6 +81,12 @@ public sealed class XpsBrowserWasmCompiler
         {
             _buildGate.Release();
         }
+    }
+
+    private string BuildIndexHtml(string sourcePath)
+    {
+        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath));
+        return IndexHtml.Replace("__XPSCRIPT_BASE_HREF__", scriptName + "/", StringComparison.Ordinal);
     }
 
     private static string NormalizeVariantSetAssignments(string source)
@@ -174,6 +181,7 @@ public sealed class XpsBrowserWasmCompiler
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="__XPSCRIPT_BASE_HREF__">
   <title>XPScript</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
