@@ -61,35 +61,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
-      - name: Install isolated .NET SDK for Windows WASM
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $privateDotnet = Join-Path $env:RUNNER_TEMP 'xps-wasm-dotnet'
-          Remove-Item $privateDotnet -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $privateDotnet -Force | Out-Null
-          $installer = Join-Path $env:RUNNER_TEMP 'dotnet-install-xps-wasm.ps1'
-          Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer
-          & $installer -Version '10.0.400' -InstallDir $privateDotnet -NoPath
-          if ($LASTEXITCODE -ne 0) { throw "Private .NET SDK install failed with exit code $LASTEXITCODE." }
-          "DOTNET_ROOT=$privateDotnet" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $privateDotnet | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Verify WASM SDK source
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          dotnet --info
-          $dotnetPath = (Get-Command dotnet).Source
-          if (-not $dotnetPath.StartsWith($env:RUNNER_TEMP, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Windows WASM smoke is not using the isolated SDK: $dotnetPath"
-          }
-
       - name: Install WebAssembly build tools
         run: dotnet workload install wasm-tools
-
       - name: Run browser-wasm smoke
         run: dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
