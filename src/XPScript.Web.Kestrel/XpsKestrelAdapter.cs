@@ -38,6 +38,14 @@ public static class XpsKestrelAdapter
         ArgumentNullException.ThrowIfNull(application);
         options.Validate();
 
+        var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
+        var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+        var iisOutOfProcess = !string.IsNullOrWhiteSpace(iisToken) &&
+                              int.TryParse(iisPortText, out var iisPort) &&
+                              iisPort is > 0 and <= 65535;
+        var listenAddress = iisOutOfProcess ? IPAddress.Loopback : options.Address;
+        var listenPort = iisOutOfProcess ? iisPort : options.Port;
+
         var runtimeTelemetry = telemetry ??
             (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
         var connectionCounter = new XpsKestrelConnectionCounter();
@@ -51,7 +59,7 @@ public static class XpsKestrelAdapter
         builder.WebHost.ConfigureKestrel(kestrel =>
         {
             kestrel.AddServerHeader = false;
-            kestrel.Listen(options.Address, options.Port, listen =>
+            kestrel.Listen(listenAddress, listenPort, listen =>
             {
                 listen.Protocols = options.Protocols;
                 listen.Use(next => async connection =>
@@ -127,7 +135,7 @@ public static class XpsKestrelAdapter
 
         app.Use(async (http, next) =>
         {
-            if (!HostAllowed(http.Request.Host.Host, options.AllowedHosts))
+            if (!iisOutOfProcess && !HostAllowed(http.Request.Host.Host, options.AllowedHosts))
             {
                 http.Response.StatusCode = StatusCodes.Status400BadRequest;
                 if (!HttpMethods.IsHead(http.Request.Method))
