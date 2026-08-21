@@ -42,23 +42,21 @@ public sealed class XpsBrowserWasmCompiler
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity)));
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
-        var publishRoot = Path.Combine(bundleRoot, "publish");
         var appRoot = Path.Combine(bundleRoot, "app");
         var marker = Path.Combine(bundleRoot, "source.sha256");
         if (File.Exists(marker) && IsValidAppRoot(appRoot))
             return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
         await _buildGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        string? workspace = null;
         try
         {
             if (File.Exists(marker) && IsValidAppRoot(appRoot))
                 return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
-            var workspace = Path.Combine(bundleRoot, "build");
-            TryDelete(workspace);
-            TryDelete(publishRoot);
+            workspace = CreateBuildWorkspace();
+            var publishRoot = Path.Combine(workspace, "pub");
             TryDelete(appRoot);
-            Directory.CreateDirectory(workspace);
             Directory.CreateDirectory(publishRoot);
 
             var browserSource = EnsureBrowserEntryPoint(NormalizeVariantSetAssignments(parsed.Source), parsed.Routes);
@@ -87,14 +85,20 @@ public sealed class XpsBrowserWasmCompiler
                 throw new XpsWebCompilationException("browser-wasm persisted app bundle is incomplete.");
 
             await File.WriteAllTextAsync(marker, hash, cancellationToken).ConfigureAwait(false);
-            TryDelete(workspace);
-            TryDelete(publishRoot);
             return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
         }
         finally
         {
+            if (workspace is not null) TryDelete(workspace);
             _buildGate.Release();
         }
+    }
+
+    private static string CreateBuildWorkspace()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "xw" + Guid.NewGuid().ToString("N")[..10]);
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     private static bool IsValidAppRoot(string appRoot) =>
@@ -286,11 +290,11 @@ function applyFieldState(field, editor) {
   if (field.dateMinimum && 'min' in editor) editor.min = String(field.dateMinimum);
   if (field.dateMaximum && 'max' in editor) editor.max = String(field.dateMaximum);
   if (field.timeMinimum && 'min' in editor) editor.min = String(field.timeMinimum);
-  if (field.timeMaximum && 'max' in editor) editor.max = String(field.timeMaximum);
+  if (field.timeMaximum && 'min' in editor) editor.min = String(field.timeMaximum);
   if (field.dateTimeMinimum && 'min' in editor) editor.min = String(field.dateTimeMinimum);
-  if (field.dateTimeMaximum && 'max' in editor) editor.max = String(field.dateTimeMaximum);
+  if (field.dateTimeMaximum && 'min' in editor) editor.min = String(field.dateTimeMaximum);
   if (field.monthMinimum && 'min' in editor) editor.min = String(field.monthMinimum);
-  if (field.monthMaximum && 'max' in editor) editor.max = String(field.monthMaximum);
+  if (field.monthMaximum && 'min' in editor) editor.min = String(field.monthMaximum);
   if (field.placeholder && 'placeholder' in editor) editor.placeholder = String(field.placeholder);
   if (field.regexPattern && 'pattern' in editor) editor.pattern = String(field.regexPattern);
   if (field.tooltip) editor.title = String(field.tooltip);
