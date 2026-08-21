@@ -69,7 +69,7 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
         {
             var webRuntime = Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
             var stageMethod = webRuntime?.GetMethod("TryStageRequestStateForNavigation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            stageMethod?.Invoke(null, null);
+            stageMethod?.Invoke(null, [path]);
         }
 """;
 
