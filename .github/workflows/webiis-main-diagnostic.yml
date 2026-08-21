@@ -1,6 +1,7 @@
 name: WebIIS Main Diagnostic
 
 on:
+  pull_request:
   push:
     branches: [ fix-navigation-state-handoff ]
   workflow_dispatch:
