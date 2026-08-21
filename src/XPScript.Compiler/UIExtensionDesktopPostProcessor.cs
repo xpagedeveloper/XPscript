@@ -45,13 +45,27 @@ internal sealed class UIExtensionDesktopPostProcessor
                 }
                 return "OK";
             }
-            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
+            XPScriptUIWebAdapter.WriteHtml(RenderApplicationWebMetadata(RenderWebForm()));
             return "Pending";
         }
 
         if (!XPScriptUIDesktopAdapter.IsAvailable)
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
         return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
+    }
+
+    private string RenderApplicationWebMetadata(string html)
+    {
+        var title = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_title"));
+        var icon = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_icon"));
+        if (title.Length == 0 && icon.Length == 0) return html;
+
+        var prefix = new System.Text.StringBuilder();
+        if (title.Length > 0)
+            prefix.Append("<title>").Append(System.Net.WebUtility.HtmlEncode(title)).Append("</title>");
+        if (icon.Length > 0)
+            prefix.Append("<link rel=\"icon\" href=\"").Append(System.Net.WebUtility.HtmlEncode(icon)).Append("\">");
+        return prefix.Append(html).ToString();
     }
 
     private void ApplyDesktopValue(XPScriptUIField field, string submitted)
