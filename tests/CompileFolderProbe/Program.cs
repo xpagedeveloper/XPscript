@@ -16,6 +16,10 @@ try
 [Compile:app]
 Sub Main()
     Dim form As New UIForm("Main")
+    Application.State.Set("app", "main")
+    Process.State.Set("process", "main")
+    Session.State.Set("session", "main")
+    Request.State.Set("request", "main")
     Call Navigate("CUSTOMERS")
 End Sub
 """;
@@ -24,13 +28,21 @@ End Sub
     File.WriteAllText(Path.Combine(app, "customers.xps"), """
 Include "includes/common.xps"
 Sub Main()
-    Print "customers"
+    Print Application.State.Get("app")
+    Print Process.State.Get("process")
+    Print Session.State.Get("session")
+    Print Request.State.Get("request")
+    Request.State.Set("request", "customers")
+    Call Navigate("nested/orders")
 End Sub
 """);
 
     File.WriteAllText(Path.Combine(nested, "orders.xps"), """
 Sub Orders()
-    Print "orders"
+    Print Application.State.Get("app")
+    Print Process.State.Get("process")
+    Print Session.State.Get("session")
+    Print Request.State.Get("request")
 End Sub
 """);
 
@@ -75,6 +87,11 @@ End Sub
     var generated = new XPScriptTranspiler().Transpile(mainSource, mainPath, CompilerDriver.CurrentRuntimeIdentifier());
     Require(generated.Contains("__XpsCompiledNavigationDispatch", StringComparison.Ordinal), "desktop transpilation did not install compiled navigation dispatch");
     Require(generated.Contains("__XpsModule_", StringComparison.Ordinal), "desktop transpilation did not compile module entry points");
+    Require(generated.Contains("XPScriptApplicationRuntime.State", StringComparison.Ordinal), "Application.State was not mapped for a compiled desktop application");
+    Require(generated.Contains("XPScriptProcessRuntime.State", StringComparison.Ordinal), "Process.State was not mapped for a compiled desktop application");
+    Require(generated.Contains("XPScriptSessionRuntime.State", StringComparison.Ordinal), "Session.State was not mapped for a compiled desktop/WASM application");
+    Require(generated.Contains("XPScriptRequestRuntime.State", StringComparison.Ordinal), "Request.State was not mapped for a compiled desktop/WASM application");
+    Require(generated.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
 
     Console.WriteLine("CompileFolderProbe OK");
     return 0;
