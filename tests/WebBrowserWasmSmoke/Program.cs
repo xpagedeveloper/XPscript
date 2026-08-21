@@ -74,6 +74,10 @@ End Sub
     var browserJs = Directory.EnumerateFiles(cacheRoot, "xpscript-browser.js", SearchOption.AllDirectories).FirstOrDefault();
     if (index is null || dotnetJs is null || browserJs is null) throw new Exception("WASM publish output was not cached.");
 
+    var bootstrap = await File.ReadAllTextAsync(index);
+    if (!bootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
+        throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
+
     var browserModule = await File.ReadAllTextAsync(browserJs);
     foreach (var requiredMarker in new[]
     {
