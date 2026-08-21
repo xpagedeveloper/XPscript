@@ -364,6 +364,7 @@ public static class XpsKestrelAdapter
         var normalized = decoded.Replace('\\', '/');
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0 || segments.Any(segment => segment is "." or ".." || segment.StartsWith(".", StringComparison.Ordinal))) return false;
+        if (segments.Take(segments.Length - 1).Any(segment => segment.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))) return false;
 
         var extension = Path.GetExtension(segments[^1]);
         if (string.IsNullOrWhiteSpace(extension) || extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)) return false;
