@@ -79,6 +79,7 @@ public interface IXpsSession
     private static string RolesKey => "roles";
     private static string RolesSessionIdKey => "roles-session-id";
 
+    IXpsSession State => this;
     string Id { get; }
     bool Started { get; }
     int Count { get; }
@@ -166,11 +167,38 @@ public interface IXpsSession
 
 public interface IXpsApplicationState
 {
+    IXpsApplicationState State => this;
+    int Count => Keys.Count;
+    IReadOnlyList<string> Keys => Array.Empty<string>();
     object? Get(string name);
     void Set(string name, object? value);
     void Add(string name, object? value) => Set(name, value);
+    bool Exists(string name) => Get(name) is not null;
     bool Remove(string name);
+    bool Unset(string name) => Remove(name);
     void Clear();
+}
+
+public sealed class XpsWebApplication
+{
+    public XpsWebApplication(IXpsApplicationState state) => State = state ?? throw new ArgumentNullException(nameof(state));
+    public IXpsApplicationState State { get; }
+
+    public int Count => State.Count;
+    public IReadOnlyList<string> Keys => State.Keys;
+    public object? Get(string name) => State.Get(name);
+    public void Set(string name, object? value) => State.Set(name, value);
+    public void Add(string name, object? value) => State.Add(name, value);
+    public bool Exists(string name) => State.Exists(name);
+    public bool Remove(string name) => State.Remove(name);
+    public bool Unset(string name) => State.Unset(name);
+    public void Clear() => State.Clear();
+}
+
+public sealed class XpsWebProcess
+{
+    internal XpsWebProcess(XpsProcessState state) => State = state ?? throw new ArgumentNullException(nameof(state));
+    public XpsProcessState State { get; }
 }
 
 public sealed class XpsWebContext

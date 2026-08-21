@@ -39,6 +39,7 @@ internal sealed class LSArray
 internal static class XPScriptRuntime
 {
     public static int CInt(object? value) => Convert.ToInt32(value);
+    public static string CStr(object? value) => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 }
 
 internal sealed class XPScriptRuntimeException : Exception

@@ -1,0 +1,44 @@
+name: State Scopes
+
+on:
+  pull_request:
+    paths:
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompileFolderSourcePreprocessor.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Web.Runtime/XpsProcessState.cs'
+      - 'tests/StateScopeObjectProbe/**'
+      - 'tests/CompileFolderProbe/**'
+      - 'XPScriptCompiler.slnx'
+      - '.github/workflows/state-scopes.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompileFolderSourcePreprocessor.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Web.Runtime/XpsProcessState.cs'
+      - 'tests/StateScopeObjectProbe/**'
+      - 'tests/CompileFolderProbe/**'
+      - 'XPScriptCompiler.slnx'
+      - '.github/workflows/state-scopes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  state-scopes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run web state scope regression
+        run: dotnet run --project ./tests/StateScopeObjectProbe/StateScopeObjectProbe.csproj -c Release
+      - name: Run desktop and WASM state scope regression
+        run: dotnet run --project ./tests/CompileFolderProbe/CompileFolderProbe.csproj -c Release

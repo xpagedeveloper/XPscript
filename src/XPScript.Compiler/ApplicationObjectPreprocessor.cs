@@ -8,6 +8,17 @@ internal sealed class ApplicationObjectPreprocessor
     {
         RejectWrites(source);
 
+        source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bSession\.State\b", "XPScriptSessionRuntime.State", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bRequest\.State\b", "XPScriptRequestRuntime.State", RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?im)^(\s*Private\s+Sub\s+__XpsCompiledNavigationDispatch\s*\([^\r\n]*\)\s*)$",
+            "$1" + Environment.NewLine + "    Call XPScriptRequestRuntime.BeforeCompiledNavigation()",
+            RegexOptions.CultureInvariant);
+
         source = Regex.Replace(
             source,
             @"\bApplication\.Args\s*\(((?:[^()]|\([^()]*\))*)\)",

@@ -238,22 +238,23 @@ public sealed class CompileFolderSourcePreprocessor
     {
         var normalized = relativePath.Replace('\\', '/').ToLowerInvariant();
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..16];
-        return "__XpsModule_" + hash;
+        return "XpsCompilerGeneratedModule_" + hash;
     }
 
     private static void AppendNavigationDispatcher(StringBuilder source, string rootPath, IReadOnlyList<ModuleEntry> modules)
     {
         var aliases = BuildAliases(rootPath, modules);
         source.AppendLine();
-        source.AppendLine("Private Sub __XpsCompiledNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
-        source.AppendLine("    Dim __xpsTarget As String");
-        source.AppendLine("    __xpsTarget = LCase(Trim(target))");
+        source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
+        source.AppendLine("    Dim xpsCompilerGeneratedTarget As String");
+        source.AppendLine("    Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
+        source.AppendLine("    xpsCompilerGeneratedTarget = LCase(Trim(target))");
 
         var first = true;
         foreach (var pair in aliases.OrderBy(x => x.Key, StringComparer.Ordinal))
         {
             source.Append("    ").Append(first ? "If " : "ElseIf ")
-                .Append("__xpsTarget = \"").Append(EscapeXpsString(pair.Key)).AppendLine("\" Then");
+                .Append("xpsCompilerGeneratedTarget = \"").Append(EscapeXpsString(pair.Key)).AppendLine("\" Then");
             source.Append("        Call ").Append(pair.Value).AppendLine("()");
             first = false;
         }
@@ -267,7 +268,7 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine("End Sub");
         source.AppendLine();
         source.AppendLine("Public Sub Navigate(target As String)");
-        source.AppendLine("    Call __XpsCompiledNavigationDispatch(target, \"\", \"\")");
+        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, \"\", \"\")");
         source.AppendLine("End Sub");
     }
 
