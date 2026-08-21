@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class SourceLineMarkerPreprocessor
 {
     private static readonly Regex ApplicationIconPattern = new(
-        @"^\s*Application\.Icon\s*=\s*\"(?<path>(?:\"\"|[^\"])*)\"\s*$",
+        @"^\s*Application\.Icon\s*=\s*""(?<path>(?:""""|[^""])*)""\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public string Transform(string source) => Transform(source, null, "input.xps");
