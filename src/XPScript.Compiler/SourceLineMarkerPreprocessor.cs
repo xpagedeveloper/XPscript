@@ -5,6 +5,10 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceLineMarkerPreprocessor
 {
+    private static readonly Regex ApplicationIconPattern = new(
+        @"^\s*Application\.Icon\s*=\s*\"(?<path>(?:\"\"|[^\"])*)\"\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public string Transform(string source) => Transform(source, null, "input.xps");
 
     public string Transform(string source, SourceMap? sourceMap, string sourceName)
@@ -37,9 +41,17 @@ internal sealed class SourceLineMarkerPreprocessor
 
             if (inProcedure)
             {
+                var indent = Regex.Match(raw, @"^\s*").Value;
+                var iconMetadata = BuildApplicationIconMetadata(code, sourceName);
+                if (iconMetadata is not null)
+                {
+                    var variableName = "XpsCompilerGeneratedIconMarker_" + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    output.Add(indent + "Dim " + variableName + " As String");
+                    output.Add(indent + variableName + " = \"" + EscapeXpsString(iconMetadata) + "\"");
+                }
+
                 if (!continuation && code.Length > 0)
                 {
-                    var indent = Regex.Match(raw, @"^\s*").Value;
                     var expandedLine = i + 1;
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
@@ -58,6 +70,29 @@ internal sealed class SourceLineMarkerPreprocessor
 
         return string.Join(Environment.NewLine, output);
     }
+
+    private static string? BuildApplicationIconMetadata(string code, string sourceName)
+    {
+        var match = ApplicationIconPattern.Match(code);
+        if (!match.Success) return null;
+
+        var declared = match.Groups["path"].Value.Replace("\"\"", "\"", StringComparison.Ordinal).Trim();
+        if (declared.Length == 0) return null;
+
+        try
+        {
+            var sourcePath = Path.GetFullPath(sourceName);
+            var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+            var resolved = Path.IsPathRooted(declared) ? Path.GetFullPath(declared) : Path.GetFullPath(declared, baseDirectory);
+            return ApplicationObjectPreprocessor.BuildIconMarker + resolved;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string EscapeXpsString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static string SafeSourceId(string sourcePath, string rootSourcePath)
     {
