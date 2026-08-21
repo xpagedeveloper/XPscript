@@ -34,6 +34,8 @@ try
     var config = await File.ReadAllTextAsync(Path.Combine(site, "web.config"));
     Require(config.Contains("AspNetCoreModuleV2", StringComparison.Ordinal), "web.config does not use ASP.NET Core Module V2");
     Require(config.Contains("xpscript.dll", StringComparison.OrdinalIgnoreCase), "web.config does not start the XPscript host");
+    Require(config.Contains("hostingModel=\"outofprocess\"", StringComparison.OrdinalIgnoreCase), "web.config must use out-of-process hosting because XPscript uses Kestrel");
+    Require(!config.Contains("--host localhost", StringComparison.OrdinalIgnoreCase), "WebIIS package must let IIS bindings control public hostnames");
 
     using var archive = ZipFile.OpenRead(output + ".zip");
     Require(archive.Entries.Any(entry => entry.FullName.Replace('\\', '/').Equals("site/main.xps", StringComparison.OrdinalIgnoreCase)), "ZIP does not contain main.xps");
