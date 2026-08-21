@@ -150,6 +150,11 @@ internal static class WebIisPackageTarget
       <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess">
         <environmentVariables>
           <environmentVariable name="XPSCRIPT_WEB_CACHE_DIRECTORY" value=".\\.xpscript-cache" />
+          <environmentVariable name="DOTNET_CLI_HOME" value=".\\.xpscript-cache\\dotnet-home" />
+          <environmentVariable name="NUGET_PACKAGES" value=".\\.xpscript-cache\\nuget-packages" />
+          <environmentVariable name="DOTNET_SKIP_FIRST_TIME_EXPERIENCE" value="1" />
+          <environmentVariable name="DOTNET_CLI_TELEMETRY_OPTOUT" value="1" />
+          <environmentVariable name="DOTNET_NOLOGO" value="1" />
         </environmentVariables>
       </aspNetCore>
     </system.webServer>
@@ -200,7 +205,7 @@ Manual installation:
 2. Extract the site directory to the IIS physical path.
 3. Give the application pool identity read and execute access to the site directory.
 4. Use an application pool with No Managed Code.
-5. Create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory. XPscript uses it for server-side compiled units and browser-WASM on-demand compilation.
+5. Create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory. XPscript uses it for server-side compiled units, the private .NET CLI and NuGet build environment, and browser-WASM on-demand compilation.
 6. Configure HTTP/HTTPS host bindings in IIS.
 7. Start the site.
 
