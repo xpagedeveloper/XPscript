@@ -91,13 +91,19 @@ var desktopSource = """
 Sub Main()
     Application.State.Set("app", "value")
     Process.State.Set("proc", "value")
+    Session.State.Set("session", "value")
+    Request.State.Set("request", "value")
     Print Application.State.Get("app")
     Print Process.State.Get("proc")
+    Print Session.State.Get("session")
+    Print Request.State.Get("request")
 End Sub
 """;
 var desktopGenerated = new XPScriptTranspiler().Transpile(desktopSource, "state-desktop.xps", CompilerDriver.CurrentRuntimeIdentifier());
 Assert(desktopGenerated.Contains("XPScriptApplicationRuntime.State", StringComparison.Ordinal), "Application.State was not mapped to the application runtime.");
 Assert(desktopGenerated.Contains("XPScriptProcessRuntime.State", StringComparison.Ordinal), "Process.State was not mapped to the process runtime.");
+Assert(desktopGenerated.Contains("XPScriptSessionRuntime.State", StringComparison.Ordinal), "Session.State was not mapped for desktop/WASM local state.");
+Assert(desktopGenerated.Contains("XPScriptRequestRuntime.State", StringComparison.Ordinal), "Request.State was not mapped for desktop/WASM local state.");
 
 var webRoot = Path.Combine(Path.GetTempPath(), "XPScript-state-scope-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(webRoot);
@@ -113,7 +119,8 @@ Sub Index()
     Application.State.Set("multi-file-app", "from-writer")
     Process.State.Set("multi-file-process", "from-writer")
     Session.State.Set("multi-file-session", "user-a-writer")
-    Response.Write("written")
+    Request.State.Set("multi-file-request", "request-from-writer")
+    Response.Write("written|")
 End Sub
 """);
 
@@ -126,27 +133,35 @@ Sub Index()
     Response.Write(Process.State.Get("multi-file-process"))
     Response.Write("|")
     Response.Write(Session.State.Get("multi-file-session"))
+    Response.Write("|")
+    Response.Write(Request.State.Get("multi-file-request"))
 End Sub
 """);
 
     await using var writer = await new XpsWebCompiler().CompileAsync(writerPath);
     await using var reader = await new XpsWebCompiler().CompileAsync(readerPath);
 
-    var writerContext = new XpsWebContext(Request("/writer.xps"), new XpsWebResponse(), serverA, userA, applicationA, userASession);
-    await writer.InvokeAsync("Index", writerContext);
+    var chainedResponse = new XpsWebResponse();
+    var chainedContext = new XpsWebContext(Request("/writer.xps"), chainedResponse, serverA, userA, applicationA, userASession);
+    await writer.InvokeAsync("Index", chainedContext);
+    await reader.InvokeAsync("Index", chainedContext);
+    var chainedText = System.Text.Encoding.UTF8.GetString(chainedResponse.Body.ToArray());
+    Assert(chainedText.Contains("from-writer|from-writer|user-a-writer|request-from-writer", StringComparison.Ordinal), "Request.State was not shared between .xps files in the same web request context.");
 
     var sameUserOtherFileResponse = new XpsWebResponse();
     var sameUserOtherFileContext = new XpsWebContext(Request("/reader.xps"), sameUserOtherFileResponse, serverA, userA, applicationA, userASession);
     await reader.InvokeAsync("Index", sameUserOtherFileContext);
     var sameUserText = System.Text.Encoding.UTF8.GetString(sameUserOtherFileResponse.Body.ToArray());
-    Assert(sameUserText.Contains("from-writer|from-writer|user-a-writer", StringComparison.Ordinal), "Same user's Session.State was not shared between different .xps files.");
+    Assert(sameUserText.StartsWith("from-writer|from-writer|user-a-writer|", StringComparison.Ordinal), "Same user's shared state was not available in a later .xps request.");
+    Assert(!sameUserText.Contains("request-from-writer", StringComparison.Ordinal), "Request.State leaked into the next web request.");
 
     var otherUserOtherFileResponse = new XpsWebResponse();
     var otherUserOtherFileContext = new XpsWebContext(Request("/reader.xps"), otherUserOtherFileResponse, serverA, userB, applicationA, userBSession);
     await reader.InvokeAsync("Index", otherUserOtherFileContext);
     var otherUserText = System.Text.Encoding.UTF8.GetString(otherUserOtherFileResponse.Body.ToArray());
     Assert(otherUserText.StartsWith("from-writer|from-writer|", StringComparison.Ordinal), "Application.State or Process.State was not shared across users and .xps files.");
-    Assert(!otherUserText.EndsWith("user-a-writer", StringComparison.Ordinal), "Session.State leaked between users across .xps files.");
+    Assert(!otherUserText.Contains("user-a-writer", StringComparison.Ordinal), "Session.State leaked between users across .xps files.");
+    Assert(!otherUserText.Contains("request-from-writer", StringComparison.Ordinal), "Request.State leaked between users or requests.");
 }
 finally
 {
