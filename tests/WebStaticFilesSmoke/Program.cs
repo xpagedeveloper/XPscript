@@ -51,6 +51,18 @@ try
         if ((await response.Content.ReadAsByteArrayAsync()).Length != 0) throw new Exception("HEAD returned a response body.");
     }
 
+    using (var wasmAsset = await client.GetAsync("/secret.xps/main.js"))
+    {
+        var body = await wasmAsset.Content.ReadAsStringAsync();
+        if (body != "NOT-STATIC") throw new Exception("A .xps child asset was intercepted by static-file middleware instead of reaching the XPscript dispatcher.");
+    }
+
+    using (var wasmFrameworkAsset = await client.GetAsync("/secret.xps/_framework/dotnet.js"))
+    {
+        var body = await wasmFrameworkAsset.Content.ReadAsStringAsync();
+        if (body != "NOT-STATIC") throw new Exception("A browser-WASM framework asset was intercepted by static-file middleware instead of reaching the XPscript dispatcher.");
+    }
+
     using (var source = await client.GetAsync("/secret.xps"))
     {
         var body = await source.Content.ReadAsStringAsync();
