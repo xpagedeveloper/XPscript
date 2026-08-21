@@ -17,9 +17,9 @@ internal sealed class UIListViewEventPostProcessor
         var listSource = generated[classStart..];
 
         listSource = ReplaceRequired(listSource,
-            "    private string _rowActionParameterName = string.Empty;\n",
+            "    private string _rowActionTarget = string.Empty;\n",
             """
-    private string _rowActionParameterName = string.Empty;
+    private string _rowActionTarget = string.Empty;
     private string _onSelectHandler = string.Empty;
     private string _onDoubleClickHandler = string.Empty;
 """, "event-fields");
