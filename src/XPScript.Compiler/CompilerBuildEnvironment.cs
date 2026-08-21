@@ -15,6 +15,8 @@ internal static class CompilerBuildEnvironment
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(root, "dotnet-home");
         var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
+        var nugetHttpCache = CreatePrivateDirectory(root, "nuget-http-cache");
+        var nugetPluginsCache = CreatePrivateDirectory(root, "nuget-plugins-cache");
         var profile = CreatePrivateDirectory(root, "profile");
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
@@ -29,6 +31,8 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
         startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
+        startInfo.Environment["NUGET_HTTP_CACHE_PATH"] = nugetHttpCache;
+        startInfo.Environment["NUGET_PLUGINS_CACHE_PATH"] = nugetPluginsCache;
         startInfo.Environment["USERPROFILE"] = profile;
         startInfo.Environment["HOME"] = profile;
         startInfo.Environment["APPDATA"] = appData;
