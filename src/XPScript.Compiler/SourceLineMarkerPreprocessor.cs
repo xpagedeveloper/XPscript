@@ -42,7 +42,7 @@ internal sealed class SourceLineMarkerPreprocessor
             if (inProcedure)
             {
                 var indent = Regex.Match(raw, @"^\s*").Value;
-                var iconMetadata = BuildApplicationIconMetadata(code, sourceName);
+                var iconMetadata = BuildApplicationIconMetadata(code, sourceName, i + 1);
                 if (iconMetadata is not null)
                 {
                     var variableName = "XpsCompilerGeneratedIconMarker_" + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -71,7 +71,7 @@ internal sealed class SourceLineMarkerPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private static string? BuildApplicationIconMetadata(string code, string sourceName)
+    private static string? BuildApplicationIconMetadata(string code, string sourceName, int lineNumber)
     {
         var match = ApplicationIconPattern.Match(code);
         if (!match.Success) return null;
@@ -84,7 +84,15 @@ internal sealed class SourceLineMarkerPreprocessor
             var sourcePath = Path.GetFullPath(sourceName);
             var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
             var resolved = Path.IsPathRooted(declared) ? Path.GetFullPath(declared) : Path.GetFullPath(declared, baseDirectory);
+
+            if (Path.GetExtension(resolved).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(resolved))
+                throw new CompilerException($"{sourceName}({lineNumber},1): Application.Icon file was not found: {declared}");
+
             return ApplicationObjectPreprocessor.BuildIconMarker + resolved;
+        }
+        catch (CompilerException)
+        {
+            throw;
         }
         catch
         {
