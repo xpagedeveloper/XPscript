@@ -43,17 +43,21 @@ public sealed class XpsBrowserWasmCompiler
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
         var publishRoot = Path.Combine(bundleRoot, "publish");
+        var appRoot = Path.Combine(bundleRoot, "app");
         var marker = Path.Combine(bundleRoot, "source.sha256");
-        if (File.Exists(marker) && Directory.Exists(publishRoot))
-            return new XpsBrowserWasmBundle(sourcePath, hash, ResolvePublishedAppRoot(publishRoot));
+        if (File.Exists(marker) && IsValidAppRoot(appRoot))
+            return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
         await _buildGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (File.Exists(marker) && Directory.Exists(publishRoot))
-                return new XpsBrowserWasmBundle(sourcePath, hash, ResolvePublishedAppRoot(publishRoot));
+            if (File.Exists(marker) && IsValidAppRoot(appRoot))
+                return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
             var workspace = Path.Combine(bundleRoot, "build");
+            TryDelete(workspace);
+            TryDelete(publishRoot);
+            TryDelete(appRoot);
             Directory.CreateDirectory(workspace);
             Directory.CreateDirectory(publishRoot);
 
@@ -73,13 +77,18 @@ public sealed class XpsBrowserWasmCompiler
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
 
-            var appRoot = ResolvePublishedAppRoot(publishRoot);
+            var builtAppRoot = ResolveBuiltAppRoot(publishRoot, workspace);
+            CopyDirectory(builtAppRoot, appRoot);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
 
+            if (!IsValidAppRoot(appRoot))
+                throw new XpsWebCompilationException("browser-wasm persisted app bundle is incomplete.");
+
             await File.WriteAllTextAsync(marker, hash, cancellationToken).ConfigureAwait(false);
             TryDelete(workspace);
+            TryDelete(publishRoot);
             return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
         }
         finally
@@ -88,21 +97,54 @@ public sealed class XpsBrowserWasmCompiler
         }
     }
 
-    private static string ResolvePublishedAppRoot(string publishRoot)
+    private static bool IsValidAppRoot(string appRoot) =>
+        Directory.Exists(appRoot) &&
+        File.Exists(Path.Combine(appRoot, "main.js")) &&
+        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+
+    private static string ResolveBuiltAppRoot(params string[] searchRoots)
     {
-        var fullPublishRoot = Path.GetFullPath(publishRoot);
-        var directFramework = Path.Combine(fullPublishRoot, "_framework", "dotnet.js");
-        if (File.Exists(directFramework)) return fullPublishRoot;
+        foreach (var searchRoot in searchRoots)
+        {
+            if (!Directory.Exists(searchRoot)) continue;
 
-        var frameworkEntry = Directory.EnumerateFiles(fullPublishRoot, "dotnet.js", SearchOption.AllDirectories)
-            .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
-        if (frameworkEntry is null)
-            throw new XpsWebCompilationException("browser-wasm publish output did not contain _framework/dotnet.js.");
+            var fullSearchRoot = Path.GetFullPath(searchRoot);
+            var directFramework = Path.Combine(fullSearchRoot, "_framework", "dotnet.js");
+            if (File.Exists(directFramework)) return fullSearchRoot;
 
-        var frameworkDirectory = Path.GetDirectoryName(frameworkEntry)
-            ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
-        return Directory.GetParent(frameworkDirectory)?.FullName
-            ?? throw new XpsWebCompilationException("Unable to determine browser-wasm published application root.");
+            var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories)
+                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+            if (frameworkEntry is null) continue;
+
+            var frameworkDirectory = Path.GetDirectoryName(frameworkEntry)
+                ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
+            return Directory.GetParent(frameworkDirectory)?.FullName
+                ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
+        }
+
+        throw new XpsWebCompilationException("browser-wasm build output did not contain _framework/dotnet.js.");
+    }
+
+    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+    {
+        var sourceRoot = Path.GetFullPath(sourceDirectory);
+        var destinationRoot = Path.GetFullPath(destinationDirectory);
+        if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
+        Directory.CreateDirectory(destinationRoot);
+
+        foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceRoot, directory);
+            Directory.CreateDirectory(Path.Combine(destinationRoot, relative));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceRoot, file);
+            var destination = Path.Combine(destinationRoot, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination, true);
+        }
     }
 
     private string BuildIndexHtml(string sourcePath)
