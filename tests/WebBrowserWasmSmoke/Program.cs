@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -90,6 +91,43 @@ End Sub
     }
 
     Console.WriteLine("browser-wasm smoke passed");
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine(ex);
+    var project = Directory.Exists(root)
+        ? Directory.EnumerateFiles(root, "BrowserApp.csproj", SearchOption.AllDirectories).FirstOrDefault()
+        : null;
+    if (project is not null)
+    {
+        Console.Error.WriteLine($"Diagnostic browser project: {project}");
+        var diagnosticOutput = Path.Combine(Path.GetDirectoryName(project)!, "diagnostic-publish");
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = Path.GetDirectoryName(project)!,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (var arg in new[] { "publish", project, "-c", "Release", "--no-restore", "--nologo", "-v:minimal", "-o", diagnosticOutput })
+            psi.ArgumentList.Add(arg);
+        using var process = Process.Start(psi);
+        if (process is not null)
+        {
+            var stdout = await process.StandardOutput.ReadToEndAsync();
+            var stderr = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var diagnostic = stdout + Environment.NewLine + stderr;
+            const int tailLength = 24000;
+            if (diagnostic.Length > tailLength) diagnostic = diagnostic[^tailLength..];
+            Console.Error.WriteLine("=== browser-wasm diagnostic publish tail ===");
+            Console.Error.WriteLine(diagnostic);
+            Console.Error.WriteLine($"=== diagnostic publish exit code: {process.ExitCode} ===");
+        }
+    }
+    throw;
 }
 finally
 {
