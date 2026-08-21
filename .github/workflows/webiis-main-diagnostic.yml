@@ -71,35 +71,36 @@ jobs:
       - name: Install and probe IIS site
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Continue'
+          $ErrorActionPreference = 'Stop'
           Import-Module WebAdministration
           $name = 'XPscript-IIS-Main-Diag'
           $pool = 'XPscript-IIS-Main-Diag-Pool'
           $port = 50839
           $path = $env:XPS_DIAG_SITE_PATH
-          if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
-          if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
-          New-WebAppPool $pool | Out-Null
-          Set-ItemProperty "IIS:\AppPools\$pool" -Name managedRuntimeVersion -Value ''
-          Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.identityType -Value 4
-          New-Website -Name $name -Port $port -IPAddress '127.0.0.1' -PhysicalPath $path -ApplicationPool $pool | Out-Null
-          & icacls $path /grant "IIS AppPool\${pool}:(OI)(CI)RX" /T /C | Out-Null
-          & icacls (Join-Path $path '.xpscript-cache') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
-          & icacls (Join-Path $path 'logs') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
-          Start-WebAppPool $pool
-          Start-Website $name
-          Start-Sleep 3
           try {
+            if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
+            if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
+            New-WebAppPool $pool | Out-Null
+            Set-ItemProperty "IIS:\AppPools\$pool" -Name managedRuntimeVersion -Value ''
+            Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.identityType -Value 4
+            New-Website -Name $name -Port $port -IPAddress '127.0.0.1' -PhysicalPath $path -ApplicationPool $pool | Out-Null
+            & icacls $path /grant "IIS AppPool\${pool}:(OI)(CI)RX" /T /C | Out-Null
+            & icacls (Join-Path $path '.xpscript-cache') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
+            & icacls (Join-Path $path 'logs') /grant "IIS AppPool\${pool}:(OI)(CI)M" /T /C | Out-Null
+            Start-WebAppPool $pool
+            Start-Website $name
+            Start-Sleep 3
             $r = Invoke-WebRequest "http://127.0.0.1:$port/main" -UseBasicParsing -TimeoutSec 60
             Write-Host "STATUS=$($r.StatusCode) BODY=$($r.Content)"
-          } catch {
-            Write-Host "REQUEST-ERROR=$($_.Exception.Message)"
-            if ($_.ErrorDetails.Message) { Write-Host "REQUEST-BODY=$($_.ErrorDetails.Message)" }
+            if ($r.StatusCode -ne 200 -or $r.Content -ne 'MAIN-OK') {
+              throw "Unexpected IIS diagnostic response: status=$($r.StatusCode) body='$($r.Content)'"
+            }
           }
-          Start-Sleep 2
-          Write-Host '=== stdout logs ==='
-          Get-ChildItem (Join-Path $path 'logs') -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.FullName) ---"; Get-Content $_.FullName -Raw }
-          Write-Host '=== compilation cache ==='
-          Get-ChildItem (Join-Path $path '.xpscript-cache') -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
-          if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
-          if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
+          finally {
+            Write-Host '=== stdout logs ==='
+            Get-ChildItem (Join-Path $path 'logs') -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.FullName) ---"; Get-Content $_.FullName -Raw }
+            Write-Host '=== compilation cache ==='
+            Get-ChildItem (Join-Path $path '.xpscript-cache') -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
+            if (Test-Path "IIS:\Sites\$name") { Remove-Website $name }
+            if (Test-Path "IIS:\AppPools\$pool") { Remove-WebAppPool $pool }
+          }
