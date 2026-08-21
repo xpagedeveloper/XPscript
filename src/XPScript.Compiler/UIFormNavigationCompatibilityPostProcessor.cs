@@ -54,6 +54,9 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
 
     private const string BrowserNavigationAssignment = """
         _navigationTarget = path;
+        var webRuntime = Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
+        var stageMethod = webRuntime?.GetMethod("TryStageRequestStateForNavigation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        stageMethod?.Invoke(null, null);
         if (OperatingSystem.IsBrowser())
         {
             var browserHost = Type.GetType("XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", throwOnError: false, ignoreCase: false);
