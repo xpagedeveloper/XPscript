@@ -4,79 +4,51 @@
 
 ## Goal
 
-Add one event/action model for UIForm on Avalonia desktop, Kestrel, CGI and FastCGI.
+Use one event/action model for UIForm on Avalonia desktop, Kestrel, CGI, FastCGI and browser-WASM where applicable.
 
-The same XPscript handler must be usable from:
+The same XPscript handler should be usable from UI buttons, field OnChange events, list/row actions where appropriate and future UI events. A handler must be able to mutate the live form and bound JSON document before the affected UI is refreshed.
 
-- UI buttons
-- field OnChange
-- list/row actions where appropriate
-- future UI events
-
-A handler must be able to mutate the live form and the bound JSON document before the affected UI is refreshed.
-
-## Proposed button API
+## Button API
 
 ```xps
 Call form.AddButton("save", "Save", "SaveCustomer")
 Call form.AddButton("cancel", "Back", "BackToList")
-
 Call form.SetButtonPosition("save", 10, 7, 3, 1)
 Call form.SetButtonPosition("cancel", 10, 10, 3, 1)
 Call form.SetButtonStyle("save", "Primary")
 ```
 
-Button names must be unique within one UIForm.
-
-Button handler names are configured in trusted XPscript code and must never be accepted from browser/client input.
+Button names must be unique within one UIForm. Handler names are configured in trusted XPscript code and must never be accepted from browser/client input.
 
 ## Handler contract
-
-Initial handler contract:
 
 ```xps
 Sub SaveCustomer(form As Variant)
     Dim data As Variant
     data = form.GetData()
-
     Call data.Set("saved", True)
     Call form.SetFieldValue("status", "Saved")
     Call form.RefreshRegion("statusRegion")
 End Sub
 ```
 
-A handler receives the live UIForm object as a Variant. This allows the same handler to mutate the same bound JSON and field metadata on web and desktop.
-
-Handlers may be Sub or Function. A Function result is reserved for later action-result shortcuts. Initial implementation uses mutations on the supplied form.
+A handler receives the live UIForm object as a Variant. This allows the same handler to mutate bound JSON and field metadata on web and desktop.
 
 ## Form JSON API
-
-The existing `Data` property remains available.
-
-Add explicit methods:
 
 ```xps
 Dim data As Variant
 data = form.GetData()
-
 Call form.SetData(data)
-```
 
-`GetData()` returns the live bound JsonObject. Changes made through that object are immediately visible to the form.
-
-`SetData(jsonObjectOrDocument)` replaces/rebinds the current form data using the same type rules as `BindData`.
-
-Existing APIs remain valid:
-
-```xps
 Call form.SetFieldValue("name", "Kalle")
 value = form.GetFieldValue("name")
 valueText = form.GetFieldValueString("name")
 ```
 
-## Mutable field properties
+`GetData()` returns the live bound JsonObject. `SetData()` replaces/rebinds the current form data using the same type rules as `BindData`.
 
-Add:
+## Mutable field properties
 
 ```xps
 Call form.SetFieldLabel("email", "Work email")
@@ -88,11 +60,9 @@ Call form.SetLength("email", 3, 320)
 Call form.SetNumberRange("age", 0, 150)
 ```
 
-Field state must be reflected immediately after an event refresh on both web and desktop.
+Field state must be reflected after an event refresh on both web and desktop.
 
 ## Select and Radio options
-
-Existing APIs are part of the action model:
 
 ```xps
 Call form.ClearOptions("city")
@@ -102,39 +72,15 @@ Call form.SetFieldValue("city", "Stockholm")
 Call form.RefreshRegion("cityRegion")
 ```
 
-If the current selected value is no longer in the available option set, the handler should explicitly set a replacement or clear the value. Runtime validation must still reject values outside the configured allow-list.
+Runtime validation must reject selected values outside the configured allow-list.
 
 ## OnChange
-
-Add a direct OnChange handler:
 
 ```xps
 Call form.SetOnChange("country", "CountryChanged")
 ```
 
-Example:
-
-```xps
-Sub CountryChanged(form As Variant)
-    Dim country As String
-    country = form.GetFieldValueString("country")
-
-    Call form.ClearOptions("city")
-
-    If country = "SE" Then
-        Call form.AddOption("city", "Stockholm")
-        Call form.AddOption("city", "Gothenburg")
-    ElseIf country = "NO" Then
-        Call form.AddOption("city", "Oslo")
-        Call form.AddOption("city", "Bergen")
-    End If
-
-    Call form.SetFieldValue("city", "")
-    Call form.RefreshRegion("cityRegion")
-End Sub
-```
-
-`SetRefreshOnChange` remains supported as a convenience API. Internally both APIs should use the same event dispatcher.
+`SetRefreshOnChange` remains supported as a convenience API. Both APIs use the same event dispatcher.
 
 ## Refresh API
 
@@ -146,55 +92,44 @@ Call form.RefreshAll()
 
 Multiple region refreshes may be requested during one handler. The runtime should deduplicate them.
 
-Web:
-
-- event request posts current form values
-- server validates configured handler against server-side form metadata
-- handler executes
-- response contains only requested region fragments, or complete form when `RefreshAll()` is used
-- browser replaces affected DOM regions without full page reload
-
-Desktop:
-
-- event updates the live bound JSON first
-- handler executes
-- affected Avalonia controls/containers are updated in place
-- the form window remains open
-
 ## Navigation
 
-Handlers may navigate to another local XPscript file:
+Navigation has one public argument only, the target module.
 
 ```xps
 Sub BackToList(form As Variant)
-    Call form.Navigate("customers.xps")
+    Call form.Navigate("customers")
 End Sub
 ```
 
-With a parameter:
+The `.xps` extension is optional:
 
 ```xps
-Call form.Navigate("customer-list.xps", "selectedId", form.GetFieldValueString("id"))
+Call form.Navigate("customers")
+Call form.Navigate("customers.xps")
 ```
 
-Web:
+Navigation parameters are not supported. Use the scope objects for state transfer:
 
-```text
-/customer-list.xps?selectedId=1001
+```xps
+Request.State.Set("selectedId", form.GetFieldValueString("id"))
+Call form.Navigate("customer-list")
 ```
 
-Desktop:
+Use `Request.State` only for the current navigation/request chain. Use `Session.State` for session data, `Application.State` for application-wide state and `Process.State` for process-wide state.
 
-The current form closes and the XPscript launcher/runtime opens the target script with the same named navigation value.
+Browser and browser-WASM navigation is real browser navigation. The browser URL changes to the target route. Extensionless targets remain extensionless in the address bar. WASM asset requests such as `_framework/dotnet.js` do not change the visible URL.
+
+Desktop navigation switches to the compiled target module inside the same application.
 
 Security requirements:
 
-- only target paths configured by server-side XPscript handlers are accepted
-- target must be a local relative `.xps` path
+- target must be a local relative XPscript module path
+- `.xps` is optional
 - reject absolute paths
 - reject `..`
-- reject non-XPscript extensions
-- URL encode web parameter names and values
+- reject other file extensions
+- matching is case-insensitive
 
 ## Event order
 
@@ -210,60 +145,27 @@ For Button and OnChange events:
 
 The browser/client must never be allowed to supply an arbitrary handler method name.
 
-## Field events
-
-Initial event:
-
-```xps
-Call form.SetOnChange("field", "Handler")
-```
-
-Later candidates:
-
-```text
-OnClick
-OnFocus
-OnBlur
-OnInput
-OnDoubleClick
-```
-
-Do not add these until the shared dispatcher is stable.
-
 ## Tests
 
-Add regression tests for:
+Regression coverage should include:
 
-- button invokes only configured handler
-- forged handler name is rejected/ignored
-- OnChange invokes configured handler
-- handler receives same live UIForm instance
-- GetData returns current bound JSON
-- SetData rebinds JSON
-- JSON changes appear in fields after refresh
-- SetFieldValue updates JSON and UI
-- label/visible/enabled/readonly changes
-- ClearOptions/AddOption during event
-- refresh one region
-- refresh multiple regions
-- refresh all
-- button navigation
-- OnChange navigation
+- configured button handler invocation
+- forged handler rejection
+- OnChange handler invocation
+- live UIForm instance handling
+- GetData and SetData
+- field-state mutation
+- dynamic options
+- partial and full refresh
+- button and OnChange navigation
+- extensionless and `.xps` navigation
+- case-insensitive routing
 - navigation traversal rejection
-- web partial event response
-- Avalonia in-place control refresh
-- password values are not leaked during event refresh
+- no navigation parameter overload or serialized parameter fields
+- Request.State navigation boundary
+- browser-WASM URL changes through real navigation
+- password values not leaking during event refresh
 
 ## Showcase
 
-Extend the desktop and web UI showcase scripts with:
-
-- Save button
-- Back button
-- Country OnChange
-- dynamic City options
-- status region
-- JSON mutation
-- enabled/disabled field mutation
-- label mutation
-- navigation back to a UIListView script
+Keep desktop, server-web and browser-WASM showcase scripts aligned with the same target-only navigation API and state-scope model.
