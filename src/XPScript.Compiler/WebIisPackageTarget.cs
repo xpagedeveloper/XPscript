@@ -79,12 +79,12 @@ internal static class WebIisPackageTarget
         {
             var exe = Path.Combine(destination, "xpscript.exe");
             if (!File.Exists(exe)) throw new CompilerException("Self-contained IIS host did not produce xpscript.exe.");
-            return (".\\host\\xpscript.exe", "web --root . --sessions --static-files --host localhost");
+            return (".\\host\\xpscript.exe", "web --root . --default-document main.xps --sessions --static-files --host localhost");
         }
 
         var dll = Path.Combine(destination, "xpscript.dll");
         if (!File.Exists(dll)) throw new CompilerException("Framework-dependent IIS host did not produce xpscript.dll.");
-        return ("dotnet", ".\\host\\xpscript.dll web --root . --sessions --static-files --host localhost");
+        return ("dotnet", ".\\host\\xpscript.dll web --root . --default-document main.xps --sessions --static-files --host localhost");
     }
 
     private static string? FindCliProject()
@@ -139,7 +139,8 @@ internal static class WebIisPackageTarget
     {
         var escapedProcess = SecurityElement.Escape(processPath) ?? string.Empty;
         var escapedArgs = SecurityElement.Escape(arguments) ?? string.Empty;
-        return $"""<?xml version="1.0" encoding="utf-8"?>
+        return $"""
+<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <location path="." inheritInChildApplications="false">
     <system.webServer>
@@ -153,13 +154,15 @@ internal static class WebIisPackageTarget
 """;
     }
 
-    private static string BuildSetParameters() => """<?xml version="1.0" encoding="utf-8"?>
+    private static string BuildSetParameters() => """
+<?xml version="1.0" encoding="utf-8"?>
 <parameters>
   <setParameter name="IIS Web Application Name" value="Default Web Site/XPscriptApp" />
 </parameters>
 """;
 
-    private static string BuildDeployCmd() => """@echo off
+    private static string BuildDeployCmd() => """
+@echo off
 setlocal
 if "%~1"=="" (
   echo Usage: deploy.cmd "IIS Site/Application"
@@ -174,7 +177,8 @@ if not exist "%MSDEPLOY%" (
 exit /b %ERRORLEVEL%
 """;
 
-    private static string BuildReadme(bool selfContained) => $"""XPscript IIS deployment package
+    private static string BuildReadme(bool selfContained) => $"""
+XPscript IIS deployment package
 
 Deployment model: {(selfContained ? "self-contained win-x64" : "framework-dependent .NET 10")}
 
