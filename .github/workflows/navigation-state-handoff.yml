@@ -6,8 +6,12 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/XpsNavigationStateHandoff.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Compiler/BrowserNavigationStateRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIFormNavigationCompatibilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewEventPostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRowActionsPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRowActionCompatibilityPostProcessor.cs'
+      - 'src/XPScript.UI.Browser/**'
       - 'tests/NavigationStateHandoffProbe/**'
       - '.github/workflows/navigation-state-handoff.yml'
   push:
@@ -17,8 +21,12 @@ on:
     paths:
       - 'src/XPScript.Web.Runtime/XpsNavigationStateHandoff.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Compiler/BrowserNavigationStateRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIFormNavigationCompatibilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewEventPostProcessor.cs'
       - 'src/XPScript.Compiler/UIListViewRowActionsPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRowActionCompatibilityPostProcessor.cs'
+      - 'src/XPScript.UI.Browser/**'
       - 'tests/NavigationStateHandoffProbe/**'
       - '.github/workflows/navigation-state-handoff.yml'
 
@@ -39,3 +47,7 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Run navigation state handoff probe
         run: dotnet run --project ./tests/NavigationStateHandoffProbe/NavigationStateHandoffProbe.csproj -c Release
+      - name: Build compiler and browser host
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet build ./src/XPScript.UI.Browser/XPScript.UI.Browser.csproj -c Release
