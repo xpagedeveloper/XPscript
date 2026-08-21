@@ -12,9 +12,13 @@ try
 Sub Main()
     Application.Title = "XPscript Metadata Probe"
     Application.Icon = "app.ico"
+    Application.Width = 1280
+    Application.Height = 800
     Dim form As New UIForm("Fallback title")
     Print Application.Title
     Print Application.Icon
+    Print Application.Width
+    Print Application.Height
 End Sub
 """;
     File.WriteAllText(sourcePath, source);
@@ -22,8 +26,12 @@ End Sub
     var generated = new XPScriptTranspiler().Transpile(source, sourcePath, CompilerDriver.CurrentRuntimeIdentifier());
     Require(generated.Contains("__xps_application_title", StringComparison.Ordinal), "Application.Title was not mapped to application state");
     Require(generated.Contains("__xps_application_icon", StringComparison.Ordinal), "Application.Icon was not mapped to application state");
+    Require(generated.Contains("__xps_application_width", StringComparison.Ordinal), "Application.Width was not mapped to application state");
+    Require(generated.Contains("__xps_application_height", StringComparison.Ordinal), "Application.Height was not mapped to application state");
     Require(generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal), "application title was not added to UI bridge metadata");
     Require(generated.Contains("applicationIcon = XPScriptRuntime.CStr", StringComparison.Ordinal), "application icon was not added to UI bridge metadata");
+    Require(generated.Contains("ReadApplicationDimension(\"__xps_application_width\"", StringComparison.Ordinal), "application default width was not added to desktop UI metadata");
+    Require(generated.Contains("ReadApplicationDimension(\"__xps_application_height\"", StringComparison.Ordinal), "application default height was not added to desktop UI metadata");
     Require(generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
     Require(generated.Contains("__XPSCRIPT_APPLICATION_ICON_BUILD__=", StringComparison.Ordinal), "Windows executable icon build marker was not emitted");
 
