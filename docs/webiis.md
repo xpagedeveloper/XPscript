@@ -55,6 +55,23 @@ IIS receives the public HTTP or HTTPS request. ASP.NET Core Module starts the XP
 
 Normal standalone `xpscript web` hosting keeps its explicit XPscript host allowlist behavior. The IIS behavior is activated only when the ASP.NET Core Module environment contains both its assigned port and pairing token.
 
+## Supported XPscript web application types
+
+A WebIIS package can contain all current XPscript web application types in the same IIS application:
+
+- normal server-side XPscript routes using `Response`, `Request`, `Session` and the other web runtime objects
+- server-side UIForm routes rendered as HTML by XPscript
+- `[Platform:browser-wasm]` applications that publish and run as browser WebAssembly
+
+Normal server-side routes and UIForm routes are handled by the persistent XPscript host behind IIS.
+
+A browser-WASM route is compiled and published when it is first requested unless its existing cache can be reused. Its bootstrap document and `_framework` assets are still served through the owning XPscript route, for example:
+
+```text
+/wasm.xps
+/wasm.xps/_framework/dotnet.js
+```
+
 ## Server requirements
 
 Install IIS and ASP.NET Core Module V2.
@@ -65,14 +82,30 @@ A self-contained package includes the .NET runtime, but ASP.NET Core Module V2 i
 
 Use an IIS application pool configured as `No Managed Code`.
 
+If the deployed application contains `[Platform:browser-wasm]` files and uses on-demand browser-WASM compilation, install the matching .NET SDK and WebAssembly build tools on the IIS server:
+
+```text
+dotnet workload install wasm-tools
+```
+
 ## Manual deployment
 
 1. Create an IIS site or application.
 2. Set its physical path to the extracted `site` directory.
-3. Give the application pool identity read and execute access.
-4. Configure HTTP or HTTPS bindings in IIS.
-5. Start or recycle the application pool.
-6. Browse to the configured hostname.
+3. Give the application pool identity read and execute access to the site.
+4. If browser-WASM on-demand compilation is used, create `.xpscript-cache` below the site root and give the application pool identity Modify permission only to that cache directory.
+5. Configure HTTP or HTTPS bindings in IIS.
+6. Start or recycle the application pool.
+7. Browse to the configured hostname.
+
+Example Windows permission model:
+
+```text
+site\                         Read + Execute
+site\.xpscript-cache\        Modify
+```
+
+Do not grant Modify permission to the complete site merely to support browser-WASM caching.
 
 TLS certificates and public hostnames are configured on the IIS site bindings.
 
@@ -109,11 +142,39 @@ The existing scope rules remain unchanged:
 
 An IIS application-pool recycle restarts the XPscript worker process, so in-memory `Process.State`, `Application.State` and sessions do not survive a recycle unless application code persists required data externally.
 
+## Browser WebAssembly cache
+
+Browser-WASM publish output is stored under:
+
+```text
+.xpscript-cache\wasm
+```
+
+The application-pool identity needs Modify permission on `.xpscript-cache` when on-demand compilation is enabled.
+
+The cache is not a public IIS static directory. XPscript resolves browser-WASM assets through the corresponding `.xps` route.
+
+If browser-WASM applications are precompiled as part of a deployment pipeline in the future, production servers can avoid SDK and write-permission requirements for those already-published applications.
+
 ## Updating an application
 
 Build a new package and deploy the new `site` directory or use `deploy.cmd`.
 
 Replacing `web.config` or host binaries can cause IIS to restart the application. Design deployment so users do not depend on in-memory state surviving an application recycle.
+
+A deployment process should preserve or safely rebuild `.xpscript-cache` rather than exposing it as static content.
+
+## Automated IIS verification
+
+The `WebIIS IIS E2E` GitHub Actions workflow provisions a real IIS instance on `windows-latest`, installs ASP.NET Core Module V2 and WebAssembly build tools, deploys a generated WebIIS package and verifies:
+
+- normal XPscript HTTP routing
+- routes with and without `.xps`
+- case-insensitive route matching
+- `Application.State`, `Process.State`, `Session.State` and `Request.State` behavior over real HTTP sessions
+- server-side UIForm HTML rendering
+- browser-WASM bootstrap generation
+- browser-WASM `_framework/dotnet.js` delivery through IIS
 
 ## Security
 
@@ -122,7 +183,8 @@ Replacing `web.config` or host binaries can cause IIS to restart the application
 - Keep the XPscript backend on the IIS-assigned loopback port.
 - Restrict public hostnames with IIS bindings.
 - Give the application-pool identity only the filesystem permissions required by the application.
-- Grant write access only to explicit data, upload or log directories that need it.
-- Keep ASP.NET Core Hosting Bundle and IIS patched.
+- Give browser-WASM on-demand compilation Modify permission only to `.xpscript-cache`, not to the whole site.
+- Grant other write access only to explicit data, upload or log directories that need it.
+- Keep ASP.NET Core Hosting Bundle, IIS, the .NET SDK used for browser-WASM compilation and installed workloads patched.
 
 For alternative IIS topologies such as reverse proxy or CGI, see [Hosting XPScript on IIS](iis-hosting.md).
