@@ -6,12 +6,31 @@ namespace XPScript.UI.Browser;
 
 public static partial class BrowserFormHost
 {
+    private const string NavigationStateStorageKey = "xpscript.request-state.navigation";
+
     public static string ShowDialog(string requestJson)
     {
         ArgumentNullException.ThrowIfNull(requestJson);
         var normalized = NormalizeStructuralElements(requestJson);
         ApplyApplicationMetadata(normalized);
         return RenderForm(normalized);
+    }
+
+    public static void StageRequestState(string stateJson)
+    {
+        ArgumentNullException.ThrowIfNull(stateJson);
+        if (stateJson.Length > 1024 * 1024)
+            throw new ArgumentOutOfRangeException(nameof(stateJson), "Browser Request.State navigation payload exceeds 1 MiB.");
+
+        var encodedKey = JsonSerializer.Serialize(NavigationStateStorageKey);
+        var encodedState = JsonSerializer.Serialize(stateJson);
+        Eval("(() => { const key = " + encodedKey + "; const value = " + encodedState + "; if (value === '{}') sessionStorage.removeItem(key); else sessionStorage.setItem(key, value); })();");
+    }
+
+    public static string ConsumeRequestState()
+    {
+        var encodedKey = JsonSerializer.Serialize(NavigationStateStorageKey);
+        return EvalString("(() => { const key = " + encodedKey + "; const value = sessionStorage.getItem(key) || ''; sessionStorage.removeItem(key); return value; })();") ?? string.Empty;
     }
 
     public static void Navigate(string target)
@@ -83,4 +102,7 @@ public static partial class BrowserFormHost
 
     [JSImport("eval", "globalThis")]
     private static partial void Eval(string script);
+
+    [JSImport("eval", "globalThis")]
+    private static partial string? EvalString(string script);
 }
