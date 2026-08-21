@@ -64,10 +64,42 @@ End Sub
     var resolver = new XpsWebPathResolver(root);
     var asset = resolver.Resolve("/app.xps/_framework/dotnet.js");
     if (!asset.Found || asset.RouteFunction != XpsWebPathResolver.BrowserWasmAssetRoute) throw new Exception("WASM asset route was not resolved.");
+    var mainAsset = resolver.Resolve("/app.xps/main.js");
+    if (!mainAsset.Found || mainAsset.RouteFunction != XpsWebPathResolver.BrowserWasmAssetRoute) throw new Exception("WASM main.js route was not resolved.");
 
     var compiler = new XpsWebCompiler();
     await using var unit = await compiler.CompileAsync(sourcePath, root);
     if (!unit.Routes.ContainsKey("Index") || !unit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute)) throw new Exception("Synthetic WASM routes are missing.");
+
+    var request = new XpsWebRequest(
+        "GET", "/app.xps/main.js", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
+        "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+    var response = new XpsWebResponse();
+    var context = new XpsWebContext(
+        request,
+        response,
+        new XpsServerInfo("browser-wasm-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new XpsWebPrincipal(false),
+        new SmokeApplicationState());
+    await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, context);
+    if (response.StatusCode != 200 || response.Body.Length == 0)
+        throw new Exception($"Synthetic browser-WASM main.js handler returned HTTP {response.StatusCode} with {response.Body.Length} bytes.");
+
+    var frameworkRequest = new XpsWebRequest(
+        "GET", "/app.xps/_framework/dotnet.js", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
+        "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+    var frameworkResponse = new XpsWebResponse();
+    var frameworkContext = new XpsWebContext(
+        frameworkRequest,
+        frameworkResponse,
+        new XpsServerInfo("browser-wasm-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new XpsWebPrincipal(false),
+        new SmokeApplicationState());
+    await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, frameworkContext);
+    if (frameworkResponse.StatusCode != 200 || frameworkResponse.Body.Length == 0)
+        throw new Exception($"Synthetic browser-WASM dotnet.js handler returned HTTP {frameworkResponse.StatusCode} with {frameworkResponse.Body.Length} bytes.");
 
     var cacheRoot = Path.Combine(root, ".xpscript-cache", "wasm");
     var index = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories).FirstOrDefault();
@@ -104,4 +136,16 @@ End Sub
 finally
 {
     try { Directory.Delete(root, true); } catch { }
+}
+
+sealed class SmokeApplicationState : IXpsApplicationState
+{
+    public int Count => 0;
+    public IReadOnlyList<string> Keys => Array.Empty<string>();
+    public object? Get(string name) => null;
+    public void Set(string name, object? value) { }
+    public bool Exists(string name) => false;
+    public bool Remove(string name) => false;
+    public bool Unset(string name) => false;
+    public void Clear() { }
 }
