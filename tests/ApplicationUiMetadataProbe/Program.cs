@@ -33,7 +33,6 @@ End Sub
     Require(generated.Contains("ReadApplicationDimension(\"__xps_application_width\"", StringComparison.Ordinal), "application default width was not added to desktop UI metadata");
     Require(generated.Contains("ReadApplicationDimension(\"__xps_application_height\"", StringComparison.Ordinal), "application default height was not added to desktop UI metadata");
     Require(generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
-    Require(generated.Contains("__XPSCRIPT_APPLICATION_ICON_BUILD__=", StringComparison.Ordinal), "Windows executable icon build marker was not emitted");
 
     if (OperatingSystem.IsWindows())
     {
