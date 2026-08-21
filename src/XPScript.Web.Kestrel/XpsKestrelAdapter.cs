@@ -40,8 +40,9 @@ public static class XpsKestrelAdapter
 
         var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
         var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+        var iisPort = 0;
         var iisOutOfProcess = !string.IsNullOrWhiteSpace(iisToken) &&
-                              int.TryParse(iisPortText, out var iisPort) &&
+                              int.TryParse(iisPortText, out iisPort) &&
                               iisPort is > 0 and <= 65535;
         var listenAddress = iisOutOfProcess ? IPAddress.Loopback : options.Address;
         var listenPort = iisOutOfProcess ? iisPort : options.Port;
