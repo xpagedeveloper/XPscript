@@ -39,7 +39,7 @@ try
     Require(config.Contains("hostingModel=\"outofprocess\"", StringComparison.OrdinalIgnoreCase), "web.config must use out-of-process hosting because XPscript uses Kestrel");
     Require(config.Contains("--default-document index.xps", StringComparison.OrdinalIgnoreCase), "WebIIS host must resolve / through index.xps");
     Require(config.Contains("XPSCRIPT_WEB_CACHE_DIRECTORY", StringComparison.Ordinal), "WebIIS must configure an explicit writable compilation cache");
-    Require(config.Contains(".\\.xpscript-cache", StringComparison.Ordinal), "WebIIS compilation cache must be site-local .xpscript-cache");
+    Require(config.Contains(".xpscript-cache", StringComparison.Ordinal), "WebIIS compilation cache must be site-local .xpscript-cache");
     Require(!config.Contains("--default-document main.xps", StringComparison.OrdinalIgnoreCase), "main.xps must remain the build entry and must not be the HTTP default document");
     Require(!config.Contains("--host localhost", StringComparison.OrdinalIgnoreCase), "WebIIS package must let IIS bindings control public hostnames");
 
