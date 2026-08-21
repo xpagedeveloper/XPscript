@@ -68,7 +68,7 @@ End Sub
     Require(result.Source.Contains("LCase(Trim(target))", StringComparison.Ordinal), "navigation matching is not case-insensitive");
     Require(result.Source.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
     Require(result.Source.Contains("Request.State.Set(parameterName, parameterValue)", StringComparison.Ordinal), "navigation parameters are not copied into Request.State");
-    Require(result.Source.Contains("Public Sub Navigate(target As String, parameterName As String, parameterValue As String)", StringComparison.Ordinal), "parameterized Navigate overload is missing");
+    Require(result.Source.Contains("Public Sub Navigate(target As String, Optional parameterName As String", StringComparison.Ordinal), "Navigate optional parameter support is missing");
 
     var ignored = preprocessor.Transform("""
 [Compile:app]
