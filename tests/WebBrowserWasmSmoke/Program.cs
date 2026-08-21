@@ -73,13 +73,21 @@ End Sub
     var index = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories).FirstOrDefault();
     var dotnetJs = Directory.EnumerateFiles(cacheRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault();
     var browserJs = Directory.EnumerateFiles(cacheRoot, "xpscript-browser.js", SearchOption.AllDirectories).FirstOrDefault();
-    if (index is null || dotnetJs is null || browserJs is null) throw new Exception("WASM publish output was not cached.");
+    var mainJs = Directory.EnumerateFiles(cacheRoot, "main.js", SearchOption.AllDirectories).FirstOrDefault();
+    if (index is null || dotnetJs is null || browserJs is null || mainJs is null) throw new Exception("WASM publish output was not cached.");
 
-    var bootstrap = await File.ReadAllTextAsync(index);
+    var frameworkRoot = Directory.GetParent(Path.GetDirectoryName(dotnetJs)!)?.FullName
+        ?? throw new Exception("Unable to determine the published browser-WASM application root.");
+    if (!File.Exists(Path.Combine(frameworkRoot, "index.html")) ||
+        !File.Exists(Path.Combine(frameworkRoot, "main.js")) ||
+        !File.Exists(Path.Combine(frameworkRoot, "xpscript-browser.js")))
+        throw new Exception("Browser-WASM bootstrap assets are not colocated with the published _framework directory.");
+
+    var bootstrap = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "index.html"));
     if (!bootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
-    var browserModule = await File.ReadAllTextAsync(browserJs);
+    var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
