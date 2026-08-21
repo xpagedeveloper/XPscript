@@ -85,11 +85,11 @@ internal sealed class XPScriptUIListView
 """,
             """
         string handlerName;
-        var navigationEvent = false;
+        var navigationTarget = string.Empty;
         if (eventName.Equals("select", StringComparison.OrdinalIgnoreCase))
         {
             handlerName = _onSelectHandler;
-            navigationEvent = _rowActionTarget.Length > 0;
+            navigationTarget = _rowActionTarget;
         }
         else if (eventName.Equals("doubleclick", StringComparison.OrdinalIgnoreCase))
             handlerName = _onDoubleClickHandler;
@@ -101,7 +101,7 @@ internal sealed class XPScriptUIListView
             if (!action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
                 throw new XPScriptRuntimeException(5, $"UIListView row action '{actionName}' is not a navigation action.");
             handlerName = _onSelectHandler;
-            navigationEvent = true;
+            navigationTarget = action.Target;
         }
         else if (eventName.StartsWith("action:", StringComparison.OrdinalIgnoreCase))
         {
@@ -117,11 +117,11 @@ internal sealed class XPScriptUIListView
 
         if (handlerName.Length > 0)
             InvokeRegisteredHandler(handlerName);
-        if (navigationEvent)
+        if (navigationTarget.Length > 0)
         {
             var webRuntime = Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
             var stageMethod = webRuntime?.GetMethod("TryStageRequestStateForNavigation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            stageMethod?.Invoke(null, null);
+            stageMethod?.Invoke(null, [navigationTarget]);
         }
         return SerializeLiveState();
 """);
