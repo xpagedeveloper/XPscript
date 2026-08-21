@@ -4,23 +4,23 @@
 
 ## Goal
 
-Add a cross-platform list view that can display a complete JSON array on web and desktop using the same XPscript API.
+Provide a cross-platform list view that displays JSON arrays on web and desktop using the same XPscript API.
 
-Implemented core capabilities on the current integration branch:
+Current capabilities include:
 
 - JSON array binding
 - multiple visible columns
-- configurable column labels and widths
+- configurable labels and widths
 - ascending/descending type-aware sorting
 - filtering across visible columns
 - row selection
 - `SetOnSelect` and `SetOnDoubleClick`
 - live JSON/list updates after handlers
-- row navigation to another `.xps` file
+- target-only row navigation
 - per-row handler buttons
-- per-row navigation buttons
+- per-row target-only navigation buttons
 - secure desktop navigation through the XPscript launcher
-- web support through Kestrel, CGI and FastCGI
+- Kestrel, CGI, FastCGI and WebIIS web support
 - Avalonia desktop support
 
 ## Core API
@@ -52,23 +52,33 @@ Sub CustomerSelected(list As Variant)
 End Sub
 ```
 
-Handlers may change the bound JSON array or visible list properties. The web renderer applies a state patch without a full page reload. Avalonia rebuilds only the list/header area and keeps the dialog open.
+Handlers may change the bound JSON array or visible list properties. The web renderer applies a state patch without a full page reload. Avalonia updates the list while keeping the dialog open.
 
 ## Row navigation
 
+Row navigation now takes only the target module:
+
 ```xps
-Call list.SetRowAction("customer.xps", "id", "customerId")
+Call list.SetRowAction("customer")
 ```
 
-A normal row open navigates to the configured local `.xps` target with the configured value.
+The `.xps` extension is optional:
 
-Web example:
-
-```text
-customer.xps?customerId=1001
+```xps
+Call list.SetRowAction("customer")
+Call list.SetRowAction("customer.xps")
 ```
 
-Desktop uses the XPscript launcher navigation protocol and validates the target before execution.
+No querystring or navigation parameter is generated. If the target needs data, set the appropriate XPscript state before navigation in a handler-driven flow.
+
+Use:
+
+- `Request.State` for the current request/navigation chain
+- `Session.State` for session-scoped data
+- `Application.State` for application-wide data
+- `Process.State` for process-wide data
+
+Browser navigation changes the visible URL to the configured target route. Desktop uses the XPscript launcher/runtime navigation protocol.
 
 ## Per-row action buttons
 
@@ -85,7 +95,7 @@ End Sub
 Navigation button:
 
 ```xps
-Call list.AddRowNavigationButton("edit", "Edit", "customer.xps", "id", "customerId")
+Call list.AddRowNavigationButton("edit", "Edit", "customer")
 ```
 
 Remove all configured row buttons:
@@ -94,7 +104,7 @@ Remove all configured row buttons:
 Call list.ClearRowActions()
 ```
 
-Handler buttons keep the list open and apply the returned live state. Navigation buttons open the configured target. Clicking an action button does not also trigger the row click/navigation event.
+Handler buttons keep the list open and apply returned live state. Navigation buttons open only the configured target. Clicking an action button does not also trigger row navigation.
 
 ## JSON binding
 
@@ -156,16 +166,17 @@ A single filter input searches all visible columns. Hidden JSON properties do no
 
 ## Web implementation
 
-The renderer uses semantic HTML table markup and built-in JavaScript. No external JavaScript framework is required.
+The renderer uses semantic HTML table markup and built-in JavaScript.
 
-Requirements implemented or enforced:
+Requirements:
 
 - encoded headers and cell values
 - client-side sort/filter
-- URL-encoded action values
 - keyboard-accessible row navigation
 - event POSTs to the same XPscript route
-- row actions stop event bubbling so they do not also execute row navigation
+- row actions stop event bubbling
+- target-only navigation URLs
+- no row id or other data encoded as navigation query parameters
 
 Interactive web list routes must permit both GET and POST.
 
@@ -179,20 +190,21 @@ Avalonia renders:
 - double-click event/action
 - per-row buttons
 - live list refresh
-- secure navigation through the XPscript launcher
+- secure target-only navigation through the XPscript launcher
 
 ## Security
 
 - encode rendered web values and labels
-- URL encode selected values
-- validate target `.xps` paths
+- validate local XPscript target paths
+- allow optional `.xps` extension
 - reject absolute paths
 - reject `..`
 - reject non-XPscript target extensions
 - do not execute target paths supplied by JSON data
-- handler names come only from server-side XPscript configuration
-- action targets come only from server-side XPscript configuration
-- browser/desktop clients send only event/action name and row index
+- handler names come only from trusted XPscript configuration
+- action targets come only from trusted XPscript configuration
+- browser/desktop clients send only registered event/action names and row indexes
+- do not expose selected row data through navigation querystrings
 
 ## Remaining performance work
 
@@ -214,4 +226,4 @@ samples/ui-list-view-web.xps
 samples/customer-form.xps
 ```
 
-They cover JSON binding, columns, selection, sorting/filtering configuration, events, live updates, row navigation and per-row buttons.
+They cover JSON binding, columns, selection, sorting/filtering configuration, events, live updates, target-only row navigation and per-row buttons.
