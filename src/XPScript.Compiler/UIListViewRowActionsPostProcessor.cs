@@ -16,8 +16,6 @@ internal sealed class XPScriptUIListRowAction
     public required string Kind { get; init; }
     public string Handler { get; init; } = string.Empty;
     public string Target { get; init; } = string.Empty;
-    public string ValueField { get; init; } = string.Empty;
-    public string ParameterName { get; init; } = string.Empty;
 }
 
 internal sealed class XPScriptUIListView
@@ -49,10 +47,7 @@ internal sealed class XPScriptUIListView
         });
     }
 
-    public void AddRowNavigationButton(object? name, object? label, object? targetScript, object? valueField)
-        => AddRowNavigationButton(name, label, targetScript, valueField, valueField);
-
-    public void AddRowNavigationButton(object? name, object? label, object? targetScript, object? valueField, object? parameterName)
+    public void AddRowNavigationButton(object? name, object? label, object? targetScript)
     {
         var actionName = NormalizeName(name, "row action");
         EnsureUniqueRowAction(actionName);
@@ -61,9 +56,7 @@ internal sealed class XPScriptUIListView
             Name = actionName,
             Label = XPScriptRuntime.CStr(label),
             Kind = "Navigate",
-            Target = NormalizeTarget(targetScript),
-            ValueField = NormalizeName(valueField, "row action value field"),
-            ParameterName = NormalizeName(parameterName, "row action parameter")
+            Target = NormalizeTarget(targetScript)
         });
     }
 
@@ -212,9 +205,8 @@ const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i
             """
     private string BuildActionHref(XPScriptUIListRowAction action, int rowIndex)
     {
-        if (!action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase)) return string.Empty;
-        var value = GetRowValueString(rowIndex, action.ValueField);
-        return action.Target + "?" + Uri.EscapeDataString(action.ParameterName) + "=" + Uri.EscapeDataString(value);
+        _ = rowIndex;
+        return action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase) ? action.Target : string.Empty;
     }
 
     internal bool TryWriteDesktopRowActionNavigation(string actionName)
@@ -224,12 +216,9 @@ const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i
             return false;
         var navigationFile = Environment.GetEnvironmentVariable("XPSCRIPT_NAVIGATION_FILE");
         if (string.IsNullOrWhiteSpace(navigationFile)) return false;
-        var value = GetRowValueString(_selectedIndex, action.ValueField);
         File.WriteAllText(navigationFile, System.Text.Json.JsonSerializer.Serialize(new
         {
-            target = action.Target,
-            parameterName = action.ParameterName,
-            parameterValue = value
+            target = action.Target
         }));
         return true;
     }
@@ -251,6 +240,11 @@ const hr=root.querySelector('thead tr');if(hr){hr.innerHTML='';cols.forEach((c,i
 
         if (result.Equals("Open", StringComparison.OrdinalIgnoreCase))
 """);
+
+        if (generated.Contains("ParameterName", StringComparison.Ordinal) ||
+            generated.Contains("parameterName", StringComparison.Ordinal) ||
+            generated.Contains("parameterValue", StringComparison.Ordinal))
+            throw new CompilerException("UIListView row navigation parameter cleanup was incomplete.");
 
         return generated;
     }
