@@ -16,10 +16,38 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
             throw new XPScriptRuntimeException(5, "UIForm navigation target must be a relative local XPS module path with an optional .xps extension.");
 """;
 
+    private const string ParameterFields = """
+    private string _navigationParameterName = string.Empty;
+    private string _navigationParameterValue = string.Empty;
+""";
+
     private const string ParameterOverload = """
 
     public void Navigate(object? target, object? parameterName, object? parameterValue)
         => SetNavigation(target, XPScriptRuntime.CStr(parameterName), XPScriptRuntime.CStr(parameterValue));
+""";
+
+    private const string OldNavigate = """
+    public void Navigate(object? target)
+        => SetNavigation(target, string.Empty, string.Empty);
+""";
+
+    private const string NewNavigate = """
+    public void Navigate(object? target)
+        => SetNavigation(target);
+""";
+
+    private const string OldSetNavigationSignature = "    private void SetNavigation(object? target, string parameterName, string parameterValue)";
+    private const string NewSetNavigationSignature = "    private void SetNavigation(object? target)";
+
+    private const string ParameterValidation = """
+        if (parameterName.Length > 0 && (parameterName.Length > 128 || !parameterName.All(ch => char.IsLetterOrDigit(ch) || ch is '_' or '-')))
+            throw new XPScriptRuntimeException(5, "UIForm navigation parameter name is invalid.");
+""";
+
+    private const string ParameterAssignments = """
+        _navigationParameterName = parameterName;
+        _navigationParameterValue = parameterValue;
 """;
 
     private const string NavigationAssignment = "        _navigationTarget = path;";
@@ -47,8 +75,12 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
             generated = generated.Replace(OldValidation, NewValidation, StringComparison.Ordinal);
         }
 
-        if (generated.Contains(ParameterOverload, StringComparison.Ordinal))
-            generated = generated.Replace(ParameterOverload, string.Empty, StringComparison.Ordinal);
+        generated = generated.Replace(ParameterFields, string.Empty, StringComparison.Ordinal);
+        generated = generated.Replace(ParameterOverload, string.Empty, StringComparison.Ordinal);
+        generated = generated.Replace(OldNavigate, NewNavigate, StringComparison.Ordinal);
+        generated = generated.Replace(OldSetNavigationSignature, NewSetNavigationSignature, StringComparison.Ordinal);
+        generated = generated.Replace(ParameterValidation, string.Empty, StringComparison.Ordinal);
+        generated = generated.Replace(ParameterAssignments, string.Empty, StringComparison.Ordinal);
 
         if (!generated.Contains(BrowserNavigationAssignment, StringComparison.Ordinal))
         {
@@ -56,6 +88,11 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
                 throw new CompilerException("Unable to install browser UIForm navigation compatibility.");
             generated = generated.Replace(NavigationAssignment, BrowserNavigationAssignment, StringComparison.Ordinal);
         }
+
+        if (generated.Contains("_navigationParameterName", StringComparison.Ordinal) ||
+            generated.Contains("_navigationParameterValue", StringComparison.Ordinal) ||
+            generated.Contains("SetNavigation(target, string.Empty, string.Empty)", StringComparison.Ordinal))
+            throw new CompilerException("UIForm navigation parameter compatibility cleanup was incomplete.");
 
         return generated;
     }
