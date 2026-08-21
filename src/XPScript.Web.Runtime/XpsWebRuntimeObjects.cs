@@ -29,14 +29,14 @@ public static class XpsWebRuntimeObjects
         XpsWebContextAccessor.Current.Session ??
         throw new InvalidOperationException("Session support is not enabled for this XPScript site.");
 
-    public static void StageRequestStateForNavigation()
-        => XpsNavigationStateHandoff.StageCurrent();
+    public static void StageRequestStateForNavigation(string target)
+        => XpsNavigationStateHandoff.StageCurrent(target);
 
-    public static bool TryStageRequestStateForNavigation()
+    public static bool TryStageRequestStateForNavigation(string target)
     {
         try
         {
-            XpsNavigationStateHandoff.StageCurrent();
+            XpsNavigationStateHandoff.StageCurrent(target);
             return true;
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("No XPScript web request context is active", StringComparison.Ordinal))
