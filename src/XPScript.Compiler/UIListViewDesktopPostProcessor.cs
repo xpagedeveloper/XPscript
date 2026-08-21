@@ -24,7 +24,6 @@ internal sealed class UIListViewDesktopPostProcessor
             if (index < 0)
                 throw new CompilerException("Unable to install UIListView desktop runtime bridge (metadata).");
             index += token.Length;
-            // Match the platform newline used by raw string templates in later postprocessors.
             var newline = Environment.NewLine;
             listSource = listSource[..index]
                 + newline + "            sortable = _sortable,"
@@ -61,12 +60,9 @@ if (root.TryGetProperty("selectedIndex", out var selectedElement) && selectedEle
         if (string.IsNullOrWhiteSpace(navigationFile))
             return;
 
-        var value = GetRowValueString(_selectedIndex, _rowActionValueField);
         var request = System.Text.Json.JsonSerializer.Serialize(new
         {
-            target = _rowActionTarget,
-            parameterName = _rowActionParameterName,
-            parameterValue = value
+            target = _rowActionTarget
         });
         File.WriteAllText(navigationFile, request);
     }
@@ -75,6 +71,11 @@ if (root.TryGetProperty("selectedIndex", out var selectedElement) && selectedEle
 """,
                 "navigation");
         }
+
+        if (listSource.Contains("_rowActionValueField", StringComparison.Ordinal) ||
+            listSource.Contains("_rowActionParameterName", StringComparison.Ordinal) ||
+            listSource.Contains("parameterValue =", StringComparison.Ordinal))
+            throw new CompilerException("UIListView desktop navigation parameter cleanup was incomplete.");
 
         return prefix + listSource;
     }
