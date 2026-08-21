@@ -75,9 +75,9 @@ public static class XPScriptCompilerCommandLine
 
             if (target == "webiis")
             {
-                var result = await WebIisPackageTarget.BuildAsync(sourcePath, outputPath, selfContained, resultFormat).ConfigureAwait(false);
-                WriteResult(result, resultFormat);
-                return result.Success ? 0 : 2;
+                var targetResult = await WebIisPackageTarget.BuildAsync(sourcePath, outputPath, selfContained, resultFormat).ConfigureAwait(false);
+                WriteResult(targetResult, resultFormat);
+                return targetResult.Success ? 0 : 2;
             }
 
             if (restricted && sourceRoots.Count == 0)
