@@ -15,6 +15,12 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = Regex.Replace(
             source,
+            @"(?im)^(\s*Private\s+Sub\s+__XpsCompiledNavigationDispatch\s*\([^\r\n]*\)\s*)$",
+            "$1" + Environment.NewLine + "    Call XPScriptRequestRuntime.BeforeCompiledNavigation()",
+            RegexOptions.CultureInvariant);
+
+        source = Regex.Replace(
+            source,
             @"\bApplication\.Args\s*\(((?:[^()]|\([^()]*\))*)\)",
             m => "XPScriptApplicationRuntime.Arg(" + m.Groups[1].Value + ")",
             RegexOptions.IgnoreCase);
