@@ -49,8 +49,7 @@ internal static class XPScriptApplicationMetadataRuntime
                 throw new CompilerException("Unable to install Application.Title/Application.Icon UI metadata.");
 
             var indent = match.Groups["indent"].Value;
-            var replacement = string.Join(Environment.NewLine,
-                NewRequestTitle.Replace("            ", indent, StringComparison.Ordinal).TrimEnd('\r', '\n'));
+            var replacement = NewRequestTitle.Replace("            ", indent, StringComparison.Ordinal).TrimEnd('\r', '\n');
             generated = titlePattern.Replace(generated, replacement, 1);
         }
 
