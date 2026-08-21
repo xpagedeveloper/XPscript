@@ -47,9 +47,9 @@ Sub Main()
     Call list.SetFilterEnabled(True)
     Call list.SetOnSelect("CustomerSelected")
     Call list.SetOnDoubleClick("CustomerDoubleClicked")
-    Call list.AddRowNavigationButton("edit", "Edit", "customer-form.xps", "id", "customerId")
+    Call list.AddRowNavigationButton("edit", "Edit", "customer-form")
     Call list.AddRowButton("delete", "Delete", "DeleteCustomer")
-    Call list.SetRowAction("customer-form.xps", "id", "customerId")
+    Call list.SetRowAction("customer-form")
 
     result = list.ShowDialog()
 End Sub
