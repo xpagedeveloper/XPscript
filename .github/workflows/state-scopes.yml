@@ -5,10 +5,12 @@ on:
     paths:
       - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
       - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompileFolderSourcePreprocessor.cs'
       - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
       - 'src/XPScript.Web.Runtime/XpsProcessState.cs'
       - 'tests/StateScopeObjectProbe/**'
+      - 'tests/CompileFolderProbe/**'
       - 'XPScriptCompiler.slnx'
       - '.github/workflows/state-scopes.yml'
   push:
@@ -16,10 +18,12 @@ on:
     paths:
       - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
       - 'src/XPScript.Compiler/ApplicationRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CompileFolderSourcePreprocessor.cs'
       - 'src/XPScript.Web.Runtime/XpsWebContext.cs'
       - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
       - 'src/XPScript.Web.Runtime/XpsProcessState.cs'
       - 'tests/StateScopeObjectProbe/**'
+      - 'tests/CompileFolderProbe/**'
       - 'XPScriptCompiler.slnx'
       - '.github/workflows/state-scopes.yml'
 
@@ -34,5 +38,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Run state scope regression
+      - name: Run web state scope regression
         run: dotnet run --project ./tests/StateScopeObjectProbe/StateScopeObjectProbe.csproj -c Release
+      - name: Run desktop and WASM state scope regression
+        run: dotnet run --project ./tests/CompileFolderProbe/CompileFolderProbe.csproj -c Release
