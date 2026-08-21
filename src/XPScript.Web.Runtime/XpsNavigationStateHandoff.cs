@@ -82,9 +82,23 @@ public static class XpsNavigationStateHandoff
 
     private static string CookiePath(XpsWebRequest request)
     {
-        var path = request.PathInfo;
-        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith('/')) return "/";
-        return path.EndsWith('/') ? path : path + "/";
+        // Kestrel stores ASP.NET PathBase in PathInfo. FastCGI/CGI store the
+        // actual PATH_INFO there, so those hosts must use the SCRIPT_NAME
+        // directory to make the one-hop cookie available to sibling scripts.
+        var scriptName = request.Cgi("SCRIPT_NAME");
+        if (!string.IsNullOrWhiteSpace(scriptName))
+        {
+            var normalizedScript = scriptName.Replace('\\', '/');
+            if (normalizedScript.IndexOfAny(['\r', '\n', ';']) >= 0) return "/";
+            if (!normalizedScript.StartsWith('/')) normalizedScript = "/" + normalizedScript;
+            var slash = normalizedScript.LastIndexOf('/');
+            return slash <= 0 ? "/" : normalizedScript[..(slash + 1)];
+        }
+
+        var pathBase = request.PathInfo.Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(pathBase) || pathBase == "/" || !pathBase.StartsWith('/')) return "/";
+        if (pathBase.IndexOfAny(['\r', '\n', ';']) >= 0) return "/";
+        return pathBase.EndsWith('/') ? pathBase : pathBase + "/";
     }
 
     private static void ClearCookie(XpsWebRequest request, XpsWebResponse response) =>

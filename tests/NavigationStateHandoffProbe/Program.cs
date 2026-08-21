@@ -16,6 +16,8 @@ using (XpsWebContextAccessor.Push(sourceContext))
 var setCookie = RequireNavigationCookie(sourceResponse);
 if (setCookie.Contains("1001", StringComparison.Ordinal) || setCookie.Contains("customerId", StringComparison.OrdinalIgnoreCase))
     throw new Exception("Navigation cookie leaked Request.State data.");
+if (!setCookie.Contains("Path=/", StringComparison.Ordinal))
+    throw new Exception("Root Kestrel navigation cookie did not use the application root path.");
 var token = CookieValue(setCookie, XpsNavigationStateHandoff.CookieName);
 if (token.Length < 40) throw new Exception("Navigation handoff token is too short.");
 
@@ -50,13 +52,45 @@ using (XpsWebContextAccessor.Push(plainContext))
         throw new Exception("Request.State leaked beyond one navigation request.");
 }
 
+var subAppResponse = new XpsWebResponse();
+var subAppContext = new XpsWebContext(Request(pathInfo: "/apps/orders"), subAppResponse, server, new XpsWebPrincipal(false), application);
+using (XpsWebContextAccessor.Push(subAppContext))
+{
+    XpsWebRuntimeObjects.RequestScope.Set("scope", "subapp");
+    XpsWebRuntimeObjects.StageRequestStateForNavigation();
+}
+var subAppCookie = RequireNavigationCookie(subAppResponse);
+if (!subAppCookie.Contains("Path=/apps/orders/", StringComparison.Ordinal))
+    throw new Exception("Kestrel navigation cookie did not honor PathBase.");
+
+var fastCgiVariables = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+{
+    ["SCRIPT_NAME"] = "/apps/list.xps",
+    ["PATH_INFO"] = "/details"
+};
+var fastCgiResponse = new XpsWebResponse();
+var fastCgiContext = new XpsWebContext(Request(pathInfo: "/details", cgiVariables: fastCgiVariables), fastCgiResponse, server, new XpsWebPrincipal(false), application);
+using (XpsWebContextAccessor.Push(fastCgiContext))
+{
+    XpsWebRuntimeObjects.RequestScope.Set("scope", "fastcgi");
+    XpsWebRuntimeObjects.StageRequestStateForNavigation();
+}
+var fastCgiCookie = RequireNavigationCookie(fastCgiResponse);
+if (!fastCgiCookie.Contains("Path=/apps/", StringComparison.Ordinal))
+    throw new Exception("FastCGI navigation cookie was scoped to PATH_INFO instead of the script directory.");
+if (fastCgiCookie.Contains("Path=/details/", StringComparison.Ordinal))
+    throw new Exception("FastCGI navigation cookie incorrectly used PATH_INFO as its cookie path.");
+
 Console.WriteLine("NavigationStateHandoffProbe OK");
 return 0;
 
-static XpsWebRequest Request(IReadOnlyDictionary<string, string>? cookies = null) => new(
+static XpsWebRequest Request(
+    IReadOnlyDictionary<string, string>? cookies = null,
+    string pathInfo = "",
+    IReadOnlyDictionary<string, string?>? cgiVariables = null) => new(
     "GET",
     "/customer-form",
-    string.Empty,
+    pathInfo,
     string.Empty,
     new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase),
     null,
@@ -66,7 +100,8 @@ static XpsWebRequest Request(IReadOnlyDictionary<string, string>? cookies = null
     "https",
     "127.0.0.1",
     "HTTP/1.1",
-    cookies ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+    cookies ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+    cgiVariables: cgiVariables);
 
 static string RequireNavigationCookie(XpsWebResponse response)
 {
