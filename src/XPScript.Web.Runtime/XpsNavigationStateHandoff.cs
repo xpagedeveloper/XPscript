@@ -83,6 +83,16 @@ public static class XpsNavigationStateHandoff
         Stage(state, request, response);
     }
 
+    public static void ConsumeInto(IXpsRequestState target, XpsWebRequest request, XpsWebResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        var inherited = TryConsume(request, response);
+        if (inherited is null) return;
+        target.Clear();
+        foreach (var key in inherited.Keys)
+            target.Set(key, inherited.Get(key));
+    }
+
     public static IXpsRequestState? TryConsume(XpsWebRequest request, XpsWebResponse response)
     {
         ArgumentNullException.ThrowIfNull(request);
