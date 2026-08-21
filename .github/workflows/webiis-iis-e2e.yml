@@ -9,7 +9,7 @@ on:
 jobs:
   iis-e2e:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v6
 
@@ -23,6 +23,21 @@ jobs:
           $ErrorActionPreference = 'Stop'
           dotnet workload install wasm-tools
           if ($LASTEXITCODE -ne 0) { throw "wasm-tools installation failed with exit code $LASTEXITCODE." }
+
+      - name: Install Chromium test runtime
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $playwright = Join-Path $env:RUNNER_TEMP 'xps-playwright'
+          New-Item -ItemType Directory -Path $playwright -Force | Out-Null
+          Push-Location $playwright
+          npm init -y | Out-Null
+          npm install --no-save playwright
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to install Playwright.' }
+          npx playwright install chromium
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to install Playwright Chromium.' }
+          Pop-Location
+          "XPS_PLAYWRIGHT=$playwright" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Enable IIS
         shell: powershell
@@ -79,6 +94,18 @@ jobs:
           '@ | Set-Content -Path (Join-Path $app 'main.xps') -Encoding utf8
 
           @'
+          [Platform:browser-wasm]
+
+          Sub Main()
+              Dim form As New UIForm("IIS Browser WASM Index Test")
+              Call form.AddTextField("name", "Name")
+              Call form.AddEmailField("email", "Email")
+              Call form.SetRequired("name", True)
+              Call form.ShowDialog()
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'index.xps') -Encoding utf8
+
+          @'
           [Anonymous]
           [Get]
           Sub Index()
@@ -98,17 +125,15 @@ jobs:
           End Sub
           '@ | Set-Content -Path (Join-Path $app 'uiform.xps') -Encoding utf8
 
+          $ordinary = Join-Path $app 'ordinary'
+          New-Item -ItemType Directory -Path $ordinary -Force | Out-Null
           @'
-          [Platform:browser-wasm]
-
-          Sub Main()
-              Dim form As New UIForm("IIS Browser WASM Test")
-              Call form.AddTextField("name", "Name")
-              Call form.AddEmailField("email", "Email")
-              Call form.SetRequired("name", True)
-              Call form.ShowDialog()
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.Write("ORDINARY-INDEX-OK")
           End Sub
-          '@ | Set-Content -Path (Join-Path $app 'wasm.xps') -Encoding utf8
+          '@ | Set-Content -Path (Join-Path $ordinary 'index.xps') -Encoding utf8
 
           @'
           [Anonymous]
@@ -149,9 +174,13 @@ jobs:
           dotnet run --project .\src\XPScript.Cli\XPScript.Cli.csproj -c Release -- compile (Join-Path $app 'main.xps') --target webiis --output $output
           if ($LASTEXITCODE -ne 0) { throw "WebIIS compilation failed with exit code $LASTEXITCODE." }
           if (-not (Test-Path (Join-Path $output 'site\web.config'))) { throw 'web.config was not generated.' }
+          if (-not (Test-Path (Join-Path $output 'site\index.xps'))) { throw 'index.xps was not packaged.' }
           if (-not (Test-Path (Join-Path $output 'site\uiform.xps'))) { throw 'UIForm source was not packaged.' }
-          if (-not (Test-Path (Join-Path $output 'site\wasm.xps'))) { throw 'browser-WASM source was not packaged.' }
+          if (-not (Test-Path (Join-Path $output 'site\ordinary\index.xps'))) { throw 'nested server-side index.xps was not packaged.' }
           if (-not (Test-Path "$output.zip")) { throw 'WebIIS ZIP was not generated.' }
+
+          $webConfig = Get-Content (Join-Path $output 'site\web.config') -Raw
+          if ($webConfig -notmatch '--default-document index\.xps') { throw 'WebIIS host was not configured to use index.xps as the default document.' }
 
           "XPS_E2E_APP=$app" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "XPS_E2E_OUTPUT=$output" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -172,8 +201,8 @@ jobs:
           if (Test-Path "IIS:\AppPools\$poolName") { Remove-WebAppPool -Name $poolName }
 
           New-WebAppPool -Name $poolName | Out-Null
-          Set-ItemProperty "IIS:\AppPools\$poolName" -Name managedRuntimeVersion -Value ''
-          Set-ItemProperty "IIS:\AppPools\$poolName" -Name processModel.identityType -Value 4
+          Set-ItemProperty "IIS:\AppPools\\$poolName" -Name managedRuntimeVersion -Value ''
+          Set-ItemProperty "IIS:\AppPools\\$poolName" -Name processModel.identityType -Value 4
           New-Website -Name $siteName -Port $port -IPAddress '127.0.0.1' -PhysicalPath $physicalPath -ApplicationPool $poolName | Out-Null
 
           & icacls $physicalPath /grant "IIS AppPool\${poolName}:(OI)(CI)RX" /T /C | Out-Null
@@ -195,7 +224,7 @@ jobs:
           $probe = $null
           for ($i = 0; $i -lt 30; $i++) {
             try {
-              $probe = Invoke-WebRequest "$base/" -UseBasicParsing -TimeoutSec 5
+              $probe = Invoke-WebRequest "$base/main" -UseBasicParsing -TimeoutSec 5
               if ($probe.StatusCode -eq 200) { break }
             }
             catch { $lastError = $_ }
@@ -204,7 +233,7 @@ jobs:
           if (-not $probe -or $probe.StatusCode -ne 200) {
             throw "IIS site did not become ready. Last error: $lastError"
           }
-          if ($probe.Content -ne 'MAIN-OK') { throw "Unexpected root response: '$($probe.Content)'" }
+          if ($probe.Content -ne 'MAIN-OK') { throw "Unexpected /main response: '$($probe.Content)'" }
 
           $extensionless = Invoke-WebRequest "$base/page2" -UseBasicParsing
           if ($extensionless.Content -ne 'PAGE2-OK') { throw "Extensionless route failed: '$($extensionless.Content)'" }
@@ -214,6 +243,9 @@ jobs:
 
           $caseInsensitive = Invoke-WebRequest "$base/PAGE2" -UseBasicParsing
           if ($caseInsensitive.Content -ne 'PAGE2-OK') { throw "Case-insensitive route failed: '$($caseInsensitive.Content)'" }
+
+          $ordinaryIndex = Invoke-WebRequest "$base/ordinary/" -UseBasicParsing
+          if ($ordinaryIndex.Content -ne 'ORDINARY-INDEX-OK') { throw "Nested server-side index.xps default route failed: '$($ordinaryIndex.Content)'" }
 
           $userA = New-Object Microsoft.PowerShell.Commands.WebRequestSession
           $userB = New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -257,17 +289,20 @@ jobs:
           if ($response.Content -notmatch 'email') { throw 'UIForm email field was not rendered through IIS.' }
           Write-Host 'WEBIIS-UIFORM-WEB=OK'
 
-      - name: Verify browser WebAssembly through IIS
+      - name: Verify browser WebAssembly index through IIS
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $base = $env:XPS_E2E_URL
-          $response = Invoke-WebRequest "$base/wasm.xps" -UseBasicParsing -TimeoutSec 300
-          if ($response.StatusCode -ne 200) { throw "browser-WASM bootstrap returned HTTP $($response.StatusCode)." }
-          if ($response.Content -notmatch '_framework/dotnet\.js') { throw 'browser-WASM bootstrap did not reference dotnet.js.' }
+          $response = Invoke-WebRequest "$base/" -UseBasicParsing -TimeoutSec 300
+          if ($response.StatusCode -ne 200) { throw "browser-WASM index bootstrap returned HTTP $($response.StatusCode)." }
+          if ($response.Content -notmatch '<base href="index\.xps/">') { throw 'browser-WASM root bootstrap did not point assets at index.xps.' }
           if ($response.Content -notmatch 'xpscript-app') { throw 'browser-WASM bootstrap did not contain the XPscript application host element.' }
 
-          $asset = Invoke-WebRequest "$base/wasm.xps/_framework/dotnet.js" -UseBasicParsing -TimeoutSec 60
+          $mainJs = Invoke-WebRequest "$base/index.xps/main.js" -UseBasicParsing -TimeoutSec 60
+          if ($mainJs.StatusCode -ne 200) { throw "browser-WASM main.js returned HTTP $($mainJs.StatusCode)." }
+
+          $asset = Invoke-WebRequest "$base/index.xps/_framework/dotnet.js" -UseBasicParsing -TimeoutSec 60
           if ($asset.StatusCode -ne 200) { throw "browser-WASM dotnet.js returned HTTP $($asset.StatusCode)." }
           if ([string]::IsNullOrWhiteSpace($asset.Content)) { throw 'browser-WASM dotnet.js was empty.' }
 
@@ -275,7 +310,35 @@ jobs:
           if (-not (Test-Path $cache)) { throw 'browser-WASM cache directory was not created under the deployed IIS site.' }
           $frameworkAssets = Get-ChildItem $cache -Recurse -File -Filter dotnet.js -ErrorAction SilentlyContinue
           if (-not $frameworkAssets) { throw 'browser-WASM publish output did not contain dotnet.js.' }
-          Write-Host 'WEBIIS-BROWSER-WASM=OK'
+          Write-Host 'WEBIIS-BROWSER-WASM-ASSETS=OK'
+
+      - name: Verify browser WebAssembly executes in Chromium
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path $env:XPS_PLAYWRIGHT 'verify-wasm.js'
+          @'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage();
+            const failures = [];
+            page.on('pageerror', error => failures.push('pageerror: ' + error.message));
+            page.on('requestfailed', request => failures.push('requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || '')));
+            await page.goto(process.env.XPS_E2E_URL + '/', { waitUntil: 'domcontentloaded', timeout: 300000 });
+            await page.locator('input[name="name"]').waitFor({ state: 'visible', timeout: 180000 });
+            await page.locator('input[name="email"]').waitFor({ state: 'visible', timeout: 30000 });
+            const body = await page.textContent('body');
+            if (!body || !body.includes('IIS Browser WASM Index Test')) throw new Error('WASM UIForm title was not rendered.');
+            if (failures.length) throw new Error(failures.join('\n'));
+            await browser.close();
+            console.log('WEBIIS-BROWSER-WASM-CHROMIUM=OK');
+          })().catch(error => { console.error(error); process.exit(1); });
+          '@ | Set-Content -Path $script -Encoding utf8
+          Push-Location $env:XPS_PLAYWRIGHT
+          node $script
+          if ($LASTEXITCODE -ne 0) { throw "Chromium browser-WASM verification failed with exit code $LASTEXITCODE." }
+          Pop-Location
 
       - name: Collect IIS diagnostics on failure
         if: failure()
