@@ -79,12 +79,12 @@ internal static class WebIisPackageTarget
         {
             var exe = Path.Combine(destination, "xpscript.exe");
             if (!File.Exists(exe)) throw new CompilerException("Self-contained IIS host did not produce xpscript.exe.");
-            return (".\\host\\xpscript.exe", "web --root . --default-document main.xps --sessions --static-files --host localhost");
+            return (".\\host\\xpscript.exe", "web --root . --default-document main.xps --sessions --static-files");
         }
 
         var dll = Path.Combine(destination, "xpscript.dll");
         if (!File.Exists(dll)) throw new CompilerException("Framework-dependent IIS host did not produce xpscript.dll.");
-        return ("dotnet", ".\\host\\xpscript.dll web --root . --default-document main.xps --sessions --static-files --host localhost");
+        return ("dotnet", ".\\host\\xpscript.dll web --root . --default-document main.xps --sessions --static-files");
     }
 
     private static string? FindCliProject()
@@ -147,7 +147,7 @@ internal static class WebIisPackageTarget
       <handlers>
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
-      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="inprocess" />
+      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess" />
     </system.webServer>
   </location>
 </configuration>
@@ -181,6 +181,7 @@ exit /b %ERRORLEVEL%
 XPscript IIS deployment package
 
 Deployment model: {(selfContained ? "self-contained win-x64" : "framework-dependent .NET 10")}
+Hosting model: ASP.NET Core Module V2 out-of-process with Kestrel on the IIS-assigned loopback port.
 
 Requirements:
 - IIS with ASP.NET Core Module V2.
@@ -192,12 +193,12 @@ Manual installation:
 2. Extract the site directory to the IIS physical path.
 3. Give the application pool identity read access to the directory.
 4. Use an application pool with No Managed Code.
-5. Configure the application's hostname as an allowed XPscript web host before exposing it externally.
+5. Configure HTTP/HTTPS host bindings in IIS.
 6. Start the site.
 
 Web Deploy:
   deploy.cmd "Default Web Site/MyApp"
 
-The generated web.config starts the XPscript ASP.NET Core host under IIS.
+IIS bindings control the public hostnames. ASP.NET Core Module V2 starts XPscript and forwards requests to its private loopback Kestrel endpoint.
 """;
 }
