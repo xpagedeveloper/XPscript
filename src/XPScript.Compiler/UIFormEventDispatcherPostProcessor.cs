@@ -135,9 +135,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
             refreshRegions = _requestedRefreshRegions.ToArray(),
             navigation = _navigationTarget.Length == 0 ? null : new
             {
-                target = _navigationTarget,
-                parameterName = _navigationParameterName,
-                parameterValue = _navigationParameterValue
+                target = _navigationTarget
             },
             fields = _fields.Select(field => new
             {
@@ -168,8 +166,6 @@ internal sealed class UIFormEventDispatcherPostProcessor
         _refreshAllRequested = false;
         _requestedRefreshRegions.Clear();
         _navigationTarget = string.Empty;
-        _navigationParameterName = string.Empty;
-        _navigationParameterValue = string.Empty;
         return result;
     }
 
