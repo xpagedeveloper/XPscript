@@ -60,9 +60,10 @@ End Sub
     Require(result.Modules.Any(x => x.Equals("nested/orders.xps", StringComparison.OrdinalIgnoreCase)), "recursive subfolder module was not discovered");
     Require(!result.Modules.Any(x => x.EndsWith("common.xps", StringComparison.OrdinalIgnoreCase)), "an Include file was incorrectly compiled as a standalone module");
     Require(result.Dependencies.Any(x => Path.GetFileName(x).Equals("common.xps", StringComparison.OrdinalIgnoreCase)), "Include dependency was not tracked");
-    Require(result.Source.Contains("__xpsTarget = \"customers.xps\"", StringComparison.Ordinal), "navigation alias with .xps is missing");
-    Require(result.Source.Contains("__xpsTarget = \"customers\"", StringComparison.Ordinal), "extensionless navigation alias is missing");
+    Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"customers.xps\"", StringComparison.Ordinal), "navigation alias with .xps is missing");
+    Require(result.Source.Contains("xpsCompilerGeneratedTarget = \"customers\"", StringComparison.Ordinal), "extensionless navigation alias is missing");
     Require(result.Source.Contains("LCase(Trim(target))", StringComparison.Ordinal), "navigation matching is not case-insensitive");
+    Require(result.Source.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
 
     var ignored = preprocessor.Transform("""
 [Compile:app]
@@ -72,7 +73,7 @@ End Sub
 """, mainPath, enableModules: false);
     Require(!ignored.Enabled, "compile-folder must remain disabled for non-desktop/non-WASM source");
     Require(!ignored.Source.Contains("[Compile:", StringComparison.OrdinalIgnoreCase), "ignored Compile metadata must be removed before normal compilation");
-    Require(!ignored.Source.Contains("__XpsCompiledNavigationDispatch", StringComparison.Ordinal), "ignored Compile metadata unexpectedly installed navigation");
+    Require(!ignored.Source.Contains("XpsCompilerGeneratedNavigationDispatch", StringComparison.Ordinal), "ignored Compile metadata unexpectedly installed navigation");
 
     var wasmParsed = new XpsWebRouteMetadataParser().Parse("""
 [Platform:browser-wasm]
@@ -85,8 +86,8 @@ End Sub
     Require(wasmParsed.Source.Contains("[Compile:app]", StringComparison.OrdinalIgnoreCase), "Compile metadata must survive browser route parsing");
 
     var generated = new XPScriptTranspiler().Transpile(mainSource, mainPath, CompilerDriver.CurrentRuntimeIdentifier());
-    Require(generated.Contains("__XpsCompiledNavigationDispatch", StringComparison.Ordinal), "desktop transpilation did not install compiled navigation dispatch");
-    Require(generated.Contains("__XpsModule_", StringComparison.Ordinal), "desktop transpilation did not compile module entry points");
+    Require(generated.Contains("XpsCompilerGeneratedNavigationDispatch", StringComparison.Ordinal), "desktop transpilation did not install compiled navigation dispatch");
+    Require(generated.Contains("XpsCompilerGeneratedModule_", StringComparison.Ordinal), "desktop transpilation did not compile module entry points");
     Require(generated.Contains("XPScriptApplicationRuntime.State", StringComparison.Ordinal), "Application.State was not mapped for a compiled desktop application");
     Require(generated.Contains("XPScriptProcessRuntime.State", StringComparison.Ordinal), "Process.State was not mapped for a compiled desktop application");
     Require(generated.Contains("XPScriptSessionRuntime.State", StringComparison.Ordinal), "Session.State was not mapped for a compiled desktop/WASM application");
