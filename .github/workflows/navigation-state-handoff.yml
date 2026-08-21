@@ -1,0 +1,41 @@
+name: Navigation State Handoff
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Web.Runtime/XpsNavigationStateHandoff.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Compiler/UIFormNavigationCompatibilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRowActionsPostProcessor.cs'
+      - 'tests/NavigationStateHandoffProbe/**'
+      - '.github/workflows/navigation-state-handoff.yml'
+  push:
+    branches:
+      - 'fix-navigation-state-handoff'
+      - main
+    paths:
+      - 'src/XPScript.Web.Runtime/XpsNavigationStateHandoff.cs'
+      - 'src/XPScript.Web.Runtime/XpsWebRuntimeObjects.cs'
+      - 'src/XPScript.Compiler/UIFormNavigationCompatibilityPostProcessor.cs'
+      - 'src/XPScript.Compiler/UIListViewRowActionsPostProcessor.cs'
+      - 'tests/NavigationStateHandoffProbe/**'
+      - '.github/workflows/navigation-state-handoff.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run navigation state handoff probe
+        run: dotnet run --project ./tests/NavigationStateHandoffProbe/NavigationStateHandoffProbe.csproj -c Release
