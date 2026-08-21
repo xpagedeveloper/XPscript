@@ -280,11 +280,7 @@ public sealed class CompileFolderSourcePreprocessor
         }
         source.AppendLine("End Sub");
         source.AppendLine();
-        source.AppendLine("Public Sub Navigate(target As String)");
-        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, \"\", \"\")");
-        source.AppendLine("End Sub");
-        source.AppendLine();
-        source.AppendLine("Public Sub Navigate(target As String, parameterName As String, parameterValue As String)");
+        source.AppendLine("Public Sub Navigate(target As String, Optional parameterName As String = \"\", Optional parameterValue As String = \"\")");
         source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, parameterName, parameterValue)");
         source.AppendLine("End Sub");
     }
