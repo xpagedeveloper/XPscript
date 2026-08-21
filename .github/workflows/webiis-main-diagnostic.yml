@@ -61,6 +61,7 @@ jobs:
           $config = Join-Path $site 'web.config'
           $text = Get-Content $config -Raw
           $text = $text.Replace('stdoutLogEnabled="false"','stdoutLogEnabled="true"')
+          $text = $text.Replace('</environmentVariables>','  <environmentVariable name="XPSCRIPT_WEB_CONSOLE_ERRORS" value="1" />`r`n        </environmentVariables>')
           Set-Content $config $text -Encoding utf8
           New-Item -ItemType Directory -Path (Join-Path $site 'logs') -Force | Out-Null
           New-Item -ItemType Directory -Path (Join-Path $site '.xpscript-cache') -Force | Out-Null
