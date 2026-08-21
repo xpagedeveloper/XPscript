@@ -40,6 +40,12 @@ try
     Require(config.Contains("--default-document index.xps", StringComparison.OrdinalIgnoreCase), "WebIIS host must resolve / through index.xps");
     Require(config.Contains("XPSCRIPT_WEB_CACHE_DIRECTORY", StringComparison.Ordinal), "WebIIS must configure an explicit writable compilation cache");
     Require(config.Contains(".xpscript-cache", StringComparison.Ordinal), "WebIIS compilation cache must be site-local .xpscript-cache");
+    Require(config.Contains("DOTNET_CLI_HOME", StringComparison.Ordinal), "WebIIS must give child dotnet processes a writable CLI home");
+    Require(config.Contains("NUGET_PACKAGES", StringComparison.Ordinal), "WebIIS must give child dotnet processes a writable NuGet package directory");
+    Require(config.Contains("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", StringComparison.Ordinal), "WebIIS must disable dotnet first-time profile initialization");
+    Require(config.Contains("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.Ordinal), "WebIIS must disable dotnet CLI telemetry for runtime compilation");
+    Require(config.Contains("DOTNET_NOLOGO", StringComparison.Ordinal), "WebIIS runtime compilation must suppress dotnet first-run output");
+    Require(!config.Contains("systemprofile", StringComparison.OrdinalIgnoreCase), "WebIIS build environment must not depend on the Windows system profile");
     Require(!config.Contains("--default-document main.xps", StringComparison.OrdinalIgnoreCase), "main.xps must remain the build entry and must not be the HTTP default document");
     Require(!config.Contains("--host localhost", StringComparison.OrdinalIgnoreCase), "WebIIS package must let IIS bindings control public hostnames");
 
