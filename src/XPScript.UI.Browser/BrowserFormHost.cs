@@ -7,6 +7,7 @@ namespace XPScript.UI.Browser;
 public static partial class BrowserFormHost
 {
     private const string NavigationStateStorageKey = "xpscript.request-state.navigation";
+    private const int NavigationStateLifetimeMilliseconds = 60_000;
 
     public static string ShowDialog(string requestJson)
     {
@@ -24,13 +25,14 @@ public static partial class BrowserFormHost
 
         var encodedKey = JsonSerializer.Serialize(NavigationStateStorageKey);
         var encodedState = JsonSerializer.Serialize(stateJson);
-        Eval("(() => { const key = " + encodedKey + "; const value = " + encodedState + "; if (value === '{}') sessionStorage.removeItem(key); else sessionStorage.setItem(key, value); })();");
+        Eval("(() => { const key = " + encodedKey + "; const value = " + encodedState + "; if (value === '{}') { sessionStorage.removeItem(key); sessionStorage.removeItem(key + '.target'); sessionStorage.removeItem(key + '.created'); } else { sessionStorage.setItem(key, value); } })();");
     }
 
     public static string ConsumeRequestState()
     {
         var encodedKey = JsonSerializer.Serialize(NavigationStateStorageKey);
-        return EvalString("(() => { const key = " + encodedKey + "; const value = sessionStorage.getItem(key) || ''; sessionStorage.removeItem(key); return value; })();") ?? string.Empty;
+        var lifetime = NavigationStateLifetimeMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return EvalString("(() => { const key = " + encodedKey + "; const value = sessionStorage.getItem(key) || ''; const target = sessionStorage.getItem(key + '.target') || ''; const created = Number(sessionStorage.getItem(key + '.created') || '0'); sessionStorage.removeItem(key); sessionStorage.removeItem(key + '.target'); sessionStorage.removeItem(key + '.created'); if (!value || !target || !created) return ''; if ((Date.now() - created) > " + lifetime + ") return ''; const current = window.location.pathname; return current === target ? value : ''; })();") ?? string.Empty;
     }
 
     public static void Navigate(string target)
@@ -46,7 +48,8 @@ public static partial class BrowserFormHost
             throw new ArgumentException("Browser navigation target must be a relative local XPS module path with an optional .xps extension.", nameof(target));
 
         var encoded = JsonSerializer.Serialize(path);
-        Eval("(() => { const target = " + encoded + "; const current = window.location.pathname; const slash = current.lastIndexOf('/'); const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/'; window.location.href = basePath + target; })();");
+        var encodedKey = JsonSerializer.Serialize(NavigationStateStorageKey);
+        Eval("(() => { const target = " + encoded + "; const key = " + encodedKey + "; const current = window.location.pathname; const slash = current.lastIndexOf('/'); const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/'; const next = basePath + target; if (sessionStorage.getItem(key)) { sessionStorage.setItem(key + '.target', next); sessionStorage.setItem(key + '.created', String(Date.now())); } window.location.href = next; })();");
     }
 
     private static void ApplyApplicationMetadata(string requestJson)
