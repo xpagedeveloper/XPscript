@@ -43,6 +43,8 @@ public sealed record XpsWebCompilationCacheMetrics(
 
 public sealed class XpsWebCompilationCache : IAsyncDisposable
 {
+    public const string CacheDirectoryEnvironmentVariable = "XPSCRIPT_WEB_CACHE_DIRECTORY";
+
     private sealed class Entry
     {
         public required string Key { get; init; }
@@ -237,6 +239,10 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         if (!_options.EnablePersistentCache) return null;
         if (!string.IsNullOrWhiteSpace(_options.PersistentCacheDirectory))
             return Path.GetFullPath(_options.PersistentCacheDirectory);
+
+        var environmentCache = Environment.GetEnvironmentVariable(CacheDirectoryEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(environmentCache))
+            return Path.GetFullPath(environmentCache, fullSiteRoot);
 
         var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
