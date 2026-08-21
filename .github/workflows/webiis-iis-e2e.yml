@@ -201,8 +201,8 @@ jobs:
           if (Test-Path "IIS:\AppPools\$poolName") { Remove-WebAppPool -Name $poolName }
 
           New-WebAppPool -Name $poolName | Out-Null
-          Set-ItemProperty "IIS:\AppPools\\$poolName" -Name managedRuntimeVersion -Value ''
-          Set-ItemProperty "IIS:\AppPools\\$poolName" -Name processModel.identityType -Value 4
+          Set-ItemProperty "IIS:\AppPools\$poolName" -Name managedRuntimeVersion -Value ''
+          Set-ItemProperty "IIS:\AppPools\$poolName" -Name processModel.identityType -Value 4
           New-Website -Name $siteName -Port $port -IPAddress '127.0.0.1' -PhysicalPath $physicalPath -ApplicationPool $poolName | Out-Null
 
           & icacls $physicalPath /grant "IIS AppPool\${poolName}:(OI)(CI)RX" /T /C | Out-Null
