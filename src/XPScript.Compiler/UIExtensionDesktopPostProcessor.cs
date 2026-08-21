@@ -91,6 +91,7 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n";
 
         replaced = NormalizeLineEndings(replaced);
+        replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
 
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
