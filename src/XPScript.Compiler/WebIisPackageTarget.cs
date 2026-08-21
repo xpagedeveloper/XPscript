@@ -79,12 +79,12 @@ internal static class WebIisPackageTarget
         {
             var exe = Path.Combine(destination, "xpscript.exe");
             if (!File.Exists(exe)) throw new CompilerException("Self-contained IIS host did not produce xpscript.exe.");
-            return (".\\host\\xpscript.exe", "web --root . --default-document main.xps --sessions --static-files");
+            return (".\\host\\xpscript.exe", "web --root . --default-document index.xps --sessions --static-files");
         }
 
         var dll = Path.Combine(destination, "xpscript.dll");
         if (!File.Exists(dll)) throw new CompilerException("Framework-dependent IIS host did not produce xpscript.dll.");
-        return ("dotnet", ".\\host\\xpscript.dll web --root . --default-document main.xps --sessions --static-files");
+        return ("dotnet", ".\\host\\xpscript.dll web --root . --default-document index.xps --sessions --static-files");
     }
 
     private static string? FindCliProject()
@@ -182,6 +182,8 @@ XPscript IIS deployment package
 
 Deployment model: {(selfContained ? "self-contained win-x64" : "framework-dependent .NET 10")}
 Hosting model: ASP.NET Core Module V2 out-of-process with Kestrel on the IIS-assigned loopback port.
+Build entry: main.xps
+Web default document: index.xps
 
 Requirements:
 - IIS with ASP.NET Core Module V2.
@@ -201,6 +203,7 @@ Manual installation:
 Web Deploy:
   deploy.cmd "Default Web Site/MyApp"
 
+A request for / resolves to index.xps. index.xps may be a normal server-side XPscript file, a server-rendered UIForm file, or a [Platform:browser-wasm] application.
 IIS bindings control the public hostnames. ASP.NET Core Module V2 starts XPscript and forwards requests to its private loopback Kestrel endpoint.
 Normal server-side XPscript routes, server-rendered UIForm routes and browser-WASM routes can coexist in the same WebIIS application.
 """;
