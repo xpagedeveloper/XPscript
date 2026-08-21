@@ -6,13 +6,14 @@ internal sealed class ApplicationObjectPreprocessor
 {
     private const string TitleStateKey = "__xps_application_title";
     private const string IconStateKey = "__xps_application_icon";
+    internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
 
     public string Transform(string source)
     {
         RejectWrites(source);
 
-        source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey);
-        source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey);
+        source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey, false);
+        source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, true);
 
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
@@ -44,12 +45,34 @@ internal sealed class ApplicationObjectPreprocessor
         return source;
     }
 
-    private static string RewriteWritableApplicationProperty(string source, string propertyName, string stateKey)
+    private static string RewriteWritableApplicationProperty(string source, string propertyName, string stateKey, bool emitBuildIconMarker)
     {
         source = Regex.Replace(
             source,
             $@"(?im)^(?<indent>\s*)Application\.{Regex.Escape(propertyName)}\s*=\s*(?<value>.+?)\s*$",
-            m => m.Groups["indent"].Value + $"Call XPScriptApplicationRuntime.State.Set(\"{stateKey}\", " + m.Groups["value"].Value + ")",
+            m =>
+            {
+                var indent = m.Groups["indent"].Value;
+                var value = m.Groups["value"].Value;
+                var assignment = indent + $"Call XPScriptApplicationRuntime.State.Set(\"{stateKey}\", " + value + ")";
+                if (!emitBuildIconMarker) return assignment;
+
+                var literal = TryReadStringLiteral(value);
+                if (literal is null || literal.Length == 0) return assignment;
+                var sourcePath = ExpandedSourceContext.Current?.SourcePath;
+                if (string.IsNullOrWhiteSpace(sourcePath)) return assignment;
+
+                try
+                {
+                    var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+                    var resolved = Path.IsPathRooted(literal) ? Path.GetFullPath(literal) : Path.GetFullPath(literal, baseDirectory);
+                    return indent + "' " + BuildIconMarker + resolved + Environment.NewLine + assignment;
+                }
+                catch
+                {
+                    return assignment;
+                }
+            },
             RegexOptions.CultureInvariant);
 
         return Regex.Replace(
@@ -57,6 +80,13 @@ internal sealed class ApplicationObjectPreprocessor
             $@"\bApplication\.{Regex.Escape(propertyName)}\b",
             $"XPScriptApplicationRuntime.State.Get(\"{stateKey}\")",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string? TryReadStringLiteral(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length < 2 || trimmed[0] != '"' || trimmed[^1] != '"') return null;
+        return trimmed[1..^1].Replace("\"\"", "\"", StringComparison.Ordinal);
     }
 
     private static void RejectWrites(string source)
