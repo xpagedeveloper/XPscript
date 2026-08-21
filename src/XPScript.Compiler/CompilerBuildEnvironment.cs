@@ -15,6 +15,10 @@ internal static class CompilerBuildEnvironment
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(root, "dotnet-home");
         var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
+        var profile = CreatePrivateDirectory(root, "profile");
+        var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
+        var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
+        _ = CreatePrivateDirectory(appData, "NuGet");
 
         ConfigureDesktopUiDependencies(startInfo, root);
 
@@ -25,6 +29,10 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
         startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
+        startInfo.Environment["USERPROFILE"] = profile;
+        startInfo.Environment["HOME"] = profile;
+        startInfo.Environment["APPDATA"] = appData;
+        startInfo.Environment["LOCALAPPDATA"] = localAppData;
 
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
