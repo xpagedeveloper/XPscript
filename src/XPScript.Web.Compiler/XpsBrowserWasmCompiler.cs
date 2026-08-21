@@ -45,13 +45,13 @@ public sealed class XpsBrowserWasmCompiler
         var publishRoot = Path.Combine(bundleRoot, "publish");
         var marker = Path.Combine(bundleRoot, "source.sha256");
         if (File.Exists(marker) && Directory.Exists(publishRoot))
-            return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+            return new XpsBrowserWasmBundle(sourcePath, hash, ResolvePublishedAppRoot(publishRoot));
 
         await _buildGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (File.Exists(marker) && Directory.Exists(publishRoot))
-                return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+                return new XpsBrowserWasmBundle(sourcePath, hash, ResolvePublishedAppRoot(publishRoot));
 
             var workspace = Path.Combine(bundleRoot, "build");
             Directory.CreateDirectory(workspace);
@@ -73,14 +73,36 @@ public sealed class XpsBrowserWasmCompiler
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
 
+            var appRoot = ResolvePublishedAppRoot(publishRoot);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
+
             await File.WriteAllTextAsync(marker, hash, cancellationToken).ConfigureAwait(false);
             TryDelete(workspace);
-            return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+            return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
         }
         finally
         {
             _buildGate.Release();
         }
+    }
+
+    private static string ResolvePublishedAppRoot(string publishRoot)
+    {
+        var fullPublishRoot = Path.GetFullPath(publishRoot);
+        var directFramework = Path.Combine(fullPublishRoot, "_framework", "dotnet.js");
+        if (File.Exists(directFramework)) return fullPublishRoot;
+
+        var frameworkEntry = Directory.EnumerateFiles(fullPublishRoot, "dotnet.js", SearchOption.AllDirectories)
+            .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+        if (frameworkEntry is null)
+            throw new XpsWebCompilationException("browser-wasm publish output did not contain _framework/dotnet.js.");
+
+        var frameworkDirectory = Path.GetDirectoryName(frameworkEntry)
+            ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
+        return Directory.GetParent(frameworkDirectory)?.FullName
+            ?? throw new XpsWebCompilationException("Unable to determine browser-wasm published application root.");
     }
 
     private string BuildIndexHtml(string sourcePath)
