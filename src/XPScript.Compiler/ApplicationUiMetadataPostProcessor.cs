@@ -11,12 +11,46 @@ internal sealed class ApplicationUiMetadataPostProcessor
             applicationIcon = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_icon")),
 """;
 
+    private const string OldWebWrite = "            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());";
+    private const string NewWebWrite = "            XPScriptUIWebAdapter.WriteHtml(XPScriptApplicationMetadataRuntime.WrapWebHtml(RenderWebForm()));";
+
+    private const string RuntimeCode = """
+
+internal static class XPScriptApplicationMetadataRuntime
+{
+    public static string WrapWebHtml(string html)
+    {
+        var title = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_title"));
+        var icon = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_icon"));
+        if (title.Length == 0 && icon.Length == 0) return html;
+
+        var prefix = new System.Text.StringBuilder();
+        if (title.Length > 0)
+            prefix.Append("<title>").Append(System.Net.WebUtility.HtmlEncode(title)).Append("</title>");
+        if (icon.Length > 0)
+            prefix.Append("<link rel=\"icon\" href=\"").Append(System.Net.WebUtility.HtmlEncode(icon)).Append("\">");
+        return prefix.Append(html).ToString();
+    }
+}
+""";
+
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal)) return generated;
-        if (!generated.Contains(OldRequestTitle, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install Application.Title/Application.Icon UI metadata.");
-        return generated.Replace(OldRequestTitle, NewRequestTitle, StringComparison.Ordinal);
+
+        if (!generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal))
+        {
+            if (!generated.Contains(OldRequestTitle, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install Application.Title/Application.Icon UI metadata.");
+            generated = generated.Replace(OldRequestTitle, NewRequestTitle, StringComparison.Ordinal);
+        }
+
+        if (generated.Contains(OldWebWrite, StringComparison.Ordinal))
+            generated = generated.Replace(OldWebWrite, NewWebWrite, StringComparison.Ordinal);
+
+        if (!generated.Contains("internal static class XPScriptApplicationMetadataRuntime", StringComparison.Ordinal))
+            generated += RuntimeCode;
+
+        return generated;
     }
 }
