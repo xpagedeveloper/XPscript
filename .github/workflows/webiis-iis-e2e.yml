@@ -9,13 +9,20 @@ on:
 jobs:
   iis-e2e:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Install browser WebAssembly build tools
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet workload install wasm-tools
+          if ($LASTEXITCODE -ne 0) { throw "wasm-tools installation failed with exit code $LASTEXITCODE." }
 
       - name: Enable IIS
         shell: powershell
@@ -82,6 +89,30 @@ jobs:
           @'
           [Anonymous]
           [Get]
+          Sub Index()
+              Dim form As New UIForm("IIS UIForm Test")
+              Call form.AddTextField("name", "Name")
+              Call form.AddEmailField("email", "Email")
+              Call form.SetRequired("name", True)
+              Call form.ShowDialog()
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'uiform.xps') -Encoding utf8
+
+          @'
+          [Platform:browser-wasm]
+
+          Sub Main()
+              Dim form As New UIForm("IIS Browser WASM Test")
+              Call form.AddTextField("name", "Name")
+              Call form.AddEmailField("email", "Email")
+              Call form.SetRequired("name", True)
+              Call form.ShowDialog()
+          End Sub
+          '@ | Set-Content -Path (Join-Path $app 'wasm.xps') -Encoding utf8
+
+          @'
+          [Anonymous]
+          [Get]
           Sub WriteA()
               Application.State.Set("shared", "application-a")
               Process.State.Set("shared", "process-a")
@@ -118,6 +149,8 @@ jobs:
           dotnet run --project .\src\XPScript.Cli\XPScript.Cli.csproj -c Release -- compile (Join-Path $app 'main.xps') --target webiis --output $output
           if ($LASTEXITCODE -ne 0) { throw "WebIIS compilation failed with exit code $LASTEXITCODE." }
           if (-not (Test-Path (Join-Path $output 'site\web.config'))) { throw 'web.config was not generated.' }
+          if (-not (Test-Path (Join-Path $output 'site\uiform.xps'))) { throw 'UIForm source was not packaged.' }
+          if (-not (Test-Path (Join-Path $output 'site\wasm.xps'))) { throw 'browser-WASM source was not packaged.' }
           if (-not (Test-Path "$output.zip")) { throw 'WebIIS ZIP was not generated.' }
 
           "XPS_E2E_APP=$app" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -132,6 +165,8 @@ jobs:
           $poolName = 'XPscript-WebIIS-E2E-Pool'
           $port = 50837
           $physicalPath = Join-Path $env:XPS_E2E_OUTPUT 'site'
+          $cachePath = Join-Path $physicalPath '.xpscript-cache'
+          New-Item -ItemType Directory -Path $cachePath -Force | Out-Null
 
           if (Test-Path "IIS:\Sites\$siteName") { Remove-Website -Name $siteName }
           if (Test-Path "IIS:\AppPools\$poolName") { Remove-WebAppPool -Name $poolName }
@@ -142,6 +177,7 @@ jobs:
           New-Website -Name $siteName -Port $port -IPAddress '127.0.0.1' -PhysicalPath $physicalPath -ApplicationPool $poolName | Out-Null
 
           & icacls $physicalPath /grant "IIS AppPool\${poolName}:(OI)(CI)RX" /T /C | Out-Null
+          & icacls $cachePath /grant "IIS AppPool\${poolName}:(OI)(CI)M" /T /C | Out-Null
           Start-WebAppPool -Name $poolName
           Start-Website -Name $siteName
 
@@ -149,13 +185,14 @@ jobs:
           "XPS_E2E_POOL=$poolName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "XPS_E2E_URL=http://127.0.0.1:$port" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Verify real IIS HTTP routing and state scopes
+      - name: Verify normal web routing and state scopes through IIS
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $base = $env:XPS_E2E_URL
 
           $lastError = $null
+          $probe = $null
           for ($i = 0; $i -lt 30; $i++) {
             try {
               $probe = Invoke-WebRequest "$base/" -UseBasicParsing -TimeoutSec 5
@@ -207,7 +244,38 @@ jobs:
             throw "User B Session.State was not preserved: '$($readBAfterB.Content)'"
           }
 
-          Write-Host 'WEBIIS-IIS-E2E=OK'
+          Write-Host 'WEBIIS-NORMAL-WEB=OK'
+
+      - name: Verify UIForm web application through IIS
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $response = Invoke-WebRequest "$env:XPS_E2E_URL/uiform" -UseBasicParsing -TimeoutSec 30
+          if ($response.StatusCode -ne 200) { throw "UIForm route returned HTTP $($response.StatusCode)." }
+          if ($response.Content -notmatch 'IIS UIForm Test') { throw 'UIForm title was not rendered through IIS.' }
+          if ($response.Content -notmatch 'name') { throw 'UIForm text field was not rendered through IIS.' }
+          if ($response.Content -notmatch 'email') { throw 'UIForm email field was not rendered through IIS.' }
+          Write-Host 'WEBIIS-UIFORM-WEB=OK'
+
+      - name: Verify browser WebAssembly through IIS
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = $env:XPS_E2E_URL
+          $response = Invoke-WebRequest "$base/wasm.xps" -UseBasicParsing -TimeoutSec 300
+          if ($response.StatusCode -ne 200) { throw "browser-WASM bootstrap returned HTTP $($response.StatusCode)." }
+          if ($response.Content -notmatch '_framework/dotnet\.js') { throw 'browser-WASM bootstrap did not reference dotnet.js.' }
+          if ($response.Content -notmatch 'xpscript-app') { throw 'browser-WASM bootstrap did not contain the XPscript application host element.' }
+
+          $asset = Invoke-WebRequest "$base/wasm.xps/_framework/dotnet.js" -UseBasicParsing -TimeoutSec 60
+          if ($asset.StatusCode -ne 200) { throw "browser-WASM dotnet.js returned HTTP $($asset.StatusCode)." }
+          if ([string]::IsNullOrWhiteSpace($asset.Content)) { throw 'browser-WASM dotnet.js was empty.' }
+
+          $cache = Join-Path $env:XPS_E2E_OUTPUT 'site\.xpscript-cache\wasm'
+          if (-not (Test-Path $cache)) { throw 'browser-WASM cache directory was not created under the deployed IIS site.' }
+          $frameworkAssets = Get-ChildItem $cache -Recurse -File -Filter dotnet.js -ErrorAction SilentlyContinue
+          if (-not $frameworkAssets) { throw 'browser-WASM publish output did not contain dotnet.js.' }
+          Write-Host 'WEBIIS-BROWSER-WASM=OK'
 
       - name: Collect IIS diagnostics on failure
         if: failure()
@@ -219,6 +287,8 @@ jobs:
           & "$env:windir\system32\inetsrv\appcmd.exe" list site
           Write-Host '=== IIS app pools ==='
           & "$env:windir\system32\inetsrv\appcmd.exe" list apppool
+          Write-Host '=== WASM cache ==='
+          Get-ChildItem (Join-Path $env:XPS_E2E_OUTPUT 'site\.xpscript-cache') -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
           Write-Host '=== recent Application event log ==='
           Get-WinEvent -LogName Application -MaxEvents 50 -ErrorAction SilentlyContinue |
             Where-Object { $_.ProviderName -match 'IIS|IIS AspNetCore Module|ASP.NET Core|WAS|W3SVC' } |
