@@ -96,7 +96,7 @@ Sub Index()
 End Sub
 """);
 
-    using var compiled = await new XpsWebCompiler().CompileAsync(webPath);
+    await using var compiled = await new XpsWebCompiler().CompileAsync(webPath);
 }
 finally
 {
