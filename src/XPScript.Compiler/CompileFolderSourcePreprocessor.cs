@@ -50,6 +50,9 @@ public sealed class CompileFolderSourcePreprocessor
         if (declarations.Count != 1)
             throw new CompilerException($"{Path.GetFileName(rootPath)}: A desktop or browser-wasm source may declare exactly one [Compile:folder] rule.");
 
+        if (IsDesktopProject(rootSource))
+            ValidateDesktopMain(rootPath, rootDirectory);
+
         var compileRoot = ResolveCompileRoot(rootDirectory, declarations[0]);
         var candidates = Directory.EnumerateFiles(compileRoot, "*.xps", SearchOption.AllDirectories)
             .Select(Path.GetFullPath)
@@ -98,6 +101,15 @@ public sealed class CompileFolderSourcePreprocessor
             dependencies.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
             modules.Select(x => x.RelativeName).ToArray(),
             true);
+    }
+
+    private static void ValidateDesktopMain(string rootPath, string rootDirectory)
+    {
+        var expectedMain = Path.Combine(rootDirectory, "main.xps");
+        if (!File.Exists(expectedMain))
+            throw new CompilerException("Desktop [Compile:folder] projects require main.xps in the application root.");
+        if (!PathEquals(rootPath, expectedMain))
+            throw new CompilerException("Desktop [Compile:folder] projects must be compiled from main.xps.");
     }
 
     private static List<string> ParseCompileDeclarations(string source, string sourcePath)
@@ -248,6 +260,7 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
         source.AppendLine("    Dim xpsCompilerGeneratedTarget As String");
         source.AppendLine("    Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
+        source.AppendLine("    If Len(Trim(parameterName)) > 0 Then Call Request.State.Set(parameterName, parameterValue)");
         source.AppendLine("    xpsCompilerGeneratedTarget = LCase(Trim(target))");
 
         var first = true;
@@ -269,6 +282,10 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine();
         source.AppendLine("Public Sub Navigate(target As String)");
         source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, \"\", \"\")");
+        source.AppendLine("End Sub");
+        source.AppendLine();
+        source.AppendLine("Public Sub Navigate(target As String, parameterName As String, parameterValue As String)");
+        source.AppendLine("    Call XpsCompilerGeneratedNavigationDispatch(target, parameterName, parameterValue)");
         source.AppendLine("End Sub");
     }
 
