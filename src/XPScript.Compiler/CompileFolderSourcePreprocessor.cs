@@ -78,18 +78,18 @@ public sealed class CompileFolderSourcePreprocessor
         {
             var moduleSource = File.ReadAllText(path);
             dependencies.Add(path);
+            var relativeName = Path.GetRelativePath(compileRoot, path).Replace('\\', '/');
             var entry = ResolveEntryPoint(moduleSource, path);
-            if (entry is not null)
-            {
-                var relativeName = Path.GetRelativePath(compileRoot, path).Replace('\\', '/');
-                var generatedName = BuildGeneratedEntryName(relativeName);
-                moduleSource = RenameProcedure(moduleSource, entry, generatedName);
-                modules.Add(new ModuleEntry(relativeName, generatedName, false));
-            }
+            if (entry is null)
+                throw new CompilerException($"{relativeName}: Compiled XPS module requires one navigable entry point named Main, Index, or matching the file name, or exactly one Sub.");
+
+            var generatedName = BuildGeneratedEntryName(relativeName);
+            moduleSource = RenameProcedure(moduleSource, entry, generatedName);
+            modules.Add(new ModuleEntry(relativeName, generatedName, false));
 
             moduleSource = RewriteModuleIncludes(moduleSource, path, rootDirectory);
             sourceBuilder.AppendLine();
-            sourceBuilder.AppendLine("' ----- compiled module: " + Path.GetRelativePath(compileRoot, path).Replace('\\', '/') + " -----");
+            sourceBuilder.AppendLine("' ----- compiled module: " + relativeName + " -----");
             sourceBuilder.AppendLine(moduleSource.TrimEnd('\r', '\n'));
         }
 
@@ -259,8 +259,6 @@ public sealed class CompileFolderSourcePreprocessor
         source.AppendLine();
         source.AppendLine("Private Sub XpsCompilerGeneratedNavigationDispatch(target As String, parameterName As String, parameterValue As String)");
         source.AppendLine("    Dim xpsCompilerGeneratedTarget As String");
-        source.AppendLine("    Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
-        source.AppendLine("    If Len(Trim(parameterName)) > 0 Then Call Request.State.Set(parameterName, parameterValue)");
         source.AppendLine("    xpsCompilerGeneratedTarget = LCase(Trim(target))");
 
         var first = true;
@@ -268,6 +266,8 @@ public sealed class CompileFolderSourcePreprocessor
         {
             source.Append("    ").Append(first ? "If " : "ElseIf ")
                 .Append("xpsCompilerGeneratedTarget = \"").Append(EscapeXpsString(pair.Key)).AppendLine("\" Then");
+            source.AppendLine("        Call XPScriptRequestRuntime.BeforeCompiledNavigation()");
+            source.AppendLine("        If Len(Trim(parameterName)) > 0 Then Call Request.State.Set(parameterName, parameterValue)");
             source.Append("        Call ").Append(pair.Value).AppendLine("()");
             first = false;
         }
