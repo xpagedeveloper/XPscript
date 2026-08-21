@@ -1,8 +1,9 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class ApplicationUiMetadataPostProcessor
 {
-    private const string OldRequestTitle = "            title = form.Title,";
     private const string NewRequestTitle = """
             title = string.IsNullOrWhiteSpace(XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_title")))
                 ? form.Title
@@ -40,9 +41,17 @@ internal static class XPScriptApplicationMetadataRuntime
 
         if (!generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal))
         {
-            if (!generated.Contains(OldRequestTitle, StringComparison.Ordinal))
+            var titlePattern = new Regex(
+                @"(?m)^(?<indent>\s*)title\s*=\s*form\.Title\s*,\s*$",
+                RegexOptions.CultureInvariant);
+            var match = titlePattern.Match(generated);
+            if (!match.Success)
                 throw new CompilerException("Unable to install Application.Title/Application.Icon UI metadata.");
-            generated = generated.Replace(OldRequestTitle, NewRequestTitle, StringComparison.Ordinal);
+
+            var indent = match.Groups["indent"].Value;
+            var replacement = string.Join(Environment.NewLine,
+                NewRequestTitle.Replace("            ", indent, StringComparison.Ordinal).TrimEnd('\r', '\n'));
+            generated = titlePattern.Replace(generated, replacement, 1);
         }
 
         if (generated.Contains(OldWebWrite, StringComparison.Ordinal))
