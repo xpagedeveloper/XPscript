@@ -167,6 +167,7 @@ public interface IXpsSession
 
 public interface IXpsApplicationState
 {
+    IXpsApplicationState State => this;
     int Count => Keys.Count;
     IReadOnlyList<string> Keys => Array.Empty<string>();
     object? Get(string name);
@@ -183,7 +184,6 @@ public sealed class XpsWebApplication
     public XpsWebApplication(IXpsApplicationState state) => State = state ?? throw new ArgumentNullException(nameof(state));
     public IXpsApplicationState State { get; }
 
-    // Backward-compatible direct access.
     public int Count => State.Count;
     public IReadOnlyList<string> Keys => State.Keys;
     public object? Get(string name) => State.Get(name);
@@ -221,7 +221,6 @@ public sealed class XpsWebContext
         Application = application ?? throw new ArgumentNullException(nameof(application));
         Session = session;
         RequestScope = requestScope ?? new XpsRequestState();
-        Request.State = RequestScope;
     }
 
     public XpsWebRequest Request { get; }
