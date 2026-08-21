@@ -3,10 +3,76 @@ namespace XPScript.Compiler;
 internal static class ApplicationRuntimeSource
 {
     public const string Code = """
+internal sealed class XPScriptStateScope
+{
+    private readonly object _sync = new();
+    private readonly Dictionary<string, object?> _values = new(StringComparer.OrdinalIgnoreCase);
+
+    public int Count
+    {
+        get { lock (_sync) return _values.Count; }
+    }
+
+    public string[] Keys
+    {
+        get { lock (_sync) return _values.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(); }
+    }
+
+    public object? Get(object? name)
+    {
+        var key = NormalizeName(name);
+        lock (_sync) return _values.TryGetValue(key, out var value) ? value : null;
+    }
+
+    public void Set(object? name, object? value)
+    {
+        var key = NormalizeName(name);
+        lock (_sync) _values[key] = value;
+    }
+
+    public void Add(object? name, object? value) => Set(name, value);
+
+    public bool Exists(object? name)
+    {
+        var key = NormalizeName(name);
+        lock (_sync) return _values.ContainsKey(key);
+    }
+
+    public bool Remove(object? name)
+    {
+        var key = NormalizeName(name);
+        lock (_sync) return _values.Remove(key);
+    }
+
+    public bool Unset(object? name) => Remove(name);
+
+    public void Clear()
+    {
+        lock (_sync) _values.Clear();
+    }
+
+    private static string NormalizeName(object? name)
+    {
+        var key = XPScriptRuntime.CStr(name).Trim();
+        if (key.Length == 0)
+            throw new XPScriptRuntimeException(5, "State variable name cannot be empty.");
+        if (key.Length > 256)
+            throw new XPScriptRuntimeException(5, "State variable name cannot exceed 256 characters.");
+        return key;
+    }
+}
+
+internal static class XPScriptProcessRuntime
+{
+    public static XPScriptStateScope State { get; } = new();
+}
+
 internal static class XPScriptApplicationRuntime
 {
     private static readonly object Sync = new();
     private static string[] _args = [];
+
+    public static XPScriptStateScope State { get; } = new();
 
     public static void SetArgs(string[]? args)
     {
@@ -54,7 +120,6 @@ internal static class XPScriptApplicationRuntime
     public static string ExecutableDirectory => System.IO.Path.GetDirectoryName(ExecutablePath) ?? "";
     public static string TempPath => System.IO.Path.GetTempPath();
 
-    // Convenience aliases.
     public static string Path => ExecutablePath;
     public static string FileName => ExecutableFileName;
 }
