@@ -205,12 +205,39 @@ internal static class XPScriptProcessRuntime
 
 internal static class XPScriptSessionRuntime
 {
-    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.SessionState, null, "Session.State is only available in a web request with sessions enabled.");
+    private static readonly XPScriptStateScope LocalState = new();
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.SessionState, LocalState, "Session.State is unavailable.");
 }
 
 internal static class XPScriptRequestRuntime
 {
-    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.RequestState, null, "Request.State is only available while handling a web request.");
+    private static readonly object Sync = new();
+    private static readonly XPScriptStateScope LocalState = new();
+    private static bool _firstNavigationInherited;
+
+    public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.RequestState, LocalState, "Request.State is unavailable.");
+
+    public static void BeforeCompiledNavigation()
+    {
+        if (XPScriptExternalStateBridge.RequestState() is not null) return;
+        lock (Sync)
+        {
+            if (_firstNavigationInherited)
+                LocalState.Clear();
+            else
+                _firstNavigationInherited = true;
+        }
+    }
+
+    public static void ResetLocalRequest()
+    {
+        if (XPScriptExternalStateBridge.RequestState() is not null) return;
+        lock (Sync)
+        {
+            LocalState.Clear();
+            _firstNavigationInherited = false;
+        }
+    }
 }
 
 internal static class XPScriptApplicationRuntime
