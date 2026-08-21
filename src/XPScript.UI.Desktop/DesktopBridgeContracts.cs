@@ -60,6 +60,8 @@ public sealed record DesktopFormRequest(
 {
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
+    public string ApplicationTitle { get; init; } = string.Empty;
+    public string ApplicationIcon { get; init; } = string.Empty;
 }
 
 public sealed record DesktopFormResult(
