@@ -69,6 +69,9 @@ End Sub
     Require(result.Source.Contains("XPScriptRequestRuntime.BeforeCompiledNavigation()", StringComparison.Ordinal), "compiled navigation did not apply the local Request.State boundary");
     Require(result.Source.Contains("Request.State.Set(parameterName, parameterValue)", StringComparison.Ordinal), "navigation parameters are not copied into Request.State");
     Require(result.Source.Contains("Public Sub Navigate(target As String, Optional parameterName As String", StringComparison.Ordinal), "Navigate optional parameter support is missing");
+    var targetIndex = result.Source.IndexOf("xpsCompilerGeneratedTarget = \"customers\"", StringComparison.Ordinal);
+    var boundaryIndex = result.Source.IndexOf("XPScriptRequestRuntime.BeforeCompiledNavigation()", targetIndex, StringComparison.Ordinal);
+    Require(targetIndex >= 0 && boundaryIndex > targetIndex, "Request.State boundary runs before a navigation target has matched");
 
     var ignored = preprocessor.Transform("""
 [Compile:app]
@@ -131,6 +134,42 @@ End Sub
     RequireThrows<CompilerException>(
         () => preprocessor.Transform(otherSource, otherPath, enableModules: true),
         "compiled from main.xps");
+
+    var moduleDetectedRoot = Path.Combine(root, "module-detected-desktop");
+    var moduleDetectedApp = Path.Combine(moduleDetectedRoot, "app");
+    Directory.CreateDirectory(moduleDetectedApp);
+    var moduleDetectedMainPath = Path.Combine(moduleDetectedRoot, "main.xps");
+    var moduleDetectedMain = """
+[Compile:app]
+Sub Main()
+    Call Navigate("page")
+End Sub
+""";
+    File.WriteAllText(moduleDetectedMainPath, moduleDetectedMain);
+    File.WriteAllText(Path.Combine(moduleDetectedApp, "page.xps"), """
+Sub Main()
+    Dim form As New UIForm("Page")
+End Sub
+""");
+    Require(CompileFolderSourcePreprocessor.IsDesktopProject(moduleDetectedMain, moduleDetectedMainPath), "desktop UI in a compiled module was not detected");
+    var moduleDetectedGenerated = new XPScriptTranspiler().Transpile(moduleDetectedMain, moduleDetectedMainPath, CompilerDriver.CurrentRuntimeIdentifier());
+    Require(moduleDetectedGenerated.Contains("XpsCompilerGeneratedNavigationDispatch", StringComparison.Ordinal), "compile-folder was ignored when desktop UI existed only in a child module");
+
+    var ambiguousRoot = Path.Combine(root, "ambiguous-entry");
+    var ambiguousApp = Path.Combine(ambiguousRoot, "app");
+    Directory.CreateDirectory(ambiguousApp);
+    var ambiguousMainPath = Path.Combine(ambiguousRoot, "main.xps");
+    var ambiguousMain = """
+[Compile:app]
+Sub Main()
+    Dim form As New UIForm("Ambiguous")
+End Sub
+""";
+    File.WriteAllText(ambiguousMainPath, ambiguousMain);
+    File.WriteAllText(Path.Combine(ambiguousApp, "ambiguous.xps"), "Sub First()\nEnd Sub\nSub Second()\nEnd Sub\n");
+    RequireThrows<CompilerException>(
+        () => preprocessor.Transform(ambiguousMain, ambiguousMainPath, enableModules: true),
+        "requires one navigable entry point");
 
     Console.WriteLine("CompileFolderProbe OK");
     return 0;
