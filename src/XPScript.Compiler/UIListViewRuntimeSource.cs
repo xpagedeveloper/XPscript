@@ -37,8 +37,6 @@ internal sealed class XPScriptUIListView
     private bool _sortable = true;
     private bool _filterEnabled = true;
     private string _rowActionTarget = string.Empty;
-    private string _rowActionValueField = string.Empty;
-    private string _rowActionParameterName = string.Empty;
 
     internal XPScriptUIListView(string title)
     {
@@ -109,14 +107,9 @@ internal sealed class XPScriptUIListView
     public void SetFilterEnabled(object? value)
         => _filterEnabled = Convert.ToBoolean(value, System.Globalization.CultureInfo.CurrentCulture);
 
-    public void SetRowAction(object? targetScript, object? valueField)
-        => SetRowAction(targetScript, valueField, valueField);
-
-    public void SetRowAction(object? targetScript, object? valueField, object? parameterName)
+    public void SetRowAction(object? targetScript)
     {
         _rowActionTarget = NormalizeTarget(targetScript);
-        _rowActionValueField = NormalizeName(valueField, "row action value field");
-        _rowActionParameterName = NormalizeName(parameterName, "row action parameter");
     }
 
     public object? GetRow(object? index)
@@ -276,9 +269,8 @@ internal sealed class XPScriptUIListView
 
     private string BuildRowHref(int rowIndex)
     {
-        if (_rowActionTarget.Length == 0) return string.Empty;
-        var value = GetRowValueString(rowIndex, _rowActionValueField);
-        return _rowActionTarget + "?" + Uri.EscapeDataString(_rowActionParameterName) + "=" + Uri.EscapeDataString(value);
+        _ = rowIndex;
+        return _rowActionTarget;
     }
 
     private XPScriptUIListColumn FindColumn(object? name)
@@ -312,8 +304,10 @@ internal sealed class XPScriptUIListView
     private static string NormalizeTarget(object? value)
     {
         var target = XPScriptRuntime.CStr(value).Trim().Replace('\\', '/');
-        if (target.Length is < 5 or > 512 || !target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase) || target.StartsWith('/') || target.Contains("..", StringComparison.Ordinal) || target.Contains(':'))
-            throw new XPScriptRuntimeException(5, "UIListView row action target must be a relative local .xps path.");
+        var extension = System.IO.Path.GetExtension(target);
+        if (target.Length is < 1 or > 512 || target.StartsWith('/') || target.Contains("..", StringComparison.Ordinal) || target.Contains(':') ||
+            (extension.Length > 0 && !extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, "UIListView row action target must be a relative local XPS module path with an optional .xps extension.");
         return target;
     }
 
