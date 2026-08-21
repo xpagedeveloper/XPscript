@@ -26,10 +26,8 @@ public static partial class BrowserFormHost
             (extension.Length > 0 && !extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Browser navigation target must be a relative local XPS module path with an optional .xps extension.", nameof(target));
 
-        var url = path.EndsWith(".xps", StringComparison.OrdinalIgnoreCase)
-            ? path
-            : path + ".xps";
-        Eval("window.location.href = " + JsonSerializer.Serialize(url) + ";");
+        var encoded = JsonSerializer.Serialize(path);
+        Eval("(() => { const target = " + encoded + "; const current = window.location.pathname; const slash = current.lastIndexOf('/'); const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/'; window.location.href = basePath + target; })();");
     }
 
     private static void ApplyApplicationMetadata(string requestJson)
