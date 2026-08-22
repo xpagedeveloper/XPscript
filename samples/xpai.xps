@@ -1,0 +1,71 @@
+' XPScript OpenAI-compatible AI client regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Private streamedText As String
+
+Sub OnAiChunk(ByVal chunk As String)
+    streamedText = streamedText & chunk
+    Print "CHUNK=" & chunk
+End Sub
+
+Sub Main()
+    Dim endpoint As String
+    Dim ai As XPAi
+    Dim response As XPAiResponse
+    Dim providerExtra As JsonObject
+
+    Set ai = New XPAi("openai", "test-key")
+    Print "PRESET-OPENAI=" & ai.Endpoint
+    Call ai.Dispose()
+    Set ai = New XPAi("claude", "test-key")
+    Print "PRESET-CLAUDE=" & ai.Endpoint
+    Call ai.Dispose()
+    Set ai = New XPAi("openrouter", "test-key")
+    Print "PRESET-OPENROUTER=" & ai.Endpoint
+    Call ai.Dispose()
+    Set ai = New XPAi("azure", "test-key", "xpscript-test")
+    Print "PRESET-AZURE=" & ai.Endpoint
+    Print "PRESET-AZURE-PROVIDER=" & ai.Provider
+    Call ai.Dispose()
+
+    endpoint = Environ("XPSCRIPT_AI_ENDPOINT")
+    If endpoint = "" Then
+        Print "XPAI-COMPILE=OK"
+        Exit Sub
+    End If
+
+    Set ai = New XPAi(endpoint, "XPAI_SECRET_MARKER")
+    ai.Model = "mock-model"
+    ai.Timeout = 15
+    Call ai.SetHeader("X-Provider", "xpscript-test")
+    Call ai.AddMessage("system", "Answer briefly.")
+    Call ai.AddMessage("user", "Hello")
+    ai.Temperature = 0.2
+    ai.MaxOutputTokens = 64
+
+    Set response = ai.Complete()
+    Print "STATUS=" & CStr(response.StatusCode)
+    Print "SUCCESS=" & CStr(response.IsSuccess)
+    Print "MODEL=" & response.Model
+    Print "TEXT=" & response.Text
+    Print "TOKENS=" & CStr(response.Usage.Root.AsObject().Get("total_tokens"))
+    Set providerExtra = response.RawJson.Root.AsObject().Get("provider_extra")
+    Print "RAWEXTRA=" & CStr(providerExtra.Get("preserved"))
+
+    streamedText = ""
+    Set response = ai.Stream("OnAiChunk")
+    Print "STREAM=" & streamedText
+    Print "COLLECTED=" & response.Text
+
+    On Error GoTo ProviderError
+    ai.Model = "error-model"
+    Set response = ai.Complete()
+    Print "PROVIDER-ERROR=FAILED"
+    Exit Sub
+
+ProviderError:
+    Print "PROVIDER-ERROR=" & Error$
+    Print "XPAI=OK"
+End Sub
