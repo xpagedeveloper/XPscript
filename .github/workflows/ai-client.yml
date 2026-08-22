@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AiToolRuntimeSource.cs'
       - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
       - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
@@ -82,6 +83,14 @@ jobs:
 
             $required = @(
               'STATUS=200',
+              'TOOLS=2',
+              'TOOL-HAS=True',
+              'TOOL-FIRST=retrieval',
+              'TOOL-CONTEXT=tenant-a',
+              'TOOL-TIMEOUT=12',
+              'TOOL-REMOVE=True',
+              'TOOLS-AFTER-REMOVE=1',
+              'TOOLS-AFTER-CLEAR=0',
               'PRESET-OPENAI=https://api.openai.com/v1/chat/completions',
               'PRESET-CLAUDE=https://api.anthropic.com/v1/chat/completions',
               'PRESET-OPENROUTER=https://openrouter.ai/api/v1/chat/completions',
