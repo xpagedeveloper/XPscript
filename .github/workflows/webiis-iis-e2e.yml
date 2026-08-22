@@ -335,14 +335,47 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage();
             const failures = [];
-            page.on('pageerror', error => failures.push('pageerror: ' + error.message));
-            page.on('requestfailed', request => failures.push('requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || '')));
+            const diagnostics = [];
+            const remember = message => {
+              if (diagnostics.length < 200) diagnostics.push(message);
+            };
+            const dumpDiagnostics = async label => {
+              remember('url: ' + page.url());
+              remember('body: ' + ((await page.textContent('body')) || '').slice(0, 4000));
+              remember('html: ' + (await page.content()).slice(0, 12000));
+              console.error('=== ' + label + ' ===\n' + diagnostics.join('\n'));
+            };
+            page.on('console', message => remember('console[' + message.type() + ']: ' + message.text()));
+            page.on('pageerror', error => {
+              const message = 'pageerror: ' + error.message;
+              failures.push(message);
+              remember(message);
+            });
+            page.on('requestfailed', request => {
+              const message = 'requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || '');
+              failures.push(message);
+              remember(message);
+            });
+            page.on('response', response => {
+              if (response.status() >= 400) remember('http[' + response.status() + ']: ' + response.url());
+            });
             await page.goto(process.env.XPS_E2E_URL + '/', { waitUntil: 'domcontentloaded', timeout: 300000 });
-            await page.locator('input[name="name"]').waitFor({ state: 'visible', timeout: 180000 });
-            await page.locator('input[name="email"]').waitFor({ state: 'visible', timeout: 30000 });
+            try {
+              await page.locator('input[name="name"]').waitFor({ state: 'visible', timeout: 180000 });
+              await page.locator('input[name="email"]').waitFor({ state: 'visible', timeout: 30000 });
+            } catch (error) {
+              await dumpDiagnostics('browser-WASM startup diagnostics');
+              throw error;
+            }
             const body = await page.textContent('body');
-            if (!body || !body.includes('IIS Browser WASM Index Test')) throw new Error('WASM UIForm title was not rendered.');
-            if (failures.length) throw new Error(failures.join('\n'));
+            if (!body || !body.includes('IIS Browser WASM Index Test')) {
+              await dumpDiagnostics('browser-WASM render diagnostics');
+              throw new Error('WASM UIForm title was not rendered.');
+            }
+            if (failures.length) {
+              await dumpDiagnostics('browser-WASM request diagnostics');
+              throw new Error(failures.join('\n'));
+            }
 
             await page.goto(process.env.XPS_E2E_URL + '/navigate', { waitUntil: 'domcontentloaded', timeout: 300000 });
             await page.waitForURL(url => url.pathname.toLowerCase() === '/page2', { timeout: 180000 });
