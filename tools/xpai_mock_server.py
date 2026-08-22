@@ -27,6 +27,10 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_compat(payload)
             return
 
+        if self.path == "/session/chat":
+            self._handle_session(payload)
+            return
+
         if self.path != "/custom/chat":
             self.send_error(404)
             return
@@ -70,6 +74,33 @@ class Handler(BaseHTTPRequestHandler):
                 "choices": [{"message": {"role": "assistant", "content": "Hello response"}}],
                 "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
                 "provider_extra": {"preserved": True},
+            },
+        )
+
+    def _handle_session(self, payload):
+        if payload.get("model") != "session-model" or payload.get("stream") is not False:
+            self._json(400, {"error": {"message": "session request schema mismatch"}})
+            return
+        previous = payload.get("previous_response_id")
+        if previous is None:
+            self._json(
+                200,
+                {
+                    "id": "session-response-1",
+                    "model": "session-model",
+                    "choices": [{"message": {"role": "assistant", "content": "SESSION-FIRST"}}],
+                },
+            )
+            return
+        if previous != "session-response-1":
+            self._json(400, {"error": {"message": "session continuation id mismatch"}})
+            return
+        self._json(
+            200,
+            {
+                "id": "session-response-2",
+                "model": "session-model",
+                "choices": [{"message": {"role": "assistant", "content": "SESSION-CONTINUE"}}],
             },
         )
 
