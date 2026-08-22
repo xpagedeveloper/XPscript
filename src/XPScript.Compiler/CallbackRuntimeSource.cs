@@ -88,7 +88,11 @@ internal static class XPScriptCallbackRuntime
 
     private static bool TryConvertArgument(object? value, Type targetType, out object? converted)
     {
-        if (targetType == typeof(object))
+        var conversionType = targetType.IsByRef
+            ? targetType.GetElementType() ?? targetType
+            : targetType;
+
+        if (conversionType == typeof(object))
         {
             converted = value;
             return true;
@@ -96,7 +100,7 @@ internal static class XPScriptCallbackRuntime
 
         if (value is null || XPScriptNullRuntime.IsNull(value))
         {
-            if (!targetType.IsValueType || Nullable.GetUnderlyingType(targetType) is not null)
+            if (!conversionType.IsValueType || Nullable.GetUnderlyingType(conversionType) is not null)
             {
                 converted = null;
                 return true;
@@ -105,13 +109,13 @@ internal static class XPScriptCallbackRuntime
             return false;
         }
 
-        if (targetType.IsInstanceOfType(value))
+        if (conversionType.IsInstanceOfType(value))
         {
             converted = value;
             return true;
         }
 
-        var effectiveType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        var effectiveType = Nullable.GetUnderlyingType(conversionType) ?? conversionType;
         try
         {
             if (effectiveType == typeof(string))
