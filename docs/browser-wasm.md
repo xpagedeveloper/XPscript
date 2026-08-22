@@ -90,9 +90,27 @@ Use local callbacks for UI-only work such as validation, enabling or disabling c
 
 Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `HttpClient` to call an explicit server API for that work.
 
+UI event objects provide `ToJson()` and `ToJsonObject()` for this boundary. These methods create a snapshot that deliberately excludes live runtime references. `UIFormEvent` serializes only `eventType`, `controlName`, `value` and `values`. `UIListViewEvent` serializes only `eventType`, `rowIndex`, `key` and `row`.
+
+For example, a browser callback can explicitly post its event snapshot to an application API route:
+
+```xpscript
+Sub NameChanged(evt As Variant, context As String)
+    Dim http As New HttpClient
+    Dim payload As Variant
+    Dim response As HttpResponse
+
+    Set payload = evt.ToJsonObject()
+    Call payload.Set("context", context)
+    Set response = http.PostJson("/api/ui-event", payload)
+End Sub
+```
+
+The route is selected by application code. The browser never sends an XPScript callback/function name to the server. This keeps authorization attached to normal server routes and avoids exposing a generic remote function dispatcher.
+
 XPScript must not implement browser-to-server callbacks as a generic endpoint that accepts an arbitrary function name from the client. If a dedicated server-callback facility is added, the browser request must use a server-issued opaque registration identifier or an explicit application route. The server must map that identifier to an allowlisted callback and must not trust a callback name supplied by the browser.
 
-A server callback request must use a same-origin unsafe HTTP method such as `POST`, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live `UIForm` instance cannot be transferred to the server.
+A server callback request must use a same-origin unsafe HTTP method such as `POST`, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live `UIForm` or `UIListView` instance cannot be transferred to the server.
 
 This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.
 
