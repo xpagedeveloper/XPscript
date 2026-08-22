@@ -27,8 +27,28 @@ Sub Main()
     Dim providerExtra As JsonObject
     Dim http As New HttpClient
     Dim httpRequest As Variant
+    Dim retrievalTool As New AITool("retrieval")
+    Dim mcpTool As New AITool("mcp")
+    Dim toolNames As Variant
+    Dim toolLookup As Variant
+
+    Call retrievalTool.SetRequestProperty("tenant", "tenant-a")
+    retrievalTool.Timeout = 12
 
     Set ai = New XPAi("openai", "test-key")
+    Call ai.AddTool(retrievalTool)
+    Call ai.AddTool(mcpTool)
+    Print "TOOLS=" & CStr(ai.ToolCount())
+    Print "TOOL-HAS=" & CStr(ai.HasTool("retrieval"))
+    Set toolNames = ai.GetToolNames()
+    Print "TOOL-FIRST=" & CStr(toolNames.Get(0))
+    Set toolLookup = ai.GetTool("retrieval")
+    Print "TOOL-CONTEXT=" & CStr(toolLookup.GetRequestContext().Get("tenant"))
+    Print "TOOL-TIMEOUT=" & CStr(toolLookup.Timeout)
+    Print "TOOL-REMOVE=" & CStr(ai.RemoveTool("mcp"))
+    Print "TOOLS-AFTER-REMOVE=" & CStr(ai.ToolCount())
+    Call ai.ClearTools()
+    Print "TOOLS-AFTER-CLEAR=" & CStr(ai.ToolCount())
     Print "PRESET-OPENAI=" & ai.Endpoint
     Call ai.Dispose()
     Set ai = New XPAi("claude", "test-key")
