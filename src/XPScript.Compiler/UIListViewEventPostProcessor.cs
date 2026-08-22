@@ -16,12 +16,40 @@ internal sealed class UIListViewEventPostProcessor
         var prefix = generated[..classStart];
         var listSource = generated[classStart..];
 
+        if (!prefix.Contains("internal sealed class XPScriptUIListViewEvent", StringComparison.Ordinal))
+        {
+            prefix += """
+internal sealed class XPScriptUIListViewEvent
+{
+    internal XPScriptUIListViewEvent(XPScriptUIListView listView, string eventType, int rowIndex, object? row, string key)
+    {
+        ListView = listView;
+        EventType = eventType;
+        RowIndex = rowIndex;
+        Row = row;
+        Key = key;
+    }
+
+    public XPScriptUIListView ListView { get; }
+    public string EventType { get; }
+    public int RowIndex { get; }
+    public object? Row { get; }
+    public string Key { get; }
+}
+
+""";
+        }
+
         listSource = ReplaceRequired(listSource,
             "    private string _rowActionTarget = string.Empty;\n",
             """
     private string _rowActionTarget = string.Empty;
     private string _onSelectHandler = string.Empty;
     private string _onDoubleClickHandler = string.Empty;
+    private object?[] _onSelectCallbackArguments = [];
+    private object?[] _onDoubleClickCallbackArguments = [];
+    private bool _onSelectUsesEventCallback;
+    private bool _onDoubleClickUsesEventCallback;
 """, "event-fields");
 
         listSource = ReplaceRequired(listSource,
@@ -30,10 +58,32 @@ internal sealed class UIListViewEventPostProcessor
 """,
             """
     public void SetOnSelect(object? handlerName)
-        => _onSelectHandler = NormalizeHandlerName(handlerName);
+    {
+        _onSelectHandler = NormalizeHandlerName(handlerName);
+        _onSelectCallbackArguments = [];
+        _onSelectUsesEventCallback = false;
+    }
 
     public void SetOnDoubleClick(object? handlerName)
-        => _onDoubleClickHandler = NormalizeHandlerName(handlerName);
+    {
+        _onDoubleClickHandler = NormalizeHandlerName(handlerName);
+        _onDoubleClickCallbackArguments = [];
+        _onDoubleClickUsesEventCallback = false;
+    }
+
+    public void SetOnSelectCallback(object? handlerName, params object?[] callbackArguments)
+    {
+        _onSelectHandler = NormalizeHandlerName(handlerName);
+        _onSelectCallbackArguments = CopyCallbackArguments(callbackArguments);
+        _onSelectUsesEventCallback = true;
+    }
+
+    public void SetOnDoubleClickCallback(object? handlerName, params object?[] callbackArguments)
+    {
+        _onDoubleClickHandler = NormalizeHandlerName(handlerName);
+        _onDoubleClickCallbackArguments = CopyCallbackArguments(callbackArguments);
+        _onDoubleClickUsesEventCallback = true;
+    }
 
     internal string DispatchRegisteredEvent(string eventName, string rowIndexText)
     {
@@ -42,38 +92,73 @@ internal sealed class UIListViewEventPostProcessor
             throw new XPScriptRuntimeException(13, "UIListView event row index must be an Integer value.");
         _selectedIndex = NormalizeRowIndex(rowIndex);
 
-        var handlerName = eventName.Equals("select", StringComparison.OrdinalIgnoreCase)
-            ? _onSelectHandler
-            : eventName.Equals("doubleclick", StringComparison.OrdinalIgnoreCase)
-                ? _onDoubleClickHandler
-                : throw new XPScriptRuntimeException(5, "UIListView event type is unsupported.");
+        string handlerName;
+        object?[] callbackArguments;
+        bool usesEventCallback;
+        string normalizedEventType;
+        if (eventName.Equals("select", StringComparison.OrdinalIgnoreCase))
+        {
+            handlerName = _onSelectHandler;
+            callbackArguments = _onSelectCallbackArguments;
+            usesEventCallback = _onSelectUsesEventCallback;
+            normalizedEventType = "select";
+        }
+        else if (eventName.Equals("doubleclick", StringComparison.OrdinalIgnoreCase))
+        {
+            handlerName = _onDoubleClickHandler;
+            callbackArguments = _onDoubleClickCallbackArguments;
+            usesEventCallback = _onDoubleClickUsesEventCallback;
+            normalizedEventType = "doubleclick";
+        }
+        else
+        {
+            throw new XPScriptRuntimeException(5, "UIListView event type is unsupported.");
+        }
 
         if (handlerName.Length == 0) return string.Empty;
-        InvokeRegisteredHandler(handlerName);
+        if (usesEventCallback)
+        {
+            var evt = new XPScriptUIListViewEvent(this, normalizedEventType, rowIndex, GetRow(rowIndex), GetSelectedKey());
+            XPScriptCallbackRuntime.Invoke(
+                handlerName,
+                "UIListView event",
+                XPScriptCallbackRuntime.Prepend(evt, callbackArguments));
+        }
+        else
+        {
+            InvokeRegisteredHandler(handlerName);
+        }
         return string.Empty;
     }
 
     private void InvokeRegisteredHandler(string handlerName)
     {
-        var method = typeof(Script).GetMethod(
-            handlerName,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
-            ?? throw new XPScriptRuntimeException(5, $"UIListView handler '{handlerName}' does not exist.");
+        var methods = typeof(Script)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Where(method => method.Name.Equals(handlerName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
-        var parameters = method.GetParameters();
-        if (parameters.Length > 1)
-            throw new XPScriptRuntimeException(5, $"UIListView handler '{handlerName}' must accept zero parameters or the current UIListView as one parameter.");
-        if (parameters.Length == 1 && parameters[0].ParameterType != typeof(object) && !parameters[0].ParameterType.IsAssignableFrom(typeof(XPScriptUIListView)))
-            throw new XPScriptRuntimeException(5, $"UIListView handler '{handlerName}' parameter must accept the current UIListView.");
+        if (methods.Any(method => method.GetParameters().Length == 0))
+        {
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIListView event");
+            return;
+        }
 
-        try
+        if (methods.Any(method => method.GetParameters().Length == 1))
         {
-            method.Invoke(null, parameters.Length == 0 ? null : [this]);
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIListView event", this);
+            return;
         }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            throw new XPScriptRuntimeException(5, "UIListView handler failed: " + ex.InnerException.Message);
-        }
+
+        throw new XPScriptRuntimeException(5, $"UIListView handler '{handlerName}' must accept zero parameters or the current UIListView as one parameter.");
+    }
+
+    private static object?[] CopyCallbackArguments(object?[]? callbackArguments)
+    {
+        callbackArguments ??= [];
+        if (callbackArguments.Length > 63)
+            throw new XPScriptRuntimeException(5, "UIListView callback context exceeds the 63-argument limit.");
+        return callbackArguments.ToArray();
     }
 
     public object? GetRow(object? index)
