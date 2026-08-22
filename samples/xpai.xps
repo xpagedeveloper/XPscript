@@ -19,12 +19,12 @@ Sub OnHttpComplete(ByVal response As Variant, ByVal requestId As String)
     Print "HTTP-ASYNC=" & requestId & ":" & CStr(response.StatusCode) & ":" & response.Body
 End Sub
 
-Function HandleGetWeather(call As Variant) As Variant
+Function HandleGetWeather(call As Variant, tenant As String) As Variant
     Dim city As String
     Dim units As String
     city = CStr(call.Arguments.Get("city"))
     units = CStr(call.Arguments.Get("units"))
-    Print "TOOL-HANDLER=" & call.ToolName & ":" & call.FunctionName & ":" & city & ":" & units
+    Print "TOOL-HANDLER=" & call.ToolName & ":" & call.FunctionName & ":" & city & ":" & units & ":" & tenant
     HandleGetWeather = "weather:" & city & ":" & units
 End Function
 
@@ -99,7 +99,7 @@ Sub Main()
 
         Dim weatherTool As New AITool("weather")
         weatherTool.Description = "Weather information"
-        Call weatherTool.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather")
+        Call weatherTool.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather", "tenant-42")
         Call weatherTool.AddParameter("get_weather", "city", "string", "City name", True)
         Call weatherTool.AddParameter("get_weather", "units", "string", "metric or imperial", True)
         Set ai = New XPAi(compatBase & "/tool/chat")
