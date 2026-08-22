@@ -146,6 +146,7 @@ internal static class WebIisPackageTarget
   <location path="." inheritInChildApplications="false">
     <system.webServer>
       <handlers>
+        <clear />
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
       <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess">
