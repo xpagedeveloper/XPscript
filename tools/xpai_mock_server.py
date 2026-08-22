@@ -27,6 +27,14 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_compat(payload)
             return
 
+        if self.path == "/session/chat":
+            self._handle_session(payload)
+            return
+
+        if self.path == "/tool/chat":
+            self._handle_tool(payload)
+            return
+
         if self.path != "/custom/chat":
             self.send_error(404)
             return
@@ -70,6 +78,97 @@ class Handler(BaseHTTPRequestHandler):
                 "choices": [{"message": {"role": "assistant", "content": "Hello response"}}],
                 "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
                 "provider_extra": {"preserved": True},
+            },
+        )
+
+    def _handle_tool(self, payload):
+        if payload.get("model") != "tool-model" or payload.get("stream") is not False:
+            self._json(400, {"error": {"message": "tool request schema mismatch"}})
+            return
+
+        tools = payload.get("tools")
+        if not isinstance(tools, list) or len(tools) != 1:
+            self._json(400, {"error": {"message": "tool definition missing"}})
+            return
+        function = tools[0].get("function", {})
+        if function.get("name") != "get_weather":
+            self._json(400, {"error": {"message": "tool function name mismatch"}})
+            return
+        parameters = function.get("parameters", {})
+        properties = parameters.get("properties", {})
+        if set(properties.keys()) != {"city", "units"} or set(parameters.get("required", [])) != {"city", "units"}:
+            self._json(400, {"error": {"message": "tool parameter schema mismatch"}})
+            return
+
+        messages = payload.get("messages", [])
+        tool_results = [message for message in messages if message.get("role") == "tool"]
+        if not tool_results:
+            self._json(
+                200,
+                {
+                    "model": "tool-model",
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [
+                                    {
+                                        "id": "call-weather-1",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "get_weather",
+                                            "arguments": json.dumps({"city": "Stockholm", "units": "metric"}),
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ],
+                },
+            )
+            return
+
+        if len(tool_results) != 1 or tool_results[0].get("tool_call_id") != "call-weather-1":
+            self._json(400, {"error": {"message": "tool result id mismatch"}})
+            return
+        if tool_results[0].get("content") != "weather:Stockholm:metric":
+            self._json(400, {"error": {"message": "tool result content mismatch"}})
+            return
+
+        self._json(
+            200,
+            {
+                "model": "tool-model",
+                "choices": [{"message": {"role": "assistant", "content": "Stockholm weather fetched"}}],
+                "usage": {"prompt_tokens": 4, "completion_tokens": 2, "total_tokens": 6},
+            },
+        )
+
+    def _handle_session(self, payload):
+        if payload.get("model") != "session-model" or payload.get("stream") is not False:
+            self._json(400, {"error": {"message": "session request schema mismatch"}})
+            return
+        previous = payload.get("previous_response_id")
+        if previous is None:
+            self._json(
+                200,
+                {
+                    "id": "session-response-1",
+                    "model": "session-model",
+                    "choices": [{"message": {"role": "assistant", "content": "SESSION-FIRST"}}],
+                },
+            )
+            return
+        if previous != "session-response-1":
+            self._json(400, {"error": {"message": "session continuation id mismatch"}})
+            return
+        self._json(
+            200,
+            {
+                "id": "session-response-2",
+                "model": "session-model",
+                "choices": [{"message": {"role": "assistant", "content": "SESSION-CONTINUE"}}],
             },
         )
 

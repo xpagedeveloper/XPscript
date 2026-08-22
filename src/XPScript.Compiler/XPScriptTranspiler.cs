@@ -135,6 +135,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
         generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
 
+        if (usesAi) generated = new AiSessionRuntimePostProcessor().Transform(generated);
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);

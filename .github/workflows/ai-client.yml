@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AiSessionRuntimePostProcessor.cs'
+      - 'src/XPScript.Compiler/AiToolRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AiToolCallbackValidator.cs'
       - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
       - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/SourceLineContinuationPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Web.Compiler/**'
       - 'tests/WebCompilerSmoke/**'
@@ -43,6 +47,49 @@ jobs:
 
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify AITool callback compile-time validation
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/xpai | Out-Null
+          $PSNativeCommandUseErrorActionPreference = $false
+
+          $missing = @'
+          Option Declare
+          Sub Main()
+              Dim tool As New AITool("test")
+              Call tool.AddFunction("run", "Run test", "MissingHandler")
+          End Sub
+          '@
+          $missingPath = './out/xpai/missing-tool-callback.xps'
+          Set-Content -Path $missingPath -Value $missing
+          $missingOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $missingPath -o ./out/xpai/missing-tool-callback --framework-dependent 2>&1)
+          $missingExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($missingExitCode -eq 0) { throw 'Missing AITool callback unexpectedly compiled.' }
+          if (($missingOutput -join "`n") -notmatch "AITool callback 'MissingHandler' was not found") {
+            throw "Missing callback diagnostic was not emitted.`n$missingOutput"
+          }
+
+          $arity = @'
+          Option Declare
+          Function ExistingHandler(call As Variant) As Variant
+              ExistingHandler = "ok"
+          End Function
+          Sub Main()
+              Dim tool As New AITool("test")
+              Call tool.AddFunction("run", "Run test", "ExistingHandler", "context")
+          End Sub
+          '@
+          $arityPath = './out/xpai/wrong-tool-callback-arity.xps'
+          Set-Content -Path $arityPath -Value $arity
+          $arityOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $arityPath -o ./out/xpai/wrong-tool-callback-arity --framework-dependent 2>&1)
+          $arityExitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($arityExitCode -eq 0) { throw 'Wrong-arity AITool callback unexpectedly compiled.' }
+          if (($arityOutput -join "`n") -notmatch "AITool callback 'ExistingHandler' must accept 2 parameter") {
+            throw "Callback arity diagnostic was not emitted.`n$arityOutput"
+          }
 
       - name: Compile and run XPAi regression
         shell: pwsh
@@ -82,6 +129,27 @@ jobs:
 
             $required = @(
               'STATUS=200',
+              'TOOLS=2',
+              'TOOL-HAS=True',
+              'TOOL-FIRST=retrieval',
+              'TOOL-CONTEXT=tenant-a',
+              'TOOL-TIMEOUT=12',
+              'TOOL-REMOVE=True',
+              'TOOLS-AFTER-REMOVE=1',
+              'TOOLS-AFTER-CLEAR=0',
+              'TOOL-FUNCTIONS=1',
+              'TOOL-HAS-FUNCTION=True',
+              'TOOL-HANDLER=weather:get_weather:Stockholm:metric:tenant-42',
+              'TOOL-FINAL=Stockholm weather fetched',
+              'SESSION-FIRST=SESSION-FIRST',
+              'SESSION-ID-1=session-response-1',
+              'SESSION-HAS-1=True',
+              'SESSION-CONTINUE=SESSION-CONTINUE',
+              'SESSION-ID-2=session-response-2',
+              'SESSION-AFTER-NEW=False',
+              'SESSION-TOOLS=1',
+              'SESSION-NEW=SESSION-FIRST',
+              'SESSION-ID-NEW=session-response-1',
               'PRESET-OPENAI=https://api.openai.com/v1/chat/completions',
               'PRESET-CLAUDE=https://api.anthropic.com/v1/chat/completions',
               'PRESET-OPENROUTER=https://openrouter.ai/api/v1/chat/completions',

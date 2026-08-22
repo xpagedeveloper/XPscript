@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPAi|XPAiResponse";
+    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPAi|XPAiResponse|AITool";
 
     public string Transform(string source)
     {
@@ -57,6 +57,7 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDBSQLite\s*\((.*)\)", "new XPScriptDbSqlite($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMsSql\s*\((.*)\)", "new XPScriptDbMsSql($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPAi\s*\((.*)\)", "new XPScriptAi($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+AITool\s*\((.*)\)", "new XPScriptAiTool($1)", RegexOptions.IgnoreCase);
 
             foreach (var pair in nativeTypes)
             {
@@ -88,6 +89,21 @@ internal sealed class NativeHttpJsonPreprocessor
                         $@"\b{escapedName}\.Json\s*\(\s*\)",
                         $"XPScriptHttpUiFormHelpers.ResponseJson({pair.Key})",
                         RegexOptions.IgnoreCase);
+                }
+                else if (pair.Value.Equals("XPAi", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "AddTool", "RemoveTool", "HasTool", "GetTool", "ClearTools", "GetToolNames", "ToolCount" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptAiToolRegistry.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                    rewritten = rewritten
+                        .Replace($"XPScriptAiToolRegistry.ClearTools({pair.Key}, )", $"XPScriptAiToolRegistry.ClearTools({pair.Key})", StringComparison.OrdinalIgnoreCase)
+                        .Replace($"XPScriptAiToolRegistry.GetToolNames({pair.Key}, )", $"XPScriptAiToolRegistry.GetToolNames({pair.Key})", StringComparison.OrdinalIgnoreCase)
+                        .Replace($"XPScriptAiToolRegistry.ToolCount({pair.Key}, )", $"XPScriptAiToolRegistry.ToolCount({pair.Key})", StringComparison.OrdinalIgnoreCase);
                 }
             }
 
@@ -133,6 +149,11 @@ internal sealed class NativeHttpJsonPreprocessor
         {
             if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPAi requires an endpoint argument.");
             return $"new XPScriptAi({args})";
+        }
+        if (type.Equals("AITool", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("AITool requires a name argument.");
+            return $"new XPScriptAiTool({args})";
         }
         throw new CompilerException("Unsupported native runtime type: " + type);
     }

@@ -19,6 +19,15 @@ Sub OnHttpComplete(ByVal response As Variant, ByVal requestId As String)
     Print "HTTP-ASYNC=" & requestId & ":" & CStr(response.StatusCode) & ":" & response.Body
 End Sub
 
+Function HandleGetWeather(call As Variant, tenant As String) As Variant
+    Dim city As String
+    Dim units As String
+    city = CStr(call.Arguments.Get("city"))
+    units = CStr(call.Arguments.Get("units"))
+    Print "TOOL-HANDLER=" & call.ToolName & ":" & call.FunctionName & ":" & city & ":" & units & ":" & tenant
+    HandleGetWeather = "weather:" & city & ":" & units
+End Function
+
 Sub Main()
     Dim endpoint As String
     Dim compatBase As String
@@ -27,8 +36,28 @@ Sub Main()
     Dim providerExtra As JsonObject
     Dim http As New HttpClient
     Dim httpRequest As Variant
+    Dim retrievalTool As New AITool("retrieval")
+    Dim mcpTool As New AITool("mcp")
+    Dim toolNames As Variant
+    Dim toolLookup As Variant
+
+    Call retrievalTool.SetRequestProperty("tenant", "tenant-a")
+    retrievalTool.Timeout = 12
 
     Set ai = New XPAi("openai", "test-key")
+    Call ai.AddTool(retrievalTool)
+    Call ai.AddTool(mcpTool)
+    Print "TOOLS=" & CStr(ai.ToolCount())
+    Print "TOOL-HAS=" & CStr(ai.HasTool("retrieval"))
+    Set toolNames = ai.GetToolNames()
+    Print "TOOL-FIRST=" & CStr(toolNames.Get(0))
+    Set toolLookup = ai.GetTool("retrieval")
+    Print "TOOL-CONTEXT=" & CStr(toolLookup.GetRequestContext().Get("tenant"))
+    Print "TOOL-TIMEOUT=" & CStr(toolLookup.Timeout)
+    Print "TOOL-REMOVE=" & CStr(ai.RemoveTool("mcp"))
+    Print "TOOLS-AFTER-REMOVE=" & CStr(ai.ToolCount())
+    Call ai.ClearTools()
+    Print "TOOLS-AFTER-CLEAR=" & CStr(ai.ToolCount())
     Print "PRESET-OPENAI=" & ai.Endpoint
     Call ai.Dispose()
     Set ai = New XPAi("claude", "test-key")
@@ -66,6 +95,44 @@ Sub Main()
         Call ai.AddMessage("user", "Azure compatibility fixture")
         Set response = ai.Complete()
         Print response.Text
+        Call ai.Dispose()
+
+        Dim weatherTool As New AITool("weather")
+        weatherTool.Description = "Weather information"
+        Call weatherTool.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather", "tenant-42")
+        Call weatherTool.AddParameter("get_weather", "city", "string", "City name", True)
+        Call weatherTool.AddParameter("get_weather", "units", "string", "metric or imperial", True)
+        Set ai = New XPAi(compatBase & "/tool/chat")
+        ai.Model = "tool-model"
+        ai.MaxToolIterations = 4
+        Call ai.AddTool(weatherTool)
+        Print "TOOL-FUNCTIONS=" & CStr(weatherTool.FunctionCount())
+        Print "TOOL-HAS-FUNCTION=" & CStr(weatherTool.HasFunction("get_weather"))
+        Call ai.AddMessage("user", "What is the weather in Stockholm?")
+        Set response = ai.Complete()
+        Print "TOOL-FINAL=" & response.Text
+        Call ai.Dispose()
+
+        Set ai = New XPAi(compatBase & "/session/chat")
+        ai.Model = "session-model"
+        ai.SessionRequestProperty = "previous_response_id"
+        Call ai.AddTool(retrievalTool)
+        Call ai.AddMessage("user", "Start session")
+        Set response = ai.Complete()
+        Print "SESSION-FIRST=" & response.Text
+        Print "SESSION-ID-1=" & ai.SessionId
+        Print "SESSION-HAS-1=" & CStr(ai.HasSession)
+        Call ai.AddMessage("user", "Continue session")
+        Set response = ai.Complete()
+        Print "SESSION-CONTINUE=" & response.Text
+        Print "SESSION-ID-2=" & ai.SessionId
+        Call ai.NewRequest()
+        Print "SESSION-AFTER-NEW=" & CStr(ai.HasSession)
+        Print "SESSION-TOOLS=" & CStr(ai.ToolCount())
+        Call ai.AddMessage("user", "Start fresh")
+        Set response = ai.Complete()
+        Print "SESSION-NEW=" & response.Text
+        Print "SESSION-ID-NEW=" & ai.SessionId
         Call ai.Dispose()
 
         Set httpRequest = http.GetAsync(compatBase & "/async/http", "OnHttpComplete", "http-77")

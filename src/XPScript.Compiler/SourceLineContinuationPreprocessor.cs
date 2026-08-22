@@ -29,7 +29,10 @@ internal sealed class SourceLineContinuationPreprocessor
             lines[i] = firstIndent + joined.TrimStart();
             i = j;
         }
-        return string.Join(Environment.NewLine, lines);
+
+        var result = string.Join(Environment.NewLine, lines);
+        new AiToolCallbackValidator().Validate(result, "input.xps");
+        return result;
     }
 
     private static string LeadingWhitespace(string line)
