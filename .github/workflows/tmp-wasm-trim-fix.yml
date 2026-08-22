@@ -1,0 +1,55 @@
+name: Temporary WASM Trim Fix
+
+on:
+  push:
+    branches: [ fix-navigation-state-handoff ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix-navigation-state-handoff
+      - name: Patch browser WASM compiler
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs')
+          text = path.read_text()
+
+          old = '''    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WasmMainJSPath>main.js</WasmMainJSPath>'''
+          new = '''    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishTrimmed>false</PublishTrimmed>
+    <WasmMainJSPath>main.js</WasmMainJSPath>'''
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          old_redact = '''        var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase);
+        return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>";'''
+          new_redact = '''        var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase);
+        const int max = 16_384;
+        if (result.Length <= max) return result;
+        const int half = max / 2;
+        return result[..half] + Environment.NewLine + "<diagnostics truncated>" + Environment.NewLine + result[^half..];'''
+          if old_redact in text:
+              text = text.replace(old_redact, new_redact, 1)
+
+          path.write_text(text)
+      - name: Commit patch when needed
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No patch needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/XPScript.Web.Compiler/XpsBrowserWasmCompiler.cs
+          git commit -m "Disable trimming for dynamic browser WASM apps"
+          git push origin HEAD:fix-navigation-state-handoff
