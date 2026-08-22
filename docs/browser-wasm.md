@@ -62,6 +62,20 @@ Custom UIForm buttons are rendered with their shared visibility, enabled-state a
 
 The browser build does not change the source-level UI API. The same UIForm source can still be compiled as a desktop application.
 
+## Callback execution boundary
+
+A browser-wasm XPScript application executes inside the browser. UI callbacks that are part of that application are therefore local WebAssembly callbacks and do not need a network round trip merely because the event originated in a DOM control.
+
+Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser.
+
+Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `HttpClient` to call an explicit server API for that work.
+
+XPScript must not implement browser-to-server callbacks as a generic endpoint that accepts an arbitrary function name from the client. If a dedicated server-callback facility is added, the browser request must use a server-issued opaque registration identifier or an explicit application route. The server must map that identifier to an allowlisted callback and must not trust a callback name supplied by the browser.
+
+A server callback request must use a same-origin unsafe HTTP method such as `POST`, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live `UIForm` instance cannot be transferred to the server.
+
+This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.
+
 ## CSRF protection
 
 Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.
