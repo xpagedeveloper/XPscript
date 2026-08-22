@@ -1,6 +1,18 @@
 ' XPscript UIListView core runtime sample
 ' (c) xpagedeveloper.com 2026
 
+Sub OnListSelect(evt As Variant, context As String)
+    Print "LIST-EVENT=" & evt.EventType
+    Print "LIST-ROW=" & CStr(evt.RowIndex)
+    Print "LIST-KEY=" & evt.Key
+    Print "LIST-CONTEXT=" & context
+End Sub
+
+Sub OnListDoubleClick(evt As Variant, context As String, mode As Integer)
+    Print "LIST-DOUBLE=" & evt.EventType
+    Print "LIST-DOUBLE-CONTEXT=" & context & ":" & CStr(mode)
+End Sub
+
 Sub Main()
     Dim rows As New JsonArray
     Dim first As New JsonObject
@@ -22,6 +34,8 @@ Sub Main()
     Call list.AddColumn("city", "City")
     Call list.SetColumnWidth("name", 240)
     Call list.SetKeyField("id")
+    Call list.SetOnSelectCallback("OnListSelect", "customer-list")
+    Call list.SetOnDoubleClickCallback("OnListDoubleClick", "customer-list", 2)
 
     Print "TITLE=" & list.Title
     Print "ROWS=" & list.RowCount
