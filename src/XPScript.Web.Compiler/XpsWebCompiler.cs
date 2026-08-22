@@ -236,6 +236,8 @@ public sealed class XpsWebCompiler
             context.Response.StatusCode = 200;
             context.Response.ContentType = BrowserContentType(assetPath);
             context.Response.SetHeader("Cache-Control", relativeAsset.Equals("index.html", StringComparison.OrdinalIgnoreCase) ? "no-cache" : "public, max-age=31536000, immutable");
+            if (relativeAsset.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+                XpsWebSecurity.ApplyBrowserWasmResponseSecurityHeaders(context.Response);
             if (!context.Request.Method.Equals("HEAD", StringComparison.OrdinalIgnoreCase)) context.Response.WriteBinary(bytes);
             context.Response.Complete();
         });

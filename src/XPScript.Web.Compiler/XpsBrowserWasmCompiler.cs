@@ -260,9 +260,21 @@ public sealed class XpsBrowserWasmCompiler
 
     private const string MainJs = """
 import { dotnet } from './_framework/dotnet.js';
-import { renderForm } from './xpscript-browser.js';
+import {
+  applyApplicationMetadata,
+  consumeRequestState,
+  navigate,
+  renderForm,
+  stageRequestState
+} from './xpscript-browser.js';
 const { setModuleImports, runMain } = await dotnet.create();
-setModuleImports('xpscript-browser', { renderForm });
+setModuleImports('xpscript-browser', {
+  applyApplicationMetadata,
+  consumeRequestState,
+  navigate,
+  renderForm,
+  stageRequestState
+});
 await runMain('XPScript.BrowserApp');
 """;
 
@@ -271,6 +283,65 @@ function clampInteger(value, minimum, maximum, fallback) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(minimum, Math.min(maximum, parsed));
+}
+
+function clearRequestState(key) {
+  sessionStorage.removeItem(key);
+  sessionStorage.removeItem(key + '.target');
+  sessionStorage.removeItem(key + '.created');
+}
+
+export function stageRequestState(key, stateJson) {
+  if (stateJson === '{}') {
+    clearRequestState(key);
+    return;
+  }
+
+  sessionStorage.setItem(key, stateJson);
+}
+
+export function consumeRequestState(key, lifetimeMilliseconds) {
+  const value = sessionStorage.getItem(key) || '';
+  const target = sessionStorage.getItem(key + '.target') || '';
+  const created = Number(sessionStorage.getItem(key + '.created') || '0');
+  if (!value || !target || !created) return '';
+
+  const lifetime = Number(lifetimeMilliseconds);
+  if (!Number.isFinite(lifetime) || lifetime < 0 || (Date.now() - created) > lifetime) {
+    clearRequestState(key);
+    return '';
+  }
+
+  if (window.location.pathname !== target) return '';
+  clearRequestState(key);
+  return value;
+}
+
+export function navigate(target, key) {
+  const current = window.location.pathname;
+  const slash = current.lastIndexOf('/');
+  const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/';
+  const next = basePath + target;
+  if (sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key + '.target', next);
+    sessionStorage.setItem(key + '.created', String(Date.now()));
+  }
+
+  window.location.href = next;
+}
+
+export function applyApplicationMetadata(title, icon) {
+  if (title) document.title = title;
+  if (!icon) return;
+
+  let link = document.querySelector('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+
+  link.href = icon;
 }
 
 function fieldType(field) {

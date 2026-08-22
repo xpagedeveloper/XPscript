@@ -30,6 +30,33 @@ End Sub
     await using var unit = await compiler.CompileAsync(sourcePath, root);
     if (!unit.Routes.ContainsKey("Index") || !unit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute)) throw new Exception("Synthetic WASM routes are missing.");
 
+    var indexRequest = new XpsWebRequest(
+        "GET", "/app.xps", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
+        "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+    var indexResponse = new XpsWebResponse();
+    var indexContext = new XpsWebContext(
+        indexRequest,
+        indexResponse,
+        new XpsServerInfo("browser-wasm-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new XpsWebPrincipal(false),
+        new SmokeApplicationState());
+    await unit.InvokeAsync("Index", indexContext);
+    if (indexResponse.StatusCode != 200 || indexResponse.Body.Length == 0)
+        throw new Exception($"Synthetic browser-WASM index handler returned HTTP {indexResponse.StatusCode} with {indexResponse.Body.Length} bytes.");
+    if (!indexResponse.Headers.TryGetValue("Content-Security-Policy", out var cspValues))
+        throw new Exception("Browser-WASM index response did not contain a Content-Security-Policy header.");
+    var scriptDirective = cspValues
+        .SelectMany(value => value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        .FirstOrDefault(value => value.StartsWith("script-src ", StringComparison.Ordinal));
+    if (scriptDirective is null)
+        throw new Exception("Browser-WASM Content-Security-Policy did not contain script-src.");
+    var scriptSources = scriptDirective.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Skip(1).ToArray();
+    if (!scriptSources.Contains("'wasm-unsafe-eval'", StringComparer.Ordinal))
+        throw new Exception("Browser-WASM Content-Security-Policy did not permit WebAssembly compilation.");
+    if (scriptSources.Contains("'unsafe-eval'", StringComparer.Ordinal))
+        throw new Exception("Browser-WASM Content-Security-Policy permitted unrestricted JavaScript eval.");
+
     var request = new XpsWebRequest(
         "GET", "/app.xps/main.js", "", "",
         new Dictionary<string, IReadOnlyList<string>>(), null, 0, ReadOnlyMemory<byte>.Empty,
@@ -83,11 +110,21 @@ End Sub
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
         "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
-        "type === 'separator'", "type === 'spacer'"
+        "type === 'separator'", "type === 'spacer'", "export function stageRequestState", "export function consumeRequestState",
+        "export function navigate", "export function applyApplicationMetadata"
     })
     {
         if (!browserModule.Contains(requiredMarker, StringComparison.Ordinal))
             throw new Exception($"Browser UIForm renderer is missing parity marker '{requiredMarker}'.");
+    }
+    if (browserModule.Contains("eval(", StringComparison.Ordinal))
+        throw new Exception("Browser UIForm module uses unrestricted JavaScript eval.");
+
+    var mainModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "main.js"));
+    foreach (var requiredImport in new[] { "stageRequestState", "consumeRequestState", "navigate", "applyApplicationMetadata", "renderForm" })
+    {
+        if (!mainModule.Contains(requiredImport, StringComparison.Ordinal))
+            throw new Exception($"Browser WASM bootstrap did not register '{requiredImport}'.");
     }
 
     Console.WriteLine("browser-wasm smoke passed");
