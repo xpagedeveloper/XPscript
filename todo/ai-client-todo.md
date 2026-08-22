@@ -13,6 +13,9 @@ Implement after the current UIForm work is complete and merged.
 - [x] Support configurable model name per request or client instance.
 - [x] Expose timeout and cancellation behavior consistent with the native HTTP runtime.
 - [x] Keep advanced capabilities optional so the base client stays lightweight.
+- [x] Route streaming callbacks through the shared XPScript callback runtime.
+- [x] Allow streaming callbacks to receive caller-supplied context parameters after the streamed chunk.
+- [x] Reuse the shared callback runtime for native asynchronous HTTP requests.
 
 ## Endpoint and provider compatibility
 
@@ -113,7 +116,7 @@ Implement after the current UIForm work is complete and merged.
 - [x] Apply existing HTTP redirect and SSRF/security policy consistently unless a documented safe override is explicitly configured.
 - [x] Regression-test custom endpoint URLs and additional headers against a local mock OpenAI-compatible server.
 - [x] Regression-test non-streaming and streaming calls on Windows, Ubuntu and macOS.
-- [ ] Add compatibility fixtures that emulate OpenAI-style, Azure/OpenAI-compatible and OpenRouter-style endpoint/header variations without external network calls in CI.
+- [x] Add compatibility fixtures that emulate OpenAI-style, Azure/OpenAI-compatible and OpenRouter-style endpoint/header variations without external network calls in CI.
 - [ ] Add local mock MCP server regression tests.
 - [ ] Add RAG isolation tests proving tenant/user filters cannot leak records across scopes.
 - [ ] Add embeddings batching, dimension and malformed-response tests.

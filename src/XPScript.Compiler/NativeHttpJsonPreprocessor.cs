@@ -71,6 +71,15 @@ internal sealed class NativeHttpJsonPreprocessor
                             $"XPScriptHttpUiFormHelpers.{method}({pair.Key}, ",
                             RegexOptions.IgnoreCase);
                     }
+
+                    foreach (var method in new[] { "GetAsync", "DeleteAsync", "PostAsync", "PutAsync", "PatchAsync" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptAsyncHttp.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
                 }
                 else if (pair.Value.Equals("HttpResponse", StringComparison.OrdinalIgnoreCase))
                 {
@@ -83,7 +92,7 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAsyncHttp", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
