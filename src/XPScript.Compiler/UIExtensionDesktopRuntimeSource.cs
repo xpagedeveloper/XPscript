@@ -89,7 +89,7 @@ internal static class XPScriptUIDesktopAdapter
                 if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array)
                     throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned an unsupported multi-value type.");
                 var submittedValues = property.Value.EnumerateArray()
-                    .Select(item => item.Value.ValueKind == System.Text.Json.JsonValueKind.String ? item.GetString() ?? string.Empty : throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned a non-string list value."))
+                    .Select(item => item.ValueKind == System.Text.Json.JsonValueKind.String ? item.GetString() ?? string.Empty : throw new XPScriptRuntimeException(13, $"Desktop UIForm field '{field.Name}' returned a non-string list value."))
                     .ToArray();
                 applyMany(field, submittedValues);
                 continue;
