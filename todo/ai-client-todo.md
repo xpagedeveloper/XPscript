@@ -15,6 +15,7 @@ Implement after the current UIForm work is complete and merged.
 - [x] Keep advanced capabilities optional so the base client stays lightweight.
 - [x] Route streaming callbacks through the shared XPScript callback runtime.
 - [x] Allow streaming callbacks to receive caller-supplied context parameters after the streamed chunk.
+- [x] Reuse the shared callback runtime for native asynchronous HTTP requests.
 
 ## Endpoint and provider compatibility
 
