@@ -14,7 +14,18 @@ internal sealed class UIListViewLiveUpdatePostProcessor
         listView = ReplaceRequired(listView,
             """
         if (handlerName.Length == 0) return string.Empty;
-        InvokeRegisteredHandler(handlerName);
+        if (usesEventCallback)
+        {
+            var evt = new XPScriptUIListViewEvent(this, normalizedEventType, rowIndex, GetRow(rowIndex), GetSelectedKey());
+            XPScriptCallbackRuntime.Invoke(
+                handlerName,
+                "UIListView event",
+                XPScriptCallbackRuntime.Prepend(evt, callbackArguments));
+        }
+        else
+        {
+            InvokeRegisteredHandler(handlerName);
+        }
         return string.Empty;
     }
 
@@ -22,7 +33,20 @@ internal sealed class UIListViewLiveUpdatePostProcessor
 """,
             """
         if (handlerName.Length > 0)
-            InvokeRegisteredHandler(handlerName);
+        {
+            if (usesEventCallback)
+            {
+                var evt = new XPScriptUIListViewEvent(this, normalizedEventType, rowIndex, GetRow(rowIndex), GetSelectedKey());
+                XPScriptCallbackRuntime.Invoke(
+                    handlerName,
+                    "UIListView event",
+                    XPScriptCallbackRuntime.Prepend(evt, callbackArguments));
+            }
+            else
+            {
+                InvokeRegisteredHandler(handlerName);
+            }
+        }
         return SerializeLiveState();
     }
 
