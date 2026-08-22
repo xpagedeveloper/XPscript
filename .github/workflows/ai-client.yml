@@ -94,7 +94,7 @@ jobs:
               'TOOLS-AFTER-CLEAR=0',
               'TOOL-FUNCTIONS=1',
               'TOOL-HAS-FUNCTION=True',
-              'TOOL-HANDLER=weather:get_weather:Stockholm:metric',
+              'TOOL-HANDLER=weather:get_weather:Stockholm:metric:tenant-42',
               'TOOL-FINAL=Stockholm weather fetched',
               'SESSION-FIRST=SESSION-FIRST',
               'SESSION-ID-1=session-response-1',
