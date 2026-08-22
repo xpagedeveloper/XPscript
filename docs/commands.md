@@ -182,6 +182,14 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `XPDBSQLite.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Close` | `db.Close()` | none | Rolls back an active transaction and closes the database. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDbMsSql` | `Dim db As New XPDbMsSql(connectionString)` | SQL Server connection string | Opens SQL Server or SQL Server Express. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `JsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Query` | `db.Query(sql [, parameters])` | SQL, optional `JsonObject` | Returns rows in a `JsonDocument` array. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `JsonObject` | Returns the first value or null. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction on the connection. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Close` | `db.Close()` | none | Rolls back an active transaction and closes the connection. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 
 ## Application runtime
 

@@ -42,6 +42,15 @@ Sub Sqlite()
     Call Response.Write(CStr(db.Scalar("SELECT value FROM values_table")))
     Call db.Close()
 End Sub
+
+[Anonymous]
+[Get]
+Sub MsSqlCompileOnly()
+    If False Then
+        Dim db As New XPDbMsSql("Server=localhost;Database=master;Integrated Security=True")
+        Call db.Close()
+    End If
+End Sub
 """);
 
 try
@@ -125,7 +134,7 @@ End Sub
         throw new Exception("Unknown web route attribute did not produce a console error.");
 
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
-    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite"))
+    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly"))
         throw new Exception("Compiled route table is incomplete.");
 
     var request = new XpsWebRequest(

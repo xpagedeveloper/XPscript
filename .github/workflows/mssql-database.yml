@@ -1,0 +1,121 @@
+name: SQL Server Database
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/MsSqlDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Web.Compiler/**'
+      - 'tests/WebCompilerSmoke/**'
+      - 'samples/xpdb-mssql.xps'
+      - 'docs/mssql.md'
+      - 'docs/commands.md'
+      - 'docs/index.md'
+      - 'README.md'
+      - '.github/workflows/mssql-database.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile SQL Server sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/mssql | Out-Null
+          $exe = if ($IsWindows) { './out/mssql/xpdb-mssql.exe' } else { './out/mssql/xpdb-mssql' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-mssql.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQL Server sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "SQL Server validation regression failed.`n$output" }
+          $text = $output -join [Environment]::NewLine
+          if ($text -notmatch 'INVALID-CONNECTION=SQL Server connection string is invalid\.') { throw "Invalid connection string was not rejected safely.`n$text" }
+          if ($text -match 'XPSCRIPT_MSSQL_SECRET_MARKER') { throw 'Connection string validation leaked a credential marker.' }
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: XPScript_CI_2026!Sql
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile SQL Server regression
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/mssql-integration | Out-Null
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-mssql.xps -o ./out/mssql-integration/xpdb-mssql --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQL Server regression compilation failed.' }
+          chmod +x ./out/mssql-integration/xpdb-mssql
+
+      - name: Run SQL Server regression
+        shell: pwsh
+        env:
+          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
+        run: |
+          $output = @()
+          $exitCode = 1
+          for ($attempt = 1; $attempt -le 90; $attempt++) {
+            $output = @(& ./out/mssql-integration/xpdb-mssql 2>&1)
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) { break }
+            Start-Sleep -Seconds 2
+          }
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exitCode -ne 0) { throw "SQL Server regression failed.`n$output" }
+
+          $required = @(
+            'OPEN=True',
+            'INSERTEDID=1',
+            'QUERYTYPE=Array',
+            'ROWCOUNT=1',
+            'ROWNAME=Ada',
+            'ROWACTIVE=True',
+            'SCALAR=1',
+            'ROLLBACKCOUNT=1',
+            'DATABASE=master',
+            'CLOSED=False',
+            'XPDBMSSQL=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "SQL Server output missing: $value`n$output" }
+          }

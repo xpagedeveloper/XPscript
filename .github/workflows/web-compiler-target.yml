@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/MsSqlDbRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'

@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest|XPDBSQLite";
+    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql";
 
     public string Transform(string source)
     {
@@ -55,6 +55,7 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBSupabase\s*\((.*)\)", "new XPScriptHttpDbSupabase($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBDominoRest\s*\((.*)\)", "new XPScriptHttpDbDominoRest($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDBSQLite\s*\((.*)\)", "new XPScriptDbSqlite($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMsSql\s*\((.*)\)", "new XPScriptDbMsSql($1)", RegexOptions.IgnoreCase);
 
             foreach (var pair in nativeTypes)
             {
@@ -81,7 +82,7 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
@@ -112,6 +113,11 @@ internal sealed class NativeHttpJsonPreprocessor
         {
             if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPDBSQLite requires a database path argument.");
             return $"new XPScriptDbSqlite({args})";
+        }
+        if (type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPDbMsSql requires a connection string argument.");
+            return $"new XPScriptDbMsSql({args})";
         }
         throw new CompilerException("Unsupported native runtime type: " + type);
     }
