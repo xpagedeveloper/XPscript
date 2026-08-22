@@ -70,6 +70,20 @@ internal sealed class XPScriptUIFormEvent
             throw new XPScriptRuntimeException(9, "UIForm event value index is out of range.");
         return Values[index];
     }
+
+    public XPScriptJsonObject ToJsonObject()
+    {
+        var node = new System.Text.Json.Nodes.JsonObject
+        {
+            ["eventType"] = EventType,
+            ["controlName"] = ControlName,
+            ["value"] = XPScriptNativeJson.ToNode(Value),
+            ["values"] = new System.Text.Json.Nodes.JsonArray(Values.Select(value => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(value)).ToArray())
+        };
+        return new XPScriptJsonObject(node);
+    }
+
+    public string ToJson() => ToJsonObject().Stringify();
 }
 
 internal sealed class XPScriptUIForm
