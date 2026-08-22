@@ -52,6 +52,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/xpai | Out-Null
+          $PSNativeCommandUseErrorActionPreference = $false
 
           $missing = @'
           Option Declare
@@ -63,7 +64,8 @@ jobs:
           $missingPath = './out/xpai/missing-tool-callback.xps'
           Set-Content -Path $missingPath -Value $missing
           $missingOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $missingPath -o ./out/xpai/missing-tool-callback --framework-dependent 2>&1)
-          if ($LASTEXITCODE -eq 0) { throw 'Missing AITool callback unexpectedly compiled.' }
+          $missingExitCode = $LASTEXITCODE
+          if ($missingExitCode -eq 0) { throw 'Missing AITool callback unexpectedly compiled.' }
           if (($missingOutput -join "`n") -notmatch "AITool callback 'MissingHandler' was not found") {
             throw "Missing callback diagnostic was not emitted.`n$missingOutput"
           }
@@ -81,7 +83,8 @@ jobs:
           $arityPath = './out/xpai/wrong-tool-callback-arity.xps'
           Set-Content -Path $arityPath -Value $arity
           $arityOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $arityPath -o ./out/xpai/wrong-tool-callback-arity --framework-dependent 2>&1)
-          if ($LASTEXITCODE -eq 0) { throw 'Wrong-arity AITool callback unexpectedly compiled.' }
+          $arityExitCode = $LASTEXITCODE
+          if ($arityExitCode -eq 0) { throw 'Wrong-arity AITool callback unexpectedly compiled.' }
           if (($arityOutput -join "`n") -notmatch "AITool callback 'ExistingHandler' must accept 2 parameter") {
             throw "Callback arity diagnostic was not emitted.`n$arityOutput"
           }
