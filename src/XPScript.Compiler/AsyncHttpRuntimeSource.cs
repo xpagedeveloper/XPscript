@@ -164,5 +164,5 @@ internal sealed class XPScriptHttpAsyncRequest
         return true;
     }
 }
-""";
+""" + "\n" + AiToolRuntimeSource.Code;
 }
