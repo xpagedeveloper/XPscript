@@ -8,6 +8,10 @@ internal static class XPScriptCallbackRuntime
     private const int MaxCallbackArguments = 64;
     private const int MaxCallbackNameLength = 256;
 
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.NonPublicMethods,
+        typeof(Script))]
     public static object? Invoke(object? callbackNameValue, string operation, params object?[] arguments)
     {
         var callbackName = XPScriptRuntime.CStr(callbackNameValue).Trim();
@@ -16,11 +20,7 @@ internal static class XPScriptCallbackRuntime
         if (arguments.Length > MaxCallbackArguments)
             throw new XPScriptRuntimeException(5, $"{operation} callback exceeds the {MaxCallbackArguments}-argument limit.");
 
-        var scriptType = typeof(XPScriptCallbackRuntime).Assembly.GetType("Script", throwOnError: false, ignoreCase: false);
-        if (scriptType is null)
-            throw new XPScriptRuntimeException(5, $"{operation} callback target is unavailable.");
-
-        var candidates = scriptType
+        var candidates = typeof(Script)
             .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
             .Where(method => method.Name.Equals(callbackName, StringComparison.OrdinalIgnoreCase))
             .Where(method => method.GetParameters().Length == arguments.Length)
