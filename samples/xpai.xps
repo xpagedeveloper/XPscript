@@ -19,6 +19,15 @@ Sub OnHttpComplete(ByVal response As Variant, ByVal requestId As String)
     Print "HTTP-ASYNC=" & requestId & ":" & CStr(response.StatusCode) & ":" & response.Body
 End Sub
 
+Function HandleGetWeather(call As Variant) As Variant
+    Dim city As String
+    Dim units As String
+    city = CStr(call.Arguments.Get("city"))
+    units = CStr(call.Arguments.Get("units"))
+    Print "TOOL-HANDLER=" & call.ToolName & ":" & call.FunctionName & ":" & city & ":" & units
+    HandleGetWeather = "weather:" & city & ":" & units
+End Function
+
 Sub Main()
     Dim endpoint As String
     Dim compatBase As String
@@ -86,6 +95,22 @@ Sub Main()
         Call ai.AddMessage("user", "Azure compatibility fixture")
         Set response = ai.Complete()
         Print response.Text
+        Call ai.Dispose()
+
+        Dim weatherTool As New AITool("weather")
+        weatherTool.Description = "Weather information"
+        Call weatherTool.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather")
+        Call weatherTool.AddParameter("get_weather", "city", "string", "City name", True)
+        Call weatherTool.AddParameter("get_weather", "units", "string", "metric or imperial", True)
+        Set ai = New XPAi(compatBase & "/tool/chat")
+        ai.Model = "tool-model"
+        ai.MaxToolIterations = 4
+        Call ai.AddTool(weatherTool)
+        Print "TOOL-FUNCTIONS=" & CStr(weatherTool.FunctionCount())
+        Print "TOOL-HAS-FUNCTION=" & CStr(weatherTool.HasFunction("get_weather"))
+        Call ai.AddMessage("user", "What is the weather in Stockholm?")
+        Set response = ai.Complete()
+        Print "TOOL-FINAL=" & response.Text
         Call ai.Dispose()
 
         Set ai = New XPAi(compatBase & "/session/chat")
