@@ -7,10 +7,12 @@ on:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
       - 'src/XPScript.Compiler/AiSessionRuntimePostProcessor.cs'
       - 'src/XPScript.Compiler/AiToolRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AiToolCallbackValidator.cs'
       - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
       - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
+      - 'src/XPScript.Compiler/SourceLineContinuationPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Web.Compiler/**'
       - 'tests/WebCompilerSmoke/**'
@@ -45,6 +47,44 @@ jobs:
 
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify AITool callback compile-time validation
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/xpai | Out-Null
+
+          $missing = @'
+          Option Declare
+          Sub Main()
+              Dim tool As New AITool("test")
+              Call tool.AddFunction("run", "Run test", "MissingHandler")
+          End Sub
+          '@
+          $missingPath = './out/xpai/missing-tool-callback.xps'
+          Set-Content -Path $missingPath -Value $missing
+          $missingOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $missingPath -o ./out/xpai/missing-tool-callback --framework-dependent 2>&1)
+          if ($LASTEXITCODE -eq 0) { throw 'Missing AITool callback unexpectedly compiled.' }
+          if (($missingOutput -join "`n") -notmatch "AITool callback 'MissingHandler' was not found") {
+            throw "Missing callback diagnostic was not emitted.`n$missingOutput"
+          }
+
+          $arity = @'
+          Option Declare
+          Function ExistingHandler(call As Variant) As Variant
+              ExistingHandler = "ok"
+          End Function
+          Sub Main()
+              Dim tool As New AITool("test")
+              Call tool.AddFunction("run", "Run test", "ExistingHandler", "context")
+          End Sub
+          '@
+          $arityPath = './out/xpai/wrong-tool-callback-arity.xps'
+          Set-Content -Path $arityPath -Value $arity
+          $arityOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $arityPath -o ./out/xpai/wrong-tool-callback-arity --framework-dependent 2>&1)
+          if ($LASTEXITCODE -eq 0) { throw 'Wrong-arity AITool callback unexpectedly compiled.' }
+          if (($arityOutput -join "`n") -notmatch "AITool callback 'ExistingHandler' must accept 2 parameter") {
+            throw "Callback arity diagnostic was not emitted.`n$arityOutput"
+          }
 
       - name: Compile and run XPAi regression
         shell: pwsh
