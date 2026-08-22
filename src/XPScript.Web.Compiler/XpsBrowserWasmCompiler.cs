@@ -263,7 +263,7 @@ import { dotnet } from './_framework/dotnet.js';
 import { renderForm } from './xpscript-browser.js';
 const { setModuleImports, runMain } = await dotnet.create();
 setModuleImports('xpscript-browser', { renderForm });
-await runMain();
+await runMain('XPScript.BrowserApp');
 """;
 
     private const string BrowserModuleJs = """
