@@ -58,7 +58,7 @@ myapp\
 myapp.zip
 ```
 
-Repository and build directories such as `.git`, `bin` and `obj` are excluded.
+Repository, build and runtime cache directories such as `.git`, `.xpscript-cache`, `bin` and `obj` are excluded. A source-machine `.xpscript-cache` is never copied into the deployment package.
 
 ## IIS hosting model
 
@@ -105,7 +105,9 @@ A self-contained package includes the .NET runtime, but ASP.NET Core Module V2 i
 
 Use an IIS application pool configured as `No Managed Code`.
 
-If the deployed application contains `[Platform:browser-wasm]` files and uses on-demand browser-WASM compilation, install the matching .NET SDK and WebAssembly build tools on the IIS server:
+Server-side XPscript runtime compilation requires the matching .NET SDK to be available to the IIS worker environment.
+
+If the deployed application contains `[Platform:browser-wasm]` files and uses on-demand browser-WASM compilation, also install the WebAssembly build tools on the IIS server:
 
 ```text
 dotnet workload install wasm-tools
@@ -116,7 +118,7 @@ dotnet workload install wasm-tools
 1. Create an IIS site or application.
 2. Set its physical path to the extracted `site` directory.
 3. Give the application pool identity read and execute access to the site.
-4. If browser-WASM on-demand compilation is used, create `.xpscript-cache` below the site root and give the application pool identity Modify permission only to that cache directory.
+4. Create `.xpscript-cache` below the site root and give the application pool identity Modify permission only to that cache directory.
 5. Configure HTTP or HTTPS bindings in IIS.
 6. Start or recycle the application pool.
 7. Browse to the configured hostname.
@@ -128,7 +130,9 @@ site\                         Read + Execute
 site\.xpscript-cache\        Modify
 ```
 
-Do not grant Modify permission to the complete site merely to support browser-WASM caching.
+XPscript uses `.xpscript-cache` for persisted server-side compiled units, browser-WASM publish output and the private .NET/NuGet build environment used by the IIS worker. The generated `web.config` redirects `DOTNET_CLI_HOME`, NuGet caches and user-profile locations such as `APPDATA` away from the Windows `systemprofile` directory and into this writable application-local area.
+
+Do not grant Modify permission to the complete site merely to support runtime compilation or browser-WASM caching.
 
 TLS certificates and public hostnames are configured on the IIS site bindings.
 
@@ -167,21 +171,29 @@ The existing scope rules remain unchanged:
 
 An IIS application-pool recycle restarts the XPscript worker process, so in-memory `Process.State`, `Application.State` and sessions do not survive a recycle unless application code persists required data externally.
 
-## Browser WebAssembly cache
+## Runtime compilation cache
 
-Browser-WASM publish output is stored under:
+Runtime compilation data is stored below:
+
+```text
+.xpscript-cache
+```
+
+The directory can contain persisted server-side compiled units, the private .NET CLI/NuGet profile and caches, and browser-WASM publish output under:
 
 ```text
 .xpscript-cache\wasm
 ```
 
-The application-pool identity needs Modify permission on `.xpscript-cache` when on-demand compilation is enabled.
+The application-pool identity needs Modify permission on `.xpscript-cache`.
+
+The cache is not copied from the source application into a newly generated WebIIS deployment package. Create it on the target IIS installation with the required ACL instead.
 
 The cache is not a public IIS static directory. XPscript resolves browser-WASM assets through the corresponding `.xps` route.
 
 The browser-WASM cache identity includes the XPscript browser compiler identity. Updating the compiler therefore creates a new publish bundle even when the `.xps` source itself has not changed.
 
-If browser-WASM applications are precompiled as part of a deployment pipeline in the future, production servers can avoid SDK and write-permission requirements for those already-published applications.
+If browser-WASM applications are precompiled as part of a deployment pipeline in the future, production servers can avoid WebAssembly workload requirements for those already-published applications.
 
 ## Updating an application
 
@@ -213,8 +225,9 @@ The `WebIIS IIS E2E` GitHub Actions workflow provisions a real IIS instance on `
 - Keep the XPscript backend on the IIS-assigned loopback port.
 - Restrict public hostnames with IIS bindings.
 - Give the application-pool identity only the filesystem permissions required by the application.
-- Give browser-WASM on-demand compilation Modify permission only to `.xpscript-cache`, not to the whole site.
+- Give runtime compilation Modify permission only to `.xpscript-cache`, not to the whole site.
+- Keep the IIS worker's .NET and NuGet profile/cache locations inside the writable `.xpscript-cache` area rather than granting access to the Windows system profile.
 - Grant other write access only to explicit data, upload or log directories that need it.
-- Keep ASP.NET Core Hosting Bundle, IIS, the .NET SDK used for browser-WASM compilation and installed workloads patched.
+- Keep ASP.NET Core Hosting Bundle, IIS, the .NET SDK used for runtime compilation and installed workloads patched.
 
 For alternative IIS topologies such as reverse proxy or CGI, see [Hosting XPScript on IIS](iis-hosting.md).

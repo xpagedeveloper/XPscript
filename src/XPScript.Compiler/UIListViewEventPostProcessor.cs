@@ -152,7 +152,7 @@ var method = hostType.GetMethod(
 """,
             """
         sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};");
-        if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0)
+        if (_onSelectHandler.Length > 0 || _onDoubleClickHandler.Length > 0 || _rowActionTarget.Length > 0)
             sb.Append("const postEvent=async(k,r)=>{const p=new URLSearchParams();p.set('__xps_list_event',k);p.set('__xps_list_index',r?.dataset.rowIndex||'');const x=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},credentials:'same-origin',body:p.toString()});if(!x.ok)throw new Error('UIListView event failed');};");
         else
             sb.Append("const postEvent=async()=>{};");
@@ -160,17 +160,17 @@ var method = hostType.GetMethod(
         if (_onDoubleClickHandler.Length > 0)
         {
             sb.Append("body.addEventListener('click',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;");
-            if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+            if (_onSelectHandler.Length > 0 || _rowActionTarget.Length > 0) sb.Append("await postEvent('select',r);");
             sb.Append("});body.addEventListener('dblclick',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;await postEvent('doubleclick',r);go(r);});");
         }
         else
         {
             sb.Append("body.addEventListener('click',async e=>{const r=e.target.closest('tr[data-row-index]');if(!r)return;");
-            if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+            if (_onSelectHandler.Length > 0 || _rowActionTarget.Length > 0) sb.Append("await postEvent('select',r);");
             sb.Append("go(r);});");
         }
         sb.Append("body.addEventListener('keydown',async e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('tr[data-row-index]');if(r){e.preventDefault();");
-        if (_onSelectHandler.Length > 0) sb.Append("await postEvent('select',r);");
+        if (_onSelectHandler.Length > 0 || _rowActionTarget.Length > 0) sb.Append("await postEvent('select',r);");
         sb.Append("go(r);}}});})();</script>");
 """, "web-events");
 

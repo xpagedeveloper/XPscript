@@ -70,9 +70,7 @@ internal static class XPScriptUIDesktopAdapter
                 throw new XPScriptRuntimeException(5, "Desktop UIForm navigation result is missing its target.");
 
             var target = ReadNavigationValue(navigationValues, "__xps_navigation_target");
-            var parameterName = ReadNavigationValue(navigationValues, "__xps_navigation_parameter_name");
-            var parameterValue = ReadNavigationValue(navigationValues, "__xps_navigation_parameter_value");
-            DispatchCompiledNavigation(target, parameterName, parameterValue);
+            DispatchCompiledNavigation(target);
             return "Navigate";
         }
 
@@ -115,7 +113,7 @@ internal static class XPScriptUIDesktopAdapter
             ? value.GetString() ?? string.Empty
             : string.Empty;
 
-    private static void DispatchCompiledNavigation(string target, string parameterName, string parameterValue)
+    private static void DispatchCompiledNavigation(string target)
     {
         if (string.IsNullOrWhiteSpace(target))
             throw new XPScriptRuntimeException(5, "Desktop UIForm navigation target is empty.");
@@ -127,7 +125,7 @@ internal static class XPScriptUIDesktopAdapter
 
         try
         {
-            method.Invoke(null, [target, parameterName, parameterValue]);
+            method.Invoke(null, [target]);
         }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
         {

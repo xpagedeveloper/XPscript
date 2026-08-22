@@ -6,6 +6,7 @@ public static class XpsWebSecurity
     public const string CsrfFormFieldName = "__xps_csrf";
 
     private const string DefaultCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
+    private const string BrowserWasmCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
 
     public static bool IsUnsafeMethod(string method) =>
         method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
@@ -66,6 +67,14 @@ public static class XpsWebSecurity
         SetIfMissing(response, "Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
             SetIfMissing(response, "Content-Security-Policy", DefaultCsp);
+    }
+
+    public static void ApplyBrowserWasmResponseSecurityHeaders(XpsWebResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ApplyResponseSecurityHeaders(response);
+        if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
+            response.SetHeader("Content-Security-Policy", BrowserWasmCsp);
     }
 
     public static void WriteCsrfFailure(XpsWebContext context)

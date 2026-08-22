@@ -6,6 +6,9 @@ namespace XPScript.UI.Browser;
 
 public static partial class BrowserFormHost
 {
+    private const string NavigationStateStorageKey = "xpscript.request-state.navigation";
+    private const int NavigationStateLifetimeMilliseconds = 60_000;
+
     public static string ShowDialog(string requestJson)
     {
         ArgumentNullException.ThrowIfNull(requestJson);
@@ -13,6 +16,18 @@ public static partial class BrowserFormHost
         ApplyApplicationMetadata(normalized);
         return RenderForm(normalized);
     }
+
+    public static void StageRequestState(string stateJson)
+    {
+        ArgumentNullException.ThrowIfNull(stateJson);
+        if (stateJson.Length > 1024 * 1024)
+            throw new ArgumentOutOfRangeException(nameof(stateJson), "Browser Request.State navigation payload exceeds 1 MiB.");
+
+        StageRequestStateInBrowser(NavigationStateStorageKey, stateJson);
+    }
+
+    public static string ConsumeRequestState() =>
+        ConsumeRequestStateInBrowser(NavigationStateStorageKey, NavigationStateLifetimeMilliseconds) ?? string.Empty;
 
     public static void Navigate(string target)
     {
@@ -26,8 +41,7 @@ public static partial class BrowserFormHost
             (extension.Length > 0 && !extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Browser navigation target must be a relative local XPS module path with an optional .xps extension.", nameof(target));
 
-        var encoded = JsonSerializer.Serialize(path);
-        Eval("(() => { const target = " + encoded + "; const current = window.location.pathname; const slash = current.lastIndexOf('/'); const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/'; window.location.href = basePath + target; })();");
+        NavigateInBrowser(path, NavigationStateStorageKey);
     }
 
     private static void ApplyApplicationMetadata(string requestJson)
@@ -36,15 +50,8 @@ public static partial class BrowserFormHost
         if (root is null) return;
 
         var title = root["applicationTitle"]?.GetValue<string>() ?? string.Empty;
-        if (title.Length > 0)
-            Eval("document.title = " + JsonSerializer.Serialize(title) + ";");
-
         var icon = root["applicationIcon"]?.GetValue<string>() ?? string.Empty;
-        if (icon.Length > 0)
-        {
-            var encoded = JsonSerializer.Serialize(icon);
-            Eval("(() => { let link = document.querySelector('link[rel~=\"icon\"]'); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); } link.href = " + encoded + "; })();");
-        }
+        ApplyApplicationMetadataInBrowser(title, icon);
     }
 
     private static string NormalizeStructuralElements(string requestJson)
@@ -81,6 +88,15 @@ public static partial class BrowserFormHost
     [JSImport("renderForm", "xpscript-browser")]
     private static partial string RenderForm(string requestJson);
 
-    [JSImport("eval", "globalThis")]
-    private static partial void Eval(string script);
+    [JSImport("stageRequestState", "xpscript-browser")]
+    private static partial void StageRequestStateInBrowser(string key, string stateJson);
+
+    [JSImport("consumeRequestState", "xpscript-browser")]
+    private static partial string? ConsumeRequestStateInBrowser(string key, int lifetimeMilliseconds);
+
+    [JSImport("navigate", "xpscript-browser")]
+    private static partial void NavigateInBrowser(string target, string key);
+
+    [JSImport("applyApplicationMetadata", "xpscript-browser")]
+    private static partial void ApplyApplicationMetadataInBrowser(string title, string icon);
 }

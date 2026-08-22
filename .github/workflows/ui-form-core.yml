@@ -11,6 +11,7 @@ on:
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIListView*PostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
@@ -24,6 +25,7 @@ on:
   push:
     branches:
       - main
+      - 'fix-navigation-state-handoff'
       - 'todo-ui-form-*'
       - 'uiform-*'
     paths:
@@ -34,6 +36,7 @@ on:
       - 'src/XPScript.Compiler/UIListViewRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIListView*PostProcessor.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Web.Runtime/**'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'

@@ -107,6 +107,10 @@ End Sub
     Require(!generated.Contains("_navigationParameterName", StringComparison.Ordinal), "generated UIForm runtime still contains navigation parameter-name state");
     Require(!generated.Contains("_navigationParameterValue", StringComparison.Ordinal), "generated UIForm runtime still contains navigation parameter-value state");
     Require(!generated.Contains("Navigate(object? target, object? parameterName", StringComparison.Ordinal), "generated UIForm runtime still exposes the removed navigation parameter overload");
+    Require(!generated.Contains("__xps_navigation_parameter_name", StringComparison.Ordinal), "desktop UI bridge still reads navigation parameter-name state");
+    Require(!generated.Contains("__xps_navigation_parameter_value", StringComparison.Ordinal), "desktop UI bridge still reads navigation parameter-value state");
+    Require(!generated.Contains("DispatchCompiledNavigation(string target, string parameterName", StringComparison.Ordinal), "desktop UI bridge still exposes parameter-based navigation dispatch");
+    Require(generated.Contains("method.Invoke(null, [target]);", StringComparison.Ordinal), "desktop UI bridge does not invoke the target-only compiled navigation dispatcher");
 
     var missingMainRoot = Path.Combine(root, "missing-main");
     var missingMainApp = Path.Combine(missingMainRoot, "app");

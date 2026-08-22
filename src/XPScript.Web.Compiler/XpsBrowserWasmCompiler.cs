@@ -42,19 +42,21 @@ public sealed class XpsBrowserWasmCompiler
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity)));
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
-        var publishRoot = Path.Combine(bundleRoot, "publish");
+        var appRoot = Path.Combine(bundleRoot, "app");
         var marker = Path.Combine(bundleRoot, "source.sha256");
-        if (File.Exists(marker) && Directory.Exists(publishRoot))
-            return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+        if (File.Exists(marker) && IsValidAppRoot(appRoot))
+            return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
         await _buildGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        string? workspace = null;
         try
         {
-            if (File.Exists(marker) && Directory.Exists(publishRoot))
-                return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+            if (File.Exists(marker) && IsValidAppRoot(appRoot))
+                return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
 
-            var workspace = Path.Combine(bundleRoot, "build");
-            Directory.CreateDirectory(workspace);
+            workspace = CreateBuildWorkspace();
+            var publishRoot = Path.Combine(workspace, "pub");
+            TryDelete(appRoot);
             Directory.CreateDirectory(publishRoot);
 
             var browserSource = EnsureBrowserEntryPoint(NormalizeVariantSetAssignments(parsed.Source), parsed.Routes);
@@ -73,13 +75,79 @@ public sealed class XpsBrowserWasmCompiler
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
 
+            var builtAppRoot = ResolveBuiltAppRoot(publishRoot, workspace);
+            CopyDirectory(builtAppRoot, appRoot);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
+
+            if (!IsValidAppRoot(appRoot))
+                throw new XpsWebCompilationException("browser-wasm persisted app bundle is incomplete.");
+
             await File.WriteAllTextAsync(marker, hash, cancellationToken).ConfigureAwait(false);
-            TryDelete(workspace);
-            return new XpsBrowserWasmBundle(sourcePath, hash, publishRoot);
+            return new XpsBrowserWasmBundle(sourcePath, hash, appRoot);
         }
         finally
         {
+            if (workspace is not null) TryDelete(workspace);
             _buildGate.Release();
+        }
+    }
+
+    private static string CreateBuildWorkspace()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "xw" + Guid.NewGuid().ToString("N")[..10]);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static bool IsValidAppRoot(string appRoot) =>
+        Directory.Exists(appRoot) &&
+        File.Exists(Path.Combine(appRoot, "main.js")) &&
+        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+
+    private static string ResolveBuiltAppRoot(params string[] searchRoots)
+    {
+        foreach (var searchRoot in searchRoots)
+        {
+            if (!Directory.Exists(searchRoot)) continue;
+
+            var fullSearchRoot = Path.GetFullPath(searchRoot);
+            var directFramework = Path.Combine(fullSearchRoot, "_framework", "dotnet.js");
+            if (File.Exists(directFramework)) return fullSearchRoot;
+
+            var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories)
+                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+            if (frameworkEntry is null) continue;
+
+            var frameworkDirectory = Path.GetDirectoryName(frameworkEntry)
+                ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
+            return Directory.GetParent(frameworkDirectory)?.FullName
+                ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
+        }
+
+        throw new XpsWebCompilationException("browser-wasm build output did not contain _framework/dotnet.js.");
+    }
+
+    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+    {
+        var sourceRoot = Path.GetFullPath(sourceDirectory);
+        var destinationRoot = Path.GetFullPath(destinationDirectory);
+        if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
+        Directory.CreateDirectory(destinationRoot);
+
+        foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceRoot, directory);
+            Directory.CreateDirectory(Path.Combine(destinationRoot, relative));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceRoot, file);
+            var destination = Path.Combine(destinationRoot, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination, true);
         }
     }
 
@@ -147,6 +215,7 @@ public sealed class XpsBrowserWasmCompiler
       <HintPath>{{escaped}}</HintPath>
       <Private>true</Private>
     </Reference>
+    <TrimmerRootAssembly Include="XPScript.UI.Browser" />
     <Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
@@ -191,10 +260,22 @@ public sealed class XpsBrowserWasmCompiler
 
     private const string MainJs = """
 import { dotnet } from './_framework/dotnet.js';
-import { renderForm } from './xpscript-browser.js';
+import {
+  applyApplicationMetadata,
+  consumeRequestState,
+  navigate,
+  renderForm,
+  stageRequestState
+} from './xpscript-browser.js';
 const { setModuleImports, runMain } = await dotnet.create();
-setModuleImports('xpscript-browser', { renderForm });
-await runMain();
+setModuleImports('xpscript-browser', {
+  applyApplicationMetadata,
+  consumeRequestState,
+  navigate,
+  renderForm,
+  stageRequestState
+});
+await runMain('XPScript.BrowserApp');
 """;
 
     private const string BrowserModuleJs = """
@@ -202,6 +283,65 @@ function clampInteger(value, minimum, maximum, fallback) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(minimum, Math.min(maximum, parsed));
+}
+
+function clearRequestState(key) {
+  sessionStorage.removeItem(key);
+  sessionStorage.removeItem(key + '.target');
+  sessionStorage.removeItem(key + '.created');
+}
+
+export function stageRequestState(key, stateJson) {
+  if (stateJson === '{}') {
+    clearRequestState(key);
+    return;
+  }
+
+  sessionStorage.setItem(key, stateJson);
+}
+
+export function consumeRequestState(key, lifetimeMilliseconds) {
+  const value = sessionStorage.getItem(key) || '';
+  const target = sessionStorage.getItem(key + '.target') || '';
+  const created = Number(sessionStorage.getItem(key + '.created') || '0');
+  if (!value || !target || !created) return '';
+
+  const lifetime = Number(lifetimeMilliseconds);
+  if (!Number.isFinite(lifetime) || lifetime < 0 || (Date.now() - created) > lifetime) {
+    clearRequestState(key);
+    return '';
+  }
+
+  if (window.location.pathname !== target) return '';
+  clearRequestState(key);
+  return value;
+}
+
+export function navigate(target, key) {
+  const current = window.location.pathname;
+  const slash = current.lastIndexOf('/');
+  const basePath = slash >= 0 ? current.substring(0, slash + 1) : '/';
+  const next = basePath + target;
+  if (sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key + '.target', next);
+    sessionStorage.setItem(key + '.created', String(Date.now()));
+  }
+
+  window.location.href = next;
+}
+
+export function applyApplicationMetadata(title, icon) {
+  if (title) document.title = title;
+  if (!icon) return;
+
+  let link = document.querySelector('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+
+  link.href = icon;
 }
 
 function fieldType(field) {

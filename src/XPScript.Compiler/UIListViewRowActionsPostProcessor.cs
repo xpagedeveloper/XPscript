@@ -85,10 +85,24 @@ internal sealed class XPScriptUIListView
 """,
             """
         string handlerName;
+        var navigationTarget = string.Empty;
         if (eventName.Equals("select", StringComparison.OrdinalIgnoreCase))
+        {
             handlerName = _onSelectHandler;
+            navigationTarget = _rowActionTarget;
+        }
         else if (eventName.Equals("doubleclick", StringComparison.OrdinalIgnoreCase))
             handlerName = _onDoubleClickHandler;
+        else if (eventName.StartsWith("navselect:", StringComparison.OrdinalIgnoreCase))
+        {
+            var actionName = eventName[10..];
+            var action = _rowActions.FirstOrDefault(candidate => candidate.Name.Equals(actionName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new XPScriptRuntimeException(5, $"UIListView row action '{actionName}' is not registered.");
+            if (!action.Kind.Equals("Navigate", StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(5, $"UIListView row action '{actionName}' is not a navigation action.");
+            handlerName = _onSelectHandler;
+            navigationTarget = action.Target;
+        }
         else if (eventName.StartsWith("action:", StringComparison.OrdinalIgnoreCase))
         {
             var actionName = eventName[7..];
@@ -103,6 +117,12 @@ internal sealed class XPScriptUIListView
 
         if (handlerName.Length > 0)
             InvokeRegisteredHandler(handlerName);
+        if (navigationTarget.Length > 0)
+        {
+            var webRuntime = Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
+            var stageMethod = webRuntime?.GetMethod("TryStageRequestStateForNavigation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            stageMethod?.Invoke(null, [navigationTarget]);
+        }
         return SerializeLiveState();
 """);
 
@@ -187,7 +207,7 @@ internal sealed class XPScriptUIListView
         sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};");
 """,
             """
-        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};const actionClick=async e=>{const a=e.target.closest('.xps-list-action');if(!a)return false;e.stopPropagation();const r=a.closest('tr[data-row-index]');if(!r)return true;if(a.tagName==='A')return true;e.preventDefault();await postEvent('action:'+String(a.dataset.action||''),r);return true;};body.addEventListener('click',actionClick);");
+        sb.Append("const go=r=>{const h=r?.dataset.href;if(h)location.assign(h);};const actionClick=async e=>{const a=e.target.closest('.xps-list-action');if(!a)return false;e.stopPropagation();const r=a.closest('tr[data-row-index]');if(!r)return true;if(a.tagName==='A'){e.preventDefault();const h=a.href;await postEvent('navselect:'+String(a.dataset.action||''),r);location.assign(h);return true;}e.preventDefault();await postEvent('action:'+String(a.dataset.action||''),r);return true;};body.addEventListener('click',actionClick);");
 """);
 
         generated = ReplaceRequired(generated,

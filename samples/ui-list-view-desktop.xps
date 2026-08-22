@@ -43,6 +43,7 @@ End Sub
 Sub CustomerSelected(list As Variant)
     Dim row As Variant
     row = list.GetSelectedRow()
+    Call Request.State.Set("customerId", list.GetSelectedKey())
     Call row.Set("status", "Selected")
 End Sub
 

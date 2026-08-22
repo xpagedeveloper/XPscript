@@ -40,8 +40,9 @@ public static class XpsKestrelAdapter
 
         var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
         var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+        var iisPort = 0;
         var iisOutOfProcess = !string.IsNullOrWhiteSpace(iisToken) &&
-                              int.TryParse(iisPortText, out var iisPort) &&
+                              int.TryParse(iisPortText, out iisPort) &&
                               iisPort is > 0 and <= 65535;
         var listenAddress = iisOutOfProcess ? IPAddress.Loopback : options.Address;
         var listenPort = iisOutOfProcess ? iisPort : options.Port;
@@ -363,6 +364,7 @@ public static class XpsKestrelAdapter
         var normalized = decoded.Replace('\\', '/');
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0 || segments.Any(segment => segment is "." or ".." || segment.StartsWith(".", StringComparison.Ordinal))) return false;
+        if (segments.Any(segment => Path.GetExtension(segment).Equals(".xps", StringComparison.OrdinalIgnoreCase))) return false;
 
         var extension = Path.GetExtension(segments[^1]);
         if (string.IsNullOrWhiteSpace(extension) || extension.Equals(".xps", StringComparison.OrdinalIgnoreCase)) return false;

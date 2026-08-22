@@ -51,16 +51,25 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
 """;
 
     private const string NavigationAssignment = "        _navigationTarget = path;";
+    private const string StartupToken = "        XPScriptRuntime.SetArgs(args);";
+    private const string StartupWithRestore = "        XPScriptRuntime.SetArgs(args);\n        XPScriptBrowserNavigationStateRuntime.Restore();";
 
     private const string BrowserNavigationAssignment = """
         _navigationTarget = path;
         if (OperatingSystem.IsBrowser())
         {
+            XPScriptBrowserNavigationStateRuntime.Stage();
             var browserHost = Type.GetType("XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", throwOnError: false, ignoreCase: false);
             var navigateMethod = browserHost?.GetMethod("Navigate", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             if (navigateMethod is null)
                 throw new XPScriptRuntimeException(5, "Browser UI navigation backend is unavailable.");
             navigateMethod.Invoke(null, [path]);
+        }
+        else
+        {
+            var webRuntime = Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
+            var stageMethod = webRuntime?.GetMethod("TryStageRequestStateForNavigation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            stageMethod?.Invoke(null, [path]);
         }
 """;
 
@@ -87,6 +96,16 @@ internal sealed class UIFormNavigationCompatibilityPostProcessor
             if (!generated.Contains(NavigationAssignment, StringComparison.Ordinal))
                 throw new CompilerException("Unable to install browser UIForm navigation compatibility.");
             generated = generated.Replace(NavigationAssignment, BrowserNavigationAssignment, StringComparison.Ordinal);
+        }
+
+        if (!generated.Contains("internal static class XPScriptBrowserNavigationStateRuntime", StringComparison.Ordinal))
+            generated += "\n" + BrowserNavigationStateRuntimeSource.Code + "\n";
+
+        if (!generated.Contains(StartupWithRestore, StringComparison.Ordinal))
+        {
+            if (!generated.Contains(StartupToken, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install browser Request.State navigation restore hook.");
+            generated = generated.Replace(StartupToken, StartupWithRestore, StringComparison.Ordinal);
         }
 
         if (generated.Contains("_navigationParameterName", StringComparison.Ordinal) ||

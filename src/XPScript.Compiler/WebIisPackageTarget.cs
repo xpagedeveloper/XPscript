@@ -123,6 +123,7 @@ internal static class WebIisPackageTarget
 
     private static bool IsExcludedDirectory(string segment)
         => segment.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+           segment.Equals(".xpscript-cache", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("publish-webiis", StringComparison.OrdinalIgnoreCase);
@@ -145,9 +146,25 @@ internal static class WebIisPackageTarget
   <location path="." inheritInChildApplications="false">
     <system.webServer>
       <handlers>
+        <clear />
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
-      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess" />
+      <aspNetCore processPath="{escapedProcess}" arguments="{escapedArgs}" stdoutLogEnabled="false" stdoutLogFile=".\\logs\\stdout" hostingModel="outofprocess">
+        <environmentVariables>
+          <environmentVariable name="XPSCRIPT_WEB_CACHE_DIRECTORY" value=".\\.xpscript-cache" />
+          <environmentVariable name="DOTNET_CLI_HOME" value=".\\.xpscript-cache\\dotnet-home" />
+          <environmentVariable name="NUGET_PACKAGES" value=".\\.xpscript-cache\\nuget-packages" />
+          <environmentVariable name="NUGET_HTTP_CACHE_PATH" value=".\\.xpscript-cache\\nuget-http-cache" />
+          <environmentVariable name="NUGET_PLUGINS_CACHE_PATH" value=".\\.xpscript-cache\\nuget-plugins-cache" />
+          <environmentVariable name="USERPROFILE" value=".\\.xpscript-cache\\profile" />
+          <environmentVariable name="HOME" value=".\\.xpscript-cache\\profile" />
+          <environmentVariable name="APPDATA" value=".\\.xpscript-cache\\profile\\AppData\\Roaming" />
+          <environmentVariable name="LOCALAPPDATA" value=".\\.xpscript-cache\\profile\\AppData\\Local" />
+          <environmentVariable name="DOTNET_SKIP_FIRST_TIME_EXPERIENCE" value="1" />
+          <environmentVariable name="DOTNET_CLI_TELEMETRY_OPTOUT" value="1" />
+          <environmentVariable name="DOTNET_NOLOGO" value="1" />
+        </environmentVariables>
+      </aspNetCore>
     </system.webServer>
   </location>
 </configuration>
@@ -196,7 +213,7 @@ Manual installation:
 2. Extract the site directory to the IIS physical path.
 3. Give the application pool identity read and execute access to the site directory.
 4. Use an application pool with No Managed Code.
-5. For browser-WASM on-demand compilation, create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory.
+5. Create site\.xpscript-cache and grant the application pool identity Modify permission only on that cache directory. XPscript uses it for server-side compiled units, the private .NET CLI/NuGet profile and caches, and browser-WASM on-demand compilation.
 6. Configure HTTP/HTTPS host bindings in IIS.
 7. Start the site.
 
