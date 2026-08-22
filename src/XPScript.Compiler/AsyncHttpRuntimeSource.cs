@@ -56,11 +56,12 @@ internal static class XPScriptAsyncHttp
             try
             {
                 var response = request();
-                handle.Complete(response);
+                handle.SetResponse(response);
                 XPScriptCallbackRuntime.Invoke(
                     callbackName,
                     "HTTP async",
                     XPScriptCallbackRuntime.Prepend(response, callbackArguments));
+                handle.Complete();
             }
             catch (XPScriptRuntimeException ex)
             {
@@ -122,7 +123,7 @@ internal sealed class XPScriptHttpAsyncRequest
         {
             return milliseconds == -1 ? WaitInfinite(task) : task.Wait(milliseconds);
         }
-        catch (AggregateException ex) when (ex.InnerExceptions.All(item => item is not XPScriptRuntimeException))
+        catch (AggregateException)
         {
             throw new XPScriptRuntimeException(5, "HTTP async wait failed.");
         }
@@ -138,13 +139,14 @@ internal sealed class XPScriptHttpAsyncRequest
         }
     }
 
-    internal void Complete(XPScriptHttpResponse response)
+    internal void SetResponse(XPScriptHttpResponse response)
     {
-        lock (_sync)
-        {
-            _response = response;
-            _completed = true;
-        }
+        lock (_sync) _response = response;
+    }
+
+    internal void Complete()
+    {
+        lock (_sync) _completed = true;
     }
 
     internal void Fail(string error)
