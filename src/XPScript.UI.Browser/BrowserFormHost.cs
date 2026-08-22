@@ -8,6 +8,10 @@ public static partial class BrowserFormHost
 {
     private const string NavigationStateStorageKey = "xpscript.request-state.navigation";
     private const int NavigationStateLifetimeMilliseconds = 60_000;
+    private const int MaxEventTokenLength = 260;
+    private const int MaxEventPayloadLength = 1024 * 1024;
+    private static readonly object EventDispatcherSync = new();
+    private static Func<string, string, string>? _eventDispatcher;
 
     public static string ShowDialog(string requestJson)
     {
@@ -15,6 +19,30 @@ public static partial class BrowserFormHost
         var normalized = NormalizeStructuralElements(requestJson);
         ApplyApplicationMetadata(normalized);
         return RenderForm(normalized);
+    }
+
+    public static void SetEventDispatcher(Func<string, string, string> dispatcher)
+    {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+        lock (EventDispatcherSync) _eventDispatcher = dispatcher;
+    }
+
+    [JSExport]
+    public static string DispatchEvent(string eventToken, string submittedValue)
+    {
+        if (string.IsNullOrWhiteSpace(eventToken) || eventToken.Length > MaxEventTokenLength)
+            throw new ArgumentException("Browser UI event token is invalid.", nameof(eventToken));
+        if (!(eventToken.StartsWith("change:", StringComparison.OrdinalIgnoreCase) ||
+              eventToken.StartsWith("button:", StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("Browser UI event type is unsupported.", nameof(eventToken));
+        if (submittedValue is null || submittedValue.Length > MaxEventPayloadLength)
+            throw new ArgumentOutOfRangeException(nameof(submittedValue), "Browser UI event payload exceeds the 1 MiB limit.");
+
+        Func<string, string, string>? dispatcher;
+        lock (EventDispatcherSync) dispatcher = _eventDispatcher;
+        if (dispatcher is null)
+            throw new InvalidOperationException("Browser UI event dispatcher is not registered.");
+        return dispatcher(eventToken, submittedValue) ?? string.Empty;
     }
 
     public static void StageRequestState(string stateJson)
