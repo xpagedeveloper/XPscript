@@ -215,6 +215,7 @@ public sealed class XpsBrowserWasmCompiler
       <HintPath>{{escaped}}</HintPath>
       <Private>true</Private>
     </Reference>
+    <TrimmerRootAssembly Include="XPScript.UI.Browser" />
     <Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
