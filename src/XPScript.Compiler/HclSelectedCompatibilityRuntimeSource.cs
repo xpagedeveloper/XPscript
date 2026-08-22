@@ -78,7 +78,7 @@ internal static class LSHclSelectedRuntime
 
     public static object? GetObject(object? pathName = null, object? className = null)
     {
-        if (!OperatingSystem.IsWindows()) throw new XPScriptRuntimeException(5, "GetObject is supported only on Windows.");
+        if (!OperatingSystem.IsWindows()) throw new XPScriptRuntimeException(5, "GetObject is available only on Windows.");
         var path = pathName is null ? "" : XPScriptRuntime.CStr(pathName).Trim();
         var progId = className is null ? "" : XPScriptRuntime.CStr(className).Trim();
         try
