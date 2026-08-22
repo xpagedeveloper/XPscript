@@ -145,8 +145,10 @@ internal static class XPScriptCallbackRuntime
                 return true;
             }
         }
-        catch (Exception) when (value is IConvertible)
+        catch (Exception)
         {
+            converted = null;
+            return false;
         }
 
         converted = null;
