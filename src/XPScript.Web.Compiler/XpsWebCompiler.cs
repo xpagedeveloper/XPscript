@@ -12,6 +12,7 @@ namespace XPScript.Web.Compiler;
 
 public sealed class XpsWebCompiler
 {
+    private const string MicrosoftDataSqliteVersion = "10.0.11";
     private static readonly Regex MainOrInitialize = new(@"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b", RegexOptions.CultureInvariant);
     private static readonly Regex ScriptClassMarker = new(@"internal\s+static\s+class\s+Script\s*\{", RegexOptions.CultureInvariant);
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
@@ -113,7 +114,8 @@ public sealed class XpsWebCompiler
         {
             var projectPath = Path.Combine(workspace, "WebUnit.csproj");
             var generatedPath = Path.Combine(workspace, "Generated.cs");
-            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location), cancellationToken).ConfigureAwait(false);
+            var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
@@ -267,7 +269,20 @@ public sealed class XpsWebCompiler
     private static Assembly? ResolveSharedAssembly(AssemblyLoadContext context, AssemblyName name)
     {
         var runtimeAssembly = typeof(XpsWebContext).Assembly;
-        return string.Equals(name.Name, runtimeAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase) ? runtimeAssembly : null;
+        if (string.Equals(name.Name, runtimeAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase)) return runtimeAssembly;
+        if (name.Name is null ||
+            (!name.Name.Equals("Microsoft.Data.Sqlite", StringComparison.OrdinalIgnoreCase) &&
+             !name.Name.StartsWith("SQLitePCLRaw.", StringComparison.OrdinalIgnoreCase)))
+            return null;
+
+        try
+        {
+            return AssemblyLoadContext.Default.LoadFromAssemblyName(name);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
     }
 
     private static string InjectWebObjects(string generated)
@@ -316,9 +331,14 @@ internal static class Script
         }
     }
 
-    private static string BuildProject(string webRuntimeAssemblyPath)
+    private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite)
     {
         var escapedPath = SecurityElement.Escape(webRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode the web runtime assembly path.");
+        var sqlitePackage = usesSqlite
+            ? $"""
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="{MicrosoftDataSqliteVersion}" />
+"""
+            : string.Empty;
         return $$"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -331,7 +351,7 @@ internal static class Script
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="XPScript.Web.Runtime"><HintPath>{{escapedPath}}</HintPath><Private>false</Private></Reference>
-  </ItemGroup>
+{{sqlitePackage}}  </ItemGroup>
 </Project>
 """;
     }

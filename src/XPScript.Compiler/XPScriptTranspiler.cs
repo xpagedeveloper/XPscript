@@ -61,6 +61,9 @@ public sealed class XPScriptTranspiler
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        var usesSqlite = source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
+        if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
@@ -108,6 +111,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
+        if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";

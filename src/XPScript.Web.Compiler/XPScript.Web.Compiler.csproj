@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
     <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
     <ProjectReference Include="../XPScript.UI.Browser/XPScript.UI.Browser.csproj" />
