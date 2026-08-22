@@ -204,12 +204,13 @@ internal sealed class XPScriptAi : IDisposable
         lock (_sync) _headers.Clear();
     }
 
-    public XPScriptAiResponse Complete() => Send(null, false, null, null);
-    public XPScriptAiResponse Complete(object? messages) => Send(messages, false, null, null);
-    public XPScriptAiResponse Complete(object? messages, object? model) => Send(messages, false, null, model);
-    public XPScriptAiResponse Stream(object? callbackName) => Send(null, true, callbackName, null);
-    public XPScriptAiResponse Stream(object? messages, object? callbackName) => Send(messages, true, callbackName, null);
-    public XPScriptAiResponse Stream(object? messages, object? callbackName, object? model) => Send(messages, true, callbackName, model);
+    public XPScriptAiResponse Complete() => Send(null, false, null, null, null);
+    public XPScriptAiResponse Complete(object? messages) => Send(messages, false, null, null, null);
+    public XPScriptAiResponse Complete(object? messages, object? model) => Send(messages, false, null, model, null);
+    public XPScriptAiResponse Stream(object? callbackName) => Send(null, true, callbackName, null, null);
+    public XPScriptAiResponse Stream(object? messages, object? callbackName) => Send(messages, true, callbackName, null, null);
+    public XPScriptAiResponse Stream(object? messages, object? callbackName, object? model) => Send(messages, true, callbackName, model, null);
+    public XPScriptAiResponse StreamCallback(object? callbackName, params object?[] callbackArguments) => Send(null, true, callbackName, null, callbackArguments);
 
     public void Cancel()
     {
@@ -231,7 +232,7 @@ internal sealed class XPScriptAi : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private XPScriptAiResponse Send(object? messagesValue, bool stream, object? callbackValue, object? modelValue)
+    private XPScriptAiResponse Send(object? messagesValue, bool stream, object? callbackValue, object? modelValue, object?[]? callbackArguments)
     {
         EnsureNotDisposed();
         var callbackName = stream ? XPScriptRuntime.CStr(callbackValue).Trim() : string.Empty;
@@ -251,7 +252,7 @@ internal sealed class XPScriptAi : IDisposable
             using var request = BuildHttpRequest(requestText, stream);
             using var response = _client.Send(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellation.Token);
             var result = stream
-                ? ReadStream(response, callbackName, cancellation.Token)
+                ? ReadStream(response, callbackName, callbackArguments ?? [], cancellation.Token)
                 : ReadResponse(response, cancellation.Token);
             if (ThrowOnHttpError && !result.IsSuccess)
                 throw new XPScriptRuntimeException(5, $"XPAi request failed with HTTP status {result.StatusCode}.");
@@ -389,7 +390,7 @@ internal sealed class XPScriptAi : IDisposable
         return CreateResponse(response, node, ExtractText(node), ExtractModel(node), ExtractUsage(node));
     }
 
-    private XPScriptAiResponse ReadStream(System.Net.Http.HttpResponseMessage response, string callbackName, CancellationToken cancellationToken)
+    private XPScriptAiResponse ReadStream(System.Net.Http.HttpResponseMessage response, string callbackName, object?[] callbackArguments, CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
             return ReadResponse(response, cancellationToken);
@@ -455,7 +456,7 @@ internal sealed class XPScriptAi : IDisposable
             if (chunk.Length > 0)
             {
                 if (CollectStreamedResponse) complete.Append(chunk);
-                InvokeCallback(callbackName, chunk);
+                XPScriptCallbackRuntime.Invoke(callbackName, "XPAi stream", XPScriptCallbackRuntime.Prepend(chunk, callbackArguments));
             }
             var eventModel = ExtractModel(eventNode);
             if (eventModel.Length > 0) model = eventModel;
@@ -547,26 +548,6 @@ internal sealed class XPScriptAi : IDisposable
             buffer.Write(bytes, 0, read);
         }
         return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
-    }
-
-    private void InvokeCallback(string callbackName, string chunk)
-    {
-        var scriptType = typeof(XPScriptAi).Assembly.GetType("Script", throwOnError: false, ignoreCase: false);
-        var method = scriptType?.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .FirstOrDefault(candidate => candidate.Name.Equals(callbackName, StringComparison.OrdinalIgnoreCase) &&
-                                         candidate.GetParameters().Length == 1 &&
-                                         candidate.GetParameters()[0].ParameterType.IsAssignableFrom(typeof(string)));
-        if (method is null)
-            throw new XPScriptRuntimeException(5, "XPAi stream callback was not found or must accept one ByVal String parameter.");
-        try { method.Invoke(null, [chunk]); }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is XPScriptRuntimeException runtime)
-        {
-            throw runtime;
-        }
-        catch (Exception)
-        {
-            throw new XPScriptRuntimeException(5, "XPAi stream callback failed.");
-        }
     }
 
     private CancellationTokenSource BeginRequest()
