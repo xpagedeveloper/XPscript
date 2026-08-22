@@ -105,6 +105,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NativeInteropRuntimeSource.Code + "\n";
         generated += "\n\n" + FileSystemPortabilityRuntimeSource.Code + "\n";
         generated += "\n\n" + ApplicationRuntimeSource.Code + "\n";
+        generated += "\n\n" + CallbackRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
