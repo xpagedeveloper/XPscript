@@ -10,6 +10,11 @@ Sub OnAiChunk(ByVal chunk As String)
     Print "CHUNK=" & chunk
 End Sub
 
+Sub OnAiChunkWithContext(ByVal chunk As String, ByVal requestId As String, ByVal sequence As Integer)
+    streamedText = streamedText & chunk
+    Print "CALLBACK=" & requestId & ":" & CStr(sequence) & ":" & chunk
+End Sub
+
 Sub Main()
     Dim endpoint As String
     Dim compatBase As String
@@ -86,6 +91,10 @@ Sub Main()
     Set response = ai.Stream("OnAiChunk")
     Print "STREAM=" & streamedText
     Print "COLLECTED=" & response.Text
+
+    streamedText = ""
+    Set response = ai.StreamCallback("OnAiChunkWithContext", "request-42", 7)
+    Print "STREAM-CONTEXT=" & streamedText
 
     On Error GoTo ProviderError
     ai.Model = "error-model"
