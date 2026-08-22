@@ -2,6 +2,8 @@
 ' (c) xpagedeveloper.com 2026
 
 Sub OnListSelect(evt As Variant, context As String)
+    Dim eventJson As String
+    eventJson = evt.ToJson()
     Print "LIST-EVENT=" & evt.EventType
     Print "LIST-ROW=" & CStr(evt.RowIndex)
     Print "LIST-KEY=" & evt.Key
@@ -9,6 +11,8 @@ Sub OnListSelect(evt As Variant, context As String)
 End Sub
 
 Sub OnListDoubleClick(evt As Variant, context As String, mode As Integer)
+    Dim eventJson As String
+    eventJson = evt.ToJson()
     Print "LIST-DOUBLE=" & evt.EventType
     Print "LIST-DOUBLE-CONTEXT=" & context & ":" & CStr(mode)
 End Sub
