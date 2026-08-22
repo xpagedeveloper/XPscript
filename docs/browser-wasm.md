@@ -64,9 +64,29 @@ The browser build does not change the source-level UI API. The same UIForm sourc
 
 ## Callback execution boundary
 
-A browser-wasm XPScript application executes inside the browser. UI callbacks that are part of that application are therefore local WebAssembly callbacks and do not need a network round trip merely because the event originated in a DOM control.
+A browser-wasm XPScript application executes inside the browser. UI callbacks that are part of that application are local WebAssembly callbacks and do not need a network round trip merely because the event originated in a DOM control.
 
-Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser.
+`SetOnChangeCallback` and `AddButtonCallback` are dispatched from DOM events back into the generated WebAssembly runtime. The callback receives a `UIFormEvent` as its first argument and caller-supplied context arguments after it, matching the callback contract used by the other XPScript runtimes. Callback action state is applied back to the rendered form, including changed field/button state and navigation requests.
+
+```xpscript
+Sub NameChanged(evt As Variant, context As String)
+    Print evt.EventType & ":" & evt.ControlName & ":" & context
+End Sub
+
+Sub SaveClicked(evt As Variant, context As String, mode As Integer)
+    Print evt.EventType & ":" & context & ":" & CStr(mode)
+End Sub
+
+Sub Main()
+    Dim form As New UIForm("Customer")
+    Call form.AddTextField("name", "Name")
+    Call form.SetOnChangeCallback("name", "NameChanged", "browser")
+    Call form.AddButtonCallback("save", "Save", "SaveClicked", "browser", 2)
+    Call form.ShowDialog()
+End Sub
+```
+
+Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic `xpscript:form-error` event rather than exposing runtime exception details.
 
 Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `HttpClient` to call an explicit server API for that work.
 
