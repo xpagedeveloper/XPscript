@@ -58,9 +58,9 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         {
             return Encoding.UTF8.GetString(Convert.FromHexString(hex));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw new CompilerException("Invalid generated XPScript source mapping marker: " + ex.Message);
+            throw new CompilerException("Invalid generated XPScript source mapping marker.");
         }
     }
 

@@ -23,6 +23,7 @@ Start with:
 - `docs/console-process-formatting.md`
 - `docs/platform-native.md`
 - `docs/native-http-json.md`
+- `docs/sqlite.md`
 - `docs/evaluate.md`
 - `docs/security.md` — security boundaries and powerful APIs
 - `docs/diagnostics-security.md` — diagnostic redaction and secret-safe error policy

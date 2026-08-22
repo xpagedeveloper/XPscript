@@ -30,6 +30,18 @@ End Sub
 [Rule:!blocked]
 Sub Save()
 End Sub
+
+[Anonymous]
+[Get]
+Sub Sqlite()
+    Dim db As New XPDBSQLite(":memory:")
+    Dim parameters As New JsonObject
+    Call db.Execute("CREATE TABLE values_table (value TEXT NOT NULL)")
+    Call parameters.Set("value", "WEB-SQLITE")
+    Call db.Execute("INSERT INTO values_table(value) VALUES ($value)", parameters)
+    Call Response.Write(CStr(db.Scalar("SELECT value FROM values_table")))
+    Call db.Close()
+End Sub
 """);
 
 try
@@ -113,7 +125,7 @@ End Sub
         throw new Exception("Unknown web route attribute did not produce a console error.");
 
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
-    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save"))
+    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite"))
         throw new Exception("Compiled route table is incomplete.");
 
     var request = new XpsWebRequest(
@@ -128,6 +140,10 @@ End Sub
         new SmokeApplicationState());
 
     await unit.InvokeAsync("WebMain", context);
+    await unit.InvokeAsync("Sqlite", context);
+    var sqliteBody = System.Text.Encoding.UTF8.GetString(context.Response.Body.Span);
+    if (sqliteBody != "WEB-SQLITE")
+        throw new Exception($"SQLite web route returned '{sqliteBody}'.");
     try
     {
         await unit.InvokeAsync("NotExported", context);

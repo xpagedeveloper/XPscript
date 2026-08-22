@@ -1,0 +1,48 @@
+' XPScript local SQLite database regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("xpdb-sqlite-regression.db")
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+    Dim array As JsonArray
+    Dim row As JsonObject
+    Dim readOnlyDb As XPDBSQLite
+    Dim count As Variant
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY, name TEXT NOT NULL, active INTEGER NOT NULL)")
+    Call db.Execute("DELETE FROM people")
+
+    Call parameters.Set("name", "Ada")
+    Call parameters.Set("active", True)
+    Print "INSERTED=" & CStr(db.Execute("INSERT INTO people(name, active) VALUES ($name, $active)", parameters))
+    Print "LASTID=" & CStr(db.LastInsertRowId)
+
+    Set rows = db.Query("SELECT id, name, active FROM people WHERE name = $name", parameters)
+    Set array = rows.Root.AsArray()
+    Set row = array.Get(0)
+    Print "QUERYTYPE=" & rows.Root.Type
+    Print "ROWCOUNT=" & CStr(array.Count)
+    Print "ROWNAME=" & CStr(row.Get("name"))
+    Print "ROWACTIVE=" & CStr(row.Get("active"))
+
+    count = db.Scalar("SELECT COUNT(*) FROM people WHERE name = $name", parameters)
+    Print "SCALAR=" & CStr(count)
+
+    Call parameters.Set("name", "Grace")
+    Call db.BeginTransaction()
+    Call db.Execute("INSERT INTO people(name, active) VALUES ($name, $active)", parameters)
+    Call db.Rollback()
+    Print "ROLLBACKCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM people"))
+
+    Call db.Close()
+
+    Set readOnlyDb = New XPDBSQLite("xpdb-sqlite-regression.db", True)
+    Print "READONLY=" & CStr(readOnlyDb.ReadOnly)
+    Print "READONLYCOUNT=" & CStr(readOnlyDb.Scalar("SELECT COUNT(*) FROM people"))
+    Call readOnlyDb.Close()
+
+    Print "XPDBSQLITE=OK"
+End Sub

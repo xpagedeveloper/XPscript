@@ -6,6 +6,7 @@ namespace XPScript.Compiler;
 internal static class CompilerBuildEnvironment
 {
     private const string AvaloniaVersion = "12.0.3";
+    private const string MicrosoftDataSqliteVersion = "10.0.11";
 
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
@@ -22,7 +23,7 @@ internal static class CompilerBuildEnvironment
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
 
-        ConfigureDesktopUiDependencies(startInfo, root);
+        ConfigureGeneratedDependencies(startInfo, root);
 
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
@@ -49,7 +50,7 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
     }
 
-    private static void ConfigureDesktopUiDependencies(ProcessStartInfo startInfo, string root)
+    private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
     {
         var generatedSource = Path.Combine(root, "Program.cs");
         if (!File.Exists(generatedSource)) return;
@@ -58,10 +59,11 @@ internal static class CompilerBuildEnvironment
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        var usesSqlite = source.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
 
-        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && stagedIconName is null) return;
+        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && stagedIconName is null) return;
 
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
@@ -74,19 +76,28 @@ internal static class CompilerBuildEnvironment
                 ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
         }
 
-        var propsPath = Path.Combine(root, "Directory.Build.props");
-        var propertyGroup = stagedIconName is null
+        var propertyEntries = stagedIconName is null
+            ? string.Empty
+            : $"""
+    <ApplicationIcon>{SecurityElement.Escape(stagedIconName)}</ApplicationIcon>
+""";
+        if (usesSqlite)
+        {
+            propertyEntries += """
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+""";
+        }
+
+        var propertyGroup = propertyEntries.Length == 0
             ? string.Empty
             : $"""
   <PropertyGroup>
-    <ApplicationIcon>{SecurityElement.Escape(stagedIconName)}</ApplicationIcon>
-  </PropertyGroup>
+{propertyEntries}  </PropertyGroup>
 """;
 
-        var itemGroup = escapedAssembly is null
+        var itemEntries = escapedAssembly is null
             ? string.Empty
             : $"""
-  <ItemGroup>
     <Reference Include="XPScript.UI.Desktop">
       <HintPath>{escapedAssembly}</HintPath>
       <Private>true</Private>
@@ -94,9 +105,22 @@ internal static class CompilerBuildEnvironment
     <PackageReference Include="Avalonia" Version="{AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Desktop" Version="{AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />
-  </ItemGroup>
+""";
+        if (usesSqlite)
+        {
+            itemEntries += $"""
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="{MicrosoftDataSqliteVersion}" />
+""";
+        }
+
+        var itemGroup = itemEntries.Length == 0
+            ? string.Empty
+            : $"""
+  <ItemGroup>
+{itemEntries}  </ItemGroup>
 """;
 
+        var propsPath = Path.Combine(root, "Directory.Build.props");
         var props = $"""
 <Project>
 {propertyGroup}{itemGroup}</Project>

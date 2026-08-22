@@ -8,6 +8,8 @@ on:
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.UI.Browser/**'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/IncludeSourcePreprocessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerDriver.cs'

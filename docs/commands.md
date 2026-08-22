@@ -174,6 +174,14 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `HttpClient.Post` | `client.Post(url, body [, contentType])` | URL, body, content type | Sends HTTP POST. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonParse` | `JsonParse(text)` | JSON text | Parses JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonStringify` | `JsonStringify(value)` | value | Serializes JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPDBSQLite` | `Dim db As New XPDBSQLite(path [, readOnly])` | relative path, optional read-only flag | Opens a local SQLite database. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `JsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Query` | `db.Query(sql [, parameters])` | SQL, optional `JsonObject` | Returns rows in a `JsonDocument` array. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `JsonObject` | Returns the first value or null. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction on the connection. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Close` | `db.Close()` | none | Rolls back an active transaction and closes the database. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 
 ## Application runtime
 

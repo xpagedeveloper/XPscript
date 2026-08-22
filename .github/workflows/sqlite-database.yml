@@ -1,0 +1,73 @@
+name: SQLite Database
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'samples/xpdb-sqlite.xps'
+      - 'docs/sqlite.md'
+      - 'docs/commands.md'
+      - 'docs/index.md'
+      - '.github/workflows/sqlite-database.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run SQLite sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/sqlite | Out-Null
+          $exe = if ($IsWindows) { './out/sqlite/xpdb-sqlite.exe' } else { './out/sqlite/xpdb-sqlite' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-sqlite.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQLite sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "SQLite regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          $required = @(
+            'INSERTED=1',
+            'LASTID=1',
+            'QUERYTYPE=Array',
+            'ROWCOUNT=1',
+            'ROWNAME=Ada',
+            'ROWACTIVE=1',
+            'SCALAR=1',
+            'ROLLBACKCOUNT=1',
+            'READONLY=True',
+            'READONLYCOUNT=1',
+            'XPDBSQLITE=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "SQLite output missing: $value`n$output" }
+          }
+
+      - name: Remove SQLite regression database
+        if: always()
+        shell: pwsh
+        run: Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
