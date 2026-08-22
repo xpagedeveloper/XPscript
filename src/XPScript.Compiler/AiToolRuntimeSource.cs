@@ -42,9 +42,9 @@ internal sealed class XPScriptAiTool
         }
     }
 
-    public XPScriptAiToolFunction AddFunction(object? nameValue, object? descriptionValue, object? handlerNameValue)
+    public XPScriptAiToolFunction AddFunction(object? nameValue, object? descriptionValue, object? callbackNameValue, params object?[] callbackArguments)
     {
-        var function = new XPScriptAiToolFunction(Name, nameValue, descriptionValue, handlerNameValue);
+        var function = new XPScriptAiToolFunction(Name, nameValue, descriptionValue, callbackNameValue, callbackArguments);
         lock (_sync)
         {
             if (_functions.Any(existing => existing.Name.Equals(function.Name, StringComparison.OrdinalIgnoreCase)))
@@ -173,24 +173,28 @@ internal sealed class XPScriptAiToolFunction
     private const int MaxParameters = 128;
     private readonly object _sync = new();
     private readonly List<XPScriptAiToolParameter> _parameters = [];
+    private readonly object?[] _callbackArguments;
 
-    internal XPScriptAiToolFunction(object? toolNameValue, object? nameValue, object? descriptionValue, object? handlerNameValue)
+    internal XPScriptAiToolFunction(object? toolNameValue, object? nameValue, object? descriptionValue, object? callbackNameValue, object?[]? callbackArguments)
     {
         ToolName = XPScriptAiTool.NormalizeName(toolNameValue, "AITool name");
         Name = XPScriptAiTool.NormalizeName(nameValue, "AITool function name");
         Description = XPScriptRuntime.CStr(descriptionValue).Trim();
-        HandlerName = XPScriptRuntime.CStr(handlerNameValue).Trim();
+        CallbackName = XPScriptRuntime.CStr(callbackNameValue).Trim();
+        _callbackArguments = callbackArguments?.ToArray() ?? [];
         if (Description.Length == 0 || Description.Length > 8192 || Description.IndexOf('\0') >= 0)
             throw new XPScriptRuntimeException(5, "AITool function description is invalid.");
-        if (HandlerName.Length is < 1 or > 256 || !(char.IsLetter(HandlerName[0]) || HandlerName[0] == '_') ||
-            HandlerName.Skip(1).Any(c => !(char.IsLetterOrDigit(c) || c == '_')))
-            throw new XPScriptRuntimeException(5, "AITool function handler name is invalid.");
+        if (CallbackName.Length is < 1 or > 256 || !(char.IsLetter(CallbackName[0]) || CallbackName[0] == '_') ||
+            CallbackName.Skip(1).Any(c => !(char.IsLetterOrDigit(c) || c == '_')))
+            throw new XPScriptRuntimeException(5, "AITool function callback name is invalid.");
+        if (_callbackArguments.Length > 63)
+            throw new XPScriptRuntimeException(5, "AITool function callback context exceeds the 63-argument limit.");
     }
 
     public string ToolName { get; }
     public string Name { get; }
     public string Description { get; }
-    public string HandlerName { get; }
+    public string CallbackName { get; }
 
     public void AddParameter(object? nameValue, object? typeValue, object? descriptionValue, object? requiredValue)
     {
@@ -266,7 +270,7 @@ internal sealed class XPScriptAiToolFunction
         {
             ["name"] = Name,
             ["description"] = Description,
-            ["handler"] = HandlerName,
+            ["callback"] = CallbackName,
             ["parameters"] = provider["function"]?["parameters"]?.DeepClone()
         };
     }
@@ -275,7 +279,10 @@ internal sealed class XPScriptAiToolFunction
     {
         ValidateArguments(arguments);
         var call = new XPScriptAiToolCall(ToolName, Name, callId, arguments, sessionId);
-        return XPScriptCallbackRuntime.Invoke(HandlerName, "XPAi tool", [call]);
+        return XPScriptCallbackRuntime.Invoke(
+            CallbackName,
+            "XPAi tool",
+            XPScriptCallbackRuntime.Prepend(call, _callbackArguments));
     }
 
     private void ValidateArguments(System.Text.Json.Nodes.JsonObject arguments)
