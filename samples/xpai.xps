@@ -12,6 +12,7 @@ End Sub
 
 Sub Main()
     Dim endpoint As String
+    Dim compatBase As String
     Dim ai As XPAi
     Dim response As XPAiResponse
     Dim providerExtra As JsonObject
@@ -29,6 +30,33 @@ Sub Main()
     Print "PRESET-AZURE=" & ai.Endpoint
     Print "PRESET-AZURE-PROVIDER=" & ai.Provider
     Call ai.Dispose()
+
+    compatBase = Environ("XPSCRIPT_AI_COMPAT_BASE")
+    If compatBase <> "" Then
+        Set ai = New XPAi(compatBase & "/compat/openai", "OPENAI_COMPAT_KEY")
+        ai.Model = "openai-compat-model"
+        Call ai.AddMessage("user", "OpenAI compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+
+        Set ai = New XPAi(compatBase & "/compat/openrouter", "OPENROUTER_COMPAT_KEY")
+        ai.Model = "openrouter-compat-model"
+        Call ai.SetHeader("HTTP-Referer", "https://xpscript.test/compat")
+        Call ai.SetHeader("X-OpenRouter-Title", "XPScript CI")
+        Call ai.AddMessage("user", "OpenRouter compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+
+        Set ai = New XPAi(compatBase & "/compat/azure")
+        ai.Model = "azure-compat-model"
+        Call ai.SetHeader("api-key", "AZURE_COMPAT_KEY")
+        Call ai.AddMessage("user", "Azure compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+    End If
 
     endpoint = Environ("XPSCRIPT_AI_ENDPOINT")
     If endpoint = "" Then
