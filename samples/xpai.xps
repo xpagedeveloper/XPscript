@@ -3,7 +3,7 @@
 
 Option Declare
 
-Dim streamedText As String
+Private streamedText As String
 
 Sub OnAiChunk(ByVal chunk As String)
     streamedText = streamedText & chunk
