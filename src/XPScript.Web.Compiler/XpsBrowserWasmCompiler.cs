@@ -265,9 +265,10 @@ import {
   consumeRequestState,
   navigate,
   renderForm,
+  setEventDispatcher,
   stageRequestState
 } from './xpscript-browser.js';
-const { setModuleImports, runMain } = await dotnet.create();
+const { setModuleImports, getAssemblyExports, runMain } = await dotnet.create();
 setModuleImports('xpscript-browser', {
   applyApplicationMetadata,
   consumeRequestState,
@@ -276,9 +277,19 @@ setModuleImports('xpscript-browser', {
   stageRequestState
 });
 await runMain('XPScript.BrowserApp');
+const browserExports = await getAssemblyExports('XPScript.UI.Browser.dll');
+setEventDispatcher((eventToken, submittedValue) =>
+  browserExports.XPScript.UI.Browser.BrowserFormHost.DispatchEvent(eventToken, submittedValue));
 """;
 
     private const string BrowserModuleJs = """
+let eventDispatcher = null;
+
+export function setEventDispatcher(callback) {
+  if (typeof callback !== 'function') throw new Error('XPScript browser event dispatcher must be a function.');
+  eventDispatcher = callback;
+}
+
 function clampInteger(value, minimum, maximum, fallback) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return fallback;
@@ -468,6 +479,22 @@ function readFieldValue(field, editor) {
   return editor.value ?? '';
 }
 
+function toSubmittedValue(field, editor) {
+  const value = readFieldValue(field, editor);
+  if (Array.isArray(value)) return value.map(item => String(item)).join('\u001f');
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return value == null ? '' : String(value);
+}
+
+function mergeByName(existing, updates) {
+  if (!Array.isArray(existing) || !Array.isArray(updates)) return existing || [];
+  const byName = new Map(updates.map(item => [String(item?.name || '').toLowerCase(), item]));
+  return existing.map(item => {
+    const update = byName.get(String(item?.name || '').toLowerCase());
+    return update ? { ...item, ...update } : item;
+  });
+}
+
 function buttonClass(style) {
   switch (String(style || '').toLowerCase()) {
     case 'primary': return 'btn btn-primary';
@@ -504,6 +531,27 @@ export function renderForm(requestJson) {
   form.noValidate = false;
 
   const editors = new Map();
+  const dispatchUiEvent = async (eventToken, submittedValue) => {
+    if (typeof eventDispatcher !== 'function') return false;
+    try {
+      const resultJson = await Promise.resolve(eventDispatcher(eventToken, submittedValue));
+      if (!resultJson) return true;
+      const state = JSON.parse(resultJson);
+      request.fields = mergeByName(request.fields || [], state.fields || []);
+      request.buttons = mergeByName(request.buttons || [], state.buttons || []);
+      if (state.navigation?.target) {
+        navigate(String(state.navigation.target), '');
+        return true;
+      }
+      renderForm(JSON.stringify(request));
+      return true;
+    } catch {
+      root.dataset.xpscriptError = 'UI event callback failed';
+      root.dispatchEvent(new CustomEvent('xpscript:form-error', { detail: { message: 'UI event callback failed' } }));
+      return true;
+    }
+  };
+
   let automaticRow = 1;
   for (const field of request.fields || []) {
     const type = fieldType(field);
@@ -527,6 +575,12 @@ export function renderForm(requestJson) {
     const editor = createEditor(field);
     if (type !== 'radiogroup' && type !== 'separator' && type !== 'spacer') editor.name = field.name || '';
     if (type !== 'separator' && type !== 'spacer') editors.set(field.name || '', editor);
+
+    if (field.onChangeHandler && type !== 'separator' && type !== 'spacer') {
+      editor.addEventListener('change', async () => {
+        await dispatchUiEvent(`change:${field.name || ''}`, toSubmittedValue(field, editor));
+      });
+    }
 
     if (type === 'separator' || type === 'spacer') {
       wrap.appendChild(editor);
@@ -585,7 +639,10 @@ export function renderForm(requestJson) {
       button.textContent = definition.label || definition.name || 'Action';
       button.disabled = definition.enabled === false;
       button.dataset.actionName = definition.name || '';
-      button.addEventListener('click', () => publishResult('Action', definition.name || ''));
+      button.addEventListener('click', async () => {
+        const handled = await dispatchUiEvent(`button:${definition.name || ''}`, JSON.stringify(collectValues()));
+        if (!handled) publishResult('Action', definition.name || '');
+      });
       actions.appendChild(button);
     }
     root.appendChild(actions);
