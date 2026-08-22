@@ -38,6 +38,7 @@ try
 
     var config = await File.ReadAllTextAsync(Path.Combine(site, "web.config"));
     Require(config.Contains("AspNetCoreModuleV2", StringComparison.Ordinal), "web.config does not use ASP.NET Core Module V2");
+    Require(config.Contains("<clear />", StringComparison.Ordinal), "WebIIS must clear inherited IIS handlers so all routes and generated assets reach ASP.NET Core Module V2");
     Require(config.Contains("xpscript.dll", StringComparison.OrdinalIgnoreCase), "web.config does not start the XPscript host");
     Require(config.Contains("hostingModel=\"outofprocess\"", StringComparison.OrdinalIgnoreCase), "web.config must use out-of-process hosting because XPscript uses Kestrel");
     Require(config.Contains("--default-document index.xps", StringComparison.OrdinalIgnoreCase), "WebIIS host must resolve / through index.xps");
