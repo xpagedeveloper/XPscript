@@ -1,0 +1,58 @@
+' XPScript SQL Server and SQL Server Express regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMsSql
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+    Dim array As JsonArray
+    Dim row As JsonObject
+    Dim insertedId As Variant
+    Dim count As Variant
+
+    connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
+    If connectionString = "" Then
+        On Error GoTo InvalidConnection
+        Set db = New XPDbMsSql("Server=localhost;Password=XPSCRIPT_MSSQL_SECRET_MARKER;Unsupported Keyword=value")
+        Print "INVALID-CONNECTION=FAILED"
+        Exit Sub
+    End If
+
+    Set db = New XPDbMsSql(connectionString)
+    Print "OPEN=" & CStr(db.IsOpen)
+
+    Call db.Execute("CREATE TABLE #xpdb_people (id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(100) NOT NULL, active BIT NOT NULL)")
+    Call parameters.Set("name", "Ada")
+    Call parameters.Set("active", True)
+    insertedId = db.Scalar("INSERT INTO #xpdb_people(name, active) OUTPUT INSERTED.id VALUES (@name, @active)", parameters)
+    Print "INSERTEDID=" & CStr(insertedId)
+
+    Set rows = db.Query("SELECT id, name, active FROM #xpdb_people WHERE name = @name", parameters)
+    Set array = rows.Root.AsArray()
+    Set row = array.Get(0)
+    Print "QUERYTYPE=" & rows.Root.Type
+    Print "ROWCOUNT=" & CStr(array.Count)
+    Print "ROWNAME=" & CStr(row.Get("name"))
+    Print "ROWACTIVE=" & CStr(row.Get("active"))
+
+    count = db.Scalar("SELECT COUNT(*) FROM #xpdb_people")
+    Print "SCALAR=" & CStr(count)
+
+    Call parameters.Set("name", "Grace")
+    Call db.BeginTransaction()
+    Call db.Execute("INSERT INTO #xpdb_people(name, active) VALUES (@name, @active)", parameters)
+    Call db.Rollback()
+    Print "ROLLBACKCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM #xpdb_people"))
+
+    Print "DATABASE=" & db.Database
+    Call db.Close()
+    Print "CLOSED=" & CStr(db.IsOpen)
+    Print "XPDBMSSQL=OK"
+    Exit Sub
+
+InvalidConnection:
+    Print "INVALID-CONNECTION=" & Error$
+End Sub

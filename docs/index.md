@@ -18,8 +18,9 @@ XPScript is a BASIC-style programming language implemented on .NET 10. Source fi
 12. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
 13. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
 14. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
-15. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
-16. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
+15. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
+16. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+17. [Documentation rules](documentation-rules.md), the required structure and update process for this documentation.
 
 ## How XPScript runs
 
@@ -47,4 +48,4 @@ Compile it with:
 xpscriptc hello.xps -o hello
 ```
 
-For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md). For direct IIS deployment, use [WebIIS deployment target](webiis.md). For alternative Windows Server hosting topologies, use [Hosting XPScript on IIS](iis-hosting.md). For browser form security, read [CSRF protection](csrf.md). For UIForm field types and data-bound lookup controls, use [Extended UIForm fields](uiform-fields.md). For calling REST services or loading and saving UIForm data, use [HTTP client](http-client.md). For direct Supabase or Domino REST API data access, use [HTTP database clients](httpdb.md). For local relational storage, use [SQLite database](sqlite.md).
+For web development, start with [Getting started](getting-started.md) and then read [Web programming](web.md). For direct IIS deployment, use [WebIIS deployment target](webiis.md). For alternative Windows Server hosting topologies, use [Hosting XPScript on IIS](iis-hosting.md). For browser form security, read [CSRF protection](csrf.md). For UIForm field types and data-bound lookup controls, use [Extended UIForm fields](uiform-fields.md). For calling REST services or loading and saving UIForm data, use [HTTP client](http-client.md). For direct Supabase or Domino REST API data access, use [HTTP database clients](httpdb.md). For local relational storage, use [SQLite database](sqlite.md). For SQL Server and SQL Server Express, use [SQL Server database](mssql.md).

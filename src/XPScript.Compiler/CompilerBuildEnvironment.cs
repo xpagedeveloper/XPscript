@@ -7,6 +7,7 @@ internal static class CompilerBuildEnvironment
 {
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
+    private const string MicrosoftDataSqlClientVersion = "7.0.2";
 
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
@@ -60,10 +61,11 @@ internal static class CompilerBuildEnvironment
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var usesSqlite = source.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
+        var usesMsSql = source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
 
-        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && stagedIconName is null) return;
+        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && !usesMsSql && stagedIconName is null) return;
 
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
@@ -81,7 +83,7 @@ internal static class CompilerBuildEnvironment
             : $"""
     <ApplicationIcon>{SecurityElement.Escape(stagedIconName)}</ApplicationIcon>
 """;
-        if (usesSqlite)
+        if (usesSqlite || usesMsSql)
         {
             propertyEntries += """
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -110,6 +112,12 @@ internal static class CompilerBuildEnvironment
         {
             itemEntries += $"""
     <PackageReference Include="Microsoft.Data.Sqlite" Version="{MicrosoftDataSqliteVersion}" />
+""";
+        }
+        if (usesMsSql)
+        {
+            itemEntries += $"""
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="{MicrosoftDataSqlClientVersion}" />
 """;
         }
 
