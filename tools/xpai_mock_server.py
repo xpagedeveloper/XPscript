@@ -9,6 +9,12 @@ import sys
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    def do_GET(self):
+        if self.path == "/async/http":
+            self._json(200, {"message": "async-ok"})
+            return
+        self.send_error(404)
+
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", "0"))
