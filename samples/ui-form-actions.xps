@@ -50,8 +50,10 @@ End Sub
 Sub CountryChanged(evt As Variant, contextName As String, contextCode As Integer)
     Dim form As Variant
     Dim country As String
+    Dim eventJson As String
     form = evt.Form
     country = form.GetFieldValueString("country")
+    eventJson = evt.ToJson()
 
     Print "EVENT=" & evt.EventType & ":" & evt.ControlName & ":" & contextName & ":" & CStr(contextCode)
 
@@ -76,8 +78,10 @@ End Sub
 Sub SaveCustomer(evt As Variant, contextName As String)
     Dim form As Variant
     Dim data As Variant
+    Dim eventJson As String
     form = evt.Form
     data = form.GetData()
+    eventJson = evt.ToJson()
 
     Print "EVENT=" & evt.EventType & ":" & evt.ControlName & ":" & contextName
     Call data.Set("saved", True)
