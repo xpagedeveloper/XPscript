@@ -106,7 +106,10 @@ internal sealed class UIExtensionDesktopPostProcessor
             replaced = new UIListViewEventPostProcessor().Transform(replaced);
             replaced = new UIListViewCallbackRuntimePostProcessor().Transform(replaced);
             replaced = new UIListViewLiveUpdatePostProcessor().Transform(replaced);
+            var rowActionsCallbackBridge = new UIListViewRowActionsCallbackBridgePostProcessor();
+            replaced = rowActionsCallbackBridge.Prepare(replaced);
             replaced = new UIListViewRowActionsPostProcessor().Transform(replaced);
+            replaced = rowActionsCallbackBridge.Restore(replaced);
             replaced = new UIListViewRowActionCompatibilityPostProcessor().Transform(replaced);
         }
 
