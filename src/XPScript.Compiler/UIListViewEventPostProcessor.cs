@@ -35,6 +35,20 @@ internal sealed class XPScriptUIListViewEvent
     public int RowIndex { get; }
     public object? Row { get; }
     public string Key { get; }
+
+    public XPScriptJsonObject ToJsonObject()
+    {
+        var node = new System.Text.Json.Nodes.JsonObject
+        {
+            ["eventType"] = EventType,
+            ["rowIndex"] = RowIndex,
+            ["key"] = Key,
+            ["row"] = XPScriptNativeJson.ToNode(Row)
+        };
+        return new XPScriptJsonObject(node);
+    }
+
+    public string ToJson() => ToJsonObject().Stringify();
 }
 
 """;
