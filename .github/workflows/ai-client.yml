@@ -53,7 +53,24 @@ jobs:
           $python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } else { 'python' }
           $server = Start-Process -FilePath $python -ArgumentList './tools/xpai_mock_server.py', '18765' -PassThru
           try {
-            Start-Sleep -Seconds 2
+            $serverReady = $false
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+              if ($server.HasExited) { throw 'XPAi mock server exited before becoming ready.' }
+              $client = [System.Net.Sockets.TcpClient]::new()
+              try {
+                $client.Connect('127.0.0.1', 18765)
+                $serverReady = $true
+                break
+              }
+              catch {
+                Start-Sleep -Milliseconds 500
+              }
+              finally {
+                $client.Dispose()
+              }
+            }
+            if (-not $serverReady) { throw 'XPAi mock server did not become ready.' }
+
             $env:XPSCRIPT_AI_ENDPOINT = 'http://127.0.0.1:18765/custom/chat'
             $output = @(& $exe 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "XPAi regression failed.`n$output" }
