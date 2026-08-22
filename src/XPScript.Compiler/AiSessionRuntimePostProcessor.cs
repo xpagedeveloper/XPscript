@@ -149,6 +149,7 @@ internal sealed class AiSessionRuntimePostProcessor
             """
     private void RememberSessionId(System.Text.Json.Nodes.JsonNode? node, System.Net.Http.HttpResponseMessage response)
     {
+        if (!response.IsSuccessStatusCode) return;
         var sessionId = ExtractSessionId(node);
         if (sessionId.Length == 0 && response.Headers.TryGetValues("X-Session-Id", out var headerValues))
             sessionId = headerValues.FirstOrDefault()?.Trim() ?? string.Empty;
