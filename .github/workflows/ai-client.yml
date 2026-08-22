@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
@@ -97,6 +98,9 @@ jobs:
               'CHUNK=stream',
               'STREAM=Hello stream',
               'COLLECTED=Hello stream',
+              'CALLBACK=request-42:7:Hello ',
+              'CALLBACK=request-42:7:stream',
+              'STREAM-CONTEXT=Hello stream',
               'PROVIDER-ERROR=XPAi request failed with HTTP status 401.',
               'XPAI=OK'
             )
