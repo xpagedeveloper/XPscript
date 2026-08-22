@@ -106,25 +106,24 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
     private void InvokeRegisteredHandler(string handlerName)
     {
-        var method = typeof(Script).GetMethod(
-            handlerName,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
-            ?? throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' does not exist.");
+        var methods = typeof(Script)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Where(method => method.Name.Equals(handlerName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
-        var parameters = method.GetParameters();
-        if (parameters.Length > 1)
-            throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
-        if (parameters.Length == 1 && parameters[0].ParameterType != typeof(object) && !parameters[0].ParameterType.IsAssignableFrom(typeof(XPScriptUIForm)))
-            throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' parameter must accept the current UIForm.");
+        if (methods.Any(method => method.GetParameters().Length == 0))
+        {
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIForm event");
+            return;
+        }
 
-        try
+        if (methods.Any(method => method.GetParameters().Length == 1))
         {
-            method.Invoke(null, parameters.Length == 0 ? null : [this]);
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIForm event", this);
+            return;
         }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            throw new XPScriptRuntimeException(5, "UIForm handler failed: " + ex.InnerException.Message);
-        }
+
+        throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
     }
 
     private string SerializeActionState()
