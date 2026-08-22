@@ -51,6 +51,21 @@ Sub MsSqlCompileOnly()
         Call db.Close()
     End If
 End Sub
+
+[Anonymous]
+[Get]
+Sub AiCompileOnly()
+    If False Then
+        Dim ai As New XPAi("https://api.example.com/v1/chat/completions", "test-key")
+        ai.Model = "test-model"
+        Call ai.AddMessage("user", "Hello")
+        Call ai.Dispose()
+        Dim openAiPreset As New XPAi("openai", "test-key")
+        Dim azurePreset As New XPAi("azure", "test-key", "xpscript-test")
+        Call openAiPreset.Dispose()
+        Call azurePreset.Dispose()
+    End If
+End Sub
 """);
 
 try
@@ -134,7 +149,7 @@ End Sub
         throw new Exception("Unknown web route attribute did not produce a console error.");
 
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
-    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly"))
+    if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly") || !unit.Routes.ContainsKey("AiCompileOnly"))
         throw new Exception("Compiled route table is incomplete.");
 
     var request = new XpsWebRequest(

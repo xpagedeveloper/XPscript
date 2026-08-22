@@ -190,6 +190,14 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `XPDbMsSql.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Close` | `db.Close()` | none | Rolls back an active transaction and closes the connection. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPAi` | `Dim ai As New XPAi(endpoint [, apiKey])` | endpoint, optional API key | Creates an OpenAI-compatible AI client. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi preset` | `Dim ai As New XPAi(preset, apiKey [, providerConfiguration])` | provider, key, optional Azure resource | Configures OpenAI, Claude, OpenRouter or Azure OpenAI. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.AddMessage` | `ai.AddMessage(role, content)` | role, content | Adds a system, user or assistant message. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.Complete` | `ai.Complete([messages [, model]])` | optional messages and model | Sends a non-streaming AI request. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.Stream` | `ai.Stream([messages,] callback [, model])` | callback, optional messages and model | Streams text chunks to a module callback. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.SetOption` | `ai.SetOption(name, value)` | JSON property and value | Adds an optional provider-compatible request property. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.SetHeader` | `ai.SetHeader(name, value)` | header name and value | Adds or replaces a provider header. | [xpai.xps](../samples/xpai.xps) |
+| `XPAi.Cancel` | `ai.Cancel()` | none | Cancels the active request or stream. | [xpai.xps](../samples/xpai.xps) |
 
 ## Application runtime
 

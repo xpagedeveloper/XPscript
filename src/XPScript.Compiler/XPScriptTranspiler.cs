@@ -63,10 +63,13 @@ public sealed class XPScriptTranspiler
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var usesSqlite = source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDbMsSql is not available for browser-wasm targets.");
+        if (usesAi && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
@@ -116,6 +119,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
+        if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";
         generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";

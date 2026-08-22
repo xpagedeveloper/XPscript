@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Local OpenAI-compatible regression server for XPAi CI tests."""
+
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+import sys
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def do_POST(self):
+        if self.path != "/custom/chat":
+            self.send_error(404)
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length))
+        except (ValueError, json.JSONDecodeError):
+            self._json(400, {"error": {"message": "invalid request"}})
+            return
+
+        if self.headers.get("Authorization") != "Bearer XPAI_SECRET_MARKER":
+            self._json(401, {"error": {"message": "missing authorization"}})
+            return
+        if self.headers.get("X-Provider") != "xpscript-test":
+            self._json(400, {"error": {"message": "missing provider header"}})
+            return
+        if payload.get("model") == "error-model":
+            self._json(401, {"error": {"message": "XPAI_SECRET_MARKER must stay private"}})
+            return
+        if payload.get("model") != "mock-model" or payload.get("temperature") != 0.2:
+            self._json(400, {"error": {"message": "request schema mismatch"}})
+            return
+        if len(payload.get("messages", [])) != 2:
+            self._json(400, {"error": {"message": "message schema mismatch"}})
+            return
+
+        if payload.get("stream"):
+            events = [
+                {"model": "mock-model", "choices": [{"delta": {"content": "Hello "}}]},
+                {"model": "mock-model", "choices": [{"delta": {"content": "stream"}}]},
+                {"model": "mock-model", "choices": [], "usage": {"total_tokens": 9}},
+            ]
+            body = "".join(f"data: {json.dumps(event)}\n\n" for event in events)
+            body += "data: [DONE]\n\n"
+            encoded = body.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+            return
+
+        self._json(
+            200,
+            {
+                "model": "mock-model",
+                "choices": [{"message": {"role": "assistant", "content": "Hello response"}}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
+                "provider_extra": {"preserved": True},
+            },
+        )
+
+    def _json(self, status, payload):
+        encoded = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def log_message(self, _format, *_args):
+        return
+
+
+if __name__ == "__main__":
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 18765
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

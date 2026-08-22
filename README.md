@@ -210,6 +210,26 @@ Supported request methods are `Get`, `Post`, `Put`, `Patch` and `Delete`. Header
 
 Header names/values are validated before request construction. CR/LF header injection is rejected. Native HTTP URLs must be absolute `http://` or `https://` URLs. Application-level host/network allowlisting is still required when user-controlled URLs could create SSRF risk.
 
+## AI
+
+`XPAi` provides server-side OpenAI-compatible AI requests without a provider-specific SDK:
+
+```xpscript
+Dim ai As New XPAi("https://api.example.com/v1/chat/completions", Environ("AI_API_KEY"))
+Dim response As XPAiResponse
+
+ai.Model = "example-model"
+Call ai.AddMessage("user", "Explain XPScript in one sentence.")
+Set response = ai.Complete()
+Print response.Text
+```
+
+The endpoint, model, headers and additional JSON properties are configurable. `Stream` delivers SSE text chunks to an XPScript callback. Response objects expose status, model, text, usage and the complete provider JSON. API keys and authorization headers are excluded from runtime diagnostics.
+
+Built-in presets are available through `New XPAi("openai", key)`, `New XPAi("claude", key)`, `New XPAi("openrouter", key)` and `New XPAi("azure", key, resourceName)`.
+
+See `docs/ai.md` and `samples/xpai.xps`.
+
 ## JSON
 
 XPScript provides native JSON classes and helper functions:
