@@ -3,30 +3,32 @@ namespace XPScript.Compiler;
 internal sealed class AiSessionRuntimePostProcessor
 {
     private const string Sentinel = "public string SessionRequestProperty";
+    private const string ToolRuntimeSentinel = "internal sealed class XPScriptAiTool";
 
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (!generated.Contains("internal sealed class XPScriptAi : IDisposable", StringComparison.Ordinal) ||
-            generated.Contains(Sentinel, StringComparison.Ordinal))
+        if (!generated.Contains("internal sealed class XPScriptAi : IDisposable", StringComparison.Ordinal))
             return generated;
 
-        generated = ReplaceRequired(generated,
-            "    private int? _maxOutputTokens;\n",
-            """
+        if (!generated.Contains(Sentinel, StringComparison.Ordinal))
+        {
+            generated = ReplaceRequired(generated,
+                "    private int? _maxOutputTokens;\n",
+                """
     private int? _maxOutputTokens;
     private string _sessionId = string.Empty;
     private string _sessionRequestProperty = string.Empty;
 """, "session-fields");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
     public bool CollectStreamedResponse { get; set; } = true;
     public bool ThrowOnHttpError { get; set; } = true;
 
     public void AddMessage(object? roleValue, object? contentValue)
 """,
-            """
+                """
     public bool CollectStreamedResponse { get; set; } = true;
     public bool ThrowOnHttpError { get; set; } = true;
 
@@ -78,8 +80,8 @@ internal sealed class AiSessionRuntimePostProcessor
     public void AddMessage(object? roleValue, object? contentValue)
 """, "session-api");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
         System.Text.Json.Nodes.JsonArray messages;
         System.Text.Json.Nodes.JsonObject options;
         lock (_sync)
@@ -90,7 +92,7 @@ internal sealed class AiSessionRuntimePostProcessor
             options = (System.Text.Json.Nodes.JsonObject)_options.DeepClone();
         }
 """,
-            """
+                """
         System.Text.Json.Nodes.JsonArray messages;
         System.Text.Json.Nodes.JsonObject options;
         string sessionId;
@@ -106,13 +108,13 @@ internal sealed class AiSessionRuntimePostProcessor
         }
 """, "request-session-snapshot");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
         foreach (var option in options)
             body[option.Key] = option.Value?.DeepClone();
         return body;
 """,
-            """
+                """
         foreach (var option in options)
             body[option.Key] = option.Value?.DeepClone();
         if (sessionId.Length > 0 && sessionRequestProperty.Length > 0)
@@ -120,33 +122,33 @@ internal sealed class AiSessionRuntimePostProcessor
         return body;
 """, "request-session-injection");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
         XPScriptNativeJson.ValidateBudget(node);
         return CreateResponse(response, node, ExtractText(node), ExtractModel(node), ExtractUsage(node));
 """,
-            """
+                """
         XPScriptNativeJson.ValidateBudget(node);
         RememberSessionId(node, response);
         return CreateResponse(response, node, ExtractText(node), ExtractModel(node), ExtractUsage(node));
 """, "response-session-capture");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
             XPScriptNativeJson.ValidateBudget(eventNode);
             var chunk = ExtractStreamText(eventNode);
 """,
-            """
+                """
             XPScriptNativeJson.ValidateBudget(eventNode);
             RememberSessionId(eventNode, response);
             var chunk = ExtractStreamText(eventNode);
 """, "stream-session-capture");
 
-        generated = ReplaceRequired(generated,
-            """
+            generated = ReplaceRequired(generated,
+                """
     private static XPScriptAiResponse CreateResponse(
 """,
-            """
+                """
     private void RememberSessionId(System.Text.Json.Nodes.JsonNode? node, System.Net.Http.HttpResponseMessage response)
     {
         if (!response.IsSuccessStatusCode) return;
@@ -170,6 +172,10 @@ internal sealed class AiSessionRuntimePostProcessor
 
     private static XPScriptAiResponse CreateResponse(
 """, "session-helper");
+        }
+
+        if (!generated.Contains(ToolRuntimeSentinel, StringComparison.Ordinal))
+            generated += "\n\n" + AiToolRuntimeSource.Code + "\n";
 
         return generated;
     }
