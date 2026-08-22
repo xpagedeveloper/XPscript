@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AiSessionRuntimePostProcessor.cs'
       - 'src/XPScript.Compiler/AiToolRuntimeSource.cs'
       - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
       - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
@@ -91,6 +92,15 @@ jobs:
               'TOOL-REMOVE=True',
               'TOOLS-AFTER-REMOVE=1',
               'TOOLS-AFTER-CLEAR=0',
+              'SESSION-FIRST=SESSION-FIRST',
+              'SESSION-ID-1=session-response-1',
+              'SESSION-HAS-1=True',
+              'SESSION-CONTINUE=SESSION-CONTINUE',
+              'SESSION-ID-2=session-response-2',
+              'SESSION-AFTER-NEW=False',
+              'SESSION-TOOLS=1',
+              'SESSION-NEW=SESSION-FIRST',
+              'SESSION-ID-NEW=session-response-1',
               'PRESET-OPENAI=https://api.openai.com/v1/chat/completions',
               'PRESET-CLAUDE=https://api.anthropic.com/v1/chat/completions',
               'PRESET-OPENROUTER=https://openrouter.ai/api/v1/chat/completions',
