@@ -76,6 +76,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/compat/openai":
+            if payload.get("model") != "openai-compat-model":
+                self._json(400, {"error": {"message": "openai model mismatch"}})
+                return
             if self.headers.get("Authorization") != "Bearer OPENAI_COMPAT_KEY":
                 self._json(401, {"error": {"message": "openai authorization mismatch"}})
                 return
@@ -83,6 +86,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/compat/openrouter":
+            if payload.get("model") != "openrouter-compat-model":
+                self._json(400, {"error": {"message": "openrouter model mismatch"}})
+                return
             if self.headers.get("Authorization") != "Bearer OPENROUTER_COMPAT_KEY":
                 self._json(401, {"error": {"message": "openrouter authorization mismatch"}})
                 return
@@ -96,6 +102,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/compat/azure":
+            if payload.get("model") != "azure-compat-model":
+                self._json(400, {"error": {"message": "azure model mismatch"}})
+                return
             if self.headers.get("api-key") != "AZURE_COMPAT_KEY":
                 self._json(401, {"error": {"message": "azure api-key mismatch"}})
                 return
@@ -107,11 +116,11 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_error(404)
 
-    def _compat_response(self, expected_model, text):
+    def _compat_response(self, model, text):
         self._json(
             200,
             {
-                "model": expected_model,
+                "model": model,
                 "choices": [{"message": {"role": "assistant", "content": text}}],
                 "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
             },
