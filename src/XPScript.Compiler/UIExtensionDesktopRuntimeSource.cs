@@ -22,6 +22,8 @@ internal static class XPScriptUIDesktopAdapter
         var method = type.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is incomplete.");
 
+        RegisterEventDispatcher(type, form);
+
         var request = new
         {
             title = form.Title,
@@ -106,6 +108,28 @@ internal static class XPScriptUIDesktopAdapter
         }
 
         return "OK";
+    }
+
+    private static void RegisterEventDispatcher(Type type, XPScriptUIForm form)
+    {
+        var register = type.GetMethod(
+            "SetEventDispatcher",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [typeof(Func<string, string, string>)],
+            modifiers: null);
+        if (register is null) return;
+
+        try
+        {
+            var dispatcher = new Func<string, string, string>((eventToken, submittedValue) =>
+                form.DispatchRegisteredEvent(eventToken, submittedValue));
+            register.Invoke(null, [dispatcher]);
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XPScriptRuntimeException(5, "UIForm event dispatcher registration failed: " + ex.InnerException.Message);
+        }
     }
 
     private static string ReadNavigationValue(System.Text.Json.JsonElement values, string name)

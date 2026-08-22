@@ -62,6 +62,58 @@ Custom UIForm buttons are rendered with their shared visibility, enabled-state a
 
 The browser build does not change the source-level UI API. The same UIForm source can still be compiled as a desktop application.
 
+## Callback execution boundary
+
+A browser-wasm XPScript application executes inside the browser. UI callbacks that are part of that application are local WebAssembly callbacks and do not need a network round trip merely because the event originated in a DOM control.
+
+`SetOnChangeCallback` and `AddButtonCallback` are dispatched from DOM events back into the generated WebAssembly runtime. The callback receives a `UIFormEvent` as its first argument and caller-supplied context arguments after it, matching the callback contract used by the other XPScript runtimes. Callback action state is applied back to the rendered form, including changed field/button state and navigation requests.
+
+```xpscript
+Sub NameChanged(evt As Variant, context As String)
+    Print evt.EventType & ":" & evt.ControlName & ":" & context
+End Sub
+
+Sub SaveClicked(evt As Variant, context As String, mode As Integer)
+    Print evt.EventType & ":" & context & ":" & CStr(mode)
+End Sub
+
+Sub Main()
+    Dim form As New UIForm("Customer")
+    Call form.AddTextField("name", "Name")
+    Call form.SetOnChangeCallback("name", "NameChanged", "browser")
+    Call form.AddButtonCallback("save", "Save", "SaveClicked", "browser", 2)
+    Call form.ShowDialog()
+End Sub
+```
+
+Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic `xpscript:form-error` event rather than exposing runtime exception details.
+
+Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `HttpClient` to call an explicit server API for that work.
+
+UI event objects provide `ToJson()` and `ToJsonObject()` for this boundary. These methods create a snapshot that deliberately excludes live runtime references. `UIFormEvent` serializes only `eventType`, `controlName`, `value` and `values`. `UIListViewEvent` serializes only `eventType`, `rowIndex`, `key` and `row`.
+
+For example, a browser callback can explicitly post its event snapshot to an application API route:
+
+```xpscript
+Sub NameChanged(evt As Variant, context As String)
+    Dim http As New HttpClient
+    Dim payload As Variant
+    Dim response As HttpResponse
+
+    Set payload = evt.ToJsonObject()
+    Call payload.Set("context", context)
+    Set response = http.PostJson("/api/ui-event", payload)
+End Sub
+```
+
+The route is selected by application code. The browser never sends an XPScript callback/function name to the server. This keeps authorization attached to normal server routes and avoids exposing a generic remote function dispatcher.
+
+XPScript must not implement browser-to-server callbacks as a generic endpoint that accepts an arbitrary function name from the client. If a dedicated server-callback facility is added, the browser request must use a server-issued opaque registration identifier or an explicit application route. The server must map that identifier to an allowlisted callback and must not trust a callback name supplied by the browser.
+
+A server callback request must use a same-origin unsafe HTTP method such as `POST`, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live `UIForm` or `UIListView` instance cannot be transferred to the server.
+
+This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.
+
 ## CSRF protection
 
 Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.

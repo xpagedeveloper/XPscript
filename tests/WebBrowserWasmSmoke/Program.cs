@@ -9,9 +9,20 @@ try
     var sourcePath = Path.Combine(root, "app.xps");
     await File.WriteAllTextAsync(sourcePath, """
 [Platform:browser-wasm]
+
+Sub NameChanged(evt As Variant, context As String)
+    Print "NAME-EVENT=" & evt.EventType & ":" & context
+End Sub
+
+Sub SaveClicked(evt As Variant, context As String, mode As Integer)
+    Print "SAVE-EVENT=" & evt.EventType & ":" & context & ":" & CStr(mode)
+End Sub
+
 Sub Main()
     Dim form As New UIForm("Browser Smoke")
     Call form.AddTextField("name", "Name")
+    Call form.SetOnChangeCallback("name", "NameChanged", "browser")
+    Call form.AddButtonCallback("save", "Save", "SaveClicked", "browser", 2)
     Call form.Navigate("page2")
     Call form.ShowDialog()
 End Sub
@@ -111,7 +122,8 @@ End Sub
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
         "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
         "type === 'separator'", "type === 'spacer'", "export function stageRequestState", "export function consumeRequestState",
-        "export function navigate", "export function applyApplicationMetadata"
+        "export function navigate", "export function applyApplicationMetadata", "export function setEventDispatcher",
+        "dispatchUiEvent", "change:${field.name", "button:${definition.name", "xpscript:form-error", "mergeByName"
     })
     {
         if (!browserModule.Contains(requiredMarker, StringComparison.Ordinal))
@@ -121,7 +133,11 @@ End Sub
         throw new Exception("Browser UIForm module uses unrestricted JavaScript eval.");
 
     var mainModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "main.js"));
-    foreach (var requiredImport in new[] { "stageRequestState", "consumeRequestState", "navigate", "applyApplicationMetadata", "renderForm" })
+    foreach (var requiredImport in new[]
+    {
+        "stageRequestState", "consumeRequestState", "navigate", "applyApplicationMetadata", "renderForm",
+        "setEventDispatcher", "getAssemblyExports", "XPScript.UI.Browser.dll", "BrowserFormHost.DispatchEvent"
+    })
     {
         if (!mainModule.Contains(requiredImport, StringComparison.Ordinal))
             throw new Exception($"Browser WASM bootstrap did not register '{requiredImport}'.");

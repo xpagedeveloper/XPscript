@@ -29,6 +29,9 @@ internal sealed class UIFormEventDispatcherPostProcessor
         var kind = eventToken[..separator];
         var controlName = eventToken[(separator + 1)..];
         string handlerName;
+        var useEventCallback = false;
+        object?[] callbackArguments = [];
+        XPScriptUIFormEvent? callbackEvent = null;
 
         if (kind.Equals("change", StringComparison.OrdinalIgnoreCase))
         {
@@ -47,18 +50,50 @@ internal sealed class UIFormEventDispatcherPostProcessor
             handlerName = field.OnChangeHandler.Length > 0 ? field.OnChangeHandler : field.RefreshHandler;
             if (handlerName.Length == 0)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' has no registered change handler.");
+
+            useEventCallback = field.UseEventCallback;
+            callbackArguments = field.EventCallbackArguments;
+            if (useEventCallback)
+            {
+                var values = field.Type == "MultiListBox"
+                    ? ReadSelectedValues(field.Name)
+                    : Array.Empty<string>();
+                callbackEvent = new XPScriptUIFormEvent(
+                    this,
+                    "change",
+                    field.Name,
+                    field.Type == "MultiListBox" ? null : GetFieldValue(field.Name),
+                    values);
+            }
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
             ApplySubmittedStateJson(submittedValue);
-            handlerName = FindButton(controlName).Handler;
+            var button = FindButton(controlName);
+            handlerName = button.Handler;
+            useEventCallback = button.UseEventCallback;
+            callbackArguments = button.EventCallbackArguments;
+            if (useEventCallback)
+                callbackEvent = new XPScriptUIFormEvent(this, "button", button.Name, null, Array.Empty<string>());
         }
         else
         {
             throw new XPScriptRuntimeException(5, "UIForm event type is unsupported.");
         }
 
-        InvokeRegisteredHandler(handlerName);
+        if (useEventCallback)
+        {
+            if (callbackEvent is null)
+                throw new XPScriptRuntimeException(5, "UIForm callback event could not be created.");
+            XPScriptCallbackRuntime.Invoke(
+                handlerName,
+                "UIForm event",
+                XPScriptCallbackRuntime.Prepend(callbackEvent, callbackArguments));
+        }
+        else
+        {
+            InvokeRegisteredHandler(handlerName);
+        }
         return SerializeActionState();
     }
 
@@ -106,25 +141,24 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
     private void InvokeRegisteredHandler(string handlerName)
     {
-        var method = typeof(Script).GetMethod(
-            handlerName,
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
-            ?? throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' does not exist.");
+        var methods = typeof(Script)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Where(method => method.Name.Equals(handlerName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
-        var parameters = method.GetParameters();
-        if (parameters.Length > 1)
-            throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
-        if (parameters.Length == 1 && parameters[0].ParameterType != typeof(object) && !parameters[0].ParameterType.IsAssignableFrom(typeof(XPScriptUIForm)))
-            throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' parameter must accept the current UIForm.");
+        if (methods.Any(method => method.GetParameters().Length == 0))
+        {
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIForm event");
+            return;
+        }
 
-        try
+        if (methods.Any(method => method.GetParameters().Length == 1))
         {
-            method.Invoke(null, parameters.Length == 0 ? null : [this]);
+            XPScriptCallbackRuntime.Invoke(handlerName, "UIForm event", this);
+            return;
         }
-        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            throw new XPScriptRuntimeException(5, "UIForm handler failed: " + ex.InnerException.Message);
-        }
+
+        throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
     }
 
     private string SerializeActionState()

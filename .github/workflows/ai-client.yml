@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
@@ -15,6 +17,7 @@ on:
       - 'docs/ai.md'
       - 'docs/commands.md'
       - 'docs/index.md'
+      - 'todo/ai-client-todo.md'
       - 'README.md'
       - '.github/workflows/ai-client.yml'
   workflow_dispatch:
@@ -72,6 +75,7 @@ jobs:
             if (-not $serverReady) { throw 'XPAi mock server did not become ready.' }
 
             $env:XPSCRIPT_AI_ENDPOINT = 'http://127.0.0.1:18765/custom/chat'
+            $env:XPSCRIPT_AI_COMPAT_BASE = 'http://127.0.0.1:18765'
             $output = @(& $exe 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "XPAi regression failed.`n$output" }
             $output | ForEach-Object { Write-Host $_ }
@@ -83,6 +87,11 @@ jobs:
               'PRESET-OPENROUTER=https://openrouter.ai/api/v1/chat/completions',
               'PRESET-AZURE=https://xpscript-test.openai.azure.com/openai/v1/chat/completions',
               'PRESET-AZURE-PROVIDER=Azure',
+              'OPENAI-COMPAT=OK',
+              'OPENROUTER-COMPAT=OK',
+              'AZURE-COMPAT=OK',
+              'HTTP-ASYNC=http-77:200:{"message": "async-ok"}',
+              'HTTP-ASYNC-DONE=True',
               'SUCCESS=True',
               'MODEL=mock-model',
               'TEXT=Hello response',
@@ -92,6 +101,9 @@ jobs:
               'CHUNK=stream',
               'STREAM=Hello stream',
               'COLLECTED=Hello stream',
+              'CALLBACK=request-42:7:Hello ',
+              'CALLBACK=request-42:7:stream',
+              'STREAM-CONTEXT=Hello stream',
               'PROVIDER-ERROR=XPAi request failed with HTTP status 401.',
               'XPAI=OK'
             )

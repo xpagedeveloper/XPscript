@@ -34,9 +34,9 @@ Sub Main()
     Call form.SetFieldRegion("status", "statusRegion")
     Call form.SetFieldReadOnly("status", True)
 
-    Call form.SetOnChange("country", "CountryChanged")
+    Call form.SetOnChangeCallback("country", "CountryChanged", "country-context", 7)
 
-    Call form.AddButton("save", "Save", "SaveCustomer")
+    Call form.AddButtonCallback("save", "Save", "SaveCustomer", "save-context")
     Call form.AddButton("back", "Back", "BackToPrevious")
     Call form.SetButtonPosition("save", 10, 7, 3, 1)
     Call form.SetButtonPosition("back", 10, 10, 3, 1)
@@ -47,9 +47,15 @@ Sub Main()
     Print "DATA=" & data.Stringify()
 End Sub
 
-Sub CountryChanged(form As Variant)
+Sub CountryChanged(evt As Variant, contextName As String, contextCode As Integer)
+    Dim form As Variant
     Dim country As String
+    Dim eventJson As String
+    form = evt.Form
     country = form.GetFieldValueString("country")
+    eventJson = evt.ToJson()
+
+    Print "EVENT=" & evt.EventType & ":" & evt.ControlName & ":" & contextName & ":" & CStr(contextCode)
 
     Call form.ClearOptions("city")
 
@@ -69,10 +75,15 @@ Sub CountryChanged(form As Variant)
     Call form.RefreshRegion("cityRegion")
 End Sub
 
-Sub SaveCustomer(form As Variant)
+Sub SaveCustomer(evt As Variant, contextName As String)
+    Dim form As Variant
     Dim data As Variant
+    Dim eventJson As String
+    form = evt.Form
     data = form.GetData()
+    eventJson = evt.ToJson()
 
+    Print "EVENT=" & evt.EventType & ":" & evt.ControlName & ":" & contextName
     Call data.Set("saved", True)
     Call form.SetFieldValue("status", "Saved")
     Call form.SetFieldEnabled("name", False)

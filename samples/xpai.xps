@@ -10,11 +10,23 @@ Sub OnAiChunk(ByVal chunk As String)
     Print "CHUNK=" & chunk
 End Sub
 
+Sub OnAiChunkWithContext(ByVal chunk As String, ByVal requestId As String, ByVal sequence As Integer)
+    streamedText = streamedText & chunk
+    Print "CALLBACK=" & requestId & ":" & CStr(sequence) & ":" & chunk
+End Sub
+
+Sub OnHttpComplete(ByVal response As Variant, ByVal requestId As String)
+    Print "HTTP-ASYNC=" & requestId & ":" & CStr(response.StatusCode) & ":" & response.Body
+End Sub
+
 Sub Main()
     Dim endpoint As String
+    Dim compatBase As String
     Dim ai As XPAi
     Dim response As XPAiResponse
     Dim providerExtra As JsonObject
+    Dim http As New HttpClient
+    Dim httpRequest As Variant
 
     Set ai = New XPAi("openai", "test-key")
     Print "PRESET-OPENAI=" & ai.Endpoint
@@ -30,8 +42,40 @@ Sub Main()
     Print "PRESET-AZURE-PROVIDER=" & ai.Provider
     Call ai.Dispose()
 
+    compatBase = Environ("XPSCRIPT_AI_COMPAT_BASE")
+    If compatBase <> "" Then
+        Set ai = New XPAi(compatBase & "/compat/openai", "OPENAI_COMPAT_KEY")
+        ai.Model = "openai-compat-model"
+        Call ai.AddMessage("user", "OpenAI compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+
+        Set ai = New XPAi(compatBase & "/compat/openrouter", "OPENROUTER_COMPAT_KEY")
+        ai.Model = "openrouter-compat-model"
+        Call ai.SetHeader("HTTP-Referer", "https://xpscript.test/compat")
+        Call ai.SetHeader("X-OpenRouter-Title", "XPScript CI")
+        Call ai.AddMessage("user", "OpenRouter compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+
+        Set ai = New XPAi(compatBase & "/compat/azure")
+        ai.Model = "azure-compat-model"
+        Call ai.SetHeader("api-key", "AZURE_COMPAT_KEY")
+        Call ai.AddMessage("user", "Azure compatibility fixture")
+        Set response = ai.Complete()
+        Print response.Text
+        Call ai.Dispose()
+
+        Set httpRequest = http.GetAsync(compatBase & "/async/http", "OnHttpComplete", "http-77")
+        Call httpRequest.Wait()
+        Print "HTTP-ASYNC-DONE=" & CStr(httpRequest.IsCompleted)
+    End If
+
     endpoint = Environ("XPSCRIPT_AI_ENDPOINT")
     If endpoint = "" Then
+        Call http.Dispose()
         Print "XPAI-COMPILE=OK"
         Exit Sub
     End If
@@ -58,6 +102,12 @@ Sub Main()
     Set response = ai.Stream("OnAiChunk")
     Print "STREAM=" & streamedText
     Print "COLLECTED=" & response.Text
+
+    streamedText = ""
+    Set response = ai.StreamCallback("OnAiChunkWithContext", "request-42", 7)
+    Print "STREAM-CONTEXT=" & streamedText
+
+    Call http.Dispose()
 
     On Error GoTo ProviderError
     ai.Model = "error-model"
