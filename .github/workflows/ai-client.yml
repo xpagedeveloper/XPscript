@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/AiRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AsyncHttpRuntimeSource.cs'
       - 'src/XPScript.Compiler/CallbackRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
@@ -89,6 +90,8 @@ jobs:
               'OPENAI-COMPAT=OK',
               'OPENROUTER-COMPAT=OK',
               'AZURE-COMPAT=OK',
+              'HTTP-ASYNC=http-77:200:{"message": "async-ok"}',
+              'HTTP-ASYNC-DONE=True',
               'SUCCESS=True',
               'MODEL=mock-model',
               'TEXT=Hello response',
