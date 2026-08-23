@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/XPScript.Compiler/MsSqlDbRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
@@ -14,7 +15,9 @@ on:
       - 'tests/WebCompilerSmoke/**'
       - 'samples/xpdb-mssql.xps'
       - 'samples/database-uiform-datasource-mssql.xps'
+      - 'samples/database-attachments-mssql.xps'
       - 'docs/mssql.md'
+      - 'docs/database-ui-datasources.md'
       - 'docs/commands.md'
       - 'docs/index.md'
       - 'README.md'
@@ -36,22 +39,21 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
       - name: Restore
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
-
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-
-      - name: Compile SQL Server sample
+      - name: Compile SQL Server samples
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/mssql | Out-Null
           $exe = if ($IsWindows) { './out/mssql/xpdb-mssql.exe' } else { './out/mssql/xpdb-mssql' }
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-mssql.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'SQL Server sample compilation failed.' }
-          if (-not $IsWindows) { chmod +x $exe }
-
+          $attachmentExe = if ($IsWindows) { './out/mssql/database-attachments-mssql.exe' } else { './out/mssql/database-attachments-mssql' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-attachments-mssql.xps -o $attachmentExe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQL Server attachment sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe; chmod +x $attachmentExe }
           $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "SQL Server validation regression failed.`n$output" }
           $text = $output -join [Environment]::NewLine
@@ -73,7 +75,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
       - name: Build compiler
         shell: pwsh
         run: |
@@ -81,7 +82,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Compiler restore failed.' }
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
           if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
-
       - name: Compile SQL Server regressions
         shell: pwsh
         run: |
@@ -90,62 +90,48 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'SQL Server regression compilation failed.' }
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-uiform-datasource-mssql.xps -o ./out/mssql-integration/database-uiform-datasource-mssql --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'SQL Server data-source regression compilation failed.' }
-          chmod +x ./out/mssql-integration/xpdb-mssql
-          chmod +x ./out/mssql-integration/database-uiform-datasource-mssql
-
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-attachments-mssql.xps -o ./out/mssql-integration/database-attachments-mssql --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQL Server attachment regression compilation failed.' }
+          chmod +x ./out/mssql-integration/xpdb-mssql ./out/mssql-integration/database-uiform-datasource-mssql ./out/mssql-integration/database-attachments-mssql
       - name: Run SQL Server regression
         shell: pwsh
         env:
           XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
         run: |
-          $output = @()
-          $exitCode = 1
+          $output = @(); $exitCode = 1
           for ($attempt = 1; $attempt -le 90; $attempt++) {
-            $output = @(& ./out/mssql-integration/xpdb-mssql 2>&1)
-            $exitCode = $LASTEXITCODE
+            $output = @(& ./out/mssql-integration/xpdb-mssql 2>&1); $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) { break }
             Start-Sleep -Seconds 2
           }
           $output | ForEach-Object { Write-Host $_ }
           if ($exitCode -ne 0) { throw "SQL Server regression failed.`n$output" }
-
-          $required = @(
-            'OPEN=True',
-            'INSERTEDID=1',
-            'QUERYTYPE=Array',
-            'ROWCOUNT=1',
-            'ROWNAME=Ada',
-            'ROWACTIVE=True',
-            'SCALAR=1',
-            'ROLLBACKCOUNT=1',
-            'DATABASE=master',
-            'CLOSED=False',
-            'XPDBMSSQL=OK'
-          )
-          foreach ($value in $required) {
+          foreach ($value in @('OPEN=True','INSERTEDID=1','QUERYTYPE=Array','ROWCOUNT=1','ROWNAME=Ada','ROWACTIVE=True','SCALAR=1','ROLLBACKCOUNT=1','DATABASE=master','CLOSED=False','XPDBMSSQL=OK')) {
             if ($output -notcontains $value) { throw "SQL Server output missing: $value`n$output" }
           }
-
       - name: Run SQL Server shared UIForm data-source regression
         shell: pwsh
         env:
           XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
         run: |
-          $output = @(& ./out/mssql-integration/database-uiform-datasource-mssql 2>&1)
-          $exitCode = $LASTEXITCODE
+          $output = @(& ./out/mssql-integration/database-uiform-datasource-mssql 2>&1); $exitCode = $LASTEXITCODE
           $output | ForEach-Object { Write-Host $_ }
           if ($exitCode -ne 0) { throw "SQL Server data-source regression failed.`n$output" }
-          $required = @(
-            'MSSQL-LIST-COUNT=1',
-            'MSSQL-HIDDEN-BEFORE=KEEP-ME',
-            'MSSQL-COMPUTED-BEFORE=Anna!',
-            'MSSQL-SAVE-AFFECTED=1',
-            'MSSQL-SAVED-NAME=Anna Andersson',
-            'MSSQL-SAVED-CITY=Goteborg',
-            'MSSQL-HIDDEN-AFTER=KEEP-ME',
-            'MSSQL-COMPUTED-AFTER=Anna Andersson!',
-            'MSSQL-DATABASE-UIFORM-DATASOURCE=OK'
-          )
-          foreach ($value in $required) {
+          foreach ($value in @('MSSQL-LIST-COUNT=1','MSSQL-HIDDEN-BEFORE=KEEP-ME','MSSQL-COMPUTED-BEFORE=Anna!','MSSQL-SAVE-AFFECTED=1','MSSQL-SAVED-NAME=Anna Andersson','MSSQL-SAVED-CITY=Goteborg','MSSQL-HIDDEN-AFTER=KEEP-ME','MSSQL-COMPUTED-AFTER=Anna Andersson!','MSSQL-DATABASE-UIFORM-DATASOURCE=OK')) {
             if ($output -notcontains $value) { throw "SQL Server data-source output missing: $value`n$output" }
           }
+      - name: Run SQL Server attachment regression
+        shell: pwsh
+        env:
+          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
+        run: |
+          $output = @(& ./out/mssql-integration/database-attachments-mssql 2>&1); $exitCode = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exitCode -ne 0) { throw "SQL Server attachment regression failed.`n$output" }
+          foreach ($value in @('MSSQL-ATTACH-EMPTY=0','MSSQL-ATTACH-AFTER-SAVE=1','MSSQL-ATTACH-NAME=contract.xps','MSSQL-ATTACH-SAME-LENGTH=True','MSSQL-ATTACH-DELETED=True','MSSQL-ATTACH-AFTER-DELETE=0','DATABASE-ATTACHMENTS-MSSQL=OK')) {
+            if ($output -notcontains $value) { throw "SQL Server attachment output missing: $value`n$output" }
+          }
+      - name: Cleanup attachment copy
+        if: always()
+        shell: pwsh
+        run: Remove-Item ./database-attachments-mssql-copy.xps -Force -ErrorAction SilentlyContinue
