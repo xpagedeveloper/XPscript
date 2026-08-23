@@ -1,0 +1,27 @@
+' XPScript Domino REST database sample
+Option Declare
+
+Sub Main()
+    Dim db As New HTTPDBDominoRest("http://127.0.0.1:18082", "", "demo")
+    Dim data As New JsonObject
+    Dim doc As JsonDocument
+    Dim token As String
+    Dim unid As String
+
+    token = db.Login("CN=Test User/O=Example", "secret")
+    Call db.SetDataSource("demo")
+    Call data.Set("Form", "Customer")
+    Call data.Set("name", "Ada")
+    Set doc = db.CreateDocument(data)
+    unid = "0123456789ABCDEF0123456789ABCDEF"
+    Set doc = db.GetDocument(unid)
+    Set doc = db.UpdateDocument(unid, data)
+    Set doc = db.PatchDocument(unid, data)
+    Set doc = db.ListViews()
+    Set doc = db.GetView("People", "count=10")
+    Set doc = db.Query("Form = 'Customer'")
+    Set doc = db.ListForms()
+    Print "DELETE=" & CStr(db.DeleteDocument(unid))
+    Call db.Logout()
+    Print "DOMINO_REFERENCE=OK"
+End Sub
