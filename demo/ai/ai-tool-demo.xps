@@ -1,0 +1,38 @@
+Option Declare
+
+Function HandleGetWeather(call As Variant, tenant As String) As Variant
+    Dim city As String
+    Dim units As String
+
+    city = CStr(call.Arguments.Get("city"))
+    units = CStr(call.Arguments.Get("units"))
+    Print "TOOL=" & call.FunctionName & ":" & city & ":" & units & ":" & tenant
+    HandleGetWeather = "weather:" & city & ":" & units
+End Function
+
+Sub Main()
+    Dim baseUrl As String
+    Dim ai As XPAi
+    Dim response As XPAiResponse
+    Dim weather As New AITool("weather")
+
+    baseUrl = Environ("XPSCRIPT_AI_COMPAT_BASE")
+    If baseUrl = "" Then
+        baseUrl = "http://127.0.0.1:18765"
+    End If
+
+    weather.Description = "Weather information"
+    Call weather.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather", "demo-tenant")
+    Call weather.AddParameter("get_weather", "city", "string", "City name", True)
+    Call weather.AddParameter("get_weather", "units", "string", "metric or imperial", True)
+
+    Set ai = New XPAi(baseUrl & "/tool/chat")
+    ai.Model = "tool-model"
+    ai.MaxToolIterations = 4
+    Call ai.AddTool(weather)
+    Call ai.AddMessage("user", "What is the weather in Stockholm?")
+
+    Set response = ai.Complete()
+    Print "RESULT=" & response.Text
+    Call ai.Dispose()
+End Sub
