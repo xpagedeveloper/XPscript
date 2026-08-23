@@ -3,11 +3,14 @@ Option Declare
 Sub Main()
     Dim form As New UIForm("Customer demo")
     Dim result As String
+    Dim answer As Integer
 
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
     Call form.SetRequired("name", True)
 
     result = form.ShowDialog()
+    answer = MsgBox("UIForm result: " & result, 0, "XPScript desktop")
     Print "DIALOG=" & result
+    Print "MSGBOX=" & CStr(answer)
 End Sub
