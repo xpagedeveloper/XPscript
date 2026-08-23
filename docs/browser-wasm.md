@@ -24,13 +24,15 @@ Sub Main()
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
 
-    Set grid = form.AddGridColumns(12)
+    grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.SetFieldPosition("email", 6)
 
     Call form.ShowDialog()
 End Sub
 ```
+
+`AddGridColumns()` returns the generated grid helper as a `Variant`. Assign it with a normal `=` assignment. `Set` is reserved for source-level object-reference variables and is not required for this runtime helper.
 
 ## On-demand compilation
 
