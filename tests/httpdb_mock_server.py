@@ -125,8 +125,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/rest/v1/customers":
             if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42":
                 return self._send(400, {"error": "bad supabase patch"})
-            if isinstance(payload, dict) and "internal_code" in payload and payload.get("internal_code") != "KEEP-ME":
-                return self._send(400, {"error": "hidden supabase field changed"})
+            if isinstance(payload, dict) and payload.get("name") == "Ada Shared" and payload.get("internal_code") != "KEEP-ME":
+                return self._send(400, {"error": "hidden supabase field was not preserved by SaveRow"})
             return self._send(200, [payload])
 
         if path == f"/api/v1/document/{UNID}":
@@ -148,8 +148,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "bad domino update payload"})
             if any(str(key).startswith("@") for key in payload.keys()):
                 return self._send(400, {"error": "domino metadata must not be written as document items"})
-            if payload.get("InternalCode") != "KEEP-ME":
-                return self._send(400, {"error": "hidden domino item was not preserved"})
+            if payload.get("name") == "Shared Updated" and payload.get("InternalCode") != "KEEP-ME":
+                return self._send(400, {"error": "hidden domino item was not preserved by SaveRow"})
             return self._send(200, {"updated": True, "fields": payload})
         return self._send(404, {"error": "not found", "path": self.path})
 
