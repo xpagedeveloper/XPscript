@@ -256,11 +256,11 @@ internal sealed class XPScriptAttachmentCollectionV3
 
 internal static class XPScriptDatabaseAttachmentApi
 {
-    public static XPScriptAttachmentCollectionV3 ForSqlite(XPScriptDbSqlite db, object? table, object? keyColumn, object? keyValue)
-        => new(XPScriptDatabaseAttachmentRuntime.ForSqlite(db, table, keyColumn, keyValue));
+    public static XPScriptAttachmentCollectionV3 ForSqlite(object db, object? table, object? keyColumn, object? keyValue)
+        => InvokeProviderFactory("ForSqlite", db, table, keyColumn, keyValue);
 
-    public static XPScriptAttachmentCollectionV3 ForMsSql(XPScriptDbMsSql db, object? table, object? keyColumn, object? keyValue)
-        => new(XPScriptDatabaseAttachmentRuntime.ForMsSql(db, table, keyColumn, keyValue));
+    public static XPScriptAttachmentCollectionV3 ForMsSql(object db, object? table, object? keyColumn, object? keyValue)
+        => InvokeProviderFactory("ForMsSql", db, table, keyColumn, keyValue);
 
     public static XPScriptAttachmentCollectionV3 ForSupabase(XPScriptHttpDbSupabase db, object? table, object? keyColumn, object? keyValue)
         => new(XPScriptDatabaseAttachmentRuntime.ForSupabase(db, table, keyColumn, keyValue));
@@ -273,6 +273,24 @@ internal static class XPScriptDatabaseAttachmentApi
 
     public static void SetSupabaseBucket(XPScriptHttpDbSupabase db, object? bucket)
         => XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(db, bucket);
+
+    private static XPScriptAttachmentCollectionV3 InvokeProviderFactory(string methodName, object db, object? table, object? keyColumn, object? keyValue)
+    {
+        var methods = typeof(XPScriptDatabaseAttachmentRuntime).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        var method = methods.FirstOrDefault(candidate => string.Equals(candidate.Name, methodName, StringComparison.Ordinal) && candidate.GetParameters().Length == 4)
+            ?? throw new XPScriptRuntimeException(5, $"Attachment provider '{methodName}' is not available in this compiled program.");
+        try
+        {
+            var inner = method.Invoke(null, [db, table, keyColumn, keyValue]) as XPScriptAttachmentCollection
+                ?? throw new XPScriptRuntimeException(5, "Attachment provider factory returned an invalid collection.");
+            return new XPScriptAttachmentCollectionV3(inner);
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw;
+        }
+    }
 }
 """;
 }
