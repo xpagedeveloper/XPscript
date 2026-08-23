@@ -1,5 +1,5 @@
 ' XPScript unified database attachment regression
-' Uses the source file itself as binary attachment data.
+' Proves attachment identity is owner + attachmentId, never file name.
 
 Option Declare
 
@@ -7,9 +7,16 @@ Sub Main()
     Dim db As New XPDBSQLite("database-attachments.db")
     Dim files As Variant
     Dim list As JsonArray
-    Dim info As JsonObject
+    Dim matches As JsonArray
+    Dim downloaded As JsonArray
+    Dim created1 As JsonObject
+    Dim created2 As JsonObject
+    Dim updated As JsonObject
+    Dim metadata As JsonObject
     Dim sourcePath As String
     Dim targetPath As String
+    Dim id1 As String
+    Dim id2 As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
 
@@ -21,21 +28,45 @@ Sub Main()
     Call db.Execute("INSERT INTO customers(id, name) VALUES (42, 'Anna')")
 
     Set files = db.Attachments("customers", "id", 42)
-    Set list = files.List()
+    Call files.SetActor("creator@example")
+    Set list = files.GetMetadata()
     Print "ATTACH-EMPTY=" & CStr(list.Count)
 
-    Call files.SaveAs(sourcePath, "contract.xps")
+    Set created1 = files.SaveAs(sourcePath, "contracts.pdf")
+    Set created2 = files.SaveAs(sourcePath, "contracts.pdf")
+    id1 = CStr(created1.Get("attachmentId"))
+    id2 = CStr(created2.Get("attachmentId"))
+
     Set list = files.List()
-    Set info = list.Get(0)
     Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
-    Print "ATTACH-NAME=" & CStr(info.Get("name"))
+    Print "ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
+    Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
+    Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
+    Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
+
+    Set matches = files.FindByName("contracts.pdf")
+    Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
+
+    Set metadata = files.GetMetadata(id1)
+    Print "ATTACH-METADATA-ID=" & CStr(metadata.Get("attachmentId") = id1)
 
     sourceLength = FileLen(sourcePath)
-    Call files.Get("contract.xps", targetPath)
+    Call files.Get(id1, targetPath)
     targetLength = FileLen(targetPath)
     Print "ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
 
-    Print "ATTACH-DELETED=" & CStr(files.Delete("contract.xps"))
+    Set downloaded = files.GetAll("database-attachments-all")
+    Print "ATTACH-GETALL=" & CStr(downloaded.Count)
+
+    Call files.SetActor("editor@example")
+    Set updated = files.Update(id2, sourcePath)
+    Print "ATTACH-CREATED-BY-PRESERVED=" & CStr(updated.Get("createdBy"))
+    Print "ATTACH-MODIFIED-BY=" & CStr(updated.Get("modifiedBy"))
+
+    Print "ATTACH-DELETED-FIRST=" & CStr(files.Delete(id1))
+    Set list = files.List()
+    Print "ATTACH-AFTER-FIRST-DELETE=" & CStr(list.Count)
+    Print "ATTACH-DELETED-SECOND=" & CStr(files.Delete(id2))
     Set list = files.List()
     Print "ATTACH-AFTER-DELETE=" & CStr(list.Count)
 
