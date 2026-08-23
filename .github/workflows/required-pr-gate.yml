@@ -23,6 +23,49 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Validate solution project-reference closure
+        shell: pwsh
+        run: |
+          $repoRoot = [System.IO.Path]::GetFullPath((Get-Location).Path)
+          $solutionPath = Join-Path $repoRoot 'XPScriptCompiler.slnx'
+          [xml]$solution = Get-Content -Raw $solutionPath
+
+          $solutionProjects = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+          foreach ($project in @($solution.Solution.Project)) {
+            $relativePath = [string]$project.Path
+            if ([string]::IsNullOrWhiteSpace($relativePath)) {
+              throw 'XPScriptCompiler.slnx contains a Project entry without a Path.'
+            }
+
+            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $relativePath))
+            if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+              throw "Solution project does not exist: $relativePath"
+            }
+            [void]$solutionProjects.Add($fullPath)
+          }
+
+          foreach ($projectPath in $solutionProjects) {
+            [xml]$projectXml = Get-Content -Raw $projectPath
+            $projectDirectory = Split-Path -Parent $projectPath
+            foreach ($reference in @($projectXml.Project.ItemGroup.ProjectReference)) {
+              if ($null -eq $reference) { continue }
+              $include = [string]$reference.Include
+              if ([string]::IsNullOrWhiteSpace($include)) { continue }
+
+              $referencedPath = [System.IO.Path]::GetFullPath((Join-Path $projectDirectory $include))
+              if (-not (Test-Path -LiteralPath $referencedPath -PathType Leaf)) {
+                throw "ProjectReference from '$projectPath' does not exist: $include"
+              }
+              if (-not $solutionProjects.Contains($referencedPath)) {
+                $relativeReferencedPath = [System.IO.Path]::GetRelativePath($repoRoot, $referencedPath).Replace('\', '/')
+                $relativeOwnerPath = [System.IO.Path]::GetRelativePath($repoRoot, $projectPath).Replace('\', '/')
+                throw "Solution is missing ProjectReference '$relativeReferencedPath' required by '$relativeOwnerPath'. Add it to XPScriptCompiler.slnx."
+              }
+            }
+          }
+
+          Write-Host "SOLUTION-PROJECT-REFERENCE-CLOSURE=OK ($($solutionProjects.Count) projects)"
+
       - name: Restore compiler
         run: dotnet restore ./XPScriptCompiler.slnx
 
