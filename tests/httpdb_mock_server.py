@@ -54,6 +54,8 @@ class Handler(BaseHTTPRequestHandler):
             if not part or b"\r\n\r\n" not in part:
                 continue
             headers, data = part.split(b"\r\n\r\n", 1)
+            if b'name="filename"' not in headers:
+                continue
             name_match = re.search(br'filename="([^"]+)"', headers)
             if not name_match:
                 continue
@@ -153,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
             if not name or data is None:
                 return self._send(400, {"error": "bad domino multipart upload"})
             DOMINO_FILES[name] = {"data": data, "content_type": "application/octet-stream"}
-            return self._send(201, {"name": name, "size": len(data)})
+            return self._send(200, {"status": "upload complete", "filename": [name]})
 
         payload = self._read_json()
         if path == "/api/v1/auth":
