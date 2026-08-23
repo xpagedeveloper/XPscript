@@ -99,6 +99,23 @@ jobs:
           }
           Write-Host "DEMO-COMPILE=OK ($($demos.Count) standalone programs)"
 
+      - name: Verify managed-reference documentation example
+        shell: pwsh
+        run: |
+          dotnet build ./tests/ManagedReferenceFixture/ManagedReferenceFixture.csproj -c Release --no-restore
+          New-Item -ItemType Directory -Force ./samples/managed-reference | Out-Null
+          Copy-Item ./tests/ManagedReferenceFixture/bin/Release/net10.0/ManagedReferenceFixture.dll ./samples/managed-reference/ManagedReferenceFixture.dll -Force
+          $output = './out/required-gate/demos/managed-reference'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/managed-reference.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Managed-reference documentation example did not compile.' }
+          chmod +x $output
+          $result = & $output 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Managed-reference documentation example failed with exit code $exit." }
+          if ($result -notcontains 'MANAGED-REFERENCE=OK') { throw 'Managed-reference documentation example output mismatch.' }
+          Write-Host 'MANAGED-REFERENCE-DOCS=OK'
+
       - name: Run offline demo programs
         shell: pwsh
         run: |
