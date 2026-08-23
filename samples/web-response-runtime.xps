@@ -1,0 +1,34 @@
+Option Declare
+
+[Anonymous]
+[Get]
+[Route:/response-demo]
+Sub ResponseDemo()
+    Dim cookieOptions As New JsonObject
+    Dim bytes As Variant
+
+    Response.StatusCode = 200
+    Response.ContentType = "text/plain; charset=utf-8"
+    Response.SetHeader("X-Demo", "one")
+    Response.AppendHeader("X-Demo", "two")
+    Response.RemoveHeader("X-Remove-Me")
+
+    Call cookieOptions.Set("Path", "/")
+    Call cookieOptions.Set("HttpOnly", True)
+    Call cookieOptions.Set("SameSite", "Lax")
+    Response.SetCookie("xps-demo", "1", cookieOptions)
+    Response.DeleteCookie("xps-old", "/", True, "Lax", "")
+
+    Response.Write("text response" & Chr(10))
+    bytes = Base64DecodeBinary("YmluYXJ5")
+    Response.WriteBinary(bytes)
+    Response.Complete()
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/response-redirect]
+Sub RedirectDemo()
+    Response.Clear()
+    Response.Redirect("/response-demo", 302)
+End Sub
