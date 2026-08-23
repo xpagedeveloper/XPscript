@@ -45,7 +45,7 @@ Every user-callable command, built-in function, runtime method/property, route r
 
 ## When a language command changes
 
-For every new language statement, built-in function, operator family, file/process command, interop declaration or compiler CLI option, update `language-reference.md`. Keep `commands.md` in sync when the command belongs in the compact index. If it is a common core statement, also add or update a minimal runnable program in `command-examples.md`.
+For every new command, language statement, built-in function, operator family, file/process command, interop declaration or compiler CLI option, update `language-reference.md`. Keep `commands.md` in sync when the command belongs in the compact index. If it is a common core statement, also add or update a minimal runnable program in `command-examples.md`.
 
 ## When a runtime API changes
 
