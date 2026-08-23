@@ -66,11 +66,56 @@ jobs:
 
           Write-Host "SOLUTION-PROJECT-REFERENCE-CLOSURE=OK ($($solutionProjects.Count) projects)"
 
+      - name: Validate command docs and demo catalog
+        shell: pwsh
+        run: ./scripts/validate-docs-demos.ps1
+
       - name: Restore compiler
         run: dotnet restore ./XPScriptCompiler.slnx
 
       - name: Build compiler
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Compile runnable demo programs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/required-gate/demos | Out-Null
+          $demos = @(
+            'console/hello.xps',
+            'desktop-ui/customer-form.xps',
+            'browser-wasm/customer-form.xps',
+            'sqlite/sqlite-demo.xps',
+            'mssql/mssql-demo.xps',
+            'httpdb/httpdb-demo.xps',
+            'http/http-client.xps',
+            'ai/ai-tool-demo.xps'
+          )
+          foreach ($relative in $demos) {
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($relative)
+            $safe = ($relative -replace '[^A-Za-z0-9._-]', '-')
+            $output = "./out/required-gate/demos/$safe"
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./demo/$relative" -o $output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Demo compilation failed: $relative" }
+          }
+          Write-Host "DEMO-COMPILE=OK ($($demos.Count) standalone programs)"
+
+      - name: Run offline demo programs
+        shell: pwsh
+        run: |
+          $programs = @(
+            './out/required-gate/demos/console-hello',
+            './out/required-gate/demos/sqlite-sqlite-demo',
+            './out/required-gate/demos/mssql-mssql-demo',
+            './out/required-gate/demos/httpdb-httpdb-demo'
+          )
+          foreach ($program in $programs) {
+            chmod +x $program
+            $output = & $program 2>&1
+            $exit = $LASTEXITCODE
+            $output | ForEach-Object { Write-Host $_ }
+            if ($exit -ne 0) { throw "Demo runtime failed: $program (exit $exit)" }
+          }
+          Write-Host "DEMO-RUNTIME=OK ($($programs.Count) offline demos)"
 
       - name: Compile portable smoke program
         shell: pwsh
