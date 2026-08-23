@@ -4,6 +4,8 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $referenceFiles = @(
     (Join-Path $root 'docs/language-reference.md'),
     (Join-Path $root 'docs/file-io-reference.md'),
+    (Join-Path $root 'docs/native-interop-reference.md'),
+    (Join-Path $root 'docs/cli-reference.md'),
     (Join-Path $root 'docs/api-reference.md')
 )
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -53,7 +55,7 @@ $requiredLanguage = @(
     'LenB', 'InstrB', 'StrCompare', 'StrConv', 'StrToken', 'UChr', 'Uni',
     'RegexValidate', 'RegexMatch', 'Base64DecodeBinary', 'UrlEncode',
     'Date.Adjust', 'Date.Difference', 'Date.OSDateFormatting',
-    'Platform', 'Shell', 'Declare Function', 'ReferenceNative', '--runtime', '--result-format'
+    'Platform', 'Shell'
 )
 foreach ($name in $requiredLanguage) {
     if ($language -notmatch [regex]::Escape($name)) {
@@ -71,6 +73,36 @@ $requiredFileIo = @(
 foreach ($name in $requiredFileIo) {
     if ($fileIo -notmatch [regex]::Escape($name)) {
         $errors.Add("File I/O reference is missing required command: $name")
+    }
+}
+
+$interop = Get-Content -LiteralPath (Join-Path $root 'docs/native-interop-reference.md') -Raw
+$requiredInterop = @(
+    'Declare Function', 'Declare Sub', 'Alias',
+    'WindowsLib', 'LinuxLib', 'MacOSLib',
+    'WindowsX64Lib', 'WindowsArm64Lib', 'LinuxX64Lib', 'LinuxArm64Lib', 'MacOSX64Lib', 'MacOSArm64Lib',
+    'WindowsAlias', 'LinuxAlias', 'MacOSAlias',
+    'WindowsX64Alias', 'WindowsArm64Alias', 'LinuxX64Alias', 'LinuxArm64Alias', 'MacOSX64Alias', 'MacOSArm64Alias',
+    'Reference', 'ReferenceNative', 'Runtime'
+)
+foreach ($name in $requiredInterop) {
+    if ($interop -notmatch [regex]::Escape($name)) {
+        $errors.Add("Interop reference is missing required selector/directive: $name")
+    }
+}
+
+$cli = Get-Content -LiteralPath (Join-Path $root 'docs/cli-reference.md') -Raw
+$requiredCli = @(
+    'xpscriptc', 'run', '-o', '--runtime', '--framework-dependent', '--result-format',
+    'xpscript web', '--root', '--default-document', '--address', '--bind', '--port', '--host', '--allowed-host',
+    '--https-cert', '--https-cert-password-env', '--protocols', '--health', '--metrics', '--sessions',
+    '--session-cookie', '--session-timeout-seconds', '--session-same-site', '--session-secure', '--operational-external',
+    '--structured-log', '--static-files', '--static-max-bytes', '--config',
+    'xpscript fastcgi', '--listen', '--unix-socket', 'xpscript compile', '--target webiis'
+)
+foreach ($name in $requiredCli) {
+    if ($cli -notmatch [regex]::Escape($name)) {
+        $errors.Add("CLI reference is missing required command/option: $name")
     }
 }
 
