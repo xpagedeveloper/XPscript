@@ -14,6 +14,8 @@ Sub Main()
     Dim array As JsonArray
     Dim attachmentRows As JsonArray
     Dim attachmentInfo As JsonObject
+    Dim attachment1 As JsonObject
+    Dim attachment2 As JsonObject
     Dim supaFiles As Variant
     Dim dominoFiles As Variant
     Dim filter As String
@@ -23,6 +25,8 @@ Sub Main()
     Dim supaCopy As String
     Dim dominoCopy As String
     Dim sourceLength As Variant
+    Dim id1 As String
+    Dim id2 As String
 
     sourcePath = "samples/httpdb-supabase-domino.xps"
     supaCopy = "httpdb-supabase-attachment-copy.xps"
@@ -36,10 +40,8 @@ Sub Main()
 
     Set doc = supa.Select("customers", "select=*&id=eq.42")
     Print "SUPA_SELECT_TYPE=" & doc.Root.Type
-
     Set array = supa.QueryArray("customers", "select=*&id=eq.42")
     Print "SUPA_QUERYARRAY_COUNT=" & CStr(array.Count)
-
     Set row = supa.GetRow("customers", "id", 42)
     Print "SUPA_GETROW_HIDDEN=" & CStr(row.Get("internal_code"))
     Call row.Set("name", "Ada Shared")
@@ -47,16 +49,27 @@ Sub Main()
 
     Call supa.SetAttachmentBucket("attachments")
     Set supaFiles = supa.Attachments("customers", "id", 42)
+    Call supaFiles.SetActor("creator@example")
+    Print "SUPA_ATTACH_EMPTY=" & CStr(supaFiles.GetMetadata().Count)
+    Set attachment1 = supaFiles.SaveAs(sourcePath, "contracts.pdf")
+    Set attachment2 = supaFiles.SaveAs(sourcePath, "contracts.pdf")
+    id1 = CStr(attachment1.Get("attachmentId"))
+    id2 = CStr(attachment2.Get("attachmentId"))
     Set attachmentRows = supaFiles.List()
-    Print "SUPA_ATTACH_EMPTY=" & CStr(attachmentRows.Count)
-    Call supaFiles.SaveAs(sourcePath, "supa-contract.xps")
-    Set attachmentRows = supaFiles.List()
-    Set attachmentInfo = attachmentRows.Get(0)
     Print "SUPA_ATTACH_COUNT=" & CStr(attachmentRows.Count)
-    Print "SUPA_ATTACH_NAME=" & CStr(attachmentInfo.Get("name"))
-    Call supaFiles.Get("supa-contract.xps", supaCopy)
+    Print "SUPA_ATTACH_DUPLICATE_IDS=" & CStr(id1 <> id2)
+    Print "SUPA_ATTACH_NAME=" & CStr(attachment1.Get("originalName"))
+    Print "SUPA_ATTACH_CREATED_BY=" & CStr(attachment1.Get("createdBy"))
+    Print "SUPA_ATTACH_FIND_NAME=" & CStr(supaFiles.FindByName("contracts.pdf").Count)
+    Set attachmentInfo = supaFiles.GetMetadata(id1)
+    Print "SUPA_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
+    Call supaFiles.Get(id1, supaCopy)
     Print "SUPA_ATTACH_SAME_LENGTH=" & CStr(FileLen(supaCopy) = sourceLength)
-    Print "SUPA_ATTACH_DELETE=" & CStr(supaFiles.Delete("supa-contract.xps"))
+    Call supaFiles.SetActor("editor@example")
+    Set attachmentInfo = supaFiles.Update(id2, sourcePath)
+    Print "SUPA_ATTACH_MODIFIED_BY=" & CStr(attachmentInfo.Get("modifiedBy"))
+    Print "SUPA_ATTACH_DELETE_FIRST=" & CStr(supaFiles.Delete(id1))
+    Print "SUPA_ATTACH_DELETE_SECOND=" & CStr(supaFiles.Delete(id2))
     Print "SUPA_ATTACH_AFTER_DELETE=" & CStr(supaFiles.List().Count)
     Kill supaCopy
 
@@ -64,33 +77,26 @@ Sub Main()
     Call data.Set("name", "Ada")
     Set doc = supa.Insert("customers", data)
     Print "SUPA_INSERT_TYPE=" & doc.Root.Type
-
     Call data.Set("name", "Ada Updated")
     Set doc = supa.Update("customers", filter, data)
     Print "SUPA_UPDATE_TYPE=" & doc.Root.Type
-
     Set doc = supa.Upsert("customers", data)
     Print "SUPA_UPSERT_TYPE=" & doc.Root.Type
-
     Call args.Set("name", "Ada")
     Set doc = supa.Rpc("hello", args)
     Print "SUPA_RPC_TYPE=" & doc.Root.Type
-
     Set doc = supa.Delete("customers", filter)
     Print "SUPA_DELETE_TYPE=" & doc.Root.Type
-
     Call supa.ConfigureSqlEndpoint("http://127.0.0.1:18082/sql", "admin-token")
     Set doc = supa.ExecuteSql("select 1 as ok")
     Set obj = doc.Root.AsObject()
     Print "SUPA_SQL=" & CStr(obj.Get("query"))
-
     Set doc = supa.CreateTable("create table demo(id int)")
     Set obj = doc.Root.AsObject()
     Print "SUPA_DDL=" & CStr(obj.Get("query"))
 
     token = domino.Login("CN=Test User/O=Example", "secret")
     Print "DOMINO_LOGIN=" & token
-
     Set data = New JsonObject
     Call data.Set("Form", "Customer")
     Call data.Set("name", "Ada")
@@ -102,7 +108,6 @@ Sub Main()
     Set doc = domino.GetDocument(unid)
     Set obj = doc.Root.AsObject()
     Print "DOMINO_GET_FORM=" & CStr(obj.Get("Form"))
-
     Set row = domino.GetRow(unid)
     Print "DOMINO_GETROW_HIDDEN=" & CStr(row.Get("InternalCode"))
     Print "DOMINO_GETROW_META=" & CStr(row.Contains("@meta"))
@@ -111,44 +116,47 @@ Sub Main()
     Print "DOMINO_META_AFTER_SAVE=" & CStr(row.Contains("@meta"))
 
     Set dominoFiles = domino.Attachments(unid, "Body")
+    Call dominoFiles.SetActor("creator@example")
+    Print "DOMINO_ATTACH_EMPTY=" & CStr(dominoFiles.GetMetadata().Count)
+    Set attachment1 = dominoFiles.SaveAs(sourcePath, "contracts.pdf")
+    Set attachment2 = dominoFiles.SaveAs(sourcePath, "contracts.pdf")
+    id1 = CStr(attachment1.Get("attachmentId"))
+    id2 = CStr(attachment2.Get("attachmentId"))
     Set attachmentRows = dominoFiles.List()
-    Print "DOMINO_ATTACH_EMPTY=" & CStr(attachmentRows.Count)
-    Call dominoFiles.SaveAs(sourcePath, "domino-contract.xps")
-    Set attachmentRows = dominoFiles.List()
-    Set attachmentInfo = attachmentRows.Get(0)
     Print "DOMINO_ATTACH_COUNT=" & CStr(attachmentRows.Count)
-    Print "DOMINO_ATTACH_NAME=" & CStr(attachmentInfo.Get("name"))
-    Call dominoFiles.Get("domino-contract.xps", dominoCopy)
+    Print "DOMINO_ATTACH_DUPLICATE_IDS=" & CStr(id1 <> id2)
+    Print "DOMINO_ATTACH_NAME=" & CStr(attachment1.Get("originalName"))
+    Print "DOMINO_ATTACH_CREATED_BY=" & CStr(attachment1.Get("createdBy"))
+    Print "DOMINO_ATTACH_FIND_NAME=" & CStr(dominoFiles.FindByName("contracts.pdf").Count)
+    Set attachmentInfo = dominoFiles.GetMetadata(id1)
+    Print "DOMINO_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
+    Call dominoFiles.Get(id1, dominoCopy)
     Print "DOMINO_ATTACH_SAME_LENGTH=" & CStr(FileLen(dominoCopy) = sourceLength)
-    Print "DOMINO_ATTACH_DELETE=" & CStr(dominoFiles.Delete("domino-contract.xps"))
+    Call dominoFiles.SetActor("editor@example")
+    Set attachmentInfo = dominoFiles.Update(id2, sourcePath)
+    Print "DOMINO_ATTACH_MODIFIED_BY=" & CStr(attachmentInfo.Get("modifiedBy"))
+    Print "DOMINO_ATTACH_DELETE_FIRST=" & CStr(dominoFiles.Delete(id1))
+    Print "DOMINO_ATTACH_DELETE_SECOND=" & CStr(dominoFiles.Delete(id2))
     Print "DOMINO_ATTACH_AFTER_DELETE=" & CStr(dominoFiles.List().Count)
     Kill dominoCopy
 
     Call data.Set("name", "Updated")
     Set doc = domino.UpdateDocument(unid, data)
     Print "DOMINO_UPDATE_TYPE=" & doc.Root.Type
-
     Set doc = domino.PatchDocument(unid, data)
     Print "DOMINO_PATCH_TYPE=" & doc.Root.Type
-
     Set doc = domino.ListViews()
     Print "DOMINO_VIEWS_TYPE=" & doc.Root.Type
-
     Set doc = domino.GetView("People", "count=10")
     Print "DOMINO_VIEW_TYPE=" & doc.Root.Type
-
     Set array = domino.GetViewArray("People", "count=10")
     Print "DOMINO_VIEWARRAY_COUNT=" & CStr(array.Count)
-
     Set doc = domino.Query("Form = 'Customer'")
     Print "DOMINO_QUERY_TYPE=" & doc.Root.Type
-
     Set array = domino.QueryArray("Form = 'Customer'")
     Print "DOMINO_QUERYARRAY_COUNT=" & CStr(array.Count)
-
     Set doc = domino.ListForms()
     Print "DOMINO_FORMS_TYPE=" & doc.Root.Type
-
     Print "DOMINO_DELETE=" & CStr(domino.DeleteDocument(unid))
     Call domino.Logout()
     Print "HTTPDB_CLIENTS=OK"
