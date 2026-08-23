@@ -1,0 +1,43 @@
+' XPScript unified database attachment regression
+' Uses the source file itself as binary attachment data.
+
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("database-attachments.db")
+    Dim files As Variant
+    Dim list As JsonArray
+    Dim sourcePath As String
+    Dim targetPath As String
+    Dim sourceLength As Variant
+    Dim targetLength As Variant
+
+    sourcePath = "samples/database-attachments.xps"
+    targetPath = "database-attachments-copy.xps"
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call db.Execute("DELETE FROM customers")
+    Call db.Execute("INSERT INTO customers(id, name) VALUES (42, 'Anna')")
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set list = files.List()
+    Print "ATTACH-EMPTY=" & CStr(list.Count)
+
+    Call files.SaveAs(sourcePath, "contract.xps")
+    Set list = files.List()
+    Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
+    Print "ATTACH-NAME=" & CStr(list.Get(0).Get("name"))
+
+    sourceLength = FileLen(sourcePath)
+    Call files.Get("contract.xps", targetPath)
+    targetLength = FileLen(targetPath)
+    Print "ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
+
+    Print "ATTACH-DELETED=" & CStr(files.Delete("contract.xps"))
+    Set list = files.List()
+    Print "ATTACH-AFTER-DELETE=" & CStr(list.Count)
+
+    Call db.Close()
+    Kill targetPath
+    Print "DATABASE-ATTACHMENTS=OK"
+End Sub
