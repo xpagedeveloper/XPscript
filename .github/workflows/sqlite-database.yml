@@ -85,6 +85,8 @@ jobs:
 
           $required = @(
             'LIST-COUNT=1',
+            'LISTVIEW-COUNT=1',
+            'LISTVIEW-NAME=Anna',
             'SHARED-NAME=Anna Andersson',
             'SHARED-CITY=Goteborg',
             'HIDDEN-BEFORE=KEEP-ME',
