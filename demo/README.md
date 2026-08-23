@@ -196,6 +196,20 @@ xpscriptc .\demo\ai\ai-tool-demo.xps -o .\out\demo-ai.exe --framework-dependent
 
 Demonstrates `AITool`, JSON parameter schemas, compile-time callback validation, callback context, automatic tool execution and `XPAi.Complete()`.
 
+## Managed and native references
+
+The managed-reference example is [`../samples/managed-reference.xps`](../samples/managed-reference.xps). `Reference` deliberately accepts only an application-local relative DLL path, so prepare the fixture beside the source first:
+
+```powershell
+dotnet build .\tests\ManagedReferenceFixture\ManagedReferenceFixture.csproj -c Release
+New-Item -ItemType Directory -Force .\samples\managed-reference | Out-Null
+Copy-Item .\tests\ManagedReferenceFixture\bin\Release\net10.0\ManagedReferenceFixture.dll .\samples\managed-reference\ManagedReferenceFixture.dll -Force
+xpscriptc .\samples\managed-reference.xps -o .\out\demo-managed-reference.exe --framework-dependent
+.\out\demo-managed-reference.exe
+```
+
+For RID-specific native dependencies use [`../samples/managed-reference-native.xps`](../samples/managed-reference-native.xps). It uses the checked-in native-transitive fixture assets and demonstrates repeatable `ReferenceNative "path" Runtime "rid"` directives.
+
 ## Regression samples versus demos
 
 Use `demo/` when learning or showing XPScript. Use `samples/` when validating edge cases, compatibility and compiler regressions. Documentation may link to either, but new user-facing walkthroughs should prefer `demo/` when a matching demo exists.
