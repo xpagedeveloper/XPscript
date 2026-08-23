@@ -1,6 +1,6 @@
 # Date and time
 
-This page documents XPScript date/time functions and the Date object extensions. Every example below can be copied into an `.xps` file and run with `xpscriptc run file.xps`. The complete regression is [`samples/date-object-enhancements.xps`](../samples/date-object-enhancements.xps).
+This page documents XPScript date/time functions and the Date object extensions. Every example below can be copied into an `.xps` file and run with `xpscriptc run file.xps`. The complete regression is [samples/date-object-enhancements.xps](../samples/date-object-enhancements.xps).
 
 ## `Date()`
 
