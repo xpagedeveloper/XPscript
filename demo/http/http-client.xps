@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim baseUrl As String
+    Dim http As New HttpClient
+    Dim response As HttpResponse
+
+    baseUrl = Environ("XPSCRIPT_DEMO_HTTP_URL")
+    If baseUrl = "" Then
+        baseUrl = "http://127.0.0.1:8080/"
+    End If
+
+    http.Timeout = 10
+    Call http.SetHeader("Accept", "text/html, application/json")
+    Set response = http.Get(baseUrl)
+
+    Print "STATUS=" & CStr(response.StatusCode)
+    Print "SUCCESS=" & CStr(response.IsSuccess)
+    Print "CONTENT-TYPE=" & response.ContentType
+    Print "BODY=" & response.Body
+    Call http.Dispose()
+End Sub
