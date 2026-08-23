@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $referenceFiles = @(
     (Join-Path $root 'docs/language-reference.md'),
+    (Join-Path $root 'docs/file-io-reference.md'),
     (Join-Path $root 'docs/api-reference.md')
 )
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -52,12 +53,24 @@ $requiredLanguage = @(
     'LenB', 'InstrB', 'StrCompare', 'StrConv', 'StrToken', 'UChr', 'Uni',
     'RegexValidate', 'RegexMatch', 'Base64DecodeBinary', 'UrlEncode',
     'Date.Adjust', 'Date.Difference', 'Date.OSDateFormatting',
-    'Input$', 'Lock', 'Unlock', 'ChDrive', 'Platform', 'Shell',
-    'Declare Function', 'ReferenceNative', '--runtime', '--result-format'
+    'Platform', 'Shell', 'Declare Function', 'ReferenceNative', '--runtime', '--result-format'
 )
 foreach ($name in $requiredLanguage) {
     if ($language -notmatch [regex]::Escape($name)) {
         $errors.Add("Language reference is missing required command: $name")
+    }
+}
+
+$fileIo = Get-Content -LiteralPath (Join-Path $root 'docs/file-io-reference.md') -Raw
+$requiredFileIo = @(
+    'FreeFile', 'Open', 'Charset', 'Close', 'Print #', 'Write #', 'Line Input #',
+    'Input #', 'Input$', 'EOF', 'Put', 'Get', 'Lock', 'Unlock',
+    'FileLen', 'FileDateTime', 'GetFileAttr', 'SetFileAttr', 'FileCopy', 'Kill',
+    'Name', 'MkDir', 'RmDir', 'ChDir', 'ChDrive', 'Dir'
+)
+foreach ($name in $requiredFileIo) {
+    if ($fileIo -notmatch [regex]::Escape($name)) {
+        $errors.Add("File I/O reference is missing required command: $name")
     }
 }
 
