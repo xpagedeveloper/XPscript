@@ -53,7 +53,7 @@ Sub Main()
     Print "ATTACH-METADATA-ID=" & CStr(metadata.Get("attachmentId") = id1)
 
     sourceLength = FileLen(sourcePath)
-    Call files.Get(id1, targetPath)
+    Call files.SaveToDisk(id1, targetPath)
     targetLength = FileLen(targetPath)
     Print "ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
 
