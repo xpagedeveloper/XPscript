@@ -19,6 +19,7 @@ Sub Main()
     Dim replacement As JsonObject
     Dim supaFiles As Variant
     Dim dominoFiles As Variant
+    Dim deleted As Variant
     Dim filter As String
     Dim token As String
     Dim unid As String
@@ -65,14 +66,17 @@ Sub Main()
     Print "SUPA_ATTACH_FIND_NAME=" & CStr(supaFiles.FindByName("contracts.pdf").Count)
     Set attachmentInfo = supaFiles.GetMetadata(id1)
     Print "SUPA_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
-    Call supaFiles.Get(id1, supaCopy)
+    Call supaFiles.SaveToDisk(id1, supaCopy)
     Print "SUPA_ATTACH_SAME_LENGTH=" & CStr(FileLen(supaCopy) = sourceLength)
-    Print "SUPA_ATTACH_DELETE_FOR_REPLACE=" & CStr(supaFiles.Delete(id2))
+    deleted = supaFiles.Delete(id2)
+    Print "SUPA_ATTACH_DELETE_FOR_REPLACE=" & CStr(deleted)
     Set replacement = supaFiles.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
     replacementId = CStr(replacement.Get("attachmentId"))
     Print "SUPA_ATTACH_REPLACEMENT_NEW_ID=" & CStr(replacementId <> id2)
-    Print "SUPA_ATTACH_DELETE_FIRST=" & CStr(supaFiles.Delete(id1))
-    Print "SUPA_ATTACH_DELETE_REPLACEMENT=" & CStr(supaFiles.Delete(replacementId))
+    deleted = supaFiles.Delete(id1)
+    Print "SUPA_ATTACH_DELETE_FIRST=" & CStr(deleted)
+    deleted = supaFiles.Delete(replacementId)
+    Print "SUPA_ATTACH_DELETE_REPLACEMENT=" & CStr(deleted)
     Print "SUPA_ATTACH_AFTER_DELETE=" & CStr(supaFiles.List().Count)
     Kill supaCopy
 
@@ -133,14 +137,17 @@ Sub Main()
     Print "DOMINO_ATTACH_FIND_NAME=" & CStr(dominoFiles.FindByName("contracts.pdf").Count)
     Set attachmentInfo = dominoFiles.GetMetadata(id1)
     Print "DOMINO_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
-    Call dominoFiles.Get(id1, dominoCopy)
+    Call dominoFiles.SaveToDisk(id1, dominoCopy)
     Print "DOMINO_ATTACH_SAME_LENGTH=" & CStr(FileLen(dominoCopy) = sourceLength)
-    Print "DOMINO_ATTACH_DELETE_FOR_REPLACE=" & CStr(dominoFiles.Delete(id2))
+    deleted = dominoFiles.Delete(id2)
+    Print "DOMINO_ATTACH_DELETE_FOR_REPLACE=" & CStr(deleted)
     Set replacement = dominoFiles.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
     replacementId = CStr(replacement.Get("attachmentId"))
     Print "DOMINO_ATTACH_REPLACEMENT_NEW_ID=" & CStr(replacementId <> id2)
-    Print "DOMINO_ATTACH_DELETE_FIRST=" & CStr(dominoFiles.Delete(id1))
-    Print "DOMINO_ATTACH_DELETE_REPLACEMENT=" & CStr(dominoFiles.Delete(replacementId))
+    deleted = dominoFiles.Delete(id1)
+    Print "DOMINO_ATTACH_DELETE_FIRST=" & CStr(deleted)
+    deleted = dominoFiles.Delete(replacementId)
+    Print "DOMINO_ATTACH_DELETE_REPLACEMENT=" & CStr(deleted)
     Print "DOMINO_ATTACH_AFTER_DELETE=" & CStr(dominoFiles.List().Count)
     Kill dominoCopy
 
