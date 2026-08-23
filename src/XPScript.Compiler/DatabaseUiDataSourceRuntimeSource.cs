@@ -280,7 +280,13 @@ internal static class XPScriptHttpDatabaseDataSourceExtensions
     public static bool SaveRow(this XPScriptHttpDbDominoRest db, object? unid, object? data)
     {
         var row = XPScriptDatabaseDataSourceRuntime.RequireObject(data, "Domino SaveRow");
-        db.UpdateDocument(unid, row);
+        var payload = XPScriptNativeJson.CreateObject();
+        foreach (var pair in row.Node)
+        {
+            if (pair.Key.StartsWith("@", StringComparison.Ordinal)) continue;
+            payload.Set(pair.Key, XPScriptDatabaseDataSourceRuntime.NodeValue(pair.Value));
+        }
+        db.UpdateDocument(unid, payload);
         return true;
     }
 }
