@@ -1,0 +1,10 @@
+Option Declare
+
+' Before compiling this sample, build tests/ManagedReferenceFixture and copy
+' ManagedReferenceFixture.dll into samples/managed-reference/ as documented
+' in demo/README.md.
+Reference "managed-reference/ManagedReferenceFixture.dll"
+
+Sub Main()
+    Print "MANAGED-REFERENCE=OK"
+End Sub
