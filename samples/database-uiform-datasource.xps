@@ -42,10 +42,10 @@ Sub Main()
     Call addressForm.AddTextField("city", "City")
 
     Call generalForm.SetFieldValue("name", "Anna Andersson")
-    Call addressForm.SetFieldValue("city", "Goteborg")
+    Print "SHARED-NAME=" & CStr(customer.Get("name"))
 
-    Print "SHARED-NAME=" & CStr(addressForm.Data.Get("name"))
-    Print "SHARED-CITY=" & CStr(generalForm.Data.Get("city"))
+    Call addressForm.SetFieldValue("city", "Goteborg")
+    Print "SHARED-CITY=" & CStr(customer.Get("city"))
     Print "HIDDEN-BEFORE=" & CStr(customer.Get("internal_code"))
 
     affected = db.SaveRow("customers", "id", customer)
