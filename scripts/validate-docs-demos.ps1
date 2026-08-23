@@ -129,15 +129,21 @@ $requiredDatabaseUi = @(
     'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow', 'XPDbMsSql.Attachments',
     'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow', 'HTTPDBSupabase.SetAttachmentBucket', 'HTTPDBSupabase.Attachments',
     'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow', 'HTTPDBDominoRest.Attachments',
-    'AttachmentCollection.SetActor', 'AttachmentCollection.List', 'AttachmentCollection.GetMetadata', 'AttachmentCollection.FindByName',
-    'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Update', 'AttachmentCollection.UpdateAs',
-    'AttachmentCollection.Get', 'AttachmentCollection.GetAll', 'AttachmentCollection.Delete',
-    'attachmentId', 'originalName', 'created', 'modified', 'createdBy', 'modifiedBy', 'checksumSha256',
+    'AttachmentCollection.List', 'AttachmentCollection.GetMetadata', 'AttachmentCollection.FindByName',
+    'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Get', 'AttachmentCollection.SaveToDisk',
+    'AttachmentCollection.GetAll', 'AttachmentCollection.SendToBrowser', 'AttachmentCollection.Delete',
+    'attachmentId', 'originalName', 'created', 'createdBy', 'checksumSha256',
+    'immutable', 'delete', 'private export sandbox', 'browser-WASM', 'Content-Disposition',
     'UIListView.BindData', 'UIForm.BindData', 'native database columns/items', '64 MiB'
 )
 foreach ($name in $requiredDatabaseUi) {
     if ($databaseUi -notmatch [regex]::Escape($name)) {
         $errors.Add("Database UI data-source reference is missing required member/contract: $name")
+    }
+}
+foreach ($forbidden in @('AttachmentCollection.SetActor', 'AttachmentCollection.Update', 'AttachmentCollection.UpdateAs', 'modifiedBy')) {
+    if ($databaseUi -match [regex]::Escape($forbidden)) {
+        $errors.Add("Database UI data-source reference still exposes removed mutable attachment contract: $forbidden")
     }
 }
 
