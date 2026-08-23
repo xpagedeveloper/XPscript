@@ -6,10 +6,11 @@ XPScript is a BASIC-style programming language implemented on .NET 10. Source fi
 
 - [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
+- [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
 - [File and filesystem command reference](file-io-reference.md): complete file I/O, metadata, filesystem and locking command catalog.
 - [Native and managed interop reference](native-interop-reference.md): native declarations plus every OS/RID-specific `Lib`/`Alias` selector and managed/native dependency directive.
 - [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, Kestrel, FastCGI and WebIIS commands/options.
-- [Runtime API reference](api-reference.md): Application, HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
+- [Runtime API reference](api-reference.md): HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
 - [Compact command index](commands.md): the older compact overview. Use the references above for the complete searchable catalog.
 
 ## Documentation map
@@ -17,30 +18,31 @@ XPScript is a BASIC-style programming language implemented on .NET 10. Source fi
 1. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.
 2. [Programming language](language.md), syntax, variables, procedures, control flow, types and coding rules.
 3. [Language and built-in command reference](language-reference.md), the primary language/built-in catalog with parameters and executable examples.
-4. [File and filesystem command reference](file-io-reference.md), complete file handles, text/binary I/O, locking, metadata and filesystem commands.
-5. [Native and managed interop reference](native-interop-reference.md), complete native target selectors and reference directives.
-6. [Compiler and host CLI reference](cli-reference.md), complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.
-7. [Runtime API reference](api-reference.md), HTTP/JSON/database/AI/UI/web runtime members with parameters and executable examples.
-8. [Compact command index](commands.md), a concise compatibility overview.
-9. [Core command examples](command-examples.md), minimal copy/paste examples for common language constructs.
-10. [Date and time](date-time.md), date functions, Date object enhancements and OS formatting metadata.
-11. [Evaluate](evaluate.md), dynamic XPScript evaluation.
-12. [Classes](classes.md), classes, constructors, properties, object references and module state.
-13. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
-14. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
-15. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
-16. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
-17. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
-18. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-19. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
-20. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
-21. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
-22. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
-23. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
-24. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
-25. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
-26. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
-27. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
+4. [Application and state reference](application-reference.md), complete executable/runtime path aliases, UI metadata and state-scope API.
+5. [File and filesystem command reference](file-io-reference.md), complete file handles, text/binary I/O, locking, metadata and filesystem commands.
+6. [Native and managed interop reference](native-interop-reference.md), complete native target selectors and reference directives.
+7. [Compiler and host CLI reference](cli-reference.md), complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.
+8. [Runtime API reference](api-reference.md), HTTP/JSON/database/AI/UI/web runtime members with parameters and executable examples.
+9. [Compact command index](commands.md), a concise compatibility overview.
+10. [Core command examples](command-examples.md), minimal copy/paste examples for common language constructs.
+11. [Date and time](date-time.md), date functions, Date object enhancements and OS formatting metadata.
+12. [Evaluate](evaluate.md), dynamic XPScript evaluation.
+13. [Classes](classes.md), classes, constructors, properties, object references and module state.
+14. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
+15. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
+16. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
+17. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
+18. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
+19. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+20. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
+21. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
+22. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
+23. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
+24. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
+25. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
+26. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
+27. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+28. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
 
 ## How XPScript runs
 
@@ -68,4 +70,4 @@ Compile it with:
 xpscriptc hello.xps -o hello
 ```
 
-For a feature tour, start with the [demo catalog](../demo/README.md). For lookup use [language-reference.md](language-reference.md), [file-io-reference.md](file-io-reference.md), [native-interop-reference.md](native-interop-reference.md), [cli-reference.md](cli-reference.md), or [api-reference.md](api-reference.md) according to the command family. The topical pages then provide deeper behavior, security and deployment guidance.
+For a feature tour, start with the [demo catalog](../demo/README.md). For lookup use [language-reference.md](language-reference.md), [application-reference.md](application-reference.md), [file-io-reference.md](file-io-reference.md), [native-interop-reference.md](native-interop-reference.md), [cli-reference.md](cli-reference.md), or [api-reference.md](api-reference.md) according to the command family. The topical pages then provide deeper behavior, security and deployment guidance.
