@@ -1,0 +1,52 @@
+Option Declare
+
+Public Class CreateUserRequest
+    [Required]
+    Public Name As String
+
+    [Required]
+    [Email]
+    Public Email As String
+End Class
+
+[Anonymous]
+[Get]
+[Route:/api/users/{id}]
+Function GetUser(ByVal id As Integer) As Variant
+    Dim data As New JsonObject
+    Call data.Set("id", id)
+    Call data.Set("name", "Ada")
+    Set GetUser = Response.OK(data)
+End Function
+
+[Anonymous]
+[Post]
+[Route:/api/users]
+Sub CreateUser([FromBody] payload As CreateUserRequest)
+    Response.Created("/api/users/1", payload)
+End Sub
+
+[Anonymous]
+[Delete]
+[Route:/api/users/{id}]
+Sub DeleteUser(ByVal id As Integer)
+    Response.NoContent()
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/problem/{kind}]
+Sub ProblemDemo(ByVal kind As String)
+    Select Case kind
+    Case "bad-request"
+        Response.BadRequest("Invalid request")
+    Case "unauthorized"
+        Response.Unauthorized("Authentication required")
+    Case "forbidden"
+        Response.Forbidden("Access denied")
+    Case "conflict"
+        Response.Conflict("Resource conflict")
+    Case Else
+        Response.Problem(500, "Demo problem", "Example Problem Details response")
+    End Select
+End Sub
