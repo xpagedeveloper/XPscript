@@ -67,7 +67,7 @@ internal sealed class XPScriptAttachmentCollectionV3
             string exposedPath;
             if (TryGetWebContext(out var webContext))
             {
-                var requestedFolder = NormalizePrivateRelativePath(targetFolder, allowFileName: false);
+                var requestedFolder = NormalizePrivateRelativePath(targetFolder);
                 var relativePath = requestedFolder + "/" + relativeName;
                 localPath = ResolvePrivateWebExportPath(webContext!, relativePath);
                 exposedPath = relativePath;
@@ -190,7 +190,7 @@ internal sealed class XPScriptAttachmentCollectionV3
         var root = Convert.ToString(server.GetType().GetProperty("RootPath")?.GetValue(server), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         if (root.Length == 0) throw new XPScriptRuntimeException(5, "Web root information is unavailable.");
 
-        var requested = NormalizePrivateRelativePath(targetPath, allowFileName: true);
+        var requested = NormalizePrivateRelativePath(targetPath);
         var siteHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(root))))[..24].ToLowerInvariant();
         var sandbox = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash));
         Directory.CreateDirectory(sandbox);
@@ -209,16 +209,14 @@ internal sealed class XPScriptAttachmentCollectionV3
         return full;
     }
 
-    private static string NormalizePrivateRelativePath(object? value, bool allowFileName)
+    private static string NormalizePrivateRelativePath(object? value)
     {
         var requested = XPScriptRuntime.CStr(value).Trim().Replace('\\', '/');
-        if (requested.Length == 0 || requested.Length > 1024 || Path.IsPathRooted(requested) || requested.StartsWith('/', StringComparison.Ordinal))
+        if (requested.Length == 0 || requested.Length > 1024 || Path.IsPathRooted(requested) || requested.StartsWith("/", StringComparison.Ordinal))
             throw new XPScriptRuntimeException(5, "Web attachment export path must be a relative private path.");
         var parts = requested.Split('/', StringSplitOptions.None);
         if (parts.Any(part => part.Length == 0 || part == "." || part == ".." || part.Any(char.IsControl)))
             throw new XPScriptRuntimeException(5, "Web attachment export path contains an invalid segment.");
-        if (!allowFileName && parts.Length > 32)
-            throw new XPScriptRuntimeException(5, "Web attachment export folder is too deeply nested.");
         if (parts.Length > 32)
             throw new XPScriptRuntimeException(5, "Web attachment export path is too deeply nested.");
         return string.Join('/', parts);
