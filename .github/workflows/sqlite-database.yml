@@ -5,10 +5,13 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'samples/xpdb-sqlite.xps'
+      - 'samples/database-uiform-datasource.xps'
       - 'docs/sqlite.md'
       - 'docs/commands.md'
       - 'docs/index.md'
@@ -67,7 +70,39 @@ jobs:
             if ($output -notcontains $value) { throw "SQLite output missing: $value`n$output" }
           }
 
-      - name: Remove SQLite regression database
+      - name: Verify shared UIForm database data source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/sqlite-datasource | Out-Null
+          $exe = if ($IsWindows) { './out/sqlite-datasource/database-uiform-datasource.exe' } else { './out/sqlite-datasource/database-uiform-datasource' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-uiform-datasource.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Database/UIForm data-source sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Database/UIForm data-source regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          $required = @(
+            'LIST-COUNT=1',
+            'SHARED-NAME=Anna Andersson',
+            'SHARED-CITY=Goteborg',
+            'HIDDEN-BEFORE=KEEP-ME',
+            'SAVE-AFFECTED=1',
+            'SAVED-NAME=Anna Andersson',
+            'SAVED-CITY=Goteborg',
+            'HIDDEN-AFTER=KEEP-ME',
+            'DATABASE-UIFORM-DATASOURCE=OK'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Database/UIForm output missing: $value`n$output" }
+          }
+
+      - name: Remove SQLite regression databases
         if: always()
         shell: pwsh
-        run: Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+        run: |
+          Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./out/sqlite-datasource/database-uiform-datasource.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./database-uiform-datasource.db -Force -ErrorAction SilentlyContinue
