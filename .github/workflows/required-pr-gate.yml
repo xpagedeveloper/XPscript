@@ -99,6 +99,22 @@ jobs:
           }
           Write-Host "DEMO-COMPILE=OK ($($demos.Count) standalone programs)"
 
+      - name: Verify Seek Loc LOF and Reset
+        shell: pwsh
+        run: |
+          $output = './out/required-gate/demos/file-position-reset'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-position-reset.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Seek/Loc/LOF/Reset sample did not compile.' }
+          chmod +x $output
+          $result = & $output 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Seek/Loc/LOF/Reset sample failed with exit code $exit." }
+          foreach ($expected in @('SEEK-RESET=1','RESET-FREEFILE=1','FILE-POSITION-RESET=OK')) {
+            if ($result -notcontains $expected) { throw "File-position sample output missing: $expected" }
+          }
+          Write-Host 'FILE-POSITION-RESET=OK'
+
       - name: Verify managed-reference documentation example
         shell: pwsh
         run: |
