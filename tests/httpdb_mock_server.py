@@ -7,9 +7,16 @@ from urllib.parse import urlparse, parse_qs, unquote
 UNID = "0123456789ABCDEF0123456789ABCDEF"
 SUPABASE_FILES = {}
 DOMINO_FILES = {}
+DOMINO_DOC = {
+    "Form": "Customer",
+    "name": "Ada",
+    "City": "Stockholm",
+    "InternalCode": "KEEP-ME",
+}
+
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "XPScriptHttpDbMock/1.0"
+    server_version = "XPScriptHttpDbMock/2.0"
 
     def log_message(self, fmt, *args):
         pass
@@ -47,7 +54,7 @@ class Handler(BaseHTTPRequestHandler):
         content_type = self.headers.get("Content-Type", "")
         match = re.search(r"boundary=([^;]+)", content_type)
         if not match:
-            return None, None
+            return None, None, None
         boundary = ("--" + match.group(1).strip().strip('"')).encode("utf-8")
         for part in raw.split(boundary):
             if part.startswith(b"\r\n"):
@@ -60,10 +67,13 @@ class Handler(BaseHTTPRequestHandler):
             if b'name="filename"' not in headers:
                 continue
             name_match = re.search(br'filename="([^"]+)"', headers)
+            type_match = re.search(br'Content-Type:\s*([^\r\n]+)', headers, re.I)
             if not name_match:
                 continue
-            return name_match.group(1).decode("utf-8"), data
-        return None, None
+            name = name_match.group(1).decode("utf-8")
+            ctype = type_match.group(1).decode("utf-8").strip() if type_match else "application/octet-stream"
+            return name, data, ctype
+        return None, None, None
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -82,8 +92,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == f"/api/v1/attachmentnames/{UNID}":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
                 return self._send(401, {"error": "bad domino attachment auth"})
-            rows = [{"name": name, "size": len(value["data"]), "contentType": value["content_type"], "modified": "2026-08-23T12:00:00Z"}
-                    for name, value in sorted(DOMINO_FILES.items())]
+            rows = [
+                {
+                    "name": name,
+                    "size": len(value["data"]),
+                    "contentType": value["content_type"],
+                    "modified": "2026-08-23T12:00:00Z",
+                }
+                for name, value in sorted(DOMINO_FILES.items())
+            ]
             return self._send(200, {"attachments": rows})
 
         attachment_prefix = f"/api/v1/attachments/{UNID}/"
@@ -107,7 +124,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == f"/api/v1/document/{UNID}":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
                 return self._send(401, {"error": "bad domino auth"})
-            return self._send(200, {"Form": "Customer", "name": "Ada", "City": "Stockholm", "InternalCode": "KEEP-ME", "@meta": {"unid": UNID}})
+            result = dict(DOMINO_DOC)
+            result["@meta"] = {"unid": UNID}
+            return self._send(200, result)
 
         if path == "/api/v1/lists":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
@@ -138,26 +157,43 @@ class Handler(BaseHTTPRequestHandler):
             prefix = (payload or {}).get("prefix", "").rstrip("/") + "/"
             rows = []
             for object_path, item in sorted(SUPABASE_FILES.items()):
-                if object_path.startswith(prefix):
-                    rows.append({"name": object_path[len(prefix):], "updated_at": "2026-08-23T12:00:00Z", "metadata": {"size": len(item["data"]), "mimetype": item["content_type"]}})
+                if not object_path.startswith(prefix):
+                    continue
+                relative = object_path[len(prefix):]
+                if "/" in relative:
+                    continue
+                rows.append({
+                    "name": relative,
+                    "updated_at": "2026-08-23T12:00:00Z",
+                    "metadata": {"size": len(item["data"]), "mimetype": item["content_type"]},
+                })
             return self._send(200, rows)
 
         if path.startswith("/storage/v1/object/attachments/"):
-            if not self._supabase_auth_ok() or self.headers.get("x-upsert") != "true":
-                return self._send(401, {"error": "bad supabase storage upload"})
+            if not self._supabase_auth_ok():
+                return self._send(401, {"error": "bad supabase storage auth"})
             object_path = self._storage_path("/storage/v1/object/attachments/")
             raw = self._read_body()
-            SUPABASE_FILES[object_path] = {"data": raw, "content_type": self.headers.get("Content-Type", "application/octet-stream")}
-            return self._send(200, {"Key": "attachments/" + object_path})
+            exists = object_path in SUPABASE_FILES
+            upsert = self.headers.get("x-upsert", "").lower() == "true"
+            if exists and not upsert:
+                return self._send(409, {"error": "object already exists"})
+            SUPABASE_FILES[object_path] = {
+                "data": raw,
+                "content_type": self.headers.get("Content-Type", "application/octet-stream"),
+            }
+            return self._send(200 if exists else 201, {"Key": "attachments/" + object_path})
 
         if path == f"/api/v1/attachments/{UNID}":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("fieldName", [""])[0] != "Body":
                 return self._send(400, {"error": "bad domino attachment upload"})
             raw = self._read_body()
-            name, data = self._multipart_file(raw)
+            name, data, content_type = self._multipart_file(raw)
             if not name or data is None:
                 return self._send(400, {"error": "bad domino multipart upload"})
-            DOMINO_FILES[name] = {"data": data, "content_type": "application/octet-stream"}
+            if name in DOMINO_FILES:
+                return self._send(409, {"error": "duplicate internal domino attachment name"})
+            DOMINO_FILES[name] = {"data": data, "content_type": content_type or "application/octet-stream"}
             return self._send(200, {"status": "upload complete", "filename": [name]})
 
         payload = self._read_json()
@@ -166,67 +202,114 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(401, {"error": "bad login"})
             return self._send(200, {"bearer": "login-token", "expires_in": 3600})
         if path == "/api/v1/auth/logout":
-            if not self._domino_auth_ok(): return self._send(401, {"error": "bad domino auth"})
+            if not self._domino_auth_ok():
+                return self._send(401, {"error": "bad domino auth"})
             return self._send(200, {"loggedOut": True})
         if path == "/sql":
-            if self.headers.get("Authorization") != "Bearer admin-token": return self._send(401, {"error": "bad sql token"})
-            if not isinstance(payload, dict) or not payload.get("query"): return self._send(400, {"error": "missing query"})
+            if self.headers.get("Authorization") != "Bearer admin-token":
+                return self._send(401, {"error": "bad sql token"})
+            if not isinstance(payload, dict) or not payload.get("query"):
+                return self._send(400, {"error": "missing query"})
             return self._send(200, {"query": payload["query"], "ok": True})
         if path.startswith("/rest/v1/"):
-            if not self._supabase_auth_ok(): return self._send(401, {"error": "bad supabase auth"})
-            if self.headers.get("Content-Profile") != "public": return self._send(400, {"error": "bad content schema"})
-            if path == "/rest/v1/customers": return self._send(201, [payload])
-            if path == "/rest/v1/rpc/hello": return self._send(200, {"message": "Hello", "args": payload})
+            if not self._supabase_auth_ok():
+                return self._send(401, {"error": "bad supabase auth"})
+            if self.headers.get("Content-Profile") != "public":
+                return self._send(400, {"error": "bad content schema"})
+            if path == "/rest/v1/customers":
+                return self._send(201, [payload])
+            if path == "/rest/v1/rpc/hello":
+                return self._send(200, {"message": "Hello", "args": payload})
         if path == "/api/v1/document":
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo": return self._send(401, {"error": "bad domino auth"})
-            result = dict(payload or {}); result["@meta"] = {"unid": UNID}; return self._send(201, result)
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
+                return self._send(401, {"error": "bad domino auth"})
+            result = dict(payload or {})
+            result["@meta"] = {"unid": UNID}
+            return self._send(201, result)
         if path == "/api/v1/query":
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("action", [""])[0] != "execute": return self._send(400, {"error": "bad query request"})
-            if not isinstance(payload, dict) or not payload.get("query"): return self._send(400, {"error": "bad query payload"})
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("action", [""])[0] != "execute":
+                return self._send(400, {"error": "bad query request"})
+            if not isinstance(payload, dict) or not payload.get("query"):
+                return self._send(400, {"error": "bad query payload"})
             return self._send(200, [{"Form": "Customer", "name": "Ada", "City": "Stockholm"}])
         return self._send(404, {"error": "not found", "path": self.path})
 
     def do_PATCH(self):
-        parsed = urlparse(self.path); path = parsed.path; query = parse_qs(parsed.query); payload = self._read_json()
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+        payload = self._read_json()
+
         if path == "/rest/v1/customers":
-            if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42": return self._send(400, {"error": "bad supabase patch"})
-            if isinstance(payload, dict) and payload.get("name") == "Ada Shared" and payload.get("internal_code") != "KEEP-ME": return self._send(400, {"error": "hidden supabase field was not preserved by SaveRow"})
+            if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42":
+                return self._send(400, {"error": "bad supabase patch"})
+            if isinstance(payload, dict) and payload.get("name") == "Ada Shared" and payload.get("internal_code") != "KEEP-ME":
+                return self._send(400, {"error": "hidden supabase field was not preserved by SaveRow"})
             return self._send(200, [payload])
+
         if path == f"/api/v1/document/{UNID}":
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo": return self._send(401, {"error": "bad domino auth"})
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
+                return self._send(401, {"error": "bad domino auth"})
+            if isinstance(payload, dict):
+                DOMINO_DOC.update(payload)
             return self._send(200, {"patched": True, "fields": payload})
+
         return self._send(404, {"error": "not found", "path": self.path})
 
     def do_PUT(self):
-        parsed = urlparse(self.path); path = parsed.path; query = parse_qs(parsed.query); payload = self._read_json()
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+        payload = self._read_json()
+
         if path == f"/api/v1/document/{UNID}":
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo": return self._send(401, {"error": "bad domino auth"})
-            if not isinstance(payload, dict): return self._send(400, {"error": "bad domino update payload"})
-            if any(str(key).startswith("@") for key in payload.keys()): return self._send(400, {"error": "domino metadata must not be written as document items"})
-            if payload.get("name") == "Shared Updated" and payload.get("InternalCode") != "KEEP-ME": return self._send(400, {"error": "hidden domino item was not preserved by SaveRow"})
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
+                return self._send(401, {"error": "bad domino auth"})
+            if not isinstance(payload, dict):
+                return self._send(400, {"error": "bad domino update payload"})
+            if any(str(key).startswith("@") for key in payload.keys()):
+                return self._send(400, {"error": "domino metadata must not be written as document items"})
+            if payload.get("name") == "Shared Updated" and payload.get("InternalCode") != "KEEP-ME":
+                return self._send(400, {"error": "hidden domino item was not preserved by SaveRow"})
+            DOMINO_DOC.update(payload)
             return self._send(200, {"updated": True, "fields": payload})
+
         return self._send(404, {"error": "not found", "path": self.path})
 
     def do_DELETE(self):
-        parsed = urlparse(self.path); path = parsed.path; query = parse_qs(parsed.query)
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+
         if path.startswith("/storage/v1/object/attachments/"):
-            if not self._supabase_auth_ok(): return self._send(401, {"error": "bad supabase storage auth"})
+            if not self._supabase_auth_ok():
+                return self._send(401, {"error": "bad supabase storage auth"})
             object_path = self._storage_path("/storage/v1/object/attachments/")
-            if SUPABASE_FILES.pop(object_path, None) is None: return self._send(404, {"error": "storage object not found"})
+            if SUPABASE_FILES.pop(object_path, None) is None:
+                return self._send(404, {"error": "storage object not found"})
             return self._send(200, {"message": "Successfully deleted"})
+
         attachment_prefix = f"/api/v1/attachments/{UNID}/"
         if path.startswith(attachment_prefix):
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("fieldName", [""])[0] != "Body": return self._send(400, {"error": "bad domino attachment delete"})
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("fieldName", [""])[0] != "Body":
+                return self._send(400, {"error": "bad domino attachment delete"})
             name = unquote(path[len(attachment_prefix):])
-            if DOMINO_FILES.pop(name, None) is None: return self._send(404, {"error": "domino attachment not found"})
+            if DOMINO_FILES.pop(name, None) is None:
+                return self._send(404, {"error": "domino attachment not found"})
             return self._send(200, {"deleted": True})
+
         if path == "/rest/v1/customers":
-            if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42": return self._send(400, {"error": "bad supabase delete"})
+            if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42":
+                return self._send(400, {"error": "bad supabase delete"})
             return self._send(200, [{"id": 42}])
+
         if path == f"/api/v1/document/{UNID}":
-            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo": return self._send(401, {"error": "bad domino auth"})
+            if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
+                return self._send(401, {"error": "bad domino auth"})
             return self._send(200, {"deleted": True})
+
         return self._send(404, {"error": "not found", "path": self.path})
+
 
 if __name__ == "__main__":
     ThreadingHTTPServer(("127.0.0.1", 18082), Handler).serve_forever()
