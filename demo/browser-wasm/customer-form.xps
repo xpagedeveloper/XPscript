@@ -2,7 +2,7 @@
 
 Sub Main()
     Dim form As New UIForm("Browser WASM demo")
-    Dim grid As Variant
+    Dim grid As Object
 
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
