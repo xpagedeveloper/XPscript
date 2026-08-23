@@ -1,0 +1,24 @@
+Option Declare
+
+Public Class CreateUserRequest
+    [Required]
+    Public Name As String
+
+    [Required]
+    [Email]
+    Public Email As String
+End Class
+
+[Anonymous]
+[Get]
+[Route:/api/users/{id}]
+Function GetUser(ByVal id As Integer) As String
+    GetUser = "user-" & CStr(id)
+End Function
+
+[Anonymous]
+[Post]
+[Route:/api/users]
+Sub CreateUser([FromBody] payload As CreateUserRequest)
+    Response.Created("/api/users/1", payload)
+End Sub
