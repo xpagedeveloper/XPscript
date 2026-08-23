@@ -1,0 +1,53 @@
+' XPScript SQL Server unified attachment regression
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMsSql
+    Dim files As Variant
+    Dim list As JsonArray
+    Dim info As JsonObject
+    Dim sourcePath As String
+    Dim targetPath As String
+    Dim sourceLength As Variant
+    Dim targetLength As Variant
+
+    connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
+    If connectionString = "" Then
+        Print "DATABASE-ATTACHMENTS-MSSQL=SKIPPED"
+        Exit Sub
+    End If
+
+    sourcePath = "samples/database-attachments-mssql.xps"
+    targetPath = "database-attachments-mssql-copy.xps"
+
+    Set db = New XPDbMsSql(connectionString)
+    Call db.Execute("IF OBJECT_ID(N'dbo.__xps_attachment_owner_test', N'U') IS NOT NULL DROP TABLE dbo.__xps_attachment_owner_test")
+    Call db.Execute("CREATE TABLE dbo.__xps_attachment_owner_test (id int NOT NULL PRIMARY KEY, name nvarchar(100) NOT NULL)")
+    Call db.Execute("INSERT INTO dbo.__xps_attachment_owner_test(id, name) VALUES (42, N'Anna')")
+
+    Set files = db.Attachments("dbo.__xps_attachment_owner_test", "id", 42)
+    Set list = files.List()
+    Print "MSSQL-ATTACH-EMPTY=" & CStr(list.Count)
+
+    Call files.SaveAs(sourcePath, "contract.xps")
+    Set list = files.List()
+    Set info = list.Get(0)
+    Print "MSSQL-ATTACH-AFTER-SAVE=" & CStr(list.Count)
+    Print "MSSQL-ATTACH-NAME=" & CStr(info.Get("name"))
+
+    sourceLength = FileLen(sourcePath)
+    Call files.Get("contract.xps", targetPath)
+    targetLength = FileLen(targetPath)
+    Print "MSSQL-ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
+
+    Print "MSSQL-ATTACH-DELETED=" & CStr(files.Delete("contract.xps"))
+    Set list = files.List()
+    Print "MSSQL-ATTACH-AFTER-DELETE=" & CStr(list.Count)
+
+    Call db.Execute("DROP TABLE dbo.__xps_attachment_owner_test")
+    Call db.Close()
+    Kill targetPath
+    Print "DATABASE-ATTACHMENTS-MSSQL=OK"
+End Sub
