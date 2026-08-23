@@ -14,10 +14,10 @@ The same provider-neutral model applies to record attachments. An attachment col
 - SQLite generated/hidden columns and SQL Server identity/computed columns remain readable but are excluded from `SaveRow` assignments.
 - Domino top-level provider metadata beginning with `@` remains in the object but is excluded from document-item writes.
 - Attachment collections are parent-scoped. The same `originalName` may appear on many parents and multiple times on the same parent.
-- Every attachment has a stable `attachmentId` GUID. `Get`, `Update` and `Delete` use that ID, never a file name.
+- Every attachment has a stable `attachmentId` GUID. Binary retrieval and delete use that ID, never a file name.
 - `Save` and `SaveAs` always create a new attachment ID, even when another attachment has the same `originalName`.
-- `Update` and `UpdateAs` replace content for an existing attachment while preserving `attachmentId`, `created` and `createdBy`.
-- `SetActor` sets the application/session identity used for `createdBy` and `modifiedBy`; the process user is only a fallback.
+- Attachments are immutable. To replace a file, delete the old attachment and create a new one with a new `attachmentId`.
+- `createdBy` is supplied explicitly when `Save` or `SaveAs` is called.
 - The current portable attachment runtime limits one file to 64 MiB because one attachment is buffered at a time.
 
 The executable SQLite regressions [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) and [database-attachments.xps](../samples/database-attachments.xps) demonstrate both record and attachment flows.
@@ -58,7 +58,7 @@ The executable SQLite regressions [database-uiform-datasource.xps](../samples/da
 | `HTTPDBDominoRest.QueryArray` | `db.QueryArray(queryPayload)` | Domino query string/payload. | Returns query documents as `JsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 | `HTTPDBDominoRest.GetRow` | `db.GetRow(unid)` | 32-character document UNID. | Loads the complete Notes document as one shared `JsonObject`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 | `HTTPDBDominoRest.SaveRow` | `db.SaveRow(unid, data)` | UNID and complete shared object. | Updates native document items while excluding top-level `@...` provider metadata. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document; `fieldName` targets the native rich-text item for save/update/delete. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `HTTPDBDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document. `fieldName` targets the native rich-text item. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 
 ## Attachment identity and metadata
 
@@ -73,9 +73,7 @@ A metadata object contains at least:
   "contentType": "application/pdf",
   "size": 183244,
   "created": "2026-08-23T13:21:00Z",
-  "modified": "2026-08-23T13:32:00Z",
   "createdBy": "creator@example",
-  "modifiedBy": "editor@example",
   "checksumSha256": "..."
 }
 ```
@@ -86,17 +84,16 @@ Two or more attachments on the same parent may all have `originalName = "contrac
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `AttachmentCollection.SetActor` | `files.SetActor(actor)` | Application/session user identity. | Sets the audit identity used by subsequent `Save`/`Update`. Without an override, the process user is used as fallback. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.List` | `files.List()` | none | Alias for `GetMetadata()` returning metadata for all attachments belonging to the current parent. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.GetMetadata` | `files.GetMetadata()` or `files.GetMetadata(attachmentId)` | Optional attachment GUID. | Returns all metadata as `JsonArray`, or one metadata `JsonObject` by ID. Does not download binary content. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.FindByName` | `files.FindByName(originalName)` | Original display/file name. | Returns every matching metadata object. Multiple matches are valid and expected. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.Save` | `files.Save(sourcePath)` | Existing local source file. | Creates a new attachment with a new GUID and returns its metadata. It never replaces an existing attachment merely because the name matches. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.SaveAs` | `files.SaveAs(sourcePath, originalName)` | Existing file and display/original name. | Creates a new attachment with the supplied `originalName`, even if that name already exists. Returns metadata. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.Update` | `files.Update(attachmentId, sourcePath)` | Existing attachment ID and replacement local file. | Replaces binary content while preserving `attachmentId`, `created` and `createdBy`; updates size, checksum, `modified` and `modifiedBy`. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.UpdateAs` | `files.UpdateAs(attachmentId, sourcePath, originalName)` | Existing ID, replacement file and new original name. | Same as `Update`, but also changes `originalName`. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.Get` | `files.Get(attachmentId, targetPath)` | Attachment GUID and local output path. | Downloads exactly one attachment by stable ID. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.GetAll` | `files.GetAll(targetFolder)` | Local destination directory only. Parent/owner is already fixed by `Attachments(...)`. | Downloads all attachments for that parent. Local names are prefixed with `attachmentId` so duplicate original names cannot collide. Returns metadata plus `localPath`. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.Delete` | `files.Delete(attachmentId)` | Attachment GUID. | Deletes exactly one attachment from the current parent. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.Save` | `files.Save(sourcePath, createdBy)` | Existing local source file and creator identity. | Creates a new immutable attachment with a new GUID and returns its metadata. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.SaveAs` | `files.SaveAs(sourcePath, originalName, createdBy)` | Existing file, display/original name and creator identity. | Creates a new immutable attachment even if the same name already exists. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.Get` | `files.Get(attachmentId, targetPath)` | Attachment GUID and disk target. | Compatibility alias for `SaveToDisk`. Desktop uses normal OS file permissions. Web uses the private export sandbox. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.SaveToDisk` | `files.SaveToDisk(attachmentId, targetPath)` | Attachment GUID and output path. | On desktop, writes to the requested OS path. On web/server, `targetPath` must be relative and is resolved inside a private non-web-served sandbox. Not available in browser-WASM. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.GetAll` | `files.GetAll(targetFolder)` | Local destination directory only. Parent/owner is already fixed by `Attachments(...)`. | Desktop exports all attachments under the requested directory. Web requires a relative private directory and exports only inside the private sandbox. Browser-WASM must use `SendToBrowser` per attachment. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.SendToBrowser` | `files.SendToBrowser(attachmentId [, downloadName])` | Attachment GUID and optional safe browser download name. | Server web streams bytes through the active `Response` with `Content-Disposition: attachment`; browser-WASM creates a browser Blob download. No web-accessible disk file is created. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `AttachmentCollection.Delete` | `files.Delete(attachmentId)` | Attachment GUID. | Deletes exactly one attachment from the current parent. To replace content, delete then create a new attachment. | [database-attachments.xps](../samples/database-attachments.xps) |
 
 ### Example with duplicate names
 
@@ -107,31 +104,54 @@ Dim second As JsonObject
 Dim matches As JsonArray
 
 Set files = db.Attachments("customers", "id", 42)
-Call files.SetActor("user@example")
+Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf", "user@example")
+Set second = files.SaveAs("docs/contract-v2.pdf", "contracts.pdf", "user@example")
 
-Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf")
-Set second = files.SaveAs("docs/contract-v2.pdf", "contracts.pdf")
-
-' Two different attachments with the same original name.
 Print first.Get("attachmentId")
 Print second.Get("attachmentId")
 
 Set matches = files.FindByName("contracts.pdf")
 Print matches.Count
-
-Call files.Get(first.Get("attachmentId"), "downloads/first.pdf")
 ```
 
-### Update an attachment while keeping its identity
+### Replace an attachment
+
+Attachments are immutable. Replacing a file means deleting the old attachment and creating a new one:
 
 ```xpscript
-Dim updated As JsonObject
-
-Call files.SetActor("editor@example")
-Set updated = files.Update(attachmentId, "docs/revised-contract.pdf")
+Call files.Delete(oldAttachmentId)
+Set replacement = files.SaveAs("docs/revised-contract.pdf", "contracts.pdf", "editor@example")
 ```
 
-The existing `attachmentId`, `created` and `createdBy` remain unchanged. `modified`, `modifiedBy`, size, content type and checksum are updated.
+The replacement has a new `attachmentId`, `created` timestamp and `createdBy` value.
+
+## Disk export security
+
+Desktop programs use the ordinary operating-system security boundary. `SaveToDisk` may write wherever the desktop process account has permission.
+
+Web/server programs do not receive arbitrary filesystem write access through the attachment API. The requested path must be relative, traversal such as `..` is rejected, and the output is resolved beneath an XPScript-managed private export sandbox under the operating-system temporary area. The sandbox is not under the configured web root, so an exported file cannot become directly reachable merely because the web server serves static files from the application root. Symbolic-link/reparse-point directories are rejected.
+
+Use `SendToBrowser` when the intent is to let the HTTP client download an attachment. It streams the attachment through the response instead of publishing a file.
+
+### Server web download
+
+```xpscript
+Dim files As Variant
+Set files = db.Attachments("customers", "id", 23)
+Call files.SendToBrowser(attachmentId, "contract.pdf")
+```
+
+`SendToBrowser` uses the active web response, sets a safe attachment `Content-Disposition`, applies the attachment content type and writes the bytes directly to the response body.
+
+### Browser-WASM download
+
+The same public call is valid in a `[Platform:browser-wasm]` program:
+
+```xpscript
+Call files.SendToBrowser(attachmentId, "contract.pdf")
+```
+
+In browser-WASM no server filesystem is used. XPScript converts the retrieved bytes to a browser Blob, creates a temporary object URL, triggers the browser download and revokes the URL afterwards.
 
 ### Get all attachments for one parent
 
@@ -140,10 +160,10 @@ Dim files As Variant
 Dim downloaded As JsonArray
 
 Set files = db.Attachments("customers", "id", 23)
-Set downloaded = files.GetAll("downloads/customer-23")
+Set downloaded = files.GetAll("customer-23")
 ```
 
-`downloads/customer-23` is only the local destination. The parent is already `customers/id=23` because that is how `files` was created.
+On desktop the directory can be an ordinary OS path. On web it is interpreted as a relative path beneath the private export sandbox. The parent remains `customers/id=23` because it was fixed when `files` was created.
 
 ### Provider storage model
 
