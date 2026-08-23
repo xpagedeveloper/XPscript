@@ -2,7 +2,7 @@
 
 This is the complete reference for XPScript file I/O and filesystem commands. Each entry includes syntax, parameters, behavior, and a complete `.xps` program that can be copied and compiled.
 
-For portability and security behavior across Windows, Linux, and macOS, also see [Cross-platform runtime](cross-platform-runtime.md).
+For broader compatibility notes, also see the repository [compatibility matrix](../COMPATIBILITY.md).
 
 ## File handles and text I/O
 
@@ -11,13 +11,18 @@ For portability and security behavior across Windows, Linux, and macOS, also see
 | `FreeFile` | `FreeFile()` | none | Returns an available XPScript file number. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 | `Open` | `Open path For mode As #number [Len = recordLength]` | `path`: file path; `mode`: `Input`, `Output`, `Append`, `Binary`, or `Random`; `number`: file number; `recordLength`: optional Random record size. | Opens a file using the requested access mode. | [file-io-portability.xps](../samples/file-io-portability.xps) |
 | `Open ... Charset` | `Open path For Input|Output|Append As #number Charset charset [Encoding transferEncoding]` | `charset`: text encoding such as `utf-8`; `transferEncoding`: optional `base64`; other arguments are the normal `Open` arguments. | Opens a sequential text file with explicit character and optional transfer encoding. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
-| `Close` | `Close [#number]` | optional `number`: one open file number. | Closes the selected file, or uses normal XPScript close semantics when no number is supplied. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
+| `Close` | `Close [#number]` | optional `number`: one open file number. | Closes the selected file. With no number, closes all currently open XPScript file numbers. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
+| `Reset` | `Reset` | none | Flushes and closes all currently open XPScript file numbers. It is equivalent to `Close` without a file number and makes those numbers available to `FreeFile` again. | [file-position-reset.xps](../samples/file-position-reset.xps) |
 | `Print #` | `Print #number, value` | `number`: output file number; `value`: text/value to write. | Writes a line to a sequential output/append file. | [textio-console.xps](../samples/textio-console.xps) |
 | `Write #` | `Write #number, value [, value ...]` | `number`: output file number; `value`: one or more values. | Writes comma-separated, type-aware sequential data suitable for `Input #`. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 | `Line Input #` | `Line Input #number, variable` | `number`: input file number; `variable`: String/Variant target. | Reads one complete text line from a sequential input file. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 | `Input #` | `Input #number, variable` | `number`: input file number; `variable`: target variable. | Reads the next delimited sequential value from an input file. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 | `Input$` | `Input$(count, #number)` | `count`: requested character/byte count according to the file mode; `number`: input file number. | Reads a fixed amount of content from an open file. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 | `EOF` | `EOF(number)` | `number`: input file number. | Returns `True` when the current input file has no more data to read. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
+| `LOF` | `LOF(number)` | `number`: open file number. | Returns the length of the open file in bytes. | [file-position-reset.xps](../samples/file-position-reset.xps) |
+| `Seek` | `Seek(number)` | `number`: open file number. | Returns the current one-based byte position for sequential/Binary files, or the current one-based record position for Random files. | [file-position-reset.xps](../samples/file-position-reset.xps) |
+| `Seek` statement | `Seek #number, position` | `number`: open file number; `position`: one-based byte position, or Random record position. | Moves the current file position. Reader buffers are discarded and writer buffers are flushed before repositioning. | [file-position-reset.xps](../samples/file-position-reset.xps) |
+| `Loc` | `Loc(number)` | `number`: open file number. | Returns the current logical location. Binary/Random mode reports the most recent logical record/location; sequential mode follows XPScript compatibility block semantics. | [file-position-reset.xps](../samples/file-position-reset.xps) |
 
 ## Binary, Random, and locking
 
@@ -47,10 +52,11 @@ For portability and security behavior across Windows, Linux, and macOS, also see
 
 ## Copyable example
 
-For the broadest single-file demonstration, copy [samples/file-io-extensions.xps](../samples/file-io-extensions.xps). It demonstrates text encodings, `Print #`, `Write #`, `Input #`, `Line Input #`, `EOF`, `Input$`, Binary/Random I/O, and file locking.
+For the broadest text/Binary/locking demonstration, copy [samples/file-io-extensions.xps](../samples/file-io-extensions.xps). For file position and global handle reset, copy [samples/file-position-reset.xps](../samples/file-position-reset.xps).
 
-Compile it with:
+Compile them with:
 
 ```powershell
 xpscriptc .\samples\file-io-extensions.xps -o .\out\file-io-demo.exe --framework-dependent
+xpscriptc .\samples\file-position-reset.xps -o .\out\file-position-demo.exe --framework-dependent
 ```
