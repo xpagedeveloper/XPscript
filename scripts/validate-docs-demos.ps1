@@ -6,6 +6,8 @@ $referenceFiles = @(
     (Join-Path $root 'docs/file-io-reference.md'),
     (Join-Path $root 'docs/native-interop-reference.md'),
     (Join-Path $root 'docs/cli-reference.md'),
+    (Join-Path $root 'docs/application-reference.md'),
+    (Join-Path $root 'docs/desktop-ui-reference.md'),
     (Join-Path $root 'docs/api-reference.md')
 )
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -65,8 +67,8 @@ foreach ($name in $requiredLanguage) {
 
 $fileIo = Get-Content -LiteralPath (Join-Path $root 'docs/file-io-reference.md') -Raw
 $requiredFileIo = @(
-    'FreeFile', 'Open', 'Charset', 'Close', 'Print #', 'Write #', 'Line Input #',
-    'Input #', 'Input$', 'EOF', 'Put', 'Get', 'Lock', 'Unlock',
+    'FreeFile', 'Open', 'Charset', 'Close', 'Reset', 'Print #', 'Write #', 'Line Input #',
+    'Input #', 'Input$', 'EOF', 'LOF', 'Seek', 'Loc', 'Put', 'Get', 'Lock', 'Unlock',
     'FileLen', 'FileDateTime', 'GetFileAttr', 'SetFileAttr', 'FileCopy', 'Kill',
     'Name', 'MkDir', 'RmDir', 'ChDir', 'ChDrive', 'Dir'
 )
@@ -103,6 +105,20 @@ $requiredCli = @(
 foreach ($name in $requiredCli) {
     if ($cli -notmatch [regex]::Escape($name)) {
         $errors.Add("CLI reference is missing required command/option: $name")
+    }
+}
+
+$application = Get-Content -LiteralPath (Join-Path $root 'docs/application-reference.md') -Raw
+foreach ($name in @('Application.ArgCount','Application.ExecutablePath','Application.ExecutableFileName','Application.TempFolder','Application.Path','Application.FileName','Application.State','Process.State','Session.State','Request.State')) {
+    if ($application -notmatch [regex]::Escape($name)) {
+        $errors.Add("Application reference is missing required member: $name")
+    }
+}
+
+$desktop = Get-Content -LiteralPath (Join-Path $root 'docs/desktop-ui-reference.md') -Raw
+foreach ($name in @('MsgBox','ShowDialog','OpenFileDialog','LoadFileDialog','SaveFileDialog')) {
+    if ($desktop -notmatch [regex]::Escape($name)) {
+        $errors.Add("Desktop UI reference is missing required command: $name")
     }
 }
 
