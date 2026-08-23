@@ -129,7 +129,9 @@ $requiredDatabaseUi = @(
     'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow', 'XPDbMsSql.Attachments',
     'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow', 'HTTPDBSupabase.SetAttachmentBucket', 'HTTPDBSupabase.Attachments',
     'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow', 'HTTPDBDominoRest.Attachments',
-    'AttachmentCollection.List', 'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Get', 'AttachmentCollection.Delete',
+    'AttachmentCollection.List', 'AttachmentCollection.GetMetadata', 'AttachmentCollection.FindByName',
+    'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Get', 'AttachmentCollection.GetAll', 'AttachmentCollection.Delete',
+    'createdBy', 'immutable', 'new `attachmentId`',
     'UIListView.BindData', 'UIForm.BindData', 'native database columns/items', '64 MiB'
 )
 foreach ($name in $requiredDatabaseUi) {
