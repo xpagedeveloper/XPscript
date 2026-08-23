@@ -125,11 +125,12 @@ foreach ($name in @('MsgBox','ShowDialog','OpenFileDialog','LoadFileDialog','Sav
 
 $databaseUi = Get-Content -LiteralPath (Join-Path $root 'docs/database-ui-datasources.md') -Raw
 $requiredDatabaseUi = @(
-    'XPDBSQLite.QueryArray', 'XPDBSQLite.GetRow', 'XPDBSQLite.SaveRow',
-    'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow',
-    'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow',
-    'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow',
-    'UIListView.BindData', 'UIForm.BindData', 'native database columns/items'
+    'XPDBSQLite.QueryArray', 'XPDBSQLite.GetRow', 'XPDBSQLite.SaveRow', 'XPDBSQLite.Attachments',
+    'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow', 'XPDbMsSql.Attachments',
+    'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow', 'HTTPDBSupabase.SetAttachmentBucket', 'HTTPDBSupabase.Attachments',
+    'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow', 'HTTPDBDominoRest.Attachments',
+    'AttachmentCollection.List', 'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Get', 'AttachmentCollection.Delete',
+    'UIListView.BindData', 'UIForm.BindData', 'native database columns/items', '64 MiB'
 )
 foreach ($name in $requiredDatabaseUi) {
     if ($databaseUi -notmatch [regex]::Escape($name)) {
