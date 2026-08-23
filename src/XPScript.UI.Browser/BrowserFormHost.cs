@@ -51,21 +51,24 @@ public static partial class BrowserFormHost
         ArgumentNullException.ThrowIfNull(base64);
         if (base64.Length == 0 || base64.Length > MaxDownloadBase64Length)
             throw new ArgumentOutOfRangeException(nameof(base64), "Browser download payload exceeds the supported attachment limit.");
+
         var safeName = NormalizeDownloadFileName(fileName);
         var safeType = NormalizeContentType(contentType);
+        var href = "data:" + safeType + ";base64," + base64;
 
-        var script = "(() => {" +
-            "const b64=" + JsonSerializer.Serialize(base64) + ";" +
-            "const name=" + JsonSerializer.Serialize(safeName) + ";" +
-            "const type=" + JsonSerializer.Serialize(safeType) + ";" +
-            "const raw=atob(b64);const bytes=new Uint8Array(raw.length);" +
-            "for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);" +
-            "const url=URL.createObjectURL(new Blob([bytes],{type}));" +
-            "try{const a=document.createElement('a');a.href=url;a.download=name;a.rel='noopener';" +
-            "a.style.display='none';document.body.appendChild(a);a.click();a.remove();}" +
-            "finally{setTimeout(()=>URL.revokeObjectURL(url),0);}" +
-            "})()";
-        Eval(script);
+        using var anchor = CreateElement("a");
+        anchor.SetProperty("href", href);
+        anchor.SetProperty("download", safeName);
+        anchor.SetProperty("rel", "noopener");
+        AppendToBody(anchor);
+        try
+        {
+            Click(anchor);
+        }
+        finally
+        {
+            Remove(anchor);
+        }
     }
 
     public static void StageRequestState(string stateJson)
@@ -170,6 +173,15 @@ public static partial class BrowserFormHost
     [JSImport("applyApplicationMetadata", "xpscript-browser")]
     private static partial void ApplyApplicationMetadataInBrowser(string title, string icon);
 
-    [JSImport("globalThis.eval")]
-    private static partial void Eval(string script);
+    [JSImport("globalThis.document.createElement")]
+    private static partial JSObject CreateElement(string tagName);
+
+    [JSImport("globalThis.document.body.appendChild")]
+    private static partial JSObject AppendToBody(JSObject element);
+
+    [JSImport("globalThis.HTMLElement.prototype.click.call")]
+    private static partial void Click(JSObject element);
+
+    [JSImport("globalThis.Element.prototype.remove.call")]
+    private static partial void Remove(JSObject element);
 }
