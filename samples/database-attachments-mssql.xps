@@ -7,9 +7,14 @@ Sub Main()
     Dim db As XPDbMsSql
     Dim files As Variant
     Dim list As JsonArray
-    Dim info As JsonObject
+    Dim matches As JsonArray
+    Dim created1 As JsonObject
+    Dim created2 As JsonObject
+    Dim metadata As JsonObject
     Dim sourcePath As String
     Dim targetPath As String
+    Dim id1 As String
+    Dim id2 As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
 
@@ -28,21 +33,36 @@ Sub Main()
     Call db.Execute("INSERT INTO dbo.__xps_attachment_owner_test(id, name) VALUES (42, N'Anna')")
 
     Set files = db.Attachments("dbo.__xps_attachment_owner_test", "id", 42)
+    Call files.SetActor("creator@example")
     Set list = files.List()
     Print "MSSQL-ATTACH-EMPTY=" & CStr(list.Count)
 
-    Call files.SaveAs(sourcePath, "contract.xps")
+    Set created1 = files.SaveAs(sourcePath, "contracts.pdf")
+    Set created2 = files.SaveAs(sourcePath, "contracts.pdf")
+    id1 = CStr(created1.Get("attachmentId"))
+    id2 = CStr(created2.Get("attachmentId"))
     Set list = files.List()
-    Set info = list.Get(0)
     Print "MSSQL-ATTACH-AFTER-SAVE=" & CStr(list.Count)
-    Print "MSSQL-ATTACH-NAME=" & CStr(info.Get("name"))
+    Print "MSSQL-ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
+    Print "MSSQL-ATTACH-NAME=" & CStr(created1.Get("originalName"))
+    Print "MSSQL-ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
+
+    Set matches = files.FindByName("contracts.pdf")
+    Print "MSSQL-ATTACH-FIND-NAME=" & CStr(matches.Count)
+    Set metadata = files.GetMetadata(id1)
+    Print "MSSQL-ATTACH-METADATA-ID=" & CStr(metadata.Get("attachmentId") = id1)
 
     sourceLength = FileLen(sourcePath)
-    Call files.Get("contract.xps", targetPath)
+    Call files.Get(id1, targetPath)
     targetLength = FileLen(targetPath)
     Print "MSSQL-ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
 
-    Print "MSSQL-ATTACH-DELETED=" & CStr(files.Delete("contract.xps"))
+    Call files.SetActor("editor@example")
+    Set metadata = files.Update(id2, sourcePath)
+    Print "MSSQL-ATTACH-MODIFIED-BY=" & CStr(metadata.Get("modifiedBy"))
+
+    Print "MSSQL-ATTACH-DELETED-FIRST=" & CStr(files.Delete(id1))
+    Print "MSSQL-ATTACH-DELETED-SECOND=" & CStr(files.Delete(id2))
     Set list = files.List()
     Print "MSSQL-ATTACH-AFTER-DELETE=" & CStr(list.Count)
 
