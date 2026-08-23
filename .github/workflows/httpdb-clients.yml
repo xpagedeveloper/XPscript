@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/HttpDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/httpdb-supabase-domino.xps'
@@ -62,6 +63,9 @@ jobs:
           $required = @(
             'SUPA_EQ=id=eq.42',
             'SUPA_SELECT_TYPE=Array',
+            'SUPA_QUERYARRAY_COUNT=1',
+            'SUPA_GETROW_HIDDEN=KEEP-ME',
+            'SUPA_SAVEROW=1',
             'SUPA_INSERT_TYPE=Array',
             'SUPA_UPDATE_TYPE=Array',
             'SUPA_UPSERT_TYPE=Array',
@@ -72,11 +76,17 @@ jobs:
             'DOMINO_LOGIN=login-token',
             'DOMINO_CREATE_FORM=Customer',
             'DOMINO_GET_FORM=Customer',
+            'DOMINO_GETROW_HIDDEN=KEEP-ME',
+            'DOMINO_GETROW_META=True',
+            'DOMINO_SAVEROW=True',
+            'DOMINO_META_AFTER_SAVE=True',
             'DOMINO_UPDATE_TYPE=Object',
             'DOMINO_PATCH_TYPE=Object',
             'DOMINO_VIEWS_TYPE=Array',
             'DOMINO_VIEW_TYPE=Array',
+            'DOMINO_VIEWARRAY_COUNT=1',
             'DOMINO_QUERY_TYPE=Array',
+            'DOMINO_QUERYARRAY_COUNT=1',
             'DOMINO_FORMS_TYPE=Array',
             'DOMINO_DELETE=True',
             'HTTPDB_CLIENTS=OK'
