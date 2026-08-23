@@ -102,7 +102,7 @@ jobs:
       - name: Verify managed-reference documentation example
         shell: pwsh
         run: |
-          dotnet build ./tests/ManagedReferenceFixture/ManagedReferenceFixture.csproj -c Release --no-restore
+          dotnet build ./tests/ManagedReferenceFixture/ManagedReferenceFixture.csproj -c Release
           New-Item -ItemType Directory -Force ./samples/managed-reference | Out-Null
           Copy-Item ./tests/ManagedReferenceFixture/bin/Release/net10.0/ManagedReferenceFixture.dll ./samples/managed-reference/ManagedReferenceFixture.dll -Force
           $output = './out/required-gate/demos/managed-reference'
