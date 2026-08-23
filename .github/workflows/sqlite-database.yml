@@ -8,6 +8,7 @@ on:
       - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV3Source.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
@@ -89,18 +90,20 @@ jobs:
             'ATTACH-EMPTY=0',
             'ATTACH-AFTER-SAVE=2',
             'ATTACH-DUPLICATE-IDS=True',
-            'ATTACH-CREATED-BY=creator@example',
+            'ATTACH-CREATED-BY=creator-one@example',
             'ATTACH-NAME=contracts.pdf',
             'ATTACH-HAS-CHECKSUM=True',
+            'ATTACH-NO-MODIFIED=True',
+            'ATTACH-NO-MODIFIED-BY=True',
             'ATTACH-FIND-NAME=2',
             'ATTACH-METADATA-ID=True',
             'ATTACH-SAME-LENGTH=True',
             'ATTACH-GETALL=2',
-            'ATTACH-CREATED-BY-PRESERVED=creator@example',
-            'ATTACH-MODIFIED-BY=editor@example',
+            'ATTACH-DELETE-FOR-REPLACE=True',
+            'ATTACH-REPLACEMENT-NEW-ID=True',
+            'ATTACH-REPLACEMENT-CREATED-BY=replacement@example',
             'ATTACH-DELETED-FIRST=True',
-            'ATTACH-AFTER-FIRST-DELETE=1',
-            'ATTACH-DELETED-SECOND=True',
+            'ATTACH-DELETED-REPLACEMENT=True',
             'ATTACH-AFTER-DELETE=0',
             'DATABASE-ATTACHMENTS=OK'
           )) {
