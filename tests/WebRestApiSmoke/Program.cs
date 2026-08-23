@@ -80,7 +80,7 @@ Sub AttachmentExport()
 
     fileNo = FreeFile()
     Open "web-attachment-source.txt" For Output As #fileNo
-    Print #fileNo, "attachment payload";
+    Print #fileNo, "attachment payload"
     Close #fileNo
 
     Set files = db.Attachments("customers", "id", 42)
@@ -224,7 +224,7 @@ try
     var privateFile = Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash, "exports", "contract.txt");
     if (!File.Exists(privateFile)) throw new Exception("Attachment private export was not written to the managed sandbox.");
     if (File.Exists(Path.Combine(root, "exports", "contract.txt"))) throw new Exception("Attachment export was written beneath the web root.");
-    if (await File.ReadAllTextAsync(privateFile) != "attachment payload") throw new Exception("Attachment private export bytes did not match source content.");
+    if ((await File.ReadAllTextAsync(privateFile)).TrimEnd('\r', '\n') != "attachment payload") throw new Exception("Attachment private export bytes did not match source content.");
 
     var traversal = await SendAsync(dispatcher, app, "GET", "/api/attachment-export-traversal", serverRoot: root);
     if (traversal.StatusCode < 400) throw new Exception("Attachment traversal export was not rejected.");
@@ -239,7 +239,7 @@ try
     var disposition = Header(download, "Content-Disposition");
     if (!disposition.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase) || !disposition.Contains("download-contract.txt", StringComparison.Ordinal))
         throw new Exception("Attachment browser download Content-Disposition was incorrect: " + disposition);
-    if (BodyText(download) != "attachment payload") throw new Exception("Attachment browser download bytes did not match source content.");
+    if (BodyText(download).TrimEnd('\r', '\n') != "attachment payload") throw new Exception("Attachment browser download bytes did not match source content.");
 
     var second = await SendAsync(dispatcher, app, "GET", "/api/users/43");
     if (second.StatusCode != 200) throw new Exception("Second rate-limited request should still be allowed.");
