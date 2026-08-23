@@ -1,0 +1,20 @@
+' XPScript UIForm additional fields sample
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Extended fields")
+    Call form.AddFileField("attachment", "Attachment")
+    Call form.SetFileOptions("attachment", ".pdf,image/*", 8388608, True)
+    Call form.AddMultiSelect("roles", "Roles")
+    Call form.AddOption("roles", "admin")
+    Call form.AddCheckBoxGroup("features", "Features")
+    Call form.AddOption("features", "api")
+    Call form.AddTelField("phone", "Phone")
+    Call form.AddWeekField("week", "Week")
+    Call form.AddDecimalField("amount", "Amount")
+    Call form.AddCurrencyField("price", "Price", "SEK")
+    Call form.AddRichTextField("description", "Description")
+    Call form.SetLength("description", 0, 100000)
+    Call form.SetNumberRange("price", 0, 1000000)
+    Print "UIFORM_ADDITIONAL_FIELDS=OK"
+End Sub
