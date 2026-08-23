@@ -7,6 +7,7 @@ Sub Main()
     Dim db As New XPDBSQLite("database-attachments.db")
     Dim files As Variant
     Dim list As JsonArray
+    Dim info As JsonObject
     Dim sourcePath As String
     Dim targetPath As String
     Dim sourceLength As Variant
@@ -25,8 +26,9 @@ Sub Main()
 
     Call files.SaveAs(sourcePath, "contract.xps")
     Set list = files.List()
+    Set info = list.Get(0)
     Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
-    Print "ATTACH-NAME=" & CStr(list.Get(0).Get("name"))
+    Print "ATTACH-NAME=" & CStr(info.Get("name"))
 
     sourceLength = FileLen(sourcePath)
     Call files.Get("contract.xps", targetPath)
