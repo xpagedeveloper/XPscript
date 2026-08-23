@@ -10,6 +10,8 @@ Sub Main()
     Dim args As New JsonObject
     Dim doc As JsonDocument
     Dim obj As JsonObject
+    Dim row As JsonObject
+    Dim array As JsonArray
     Dim filter As String
     Dim token As String
     Dim unid As String
@@ -21,6 +23,14 @@ Sub Main()
 
     Set doc = supa.Select("customers", "select=*&id=eq.42")
     Print "SUPA_SELECT_TYPE=" & doc.Root.Type
+
+    Set array = supa.QueryArray("customers", "select=*&id=eq.42")
+    Print "SUPA_QUERYARRAY_COUNT=" & CStr(array.Count)
+
+    Set row = supa.GetRow("customers", "id", 42)
+    Print "SUPA_GETROW_HIDDEN=" & CStr(row.Get("internal_code"))
+    Call row.Set("name", "Ada Shared")
+    Print "SUPA_SAVEROW=" & CStr(supa.SaveRow("customers", "id", row))
 
     Call data.Set("id", 42)
     Call data.Set("name", "Ada")
@@ -65,6 +75,13 @@ Sub Main()
     Set obj = doc.Root.AsObject()
     Print "DOMINO_GET_FORM=" & CStr(obj.Get("Form"))
 
+    Set row = domino.GetRow(unid)
+    Print "DOMINO_GETROW_HIDDEN=" & CStr(row.Get("InternalCode"))
+    Print "DOMINO_GETROW_META=" & CStr(row.Contains("@meta"))
+    Call row.Set("name", "Shared Updated")
+    Print "DOMINO_SAVEROW=" & CStr(domino.SaveRow(unid, row))
+    Print "DOMINO_META_AFTER_SAVE=" & CStr(row.Contains("@meta"))
+
     Call data.Set("name", "Updated")
     Set doc = domino.UpdateDocument(unid, data)
     Print "DOMINO_UPDATE_TYPE=" & doc.Root.Type
@@ -78,8 +95,14 @@ Sub Main()
     Set doc = domino.GetView("People", "count=10")
     Print "DOMINO_VIEW_TYPE=" & doc.Root.Type
 
+    Set array = domino.GetViewArray("People", "count=10")
+    Print "DOMINO_VIEWARRAY_COUNT=" & CStr(array.Count)
+
     Set doc = domino.Query("Form = 'Customer'")
     Print "DOMINO_QUERY_TYPE=" & doc.Root.Type
+
+    Set array = domino.QueryArray("Form = 'Customer'")
+    Print "DOMINO_QUERYARRAY_COUNT=" & CStr(array.Count)
 
     Set doc = domino.ListForms()
     Print "DOMINO_FORMS_TYPE=" & doc.Root.Type
