@@ -1,0 +1,35 @@
+Option Declare
+
+Sub Main()
+    Dim firstFile As Integer
+    Dim secondFile As Integer
+    Dim nextFile As Integer
+    Dim payload As String
+
+    firstFile = FreeFile
+    Open "xpscript-position-a.bin" For Binary As #firstFile
+    payload = "ABCDE"
+    Put #firstFile, 1, payload
+
+    Print "LOF=" & CStr(LOF(firstFile))
+    Print "SEEK-AFTER-PUT=" & CStr(Seek(firstFile))
+    Print "LOC-AFTER-PUT=" & CStr(Loc(firstFile))
+
+    Seek #firstFile, 1
+    Print "SEEK-RESET=" & CStr(Seek(firstFile))
+
+    secondFile = FreeFile
+    Open "xpscript-position-b.bin" For Binary As #secondFile
+
+    Reset
+
+    nextFile = FreeFile
+    Print "RESET-FREEFILE=" & CStr(nextFile)
+    If nextFile <> 1 Then
+        Error 5, "Reset did not close all open file numbers."
+    End If
+
+    Kill "xpscript-position-a.bin"
+    Kill "xpscript-position-b.bin"
+    Print "FILE-POSITION-RESET=OK"
+End Sub
