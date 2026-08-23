@@ -43,12 +43,12 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get("Accept-Profile") != "public":
                 return self._send(400, {"error": "bad schema"})
             if path == "/rest/v1/customers":
-                return self._send(200, [{"id": 42, "name": "Ada"}])
+                return self._send(200, [{"id": 42, "name": "Ada", "city": "Stockholm", "internal_code": "KEEP-ME"}])
 
         if path == f"/api/v1/document/{UNID}":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
                 return self._send(401, {"error": "bad domino auth"})
-            return self._send(200, {"Form": "Customer", "name": "Ada", "@meta": {"unid": UNID}})
+            return self._send(200, {"Form": "Customer", "name": "Ada", "City": "Stockholm", "InternalCode": "KEEP-ME", "@meta": {"unid": UNID}})
 
         if path == "/api/v1/lists":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
@@ -58,7 +58,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/v1/lists/People":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo" or query.get("count", [""])[0] != "10":
                 return self._send(400, {"error": "bad view request"})
-            return self._send(200, [{"name": "Ada"}])
+            return self._send(200, [{"unid": UNID, "name": "Ada", "City": "Stockholm"}])
 
         if path == "/api/setup-v1/design/forms":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
@@ -112,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "bad query request"})
             if not isinstance(payload, dict) or not payload.get("query"):
                 return self._send(400, {"error": "bad query payload"})
-            return self._send(200, [{"Form": "Customer", "name": "Ada"}])
+            return self._send(200, [{"Form": "Customer", "name": "Ada", "City": "Stockholm"}])
 
         return self._send(404, {"error": "not found", "path": self.path})
 
@@ -125,6 +125,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/rest/v1/customers":
             if not self._supabase_auth_ok() or query.get("id", [""])[0] != "eq.42":
                 return self._send(400, {"error": "bad supabase patch"})
+            if isinstance(payload, dict) and "internal_code" in payload and payload.get("internal_code") != "KEEP-ME":
+                return self._send(400, {"error": "hidden supabase field changed"})
             return self._send(200, [payload])
 
         if path == f"/api/v1/document/{UNID}":
@@ -142,6 +144,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == f"/api/v1/document/{UNID}":
             if not self._domino_auth_ok() or query.get("dataSource", [""])[0] != "demo":
                 return self._send(401, {"error": "bad domino auth"})
+            if not isinstance(payload, dict):
+                return self._send(400, {"error": "bad domino update payload"})
+            if any(str(key).startswith("@") for key in payload.keys()):
+                return self._send(400, {"error": "domino metadata must not be written as document items"})
+            if payload.get("InternalCode") != "KEEP-ME":
+                return self._send(400, {"error": "hidden domino item was not preserved"})
             return self._send(200, {"updated": True, "fields": payload})
         return self._send(404, {"error": "not found", "path": self.path})
 
