@@ -26,7 +26,7 @@ Sub Main()
     Call form.AddTextField("status", "Status")
     Call form.SetFieldReadOnly("status", True)
 
-    Set grid = form.AddGridColumns(12)
+    grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.AddNewRow()
     Call grid.SetFieldPosition("status", 12)
