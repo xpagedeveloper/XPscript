@@ -11,8 +11,18 @@ try
 [Platform:browser-wasm]
 Sub Main()
     Dim form As New UIForm("Dispatcher WASM")
+    Dim db As New HTTPDBSupabase("https://example.invalid", "anon-key")
+    Dim files As Variant
+    Dim attachmentId As String
+
     Call form.AddTextField("name", "Name")
     Call form.ShowDialog()
+
+    attachmentId = "00000000-0000-0000-0000-000000000001"
+    Set files = db.Attachments("customers", "id", 42)
+    If False Then
+        Call files.SendToBrowser(attachmentId, "contract.pdf")
+    End If
 End Sub
 """);
 
@@ -45,6 +55,7 @@ End Sub
     if (framework.StatusCode != 200 || framework.Body.Length == 0)
         throw new Exception($"dotnet.js returned HTTP {framework.StatusCode} with {framework.Body.Length} bytes.");
 
+    Console.WriteLine("WEB-BROWSER-WASM-ATTACHMENT-DOWNLOAD=COMPILED");
     Console.WriteLine("WEB-BROWSER-WASM-DISPATCHER=OK");
 }
 finally
