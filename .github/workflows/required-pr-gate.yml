@@ -143,19 +143,25 @@ jobs:
       - name: Run offline demo programs
         shell: pwsh
         run: |
-          $programs = @(
-            './out/required-gate/demos/console-hello',
-            './out/required-gate/demos/sqlite-sqlite-demo',
-            './out/required-gate/demos/httpdb-httpdb-demo'
+          $demos = @(
+            'console/hello.xps',
+            'sqlite/sqlite-demo.xps',
+            'httpdb/httpdb-demo.xps'
           )
-          foreach ($program in $programs) {
-            chmod +x $program
-            $output = & $program 2>&1
+          foreach ($relative in $demos) {
+            $withoutExtension = [System.IO.Path]::ChangeExtension($relative, $null)
+            $safe = ($withoutExtension -replace '[^A-Za-z0-9._-]', '-')
+            $output = "./out/required-gate/runtime/$safe"
+            New-Item -ItemType Directory -Force (Split-Path -Parent $output) | Out-Null
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./demo/$relative" -o $output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Offline demo compilation failed: $relative" }
+            chmod +x $output
+            $result = & $output 2>&1
             $exit = $LASTEXITCODE
-            $output | ForEach-Object { Write-Host $_ }
-            if ($exit -ne 0) { throw "Demo runtime failed: $program (exit $exit)" }
+            $result | ForEach-Object { Write-Host $_ }
+            if ($exit -ne 0) { throw "Offline demo runtime failed: $relative (exit $exit)" }
           }
-          Write-Host "DEMO-RUNTIME=OK ($($programs.Count) offline demos)"
+          Write-Host "DEMO-RUNTIME=OK ($($demos.Count) offline demos)"
 
       - name: Compile portable smoke program
         shell: pwsh
