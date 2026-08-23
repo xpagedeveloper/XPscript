@@ -8,6 +8,7 @@ on:
       - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV3Source.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
@@ -134,13 +135,15 @@ jobs:
             'MSSQL-ATTACH-AFTER-SAVE=2',
             'MSSQL-ATTACH-DUPLICATE-IDS=True',
             'MSSQL-ATTACH-NAME=contracts.pdf',
-            'MSSQL-ATTACH-CREATED-BY=creator@example',
+            'MSSQL-ATTACH-CREATED-BY=creator-one@example',
+            'MSSQL-ATTACH-NO-MODIFIED=True',
             'MSSQL-ATTACH-FIND-NAME=2',
             'MSSQL-ATTACH-METADATA-ID=True',
             'MSSQL-ATTACH-SAME-LENGTH=True',
-            'MSSQL-ATTACH-MODIFIED-BY=editor@example',
+            'MSSQL-ATTACH-DELETE-FOR-REPLACE=True',
+            'MSSQL-ATTACH-REPLACEMENT-NEW-ID=True',
             'MSSQL-ATTACH-DELETED-FIRST=True',
-            'MSSQL-ATTACH-DELETED-SECOND=True',
+            'MSSQL-ATTACH-DELETED-REPLACEMENT=True',
             'MSSQL-ATTACH-AFTER-DELETE=0',
             'DATABASE-ATTACHMENTS-MSSQL=OK'
           )) {
