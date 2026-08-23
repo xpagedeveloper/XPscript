@@ -29,7 +29,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
         RegexOptions.CultureInvariant);
 
-    private static readonly string[] DialogFunctions = ["ShowDialog", "LoadFileDialog", "OpenFileDialog", "SaveFileDialog"];
+    private static readonly string[] DialogFunctions = ["ShowDialog", "MsgBox", "LoadFileDialog", "OpenFileDialog", "SaveFileDialog"];
 
     private const string Replacement = """
     public string ShowDialog()
