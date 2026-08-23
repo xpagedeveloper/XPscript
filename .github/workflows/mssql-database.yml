@@ -69,7 +69,7 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: XPScript_CI_2026!Sql
+          MSSQL_SA_PASSWORD: ${{ format('Xps{0}Aa!', github.run_id) }}
         ports:
           - 1433:1433
     steps:
@@ -98,7 +98,7 @@ jobs:
       - name: Run SQL Server regression
         shell: pwsh
         env:
-          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
+          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=${{ format('Xps{0}Aa!', github.run_id) }};Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
         run: |
           $output = @(); $exitCode = 1
           for ($attempt = 1; $attempt -le 90; $attempt++) {
@@ -114,7 +114,7 @@ jobs:
       - name: Run SQL Server shared UIForm data-source regression
         shell: pwsh
         env:
-          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
+          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=${{ format('Xps{0}Aa!', github.run_id) }};Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
         run: |
           $output = @(& ./out/mssql-integration/database-uiform-datasource-mssql 2>&1); $exitCode = $LASTEXITCODE
           $output | ForEach-Object { Write-Host $_ }
@@ -125,7 +125,7 @@ jobs:
       - name: Run SQL Server attachment regression
         shell: pwsh
         env:
-          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=XPScript_CI_2026!Sql;Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
+          XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=${{ format('Xps{0}Aa!', github.run_id) }};Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
         run: |
           $output = @(& ./out/mssql-integration/database-attachments-mssql 2>&1); $exitCode = $LASTEXITCODE
           $output | ForEach-Object { Write-Host $_ }
