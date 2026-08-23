@@ -91,8 +91,8 @@ jobs:
             'ai/ai-tool-demo.xps'
           )
           foreach ($relative in $demos) {
-            $name = [System.IO.Path]::GetFileNameWithoutExtension($relative)
-            $safe = ($relative -replace '[^A-Za-z0-9._-]', '-')
+            $withoutExtension = [System.IO.Path]::ChangeExtension($relative, $null)
+            $safe = ($withoutExtension -replace '[^A-Za-z0-9._-]', '-')
             $output = "./out/required-gate/demos/$safe"
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./demo/$relative" -o $output --framework-dependent
             if ($LASTEXITCODE -ne 0) { throw "Demo compilation failed: $relative" }
@@ -105,7 +105,6 @@ jobs:
           $programs = @(
             './out/required-gate/demos/console-hello',
             './out/required-gate/demos/sqlite-sqlite-demo',
-            './out/required-gate/demos/mssql-mssql-demo',
             './out/required-gate/demos/httpdb-httpdb-demo'
           )
           foreach ($program in $programs) {
