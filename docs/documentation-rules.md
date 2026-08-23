@@ -11,7 +11,8 @@ The primary documentation entry points are:
 - `index.md`, overview and navigation.
 - `getting-started.md`, build, compile, run and hosting setup.
 - `language.md`, BASIC language guide.
-- `language-reference.md`, complete language statement, built-in function, file/process, interop and compiler CLI reference.
+- `language-reference.md`, complete language statement, built-in scalar function, process, interop and compiler CLI reference.
+- `file-io-reference.md`, complete file I/O, filesystem, metadata and locking command reference.
 - `api-reference.md`, complete searchable runtime-object API reference.
 - `commands.md`, compact compatibility/quick command index.
 - `command-examples.md`, small runnable examples for common core language commands.
@@ -23,7 +24,7 @@ The primary documentation entry points are:
 - `documentation-rules.md`, this maintenance contract.
 - `../demo/README.md`, runnable feature/application demonstrations.
 
-Do not create a new page for every small feature. Extend the appropriate reference or topical page unless the subject is large enough to need its own navigable page.
+Do not create a new page for every small feature. Extend the appropriate reference or topical page unless the subject is large enough to need its own navigable page. File I/O is intentionally split into `file-io-reference.md` because its sequential, Binary/Random, locking, metadata and cross-platform filesystem surface is large enough to warrant a dedicated complete command catalog.
 
 ## Source of truth
 
@@ -41,11 +42,11 @@ Every user-callable command, built-in function, runtime method/property, route r
 4. **Description/behavior**, a short statement of what the command does. Include return behavior when it is important to using the command correctly.
 5. **Example**, linking to a complete `.xps` file under `demo/` or `samples/` that can be copied and compiled.
 
-`language-reference.md` owns language statements, built-in scalar functions, file/process commands, interop syntax and compiler CLI options. `api-reference.md` owns runtime objects such as HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web state. Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.
+`language-reference.md` owns language statements, built-in scalar functions, process commands, interop syntax and compiler CLI options. `file-io-reference.md` owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands. `api-reference.md` owns runtime objects such as HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web state. Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.
 
 ## When a language command changes
 
-For every new command, language statement, built-in function, operator family, file/process command, interop declaration or compiler CLI option, update `language-reference.md`. Keep `commands.md` in sync when the command belongs in the compact index. If it is a common core statement, also add or update a minimal runnable program in `command-examples.md`.
+For every new command, language statement, built-in function, operator family, interop declaration or compiler CLI option, update `language-reference.md`. For every new file I/O, locking, file metadata or filesystem command, update `file-io-reference.md`. Keep `commands.md` in sync when the command belongs in the compact index. If it is a common core statement, also add or update a minimal runnable program in `command-examples.md`.
 
 ## When a runtime API changes
 
@@ -86,7 +87,7 @@ A documentation table must not link to an invented or future example filename. C
 
 `scripts/validate-docs-demos.ps1` validates the documentation/demo contract. The required PR gate must run it before restore/build. The validator checks:
 
-- the primary language/runtime reference files exist;
+- the primary language, file-I/O and runtime reference files exist;
 - reference rows contain the required fields and an `.xps` example link;
 - every referenced `demo/` or `samples/` `.xps` file exists;
 - high-risk/easy-to-miss command families remain present in the master references;
@@ -96,7 +97,7 @@ Relevant standalone demos should also be compiler-checked in CI so documentation
 
 ## Links and navigation
 
-`index.md` is the documentation entry point. The demo catalog and both primary references must be visible near the top of that page. Every primary topical page must be reachable from `index.md`.
+`index.md` is the documentation entry point. The demo catalog and all primary references must be visible near the top of that page. Every primary topical page must be reachable from `index.md`.
 
 ## Review checklist
 
