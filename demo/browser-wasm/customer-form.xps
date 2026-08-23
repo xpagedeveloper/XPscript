@@ -2,13 +2,13 @@
 
 Sub Main()
     Dim form As New UIForm("Browser WASM demo")
-    Dim grid As Object
+    Dim grid As Variant
 
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
     Call form.SetRequired("name", True)
 
-    Set grid = form.AddGridColumns(12)
+    grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.SetFieldPosition("email", 6)
 
