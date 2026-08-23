@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/MsSqlDbRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
       - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
@@ -128,7 +129,21 @@ jobs:
           $output = @(& ./out/mssql-integration/database-attachments-mssql 2>&1); $exitCode = $LASTEXITCODE
           $output | ForEach-Object { Write-Host $_ }
           if ($exitCode -ne 0) { throw "SQL Server attachment regression failed.`n$output" }
-          foreach ($value in @('MSSQL-ATTACH-EMPTY=0','MSSQL-ATTACH-AFTER-SAVE=1','MSSQL-ATTACH-NAME=contract.xps','MSSQL-ATTACH-SAME-LENGTH=True','MSSQL-ATTACH-DELETED=True','MSSQL-ATTACH-AFTER-DELETE=0','DATABASE-ATTACHMENTS-MSSQL=OK')) {
+          foreach ($value in @(
+            'MSSQL-ATTACH-EMPTY=0',
+            'MSSQL-ATTACH-AFTER-SAVE=2',
+            'MSSQL-ATTACH-DUPLICATE-IDS=True',
+            'MSSQL-ATTACH-NAME=contracts.pdf',
+            'MSSQL-ATTACH-CREATED-BY=creator@example',
+            'MSSQL-ATTACH-FIND-NAME=2',
+            'MSSQL-ATTACH-METADATA-ID=True',
+            'MSSQL-ATTACH-SAME-LENGTH=True',
+            'MSSQL-ATTACH-MODIFIED-BY=editor@example',
+            'MSSQL-ATTACH-DELETED-FIRST=True',
+            'MSSQL-ATTACH-DELETED-SECOND=True',
+            'MSSQL-ATTACH-AFTER-DELETE=0',
+            'DATABASE-ATTACHMENTS-MSSQL=OK'
+          )) {
             if ($output -notcontains $value) { throw "SQL Server attachment output missing: $value`n$output" }
           }
       - name: Cleanup attachment copy
