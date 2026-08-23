@@ -14,9 +14,10 @@ The same provider-neutral model applies to record attachments. An attachment col
 - SQLite generated/hidden columns and SQL Server identity/computed columns remain readable but are excluded from `SaveRow` assignments.
 - Domino top-level provider metadata beginning with `@` remains in the object but is excluded from document-item writes.
 - Attachment collections are parent-scoped. The same `originalName` may appear on many parents and multiple times on the same parent.
-- Every attachment has a stable `attachmentId` GUID. `Get` and `Delete` use that ID, never a file name.
-- Attachments are immutable after creation. To replace a file, delete the old attachment and create a new one, which receives a new `attachmentId`.
-- The creator identity is supplied explicitly to `Save` or `SaveAs` and stored as `createdBy`.
+- Every attachment has a stable `attachmentId` GUID. `Get`, `Update` and `Delete` use that ID, never a file name.
+- `Save` and `SaveAs` always create a new attachment ID, even when another attachment has the same `originalName`.
+- `Update` and `UpdateAs` replace content for an existing attachment while preserving `attachmentId`, `created` and `createdBy`.
+- `SetActor` sets the application/session identity used for `createdBy` and `modifiedBy`; the process user is only a fallback.
 - The current portable attachment runtime limits one file to 64 MiB because one attachment is buffered at a time.
 
 The executable SQLite regressions [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) and [database-attachments.xps](../samples/database-attachments.xps) demonstrate both record and attachment flows.
@@ -57,11 +58,11 @@ The executable SQLite regressions [database-uiform-datasource.xps](../samples/da
 | `HTTPDBDominoRest.QueryArray` | `db.QueryArray(queryPayload)` | Domino query string/payload. | Returns query documents as `JsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 | `HTTPDBDominoRest.GetRow` | `db.GetRow(unid)` | 32-character document UNID. | Loads the complete Notes document as one shared `JsonObject`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 | `HTTPDBDominoRest.SaveRow` | `db.SaveRow(unid, data)` | UNID and complete shared object. | Updates native document items while excluding top-level `@...` provider metadata. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document; `fieldName` targets the native rich-text item for save/delete. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `HTTPDBDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document; `fieldName` targets the native rich-text item for save/update/delete. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 
 ## Attachment identity and metadata
 
-`originalName` is never unique. `attachmentId` is the stable identity for one immutable attachment.
+`originalName` is never unique. `attachmentId` is the stable identity.
 
 A metadata object contains at least:
 
@@ -72,7 +73,9 @@ A metadata object contains at least:
   "contentType": "application/pdf",
   "size": 183244,
   "created": "2026-08-23T13:21:00Z",
+  "modified": "2026-08-23T13:32:00Z",
   "createdBy": "creator@example",
+  "modifiedBy": "editor@example",
   "checksumSha256": "..."
 }
 ```
@@ -83,11 +86,14 @@ Two or more attachments on the same parent may all have `originalName = "contrac
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
+| `AttachmentCollection.SetActor` | `files.SetActor(actor)` | Application/session user identity. | Sets the audit identity used by subsequent `Save`/`Update`. Without an override, the process user is used as fallback. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.List` | `files.List()` | none | Alias for `GetMetadata()` returning metadata for all attachments belonging to the current parent. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.GetMetadata` | `files.GetMetadata()` or `files.GetMetadata(attachmentId)` | Optional attachment GUID. | Returns all metadata as `JsonArray`, or one metadata `JsonObject` by ID. Does not download binary content. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.FindByName` | `files.FindByName(originalName)` | Original display/file name. | Returns every matching metadata object. Multiple matches are valid and expected. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.Save` | `files.Save(sourcePath, createdBy)` | Existing local source file and creator identity. | Creates a new immutable attachment with a new GUID and stores `createdBy`. The source file name becomes `originalName`. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.SaveAs` | `files.SaveAs(sourcePath, originalName, createdBy)` | Existing file, display/original name and creator identity. | Creates a new immutable attachment with the supplied `originalName`, even if that name already exists. Returns metadata. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.Save` | `files.Save(sourcePath)` | Existing local source file. | Creates a new attachment with a new GUID and returns its metadata. It never replaces an existing attachment merely because the name matches. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.SaveAs` | `files.SaveAs(sourcePath, originalName)` | Existing file and display/original name. | Creates a new attachment with the supplied `originalName`, even if that name already exists. Returns metadata. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.Update` | `files.Update(attachmentId, sourcePath)` | Existing attachment ID and replacement local file. | Replaces binary content while preserving `attachmentId`, `created` and `createdBy`; updates size, checksum, `modified` and `modifiedBy`. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.UpdateAs` | `files.UpdateAs(attachmentId, sourcePath, originalName)` | Existing ID, replacement file and new original name. | Same as `Update`, but also changes `originalName`. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.Get` | `files.Get(attachmentId, targetPath)` | Attachment GUID and local output path. | Downloads exactly one attachment by stable ID. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.GetAll` | `files.GetAll(targetFolder)` | Local destination directory only. Parent/owner is already fixed by `Attachments(...)`. | Downloads all attachments for that parent. Local names are prefixed with `attachmentId` so duplicate original names cannot collide. Returns metadata plus `localPath`. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.Delete` | `files.Delete(attachmentId)` | Attachment GUID. | Deletes exactly one attachment from the current parent. | [database-attachments.xps](../samples/database-attachments.xps) |
@@ -101,9 +107,10 @@ Dim second As JsonObject
 Dim matches As JsonArray
 
 Set files = db.Attachments("customers", "id", 42)
+Call files.SetActor("user@example")
 
-Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf", Session.UserName)
-Set second = files.SaveAs("docs/contract-v2.pdf", "contracts.pdf", Session.UserName)
+Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf")
+Set second = files.SaveAs("docs/contract-v2.pdf", "contracts.pdf")
 
 ' Two different attachments with the same original name.
 Print first.Get("attachmentId")
@@ -115,17 +122,16 @@ Print matches.Count
 Call files.Get(first.Get("attachmentId"), "downloads/first.pdf")
 ```
 
-### Replace an attachment
-
-Attachments are immutable. Delete the old one and create a new one:
+### Update an attachment while keeping its identity
 
 ```xpscript
-Dim replacement As JsonObject
-Call files.Delete(oldAttachmentId)
-Set replacement = files.SaveAs("docs/new-contract.pdf", "contracts.pdf", Session.UserName)
+Dim updated As JsonObject
+
+Call files.SetActor("editor@example")
+Set updated = files.Update(attachmentId, "docs/revised-contract.pdf")
 ```
 
-The replacement receives a new `attachmentId`, a new `created` timestamp and the supplied `createdBy` identity.
+The existing `attachmentId`, `created` and `createdBy` remain unchanged. `modified`, `modifiedBy`, size, content type and checksum are updated.
 
 ### Get all attachments for one parent
 
