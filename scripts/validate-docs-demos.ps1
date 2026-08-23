@@ -5,10 +5,12 @@ $referenceFiles = @(
     (Join-Path $root 'docs/language-reference.md'),
     (Join-Path $root 'docs/api-reference.md')
 )
+$errors = [System.Collections.Generic.List[string]]::new()
 
 foreach ($file in $referenceFiles) {
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
-        throw "Reference file is missing: $file"
+        $errors.Add("Reference file is missing: $file")
+        continue
     }
 
     $lines = Get-Content -LiteralPath $file
@@ -21,10 +23,11 @@ foreach ($file in $referenceFiles) {
     foreach ($row in $tableRows) {
         $pipeCount = ([regex]::Matches($row, '\|')).Count
         if ($pipeCount -lt 6) {
-            throw "Reference row does not contain the five required fields in ${file}: $row"
+            $errors.Add("Reference row does not contain the five required fields in ${file}: $row")
+            continue
         }
         if ($row -notmatch '\[[^\]]+\.xps\]\((\.\./(?:samples|demo)/[^)]+\.xps)\)') {
-            throw "Reference row is missing a complete .xps example link in ${file}: $row"
+            $errors.Add("Reference row is missing a complete .xps example link in ${file}: $row")
         }
     }
 
@@ -34,7 +37,7 @@ foreach ($file in $referenceFiles) {
         $relative = $match.Groups[1].Value.Replace('/', [IO.Path]::DirectorySeparatorChar)
         $resolved = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $file) $relative))
         if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
-            throw "Reference example does not exist: $relative (from $(Split-Path -Leaf $file))"
+            $errors.Add("Reference example does not exist: $relative (from $(Split-Path -Leaf $file))")
         }
     }
 }
@@ -54,7 +57,7 @@ $requiredLanguage = @(
 )
 foreach ($name in $requiredLanguage) {
     if ($language -notmatch [regex]::Escape($name)) {
-        throw "Language reference is missing required command: $name"
+        $errors.Add("Language reference is missing required command: $name")
     }
 }
 
@@ -70,25 +73,34 @@ $requiredApi = @(
 )
 foreach ($name in $requiredApi) {
     if ($api -notmatch [regex]::Escape($name)) {
-        throw "Runtime API reference is missing required member: $name"
+        $errors.Add("Runtime API reference is missing required member: $name")
     }
 }
 
 $demoRoot = Join-Path $root 'demo'
 $demoReadmePath = Join-Path $demoRoot 'README.md'
 if (-not (Test-Path -LiteralPath $demoReadmePath -PathType Leaf)) {
-    throw 'demo/README.md is missing.'
-}
-$demoReadme = Get-Content -LiteralPath $demoReadmePath -Raw
-$demoFiles = Get-ChildItem -LiteralPath $demoRoot -Recurse -File -Filter '*.xps'
-if ($demoFiles.Count -eq 0) {
-    throw 'No demo .xps files were found.'
-}
-foreach ($demo in $demoFiles) {
-    $relative = [IO.Path]::GetRelativePath($demoRoot, $demo.FullName).Replace('\', '/')
-    if ($demoReadme -notmatch [regex]::Escape($relative)) {
-        throw "Demo is not listed in demo/README.md: $relative"
+    $errors.Add('demo/README.md is missing.')
+} else {
+    $demoReadme = Get-Content -LiteralPath $demoReadmePath -Raw
+    $demoFiles = Get-ChildItem -LiteralPath $demoRoot -Recurse -File -Filter '*.xps'
+    if ($demoFiles.Count -eq 0) {
+        $errors.Add('No demo .xps files were found.')
     }
+    foreach ($demo in $demoFiles) {
+        $relative = [IO.Path]::GetRelativePath($demoRoot, $demo.FullName).Replace('\', '/')
+        if ($demoReadme -notmatch [regex]::Escape($relative)) {
+            $errors.Add("Demo is not listed in demo/README.md: $relative")
+        }
+    }
+}
+
+if ($errors.Count -gt 0) {
+    Write-Host "DOCS-DEMO-VALIDATION-ERRORS=$($errors.Count)"
+    foreach ($errorMessage in $errors) {
+        Write-Host "ERROR: $errorMessage"
+    }
+    throw "Documentation/demo validation failed with $($errors.Count) error(s)."
 }
 
 Write-Host "DOC-REFERENCE-FILES=$($referenceFiles.Count)"
