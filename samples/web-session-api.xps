@@ -1,0 +1,58 @@
+Option Declare
+
+[Anonymous]
+[Get]
+[Route:/session-demo]
+Sub SessionDemo()
+    Dim rules As Variant
+    Dim roles As Variant
+    Dim keys As Variant
+    Dim value As Variant
+
+    Session.Start()
+    Session.Add("counter", 1)
+    Session.Set("name", "Ada")
+    value = Session.Get("name")
+    If Session.Exists("name") Then
+        Response.Write("NAME=" & CStr(value) & Chr(10))
+    End If
+
+    Session.Remove("missing")
+    Session.Unset("temporary")
+
+    rules = Array("profile.read", "profile.write")
+    Session.Authenticate("42", "Ada", rules)
+    Session.SetRole("admin")
+    roles = Session.GetRoles()
+    Response.Write("HAS_ADMIN=" & CStr(Session.HasRole("admin")) & Chr(10))
+    Response.Write("HAS_RULE=" & CStr(Session.HasRule("profile.read")) & Chr(10))
+    Session.RemoveRole("admin")
+
+    Response.Write("ID=" & CStr(Session.Id) & Chr(10))
+    Response.Write("COUNT=" & CStr(Session.Count) & Chr(10))
+    keys = Session.Keys
+    Response.Write("AUTH=" & CStr(Session.IsAuthenticated) & Chr(10))
+    Response.Write("USER_ID=" & CStr(Session.UserId) & Chr(10))
+    Response.Write("USER_NAME=" & CStr(Session.UserName) & Chr(10))
+
+    Session.RotateId()
+    Session.RegenerateId()
+    Session.SignOut()
+    Session.Clear()
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/session-abandon]
+Sub AbandonSession()
+    Session.Abandon()
+    Response.NoContent()
+End Sub
+
+[Anonymous]
+[Delete]
+[Route:/session-destroy]
+Sub DestroySession()
+    Session.Destroy()
+    Response.NoContent()
+End Sub
