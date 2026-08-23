@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Customer demo")
+    Dim result As String
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextField("email", "Email")
+    Call form.SetRequired("name", True)
+
+    result = form.ShowDialog()
+    Print "DIALOG=" & result
+End Sub
