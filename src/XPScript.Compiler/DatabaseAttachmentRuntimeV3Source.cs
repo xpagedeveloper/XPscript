@@ -64,21 +64,23 @@ internal sealed class XPScriptAttachmentCollectionV3
             var name = XPScriptAttachmentFileRuntime.RequiredAttachmentName(item["originalName"]?.GetValue<string>());
             var relativeName = id + "_" + name;
             string localPath;
+            string exposedPath;
             if (TryGetWebContext(out var webContext))
             {
-                var requestedFolder = XPScriptRuntime.CStr(targetFolder).Trim().Replace('\\', '/');
-                if (requestedFolder.Length == 0 || Path.IsPathRooted(requestedFolder) || requestedFolder.Split('/').Any(part => part == ".."))
-                    throw new XPScriptRuntimeException(5, "Web attachment export folder must be a relative private path without '..'.");
-                localPath = ResolvePrivateWebExportPath(webContext!, Path.Combine(requestedFolder, relativeName));
+                var requestedFolder = NormalizePrivateRelativePath(targetFolder, allowFileName: false);
+                var relativePath = requestedFolder + "/" + relativeName;
+                localPath = ResolvePrivateWebExportPath(webContext!, relativePath);
+                exposedPath = relativePath;
             }
             else
             {
                 var folder = XPScriptAttachmentFileRuntime.RequiredTargetFolder(targetFolder);
                 localPath = Path.Combine(folder, relativeName);
+                exposedPath = localPath;
             }
             XPScriptAttachmentFileRuntime.WriteAllBytes(localPath, ReadBytes(id));
             var copy = (System.Text.Json.Nodes.JsonObject)item.DeepClone();
-            copy["localPath"] = localPath;
+            copy["localPath"] = exposedPath;
             result.Add(copy);
         }
         return new XPScriptJsonArray(result);
@@ -188,22 +190,57 @@ internal sealed class XPScriptAttachmentCollectionV3
         var root = Convert.ToString(server.GetType().GetProperty("RootPath")?.GetValue(server), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         if (root.Length == 0) throw new XPScriptRuntimeException(5, "Web root information is unavailable.");
 
-        var requested = XPScriptRuntime.CStr(targetPath).Trim().Replace('\\', '/');
-        if (requested.Length == 0 || Path.IsPathRooted(requested) || requested.Split('/').Any(part => part == ".." || part.Length == 0))
-            throw new XPScriptRuntimeException(5, "Web attachment export path must be a relative private file path without '..'.");
-
+        var requested = NormalizePrivateRelativePath(targetPath, allowFileName: true);
         var siteHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(root))))[..24].ToLowerInvariant();
-        var sandbox = Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash);
+        var sandbox = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash));
         Directory.CreateDirectory(sandbox);
+        EnsureNoReparsePoint(sandbox);
+
         var full = Path.GetFullPath(Path.Combine(sandbox, requested.Replace('/', Path.DirectorySeparatorChar)));
-        var prefix = Path.GetFullPath(sandbox).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var prefix = sandbox.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             throw new XPScriptRuntimeException(5, "Web attachment export escaped the private sandbox.");
+
         var directory = Path.GetDirectoryName(full)!;
         Directory.CreateDirectory(directory);
-        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
-            throw new XPScriptRuntimeException(5, "Web attachment export refuses symbolic-link or reparse-point directories.");
+        EnsureSandboxPathHasNoReparsePoints(sandbox, directory);
+        if (File.Exists(full) && (File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0)
+            throw new XPScriptRuntimeException(5, "Web attachment export refuses symbolic-link or reparse-point file targets.");
         return full;
+    }
+
+    private static string NormalizePrivateRelativePath(object? value, bool allowFileName)
+    {
+        var requested = XPScriptRuntime.CStr(value).Trim().Replace('\\', '/');
+        if (requested.Length == 0 || requested.Length > 1024 || Path.IsPathRooted(requested) || requested.StartsWith('/', StringComparison.Ordinal))
+            throw new XPScriptRuntimeException(5, "Web attachment export path must be a relative private path.");
+        var parts = requested.Split('/', StringSplitOptions.None);
+        if (parts.Any(part => part.Length == 0 || part == "." || part == ".." || part.Any(char.IsControl)))
+            throw new XPScriptRuntimeException(5, "Web attachment export path contains an invalid segment.");
+        if (!allowFileName && parts.Length > 32)
+            throw new XPScriptRuntimeException(5, "Web attachment export folder is too deeply nested.");
+        if (parts.Length > 32)
+            throw new XPScriptRuntimeException(5, "Web attachment export path is too deeply nested.");
+        return string.Join('/', parts);
+    }
+
+    private static void EnsureSandboxPathHasNoReparsePoints(string sandbox, string directory)
+    {
+        EnsureNoReparsePoint(sandbox);
+        var relative = Path.GetRelativePath(sandbox, directory);
+        if (relative == ".") return;
+        var current = sandbox;
+        foreach (var part in relative.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, part);
+            EnsureNoReparsePoint(current);
+        }
+    }
+
+    private static void EnsureNoReparsePoint(string path)
+    {
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            throw new XPScriptRuntimeException(5, "Web attachment export refuses symbolic-link or reparse-point paths.");
     }
 
     private static Type? ResolveType(string typeName, string assemblyName)
