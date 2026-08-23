@@ -18,6 +18,15 @@ internal sealed class FileIoExtensionsPreprocessor
             var line = raw.Trim();
             if (line.Length == 0) { output.Add(raw); continue; }
 
+            // LotusScript/VB-compatible Reset closes every currently open file number.
+            // Reuse the existing bare Close semantics so all writer buffers are flushed and
+            // both sequential and Binary/Random handles are released by LSFileRuntime.
+            if (Regex.IsMatch(line, @"^Reset$", RegexOptions.IgnoreCase))
+            {
+                output.Add(indent + "Close");
+                continue;
+            }
+
             var lockMatch = Regex.Match(line, @"^(Lock|Unlock)\s+#?([^,\s]+)(?:\s*,\s*(.+))?$", RegexOptions.IgnoreCase);
             if (lockMatch.Success)
             {
