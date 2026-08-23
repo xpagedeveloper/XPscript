@@ -99,6 +99,14 @@ jobs:
           }
           Write-Host "DEMO-COMPILE=OK ($($demos.Count) standalone programs)"
 
+      - name: Compile standalone desktop MsgBox sample
+        shell: pwsh
+        run: |
+          $output = './out/required-gate/demos/msgbox-desktop'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/msgbox-desktop.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone MsgBox sample did not compile.' }
+          Write-Host 'MSGBOX-DESKTOP-COMPILE=OK'
+
       - name: Verify Seek Loc LOF and Reset
         shell: pwsh
         run: |
