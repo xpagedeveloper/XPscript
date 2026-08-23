@@ -16,6 +16,7 @@ Sub Main()
     Dim attachmentInfo As JsonObject
     Dim attachment1 As JsonObject
     Dim attachment2 As JsonObject
+    Dim replacement As JsonObject
     Dim supaFiles As Variant
     Dim dominoFiles As Variant
     Dim filter As String
@@ -27,6 +28,7 @@ Sub Main()
     Dim sourceLength As Variant
     Dim id1 As String
     Dim id2 As String
+    Dim replacementId As String
 
     sourcePath = "samples/httpdb-supabase-domino.xps"
     supaCopy = "httpdb-supabase-attachment-copy.xps"
@@ -49,10 +51,9 @@ Sub Main()
 
     Call supa.SetAttachmentBucket("attachments")
     Set supaFiles = supa.Attachments("customers", "id", 42)
-    Call supaFiles.SetActor("creator@example")
     Print "SUPA_ATTACH_EMPTY=" & CStr(supaFiles.GetMetadata().Count)
-    Set attachment1 = supaFiles.SaveAs(sourcePath, "contracts.pdf")
-    Set attachment2 = supaFiles.SaveAs(sourcePath, "contracts.pdf")
+    Set attachment1 = supaFiles.SaveAs(sourcePath, "contracts.pdf", "creator-one@example")
+    Set attachment2 = supaFiles.SaveAs(sourcePath, "contracts.pdf", "creator-two@example")
     id1 = CStr(attachment1.Get("attachmentId"))
     id2 = CStr(attachment2.Get("attachmentId"))
     Set attachmentRows = supaFiles.List()
@@ -60,16 +61,18 @@ Sub Main()
     Print "SUPA_ATTACH_DUPLICATE_IDS=" & CStr(id1 <> id2)
     Print "SUPA_ATTACH_NAME=" & CStr(attachment1.Get("originalName"))
     Print "SUPA_ATTACH_CREATED_BY=" & CStr(attachment1.Get("createdBy"))
+    Print "SUPA_ATTACH_NO_MODIFIED=" & CStr(Not attachment1.Contains("modified"))
     Print "SUPA_ATTACH_FIND_NAME=" & CStr(supaFiles.FindByName("contracts.pdf").Count)
     Set attachmentInfo = supaFiles.GetMetadata(id1)
     Print "SUPA_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
     Call supaFiles.Get(id1, supaCopy)
     Print "SUPA_ATTACH_SAME_LENGTH=" & CStr(FileLen(supaCopy) = sourceLength)
-    Call supaFiles.SetActor("editor@example")
-    Set attachmentInfo = supaFiles.Update(id2, sourcePath)
-    Print "SUPA_ATTACH_MODIFIED_BY=" & CStr(attachmentInfo.Get("modifiedBy"))
+    Print "SUPA_ATTACH_DELETE_FOR_REPLACE=" & CStr(supaFiles.Delete(id2))
+    Set replacement = supaFiles.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
+    replacementId = CStr(replacement.Get("attachmentId"))
+    Print "SUPA_ATTACH_REPLACEMENT_NEW_ID=" & CStr(replacementId <> id2)
     Print "SUPA_ATTACH_DELETE_FIRST=" & CStr(supaFiles.Delete(id1))
-    Print "SUPA_ATTACH_DELETE_SECOND=" & CStr(supaFiles.Delete(id2))
+    Print "SUPA_ATTACH_DELETE_REPLACEMENT=" & CStr(supaFiles.Delete(replacementId))
     Print "SUPA_ATTACH_AFTER_DELETE=" & CStr(supaFiles.List().Count)
     Kill supaCopy
 
@@ -116,10 +119,9 @@ Sub Main()
     Print "DOMINO_META_AFTER_SAVE=" & CStr(row.Contains("@meta"))
 
     Set dominoFiles = domino.Attachments(unid, "Body")
-    Call dominoFiles.SetActor("creator@example")
     Print "DOMINO_ATTACH_EMPTY=" & CStr(dominoFiles.GetMetadata().Count)
-    Set attachment1 = dominoFiles.SaveAs(sourcePath, "contracts.pdf")
-    Set attachment2 = dominoFiles.SaveAs(sourcePath, "contracts.pdf")
+    Set attachment1 = dominoFiles.SaveAs(sourcePath, "contracts.pdf", "creator-one@example")
+    Set attachment2 = dominoFiles.SaveAs(sourcePath, "contracts.pdf", "creator-two@example")
     id1 = CStr(attachment1.Get("attachmentId"))
     id2 = CStr(attachment2.Get("attachmentId"))
     Set attachmentRows = dominoFiles.List()
@@ -127,16 +129,18 @@ Sub Main()
     Print "DOMINO_ATTACH_DUPLICATE_IDS=" & CStr(id1 <> id2)
     Print "DOMINO_ATTACH_NAME=" & CStr(attachment1.Get("originalName"))
     Print "DOMINO_ATTACH_CREATED_BY=" & CStr(attachment1.Get("createdBy"))
+    Print "DOMINO_ATTACH_NO_MODIFIED=" & CStr(Not attachment1.Contains("modified"))
     Print "DOMINO_ATTACH_FIND_NAME=" & CStr(dominoFiles.FindByName("contracts.pdf").Count)
     Set attachmentInfo = dominoFiles.GetMetadata(id1)
     Print "DOMINO_ATTACH_METADATA_ID=" & CStr(attachmentInfo.Get("attachmentId") = id1)
     Call dominoFiles.Get(id1, dominoCopy)
     Print "DOMINO_ATTACH_SAME_LENGTH=" & CStr(FileLen(dominoCopy) = sourceLength)
-    Call dominoFiles.SetActor("editor@example")
-    Set attachmentInfo = dominoFiles.Update(id2, sourcePath)
-    Print "DOMINO_ATTACH_MODIFIED_BY=" & CStr(attachmentInfo.Get("modifiedBy"))
+    Print "DOMINO_ATTACH_DELETE_FOR_REPLACE=" & CStr(dominoFiles.Delete(id2))
+    Set replacement = dominoFiles.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
+    replacementId = CStr(replacement.Get("attachmentId"))
+    Print "DOMINO_ATTACH_REPLACEMENT_NEW_ID=" & CStr(replacementId <> id2)
     Print "DOMINO_ATTACH_DELETE_FIRST=" & CStr(dominoFiles.Delete(id1))
-    Print "DOMINO_ATTACH_DELETE_SECOND=" & CStr(dominoFiles.Delete(id2))
+    Print "DOMINO_ATTACH_DELETE_REPLACEMENT=" & CStr(dominoFiles.Delete(replacementId))
     Print "DOMINO_ATTACH_AFTER_DELETE=" & CStr(dominoFiles.List().Count)
     Kill dominoCopy
 
