@@ -66,8 +66,8 @@ $requiredApi = @(
     'HttpClient.Get', 'HttpClient.Put', 'HttpClient.Patch', 'HttpClient.Delete',
     'JsonObject.Set', 'JsonArray.Add', 'XPDBSQLite.Execute', 'XPDbMsSql.Query',
     'HTTPDBSupabase', 'HTTPDBDominoRest',
-    'XPAi.Complete', 'AutoExecuteTools', 'MaxToolIterations', 'NewRequest',
-    'AITool.AddFunction', 'AITool.AddParameter', 'AIToolCall',
+    '`Complete`', 'AutoExecuteTools', 'MaxToolIterations', 'NewRequest',
+    '`AddFunction`', '`AddParameter`', 'AIToolCall',
     'UIForm', 'AddLookupField', 'UIListView', 'AddRowButton',
     'FromBody', 'Response.Created', 'Session.Authenticate', 'RequestScope.Add'
 )
