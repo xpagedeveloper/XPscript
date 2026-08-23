@@ -51,7 +51,24 @@ public static partial class BrowserFormHost
         ArgumentNullException.ThrowIfNull(base64);
         if (base64.Length == 0 || base64.Length > MaxDownloadBase64Length)
             throw new ArgumentOutOfRangeException(nameof(base64), "Browser download payload exceeds the supported attachment limit.");
-        DownloadFileInBrowser(base64, NormalizeDownloadFileName(fileName), NormalizeContentType(contentType));
+
+        var safeName = NormalizeDownloadFileName(fileName);
+        var safeType = NormalizeContentType(contentType);
+        var href = "data:" + safeType + ";base64," + base64;
+
+        using var anchor = CreateElement("a");
+        anchor.SetProperty("href", href);
+        anchor.SetProperty("download", safeName);
+        anchor.SetProperty("rel", "noopener");
+        AppendToBody(anchor);
+        try
+        {
+            ClickElement(anchor);
+        }
+        finally
+        {
+            RemoveElement(anchor);
+        }
     }
 
     public static void StageRequestState(string stateJson)
@@ -155,6 +172,15 @@ public static partial class BrowserFormHost
     [JSImport("applyApplicationMetadata", "xpscript-browser")]
     private static partial void ApplyApplicationMetadataInBrowser(string title, string icon);
 
-    [JSImport("downloadFile", "xpscript-browser")]
-    private static partial void DownloadFileInBrowser(string base64, string fileName, string contentType);
+    [JSImport("globalThis.document.createElement")]
+    private static partial JSObject CreateElement(string tagName);
+
+    [JSImport("globalThis.document.body.appendChild")]
+    private static partial JSObject AppendToBody(JSObject element);
+
+    [JSImport("globalThis.HTMLElement.prototype.click.call")]
+    private static partial void ClickElement(JSObject element);
+
+    [JSImport("globalThis.Element.prototype.remove.call")]
+    private static partial void RemoveElement(JSObject element);
 }
