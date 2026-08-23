@@ -10,6 +10,7 @@ public static partial class BrowserFormHost
     private const int NavigationStateLifetimeMilliseconds = 60_000;
     private const int MaxEventTokenLength = 260;
     private const int MaxEventPayloadLength = 1024 * 1024;
+    private const int MaxDownloadBase64Length = 96 * 1024 * 1024;
     private static readonly object EventDispatcherSync = new();
     private static Func<string, string, string>? _eventDispatcher;
 
@@ -43,6 +44,28 @@ public static partial class BrowserFormHost
         if (dispatcher is null)
             throw new InvalidOperationException("Browser UI event dispatcher is not registered.");
         return dispatcher(eventToken, submittedValue) ?? string.Empty;
+    }
+
+    public static void DownloadFile(string base64, string fileName, string contentType)
+    {
+        ArgumentNullException.ThrowIfNull(base64);
+        if (base64.Length == 0 || base64.Length > MaxDownloadBase64Length)
+            throw new ArgumentOutOfRangeException(nameof(base64), "Browser download payload exceeds the supported attachment limit.");
+        var safeName = NormalizeDownloadFileName(fileName);
+        var safeType = NormalizeContentType(contentType);
+
+        var script = "(() => {" +
+            "const b64=" + JsonSerializer.Serialize(base64) + ";" +
+            "const name=" + JsonSerializer.Serialize(safeName) + ";" +
+            "const type=" + JsonSerializer.Serialize(safeType) + ";" +
+            "const raw=atob(b64);const bytes=new Uint8Array(raw.length);" +
+            "for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);" +
+            "const url=URL.createObjectURL(new Blob([bytes],{type}));" +
+            "try{const a=document.createElement('a');a.href=url;a.download=name;a.rel='noopener';" +
+            "a.style.display='none';document.body.appendChild(a);a.click();a.remove();}" +
+            "finally{setTimeout(()=>URL.revokeObjectURL(url),0);}" +
+            "})()";
+        Eval(script);
     }
 
     public static void StageRequestState(string stateJson)
@@ -113,6 +136,25 @@ public static partial class BrowserFormHost
         return root.ToJsonString(new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
+    private static string NormalizeDownloadFileName(string? fileName)
+    {
+        var name = (fileName ?? string.Empty).Trim().Replace('\\', '/');
+        var slash = name.LastIndexOf('/');
+        if (slash >= 0) name = name[(slash + 1)..];
+        if (name.Length is < 1 or > 255 || name.Any(char.IsControl))
+            throw new ArgumentException("Browser download file name is invalid.", nameof(fileName));
+        return name;
+    }
+
+    private static string NormalizeContentType(string? contentType)
+    {
+        var value = (contentType ?? string.Empty).Trim();
+        if (value.Length == 0) return "application/octet-stream";
+        if (value.Length > 255 || value.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new ArgumentException("Browser download content type is invalid.", nameof(contentType));
+        return value;
+    }
+
     [JSImport("renderForm", "xpscript-browser")]
     private static partial string RenderForm(string requestJson);
 
@@ -127,4 +169,7 @@ public static partial class BrowserFormHost
 
     [JSImport("applyApplicationMetadata", "xpscript-browser")]
     private static partial void ApplyApplicationMetadataInBrowser(string title, string icon);
+
+    [JSImport("globalThis.eval")]
+    private static partial void Eval(string script);
 }
