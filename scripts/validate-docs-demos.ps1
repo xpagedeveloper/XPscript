@@ -8,6 +8,7 @@ $referenceFiles = @(
     (Join-Path $root 'docs/cli-reference.md'),
     (Join-Path $root 'docs/application-reference.md'),
     (Join-Path $root 'docs/desktop-ui-reference.md'),
+    (Join-Path $root 'docs/database-ui-datasources.md'),
     (Join-Path $root 'docs/api-reference.md')
 )
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -119,6 +120,20 @@ $desktop = Get-Content -LiteralPath (Join-Path $root 'docs/desktop-ui-reference.
 foreach ($name in @('MsgBox','ShowDialog','OpenFileDialog','LoadFileDialog','SaveFileDialog')) {
     if ($desktop -notmatch [regex]::Escape($name)) {
         $errors.Add("Desktop UI reference is missing required command: $name")
+    }
+}
+
+$databaseUi = Get-Content -LiteralPath (Join-Path $root 'docs/database-ui-datasources.md') -Raw
+$requiredDatabaseUi = @(
+    'XPDBSQLite.QueryArray', 'XPDBSQLite.GetRow', 'XPDBSQLite.SaveRow',
+    'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow',
+    'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow',
+    'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow',
+    'UIListView.BindData', 'UIForm.BindData', 'native database columns/items'
+)
+foreach ($name in $requiredDatabaseUi) {
+    if ($databaseUi -notmatch [regex]::Escape($name)) {
+        $errors.Add("Database UI data-source reference is missing required member/contract: $name")
     }
 }
 
