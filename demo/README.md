@@ -74,6 +74,16 @@ Invoke-RestMethod http://127.0.0.1:8080/api/users -Method Post -ContentType 'app
 
 Demonstrates `[Route]`, route parameters, `[FromBody]`, validation and `Response.Created`.
 
+## Web request, session and application state
+
+Source: [`web-state/index.xps`](web-state/index.xps)
+
+```powershell
+xpscript web --root .\demo\web-state --address 127.0.0.1 --port 8080 --sessions
+```
+
+Open `http://127.0.0.1:8080/`. The demo shows request-local `RequestScope`, process/application state and host-enabled `Session` state in the same route.
+
 ## Kestrel hosting
 
 Source: [`kestrel/index.xps`](kestrel/index.xps)
@@ -140,6 +150,17 @@ xpscriptc .\demo\mssql\mssql-demo.xps -o .\out\demo-mssql.exe --framework-depend
 ```
 
 The demo uses a temporary SQL Server table and parameterized SQL.
+
+## HTTP database clients
+
+Source: [`httpdb/httpdb-demo.xps`](httpdb/httpdb-demo.xps)
+
+```powershell
+xpscriptc .\demo\httpdb\httpdb-demo.xps -o .\out\demo-httpdb.exe --framework-dependent
+.\out\demo-httpdb.exe
+```
+
+This offline-safe configuration demo creates Supabase and Domino REST clients without sending a network request. It demonstrates `HTTPDBSupabase.SetSchema`, `HTTPDBSupabase.Eq` and `HTTPDBDominoRest.SetDataSource`. See `docs/httpdb.md` for real CRUD/login examples and credential guidance.
 
 ## HTTP client
 
