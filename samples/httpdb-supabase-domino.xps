@@ -12,9 +12,22 @@ Sub Main()
     Dim obj As JsonObject
     Dim row As JsonObject
     Dim array As JsonArray
+    Dim attachmentRows As JsonArray
+    Dim attachmentInfo As JsonObject
+    Dim supaFiles As Variant
+    Dim dominoFiles As Variant
     Dim filter As String
     Dim token As String
     Dim unid As String
+    Dim sourcePath As String
+    Dim supaCopy As String
+    Dim dominoCopy As String
+    Dim sourceLength As Variant
+
+    sourcePath = "samples/httpdb-supabase-domino.xps"
+    supaCopy = "httpdb-supabase-attachment-copy.xps"
+    dominoCopy = "httpdb-domino-attachment-copy.xps"
+    sourceLength = FileLen(sourcePath)
 
     Call supa.SetBearerToken("user-token")
     Call supa.SetSchema("public")
@@ -31,6 +44,21 @@ Sub Main()
     Print "SUPA_GETROW_HIDDEN=" & CStr(row.Get("internal_code"))
     Call row.Set("name", "Ada Shared")
     Print "SUPA_SAVEROW=" & CStr(supa.SaveRow("customers", "id", row))
+
+    Call supa.SetAttachmentBucket("attachments")
+    Set supaFiles = supa.Attachments("customers", "id", 42)
+    Set attachmentRows = supaFiles.List()
+    Print "SUPA_ATTACH_EMPTY=" & CStr(attachmentRows.Count)
+    Call supaFiles.SaveAs(sourcePath, "supa-contract.xps")
+    Set attachmentRows = supaFiles.List()
+    Set attachmentInfo = attachmentRows.Get(0)
+    Print "SUPA_ATTACH_COUNT=" & CStr(attachmentRows.Count)
+    Print "SUPA_ATTACH_NAME=" & CStr(attachmentInfo.Get("name"))
+    Call supaFiles.Get("supa-contract.xps", supaCopy)
+    Print "SUPA_ATTACH_SAME_LENGTH=" & CStr(FileLen(supaCopy) = sourceLength)
+    Print "SUPA_ATTACH_DELETE=" & CStr(supaFiles.Delete("supa-contract.xps"))
+    Print "SUPA_ATTACH_AFTER_DELETE=" & CStr(supaFiles.List().Count)
+    Kill supaCopy
 
     Call data.Set("id", 42)
     Call data.Set("name", "Ada")
@@ -81,6 +109,20 @@ Sub Main()
     Call row.Set("name", "Shared Updated")
     Print "DOMINO_SAVEROW=" & CStr(domino.SaveRow(unid, row))
     Print "DOMINO_META_AFTER_SAVE=" & CStr(row.Contains("@meta"))
+
+    Set dominoFiles = domino.Attachments(unid, "Body")
+    Set attachmentRows = dominoFiles.List()
+    Print "DOMINO_ATTACH_EMPTY=" & CStr(attachmentRows.Count)
+    Call dominoFiles.SaveAs(sourcePath, "domino-contract.xps")
+    Set attachmentRows = dominoFiles.List()
+    Set attachmentInfo = attachmentRows.Get(0)
+    Print "DOMINO_ATTACH_COUNT=" & CStr(attachmentRows.Count)
+    Print "DOMINO_ATTACH_NAME=" & CStr(attachmentInfo.Get("name"))
+    Call dominoFiles.Get("domino-contract.xps", dominoCopy)
+    Print "DOMINO_ATTACH_SAME_LENGTH=" & CStr(FileLen(dominoCopy) = sourceLength)
+    Print "DOMINO_ATTACH_DELETE=" & CStr(dominoFiles.Delete("domino-contract.xps"))
+    Print "DOMINO_ATTACH_AFTER_DELETE=" & CStr(dominoFiles.List().Count)
+    Kill dominoCopy
 
     Call data.Set("name", "Updated")
     Set doc = domino.UpdateDocument(unid, data)
