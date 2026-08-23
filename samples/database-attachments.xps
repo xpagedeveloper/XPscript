@@ -11,12 +11,13 @@ Sub Main()
     Dim downloaded As JsonArray
     Dim created1 As JsonObject
     Dim created2 As JsonObject
-    Dim updated As JsonObject
+    Dim replacement As JsonObject
     Dim metadata As JsonObject
     Dim sourcePath As String
     Dim targetPath As String
     Dim id1 As String
     Dim id2 As String
+    Dim replacementId As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
 
@@ -28,12 +29,11 @@ Sub Main()
     Call db.Execute("INSERT INTO customers(id, name) VALUES (42, 'Anna')")
 
     Set files = db.Attachments("customers", "id", 42)
-    Call files.SetActor("creator@example")
     Set list = files.GetMetadata()
     Print "ATTACH-EMPTY=" & CStr(list.Count)
 
-    Set created1 = files.SaveAs(sourcePath, "contracts.pdf")
-    Set created2 = files.SaveAs(sourcePath, "contracts.pdf")
+    Set created1 = files.SaveAs(sourcePath, "contracts.pdf", "creator-one@example")
+    Set created2 = files.SaveAs(sourcePath, "contracts.pdf", "creator-two@example")
     id1 = CStr(created1.Get("attachmentId"))
     id2 = CStr(created2.Get("attachmentId"))
 
@@ -43,6 +43,8 @@ Sub Main()
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
+    Print "ATTACH-NO-MODIFIED=" & CStr(Not created1.Contains("modified"))
+    Print "ATTACH-NO-MODIFIED-BY=" & CStr(Not created1.Contains("modifiedBy"))
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
@@ -58,15 +60,14 @@ Sub Main()
     Set downloaded = files.GetAll("database-attachments-all")
     Print "ATTACH-GETALL=" & CStr(downloaded.Count)
 
-    Call files.SetActor("editor@example")
-    Set updated = files.Update(id2, sourcePath)
-    Print "ATTACH-CREATED-BY-PRESERVED=" & CStr(updated.Get("createdBy"))
-    Print "ATTACH-MODIFIED-BY=" & CStr(updated.Get("modifiedBy"))
+    Print "ATTACH-DELETE-FOR-REPLACE=" & CStr(files.Delete(id2))
+    Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
+    replacementId = CStr(replacement.Get("attachmentId"))
+    Print "ATTACH-REPLACEMENT-NEW-ID=" & CStr(replacementId <> id2)
+    Print "ATTACH-REPLACEMENT-CREATED-BY=" & CStr(replacement.Get("createdBy"))
 
     Print "ATTACH-DELETED-FIRST=" & CStr(files.Delete(id1))
-    Set list = files.List()
-    Print "ATTACH-AFTER-FIRST-DELETE=" & CStr(list.Count)
-    Print "ATTACH-DELETED-SECOND=" & CStr(files.Delete(id2))
+    Print "ATTACH-DELETED-REPLACEMENT=" & CStr(files.Delete(replacementId))
     Set list = files.List()
     Print "ATTACH-AFTER-DELETE=" & CStr(list.Count)
 
