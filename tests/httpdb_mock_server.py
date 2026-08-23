@@ -50,8 +50,11 @@ class Handler(BaseHTTPRequestHandler):
             return None, None
         boundary = ("--" + match.group(1).strip().strip('"')).encode("utf-8")
         for part in raw.split(boundary):
-            part = part.strip(b"\r\n-")
-            if not part or b"\r\n\r\n" not in part:
+            if part.startswith(b"\r\n"):
+                part = part[2:]
+            if part.endswith(b"\r\n"):
+                part = part[:-2]
+            if not part or part == b"--" or b"\r\n\r\n" not in part:
                 continue
             headers, data = part.split(b"\r\n\r\n", 1)
             if b'name="filename"' not in headers:
@@ -59,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
             name_match = re.search(br'filename="([^"]+)"', headers)
             if not name_match:
                 continue
-            return name_match.group(1).decode("utf-8"), data.rstrip(b"\r\n")
+            return name_match.group(1).decode("utf-8"), data
         return None, None
 
     def do_GET(self):
