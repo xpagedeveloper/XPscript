@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("demo.db")
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call db.Execute("DELETE FROM people")
+    Call parameters.Set("name", "Ada")
+    Call db.Execute("INSERT INTO people(name) VALUES ($name)", parameters)
+
+    Set rows = db.Query("SELECT id, name FROM people ORDER BY id")
+    Print rows.Stringify()
+    Call db.Close()
+End Sub
