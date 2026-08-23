@@ -1,6 +1,6 @@
-' XPScript database/UIForm shared data-source regression
-' Verifies that multiple UIForms share the same JsonObject and that fields not shown
-' by either form survive SaveRow unchanged in the database.
+' XPScript database/UI shared data-source regression
+' Verifies that QueryArray binds directly to UIListView, multiple UIForms share
+' the same JsonObject, and fields not shown by either form survive SaveRow unchanged.
 
 Option Declare
 
@@ -10,6 +10,7 @@ Sub Main()
     Dim listRows As JsonArray
     Dim customer As JsonObject
     Dim saved As JsonObject
+    Dim list As New UIListView("Customers")
     Dim generalForm As New UIForm("General")
     Dim addressForm As New UIForm("Address")
     Dim affected As Integer
@@ -24,7 +25,13 @@ Sub Main()
     Call db.Execute("INSERT INTO customers(id, name, city, internal_code) VALUES ($id, $name, $city, $internal_code)", insertValues)
 
     Set listRows = db.QueryArray("SELECT id, name, city FROM customers ORDER BY name")
+    Call list.BindData(listRows)
+    Call list.SetKeyField("id")
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("city", "City")
     Print "LIST-COUNT=" & CStr(listRows.Count)
+    Print "LISTVIEW-COUNT=" & CStr(list.RowCount)
+    Print "LISTVIEW-NAME=" & CStr(list.GetRowValue(0, "name"))
 
     Set customer = db.GetRow("customers", "id", 42)
 
