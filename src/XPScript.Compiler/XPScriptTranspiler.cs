@@ -124,6 +124,7 @@ public sealed class XPScriptTranspiler
         if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";
         generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
         generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.Build(usesSqlite, usesMsSql) + "\n";
+        generated += "\n\n" + DatabaseAttachmentRuntimeSource.Build(usesSqlite, usesMsSql) + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
