@@ -112,7 +112,7 @@ internal static class RunRoslynCompiler
 
         if (builder.Count == 0)
             throw new CompilerException("No .NET framework metadata references were available for the run fast path.");
-        return builder.MoveToImmutable();
+        return builder.ToImmutable();
     }
 
     private static string BuildDiagnostics(IEnumerable<Diagnostic> diagnostics)
