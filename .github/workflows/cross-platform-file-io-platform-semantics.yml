@@ -10,40 +10,18 @@ on:
       - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
       - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'samples/file-io-platform-semantics.xps'
       - 'samples/file-convenience.xps'
       - 'docs/file-io-reference.md'
-      - 'scripts/_patch_copy_move_path.py'
       - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  prepare-copy-move-path:
-    if: github.head_ref == 'feature/dir-filter-isfile-isdir'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-      - run: python ./scripts/_patch_copy_move_path.py
-      - shell: bash
-        run: |
-          if git diff --quiet; then exit 0; fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs src/XPScript.Compiler/CrossPlatformRuntimeSource.cs src/XPScript.Compiler/CrossPlatformPreprocessor.cs samples/file-convenience.xps docs/file-io-reference.md
-          git commit -m 'Add CopyFile MoveFile policies and Path API'
-          git push origin HEAD:${{ github.head_ref }}
-
   platform-semantics:
-    needs: prepare-copy-move-path
     strategy:
       fail-fast: false
       matrix:
@@ -51,8 +29,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
