@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -93,14 +92,10 @@ End Sub
 """);
     try
     {
-        _ = new XPScriptTranspiler().TranspileRestricted(
-            await File.ReadAllTextAsync(unsafePath),
-            unsafePath,
-            "browser-wasm",
-            [root]);
+        await using var ignored = await compiler.CompileAsync(unsafePath, root);
         throw new Exception("Unannotated XPDB browser-WASM code compiled without [ServerSide].");
     }
-    catch (CompilerException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
     {
     }
 
