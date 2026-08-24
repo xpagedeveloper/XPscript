@@ -9,6 +9,8 @@ internal sealed class RunArtifactCache
     private static readonly Regex ExternalInputPattern = new(
         @"(?im)^\s*(?:Include\b|Declare\b|Reference(?:Native)?\b)|\bApplication\.Icon\b",
         RegexOptions.CultureInvariant);
+    private static readonly TimeSpan MaxCacheAge = TimeSpan.FromDays(14);
+    private const int MaxEntries = 128;
 
     private readonly string _entryRoot;
     private readonly string _readyPath;
@@ -45,11 +47,14 @@ internal sealed class RunArtifactCache
             localRoot = Path.GetTempPath();
 
         var cacheRoot = Path.Combine(localRoot, "XPScript", "run-cache");
-        var entryRoot = Path.Combine(cacheRoot, hash[..32]);
         Directory.CreateDirectory(cacheRoot);
-        Directory.CreateDirectory(entryRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(cacheRoot);
+        Prune(cacheRoot);
+
+        var entryRoot = Path.Combine(cacheRoot, hash[..32]);
+        Directory.CreateDirectory(entryRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(entryRoot);
+        TryTouch(entryRoot);
         return new RunArtifactCache(true, entryRoot);
     }
 
@@ -66,6 +71,7 @@ internal sealed class RunArtifactCache
         if (fileName.Length == 0 || fileName != Path.GetFileName(fileName)) return false;
         var candidate = Path.Combine(OutputDirectory, fileName);
         if (!File.Exists(candidate)) return false;
+        TryTouch(_entryRoot);
         executablePath = candidate;
         return true;
     }
@@ -82,6 +88,7 @@ internal sealed class RunArtifactCache
         Directory.CreateDirectory(OutputDirectory);
         CompilerPathSecurity.HardenTemporaryDirectory(OutputDirectory);
         try { if (File.Exists(_readyPath)) File.Delete(_readyPath); } catch { }
+        TryTouch(_entryRoot);
     }
 
     public void MarkReady(string executablePath)
@@ -95,11 +102,35 @@ internal sealed class RunArtifactCache
         var fileName = Path.GetFileName(fullExecutable);
         File.WriteAllText(_readyPath, fileName);
         CompilerPathSecurity.HardenTemporaryFile(_readyPath);
+        TryTouch(_entryRoot);
     }
 
     public void Invalidate()
     {
         if (!Enabled) return;
         try { if (File.Exists(_readyPath)) File.Delete(_readyPath); } catch { }
+    }
+
+    private static void Prune(string cacheRoot)
+    {
+        try
+        {
+            var cutoff = DateTime.UtcNow - MaxCacheAge;
+            var entries = Directory.EnumerateDirectories(cacheRoot)
+                .Select(path => new DirectoryInfo(path))
+                .OrderByDescending(info => info.LastWriteTimeUtc)
+                .ToArray();
+
+            foreach (var entry in entries.Where(info => info.LastWriteTimeUtc < cutoff).Concat(entries.Skip(MaxEntries)).DistinctBy(info => info.FullName))
+            {
+                try { entry.Delete(recursive: true); } catch { }
+            }
+        }
+        catch { }
+    }
+
+    private static void TryTouch(string path)
+    {
+        try { Directory.SetLastWriteTimeUtc(path, DateTime.UtcNow); } catch { }
     }
 }
