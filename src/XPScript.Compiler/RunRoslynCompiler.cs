@@ -9,6 +9,16 @@ namespace XPScript.Compiler;
 
 internal static class RunRoslynCompiler
 {
+    private const string SdkImplicitUsings = """
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+""";
+
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences = new(CreateFrameworkReferences, LazyThreadSafetyMode.ExecutionAndPublication);
 
     public static bool CanCompile(string generatedSource, bool hasManagedReferences)
@@ -53,19 +63,27 @@ internal static class RunRoslynCompiler
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
 
+        var parseOptions = new CSharpParseOptions(LanguageVersion.Latest);
+        var implicitUsingsTree = CSharpSyntaxTree.ParseText(
+            SdkImplicitUsings,
+            parseOptions,
+            path: "ImplicitUsings.g.cs",
+            encoding: Encoding.UTF8,
+            cancellationToken: cancellationToken);
         var syntaxTree = CSharpSyntaxTree.ParseText(
             generatedSource,
-            new CSharpParseOptions(LanguageVersion.Latest),
+            parseOptions,
             path: "Program.cs",
             encoding: Encoding.UTF8,
             cancellationToken: cancellationToken);
 
         var compilation = CSharpCompilation.Create(
             "Generated",
-            [syntaxTree],
+            [implicitUsingsTree, syntaxTree],
             FrameworkReferences.Value,
             new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication,
+                mainTypeName: "Program",
                 optimizationLevel: OptimizationLevel.Release,
                 allowUnsafe: true,
                 nullableContextOptions: NullableContextOptions.Enable,
