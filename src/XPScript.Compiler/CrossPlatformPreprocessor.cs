@@ -44,7 +44,7 @@ internal sealed class CrossPlatformPreprocessor
 
         foreach (var function in new[]
         {
-            "FileInfo", "FileHash", "FileEquals", "Files", "Directories",
+            "FileInfo", "FileHash", "FileEquals", "Files", "Directories", "CopyFile", "MoveFile",
             "ReadFile", "ReadLines", "ReadBytes", "WriteFile", "AppendFile", "WriteLines", "WriteBytes"
         })
         {
@@ -52,6 +52,15 @@ internal sealed class CrossPlatformPreprocessor
                 source,
                 $@"(?<![\w.]){Regex.Escape(function)}\s*\(",
                 $"XPCrossPlatformRuntime.{function}(",
+                RegexOptions.IgnoreCase);
+        }
+
+        foreach (var method in new[] { "Combine", "FileName", "Extension", "Directory", "Absolute", "Relative", "Exists" })
+        {
+            source = Regex.Replace(
+                source,
+                $@"(?<![\w.])Path\s*\.\s*{Regex.Escape(method)}\s*\(",
+                $"XPCrossPlatformRuntime.PathApi.{method}(",
                 RegexOptions.IgnoreCase);
         }
 

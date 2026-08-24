@@ -28,6 +28,74 @@ internal static class XPCrossPlatformRuntime
 
     public static bool IsDir(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
 
+    public static bool CopyFile(object? source, object? target, int action = 1) =>
+        ApplyFileTransferPolicy(source, target, action, move: false);
+
+    public static bool MoveFile(object? source, object? target, int action = 1) =>
+        ApplyFileTransferPolicy(source, target, action, move: true);
+
+    private static bool ApplyFileTransferPolicy(object? sourceValue, object? targetValue, int action, bool move)
+    {
+        if (action < 1 || action > 3)
+            throw new XPScriptRuntimeException(5, "File transfer action must be 1 (fail), 2 (overwrite), or 3 (skip).");
+
+        var source = XPScriptFileSystemRuntime.ResolvePath(sourceValue);
+        var target = XPScriptFileSystemRuntime.ResolvePath(targetValue);
+        if (!File.Exists(source)) return false;
+
+        if (File.Exists(target) || Directory.Exists(target))
+        {
+            if (action == 1 || action == 3) return false;
+            if (Directory.Exists(target)) return false;
+        }
+
+        try
+        {
+            if (move) XPScriptFileSystemRuntime.MoveFile(source, target, overwrite: action == 2);
+            else XPScriptFileSystemRuntime.CopyFile(source, target, overwrite: action == 2);
+            return true;
+        }
+        catch (IOException) when (action != 2 && (File.Exists(target) || Directory.Exists(target)))
+        {
+            return false;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return false;
+        }
+    }
+
+    public static class PathApi
+    {
+        public static string Combine(object? left, object? right) =>
+            System.IO.Path.Combine(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right));
+
+        public static string FileName(object? path) =>
+            System.IO.Path.GetFileName(XPScriptRuntime.CStr(path));
+
+        public static string Extension(object? path) =>
+            System.IO.Path.GetExtension(XPScriptRuntime.CStr(path));
+
+        public static string Directory(object? path) =>
+            System.IO.Path.GetDirectoryName(XPScriptFileSystemRuntime.ResolvePath(path)) ?? "";
+
+        public static string Absolute(object? path) =>
+            XPScriptFileSystemRuntime.ResolvePath(path);
+
+        public static string Relative(object? basePath, object? path) =>
+            System.IO.Path.GetRelativePath(XPScriptFileSystemRuntime.ResolvePath(basePath), XPScriptFileSystemRuntime.ResolvePath(path));
+
+        public static bool Exists(object? path)
+        {
+            var value = XPScriptRuntime.CStr(path);
+            return FileExists(value) || DirExists(value);
+        }
+    }
+
     public static string Dir(object? pattern = null, int mode = 0, int maxDepth = 3)
     {
         if (pattern is not null)

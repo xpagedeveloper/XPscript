@@ -139,3 +139,36 @@ Compile them with:
 xpscriptc .\samples\file-io-extensions.xps -o .\out\file-io-demo.exe --framework-dependent
 xpscriptc .\samples\file-position-reset.xps -o .\out\file-position-demo.exe --framework-dependent
 ```
+
+
+## CopyFile and MoveFile
+
+`CopyFile(source, target [, action])` and `MoveFile(source, target [, action])` return `True` only when a file was actually copied or moved. The optional `action` defaults to `1`.
+
+- `1` = fail if the target already exists; returns `False` and leaves both files unchanged.
+- `2` = overwrite an existing target; returns `True` when the transfer succeeds.
+- `3` = skip if the target already exists; returns `False` because no transfer was performed.
+
+A missing source or unavailable destination directory returns `False`. Invalid action values raise runtime error 5. The legacy `FileCopy` statement remains available for compatibility and keeps its existing behavior.
+
+```xpscript
+ok = CopyFile("in.dat", "out.dat")
+ok = CopyFile("in.dat", "out.dat", 2)
+ok = MoveFile("out.dat", "archive/out.dat", 3)
+```
+
+## Path object
+
+The built-in `Path` object centralizes cross-platform path manipulation and reuses XPscript's existing filesystem path normalization and existence checks.
+
+```xpscript
+full = Path.Combine("data", "config.json")
+name = Path.FileName(full)
+ext = Path.Extension(full)
+dir = Path.Directory(full)
+absolute = Path.Absolute(full)
+relative = Path.Relative("data", absolute)
+exists = Path.Exists(full)
+```
+
+`Path.Combine(left, right)` joins two path parts using the target platform separator. `Path.FileName(path)` returns the final file or directory name. `Path.Extension(path)` returns the extension including the leading dot or an empty string. `Path.Directory(path)` returns the absolute parent directory. `Path.Absolute(path)` resolves an absolute path. `Path.Relative(basePath, path)` calculates `path` relative to `basePath`. `Path.Exists(path)` returns `True` for either an existing file or an existing directory and internally reuses the existing `FileExists`/`DirExists` behavior.

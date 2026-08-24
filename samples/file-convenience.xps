@@ -103,6 +103,56 @@ Sub Main()
         Error 9816, "Directories ForAll failed"
     End If
 
+    WriteFile root & "/copy-source.txt", "one"
+    If Not CopyFile(root & "/copy-source.txt", root & "/copy-target.txt") Then
+        Error 9820, "CopyFile default fail policy should copy to a missing target"
+    End If
+    If CopyFile(root & "/copy-source.txt", root & "/copy-target.txt") Then
+        Error 9821, "CopyFile default fail policy should return False when target exists"
+    End If
+    If CopyFile(root & "/copy-source.txt", root & "/copy-target.txt", 3) Then
+        Error 9822, "CopyFile skip policy should return False when skipped"
+    End If
+    WriteFile root & "/copy-source.txt", "two"
+    If Not CopyFile(root & "/copy-source.txt", root & "/copy-target.txt", 2) Then
+        Error 9823, "CopyFile overwrite policy failed"
+    End If
+    If ReadFile(root & "/copy-target.txt") <> "two" Then
+        Error 9824, "CopyFile overwrite content failed"
+    End If
+
+    WriteFile root & "/move-source.txt", "move"
+    If Not MoveFile(root & "/move-source.txt", root & "/move-target.txt") Then
+        Error 9825, "MoveFile default fail policy failed"
+    End If
+    If IsFile(root & "/move-source.txt") Or Not IsFile(root & "/move-target.txt") Then
+        Error 9826, "MoveFile did not move the file"
+    End If
+
+    If Path.FileName(Path.Combine(root, "copy-target.txt")) <> "copy-target.txt" Then
+        Error 9827, "Path.Combine/FileName failed"
+    End If
+    If Path.Extension(root & "/copy-target.txt") <> ".txt" Then
+        Error 9828, "Path.Extension failed"
+    End If
+    If Path.Directory(root & "/copy-target.txt") = "" Then
+        Error 9829, "Path.Directory failed"
+    End If
+    If Not Path.Exists(root & "/copy-target.txt") Then
+        Error 9830, "Path.Exists failed"
+    End If
+    If Path.Absolute(root & "/copy-target.txt") = "" Then
+        Error 9831, "Path.Absolute failed"
+    End If
+    If Path.Relative(root, root & "/copy-target.txt") <> "copy-target.txt" Then
+        Error 9832, "Path.Relative failed"
+    End If
+    Print "COPY_MOVE_PATH=OK"
+
+    Kill root & "/copy-source.txt"
+    Kill root & "/copy-target.txt"
+    Kill root & "/move-target.txt"
+
     Kill root & "/alpha.txt"
     Kill root & "/latin.txt"
     Kill root & "/lines.txt"
