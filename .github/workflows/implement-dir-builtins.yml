@@ -1,0 +1,238 @@
+name: Implement Dir builtins
+
+on:
+  push:
+    branches: [feature/dir-filter-isfile-isdir]
+    paths: [.github/workflows/implement-dir-builtins.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/dir-filter-isfile-isdir
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Implement language builtins and docs
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs')
+          s = p.read_text()
+          old = '"GetFileAttr", "Dir", "Timer", "Command", "InputBox", "MsgBox"'
+          new = '"GetFileAttr", "IsFile", "IsDir", "Dir", "Timer", "Command", "InputBox", "MsgBox"'
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('src/XPScript.Compiler/XPScriptRuntimeSource.cs')
+          s = p.read_text()
+          old = '''    public static string Dir(object? pattern = null)
+    {
+        if (pattern is not null)
+        {
+            var raw = CStr(pattern);
+            var directory = Path.GetDirectoryName(raw);
+            if (string.IsNullOrEmpty(directory)) directory = Environment.CurrentDirectory;
+            var mask = Path.GetFileName(raw);
+            if (string.IsNullOrEmpty(mask)) mask = "*";
+            DirEnumerator?.Dispose();
+            DirEnumerator = Directory.EnumerateFileSystemEntries(directory, mask)
+                .Select(Path.GetFileName)
+                .Where(x => x is not null)
+                .Cast<string>()
+                .GetEnumerator();
+        }
+
+        if (DirEnumerator is null) return "";
+        if (!DirEnumerator.MoveNext())
+        {
+            DirEnumerator.Dispose();
+            DirEnumerator = null;
+            return "";
+        }
+        return DirEnumerator.Current;
+    }
+'''
+          new = '''    public static bool IsFile(object? path) => XPScriptFileSystemRuntime.IsFile(path);
+    public static bool IsDir(object? path) => XPScriptFileSystemRuntime.IsDir(path);
+
+    public static string Dir(object? pattern = null, int mode = 0)
+    {
+        if (pattern is not null)
+        {
+            if (mode < 0 || mode > 3)
+                throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.");
+            DirEnumerator?.Dispose();
+            DirEnumerator = XPScriptFileSystemRuntime.Enumerate(pattern, mode).GetEnumerator();
+        }
+
+        if (DirEnumerator is null) return "";
+        if (!DirEnumerator.MoveNext())
+        {
+            DirEnumerator.Dispose();
+            DirEnumerator = null;
+            return "";
+        }
+        return DirEnumerator.Current;
+    }
+'''
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs')
+          s = p.read_text()
+          old = '''        generated = generated.Replace(
+            "DirEnumerator = Directory.EnumerateFileSystemEntries(directory, mask)\\n                .Select(Path.GetFileName)\\n                .Where(x => x is not null)\\n                .Cast<string>()\\n                .GetEnumerator();",
+            "DirEnumerator = XPScriptFileSystemRuntime.Enumerate(raw).GetEnumerator();",
+            StringComparison.Ordinal);
+'''
+          # The new runtime calls portability functions directly; remove the obsolete legacy rewrite if present.
+          if old in s:
+              s = s.replace(old, '', 1)
+          p.write_text(s)
+
+          p = Path('src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs')
+          s = p.read_text()
+          old = '''    public static IEnumerable<string> Enumerate(object? patternValue)
+    {
+        var raw = XPScriptRuntime.CStr(patternValue);
+        if (string.IsNullOrWhiteSpace(raw)) raw = "*";
+        var directoryPart = Path.GetDirectoryName(raw);
+        var directory = string.IsNullOrEmpty(directoryPart) ? Environment.CurrentDirectory : ResolvePath(directoryPart);
+        var mask = Path.GetFileName(raw);
+        if (string.IsNullOrEmpty(mask)) mask = "*";
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("Directory does not exist.");
+        return Directory.EnumerateFileSystemEntries(directory, mask)
+            .Select(Path.GetFileName).Where(x => x is not null).Cast<string>();
+    }
+'''
+          new = '''    public static bool IsFile(object? value)
+    {
+        var path = ResolvePath(value);
+        return File.Exists(path) && !Directory.Exists(path);
+    }
+
+    public static bool IsDir(object? value)
+    {
+        var path = ResolvePath(value);
+        return Directory.Exists(path);
+    }
+
+    public static IEnumerable<string> Enumerate(object? patternValue, int mode = 0)
+    {
+        var raw = XPScriptRuntime.CStr(patternValue);
+        if (string.IsNullOrWhiteSpace(raw)) raw = "*";
+        var directoryPart = Path.GetDirectoryName(raw);
+        var directory = string.IsNullOrEmpty(directoryPart) ? Environment.CurrentDirectory : ResolvePath(directoryPart);
+        var mask = Path.GetFileName(raw);
+        if (string.IsNullOrEmpty(mask)) mask = "*";
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("Directory does not exist.");
+
+        IEnumerable<string> entries = mode switch
+        {
+            0 => Directory.EnumerateFileSystemEntries(directory, mask, SearchOption.TopDirectoryOnly),
+            1 => Directory.EnumerateFiles(directory, mask, SearchOption.TopDirectoryOnly),
+            2 => Directory.EnumerateDirectories(directory, mask, SearchOption.TopDirectoryOnly),
+            3 => Directory.EnumerateFiles(directory, mask, SearchOption.AllDirectories),
+            _ => throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.")
+        };
+
+        return entries
+            .Select(path => mode == 3 ? Path.GetRelativePath(directory, path) : Path.GetFileName(path))
+            .Where(name => !string.IsNullOrEmpty(name) && name != "." && name != "..");
+    }
+'''
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+
+          sample = Path('samples/dir-filter-builtins.xps')
+          sample.write_text('''Option Declare
+
+Sub Main()
+    Dim root As String
+    Dim item As String
+
+    root = "dir-filter-fixture"
+    MkDir root
+    MkDir root & "/sub"
+
+    Dim f As Integer
+    f = FreeFile()
+    Open root & "/top.txt" For Output As #f
+    Print #f, "top"
+    Close #f
+
+    f = FreeFile()
+    Open root & "/sub/nested.txt" For Output As #f
+    Print #f, "nested"
+    Close #f
+
+    Print "ISFILE=" & CStr(IsFile(root & "/top.txt"))
+    Print "ISDIR=" & CStr(IsDir(root & "/sub"))
+
+    item = Dir(root & "/*", 1)
+    Do While item <> ""
+        Print "FILE=" & item
+        item = Dir()
+    Loop
+
+    item = Dir(root & "/*", 2)
+    Do While item <> ""
+        Print "DIR=" & item
+        item = Dir()
+    Loop
+
+    item = Dir(root & "/*", 3)
+    Do While item <> ""
+        Print "RECURSIVE=" & item
+        item = Dir()
+    Loop
+End Sub
+''')
+
+          p = Path('docs/file-io-reference.md')
+          s = p.read_text()
+          old = '| `Dir` | `Dir([pattern])` | optional `pattern`: path/search mask. Call `Dir()` again to continue enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |'
+          new = '| `IsFile` | `IsFile(path)` | `path`: filesystem path. | Returns `True` only when the path exists and is a file. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |\n| `IsDir` | `IsDir(path)` | `path`: filesystem path. | Returns `True` only when the path exists and is a directory. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |\n| `Dir` | `Dir([pattern] [, mode])` | optional `pattern`: path/search mask; optional `mode`: `0`/omitted = files and directories in the current level, `1` = files only, `2` = directories only, `3` = files recursively including subdirectories. Call `Dir()` again to continue enumeration. | Enumerates matching entries, always excluding `.` and `..`. Recursive mode returns paths relative to the searched directory. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |'
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('docs/language-reference.md')
+          s = p.read_text()
+          old = '| `Dir` | `Dir([pattern])` | optional `pattern`: search mask. | Enumerates files/directories. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |'
+          if old in s:
+              new = '| `IsFile` | `IsFile(path)` | filesystem path. | Returns whether the path exists and is a file. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |\n| `IsDir` | `IsDir(path)` | filesystem path. | Returns whether the path exists and is a directory. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |\n| `Dir` | `Dir([pattern] [, mode])` | optional search mask; optional mode: `0`/omitted all entries, `1` files, `2` directories, `3` files recursively. | Enumerates entries and always suppresses `.` and `..`; mode `3` returns relative recursive file paths. | [dir-filter-builtins.xps](../samples/dir-filter-builtins.xps) |'
+              s = s.replace(old, new, 1)
+          else:
+              s = s.replace('`Dir([pattern])`', '`Dir([pattern] [, mode])`')
+          p.write_text(s)
+
+      - name: Build compiler
+        run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo
+      - name: Run builtin filesystem sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=$(dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run samples/dir-filter-builtins.xps --info)
+          echo "$out"
+          grep -q 'ISFILE=True' <<<"$out"
+          grep -q 'ISDIR=True' <<<"$out"
+          grep -q 'FILE=top.txt' <<<"$out"
+          grep -q 'DIR=sub' <<<"$out"
+          grep -q 'RECURSIVE=top.txt' <<<"$out"
+          grep -Eq 'RECURSIVE=sub[/\\]nested.txt' <<<"$out"
+          ! grep -Eq '(^|=)\.\.?$' <<<"$out"
+      - name: Commit implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs src/XPScript.Compiler/XPScriptRuntimeSource.cs src/XPScript.Compiler/FileSystemPortabilityPostProcessor.cs src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs samples/dir-filter-builtins.xps docs/file-io-reference.md docs/language-reference.md
+          git commit -m 'Add Dir filters and IsFile IsDir builtins'
+          git push origin HEAD:feature/dir-filter-isfile-isdir
