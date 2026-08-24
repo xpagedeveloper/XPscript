@@ -48,7 +48,34 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 | `RmDir` | `RmDir path` | `path`: empty directory to remove. | Removes an empty directory. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `ChDir` | `ChDir path` | `path`: directory path. | Changes the process current directory using target-OS path semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `ChDrive` | `ChDrive drive` | `drive`: Windows drive specifier. | Changes the current drive on Windows. Other platforms report explicit unsupported behavior. | [file-io-portability.xps](../samples/file-io-portability.xps) |
-| `Dir` | `Dir([pattern])` | optional `pattern`: path/search mask. Call `Dir()` again to continue enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
+| `IsFile` | `IsFile(path)` | `path`: filesystem path. | Returns `True` when the path exists and is a file; otherwise `False`. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+| `IsDir` | `IsDir(path)` | `path`: filesystem path. | Returns `True` when the path exists and is a directory; otherwise `False`. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+| `Dir` | `Dir([pattern] [, mode])` | optional `pattern`: path/search mask. optional `mode`: omitted or `0` = files and directories in the current directory level; `1` = files only in the current level; `2` = directories only in the current level; `3` = files recursively, including files in matching subdirectories. Call `Dir()` again to continue the current enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. `.` and `..` are always excluded. Mode `3` returns paths relative to the searched directory so nested files retain their subdirectory path. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+
+### `Dir` mode examples
+
+```xpscript
+Dim item As String
+
+' Omitted mode / 0: files and directories at this level.
+item = Dir("C:\\Temp\\*")
+
+' 1: files only at this level.
+item = Dir("C:\\Temp\\*", 1)
+
+' 2: directories only at this level.
+item = Dir("C:\\Temp\\*", 2)
+
+' 3: files recursively, including files in subdirectories.
+item = Dir("C:\\Temp\\*", 3)
+
+Do While item <> ""
+    Print item
+    item = Dir()
+Loop
+```
+
+`Dir()` without arguments never starts a new search; it continues the most recently started `Dir(pattern [, mode])` enumeration. Values outside `0` through `3` are invalid.
 
 ## Copyable example
 
