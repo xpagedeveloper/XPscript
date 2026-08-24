@@ -274,6 +274,19 @@ internal static class XPScriptDatabaseAttachmentApi
     public static void SetSupabaseBucket(XPScriptHttpDbSupabase db, object? bucket)
         => XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(db, bucket);
 
+    public static XPScriptJsonArray List(XPScriptAttachmentCollectionV3 files) => files.List();
+    public static XPScriptJsonArray GetMetadata(XPScriptAttachmentCollectionV3 files) => files.GetMetadata();
+    public static XPScriptJsonObject GetMetadata(XPScriptAttachmentCollectionV3 files, object? attachmentId) => files.GetMetadata(attachmentId);
+    public static XPScriptJsonArray FindByName(XPScriptAttachmentCollectionV3 files, object? originalName) => files.FindByName(originalName);
+    public static XPScriptJsonObject Save(XPScriptAttachmentCollectionV3 files, object? sourcePath, object? createdBy) => files.Save(sourcePath, createdBy);
+    public static XPScriptJsonObject SaveAs(XPScriptAttachmentCollectionV3 files, object? sourcePath, object? originalName, object? createdBy) => files.SaveAs(sourcePath, originalName, createdBy);
+    public static bool Get(XPScriptAttachmentCollectionV3 files, object? attachmentId, object? targetPath) => files.Get(attachmentId, targetPath);
+    public static bool SaveToDisk(XPScriptAttachmentCollectionV3 files, object? attachmentId, object? targetPath) => files.SaveToDisk(attachmentId, targetPath);
+    public static XPScriptJsonArray GetAll(XPScriptAttachmentCollectionV3 files, object? targetFolder) => files.GetAll(targetFolder);
+    public static bool SendToBrowser(XPScriptAttachmentCollectionV3 files, object? attachmentId) => files.SendToBrowser(attachmentId);
+    public static bool SendToBrowser(XPScriptAttachmentCollectionV3 files, object? attachmentId, object? downloadName) => files.SendToBrowser(attachmentId, downloadName);
+    public static bool Delete(XPScriptAttachmentCollectionV3 files, object? attachmentId) => files.Delete(attachmentId);
+
     private static XPScriptAttachmentCollectionV3 InvokeProviderFactory(string methodName, object db, object? table, object? keyColumn, object? keyValue)
     {
         var methods = typeof(XPScriptDatabaseAttachmentRuntime).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
