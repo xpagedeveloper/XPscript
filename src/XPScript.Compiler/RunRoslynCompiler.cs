@@ -59,6 +59,8 @@ global using System.Threading.Tasks;
         ArgumentNullException.ThrowIfNull(generatedSource);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
 
+        generatedSource = RunRuntimeTrimmer.Trim(generatedSource);
+
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
