@@ -30,6 +30,7 @@ public static class XPScriptCompilationSnapshotBuilder
             configurationIdentity,
             maxDependencyBytes,
             [Path.GetFullPath(allowedSourceRoot)],
+            includeExternalInputs: false,
             cancellationToken);
     }
 
@@ -45,6 +46,7 @@ public static class XPScriptCompilationSnapshotBuilder
             configurationIdentity,
             maxDependencyBytes,
             includeRoots: null,
+            includeExternalInputs: true,
             cancellationToken);
 
     private static async Task<XPScriptCompilationSnapshot> CreateCoreAsync(
@@ -53,6 +55,7 @@ public static class XPScriptCompilationSnapshotBuilder
         string configurationIdentity,
         long maxDependencyBytes,
         IReadOnlyList<string>? includeRoots,
+        bool includeExternalInputs,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
@@ -75,28 +78,11 @@ public static class XPScriptCompilationSnapshotBuilder
             expanded = new IncludeSourcePreprocessor().Transform(rootSource, fullSourcePath);
         }
 
-        var managedReferences = new ManagedAssemblyReferencePreprocessor(runtimeIdentifier)
-            .Transform(expanded.Source, expanded.Map, fullSourcePath);
-        var nativeDependencies = new NativeDependencyPackager(runtimeIdentifier)
-            .Collect(managedReferences.Source, expanded.Map, fullSourcePath);
-
-        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(fullSourcePath) ?? Environment.CurrentDirectory);
         var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var dependencyPaths = new HashSet<string>(expanded.Dependencies.Select(Path.GetFullPath), comparer);
 
-        foreach (var reference in managedReferences.Managed)
-            dependencyPaths.Add(CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, reference.DeclaredPath, "Managed Reference"));
-        foreach (var reference in managedReferences.Native)
-            dependencyPaths.Add(CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, reference.DeclaredPath, "ReferenceNative"));
-        foreach (var dependency in nativeDependencies)
-            dependencyPaths.Add(CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, dependency.DeclaredPath));
-
-        string applicationSource;
-        using (ExpandedSourceContext.Begin(managedReferences.Source, fullSourcePath, expanded.Map))
-            applicationSource = new ApplicationObjectPreprocessor().Transform(managedReferences.Source);
-        var iconPath = TryReadApplicationIconPath(applicationSource);
-        if (iconPath is not null)
-            dependencyPaths.Add(iconPath);
+        if (includeExternalInputs)
+            AddRunExternalInputs(fullSourcePath, runtimeIdentifier, expanded, dependencyPaths);
 
         var orderedPaths = dependencyPaths.OrderBy(path => path, comparer).ToArray();
         var dependencyTasks = orderedPaths
@@ -119,6 +105,33 @@ public static class XPScriptCompilationSnapshotBuilder
 
         var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identityText.ToString())));
         return new XPScriptCompilationSnapshot(identity, compilerIdentity, runtimeIdentifier, configurationIdentity, dependencies);
+    }
+
+    private static void AddRunExternalInputs(
+        string fullSourcePath,
+        string runtimeIdentifier,
+        IncludeSourcePreprocessor.Result expanded,
+        HashSet<string> dependencyPaths)
+    {
+        var managedReferences = new ManagedAssemblyReferencePreprocessor(runtimeIdentifier)
+            .Transform(expanded.Source, expanded.Map, fullSourcePath);
+        var nativeDependencies = new NativeDependencyPackager(runtimeIdentifier)
+            .Collect(managedReferences.Source, expanded.Map, fullSourcePath);
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(fullSourcePath) ?? Environment.CurrentDirectory);
+
+        foreach (var reference in managedReferences.Managed)
+            dependencyPaths.Add(CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, reference.DeclaredPath, "Managed Reference"));
+        foreach (var reference in managedReferences.Native)
+            dependencyPaths.Add(CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, reference.DeclaredPath, "ReferenceNative"));
+        foreach (var dependency in nativeDependencies)
+            dependencyPaths.Add(CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, dependency.DeclaredPath));
+
+        string applicationSource;
+        using (ExpandedSourceContext.Begin(managedReferences.Source, fullSourcePath, expanded.Map))
+            applicationSource = new ApplicationObjectPreprocessor().Transform(managedReferences.Source);
+        var iconPath = TryReadApplicationIconPath(applicationSource);
+        if (iconPath is not null)
+            dependencyPaths.Add(iconPath);
     }
 
     private static async Task<XPScriptCompilationDependency> HashDependencyAsync(
