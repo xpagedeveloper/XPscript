@@ -53,10 +53,10 @@ Sub Main()
     Print "MSSQL-HIDDEN-AFTER=" & CStr(saved.Get("internal_code"))
     Print "MSSQL-COMPUTED-AFTER=" & CStr(saved.Get("computed_label"))
 
-    If CStr(saved.Get("name")) <> "Anna Andersson" Then Error 5, "name was not saved"
-    If CStr(saved.Get("city")) <> "Goteborg" Then Error 5, "city was not saved"
-    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then Error 5, "unbound SQL Server field was discarded"
-    If CStr(saved.Get("computed_label")) <> "Anna Andersson!" Then Error 5, "computed SQL Server field was not preserved"
+    If CStr(saved.Get("name")) <> "Anna Andersson" Then Error 5
+    If CStr(saved.Get("city")) <> "Goteborg" Then Error 5
+    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then Error 5
+    If CStr(saved.Get("computed_label")) <> "Anna Andersson!" Then Error 5
 
     Call db.Execute("DROP TABLE dbo.xpdb_datasource_customers")
     Call db.Close()
