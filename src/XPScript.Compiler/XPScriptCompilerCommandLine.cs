@@ -6,6 +6,8 @@ namespace XPScript.Compiler;
 
 public static class XPScriptCompilerCommandLine
 {
+    private static int progressLineWidth;
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Length == 0 || args[0] is "--help" or "-h")
@@ -74,17 +76,18 @@ public static class XPScriptCompilerCommandLine
                 throw new ArgumentException("--target currently supports webiis.");
 
             var timer = Stopwatch.StartNew();
-            WriteProgress($"compile: {Path.GetFileName(sourcePath)}");
-            WriteProgress($"compile: target={runtimeIdentifier}, mode={(selfContained ? "self-contained" : "framework-dependent")}");
+            var sourceName = Path.GetFileName(sourcePath);
+            WriteProgress($"Started to compile {sourceName}");
 
             if (target == "webiis")
             {
-                WriteProgress("compile: building WebIIS package");
                 var targetResult = await WaitWithProgressAsync(
                     WebIisPackageTarget.BuildAsync(sourcePath, outputPath, selfContained, resultFormat),
                     timer,
-                    "compile").ConfigureAwait(false);
-                WriteProgress($"compile: {(targetResult.Success ? "completed" : "failed")} in {timer.Elapsed.TotalSeconds:F1}s");
+                    $"Compiling {sourceName} as WebIIS package").ConfigureAwait(false);
+                CompleteProgress(targetResult.Success
+                    ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
+                    : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
                 WriteResult(targetResult, resultFormat);
                 return targetResult.Success ? 0 : 2;
             }
@@ -99,17 +102,20 @@ public static class XPScriptCompilerCommandLine
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
-            WriteProgress("compile: preprocessing, transpiling and building .NET application");
+            var mode = selfContained ? "self-contained" : "framework-dependent";
             var result = await WaitWithProgressAsync(
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
-                "compile").ConfigureAwait(false);
-            WriteProgress($"compile: {(result.Success ? "completed" : "failed")} in {timer.Elapsed.TotalSeconds:F1}s");
+                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
+            CompleteProgress(result.Success
+                ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
+                : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
         catch (Exception ex)
         {
+            CompleteProgress("Compilation failed");
             var result = CompileResult.Error([new CompileDiagnostic { Description = ex.Message }]);
             WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
             return 1;
@@ -230,22 +236,25 @@ public static class XPScriptCompilerCommandLine
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
             var timer = Stopwatch.StartNew();
+            var sourceName = Path.GetFileName(sourcePath);
             if (info)
-            {
-                WriteProgress($"run: compiling {Path.GetFileName(sourcePath)}");
-                WriteProgress($"run: target={currentRuntimeIdentifier}, mode=framework-dependent transient build");
-            }
+                WriteProgress($"Started to compile {sourceName}");
+
             var compileTask = compiler.CompileForRunWithResultAsync(
                 sourcePath,
                 tempRoot,
                 currentRuntimeIdentifier);
             var compileResult = info
-                ? await WaitWithProgressAsync(compileTask, timer, "run").ConfigureAwait(false)
+                ? await WaitWithProgressAsync(
+                    compileTask,
+                    timer,
+                    $"Compiling {sourceName} [{currentRuntimeIdentifier}, transient]").ConfigureAwait(false)
                 : await compileTask.ConfigureAwait(false);
 
             if (!compileResult.Success)
             {
-                if (info) WriteProgress($"run: compile failed in {timer.Elapsed.TotalSeconds:F1}s");
+                if (info)
+                    CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
                 WriteResult(compileResult, resultFormat);
                 return 2;
             }
@@ -256,8 +265,8 @@ public static class XPScriptCompilerCommandLine
 
             if (info)
             {
-                WriteProgress($"run: compiled in {timer.Elapsed.TotalSeconds:F1}s");
-                WriteProgress("run: starting program");
+                CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
+                WriteProgressLine("Starting program");
             }
 
             var startInfo = new ProcessStartInfo
@@ -273,7 +282,7 @@ public static class XPScriptCompilerCommandLine
             using var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Unable to start the compiled XPScript program.");
             await process.WaitForExitAsync().ConfigureAwait(false);
-            if (info) WriteProgress($"run: program exited with code {process.ExitCode}");
+            if (info) WriteProgressLine($"Program exited with code {process.ExitCode}");
             if (process.ExitCode != 0 || !File.Exists(navigationPath))
                 return process.ExitCode;
 
@@ -335,6 +344,7 @@ public static class XPScriptCompilerCommandLine
         }
         catch (Exception ex)
         {
+            if (progressLineWidth > 0) CompleteProgress("Run failed");
             WriteResult(CompileResult.Error([new CompileDiagnostic { Description = ex.Message }]), resultFormat);
             return 1;
         }
@@ -347,22 +357,61 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
-    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string operation)
+    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status)
     {
-        var nextReportAt = TimeSpan.FromSeconds(5);
+        var nextReportAt = TimeSpan.Zero;
         while (!task.IsCompleted)
         {
-            var delay = Task.Delay(TimeSpan.FromMilliseconds(250));
-            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (timer.Elapsed >= nextReportAt)
+            {
+                WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
+                nextReportAt += TimeSpan.FromSeconds(1);
+            }
+
+            var completed = await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100))).ConfigureAwait(false);
             if (completed == task) break;
-            if (timer.Elapsed < nextReportAt) continue;
-            WriteProgress($"{operation}: still working, {timer.Elapsed.TotalSeconds:F0}s elapsed");
-            nextReportAt += TimeSpan.FromSeconds(5);
         }
         return await task.ConfigureAwait(false);
     }
 
-    private static void WriteProgress(string message) => Console.Error.WriteLine(message);
+    private static void WriteProgress(string message)
+    {
+        if (Console.IsErrorRedirected)
+        {
+            Console.Error.WriteLine(message);
+            return;
+        }
+
+        var width = Math.Max(progressLineWidth, message.Length);
+        Console.Error.Write('\r');
+        Console.Error.Write(message.PadRight(width));
+        Console.Error.Flush();
+        progressLineWidth = width;
+    }
+
+    private static void CompleteProgress(string message)
+    {
+        if (Console.IsErrorRedirected)
+        {
+            Console.Error.WriteLine(message);
+            progressLineWidth = 0;
+            return;
+        }
+
+        var width = Math.Max(progressLineWidth, message.Length);
+        Console.Error.Write('\r');
+        Console.Error.WriteLine(message.PadRight(width));
+        Console.Error.Flush();
+        progressLineWidth = 0;
+    }
+
+    private static void WriteProgressLine(string message)
+    {
+        if (progressLineWidth > 0)
+            CompleteProgress(message);
+        else
+            Console.Error.WriteLine(message);
+    }
 
     public static void WriteHelp(string compileCommand = "xpscript compile", string runCommand = "xpscript run")
     {
@@ -385,8 +434,8 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
 --source-root may be repeated and automatically enables restricted Include processing.
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
-The compile command reports progress to stderr while preserving structured result output on stdout.
-The run command stays quiet by default. Use --info to show compilation timing and runtime lifecycle information.
+The compile command reports live progress on one console line while preserving structured result output on stdout.
+The run command stays quiet by default. Use --info to show the same live compilation status and runtime lifecycle information.
 The run command uses a framework-dependent transient build and can execute only the current OS/architecture target.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
