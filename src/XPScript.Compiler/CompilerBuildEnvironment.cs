@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace XPScript.Compiler;
 
@@ -28,6 +30,8 @@ internal static class CompilerBuildEnvironment
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
 
         ConfigureGeneratedDependencies(startInfo, root);
+        if (usePersistentRunCache)
+            ConfigurePersistentRunRestore(startInfo, root, cacheRoot);
 
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
@@ -72,6 +76,37 @@ internal static class CompilerBuildEnvironment
         CompilerPathSecurity.HardenTemporaryDirectory(root);
         return root;
     }
+
+    private static void ConfigurePersistentRunRestore(ProcessStartInfo startInfo, string workspace, string cacheRoot)
+    {
+        if (startInfo.ArgumentList.Count < 2) return;
+
+        var projectPath = startInfo.ArgumentList[1];
+        if (string.IsNullOrWhiteSpace(projectPath)) return;
+        projectPath = Path.GetFullPath(projectPath);
+        if (!File.Exists(projectPath)) return;
+
+        var projectText = File.ReadAllText(projectPath);
+        if (projectText.Contains("<HintPath>", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var propsPath = Path.Combine(workspace, "Directory.Build.props");
+        var propsText = File.Exists(propsPath) ? File.ReadAllText(propsPath) : string.Empty;
+        var rid = ReadRuntimeIdentifier(startInfo);
+        var identity = projectText + "\0" + propsText + "\0" + rid;
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
+        var restoreRoot = CreatePrivateDirectory(Path.Combine(cacheRoot, "restore"), hash[..32]);
+        var assetsPath = Path.Combine(restoreRoot, "project.assets.json");
+
+        startInfo.ArgumentList.Add("-p:MSBuildProjectExtensionsPath=" + EnsureTrailingSeparator(restoreRoot));
+        if (File.Exists(assetsPath))
+            startInfo.ArgumentList.Add("--no-restore");
+    }
+
+    private static string EnsureTrailingSeparator(string path) =>
+        path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
 
     private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
     {
@@ -193,6 +228,8 @@ internal static class CompilerBuildEnvironment
 
     private static string CreatePrivateDirectory(string root, string name)
     {
+        Directory.CreateDirectory(root);
+        CompilerPathSecurity.HardenTemporaryDirectory(root);
         var path = Path.Combine(root, name);
         Directory.CreateDirectory(path);
         CompilerPathSecurity.HardenTemporaryDirectory(path);
