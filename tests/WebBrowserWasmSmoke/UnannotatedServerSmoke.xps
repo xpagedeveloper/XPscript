@@ -1,0 +1,10 @@
+[Platform:browser-wasm]
+
+Function UnsafeDb() As Variant
+    Dim db As New XPDBSQLite("unsafe.db")
+    UnsafeDb = db.Query("SELECT 1")
+End Function
+
+Sub Main()
+    Print "UNSAFE"
+End Sub
