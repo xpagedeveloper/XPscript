@@ -205,6 +205,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>XPScript.BrowserServer</AssemblyName>
   </PropertyGroup>
 {itemGroup}  <ItemGroup>
