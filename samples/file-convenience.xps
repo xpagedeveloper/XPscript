@@ -8,7 +8,6 @@ Sub Main()
     Dim dirs As Variant
     Dim lines As Variant
     Dim bytes As Variant
-    Dim item As Variant
     Dim count As Integer
     Dim h1 As String
     Dim h2 As String
