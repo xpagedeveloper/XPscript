@@ -64,18 +64,31 @@ jobs:
           $expectedMarkerNormalized = $expectedCode + "`n" + (' ' * 12) + '^'
 
           function Invoke-ExpectedCompileFailure([string] $format, [bool] $directRun) {
-            if ($directRun) {
-              $text = (& dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- run samples/include-source-map/root.xps --result-format $format 2>&1 | Out-String)
-            } else {
-              $text = (& dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- samples/include-source-map/root.xps --framework-dependent --result-format $format 2>&1 | Out-String)
+            $stdoutPath = [System.IO.Path]::GetTempFileName()
+            $stderrPath = [System.IO.Path]::GetTempFileName()
+            try {
+              if ($directRun) {
+                & dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- run samples/include-source-map/root.xps --result-format $format 1> $stdoutPath 2> $stderrPath
+              } else {
+                & dotnet run --no-build --project src/XPScript.Compiler/XPScript.Compiler.csproj -- samples/include-source-map/root.xps --framework-dependent --result-format $format 1> $stdoutPath 2> $stderrPath
+              }
+              $exitCode = $LASTEXITCODE
+              $stdout = Get-Content -Raw $stdoutPath
+              $stderr = Get-Content -Raw $stderrPath
+              Write-Host "--- $format run=$directRun exit=$exitCode ---"
+              if (-not [string]::IsNullOrWhiteSpace($stderr)) {
+                Write-Host "stderr:"
+                Write-Host $stderr
+              }
+              Write-Host "stdout:"
+              Write-Host $stdout
+              if ($exitCode -ne 2) {
+                throw "Expected compiler exit code 2 for $format (run=$directRun), got $exitCode.`nstdout:`n$stdout`nstderr:`n$stderr"
+              }
+              return $stdout
+            } finally {
+              Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
             }
-            $exitCode = $LASTEXITCODE
-            Write-Host "--- $format run=$directRun exit=$exitCode ---"
-            Write-Host $text
-            if ($exitCode -ne 2) {
-              throw "Expected compiler exit code 2 for $format (run=$directRun), got $exitCode.`n$text"
-            }
-            return $text
           }
 
           $text = Invoke-ExpectedCompileFailure 'text' $false
