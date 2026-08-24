@@ -2,21 +2,21 @@ namespace XPScript.Web.Compiler;
 
 internal static class BrowserWasmServerBridgeTransportInstaller
 {
-    private const string UrlMarker = "        var url = XPScriptRuntime.CStr(urlValue).Trim();";
+    private const string SendUrlMarker = "        EnsureNotDisposed();\n        var url = XPScriptRuntime.CStr(urlValue).Trim();";
     private const string InstalledMarker = "XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers)";
 
     public static string TransformGenerated(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(InstalledMarker, StringComparison.Ordinal)) return generated;
-        if (!generated.Contains(UrlMarker, StringComparison.Ordinal))
+        if (!generated.Contains(SendUrlMarker, StringComparison.Ordinal))
             throw new XpsWebCompilationException("Unable to install browser-wasm server bridge transport in HttpClient runtime.");
 
-        var replacement = UrlMarker + "\n" +
+        var replacement = SendUrlMarker + "\n" +
             "        if (XPScriptBrowserServerBridgeTransport.IsBridgeUrl(url))\n" +
             "            return XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers);";
 
-        return generated.Replace(UrlMarker, replacement, StringComparison.Ordinal) + "\n\n" + RuntimeCode;
+        return generated.Replace(SendUrlMarker, replacement, StringComparison.Ordinal) + "\n\n" + RuntimeCode;
     }
 
     public static string TransformBrowserModule(string module)
