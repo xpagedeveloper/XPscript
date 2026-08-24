@@ -2,7 +2,7 @@ using System.Text;
 
 namespace XPScript.Compiler;
 
-internal sealed class ServerSideMetadataPreprocessor
+public sealed class ServerSideMetadataPreprocessor
 {
     public string Transform(string source)
     {
