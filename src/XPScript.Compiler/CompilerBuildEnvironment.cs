@@ -16,13 +16,16 @@ internal static class CompilerBuildEnvironment
         var root = Path.GetFullPath(workspace);
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(root, "dotnet-home");
-        var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
-        var nugetHttpCache = CreatePrivateDirectory(root, "nuget-http-cache");
-        var nugetPluginsCache = CreatePrivateDirectory(root, "nuget-plugins-cache");
         var profile = CreatePrivateDirectory(root, "profile");
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
+
+        var usePersistentRunCache = IsTransientRunBuild(startInfo);
+        var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
+        var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
+        var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
+        var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
 
         ConfigureGeneratedDependencies(startInfo, root);
 
@@ -49,6 +52,25 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBuildSDKsPath");
         startInfo.Environment.Remove("MSBUILDSDKSPATH");
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
+    }
+
+    private static bool IsTransientRunBuild(ProcessStartInfo startInfo)
+    {
+        if (startInfo.ArgumentList.Count == 0) return false;
+        return string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string PersistentRunCacheRoot()
+    {
+        var baseDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(baseDirectory))
+            baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
+
+        var compilerIdentity = typeof(CompilerBuildEnvironment).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var root = Path.Combine(baseDirectory, "XPScript", "run-build-cache", compilerIdentity);
+        Directory.CreateDirectory(root);
+        CompilerPathSecurity.HardenTemporaryDirectory(root);
+        return root;
     }
 
     private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
