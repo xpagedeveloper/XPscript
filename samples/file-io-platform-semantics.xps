@@ -7,6 +7,8 @@ Sub Main()
     Dim driveErr As Integer
     Dim deleteOpenErr As Integer
     Dim recursiveFound As Boolean
+    Dim depthOneFound As Boolean
+    Dim depthTwoFound As Boolean
 
     MkDir "xps-platform-semantics"
     ChDir "xps-platform-semantics"
@@ -40,6 +42,22 @@ Sub Main()
     fileNumber = FreeFile
     Open "subdir/nested.txt" For Output As #fileNumber
     Print #fileNumber, "nested"
+    Close #fileNumber
+
+    MkDir "depth-a"
+    MkDir "depth-a/depth-b"
+    MkDir "depth-a/depth-b/depth-c"
+    fileNumber = FreeFile
+    Open "depth-a/level1.txt" For Output As #fileNumber
+    Print #fileNumber, "level1"
+    Close #fileNumber
+    fileNumber = FreeFile
+    Open "depth-a/depth-b/level2.txt" For Output As #fileNumber
+    Print #fileNumber, "level2"
+    Close #fileNumber
+    fileNumber = FreeFile
+    Open "depth-a/depth-b/depth-c/level3.txt" For Output As #fileNumber
+    Print #fileNumber, "level3"
     Close #fileNumber
 
     If Not IsFile("CaseProbe.TXT") Then
@@ -98,6 +116,22 @@ Sub Main()
     End If
     Print "DIR_MODE3=OK"
 
+    depthOneFound = False
+    depthTwoFound = False
+    found = Dir("*.txt", 3, 1)
+    Do While found <> ""
+        If found = "depth-a/level1.txt" Or found = "depth-a\level1.txt" Then depthOneFound = True
+        If found = "depth-a/depth-b/level2.txt" Or found = "depth-a\depth-b\level2.txt" Then depthTwoFound = True
+        found = Dir()
+    Loop
+    If Not depthOneFound Then
+        Error 9730, "Dir maxDepth=1 did not include one subdirectory level"
+    End If
+    If depthTwoFound Then
+        Error 9731, "Dir maxDepth=1 traversed too deeply"
+    End If
+    Print "DIR_MAXDEPTH=OK"
+
     fileNumber = FreeFile
     Open "delete-open-probe.txt" For Output As #fileNumber
     Print #fileNumber, "before-delete"
@@ -153,6 +187,12 @@ Sub Main()
     Kill "normal-probe.txt"
     Kill "subdir/nested.txt"
     RmDir "subdir"
+    Kill "depth-a/depth-b/depth-c/level3.txt"
+    Kill "depth-a/depth-b/level2.txt"
+    Kill "depth-a/level1.txt"
+    RmDir "depth-a/depth-b/depth-c"
+    RmDir "depth-a/depth-b"
+    RmDir "depth-a"
     ChDir ".."
     RmDir "xps-platform-semantics"
 
