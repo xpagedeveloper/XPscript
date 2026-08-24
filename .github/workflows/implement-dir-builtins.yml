@@ -1,15 +1,15 @@
 name: Implement Dir builtins
 
 on:
-  push:
-    branches: [feature/dir-filter-isfile-isdir]
-    paths: [.github/workflows/implement-dir-builtins.yml]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   implement:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/dir-filter-isfile-isdir'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,6 @@ jobs:
             "DirEnumerator = XPScriptFileSystemRuntime.Enumerate(raw).GetEnumerator();",
             StringComparison.Ordinal);
 '''
-          # The new runtime calls portability functions directly; remove the obsolete legacy rewrite if present.
           if old in s:
               s = s.replace(old, '', 1)
           p.write_text(s)
@@ -220,6 +219,7 @@ End Sub
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf dir-filter-fixture
           out=$(dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run samples/dir-filter-builtins.xps --info)
           echo "$out"
           grep -q 'ISFILE=True' <<<"$out"
