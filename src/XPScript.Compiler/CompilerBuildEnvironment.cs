@@ -16,15 +16,23 @@ internal static class CompilerBuildEnvironment
         ArgumentNullException.ThrowIfNull(startInfo);
 
         var root = Path.GetFullPath(workspace);
+        var usePersistentRunCache = IsTransientRunBuild(startInfo);
+        var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
+        var environmentRoot = usePersistentRunCache
+            ? CreatePrivateDirectory(cacheRoot, "environment")
+            : root;
+
+        // Process temp remains invocation-local. The dotnet user/profile state is safe to
+        // reuse for transient run builds because the persistent cache is owner-only.
+        // Keeping DOTNET_CLI_HOME and the profile stable avoids paying a fresh CLI/tooling
+        // cold-start on every edit-run cycle while release compile remains one-shot isolated.
         var processTemp = CreatePrivateDirectory(root, "process-temp");
-        var cliHome = CreatePrivateDirectory(root, "dotnet-home");
-        var profile = CreatePrivateDirectory(root, "profile");
+        var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
+        var profile = CreatePrivateDirectory(environmentRoot, "profile");
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
 
-        var usePersistentRunCache = IsTransientRunBuild(startInfo);
-        var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
         var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
         var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
