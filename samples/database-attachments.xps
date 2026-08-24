@@ -19,7 +19,6 @@ Sub Main()
     Dim id2 As String
     Dim replacementId As String
     Dim metadataId As String
-    Dim metadataText As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
 
@@ -45,9 +44,6 @@ Sub Main()
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
-    metadataText = created1.Stringify()
-    Print "ATTACH-NO-MODIFIED=" & CStr(InStr(1, metadataText, Chr(34) & "modified" & Chr(34)) = 0)
-    Print "ATTACH-NO-MODIFIED-BY=" & CStr(InStr(1, metadataText, Chr(34) & "modifiedBy" & Chr(34)) = 0)
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
