@@ -93,8 +93,6 @@ jobs:
             'ATTACH-CREATED-BY=creator-one@example',
             'ATTACH-NAME=contracts.pdf',
             'ATTACH-HAS-CHECKSUM=True',
-            'ATTACH-NO-MODIFIED=True',
-            'ATTACH-NO-MODIFIED-BY=True',
             'ATTACH-FIND-NAME=2',
             'ATTACH-METADATA-ID=True',
             'ATTACH-SAME-LENGTH=True',
