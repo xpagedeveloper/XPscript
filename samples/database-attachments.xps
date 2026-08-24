@@ -19,6 +19,7 @@ Sub Main()
     Dim id2 As String
     Dim replacementId As String
     Dim metadataId As String
+    Dim checksum As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
 
@@ -43,7 +44,8 @@ Sub Main()
     Print "ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
-    Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
+    checksum = CStr(created1.Get("checksumSha256"))
+    Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(checksum) = 64)
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
