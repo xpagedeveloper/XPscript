@@ -10,11 +10,9 @@ internal static class RunRoslynCompiler
 {
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences = new(CreateFrameworkReferences, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    public static bool CanCompile(
-        string generatedSource,
-        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference> managedReferences)
+    public static bool CanCompile(string generatedSource, bool hasManagedReferences)
     {
-        if (managedReferences.Count > 0) return false;
+        if (hasManagedReferences) return false;
 
         return !generatedSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) &&
                !generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) &&
