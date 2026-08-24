@@ -11,6 +11,7 @@ on:
       - 'src/XPScript.Compiler/RunArtifactCache.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
       - 'samples/unified-cli-smoke.xps'
+      - 'demo/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - 'src/XPScript.Compiler/RunArtifactCache.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
       - 'samples/unified-cli-smoke.xps'
+      - 'demo/**'
       - 'XPScriptCompiler.slnx'
 
 permissions:
@@ -35,7 +37,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -86,6 +88,24 @@ jobs:
           $second = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run $changed --info 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "changed source cached run failed.`n$second" }
           if (-not ($second | Where-Object { $_ -like 'Run cache hit for unified-cli-changed.xps*' })) { throw "Changed source did not recache after rebuild.`n$second" }
+      - name: Run headless demo programs and verify cache
+        shell: pwsh
+        run: |
+          $demos = @(
+            @{ Path = './demo/console/hello.xps'; Name = 'hello.xps'; Expected = 'SUM=15' },
+            @{ Path = './demo/sqlite/sqlite-demo.xps'; Name = 'sqlite-demo.xps'; Expected = 'Ada' },
+            @{ Path = './demo/httpdb/httpdb-demo.xps'; Name = 'httpdb-demo.xps'; Expected = 'HTTPDB-DEMO=CONFIGURED' }
+          )
+          foreach ($demo in $demos) {
+            $first = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run $demo.Path --info 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Demo first run failed: $($demo.Path)`n$first" }
+            if (-not (($first -join "`n") -match [regex]::Escape($demo.Expected))) { throw "Demo output mismatch: $($demo.Path)`n$first" }
+            $second = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run $demo.Path --info 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Demo cached run failed: $($demo.Path)`n$second" }
+            if (-not (($second -join "`n") -match [regex]::Escape($demo.Expected))) { throw "Cached demo output mismatch: $($demo.Path)`n$second" }
+            if (-not ($second | Where-Object { $_ -like "Run cache hit for $($demo.Name)*" })) { throw "Demo did not use run artifact cache on second execution: $($demo.Path)`n$second" }
+          }
+          Remove-Item ./demo.db -Force -ErrorAction SilentlyContinue
       - name: Verify direct compile shortcut
         shell: pwsh
         run: |
