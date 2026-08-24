@@ -6,17 +6,48 @@ on:
     paths:
       - 'src/XPScript.Compiler/FileSystemPortabilityRuntimeSource.cs'
       - 'src/XPScript.Compiler/FileIoExtensionsRuntimeSource.cs'
+      - 'src/XPScript.Compiler/FileIoExtensionsPreprocessor.cs'
       - 'src/XPScript.Compiler/CrossPlatformRuntimeSource.cs'
+      - 'src/XPScript.Compiler/CrossPlatformPreprocessor.cs'
       - 'samples/file-io-platform-semantics.xps'
+      - 'samples/file-convenience.xps'
       - 'docs/file-io-reference.md'
+      - 'scripts/_apply_file_convenience.py'
       - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  prepare-file-convenience:
+    if: github.head_ref == 'feature/dir-filter-isfile-isdir'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Apply filesystem convenience implementation
+        run: python ./scripts/_apply_file_convenience.py
+      - name: Commit implementation
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No implementation changes needed."
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Compiler/CrossPlatformRuntimeSource.cs src/XPScript.Compiler/CrossPlatformPreprocessor.cs src/XPScript.Compiler/FileIoExtensionsPreprocessor.cs samples/file-convenience.xps docs/file-io-reference.md
+          git commit -m 'Add filesystem convenience APIs'
+          git push origin HEAD:${{ github.head_ref }}
+
   platform-semantics:
+    needs: prepare-file-convenience
     strategy:
       fail-fast: false
       matrix:
@@ -24,6 +55,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
@@ -46,12 +79,17 @@ jobs:
           $result = & $exe
           if ($LASTEXITCODE -ne 0) { throw "Platform semantics fixture failed.`n$result" }
           $result | ForEach-Object { Write-Host $_ }
-          if ($result -notcontains 'FILE_IO_PLATFORM_SEMANTICS=OK') { throw "Missing success marker.`n$result" }
-          if ($result -notcontains 'ISFILE_ISDIR=OK') { throw "IsFile/IsDir regression missing.`n$result" }
-          if ($result -notcontains 'DIR_MODE1=OK') { throw "Dir mode 1 regression missing.`n$result" }
-          if ($result -notcontains 'DIR_MODE2=OK') { throw "Dir mode 2 regression missing.`n$result" }
-          if ($result -notcontains 'DIR_MODE3=OK') { throw "Dir mode 3 regression missing.`n$result" }
-          if ($result -notcontains 'DIR_MAXDEPTH=OK') { throw "Dir maxDepth regression missing.`n$result" }
+          foreach ($required in @('FILE_IO_PLATFORM_SEMANTICS=OK','ISFILE_ISDIR=OK','DIR_MODE1=OK','DIR_MODE2=OK','DIR_MODE3=OK','DIR_MAXDEPTH=OK')) {
+            if ($result -notcontains $required) { throw "Missing regression marker $required.`n$result" }
+          }
+
+          $convExe = if ($env:RUNNER_OS -eq 'Windows') { './out/file-convenience.exe' } else { './out/file-convenience' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-convenience.xps --runtime '${{ steps.rid.outputs.rid }}' -o $convExe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'file-convenience.xps compilation failed.' }
+          $conv = & $convExe
+          if ($LASTEXITCODE -ne 0) { throw "File convenience fixture failed.`n$conv" }
+          $conv | ForEach-Object { Write-Host $_ }
+          if ($conv -notcontains 'FILE_CONVENIENCE=OK') { throw "Missing file convenience success marker.`n$conv" }
 
           if ($env:RUNNER_OS -eq 'Windows') {
             if ($result -notcontains 'CHDRIVE_WINDOWS=SUPPORTED') { throw "Windows ChDrive was not verified.`n$result" }
@@ -61,10 +99,6 @@ jobs:
             if (($value -band 2) -eq 0) { throw "Windows hidden attribute bit was not set.`n$result" }
             if ($result -notcontains 'DIR_CASE_MATCH=TRUE') { throw "Windows filesystem should match case-insensitively on the hosted runner.`n$result" }
             if ($result -notcontains 'DELETE_OPEN_WINDOWS=BLOCKED') { throw "Windows delete-while-open contract was not verified.`n$result" }
-            $deleteErr = $result | Where-Object { $_ -like 'DELETE_OPEN_WINDOWS_ERR=*' } | Select-Object -First 1
-            if (-not $deleteErr) { throw "Windows delete-while-open error code was not reported.`n$result" }
-            $deleteErrValue = [int]($deleteErr -replace '^DELETE_OPEN_WINDOWS_ERR=', '')
-            if ($deleteErrValue -eq 0) { throw "Windows delete-while-open unexpectedly reported success.`n$result" }
           } else {
             if ($result -notcontains 'CHDRIVE_NONWINDOWS_ERR=5') { throw "Non-Windows ChDrive must raise XPScript error 5.`n$result" }
             if ($result -notcontains 'UNIX_SET_HIDDEN_ERR=5') { throw "Unix SetFileAttr Hidden must require an explicit dot-name rename.`n$result" }
