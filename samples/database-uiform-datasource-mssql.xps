@@ -53,10 +53,22 @@ Sub Main()
     Print "MSSQL-HIDDEN-AFTER=" & CStr(saved.Get("internal_code"))
     Print "MSSQL-COMPUTED-AFTER=" & CStr(saved.Get("computed_label"))
 
-    If CStr(saved.Get("name")) <> "Anna Andersson" Then Error 5
-    If CStr(saved.Get("city")) <> "Goteborg" Then Error 5
-    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then Error 5
-    If CStr(saved.Get("computed_label")) <> "Anna Andersson!" Then Error 5
+    If CStr(saved.Get("name")) <> "Anna Andersson" Then
+        Print "MSSQL-DATASOURCE=FAILED"
+        Exit Sub
+    End If
+    If CStr(saved.Get("city")) <> "Goteborg" Then
+        Print "MSSQL-DATASOURCE=FAILED"
+        Exit Sub
+    End If
+    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then
+        Print "MSSQL-DATASOURCE=FAILED"
+        Exit Sub
+    End If
+    If CStr(saved.Get("computed_label")) <> "Anna Andersson!" Then
+        Print "MSSQL-DATASOURCE=FAILED"
+        Exit Sub
+    End If
 
     Call db.Execute("DROP TABLE dbo.xpdb_datasource_customers")
     Call db.Close()
