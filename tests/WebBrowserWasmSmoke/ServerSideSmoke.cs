@@ -1,9 +1,19 @@
+using System.Runtime.CompilerServices;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 internal static class ServerSideSmoke
 {
-    public static async Task RunAsync(string root)
+    [ModuleInitializer]
+    public static void Initialize()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "xps-browser-wasm-server-side-smoke-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try { RunAsync(root).GetAwaiter().GetResult(); }
+        finally { try { Directory.Delete(root, true); } catch { } }
+    }
+
+    private static async Task RunAsync(string root)
     {
         var sourcePath = Path.Combine(root, "server-side.xps");
         await File.WriteAllTextAsync(sourcePath, """
