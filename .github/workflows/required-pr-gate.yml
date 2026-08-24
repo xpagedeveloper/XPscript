@@ -66,11 +66,102 @@ jobs:
 
           Write-Host "SOLUTION-PROJECT-REFERENCE-CLOSURE=OK ($($solutionProjects.Count) projects)"
 
+      - name: Validate command docs and demo catalog
+        shell: pwsh
+        run: ./scripts/validate-docs-demos.ps1
+
       - name: Restore compiler
         run: dotnet restore ./XPScriptCompiler.slnx
 
       - name: Build compiler
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Compile runnable demo programs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/required-gate/demos | Out-Null
+          $demos = @(
+            'console/hello.xps',
+            'desktop-ui/customer-form.xps',
+            'browser-wasm/customer-form.xps',
+            'sqlite/sqlite-demo.xps',
+            'mssql/mssql-demo.xps',
+            'httpdb/httpdb-demo.xps',
+            'http/http-client.xps',
+            'ai/ai-tool-demo.xps'
+          )
+          foreach ($relative in $demos) {
+            $withoutExtension = [System.IO.Path]::ChangeExtension($relative, $null)
+            $safe = ($withoutExtension -replace '[^A-Za-z0-9._-]', '-')
+            $output = "./out/required-gate/demos/$safe"
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./demo/$relative" -o $output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Demo compilation failed: $relative" }
+          }
+          Write-Host "DEMO-COMPILE=OK ($($demos.Count) standalone programs)"
+
+      - name: Compile standalone desktop MsgBox sample
+        shell: pwsh
+        run: |
+          $output = './out/required-gate/demos/msgbox-desktop'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/msgbox-desktop.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone MsgBox sample did not compile.' }
+          Write-Host 'MSGBOX-DESKTOP-COMPILE=OK'
+
+      - name: Verify Seek Loc LOF and Reset
+        shell: pwsh
+        run: |
+          $output = './out/required-gate/demos/file-position-reset'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/file-position-reset.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Seek/Loc/LOF/Reset sample did not compile.' }
+          chmod +x $output
+          $result = & $output 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Seek/Loc/LOF/Reset sample failed with exit code $exit." }
+          foreach ($expected in @('SEEK-RESET=1','RESET-FREEFILE=1','FILE-POSITION-RESET=OK')) {
+            if ($result -notcontains $expected) { throw "File-position sample output missing: $expected" }
+          }
+          Write-Host 'FILE-POSITION-RESET=OK'
+
+      - name: Verify managed-reference documentation example
+        shell: pwsh
+        run: |
+          dotnet build ./tests/ManagedReferenceFixture/ManagedReferenceFixture.csproj -c Release
+          New-Item -ItemType Directory -Force ./samples/managed-reference | Out-Null
+          Copy-Item ./tests/ManagedReferenceFixture/bin/Release/net10.0/ManagedReferenceFixture.dll ./samples/managed-reference/ManagedReferenceFixture.dll -Force
+          $output = './out/required-gate/demos/managed-reference'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/managed-reference.xps -o $output --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Managed-reference documentation example did not compile.' }
+          chmod +x $output
+          $result = & $output 2>&1
+          $exit = $LASTEXITCODE
+          $result | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) { throw "Managed-reference documentation example failed with exit code $exit." }
+          if ($result -notcontains 'MANAGED-REFERENCE=OK') { throw 'Managed-reference documentation example output mismatch.' }
+          Write-Host 'MANAGED-REFERENCE-DOCS=OK'
+
+      - name: Run offline demo programs
+        shell: pwsh
+        run: |
+          $demos = @(
+            'console/hello.xps',
+            'sqlite/sqlite-demo.xps',
+            'httpdb/httpdb-demo.xps'
+          )
+          foreach ($relative in $demos) {
+            $withoutExtension = [System.IO.Path]::ChangeExtension($relative, $null)
+            $safe = ($withoutExtension -replace '[^A-Za-z0-9._-]', '-')
+            $output = "./out/required-gate/runtime/$safe"
+            New-Item -ItemType Directory -Force (Split-Path -Parent $output) | Out-Null
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./demo/$relative" -o $output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Offline demo compilation failed: $relative" }
+            chmod +x $output
+            $result = & $output 2>&1
+            $exit = $LASTEXITCODE
+            $result | ForEach-Object { Write-Host $_ }
+            if ($exit -ne 0) { throw "Offline demo runtime failed: $relative (exit $exit)" }
+          }
+          Write-Host "DEMO-RUNTIME=OK ($($demos.Count) offline demos)"
 
       - name: Compile portable smoke program
         shell: pwsh

@@ -1,19 +1,16 @@
 [Platform:browser-wasm]
 
 Sub Main()
-    Dim form As New UIForm("Browser WASM Customer")
+    Dim form As New UIForm("Browser WASM demo")
     Dim grid As Variant
 
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
-    Call form.AddTextField("company", "Company")
     Call form.SetRequired("name", True)
 
     grid = form.AddGridColumns(12)
     Call grid.SetFieldPosition("name", 6)
     Call grid.SetFieldPosition("email", 6)
-    Call grid.AddNewRow()
-    Call grid.SetFieldPosition("company", 12)
 
     Call form.ShowDialog()
 End Sub

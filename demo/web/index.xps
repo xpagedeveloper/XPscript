@@ -1,0 +1,6 @@
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("<h1>XPScript web demo</h1>")
+    Response.Write("<p>Method: " & Request.Method & "</p>")
+End Sub

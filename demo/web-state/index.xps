@@ -1,0 +1,19 @@
+[Anonymous]
+[Get]
+Sub Index()
+    Call RequestScope.Set("request-value", "current request")
+    Call Application.Set("application-value", "shared process value")
+
+    If Session.Started Then
+        Call Session.Set("session-value", "current session")
+    End If
+
+    Response.ContentType = "text/plain; charset=utf-8"
+    Response.Write("RequestScope=" & CStr(RequestScope.Get("request-value")) & Chr(10))
+    Response.Write("Application=" & CStr(Application.Get("application-value")) & Chr(10))
+    If Session.Started Then
+        Response.Write("Session=" & CStr(Session.Get("session-value")) & Chr(10))
+    Else
+        Response.Write("Session=disabled" & Chr(10))
+    End If
+End Sub

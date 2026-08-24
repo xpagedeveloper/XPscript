@@ -1,0 +1,31 @@
+' XPScript Supabase HTTP database sample
+Option Declare
+
+Sub Main()
+    Dim db As New HTTPDBSupabase("http://127.0.0.1:18082", "test-key")
+    Dim data As New JsonObject
+    Dim args As New JsonObject
+    Dim filter As String
+    Dim doc As JsonDocument
+
+    Call db.SetBearerToken("user-token")
+    Call db.SetSchema("public")
+    filter = db.Eq("id", 42)
+    Call data.Set("id", 42)
+    Call data.Set("name", "Ada")
+    Set doc = db.Select("customers", "select=*&id=eq.42")
+    Set doc = db.Insert("customers", data)
+    Set doc = db.Update("customers", filter, data)
+    Set doc = db.Upsert("customers", data)
+    Call args.Set("name", "Ada")
+    Set doc = db.Rpc("hello", args)
+    Set doc = db.Delete("customers", filter)
+    Call db.ConfigureCloudManagement("project-ref", "management-token")
+    Call db.ConfigureSqlEndpoint("http://127.0.0.1:18082/sql", "admin-token")
+    Set doc = db.ExecuteSql("select 1 as ok")
+    Set doc = db.CreateTable("create table demo(id int)")
+    Set doc = db.AlterTable("alter table demo add name text")
+    Set doc = db.CreateView("create view demo_view as select * from demo")
+    Set doc = db.AlterView("create or replace view demo_view as select id from demo")
+    Print "SUPABASE_REFERENCE=OK"
+End Sub

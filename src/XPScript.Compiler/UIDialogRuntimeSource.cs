@@ -24,6 +24,36 @@ internal static class XPScriptUIDialogRuntime
         return Invoke("ShowChoiceDialog", System.Text.Json.JsonSerializer.Serialize(request));
     }
 
+    public static int MsgBox(object? prompt) => MsgBox(prompt, 0, string.Empty);
+    public static int MsgBox(object? prompt, object? boxType) => MsgBox(prompt, boxType, string.Empty);
+    public static int MsgBox(object? prompt, object? boxType, object? title)
+    {
+        var style = XPScriptRuntime.CInt(boxType);
+        var kind = (style & 0x0F) switch
+        {
+            0 => "OK",
+            1 => "OKCancel",
+            2 => "AbortRetryIgnore",
+            3 => "YesNoCancel",
+            4 => "YesNo",
+            5 => "RetryCancel",
+            _ => throw new XPScriptRuntimeException(5, "Unsupported MsgBox button style. Use 0 through 5 for the button group.")
+        };
+
+        var result = ShowDialog(prompt, title, kind, null);
+        return result.ToLowerInvariant() switch
+        {
+            "ok" => 1,
+            "cancel" => 2,
+            "abort" => 3,
+            "retry" => 4,
+            "ignore" => 5,
+            "yes" => 6,
+            "no" => 7,
+            _ => 0
+        };
+    }
+
     public static string LoadFileDialog() => OpenFileDialog();
     public static string LoadFileDialog(object? title) => OpenFileDialog(title);
     public static string LoadFileDialog(object? title, object? initialPath) => OpenFileDialog(title, initialPath);

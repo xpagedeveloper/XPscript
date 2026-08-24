@@ -1,0 +1,10 @@
+Sub Main()
+    Dim form As New UIForm("Remote search")
+
+    Call form.AddLookupField("customerId", "Customer", "http://127.0.0.1:18084/customers", "id", "name", True)
+    Call form.SetRemoteSearchOptions("customerId", "q", "value", 2, 25)
+    Call form.AddAutoCompleteField("productId", "Product", "http://127.0.0.1:18084/products", "id", "name", True)
+    Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
+
+    Print "UIFORM_LOOKUP_FIELDS=OK"
+End Sub

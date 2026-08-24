@@ -1,0 +1,8 @@
+Option Declare
+
+Sub Main()
+    Dim result As Integer
+
+    result = MsgBox("XPScript desktop MsgBox", 4, "Desktop UI")
+    Print "MSGBOX-RESULT=" & CStr(result)
+End Sub

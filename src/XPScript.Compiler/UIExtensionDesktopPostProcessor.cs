@@ -7,6 +7,8 @@ internal sealed class UIExtensionDesktopPostProcessor
 {
     private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
     private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
+    private const string RuntimeMsgBoxCall = "XPScriptRuntime.MsgBox(";
+    private const string DesktopMsgBoxCall = "XPScriptUIDialogRuntime.MsgBox(";
     private const string BridgeLookupOld = "    private static Type? BridgeType => Type.GetType(BridgeTypeName, throwOnError: false, ignoreCase: false);";
     private const string BridgeLookupNew = """
     private static Type? BridgeType
@@ -140,7 +142,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
 
         if (scriptPart.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-            scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal))
+            scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
+            scriptPart.Contains(RuntimeMsgBoxCall, StringComparison.Ordinal))
             return true;
 
         foreach (var function in DialogFunctions)
@@ -165,6 +168,8 @@ internal sealed class UIExtensionDesktopPostProcessor
 
     private static string RewriteDialogCalls(string source)
     {
+        source = source.Replace(RuntimeMsgBoxCall, DesktopMsgBoxCall, StringComparison.Ordinal);
+
         var output = new StringBuilder(source.Length + 128);
         var inString = false;
         var inChar = false;

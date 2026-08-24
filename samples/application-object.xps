@@ -1,0 +1,54 @@
+Option Declare
+
+Sub Main()
+    Dim i As Integer
+    Dim iconPath As String
+    Dim keys As Variant
+
+    iconPath = "app.ico"
+    Application.Title = "XPScript application reference"
+    Application.Icon = iconPath
+    Application.Width = 1024
+    Application.Height = 768
+
+    Print "TITLE=" & CStr(Application.Title)
+    Print "ICON=" & CStr(Application.Icon)
+    Print "WIDTH=" & CStr(Application.Width)
+    Print "HEIGHT=" & CStr(Application.Height)
+
+    Print "EXEPATH=" & Application.ExecutablePath
+    Print "PATH=" & Application.Path
+    Print "EXEFILE=" & Application.ExecutableFileName
+    Print "FILENAME=" & Application.FileName
+    Print "EXEDIR=" & Application.ExecutableDirectory
+    Print "TEMPPATH=" & Application.TempPath
+    Print "TEMPFOLDER=" & Application.TempFolder
+    Print "ARGCOUNT=" & CStr(Application.ArgCount)
+    Print "COMMANDLINE=" & Application.CommandLine
+
+    For i = 0 To Application.ArgCount - 1
+        Print "ARG" & CStr(i) & "=" & Application.Args(i)
+    Next
+
+    Call Application.State.Set("app", "value")
+    Call Application.State.Add("counter", 1)
+    Print "APP_STATE=" & CStr(Application.State.Get("app"))
+    Print "APP_EXISTS=" & CStr(Application.State.Exists("counter"))
+    Print "APP_COUNT=" & CStr(Application.State.Count)
+    keys = Application.State.Keys
+    Print "APP_REMOVE=" & CStr(Application.State.Remove("counter"))
+    Print "APP_UNSET=" & CStr(Application.State.Unset("app"))
+    Call Application.State.Clear()
+
+    Call Process.State.Set("process", "value")
+    Print "PROCESS_STATE=" & CStr(Process.State.Get("process"))
+    Call Process.State.Clear()
+
+    Call Session.State.Set("session", "value")
+    Print "SESSION_STATE=" & CStr(Session.State.Get("session"))
+    Call Session.State.Clear()
+
+    Call Request.State.Set("request", "value")
+    Print "REQUEST_STATE=" & CStr(Request.State.Get("request"))
+    Call Request.State.Clear()
+End Sub

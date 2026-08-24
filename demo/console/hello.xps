@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim name As String
+    Dim i As Long
+    Dim total As Long
+
+    name = "XPScript"
+    For i = 1 To 5
+        total = total + i
+    Next i
+
+    Print "Hello " & name
+    Print "SUM=" & CStr(total)
+    Print "UPPER=" & UCase(name)
+End Sub

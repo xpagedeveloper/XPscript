@@ -1,0 +1,18 @@
+Option Declare
+
+Sub Main()
+    Dim result As String
+    Dim selectedPath As String
+
+    result = ShowDialog("This is a desktop dialog demo.", "XPScript", "OK")
+    Print "SHOWDIALOG=" & result
+
+    selectedPath = OpenFileDialog("Open a file", "", "Text files|*.txt|All files|*.*")
+    Print "OPENFILE=" & selectedPath
+
+    selectedPath = LoadFileDialog("Load a file", "", "All files|*.*")
+    Print "LOADFILE=" & selectedPath
+
+    selectedPath = SaveFileDialog("Save a file", "demo.txt", "Text files|*.txt")
+    Print "SAVEFILE=" & selectedPath
+End Sub

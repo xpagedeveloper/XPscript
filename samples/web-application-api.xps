@@ -1,0 +1,15 @@
+Option Declare
+
+[Anonymous]
+[Get]
+[Route:/application-state]
+Sub ApplicationStateDemo()
+    Dim value As Variant
+
+    Application.Add("site-name", "XPScript")
+    Application.Set("release", "demo")
+    value = Application.Get("site-name")
+    Response.Write("SITE=" & CStr(value) & Chr(10))
+    Response.Write("REMOVED=" & CStr(Application.Remove("release")) & Chr(10))
+    Application.Clear()
+End Sub

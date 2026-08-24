@@ -1,0 +1,6 @@
+[Anonymous]
+[Get]
+Sub Index()
+    Response.ContentType = "text/html; charset=utf-8"
+    Response.Write("<h1>XPScript CGI demo</h1>")
+End Sub

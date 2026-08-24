@@ -1,0 +1,20 @@
+Option Declare
+
+[Anonymous]
+[Get]
+[Route:/request-scope]
+Sub RequestScopeDemo()
+    Dim keys As Variant
+    Dim value As Variant
+
+    RequestScope.Add("temporary", "value")
+    RequestScope.Set("counter", 1)
+    value = RequestScope.Get("temporary")
+    Response.Write("VALUE=" & CStr(value) & Chr(10))
+    Response.Write("EXISTS=" & CStr(RequestScope.Exists("counter")) & Chr(10))
+    Response.Write("COUNT=" & CStr(RequestScope.Count) & Chr(10))
+    keys = RequestScope.Keys
+    RequestScope.Remove("counter")
+    RequestScope.Unset("temporary")
+    RequestScope.Clear()
+End Sub

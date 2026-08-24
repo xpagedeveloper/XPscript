@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMsSql
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+
+    connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
+    If connectionString = "" Then
+        Print "Set XPSCRIPT_MSSQL_CONNECTION before running this demo."
+        Exit Sub
+    End If
+
+    Set db = New XPDbMsSql(connectionString)
+    Call db.Execute("CREATE TABLE #demo_people (id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(100) NOT NULL)")
+    Call parameters.Set("name", "Ada")
+    Call db.Execute("INSERT INTO #demo_people(name) VALUES (@name)", parameters)
+    Set rows = db.Query("SELECT id, name FROM #demo_people ORDER BY id")
+    Print rows.Stringify()
+    Call db.Close()
+End Sub
