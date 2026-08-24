@@ -159,16 +159,35 @@ ok = MoveFile("out.dat", "archive/out.dat", 3)
 
 ## Path object
 
-The built-in `Path` object centralizes cross-platform path manipulation and reuses XPscript's existing filesystem path normalization and existence checks.
+`Path` is an instance object. The path is supplied once when the object is created and all methods operate on that stored path.
 
 ```xpscript
-full = Path.Combine("data", "config.json")
-name = Path.FileName(full)
-ext = Path.Extension(full)
-dir = Path.Directory(full)
-absolute = Path.Absolute(full)
-relative = Path.Relative("data", absolute)
-exists = Path.Exists(full)
+p = New Path("src/test/data.json")
+Print p.FileName()
+Print p.FileNameWithoutExtension()
+Print p.Extension()
+Print p.Directory()
+Print p.Root()
+Print p.Normalize()
+Print p.Absolute()
+Print p.Relative("src/test/archive.json")
+Print p.ChangeExtension(".xml")
+Print p.IsAbsolute()
+Print p.Exists()
+Print p.Combine("child.txt")
 ```
 
-`Path.Combine(left, right)` joins two path parts using the target platform separator. `Path.FileName(path)` returns the final file or directory name. `Path.Extension(path)` returns the extension including the leading dot or an empty string. `Path.Directory(path)` returns the absolute parent directory. `Path.Absolute(path)` resolves an absolute path. `Path.Relative(basePath, path)` calculates `path` relative to `basePath`. `Path.Exists(path)` returns `True` for either an existing file or an existing directory and internally reuses the existing `FileExists`/`DirExists` behavior.
+Methods:
+
+- `FileName()` returns the final file or directory name.
+- `FileNameWithoutExtension()` removes the final extension.
+- `Extension()` returns the extension including the leading dot, or an empty string.
+- `Directory()` returns the absolute parent directory.
+- `Root()` returns the filesystem root of the absolute path.
+- `Normalize()` normalizes the stored path using the target platform path rules.
+- `Absolute()` resolves the stored path to an absolute path.
+- `Relative(targetPath)` returns `targetPath` relative to this Path object's stored path.
+- `ChangeExtension(newExtension)` returns the stored path with its extension replaced; it does not rename the file.
+- `IsAbsolute()` reports whether the originally supplied path is fully qualified.
+- `Exists()` returns `True` when the stored path identifies an existing file or directory and reuses the existing `FileExists`/`DirExists` checks.
+- `Combine(child)` combines the stored path with one child path component.

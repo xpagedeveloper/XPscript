@@ -55,14 +55,11 @@ internal sealed class CrossPlatformPreprocessor
                 RegexOptions.IgnoreCase);
         }
 
-        foreach (var method in new[] { "Combine", "FileName", "Extension", "Directory", "Absolute", "Relative", "Exists" })
-        {
-            source = Regex.Replace(
-                source,
-                $@"(?<![\w.])Path\s*\.\s*{Regex.Escape(method)}\s*\(",
-                $"XPCrossPlatformRuntime.PathApi.{method}(",
-                RegexOptions.IgnoreCase);
-        }
+        source = Regex.Replace(
+            source,
+            @"\bNew\s+Path\s*\(",
+            "XPCrossPlatformRuntime.PathValue(",
+            RegexOptions.IgnoreCase);
 
         source = Regex.Replace(
             source,

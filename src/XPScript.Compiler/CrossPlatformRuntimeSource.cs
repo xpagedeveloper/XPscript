@@ -69,32 +69,35 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
-    public static class PathApi
+    public sealed class XPPathValue
     {
-        public static string Combine(object? left, object? right) =>
-            System.IO.Path.Combine(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right));
+        private readonly string _path;
 
-        public static string FileName(object? path) =>
-            System.IO.Path.GetFileName(XPScriptRuntime.CStr(path));
-
-        public static string Extension(object? path) =>
-            System.IO.Path.GetExtension(XPScriptRuntime.CStr(path));
-
-        public static string Directory(object? path) =>
-            System.IO.Path.GetDirectoryName(XPScriptFileSystemRuntime.ResolvePath(path)) ?? "";
-
-        public static string Absolute(object? path) =>
-            XPScriptFileSystemRuntime.ResolvePath(path);
-
-        public static string Relative(object? basePath, object? path) =>
-            System.IO.Path.GetRelativePath(XPScriptFileSystemRuntime.ResolvePath(basePath), XPScriptFileSystemRuntime.ResolvePath(path));
-
-        public static bool Exists(object? path)
+        public XPPathValue(object? path)
         {
-            var value = XPScriptRuntime.CStr(path);
-            return FileExists(value) || DirExists(value);
+            _path = XPScriptRuntime.CStr(path);
+            if (string.IsNullOrWhiteSpace(_path))
+                throw new XPScriptRuntimeException(5, "Path must not be empty.");
         }
+
+        public string FileName() => System.IO.Path.GetFileName(_path);
+        public string FileNameWithoutExtension() => System.IO.Path.GetFileNameWithoutExtension(_path);
+        public string Extension() => System.IO.Path.GetExtension(_path);
+        public string Directory() => System.IO.Path.GetDirectoryName(Absolute()) ?? "";
+        public string Root() => System.IO.Path.GetPathRoot(Absolute()) ?? "";
+        public string Normalize() => System.IO.Path.GetFullPath(_path);
+        public string Absolute() => XPScriptFileSystemRuntime.ResolvePath(_path);
+        public string Relative(object? targetPath) =>
+            System.IO.Path.GetRelativePath(Absolute(), XPScriptFileSystemRuntime.ResolvePath(targetPath));
+        public string ChangeExtension(object? extension) =>
+            System.IO.Path.ChangeExtension(_path, XPScriptRuntime.CStr(extension)) ?? _path;
+        public bool IsAbsolute() => System.IO.Path.IsPathFullyQualified(_path);
+        public bool Exists() => FileExists(_path) || DirExists(_path);
+        public string Combine(object? child) => System.IO.Path.Combine(_path, XPScriptRuntime.CStr(child));
+        public override string ToString() => _path;
     }
+
+    public static XPPathValue PathValue(object? path) => new(path);
 
     public static string Dir(object? pattern = null, int mode = 0, int maxDepth = 3)
     {
