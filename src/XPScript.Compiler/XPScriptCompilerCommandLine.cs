@@ -234,47 +234,68 @@ public static class XPScriptCompilerCommandLine
 
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+            var runCache = await RunArtifactCache.CreateAsync(sourcePath, currentRuntimeIdentifier, sourcePreprocessors).ConfigureAwait(false);
             var compiler = new CompilerDriver();
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
-            if (info)
-                WriteProgress($"Started to compile {sourceName}");
 
-            var compileTask = compiler.CompileForRunWithResultAsync(
-                sourcePath,
-                tempRoot,
-                currentRuntimeIdentifier);
-            var compileResult = info
-                ? await WaitWithProgressAsync(
-                    compileTask,
-                    timer,
-                    $"Compiling {sourceName} [{currentRuntimeIdentifier}, transient]").ConfigureAwait(false)
-                : await compileTask.ConfigureAwait(false);
-
-            if (!compileResult.Success)
+            var cacheHit = runCache.TryGetRunnable(out var executablePath);
+            if (!cacheHit)
             {
+                var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
+                if (runCache.Enabled) runCache.PrepareOutputDirectory();
+
                 if (info)
-                    CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
-                WriteResult(compileResult, resultFormat);
-                return 2;
+                    WriteProgress($"Started to compile {sourceName}");
+
+                var compileTask = compiler.CompileForRunWithResultAsync(
+                    sourcePath,
+                    runOutputDirectory,
+                    currentRuntimeIdentifier);
+                var compileResult = info
+                    ? await WaitWithProgressAsync(
+                        compileTask,
+                        timer,
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, transient]").ConfigureAwait(false)
+                    : await compileTask.ConfigureAwait(false);
+
+                if (!compileResult.Success)
+                {
+                    runCache.Invalidate();
+                    if (info)
+                        CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                    WriteResult(compileResult, resultFormat);
+                    return 2;
+                }
+
+                executablePath = compileResult.Output ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+                    throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
+
+                if (runCache.Enabled) runCache.MarkReady(executablePath);
+                if (info)
+                    CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
+            }
+            else if (info)
+            {
+                WriteProgressLine($"Run cache hit for {sourceName}");
             }
 
-            var executablePath = compileResult.Output;
             if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
-                throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
+                throw new InvalidOperationException("Run cache did not contain a runnable executable.");
 
             if (info)
-            {
-                CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
                 WriteProgressLine("Starting program");
-            }
 
+            var managedAssemblyPath = Path.ChangeExtension(executablePath, ".dll");
             var startInfo = new ProcessStartInfo
             {
-                FileName = executablePath,
+                FileName = File.Exists(managedAssemblyPath) ? CompilerToolResolver.ResolveDotnetHost() : executablePath,
                 UseShellExecute = false,
                 WorkingDirectory = sourceDirectory
             };
+            if (File.Exists(managedAssemblyPath))
+                startInfo.ArgumentList.Add(managedAssemblyPath);
             startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
             foreach (var argument in scriptArgs)
                 startInfo.ArgumentList.Add(argument);
@@ -436,7 +457,7 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports live progress on one console line while preserving structured result output on stdout.
 The run command stays quiet by default. Use --info to show the same live compilation status and runtime lifecycle information.
-The run command uses a framework-dependent transient build and can execute only the current OS/architecture target.
+The run command uses a framework-dependent build and reuses a secure compiled-artifact cache when the script has no external compile-time inputs.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }

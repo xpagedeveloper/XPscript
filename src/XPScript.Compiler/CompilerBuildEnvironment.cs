@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
@@ -14,17 +17,30 @@ internal static class CompilerBuildEnvironment
         ArgumentNullException.ThrowIfNull(startInfo);
 
         var root = Path.GetFullPath(workspace);
+        var usePersistentRunCache = IsTransientRunBuild(startInfo);
+        var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
+        var environmentRoot = usePersistentRunCache
+            ? CreatePrivateDirectory(cacheRoot, "environment")
+            : root;
+
+        // Process temp remains invocation-local. The dotnet user/profile state is safe to
+        // reuse for transient run builds because the persistent cache is owner-only.
+        // Keeping DOTNET_CLI_HOME and the profile stable avoids paying a fresh CLI/tooling
+        // cold-start on every edit-run cycle while release compile remains one-shot isolated.
         var processTemp = CreatePrivateDirectory(root, "process-temp");
-        var cliHome = CreatePrivateDirectory(root, "dotnet-home");
-        var nugetPackages = CreatePrivateDirectory(root, "nuget-packages");
-        var nugetHttpCache = CreatePrivateDirectory(root, "nuget-http-cache");
-        var nugetPluginsCache = CreatePrivateDirectory(root, "nuget-plugins-cache");
-        var profile = CreatePrivateDirectory(root, "profile");
+        var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
+        var profile = CreatePrivateDirectory(environmentRoot, "profile");
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
 
+        var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
+        var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
+        var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
+
         ConfigureGeneratedDependencies(startInfo, root);
+        if (usePersistentRunCache)
+            ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
 
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
@@ -43,6 +59,8 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        if (usePersistentRunCache)
+            startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
 
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
@@ -50,6 +68,150 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBUILDSDKSPATH");
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
     }
+
+    private static bool IsTransientRunBuild(ProcessStartInfo startInfo)
+    {
+        if (startInfo.ArgumentList.Count == 0) return false;
+        return string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string PersistentRunCacheRoot()
+    {
+        var baseDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(baseDirectory))
+            baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
+
+        var compilerIdentity = typeof(CompilerBuildEnvironment).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var root = Path.Combine(baseDirectory, "XPScript", "run-build-cache", compilerIdentity);
+        Directory.CreateDirectory(root);
+        CompilerPathSecurity.HardenTemporaryDirectory(root);
+        return root;
+    }
+
+    private static void ConfigurePersistentRunBuild(ProcessStartInfo startInfo, string workspace, string cacheRoot)
+    {
+        if (startInfo.ArgumentList.Count < 2) return;
+
+        var projectPath = startInfo.ArgumentList[1];
+        if (string.IsNullOrWhiteSpace(projectPath)) return;
+        projectPath = Path.GetFullPath(projectPath);
+        if (!File.Exists(projectPath)) return;
+
+        var projectText = File.ReadAllText(projectPath);
+        if (projectText.Contains("<HintPath>", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var propsPath = Path.Combine(workspace, "Directory.Build.props");
+        var propsText = File.Exists(propsPath) ? File.ReadAllText(propsPath) : string.Empty;
+        var generatedPath = Path.Combine(workspace, "Program.cs");
+        var generatedSource = File.Exists(generatedPath) ? File.ReadAllText(generatedPath) : string.Empty;
+        var sourceIdentity = ExtractSourceIdentity(generatedSource);
+        var rid = ReadRuntimeIdentifier(startInfo);
+        var identity = sourceIdentity + "\0" + projectText + "\0" + propsText + "\0" + rid;
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
+
+        var restoreBase = CreatePrivateDirectory(cacheRoot, "restore");
+        var restoreRoot = CreatePrivateDirectory(restoreBase, hash[..32]);
+        var assetsPath = Path.Combine(restoreRoot, "project.assets.json");
+        var propsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.props");
+        var targetsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.targets");
+
+        startInfo.ArgumentList.Add("-p:MSBuildProjectExtensionsPath=" + EnsureTrailingSeparator(restoreRoot));
+        if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
+            startInfo.ArgumentList.Add("--no-restore");
+
+        // Reuse obj state only when this process can claim the cache entry. Concurrent
+        // builds of the same script fall back to their invocation-local obj directory.
+        // This preserves compiler isolation while allowing normal edit-run cycles to reuse
+        // generated MSBuild/Roslyn state across separate xpscript invocations.
+        var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
+        var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
+        if (TryClaimIntermediateCache(intermediateRoot))
+            startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+    }
+
+    private static string ExtractSourceIdentity(string generatedSource)
+    {
+        if (generatedSource.Length == 0) return "generated-empty";
+
+        var lineDirective = Regex.Match(
+            generatedSource,
+            "#line\\s+\\d+\\s+\"([^\"]+\\.xps)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (lineDirective.Success)
+            return lineDirective.Groups[1].Value;
+
+        var quotedSource = Regex.Match(
+            generatedSource,
+            "\"([^\"\\r\\n]+\\.xps)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (quotedSource.Success)
+            return quotedSource.Groups[1].Value;
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(generatedSource))).ToLowerInvariant();
+    }
+
+    private static bool TryClaimIntermediateCache(string intermediateRoot)
+    {
+        var lockPath = Path.Combine(intermediateRoot, "active.lock");
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                using (var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize: 1024, leaveOpen: false))
+                    writer.Write(Environment.ProcessId);
+
+                CompilerPathSecurity.HardenTemporaryFile(lockPath);
+                AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+                {
+                    try { File.Delete(lockPath); } catch { }
+                };
+                return true;
+            }
+            catch (IOException)
+            {
+                if (!TryRemoveStaleIntermediateLock(lockPath)) return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryRemoveStaleIntermediateLock(string lockPath)
+    {
+        try
+        {
+            var text = File.ReadAllText(lockPath).Trim();
+            if (!int.TryParse(text, out var processId) || processId <= 0)
+                return false;
+
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                if (!process.HasExited) return false;
+            }
+            catch (ArgumentException)
+            {
+                // Process no longer exists.
+            }
+
+            File.Delete(lockPath);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string EnsureTrailingSeparator(string path) =>
+        path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
 
     private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
     {
@@ -171,6 +333,8 @@ internal static class CompilerBuildEnvironment
 
     private static string CreatePrivateDirectory(string root, string name)
     {
+        Directory.CreateDirectory(root);
+        CompilerPathSecurity.HardenTemporaryDirectory(root);
         var path = Path.Combine(root, name);
         Directory.CreateDirectory(path);
         CompilerPathSecurity.HardenTemporaryDirectory(path);

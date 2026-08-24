@@ -56,12 +56,20 @@ Sub Main()
     Print "MSSQL-ATTACH-FIND-NAME=" & CStr(matches.Count)
     Set metadata = files.GetMetadata(id1)
     metadataId = CStr(metadata.Get("attachmentId"))
-    Print "MSSQL-ATTACH-METADATA-ID=" & CStr(metadataId = id1)
+    If metadataId = id1 Then
+        Print "MSSQL-ATTACH-METADATA-ID=True"
+    Else
+        Print "MSSQL-ATTACH-METADATA-ID=False"
+    End If
 
     sourceLength = FileLen(sourcePath)
     Call files.SaveToDisk(id1, targetPath)
     targetLength = FileLen(targetPath)
-    Print "MSSQL-ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
+    If sourceLength = targetLength Then
+        Print "MSSQL-ATTACH-SAME-LENGTH=True"
+    Else
+        Print "MSSQL-ATTACH-SAME-LENGTH=False"
+    End If
 
     Print "MSSQL-ATTACH-DELETE-FOR-REPLACE=" & CStr(files.Delete(id2))
     Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
