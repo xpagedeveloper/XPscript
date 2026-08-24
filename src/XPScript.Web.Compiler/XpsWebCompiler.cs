@@ -53,7 +53,7 @@ public sealed class XpsWebCompiler
         var fullSourceRoot = Path.GetFullPath(allowedSourceRoot);
         if (!File.Exists(fullSourcePath)) return null;
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
-        var parsed = new XpsWebRouteMetadataParser().Parse(source);
+        var parsed = new XpsWebRouteMetadataParser().Parse(new ServerSideMetadataPreprocessor().Transform(source));
         if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase) || parsed.Routes.Count == 0) return null;
 
         var artifactDirectory = PersistentArtifactDirectory(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity);
@@ -90,7 +90,7 @@ public sealed class XpsWebCompiler
         if (!Path.GetExtension(fullSourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Web source files must use the .xps extension.");
 
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
-        var parsed = new XpsWebRouteMetadataParser().Parse(source);
+        var parsed = new XpsWebRouteMetadataParser().Parse(new ServerSideMetadataPreprocessor().Transform(source));
         if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase))
             return await CompileBrowserWasmAsync(fullSourcePath, fullSourceRoot, parsed, cancellationToken).ConfigureAwait(false);
 
@@ -210,7 +210,7 @@ public sealed class XpsWebCompiler
 
     private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync(string sourcePath, string webRoot, XpsWebRouteParseResult parsed, CancellationToken cancellationToken)
     {
-        var bundle = await new XpsBrowserWasmCompiler(webRoot).GetOrBuildAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var bundle = await XpsBrowserWasmServerBridgeCompiler.GetOrBuildAsync(sourcePath, webRoot, parsed, cancellationToken).ConfigureAwait(false);
         var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD" };
         var policy = new XpsRoutePolicy(true, methods, [], []);
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase)
@@ -229,6 +229,8 @@ public sealed class XpsWebCompiler
                 if (marker < 0) throw new XpsWebRouteException("Invalid browser-wasm asset route.");
                 relativeAsset = path[(marker + 5)..];
             }
+
+            if (await bundle.TryHandleBridgeAsync(relativeAsset, context).ConfigureAwait(false)) return;
 
             string assetPath;
             try { assetPath = bundle.ResolveAsset(relativeAsset); }
