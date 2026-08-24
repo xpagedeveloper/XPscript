@@ -9,8 +9,13 @@ on:
       - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.Compiler/RunArtifactCache.cs'
+      - 'src/XPScript.Compiler/RunCompiler.cs'
+      - 'src/XPScript.Compiler/RunRoslynCompiler.cs'
+      - 'src/XPScript.Compiler/XPScriptCompilationSnapshot.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
+      - 'src/XPScript.Compiler.Core/XPScript.Compiler.Core.csproj'
       - 'samples/unified-cli-smoke.xps'
+      - 'samples/reference-runtime-batch1.xps'
       - 'demo/**'
       - 'XPScriptCompiler.slnx'
   pull_request:
@@ -22,8 +27,13 @@ on:
       - 'src/XPScript.Compiler/CompilerDriver.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
       - 'src/XPScript.Compiler/RunArtifactCache.cs'
+      - 'src/XPScript.Compiler/RunCompiler.cs'
+      - 'src/XPScript.Compiler/RunRoslynCompiler.cs'
+      - 'src/XPScript.Compiler/XPScriptCompilationSnapshot.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
+      - 'src/XPScript.Compiler.Core/XPScript.Compiler.Core.csproj'
       - 'samples/unified-cli-smoke.xps'
+      - 'samples/reference-runtime-batch1.xps'
       - 'demo/**'
       - 'XPScriptCompiler.slnx'
 
@@ -59,6 +69,40 @@ jobs:
           if (-not ($compileOutput | Where-Object { $_ -like 'Started to compile unified-cli-smoke.xps*' })) { throw "Compile start status missing.`n$compileOutput" }
           if (-not ($compileOutput | Where-Object { $_ -like 'Compiling unified-cli-smoke.xps*' })) { throw "Compile progress status missing.`n$compileOutput" }
           if (-not ($compileOutput | Where-Object { $_ -like 'Compiled unified-cli-smoke.xps in *' })) { throw "Compile completion status missing.`n$compileOutput" }
+      - name: Benchmark repeated reference runtime run
+        shell: pwsh
+        run: |
+          $cli = './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
+          $sample = './samples/reference-runtime-batch1.xps'
+          $expectedValues = @('INSTRB=3', 'STRRIGHT=two/three', 'CVDATE=2026', 'REGEXVALIDATE=True', 'REGEXMATCHS=9,88', 'B64DEC=Fredrik')
+          $times = @()
+
+          for ($i = 1; $i -le 5; $i++) {
+            $watch = [System.Diagnostics.Stopwatch]::StartNew()
+            $runOutput = @(dotnet $cli run $sample --info 2>&1)
+            $exitCode = $LASTEXITCODE
+            $watch.Stop()
+            $seconds = [Math]::Round($watch.Elapsed.TotalSeconds, 3)
+            $times += $seconds
+            Write-Host "REFERENCE-RUNTIME-BATCH1-RUN-$i=$seconds s"
+            $runOutput | ForEach-Object { Write-Host $_ }
+
+            if ($exitCode -ne 0) { throw "reference-runtime-batch1 run $i failed.`n$runOutput" }
+            foreach ($expected in $expectedValues) {
+              if ($runOutput -notcontains $expected) { throw "reference-runtime-batch1 run $i output missing '$expected'.`n$runOutput" }
+            }
+            if ($i -eq 1) {
+              if (-not ($runOutput | Where-Object { $_ -like 'Compiled reference-runtime-batch1.xps in *' })) {
+                throw "reference-runtime-batch1 first run did not compile.`n$runOutput"
+              }
+            } elseif (-not ($runOutput | Where-Object { $_ -like 'Run cache hit for reference-runtime-batch1.xps*' })) {
+              throw "reference-runtime-batch1 run $i was not an artifact-cache hit.`n$runOutput"
+            }
+          }
+
+          $cachedAverage = [Math]::Round((($times[1..4] | Measure-Object -Average).Average), 3)
+          Write-Host "REFERENCE-RUNTIME-BATCH1-FIRST=$($times[0]) s"
+          Write-Host "REFERENCE-RUNTIME-BATCH1-CACHED-AVG=$cachedAverage s"
       - name: Verify quiet xpscript run
         shell: pwsh
         run: |
@@ -77,8 +121,6 @@ jobs:
       - name: Verify changed source rebuild and recache
         shell: pwsh
         run: |
-          # Changing only script code keeps the generated dependency graph identical.
-          # This exercises rebuild + persistent run restore state, then artifact recache.
           $changed = './out/unified-cli-changed.xps'
           (Get-Content ./samples/unified-cli-smoke.xps -Raw).Replace('UNIFIED-CLI=OK', 'UNIFIED-CLI=CHANGED') | Set-Content -NoNewline $changed
           $first = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run $changed --info 2>&1)
@@ -88,6 +130,40 @@ jobs:
           $second = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run $changed --info 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "changed source cached run failed.`n$second" }
           if (-not ($second | Where-Object { $_ -like 'Run cache hit for unified-cli-changed.xps*' })) { throw "Changed source did not recache after rebuild.`n$second" }
+      - name: Verify Include dependency cache invalidation
+        shell: pwsh
+        run: |
+          $dir = './out/include-run'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          @'
+          Function IncludedValue() As String
+              IncludedValue = "ONE"
+          End Function
+          '@ | Set-Content -NoNewline "$dir/dep.xps"
+          @'
+          Include "dep.xps"
+          Sub Main()
+              Print "INCLUDE=" & IncludedValue()
+          End Sub
+          '@ | Set-Content -NoNewline "$dir/root.xps"
+
+          $first = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run "$dir/root.xps" --info 2>&1)
+          if ($LASTEXITCODE -ne 0 -or $first -notcontains 'INCLUDE=ONE') { throw "Include first run failed.`n$first" }
+          if (-not ($first | Where-Object { $_ -like 'Compiled root.xps in *' })) { throw "Include first run was not compiled.`n$first" }
+
+          $cached = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run "$dir/root.xps" --info 2>&1)
+          if ($LASTEXITCODE -ne 0 -or $cached -notcontains 'INCLUDE=ONE') { throw "Include cached run failed.`n$cached" }
+          if (-not ($cached | Where-Object { $_ -like 'Run cache hit for root.xps*' })) { throw "Include graph did not use artifact cache.`n$cached" }
+
+          (Get-Content "$dir/dep.xps" -Raw).Replace('ONE', 'TWO') | Set-Content -NoNewline "$dir/dep.xps"
+          $changed = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run "$dir/root.xps" --info 2>&1)
+          if ($LASTEXITCODE -ne 0 -or $changed -notcontains 'INCLUDE=TWO') { throw "Changed Include was not observed.`n$changed" }
+          if (-not ($changed | Where-Object { $_ -like 'Compiled root.xps in *' })) { throw "Changed Include did not invalidate the artifact cache.`n$changed" }
+          if ($changed | Where-Object { $_ -like 'Run cache hit for root.xps*' }) { throw "Changed Include incorrectly reused a stale artifact.`n$changed" }
+
+          $recached = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run "$dir/root.xps" --info 2>&1)
+          if ($LASTEXITCODE -ne 0 -or $recached -notcontains 'INCLUDE=TWO') { throw "Changed Include cached run failed.`n$recached" }
+          if (-not ($recached | Where-Object { $_ -like 'Run cache hit for root.xps*' })) { throw "Changed Include did not recache.`n$recached" }
       - name: Run headless demo programs and verify cache
         shell: pwsh
         run: |

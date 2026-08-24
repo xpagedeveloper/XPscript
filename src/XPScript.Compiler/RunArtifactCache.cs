@@ -1,25 +1,24 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
 internal sealed class RunArtifactCache
 {
-    private static readonly Regex ExternalInputPattern = new(
-        @"(?im)^\s*(?:Include\b|Declare\b|Reference(?:Native)?\b)|\bApplication\.Icon\b",
-        RegexOptions.CultureInvariant);
     private static readonly TimeSpan MaxCacheAge = TimeSpan.FromDays(14);
     private const int MaxEntries = 128;
+    private const int MaxGenerationsPerEntry = 4;
 
     private readonly string _entryRoot;
+    private readonly string _generationRoot;
     private readonly string _readyPath;
 
-    private RunArtifactCache(bool enabled, string entryRoot)
+    private RunArtifactCache(bool enabled, string entryRoot, string generationRoot)
     {
         Enabled = enabled;
         _entryRoot = entryRoot;
-        OutputDirectory = enabled ? Path.Combine(entryRoot, "out") : string.Empty;
+        _generationRoot = generationRoot;
+        OutputDirectory = enabled ? Path.Combine(generationRoot, "out") : string.Empty;
         _readyPath = enabled ? Path.Combine(entryRoot, "ready.txt") : string.Empty;
     }
 
@@ -31,15 +30,17 @@ internal sealed class RunArtifactCache
         string runtimeIdentifier,
         IReadOnlyList<string> sourcePreprocessors)
     {
-        var source = await File.ReadAllTextAsync(sourcePath).ConfigureAwait(false);
-        if (sourcePreprocessors.Count > 0 || ExternalInputPattern.IsMatch(source))
-            return new RunArtifactCache(false, string.Empty);
+        if (sourcePreprocessors.Count > 0)
+            return new RunArtifactCache(false, string.Empty, string.Empty);
 
+        var snapshot = await XPScriptCompilationSnapshotBuilder.CreateForRunAsync(
+            sourcePath,
+            runtimeIdentifier,
+            configurationIdentity: "run-artifact-v2").ConfigureAwait(false);
         var identity = string.Join("\0",
             Path.GetFullPath(sourcePath),
-            runtimeIdentifier,
-            typeof(CompilerDriver).Assembly.ManifestModule.ModuleVersionId.ToString("N"),
-            source);
+            snapshot.Identity,
+            typeof(CompilerDriver).Assembly.ManifestModule.ModuleVersionId.ToString("N"));
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
 
         var localRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -54,8 +55,9 @@ internal sealed class RunArtifactCache
         var entryRoot = Path.Combine(cacheRoot, hash[..32]);
         Directory.CreateDirectory(entryRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(entryRoot);
+        var generationRoot = Path.Combine(entryRoot, "build-" + Guid.NewGuid().ToString("N"));
         TryTouch(entryRoot);
-        return new RunArtifactCache(true, entryRoot);
+        return new RunArtifactCache(true, entryRoot, generationRoot);
     }
 
     public bool TryGetRunnable(out string executablePath)
@@ -63,14 +65,16 @@ internal sealed class RunArtifactCache
         executablePath = string.Empty;
         if (!Enabled || !File.Exists(_readyPath)) return false;
 
-        string fileName;
-        try { fileName = File.ReadAllText(_readyPath).Trim(); }
+        string relative;
+        try { relative = File.ReadAllText(_readyPath).Trim(); }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return false; }
 
-        if (fileName.Length == 0 || fileName != Path.GetFileName(fileName)) return false;
-        var candidate = Path.Combine(OutputDirectory, fileName);
-        if (!File.Exists(candidate)) return false;
+        if (relative.Length == 0 || Path.IsPathRooted(relative)) return false;
+        var candidate = Path.GetFullPath(Path.Combine(_entryRoot, relative));
+        if (!IsWithin(_entryRoot, candidate) || !File.Exists(candidate)) return false;
+        var managedAssembly = Path.ChangeExtension(candidate, ".dll");
+        if (!File.Exists(managedAssembly)) return false;
         TryTouch(_entryRoot);
         executablePath = candidate;
         return true;
@@ -79,36 +83,79 @@ internal sealed class RunArtifactCache
     public void PrepareOutputDirectory()
     {
         if (!Enabled) return;
-        try
-        {
-            if (Directory.Exists(OutputDirectory)) Directory.Delete(OutputDirectory, recursive: true);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        Directory.CreateDirectory(_generationRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(_generationRoot);
         Directory.CreateDirectory(OutputDirectory);
         CompilerPathSecurity.HardenTemporaryDirectory(OutputDirectory);
-        try { if (File.Exists(_readyPath)) File.Delete(_readyPath); } catch { }
         TryTouch(_entryRoot);
     }
 
     public void MarkReady(string executablePath)
     {
         if (!Enabled) return;
-        var fullOutput = Path.GetFullPath(OutputDirectory);
         var fullExecutable = Path.GetFullPath(executablePath);
-        var relative = Path.GetRelativePath(fullOutput, fullExecutable);
-        if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        if (!IsWithin(OutputDirectory, fullExecutable))
             throw new InvalidOperationException("Run cache executable resolved outside the cache output directory.");
-        var fileName = Path.GetFileName(fullExecutable);
-        File.WriteAllText(_readyPath, fileName);
-        CompilerPathSecurity.HardenTemporaryFile(_readyPath);
+
+        var relative = Path.GetRelativePath(_entryRoot, fullExecutable);
+        if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            throw new InvalidOperationException("Run cache executable resolved outside the cache entry directory.");
+
+        var tempReady = _readyPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(tempReady, relative);
+            CompilerPathSecurity.HardenTemporaryFile(tempReady);
+            File.Move(tempReady, _readyPath, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(tempReady)) File.Delete(tempReady); } catch { }
+        }
+
         TryTouch(_entryRoot);
+        PruneGenerations(_entryRoot, _generationRoot);
     }
 
     public void Invalidate()
     {
         if (!Enabled) return;
-        try { if (File.Exists(_readyPath)) File.Delete(_readyPath); } catch { }
+        try
+        {
+            if (!File.Exists(_readyPath)) return;
+            var relative = File.ReadAllText(_readyPath).Trim();
+            var current = Path.GetFullPath(Path.Combine(_entryRoot, relative));
+            if (IsWithin(_generationRoot, current)) File.Delete(_readyPath);
+        }
+        catch { }
+    }
+
+    private static bool IsWithin(string root, string candidate)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        var fullCandidate = Path.GetFullPath(candidate);
+        return fullCandidate.Equals(fullRoot, comparison) ||
+               fullCandidate.StartsWith(fullRoot + Path.DirectorySeparatorChar, comparison);
+    }
+
+    private static void PruneGenerations(string entryRoot, string keepGeneration)
+    {
+        try
+        {
+            var generations = Directory.EnumerateDirectories(entryRoot, "build-*", SearchOption.TopDirectoryOnly)
+                .Select(path => new DirectoryInfo(path))
+                .OrderByDescending(info => info.LastWriteTimeUtc)
+                .ToArray();
+            var keep = Path.GetFullPath(keepGeneration);
+            foreach (var generation in generations.Skip(MaxGenerationsPerEntry))
+            {
+                if (Path.GetFullPath(generation.FullName).Equals(keep, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                    continue;
+                try { generation.Delete(recursive: true); } catch { }
+            }
+        }
+        catch { }
     }
 
     private static void Prune(string cacheRoot)

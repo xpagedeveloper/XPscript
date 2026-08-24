@@ -235,7 +235,6 @@ public static class XPScriptCompilerCommandLine
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var runCache = await RunArtifactCache.CreateAsync(sourcePath, currentRuntimeIdentifier, sourcePreprocessors).ConfigureAwait(false);
-            var compiler = new CompilerDriver();
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
 
@@ -248,7 +247,7 @@ public static class XPScriptCompilerCommandLine
                 if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
-                var compileTask = compiler.CompileForRunWithResultAsync(
+                var compileTask = RunCompiler.CompileWithResultAsync(
                     sourcePath,
                     runOutputDirectory,
                     currentRuntimeIdentifier);
@@ -457,7 +456,7 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports live progress on one console line while preserving structured result output on stdout.
 The run command stays quiet by default. Use --info to show the same live compilation status and runtime lifecycle information.
-The run command uses a framework-dependent build and reuses a secure compiled-artifact cache when the script has no external compile-time inputs.
+The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }
