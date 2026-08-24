@@ -56,9 +56,15 @@ Sub Main()
     Print "SAVED-CITY=" & CStr(saved.Get("city"))
     Print "HIDDEN-AFTER=" & CStr(saved.Get("internal_code"))
 
-    If CStr(saved.Get("name")) <> "Anna Andersson" Then Error 5, "name was not saved"
-    If CStr(saved.Get("city")) <> "Goteborg" Then Error 5, "city was not saved"
-    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then Error 5, "unbound database field was discarded"
+    If CStr(saved.Get("name")) <> "Anna Andersson" Then
+        Error 5, "name was not saved"
+    End If
+    If CStr(saved.Get("city")) <> "Goteborg" Then
+        Error 5, "city was not saved"
+    End If
+    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then
+        Error 5, "unbound database field was discarded"
+    End If
 
     Call db.Close()
     Print "DATABASE-UIFORM-DATASOURCE=OK"
