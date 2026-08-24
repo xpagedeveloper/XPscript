@@ -18,8 +18,11 @@ Sub Main()
     Dim id1 As String
     Dim id2 As String
     Dim replacementId As String
+    Dim metadataId As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
+    Dim hasModified As Boolean
+    Dim hasModifiedBy As Boolean
 
     sourcePath = "samples/database-attachments.xps"
     targetPath = "database-attachments-copy.xps"
@@ -43,14 +46,17 @@ Sub Main()
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
-    Print "ATTACH-NO-MODIFIED=" & CStr(Not created1.Contains("modified"))
-    Print "ATTACH-NO-MODIFIED-BY=" & CStr(Not created1.Contains("modifiedBy"))
+    hasModified = created1.Contains("modified")
+    hasModifiedBy = created1.Contains("modifiedBy")
+    Print "ATTACH-NO-MODIFIED=" & CStr(Not hasModified)
+    Print "ATTACH-NO-MODIFIED-BY=" & CStr(Not hasModifiedBy)
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
 
     Set metadata = files.GetMetadata(id1)
-    Print "ATTACH-METADATA-ID=" & CStr(metadata.Get("attachmentId") = id1)
+    metadataId = CStr(metadata.Get("attachmentId"))
+    Print "ATTACH-METADATA-ID=" & CStr(metadataId = id1)
 
     sourceLength = FileLen(sourcePath)
     Call files.SaveToDisk(id1, targetPath)
