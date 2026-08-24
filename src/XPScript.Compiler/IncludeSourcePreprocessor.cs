@@ -13,6 +13,9 @@ internal sealed class IncludeSourcePreprocessor
     private static readonly Regex WebPlatformPattern = new(
         @"^\[\s*Platform\s*:\s*browser-wasm\s*\]$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex ServerSidePattern = new(
+        @"^\[\s*ServerSide\s*\]$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public Result Transform(string rootSource, string rootSourcePath)
     {
@@ -92,7 +95,7 @@ internal sealed class IncludeSourcePreprocessor
                 var raw = lines[i];
                 var code = StripComment(raw).Trim();
 
-                if (WebPlatformPattern.IsMatch(code))
+                if (WebPlatformPattern.IsMatch(code) || ServerSidePattern.IsMatch(code))
                 {
                     AddLine(output, map, string.Empty, sourcePath, i + 1);
                     continue;
