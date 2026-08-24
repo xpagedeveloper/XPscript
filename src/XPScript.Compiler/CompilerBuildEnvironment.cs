@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
@@ -39,7 +40,7 @@ internal static class CompilerBuildEnvironment
 
         ConfigureGeneratedDependencies(startInfo, root);
         if (usePersistentRunCache)
-            ConfigurePersistentRunRestore(startInfo, root, cacheRoot);
+            ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
 
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
 
@@ -58,6 +59,8 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        if (usePersistentRunCache)
+            startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
 
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
@@ -85,7 +88,7 @@ internal static class CompilerBuildEnvironment
         return root;
     }
 
-    private static void ConfigurePersistentRunRestore(ProcessStartInfo startInfo, string workspace, string cacheRoot)
+    private static void ConfigurePersistentRunBuild(ProcessStartInfo startInfo, string workspace, string cacheRoot)
     {
         if (startInfo.ArgumentList.Count < 2) return;
 
@@ -100,9 +103,13 @@ internal static class CompilerBuildEnvironment
 
         var propsPath = Path.Combine(workspace, "Directory.Build.props");
         var propsText = File.Exists(propsPath) ? File.ReadAllText(propsPath) : string.Empty;
+        var generatedPath = Path.Combine(workspace, "Program.cs");
+        var generatedSource = File.Exists(generatedPath) ? File.ReadAllText(generatedPath) : string.Empty;
+        var sourceIdentity = ExtractSourceIdentity(generatedSource);
         var rid = ReadRuntimeIdentifier(startInfo);
-        var identity = projectText + "\0" + propsText + "\0" + rid;
+        var identity = sourceIdentity + "\0" + projectText + "\0" + propsText + "\0" + rid;
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
+
         var restoreBase = CreatePrivateDirectory(cacheRoot, "restore");
         var restoreRoot = CreatePrivateDirectory(restoreBase, hash[..32]);
         var assetsPath = Path.Combine(restoreRoot, "project.assets.json");
@@ -112,6 +119,93 @@ internal static class CompilerBuildEnvironment
         startInfo.ArgumentList.Add("-p:MSBuildProjectExtensionsPath=" + EnsureTrailingSeparator(restoreRoot));
         if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
             startInfo.ArgumentList.Add("--no-restore");
+
+        // Reuse obj state only when this process can claim the cache entry. Concurrent
+        // builds of the same script fall back to their invocation-local obj directory.
+        // This preserves compiler isolation while allowing normal edit-run cycles to reuse
+        // generated MSBuild/Roslyn state across separate xpscript invocations.
+        var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
+        var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
+        if (TryClaimIntermediateCache(intermediateRoot))
+            startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+    }
+
+    private static string ExtractSourceIdentity(string generatedSource)
+    {
+        if (generatedSource.Length == 0) return "generated-empty";
+
+        var lineDirective = Regex.Match(
+            generatedSource,
+            "#line\\s+\\d+\\s+\"([^\"]+\\.xps)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (lineDirective.Success)
+            return lineDirective.Groups[1].Value;
+
+        var quotedSource = Regex.Match(
+            generatedSource,
+            "\"([^\"\\r\\n]+\\.xps)\"",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (quotedSource.Success)
+            return quotedSource.Groups[1].Value;
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(generatedSource))).ToLowerInvariant();
+    }
+
+    private static bool TryClaimIntermediateCache(string intermediateRoot)
+    {
+        var lockPath = Path.Combine(intermediateRoot, "active.lock");
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                using (var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: false))
+                    writer.Write(Environment.ProcessId);
+
+                CompilerPathSecurity.HardenTemporaryFile(lockPath);
+                AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+                {
+                    try { File.Delete(lockPath); } catch { }
+                };
+                return true;
+            }
+            catch (IOException)
+            {
+                if (!TryRemoveStaleIntermediateLock(lockPath)) return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryRemoveStaleIntermediateLock(string lockPath)
+    {
+        try
+        {
+            var text = File.ReadAllText(lockPath).Trim();
+            if (!int.TryParse(text, out var processId) || processId <= 0)
+                return false;
+
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                if (!process.HasExited) return false;
+            }
+            catch (ArgumentException)
+            {
+                // Process no longer exists.
+            }
+
+            File.Delete(lockPath);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string EnsureTrailingSeparator(string path) =>
