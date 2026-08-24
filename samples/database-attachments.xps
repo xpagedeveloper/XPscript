@@ -47,12 +47,20 @@ Sub Main()
     Set list = files.List()
     duplicateIds = id1 <> id2
     Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
-    Print "ATTACH-DUPLICATE-IDS=" & CStr(duplicateIds)
+    If duplicateIds Then
+        Print "ATTACH-DUPLICATE-IDS=True"
+    Else
+        Print "ATTACH-DUPLICATE-IDS=False"
+    End If
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     checksum = CStr(created1.Get("checksumSha256"))
     hasChecksum = Len(checksum) = 64
-    Print "ATTACH-HAS-CHECKSUM=" & CStr(hasChecksum)
+    If hasChecksum Then
+        Print "ATTACH-HAS-CHECKSUM=True"
+    Else
+        Print "ATTACH-HAS-CHECKSUM=False"
+    End If
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
@@ -60,13 +68,21 @@ Sub Main()
     Set metadata = files.GetMetadata(id1)
     metadataId = CStr(metadata.Get("attachmentId"))
     metadataMatches = metadataId = id1
-    Print "ATTACH-METADATA-ID=" & CStr(metadataMatches)
+    If metadataMatches Then
+        Print "ATTACH-METADATA-ID=True"
+    Else
+        Print "ATTACH-METADATA-ID=False"
+    End If
 
     sourceLength = FileLen(sourcePath)
     Call files.SaveToDisk(id1, targetPath)
     targetLength = FileLen(targetPath)
     sameLength = sourceLength = targetLength
-    Print "ATTACH-SAME-LENGTH=" & CStr(sameLength)
+    If sameLength Then
+        Print "ATTACH-SAME-LENGTH=True"
+    Else
+        Print "ATTACH-SAME-LENGTH=False"
+    End If
 
     Set downloaded = files.GetAll("database-attachments-all")
     Print "ATTACH-GETALL=" & CStr(downloaded.Count)
@@ -76,7 +92,11 @@ Sub Main()
     Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
     replacementId = CStr(replacement.Get("attachmentId"))
     replacementNewId = replacementId <> id2
-    Print "ATTACH-REPLACEMENT-NEW-ID=" & CStr(replacementNewId)
+    If replacementNewId Then
+        Print "ATTACH-REPLACEMENT-NEW-ID=True"
+    Else
+        Print "ATTACH-REPLACEMENT-NEW-ID=False"
+    End If
     Print "ATTACH-REPLACEMENT-CREATED-BY=" & CStr(replacement.Get("createdBy"))
 
     Call files.Delete(id1)
