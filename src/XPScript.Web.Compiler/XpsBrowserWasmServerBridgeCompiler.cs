@@ -37,7 +37,7 @@ internal sealed class XpsBrowserWasmServerBridgeBundle
 internal static class XpsBrowserWasmServerBridgeCompiler
 {
     private const string Platform = "browser-wasm";
-    private const string BridgeCompilerVersion = "1";
+    private const string BridgeCompilerVersion = "2";
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
@@ -55,8 +55,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion)));
+        var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
-        var plan = BrowserWasmServerBridgePlan.Create(normalizedSource, sourceHash);
+        var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, annotatedProcedures);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash);
+        BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotatedProcedures);
 
         if (plan.Procedures.Count == 0)
         {
