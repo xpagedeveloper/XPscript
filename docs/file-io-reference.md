@@ -39,7 +39,7 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 |---|---|---|---|---|
 | `FileLen` | `FileLen(path)` | `path`: file path. | Returns the file length in bytes using XPScript's portable filesystem runtime. | [file-io-portability.xps](../samples/file-io-portability.xps) |
 | `FileDateTime` | `FileDateTime(path)` | `path`: file path. | Returns the file's last-write date/time. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
-| `GetFileAttr` | `GetFileAttr(fullPath)` | `fullPath`: existing file or directory path. | Returns the platform file-attribute bit mask. Multiple bits may be set at once. See the attribute table below. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
+| `GetFileAttr` | `GetFileAttr(fullPath)` | `fullPath`: existing file or directory path. | Returns the platform file-attribute bit mask. Multiple bits may be set at once. See the attribute list below. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `SetFileAttr` | `SetFileAttr path, attributes` or `SetFileAttr(path, attributes)` | `path`: file path; `attributes`: attribute bit mask. | Changes supported file attributes. Platform limitations are reported explicitly. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `FileCopy` | `FileCopy source, destination` | `source`: existing file; `destination`: target path. | Copies a file with XPScript's cross-platform safety and metadata behavior. | [file-io-portability.xps](../samples/file-io-portability.xps) |
 | `Kill` | `Kill path` | `path`: file to delete. | Deletes a file using the portable filesystem runtime. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
@@ -62,21 +62,21 @@ If (GetFileAttr(fullPath) And 16) <> 0 Then
 End If
 ```
 
-| Value | Attribute | Windows | macOS / Linux |
-|---:|---|---|---|
-| `1` | ReadOnly | Returned when the filesystem reports the Windows read-only attribute. | May be returned when the runtime/filesystem exposes a read-only attribute. Unix permission bits are not a one-to-one Windows attribute mapping. |
-| `2` | Hidden | Native Windows Hidden attribute. | XPScript guarantees this bit when the final path component starts with `.`. |
-| `4` | System | Windows System attribute where supported. | Normally not meaningful on Unix-like filesystems. |
-| `16` | Directory | Directory. | Directory. |
-| `32` | Archive | Windows Archive attribute where supported. | Normally not meaningful on Unix-like filesystems. |
-| `128` | Normal | Ordinary path with no other applicable special attributes may report Normal. | May be reported for an otherwise ordinary file. |
-| `256` | Temporary | Temporary attribute where supported. | Filesystem/runtime dependent. |
-| `512` | SparseFile | Sparse-file attribute where exposed. | Filesystem/runtime dependent. |
-| `1024` | ReparsePoint | Reparse point, including symbolic-link-like entries. | Used by .NET for symbolic links/reparse-style entries where exposed. |
-| `2048` | Compressed | Compressed attribute where supported. | Filesystem/runtime dependent. |
-| `4096` | Offline | Windows Offline attribute where supported. | Normally not meaningful on Unix-like filesystems. |
-| `8192` | NotContentIndexed | Windows indexing attribute where supported. | Normally not meaningful on Unix-like filesystems. |
-| `16384` | Encrypted | Encrypted attribute where supported. | Filesystem/runtime dependent. |
+Common attribute bits are:
+
+- `1` (`ReadOnly`) — Windows: native read-only attribute. macOS/Linux: may be returned when the runtime/filesystem exposes a read-only attribute; Unix permission bits are not a one-to-one Windows attribute mapping.
+- `2` (`Hidden`) — Windows: native Hidden attribute. macOS/Linux: XPScript guarantees this bit when the final path component starts with `.`.
+- `4` (`System`) — Windows System attribute where supported; normally not meaningful on Unix-like filesystems.
+- `16` (`Directory`) — directory on Windows, macOS, and Linux.
+- `32` (`Archive`) — Windows Archive attribute where supported; normally not meaningful on Unix-like filesystems.
+- `128` (`Normal`) — an otherwise ordinary file/path may report Normal.
+- `256` (`Temporary`) — temporary attribute where the runtime/filesystem exposes it.
+- `512` (`SparseFile`) — sparse-file attribute where exposed.
+- `1024` (`ReparsePoint`) — Windows reparse point; on macOS/Linux .NET can use this bit for symbolic-link/reparse-style entries where exposed.
+- `2048` (`Compressed`) — compressed attribute where exposed.
+- `4096` (`Offline`) — Windows Offline attribute where supported; normally not meaningful on Unix-like filesystems.
+- `8192` (`NotContentIndexed`) — Windows indexing attribute where supported; normally not meaningful on Unix-like filesystems.
+- `16384` (`Encrypted`) — encrypted attribute where the runtime/filesystem exposes it.
 
 The result is a bit mask, not a single value. Windows can therefore return combinations such as `Directory + Hidden = 18`. On macOS/Linux, XPScript explicitly adds `Hidden (2)` for dot-prefixed names because hidden state is conventionally represented by the filename rather than a native Windows-style attribute. Other bits are whatever the underlying .NET runtime and filesystem report for that path; do not assume Windows-only metadata such as `Archive` or `System` exists on Unix-like systems.
 
