@@ -159,7 +159,7 @@ internal static class CompilerBuildEnvironment
             try
             {
                 using (var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: false))
+                using (var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize: 1024, leaveOpen: false))
                     writer.Write(Environment.ProcessId);
 
                 CompilerPathSecurity.HardenTemporaryFile(lockPath);
