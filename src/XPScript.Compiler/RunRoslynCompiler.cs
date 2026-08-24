@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
@@ -25,6 +26,25 @@ internal static class RunRoslynCompiler
         string generatedSource,
         string outputDirectory,
         CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await CompileCoreAsync(generatedSource, outputDirectory, cancellationToken).ConfigureAwait(false);
+        }
+        catch (CompilerException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new CompilerException("In-process Roslyn run compilation failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
+    private static async Task<string> CompileCoreAsync(
+        string generatedSource,
+        string outputDirectory,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
@@ -55,7 +75,11 @@ internal static class RunRoslynCompiler
         var pdbPath = Path.Combine(outputRoot, "Generated.pdb");
         await using var assemblyStream = new FileStream(assemblyPath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
         await using var pdbStream = new FileStream(pdbPath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var emit = compilation.Emit(assemblyStream, pdbStream, cancellationToken: cancellationToken);
+        var emit = compilation.Emit(
+            assemblyStream,
+            pdbStream,
+            options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb),
+            cancellationToken: cancellationToken);
         await assemblyStream.FlushAsync(cancellationToken).ConfigureAwait(false);
         await pdbStream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
