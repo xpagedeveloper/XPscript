@@ -95,11 +95,14 @@ internal static class CompilerBuildEnvironment
         var rid = ReadRuntimeIdentifier(startInfo);
         var identity = projectText + "\0" + propsText + "\0" + rid;
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
-        var restoreRoot = CreatePrivateDirectory(Path.Combine(cacheRoot, "restore"), hash[..32]);
+        var restoreBase = CreatePrivateDirectory(cacheRoot, "restore");
+        var restoreRoot = CreatePrivateDirectory(restoreBase, hash[..32]);
         var assetsPath = Path.Combine(restoreRoot, "project.assets.json");
+        var propsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.props");
+        var targetsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.targets");
 
         startInfo.ArgumentList.Add("-p:MSBuildProjectExtensionsPath=" + EnsureTrailingSeparator(restoreRoot));
-        if (File.Exists(assetsPath))
+        if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
             startInfo.ArgumentList.Add("--no-restore");
     }
 
