@@ -12,42 +12,14 @@ on:
       - 'samples/file-io-platform-semantics.xps'
       - 'samples/file-convenience.xps'
       - 'docs/file-io-reference.md'
-      - 'scripts/_apply_file_convenience.py'
       - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  prepare-file-convenience:
-    if: github.head_ref == 'feature/dir-filter-isfile-isdir'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-      - name: Apply filesystem convenience implementation
-        run: python ./scripts/_apply_file_convenience.py
-      - name: Commit implementation
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No implementation changes needed."
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/XPScript.Compiler/CrossPlatformRuntimeSource.cs src/XPScript.Compiler/CrossPlatformPreprocessor.cs src/XPScript.Compiler/FileIoExtensionsPreprocessor.cs samples/file-convenience.xps docs/file-io-reference.md
-          git commit -m 'Add filesystem convenience APIs'
-          git push origin HEAD:${{ github.head_ref }}
-
   platform-semantics:
-    needs: prepare-file-convenience
     strategy:
       fail-fast: false
       matrix:
@@ -55,8 +27,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
