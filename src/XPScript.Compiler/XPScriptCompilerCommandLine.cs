@@ -224,8 +224,6 @@ public static class XPScriptCompilerCommandLine
                 sourceRoots.Add(sourceDirectory);
 
             tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-");
-            var executableName = Path.GetFileNameWithoutExtension(sourcePath) + (OperatingSystem.IsWindows() ? ".exe" : "");
-            var executablePath = Path.Combine(tempRoot, executableName);
             var navigationPath = Path.Combine(tempRoot, "navigation.json");
 
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
@@ -235,13 +233,12 @@ public static class XPScriptCompilerCommandLine
             if (info)
             {
                 WriteProgress($"run: compiling {Path.GetFileName(sourcePath)}");
-                WriteProgress($"run: target={currentRuntimeIdentifier}, mode=framework-dependent");
+                WriteProgress($"run: target={currentRuntimeIdentifier}, mode=framework-dependent transient build");
             }
-            var compileTask = compiler.CompileWithResultAsync(
+            var compileTask = compiler.CompileForRunWithResultAsync(
                 sourcePath,
-                executablePath,
-                selfContained: false,
-                runtimeIdentifier: currentRuntimeIdentifier);
+                tempRoot,
+                currentRuntimeIdentifier);
             var compileResult = info
                 ? await WaitWithProgressAsync(compileTask, timer, "run").ConfigureAwait(false)
                 : await compileTask.ConfigureAwait(false);
@@ -252,6 +249,10 @@ public static class XPScriptCompilerCommandLine
                 WriteResult(compileResult, resultFormat);
                 return 2;
             }
+
+            var executablePath = compileResult.Output;
+            if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+                throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
 
             if (info)
             {
@@ -386,7 +387,7 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports progress to stderr while preserving structured result output on stdout.
 The run command stays quiet by default. Use --info to show compilation timing and runtime lifecycle information.
-The run command can execute only the current OS/architecture target.
+The run command uses a framework-dependent transient build and can execute only the current OS/architecture target.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }
