@@ -64,7 +64,7 @@ internal sealed class AdvancedXPScriptTranspiler
         PropertySet
     }
 
-    private sealed record ForAllContext(string Alias, string ElementType);
+    private sealed record ForAllContext(string Alias, string ElementType, bool IsListAlias);
 
     private readonly Dictionary<string, ClassInfo> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
@@ -141,6 +141,28 @@ internal static class Script
 {{XPScriptObjectRuntimeSource.Code}}
 
 {{XPScriptListRuntimeSource.Code}}
+
+internal static class LSForAllRuntime
+{
+    public static System.Collections.IEnumerable Enumerate(object? value)
+    {
+        if (value is null) yield break;
+        if (value is string) throw new XPScriptRuntimeException(13, "ForAll requires a list, array, or enumerable value.");
+        if (value is LSArray array)
+        {
+            if (!array.IsAllocated) yield break;
+            if (array.Rank != 1) throw new XPScriptRuntimeException(13, "ForAll currently supports one-dimensional arrays.");
+            for (var i = array.LBound(); i <= array.UBound(); i++) yield return array.Get(new object?[] { i });
+            yield break;
+        }
+        if (value is System.Collections.IEnumerable enumerable)
+        {
+            foreach (var item in enumerable) yield return item;
+            yield break;
+        }
+        throw new XPScriptRuntimeException(13, "ForAll requires a list, array, or enumerable value.");
+    }
+}
 
 {{XPScriptRuntimeSource.Code}}
 """;
@@ -524,12 +546,24 @@ internal static class Script
         if (forAll.Success)
         {
             var alias = forAll.Groups[1].Value;
-            var list = ResolveList(forAll.Groups[2].Value);
-            if (list is null) throw new CompilerException($"ForAll currently requires a declared list. '{forAll.Groups[2].Value}' is not a list.");
-            Write(sb, $"foreach (var {alias} in {list.Value.Expression}.Aliases())");
+            var sourceName = forAll.Groups[2].Value;
+            var list = ResolveList(sourceName);
+            if (list is not null)
+            {
+                Write(sb, $"foreach (var {alias} in {list.Value.Expression}.Aliases())");
+                Write(sb, "{");
+                _indent++;
+                _forAll.Push(new ForAllContext(alias, list.Value.ElementType, true));
+                return;
+            }
+
+            if (!_variableTypes.ContainsKey(sourceName) && !_objectVariables.ContainsKey(sourceName))
+                throw new CompilerException($"ForAll source '{sourceName}' is not a declared list, array, or enumerable variable.");
+
+            Write(sb, $"foreach (var {alias} in LSForAllRuntime.Enumerate({TransformExpression(sourceName)}))");
             Write(sb, "{");
             _indent++;
-            _forAll.Push(new ForAllContext(alias, list.Value.ElementType));
+            _forAll.Push(new ForAllContext(alias, "Variant", false));
             return;
         }
         if (Regex.IsMatch(line, @"^End\s+ForAll$", RegexOptions.IgnoreCase))
@@ -918,9 +952,12 @@ internal static class Script
 
         foreach (var alias in _forAll)
         {
-            text = Regex.Replace(text, $@"\b{Regex.Escape(alias.Alias)}\b", $"{alias.Alias}.Value", RegexOptions.IgnoreCase);
-            text = text.Replace($"__LSLISTTAG_{alias.Alias}.Value__", $"{alias.Alias}.Tag", StringComparison.OrdinalIgnoreCase);
-            text = text.Replace($"__LSLISTTAG_{alias.Alias}__", $"{alias.Alias}.Tag", StringComparison.OrdinalIgnoreCase);
+            if (alias.IsListAlias)
+            {
+                text = Regex.Replace(text, $@"\b{Regex.Escape(alias.Alias)}\b", $"{alias.Alias}.Value", RegexOptions.IgnoreCase);
+                text = text.Replace($"__LSLISTTAG_{alias.Alias}.Value__", $"{alias.Alias}.Tag", StringComparison.OrdinalIgnoreCase);
+                text = text.Replace($"__LSLISTTAG_{alias.Alias}__", $"{alias.Alias}.Tag", StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         text = Regex.Replace(text, @"\bAnd\b", "&&", RegexOptions.IgnoreCase);
