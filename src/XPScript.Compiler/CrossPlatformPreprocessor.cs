@@ -32,6 +32,43 @@ internal sealed class CrossPlatformPreprocessor
 
         source = Regex.Replace(
             source,
+            @"(?<![\w.])IsFile\s*\(",
+            "XPCrossPlatformRuntime.IsFile(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])IsDir\s*\(",
+            "XPCrossPlatformRuntime.IsDir(",
+            RegexOptions.IgnoreCase);
+
+        foreach (var function in new[]
+        {
+            "FileInfo", "FileHash", "FileEquals", "Files", "Directories", "CopyFile", "MoveFile",
+            "ReadFile", "ReadLines", "ReadBytes", "WriteFile", "AppendFile", "WriteLines", "WriteBytes"
+        })
+        {
+            source = Regex.Replace(
+                source,
+                $@"(?<![\w.]){Regex.Escape(function)}\s*\(",
+                $"XPCrossPlatformRuntime.{function}(",
+                RegexOptions.IgnoreCase);
+        }
+
+        source = Regex.Replace(
+            source,
+            @"\bNew\s+Path\s*\(",
+            "XPCrossPlatformRuntime.PathValue(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
+            @"(?<![\w.])Dir\s*\(",
+            "XPCrossPlatformRuntime.Dir(",
+            RegexOptions.IgnoreCase);
+
+        source = Regex.Replace(
+            source,
             @"(?<![\w.])StrTemplate\s*\(",
             "XPCrossPlatformRuntime.StrTemplate(",
             RegexOptions.IgnoreCase);

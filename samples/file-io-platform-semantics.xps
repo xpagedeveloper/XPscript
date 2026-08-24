@@ -6,6 +6,9 @@ Sub Main()
     Dim hiddenAttr As Integer
     Dim driveErr As Integer
     Dim deleteOpenErr As Integer
+    Dim recursiveFound As Boolean
+    Dim depthOneFound As Boolean
+    Dim depthTwoFound As Boolean
 
     MkDir "xps-platform-semantics"
     ChDir "xps-platform-semantics"
@@ -34,6 +37,100 @@ Sub Main()
     Open "normal-probe.txt" For Output As #fileNumber
     Print #fileNumber, "normal"
     Close #fileNumber
+
+    MkDir "subdir"
+    fileNumber = FreeFile
+    Open "subdir/nested.txt" For Output As #fileNumber
+    Print #fileNumber, "nested"
+    Close #fileNumber
+
+    MkDir "depth-a"
+    MkDir "depth-a/depth-b"
+    MkDir "depth-a/depth-b/depth-c"
+    fileNumber = FreeFile
+    Open "depth-a/level1.txt" For Output As #fileNumber
+    Print #fileNumber, "level1"
+    Close #fileNumber
+    fileNumber = FreeFile
+    Open "depth-a/depth-b/level2.txt" For Output As #fileNumber
+    Print #fileNumber, "level2"
+    Close #fileNumber
+    fileNumber = FreeFile
+    Open "depth-a/depth-b/depth-c/level3.txt" For Output As #fileNumber
+    Print #fileNumber, "level3"
+    Close #fileNumber
+
+    If Not IsFile("CaseProbe.TXT") Then
+        Error 9720, "IsFile did not identify a file"
+    End If
+    If IsFile("subdir") Then
+        Error 9721, "IsFile identified a directory as a file"
+    End If
+    If Not IsDir("subdir") Then
+        Error 9722, "IsDir did not identify a directory"
+    End If
+    If IsDir("CaseProbe.TXT") Then
+        Error 9723, "IsDir identified a file as a directory"
+    End If
+    Print "ISFILE_ISDIR=OK"
+
+    found = Dir("*", 2)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9724, "Dir returned a dot entry"
+        End If
+        If found = "subdir" Then Exit Do
+        found = Dir()
+    Loop
+    If found <> "subdir" Then
+        Error 9725, "Dir mode 2 did not return the subdirectory"
+    End If
+    Print "DIR_MODE2=OK"
+
+    found = Dir("*", 1)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9726, "Dir returned a dot entry"
+        End If
+        If found = "normal-probe.txt" Then Exit Do
+        found = Dir()
+    Loop
+    If found <> "normal-probe.txt" Then
+        Error 9727, "Dir mode 1 did not return the file"
+    End If
+    Print "DIR_MODE1=OK"
+
+    recursiveFound = False
+    found = Dir("*.txt", 3)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9728, "Recursive Dir returned a dot entry"
+        End If
+        If found = "subdir/nested.txt" Or found = "subdir\nested.txt" Then
+            recursiveFound = True
+        End If
+        found = Dir()
+    Loop
+    If Not recursiveFound Then
+        Error 9729, "Dir mode 3 did not return the nested file"
+    End If
+    Print "DIR_MODE3=OK"
+
+    depthOneFound = False
+    depthTwoFound = False
+    found = Dir("*.txt", 3, 1)
+    Do While found <> ""
+        If found = "depth-a/level1.txt" Or found = "depth-a\level1.txt" Then depthOneFound = True
+        If found = "depth-a/depth-b/level2.txt" Or found = "depth-a\depth-b\level2.txt" Then depthTwoFound = True
+        found = Dir()
+    Loop
+    If Not depthOneFound Then
+        Error 9730, "Dir maxDepth=1 did not include one subdirectory level"
+    End If
+    If depthTwoFound Then
+        Error 9731, "Dir maxDepth=1 traversed too deeply"
+    End If
+    Print "DIR_MAXDEPTH=OK"
 
     fileNumber = FreeFile
     Open "delete-open-probe.txt" For Output As #fileNumber
@@ -88,6 +185,14 @@ Sub Main()
     Kill "CaseProbe.TXT"
     Kill ".hidden-probe"
     Kill "normal-probe.txt"
+    Kill "subdir/nested.txt"
+    RmDir "subdir"
+    Kill "depth-a/depth-b/depth-c/level3.txt"
+    Kill "depth-a/depth-b/level2.txt"
+    Kill "depth-a/level1.txt"
+    RmDir "depth-a/depth-b/depth-c"
+    RmDir "depth-a/depth-b"
+    RmDir "depth-a"
     ChDir ".."
     RmDir "xps-platform-semantics"
 

@@ -1,0 +1,178 @@
+Option Declare
+
+Sub Main()
+    Dim root As String
+    Dim info As Variant
+    Dim dirInfo As Variant
+    Dim files As Variant
+    Dim dirs As Variant
+    Dim lines As Variant
+    Dim bytes As Variant
+    Dim count As Integer
+    Dim h1 As String
+    Dim h2 As String
+
+    root = "xps-file-convenience"
+    MkDir root
+    MkDir root & "/sub"
+
+    WriteFile root & "/alpha.txt", "alpha", "utf-8"
+    AppendFile root & "/alpha.txt", "-beta", "utf-8"
+    If ReadFile(root & "/alpha.txt", "utf-8") <> "alpha-beta" Then
+        Error 9801, "ReadFile/WriteFile/AppendFile failed"
+    End If
+
+    WriteFile root & "/latin.txt", "ÅÄÖ", "iso-8859-1"
+    If ReadFile(root & "/latin.txt", "iso-8859-1") <> "ÅÄÖ" Then
+        Error 9802, "ISO charset roundtrip failed"
+    End If
+
+    WriteFile root & "/sub/nested.txt", "nested"
+    WriteLines root & "/lines.txt", Array("one", "two", "three"), "utf-8"
+    lines = ReadLines(root & "/lines.txt", "utf-8")
+    count = 0
+    ForAll item In lines
+        count = count + 1
+    End ForAll
+    If count <> 3 Then
+        Error 9803, "ReadLines/WriteLines array failed"
+    End If
+
+    bytes = ReadBytes(root & "/alpha.txt")
+    WriteBytes root & "/copy.bin", bytes
+    If Not FileEquals(root & "/alpha.txt", root & "/copy.bin") Then
+        Error 9804, "ReadBytes/WriteBytes/FileEquals failed"
+    End If
+
+    h1 = FileHash(root & "/alpha.txt")
+    h2 = FileHash(root & "/copy.bin", "SHA256")
+    If Len(h1) <> 64 Or h1 <> h2 Then
+        Error 9805, "FileHash SHA256 failed"
+    End If
+    If Len(FileHash(root & "/alpha.txt", "SHA384")) <> 96 Then
+        Error 9806, "FileHash SHA384 failed"
+    End If
+    If Len(FileHash(root & "/alpha.txt", "SHA512")) <> 128 Then
+        Error 9807, "FileHash SHA512 failed"
+    End If
+
+    info = FileInfo(root & "/alpha.txt")
+    If info.Name <> "alpha.txt" Then
+        Error 9808, "FileInfo.Name failed"
+    End If
+    If info.FullPath = "" Or info.Extension <> ".txt" Then
+        Error 9809, "FileInfo path metadata failed"
+    End If
+    If info.Length <= 0 Or Not info.IsFile Or info.IsDirectory Then
+        Error 9810, "FileInfo file flags failed"
+    End If
+    If info.IsLink Then
+        Error 9811, "FileInfo link flag failed"
+    End If
+    If info.Attributes < 0 Then
+        Error 9812, "FileInfo attributes failed"
+    End If
+    If Year(info.Created) < 1970 Or Year(info.Modified) < 1970 Or Year(info.Accessed) < 1970 Then
+        Error 9813, "FileInfo timestamps failed"
+    End If
+
+    dirInfo = FileInfo(root & "/sub")
+    If Not dirInfo.IsDirectory Or dirInfo.IsFile Then
+        Error 9814, "FileInfo directory flags failed"
+    End If
+
+    files = Files(root, "*.txt", True, 2)
+    count = 0
+    ForAll item In files
+        If IsFile(item) Then
+            count = count + 1
+        End If
+    End ForAll
+    If count < 4 Then
+        Error 9815, "Files recursive ForAll failed"
+    End If
+
+    dirs = Directories(root)
+    count = 0
+    ForAll item In dirs
+        If IsDir(item) Then
+            count = count + 1
+        End If
+    End ForAll
+    If count <> 1 Then
+        Error 9816, "Directories ForAll failed"
+    End If
+
+    WriteFile root & "/copy-source.txt", "one"
+    If Not CopyFile(root & "/copy-source.txt", root & "/copy-target.txt") Then
+        Error 9820, "CopyFile default fail policy should copy to a missing target"
+    End If
+    If CopyFile(root & "/copy-source.txt", root & "/copy-target.txt") Then
+        Error 9821, "CopyFile default fail policy should return False when target exists"
+    End If
+    If CopyFile(root & "/copy-source.txt", root & "/copy-target.txt", 3) Then
+        Error 9822, "CopyFile skip policy should return False when skipped"
+    End If
+    WriteFile root & "/copy-source.txt", "two"
+    If Not CopyFile(root & "/copy-source.txt", root & "/copy-target.txt", 2) Then
+        Error 9823, "CopyFile overwrite policy failed"
+    End If
+    If ReadFile(root & "/copy-target.txt") <> "two" Then
+        Error 9824, "CopyFile overwrite content failed"
+    End If
+
+    WriteFile root & "/move-source.txt", "move"
+    If Not MoveFile(root & "/move-source.txt", root & "/move-target.txt") Then
+        Error 9825, "MoveFile default fail policy failed"
+    End If
+    If IsFile(root & "/move-source.txt") Or Not IsFile(root & "/move-target.txt") Then
+        Error 9826, "MoveFile did not move the file"
+    End If
+
+    Dim p As Variant
+    p = New Path(root & "/copy-target.txt")
+    If p.FileName() <> "copy-target.txt" Then
+        Error 9827, "Path.FileName failed"
+    End If
+    If p.FileNameWithoutExtension() <> "copy-target" Then
+        Error 9828, "Path.FileNameWithoutExtension failed"
+    End If
+    If p.Extension() <> ".txt" Then
+        Error 9829, "Path.Extension failed"
+    End If
+    If p.Directory() = "" Or p.Root() = "" Then
+        Error 9830, "Path.Directory/Root failed"
+    End If
+    If Not p.Exists() Or p.Absolute() = "" Or p.Normalize() = "" Then
+        Error 9831, "Path.Exists/Absolute/Normalize failed"
+    End If
+    If p.ChangeExtension(".json") = "" Then
+        Error 9832, "Path.ChangeExtension failed"
+    End If
+    If p.IsAbsolute() Then
+        Error 9833, "relative Path should not report absolute"
+    End If
+    Dim rootPath As Variant
+    rootPath = New Path(root)
+    If rootPath.Relative(root & "/copy-target.txt") <> "copy-target.txt" Then
+        Error 9834, "Path.Relative failed"
+    End If
+    If rootPath.Combine("child.txt") = "" Then
+        Error 9835, "Path.Combine failed"
+    End If
+    Print "COPY_MOVE_PATH=OK"
+
+    Kill root & "/copy-source.txt"
+    Kill root & "/copy-target.txt"
+    Kill root & "/move-target.txt"
+
+    Kill root & "/alpha.txt"
+    Kill root & "/latin.txt"
+    Kill root & "/lines.txt"
+    Kill root & "/copy.bin"
+    Kill root & "/sub/nested.txt"
+    RmDir root & "/sub"
+    RmDir root
+
+    Print "FILE_CONVENIENCE=OK"
+End Sub

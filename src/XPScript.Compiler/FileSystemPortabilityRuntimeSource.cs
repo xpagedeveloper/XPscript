@@ -169,7 +169,7 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
-    public static void CopyFile(object? sourceValue, object? destinationValue)
+    public static void CopyFile(object? sourceValue, object? destinationValue, bool overwrite = true)
     {
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
@@ -211,7 +211,7 @@ internal static class XPScriptFileSystemRuntime
             // Revalidate the destination immediately before publication. Moving the staged
             // regular file avoids writing through an existing destination symlink.
             RejectLinkedPath(destination, "FileCopy", "destination");
-            File.Move(stage, destination, overwrite: true);
+            File.Move(stage, destination, overwrite: overwrite);
         }
         finally
         {
@@ -291,7 +291,7 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
-    public static void MoveFile(object? sourceValue, object? destinationValue)
+    public static void MoveFile(object? sourceValue, object? destinationValue, bool overwrite = true)
     {
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
@@ -305,7 +305,7 @@ internal static class XPScriptFileSystemRuntime
         {
             RejectLinkedPath(source, "Name", "source");
             RejectLinkedPath(destination, "Name", "destination");
-            File.Move(source, destination, overwrite: true);
+            File.Move(source, destination, overwrite: overwrite);
         }
         catch (IOException ex)
         {

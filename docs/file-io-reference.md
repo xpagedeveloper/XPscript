@@ -39,7 +39,7 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 |---|---|---|---|---|
 | `FileLen` | `FileLen(path)` | `path`: file path. | Returns the file length in bytes using XPScript's portable filesystem runtime. | [file-io-portability.xps](../samples/file-io-portability.xps) |
 | `FileDateTime` | `FileDateTime(path)` | `path`: file path. | Returns the file's last-write date/time. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
-| `GetFileAttr` | `GetFileAttr(path)` | `path`: file path. | Returns the file attribute bit mask. Platform-specific attributes follow XPScript portability semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
+| `GetFileAttr` | `GetFileAttr(fullPath)` | `fullPath`: existing file or directory path. | Returns the platform file-attribute bit mask. Multiple bits may be set at once. See the attribute list below. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `SetFileAttr` | `SetFileAttr path, attributes` or `SetFileAttr(path, attributes)` | `path`: file path; `attributes`: attribute bit mask. | Changes supported file attributes. Platform limitations are reported explicitly. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `FileCopy` | `FileCopy source, destination` | `source`: existing file; `destination`: target path. | Copies a file with XPScript's cross-platform safety and metadata behavior. | [file-io-portability.xps](../samples/file-io-portability.xps) |
 | `Kill` | `Kill path` | `path`: file to delete. | Deletes a file using the portable filesystem runtime. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
@@ -48,7 +48,86 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 | `RmDir` | `RmDir path` | `path`: empty directory to remove. | Removes an empty directory. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `ChDir` | `ChDir path` | `path`: directory path. | Changes the process current directory using target-OS path semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
 | `ChDrive` | `ChDrive drive` | `drive`: Windows drive specifier. | Changes the current drive on Windows. Other platforms report explicit unsupported behavior. | [file-io-portability.xps](../samples/file-io-portability.xps) |
-| `Dir` | `Dir([pattern])` | optional `pattern`: path/search mask. Call `Dir()` again to continue enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. | [filesystem-portability-semantics.xps](../samples/filesystem-portability-semantics.xps) |
+| `IsFile` | `IsFile(path)` | `path`: filesystem path. | Returns `True` when the path exists and is a file; otherwise `False`. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+| `IsDir` | `IsDir(path)` | `path`: filesystem path. | Returns `True` when the path exists and is a directory; otherwise `False`. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+| `Dir` | `Dir([pattern] [, mode [, maxDepth]])` | optional `pattern`: path/search mask. optional `mode`: omitted or `0` = files and directories in the current directory level; `1` = files only in the current level; `2` = directories only in the current level; `3` = files recursively. optional `maxDepth`: recursion depth for mode `3`, default `3`, valid `0..32`. Depth `0` searches only the starting directory, `1` includes one subdirectory level, and so on. Call `Dir()` again to continue the current enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. `.` and `..` are always excluded. Mode `3` is bounded, skips reparse-point/symbolic-link directories, and returns paths relative to the searched directory so nested files retain their subdirectory path. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
+
+| `FileInfo` | `FileInfo(path)` | `path`: existing file or directory. | Returns a metadata object with `Name`, `FullPath`, `Extension`, `Length`, `Created`, `Modified`, `Accessed`, `IsFile`, `IsDirectory`, `IsLink`, and `Attributes`. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `FileHash` | `FileHash(path [, algorithm])` | `algorithm`: optional `SHA256` (default), `SHA384`, `SHA512`; legacy compatibility also accepts `SHA1` and `MD5`. | Streams the file and returns an uppercase hexadecimal digest. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `FileEquals` | `FileEquals(path1, path2)` | two file paths. | Returns `True` when files have equal length and byte-for-byte content. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `Files` | `Files(pathOrPattern [, mask [, recursive [, maxDepth]]])` | path/pattern, optional mask, recursive flag, optional depth `0..32` (default `3`). | Returns a String array of matching full file paths; recursive traversal skips link/reparse directories. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `Directories` | `Directories(pathOrPattern [, mask [, recursive [, maxDepth]]])` | path/pattern, optional mask, recursive flag, optional depth `0..32` (default `3`). | Returns a String array of matching full directory paths and works directly with `ForAll`. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadFile` | `ReadFile(path [, charset])` | file path and optional charset. | Reads an entire text file. UTF-8 is the default; BOMs are detected. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteFile` | `WriteFile path, content [, charset]` | path, text, optional charset. | Replaces an entire text file. Function-call syntax is also accepted. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `AppendFile` | `AppendFile path, content [, charset]` | path, text, optional charset. | Appends text to a file. Function-call syntax is also accepted. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadLines` | `ReadLines(path [, charset])` | path and optional charset. | Returns a String array with one element per text line. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteLines` | `WriteLines path, values [, charset]` | path, array/list values, optional charset. | Writes one array/list value per line. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadBytes` | `ReadBytes(path)` | file path. | Returns the complete file as a Byte array. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteBytes` | `WriteBytes path, values` | path and Byte array/array-like value. | Replaces a file with the supplied bytes. | [file-convenience.xps](../samples/file-convenience.xps) |
+
+### `GetFileAttr(fullPath)` attribute values
+
+`GetFileAttr` returns an integer bit mask. Test a specific attribute with a bitwise `And`, for example:
+
+```xpscript
+If (GetFileAttr(fullPath) And 16) <> 0 Then
+    Print "directory"
+End If
+```
+
+Common attribute bits are:
+
+- `1` (`ReadOnly`) — Windows: native read-only attribute. macOS/Linux: may be returned when the runtime/filesystem exposes a read-only attribute; Unix permission bits are not a one-to-one Windows attribute mapping.
+- `2` (`Hidden`) — Windows: native Hidden attribute. macOS/Linux: XPScript guarantees this bit when the final path component starts with `.`.
+- `4` (`System`) — Windows System attribute where supported; normally not meaningful on Unix-like filesystems.
+- `16` (`Directory`) — directory on Windows, macOS, and Linux.
+- `32` (`Archive`) — Windows Archive attribute where supported; normally not meaningful on Unix-like filesystems.
+- `128` (`Normal`) — an otherwise ordinary file/path may report Normal.
+- `256` (`Temporary`) — temporary attribute where the runtime/filesystem exposes it.
+- `512` (`SparseFile`) — sparse-file attribute where exposed.
+- `1024` (`ReparsePoint`) — Windows reparse point; on macOS/Linux .NET can use this bit for symbolic-link/reparse-style entries where exposed.
+- `2048` (`Compressed`) — compressed attribute where exposed.
+- `4096` (`Offline`) — Windows Offline attribute where supported; normally not meaningful on Unix-like filesystems.
+- `8192` (`NotContentIndexed`) — Windows indexing attribute where supported; normally not meaningful on Unix-like filesystems.
+- `16384` (`Encrypted`) — encrypted attribute where the runtime/filesystem exposes it.
+
+The result is a bit mask, not a single value. Windows can therefore return combinations such as `Directory + Hidden = 18`. On macOS/Linux, XPScript explicitly adds `Hidden (2)` for dot-prefixed names because hidden state is conventionally represented by the filename rather than a native Windows-style attribute. Other bits are whatever the underlying .NET runtime and filesystem report for that path; do not assume Windows-only metadata such as `Archive` or `System` exists on Unix-like systems.
+
+### Whole-file convenience API
+
+`Files(...)`, `Directories(...)`, `ReadLines(...)`, and `ReadBytes(...)` return arrays that can be consumed directly by `ForAll`. Recursive `Files`/`Directories` use the same bounded-depth model as recursive `Dir`: default depth `3`, valid range `0..32`, and link/reparse-point directories are not traversed.
+
+Text helpers accept .NET charset names. Common names include `utf-8`, `utf-16`, `utf-16be`, `iso-8859-1`, and other ISO/code-page names available through the platform encoding provider. UTF-8 without BOM is used when charset is omitted; readers still detect BOMs.
+
+`FileHash` defaults to SHA-256. SHA-384 and SHA-512 are recommended alternatives. SHA-1 and MD5 are available only for compatibility with legacy file manifests and should not be chosen for security-sensitive integrity checks.
+
+### `Dir` mode examples
+
+```xpscript
+Dim item As String
+
+' Omitted mode / 0: files and directories at this level.
+item = Dir("C:\\Temp\\*")
+
+' 1: files only at this level.
+item = Dir("C:\\Temp\\*", 1)
+
+' 2: directories only at this level.
+item = Dir("C:\\Temp\\*", 2)
+
+' 3: recursive files, default maximum depth 3.
+item = Dir("C:\\Temp\\*", 3)
+
+' Recursive files, but only one level below C:\\Temp.
+item = Dir("C:\\Temp\\*", 3, 1)
+
+Do While item <> ""
+    Print item
+    item = Dir()
+Loop
+```
+
+`Dir()` without arguments never starts a new search; it continues the most recently started `Dir(pattern [, mode [, maxDepth]])` enumeration. Mode values outside `0` through `3` are invalid. `maxDepth` values outside `0` through `32` are invalid. The `maxDepth` limit prevents accidental unbounded traversal of large roots such as `C:\\` or `/`.
 
 ## Copyable example
 
@@ -60,3 +139,55 @@ Compile them with:
 xpscriptc .\samples\file-io-extensions.xps -o .\out\file-io-demo.exe --framework-dependent
 xpscriptc .\samples\file-position-reset.xps -o .\out\file-position-demo.exe --framework-dependent
 ```
+
+
+## CopyFile and MoveFile
+
+`CopyFile(source, target [, action])` and `MoveFile(source, target [, action])` return `True` only when a file was actually copied or moved. The optional `action` defaults to `1`.
+
+- `1` = fail if the target already exists; returns `False` and leaves both files unchanged.
+- `2` = overwrite an existing target; returns `True` when the transfer succeeds.
+- `3` = skip if the target already exists; returns `False` because no transfer was performed.
+
+A missing source or unavailable destination directory returns `False`. Invalid action values raise runtime error 5. The legacy `FileCopy` statement remains available for compatibility and keeps its existing behavior.
+
+```xpscript
+ok = CopyFile("in.dat", "out.dat")
+ok = CopyFile("in.dat", "out.dat", 2)
+ok = MoveFile("out.dat", "archive/out.dat", 3)
+```
+
+## Path object
+
+`Path` is an instance object. The path is supplied once when the object is created and all methods operate on that stored path.
+
+```xpscript
+p = New Path("src/test/data.json")
+Print p.FileName()
+Print p.FileNameWithoutExtension()
+Print p.Extension()
+Print p.Directory()
+Print p.Root()
+Print p.Normalize()
+Print p.Absolute()
+Print p.Relative("src/test/archive.json")
+Print p.ChangeExtension(".xml")
+Print p.IsAbsolute()
+Print p.Exists()
+Print p.Combine("child.txt")
+```
+
+Methods:
+
+- `FileName()` returns the final file or directory name.
+- `FileNameWithoutExtension()` removes the final extension.
+- `Extension()` returns the extension including the leading dot, or an empty string.
+- `Directory()` returns the absolute parent directory.
+- `Root()` returns the filesystem root of the absolute path.
+- `Normalize()` normalizes the stored path using the target platform path rules.
+- `Absolute()` resolves the stored path to an absolute path.
+- `Relative(targetPath)` returns `targetPath` relative to this Path object's stored path.
+- `ChangeExtension(newExtension)` returns the stored path with its extension replaced; it does not rename the file.
+- `IsAbsolute()` reports whether the originally supplied path is fully qualified.
+- `Exists()` returns `True` when the stored path identifies an existing file or directory and reuses the existing `FileExists`/`DirExists` checks.
+- `Combine(child)` combines the stored path with one child path component.

@@ -88,13 +88,13 @@ public sealed class XPScriptTranspiler
         source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
         protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
+        protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
         protectedSource = RewriteListPresenceChecks(protectedSource);
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ReferenceRuntimeExtensionsPreprocessor().Transform(protectedSource);
-        protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
         protectedSource = new XPScriptEvaluatePreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
