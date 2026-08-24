@@ -22,11 +22,6 @@ Sub Main()
     Dim checksum As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
-    Dim duplicateIds As Boolean
-    Dim hasChecksum As Boolean
-    Dim metadataMatches As Boolean
-    Dim sameLength As Boolean
-    Dim replacementNewId As Boolean
 
     sourcePath = "samples/database-attachments.xps"
     targetPath = "database-attachments-copy.xps"
@@ -45,9 +40,8 @@ Sub Main()
     id2 = CStr(created2.Get("attachmentId"))
 
     Set list = files.List()
-    duplicateIds = id1 <> id2
     Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
-    If duplicateIds Then
+    If id1 <> id2 Then
         Print "ATTACH-DUPLICATE-IDS=True"
     Else
         Print "ATTACH-DUPLICATE-IDS=False"
@@ -55,8 +49,7 @@ Sub Main()
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     checksum = CStr(created1.Get("checksumSha256"))
-    hasChecksum = Len(checksum) = 64
-    If hasChecksum Then
+    If Len(checksum) = 64 Then
         Print "ATTACH-HAS-CHECKSUM=True"
     Else
         Print "ATTACH-HAS-CHECKSUM=False"
@@ -67,8 +60,7 @@ Sub Main()
 
     Set metadata = files.GetMetadata(id1)
     metadataId = CStr(metadata.Get("attachmentId"))
-    metadataMatches = metadataId = id1
-    If metadataMatches Then
+    If metadataId = id1 Then
         Print "ATTACH-METADATA-ID=True"
     Else
         Print "ATTACH-METADATA-ID=False"
@@ -77,8 +69,7 @@ Sub Main()
     sourceLength = FileLen(sourcePath)
     Call files.SaveToDisk(id1, targetPath)
     targetLength = FileLen(targetPath)
-    sameLength = sourceLength = targetLength
-    If sameLength Then
+    If sourceLength = targetLength Then
         Print "ATTACH-SAME-LENGTH=True"
     Else
         Print "ATTACH-SAME-LENGTH=False"
@@ -91,8 +82,7 @@ Sub Main()
     Print "ATTACH-DELETE-FOR-REPLACE=True"
     Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
     replacementId = CStr(replacement.Get("attachmentId"))
-    replacementNewId = replacementId <> id2
-    If replacementNewId Then
+    If replacementId <> id2 Then
         Print "ATTACH-REPLACEMENT-NEW-ID=True"
     Else
         Print "ATTACH-REPLACEMENT-NEW-ID=False"
