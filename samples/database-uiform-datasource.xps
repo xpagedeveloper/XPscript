@@ -1,0 +1,71 @@
+' XPScript database/UI shared data-source regression
+' Verifies that QueryArray binds directly to UIListView, multiple UIForms share
+' the same JsonObject, and fields not shown by either form survive SaveRow unchanged.
+
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("database-uiform-datasource.db")
+    Dim insertValues As New JsonObject
+    Dim listRows As JsonArray
+    Dim customer As JsonObject
+    Dim saved As JsonObject
+    Dim list As New UIListView("Customers")
+    Dim generalForm As New UIForm("General")
+    Dim addressForm As New UIForm("Address")
+    Dim affected As Integer
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, internal_code TEXT NOT NULL)")
+    Call db.Execute("DELETE FROM customers")
+
+    Call insertValues.Set("id", 42)
+    Call insertValues.Set("name", "Anna")
+    Call insertValues.Set("city", "Stockholm")
+    Call insertValues.Set("internal_code", "KEEP-ME")
+    Call db.Execute("INSERT INTO customers(id, name, city, internal_code) VALUES ($id, $name, $city, $internal_code)", insertValues)
+
+    Set listRows = db.QueryArray("SELECT id, name, city FROM customers ORDER BY name")
+    Call list.BindData(listRows)
+    Call list.SetKeyField("id")
+    Call list.AddColumn("name", "Name")
+    Call list.AddColumn("city", "City")
+    Print "LIST-COUNT=" & CStr(listRows.Count)
+    Print "LISTVIEW-COUNT=" & CStr(list.RowCount)
+    Print "LISTVIEW-NAME=" & CStr(list.GetRowValue(0, "name"))
+
+    Set customer = db.GetRow("customers", "id", 42)
+
+    Call generalForm.BindData(customer)
+    Call generalForm.AddTextField("name", "Name")
+
+    Call addressForm.BindData(customer)
+    Call addressForm.AddTextField("city", "City")
+
+    Call generalForm.SetFieldValue("name", "Anna Andersson")
+    Print "SHARED-NAME=" & CStr(customer.Get("name"))
+
+    Call addressForm.SetFieldValue("city", "Goteborg")
+    Print "SHARED-CITY=" & CStr(customer.Get("city"))
+    Print "HIDDEN-BEFORE=" & CStr(customer.Get("internal_code"))
+
+    affected = db.SaveRow("customers", "id", customer)
+    Print "SAVE-AFFECTED=" & CStr(affected)
+
+    Set saved = db.GetRow("customers", "id", 42)
+    Print "SAVED-NAME=" & CStr(saved.Get("name"))
+    Print "SAVED-CITY=" & CStr(saved.Get("city"))
+    Print "HIDDEN-AFTER=" & CStr(saved.Get("internal_code"))
+
+    If CStr(saved.Get("name")) <> "Anna Andersson" Then
+        Error 5, "name was not saved"
+    End If
+    If CStr(saved.Get("city")) <> "Goteborg" Then
+        Error 5, "city was not saved"
+    End If
+    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then
+        Error 5, "unbound database field was discarded"
+    End If
+
+    Call db.Close()
+    Print "DATABASE-UIFORM-DATASOURCE=OK"
+End Sub

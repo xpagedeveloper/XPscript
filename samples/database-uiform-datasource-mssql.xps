@@ -1,0 +1,64 @@
+' XPScript SQL Server database/UIForm shared data-source regression
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMsSql
+    Dim insertValues As New JsonObject
+    Dim listRows As JsonArray
+    Dim customer As JsonObject
+    Dim saved As JsonObject
+    Dim generalForm As New UIForm("General")
+    Dim addressForm As New UIForm("Address")
+    Dim affected As Integer
+
+    connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
+    If connectionString = "" Then
+        Print "MSSQL-DATASOURCE=SKIPPED"
+        Exit Sub
+    End If
+
+    Set db = New XPDbMsSql(connectionString)
+    Call db.Execute("IF OBJECT_ID(N'dbo.xpdb_datasource_customers', N'U') IS NOT NULL DROP TABLE dbo.xpdb_datasource_customers")
+    Call db.Execute("CREATE TABLE dbo.xpdb_datasource_customers (id INT NOT NULL PRIMARY KEY, name NVARCHAR(100) NOT NULL, city NVARCHAR(100) NOT NULL, internal_code NVARCHAR(100) NOT NULL, computed_label AS (name + N'!'))")
+
+    Call insertValues.Set("id", 42)
+    Call insertValues.Set("name", "Anna")
+    Call insertValues.Set("city", "Stockholm")
+    Call insertValues.Set("internal_code", "KEEP-ME")
+    Call db.Execute("INSERT INTO dbo.xpdb_datasource_customers(id, name, city, internal_code) VALUES (@id, @name, @city, @internal_code)", insertValues)
+
+    Set listRows = db.QueryArray("SELECT id, name, city FROM dbo.xpdb_datasource_customers ORDER BY name")
+    Print "MSSQL-LIST-COUNT=" & CStr(listRows.Count)
+
+    Set customer = db.GetRow("dbo.xpdb_datasource_customers", "id", 42)
+    Call generalForm.BindData(customer)
+    Call generalForm.AddTextField("name", "Name")
+    Call addressForm.BindData(customer)
+    Call addressForm.AddTextField("city", "City")
+
+    Call generalForm.SetFieldValue("name", "Anna Andersson")
+    Call addressForm.SetFieldValue("city", "Goteborg")
+
+    Print "MSSQL-HIDDEN-BEFORE=" & CStr(customer.Get("internal_code"))
+    Print "MSSQL-COMPUTED-BEFORE=" & CStr(customer.Get("computed_label"))
+
+    affected = db.SaveRow("dbo.xpdb_datasource_customers", "id", customer)
+    Print "MSSQL-SAVE-AFFECTED=" & CStr(affected)
+
+    Set saved = db.GetRow("dbo.xpdb_datasource_customers", "id", 42)
+    Print "MSSQL-SAVED-NAME=" & CStr(saved.Get("name"))
+    Print "MSSQL-SAVED-CITY=" & CStr(saved.Get("city"))
+    Print "MSSQL-HIDDEN-AFTER=" & CStr(saved.Get("internal_code"))
+    Print "MSSQL-COMPUTED-AFTER=" & CStr(saved.Get("computed_label"))
+
+    If CStr(saved.Get("name")) <> "Anna Andersson" Then Error 5
+    If CStr(saved.Get("city")) <> "Goteborg" Then Error 5
+    If CStr(saved.Get("internal_code")) <> "KEEP-ME" Then Error 5
+    If CStr(saved.Get("computed_label")) <> "Anna Andersson!" Then Error 5
+
+    Call db.Execute("DROP TABLE dbo.xpdb_datasource_customers")
+    Call db.Close()
+    Print "MSSQL-DATABASE-UIFORM-DATASOURCE=OK"
+End Sub

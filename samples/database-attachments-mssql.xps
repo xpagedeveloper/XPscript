@@ -1,0 +1,80 @@
+' XPScript SQL Server unified attachment regression
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMsSql
+    Dim files As Variant
+    Dim list As JsonArray
+    Dim matches As JsonArray
+    Dim created1 As JsonObject
+    Dim created2 As JsonObject
+    Dim replacement As JsonObject
+    Dim metadata As JsonObject
+    Dim sourcePath As String
+    Dim targetPath As String
+    Dim id1 As String
+    Dim id2 As String
+    Dim replacementId As String
+    Dim metadataId As String
+    Dim sourceLength As Variant
+    Dim targetLength As Variant
+    Dim hasModified As Boolean
+
+    connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
+    If connectionString = "" Then
+        Print "DATABASE-ATTACHMENTS-MSSQL=SKIPPED"
+        Exit Sub
+    End If
+
+    sourcePath = "samples/database-attachments-mssql.xps"
+    targetPath = "database-attachments-mssql-copy.xps"
+
+    Set db = New XPDbMsSql(connectionString)
+    Call db.Execute("IF OBJECT_ID(N'dbo.__xps_attachment_owner_test', N'U') IS NOT NULL DROP TABLE dbo.__xps_attachment_owner_test")
+    Call db.Execute("CREATE TABLE dbo.__xps_attachment_owner_test (id int NOT NULL PRIMARY KEY, name nvarchar(100) NOT NULL)")
+    Call db.Execute("INSERT INTO dbo.__xps_attachment_owner_test(id, name) VALUES (42, N'Anna')")
+
+    Set files = db.Attachments("dbo.__xps_attachment_owner_test", "id", 42)
+    Set list = files.List()
+    Print "MSSQL-ATTACH-EMPTY=" & CStr(list.Count)
+
+    Set created1 = files.SaveAs(sourcePath, "contracts.pdf", "creator-one@example")
+    Set created2 = files.SaveAs(sourcePath, "contracts.pdf", "creator-two@example")
+    id1 = CStr(created1.Get("attachmentId"))
+    id2 = CStr(created2.Get("attachmentId"))
+    Set list = files.List()
+    Print "MSSQL-ATTACH-AFTER-SAVE=" & CStr(list.Count)
+    Print "MSSQL-ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
+    Print "MSSQL-ATTACH-NAME=" & CStr(created1.Get("originalName"))
+    Print "MSSQL-ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
+    hasModified = created1.Contains("modified")
+    Print "MSSQL-ATTACH-NO-MODIFIED=" & CStr(Not hasModified)
+
+    Set matches = files.FindByName("contracts.pdf")
+    Print "MSSQL-ATTACH-FIND-NAME=" & CStr(matches.Count)
+    Set metadata = files.GetMetadata(id1)
+    metadataId = CStr(metadata.Get("attachmentId"))
+    Print "MSSQL-ATTACH-METADATA-ID=" & CStr(metadataId = id1)
+
+    sourceLength = FileLen(sourcePath)
+    Call files.SaveToDisk(id1, targetPath)
+    targetLength = FileLen(targetPath)
+    Print "MSSQL-ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
+
+    Print "MSSQL-ATTACH-DELETE-FOR-REPLACE=" & CStr(files.Delete(id2))
+    Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
+    replacementId = CStr(replacement.Get("attachmentId"))
+    Print "MSSQL-ATTACH-REPLACEMENT-NEW-ID=" & CStr(replacementId <> id2)
+
+    Print "MSSQL-ATTACH-DELETED-FIRST=" & CStr(files.Delete(id1))
+    Print "MSSQL-ATTACH-DELETED-REPLACEMENT=" & CStr(files.Delete(replacementId))
+    Set list = files.List()
+    Print "MSSQL-ATTACH-AFTER-DELETE=" & CStr(list.Count)
+
+    Call db.Execute("DROP TABLE dbo.__xps_attachment_owner_test")
+    Call db.Close()
+    Kill targetPath
+    Print "DATABASE-ATTACHMENTS-MSSQL=OK"
+End Sub

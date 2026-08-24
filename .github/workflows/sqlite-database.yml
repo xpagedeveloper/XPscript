@@ -5,11 +5,19 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseUiDataSourceRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs'
+      - 'src/XPScript.Compiler/DatabaseAttachmentRuntimeV3Source.cs'
       - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Compiler/UIExtensionRuntimeSource.cs'
       - 'samples/xpdb-sqlite.xps'
+      - 'samples/database-uiform-datasource.xps'
+      - 'samples/database-attachments.xps'
       - 'docs/sqlite.md'
+      - 'docs/database-ui-datasources.md'
       - 'docs/commands.md'
       - 'docs/index.md'
       - '.github/workflows/sqlite-database.yml'
@@ -45,29 +53,69 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-sqlite.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'SQLite sample compilation failed.' }
           if (-not $IsWindows) { chmod +x $exe }
-
           $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "SQLite regression failed.`n$output" }
           $output | ForEach-Object { Write-Host $_ }
-
-          $required = @(
-            'INSERTED=1',
-            'LASTID=1',
-            'QUERYTYPE=Array',
-            'ROWCOUNT=1',
-            'ROWNAME=Ada',
-            'ROWACTIVE=1',
-            'SCALAR=1',
-            'ROLLBACKCOUNT=1',
-            'READONLY=True',
-            'READONLYCOUNT=1',
-            'XPDBSQLITE=OK'
-          )
-          foreach ($value in $required) {
+          foreach ($value in @('INSERTED=1','LASTID=1','QUERYTYPE=Array','ROWCOUNT=1','ROWNAME=Ada','ROWACTIVE=1','SCALAR=1','ROLLBACKCOUNT=1','READONLY=True','READONLYCOUNT=1','XPDBSQLITE=OK')) {
             if ($output -notcontains $value) { throw "SQLite output missing: $value`n$output" }
           }
 
-      - name: Remove SQLite regression database
+      - name: Verify shared UIForm database data source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/sqlite-datasource | Out-Null
+          $exe = if ($IsWindows) { './out/sqlite-datasource/database-uiform-datasource.exe' } else { './out/sqlite-datasource/database-uiform-datasource' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-uiform-datasource.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Database/UIForm data-source sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Database/UIForm data-source regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @('LIST-COUNT=1','LISTVIEW-COUNT=1','LISTVIEW-NAME=Anna','SHARED-NAME=Anna Andersson','SHARED-CITY=Goteborg','HIDDEN-BEFORE=KEEP-ME','SAVE-AFFECTED=1','SAVED-NAME=Anna Andersson','SAVED-CITY=Goteborg','HIDDEN-AFTER=KEEP-ME','DATABASE-UIFORM-DATASOURCE=OK')) {
+            if ($output -notcontains $value) { throw "Database/UIForm output missing: $value`n$output" }
+          }
+
+      - name: Verify unified SQLite attachments
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/sqlite-attachments | Out-Null
+          $exe = if ($IsWindows) { './out/sqlite-attachments/database-attachments.exe' } else { './out/sqlite-attachments/database-attachments' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-attachments.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Database attachment sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Database attachment regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @(
+            'ATTACH-EMPTY=0',
+            'ATTACH-AFTER-SAVE=2',
+            'ATTACH-DUPLICATE-IDS=True',
+            'ATTACH-CREATED-BY=creator-one@example',
+            'ATTACH-NAME=contracts.pdf',
+            'ATTACH-HAS-CHECKSUM=True',
+            'ATTACH-FIND-NAME=2',
+            'ATTACH-METADATA-ID=True',
+            'ATTACH-SAME-LENGTH=True',
+            'ATTACH-GETALL=2',
+            'ATTACH-DELETE-FOR-REPLACE=True',
+            'ATTACH-REPLACEMENT-NEW-ID=True',
+            'ATTACH-REPLACEMENT-CREATED-BY=replacement@example',
+            'ATTACH-DELETED-FIRST=True',
+            'ATTACH-DELETED-REPLACEMENT=True',
+            'ATTACH-AFTER-DELETE=0',
+            'DATABASE-ATTACHMENTS=OK'
+          )) {
+            if ($output -notcontains $value) { throw "Database attachment output missing: $value`n$output" }
+          }
+
+      - name: Remove SQLite regression databases
         if: always()
         shell: pwsh
-        run: Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+        run: |
+          Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./out/sqlite-datasource/database-uiform-datasource.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./database-uiform-datasource.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./database-attachments.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./database-attachments-copy.xps -Force -ErrorAction SilentlyContinue
+          Remove-Item ./database-attachments-all -Recurse -Force -ErrorAction SilentlyContinue

@@ -1,0 +1,82 @@
+' XPScript unified database attachment regression
+' Proves attachment identity is owner + attachmentId, never file name.
+
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("database-attachments.db")
+    Dim files As Variant
+    Dim list As JsonArray
+    Dim matches As JsonArray
+    Dim downloaded As JsonArray
+    Dim created1 As JsonObject
+    Dim created2 As JsonObject
+    Dim replacement As JsonObject
+    Dim metadata As JsonObject
+    Dim sourcePath As String
+    Dim targetPath As String
+    Dim id1 As String
+    Dim id2 As String
+    Dim replacementId As String
+    Dim metadataId As String
+    Dim checksum As String
+    Dim sourceLength As Variant
+    Dim targetLength As Variant
+
+    sourcePath = "samples/database-attachments.xps"
+    targetPath = "database-attachments-copy.xps"
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call db.Execute("DELETE FROM customers")
+    Call db.Execute("INSERT INTO customers(id, name) VALUES (42, 'Anna')")
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set list = files.GetMetadata()
+    Print "ATTACH-EMPTY=" & CStr(list.Count)
+
+    Set created1 = files.SaveAs(sourcePath, "contracts.pdf", "creator-one@example")
+    Set created2 = files.SaveAs(sourcePath, "contracts.pdf", "creator-two@example")
+    id1 = CStr(created1.Get("attachmentId"))
+    id2 = CStr(created2.Get("attachmentId"))
+
+    Set list = files.List()
+    Print "ATTACH-AFTER-SAVE=" & CStr(list.Count)
+    Print "ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
+    Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
+    Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
+    checksum = CStr(created1.Get("checksumSha256"))
+    Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(checksum) = 64)
+
+    Set matches = files.FindByName("contracts.pdf")
+    Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
+
+    Set metadata = files.GetMetadata(id1)
+    metadataId = CStr(metadata.Get("attachmentId"))
+    Print "ATTACH-METADATA-ID=" & CStr(metadataId = id1)
+
+    sourceLength = FileLen(sourcePath)
+    Call files.SaveToDisk(id1, targetPath)
+    targetLength = FileLen(targetPath)
+    Print "ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
+
+    Set downloaded = files.GetAll("database-attachments-all")
+    Print "ATTACH-GETALL=" & CStr(downloaded.Count)
+
+    Call files.Delete(id2)
+    Print "ATTACH-DELETE-FOR-REPLACE=True"
+    Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
+    replacementId = CStr(replacement.Get("attachmentId"))
+    Print "ATTACH-REPLACEMENT-NEW-ID=" & CStr(replacementId <> id2)
+    Print "ATTACH-REPLACEMENT-CREATED-BY=" & CStr(replacement.Get("createdBy"))
+
+    Call files.Delete(id1)
+    Print "ATTACH-DELETED-FIRST=True"
+    Call files.Delete(replacementId)
+    Print "ATTACH-DELETED-REPLACEMENT=True"
+    Set list = files.List()
+    Print "ATTACH-AFTER-DELETE=" & CStr(list.Count)
+
+    Call db.Close()
+    Kill targetPath
+    Print "DATABASE-ATTACHMENTS=OK"
+End Sub

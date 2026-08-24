@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using XPScript.Web.Compiler;
@@ -61,6 +62,81 @@ End Sub
 [Route:/api/problem]
 Sub ProblemRoute()
     Response.problem(400, "Example problem", "Example detail")
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/attachment-export]
+Sub AttachmentExport()
+    Dim db As New XPDBSQLite("web-attachment-security.db")
+    Dim files As Variant
+    Dim saved As JsonObject
+    Dim id As String
+    Dim fileNo As Integer
+
+    Call db.Execute("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call db.Execute("DELETE FROM customers")
+    Call db.Execute("INSERT INTO customers(id,name) VALUES(42,'Web')")
+
+    fileNo = FreeFile()
+    Open "web-attachment-source.txt" For Output As #fileNo
+    Print #fileNo, "attachment payload"
+    Close #fileNo
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set saved = files.SaveAs("web-attachment-source.txt", "contract.txt", "web-user")
+    id = CStr(saved.Get("attachmentId"))
+    Call files.SaveToDisk(id, "exports/contract.txt")
+    Response.Write(id)
+    Call db.Close()
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/attachment-export-traversal]
+Sub AttachmentExportTraversal()
+    Dim db As New XPDBSQLite("web-attachment-security.db")
+    Dim files As Variant
+    Dim rows As JsonArray
+    Dim item As JsonObject
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set rows = files.GetMetadata()
+    Set item = rows.Get(0)
+    Call files.SaveToDisk(CStr(item.Get("attachmentId")), "../escape.txt")
+    Call db.Close()
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/attachment-export-absolute]
+Sub AttachmentExportAbsolute()
+    Dim db As New XPDBSQLite("web-attachment-security.db")
+    Dim files As Variant
+    Dim rows As JsonArray
+    Dim item As JsonObject
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set rows = files.GetMetadata()
+    Set item = rows.Get(0)
+    Call files.SaveToDisk(CStr(item.Get("attachmentId")), Application.TempFolder & "/escape.txt")
+    Call db.Close()
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/attachment-download]
+Sub AttachmentDownload()
+    Dim db As New XPDBSQLite("web-attachment-security.db")
+    Dim files As Variant
+    Dim rows As JsonArray
+    Dim item As JsonObject
+
+    Set files = db.Attachments("customers", "id", 42)
+    Set rows = files.GetMetadata()
+    Set item = rows.Get(0)
+    Call files.SendToBrowser(CStr(item.Get("attachmentId")), "download-contract.txt")
+    Call db.Close()
 End Sub
 """);
 
@@ -142,16 +218,48 @@ try
     if (problem.StatusCode != 400 || !problem.ContentType!.StartsWith("application/problem+json", StringComparison.OrdinalIgnoreCase))
         throw new Exception("Response.problem did not produce RFC Problem Details JSON.");
 
+    var export = await SendAsync(dispatcher, app, "GET", "/api/attachment-export", serverRoot: root);
+    if (export.StatusCode != 200) throw new Exception($"Attachment private export returned {export.StatusCode}: {BodyText(export)}");
+    var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root))))[..24].ToLowerInvariant();
+    var privateFile = Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash, "exports", "contract.txt");
+    if (!File.Exists(privateFile)) throw new Exception("Attachment private export was not written to the managed sandbox.");
+    if (File.Exists(Path.Combine(root, "exports", "contract.txt"))) throw new Exception("Attachment export was written beneath the web root.");
+    if ((await File.ReadAllTextAsync(privateFile)).TrimEnd('\r', '\n') != "attachment payload") throw new Exception("Attachment private export bytes did not match source content.");
+
+    var traversal = await SendAsync(dispatcher, app, "GET", "/api/attachment-export-traversal", serverRoot: root);
+    if (traversal.StatusCode < 400) throw new Exception("Attachment traversal export was not rejected.");
+    if (File.Exists(Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", "escape.txt"))) throw new Exception("Attachment traversal created an escaped file.");
+
+    var absolute = await SendAsync(dispatcher, app, "GET", "/api/attachment-export-absolute", serverRoot: root);
+    if (absolute.StatusCode < 400) throw new Exception("Attachment absolute-path export was not rejected.");
+
+    var download = await SendAsync(dispatcher, app, "GET", "/api/attachment-download", serverRoot: root);
+    if (download.StatusCode != 200) throw new Exception($"Attachment browser download returned {download.StatusCode}: {BodyText(download)}");
+    if (!download.ContentType!.StartsWith("text/plain", StringComparison.OrdinalIgnoreCase)) throw new Exception("Attachment browser download content type was incorrect.");
+    var disposition = Header(download, "Content-Disposition");
+    if (!disposition.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase) || !disposition.Contains("download-contract.txt", StringComparison.Ordinal))
+        throw new Exception("Attachment browser download Content-Disposition was incorrect: " + disposition);
+    if (BodyText(download).TrimEnd('\r', '\n') != "attachment payload") throw new Exception("Attachment browser download bytes did not match source content.");
+
     var second = await SendAsync(dispatcher, app, "GET", "/api/users/43");
     if (second.StatusCode != 200) throw new Exception("Second rate-limited request should still be allowed.");
     var limited = await SendAsync(dispatcher, app, "GET", "/api/users/44");
     if (limited.StatusCode != 429) throw new Exception($"Third request returned {limited.StatusCode} instead of 429.");
     if (string.IsNullOrWhiteSpace(Header(limited, "Retry-After"))) throw new Exception("429 response did not include Retry-After.");
 
+    Console.WriteLine("WEB-ATTACHMENT-PRIVATE-EXPORT=OK");
+    Console.WriteLine("WEB-ATTACHMENT-BROWSER-DOWNLOAD=OK");
     Console.WriteLine("WEB-REST-API-SMOKE=OK");
 }
 finally
 {
+    var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root))))[..24].ToLowerInvariant();
+    var privateRoot = Path.Combine(Path.GetTempPath(), "xpscript-private-attachments", siteHash);
+    try { if (Directory.Exists(privateRoot)) Directory.Delete(privateRoot, true); } catch { }
+    foreach (var file in new[] { "web-attachment-security.db", "web-attachment-source.txt" })
+    {
+        try { if (File.Exists(file)) File.Delete(file); } catch { }
+    }
     if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 }
 
@@ -164,7 +272,8 @@ static async Task<XpsWebResponse> SendAsync(
     string? contentType = null,
     string? origin = null,
     IReadOnlyDictionary<string, string>? extraHeaders = null,
-    string queryString = "")
+    string queryString = "",
+    string? serverRoot = null)
 {
     var headers = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
     if (origin is not null) headers["Origin"] = [origin];
@@ -189,7 +298,7 @@ static async Task<XpsWebResponse> SendAsync(
     var context = new XpsWebContext(
         request,
         response,
-        new XpsServerInfo("rest-smoke", Path.GetTempPath(), XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new XpsServerInfo("rest-smoke", serverRoot ?? Path.GetTempPath(), XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
         new XpsWebPrincipal(false),
         app);
     await handler.HandleAsync(context);

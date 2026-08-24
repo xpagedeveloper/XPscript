@@ -1,0 +1,15 @@
+[Platform:browser-wasm]
+
+Sub Main()
+    Dim db As New HTTPDBSupabase("https://example.invalid", "anon-key")
+    Dim files As Variant
+    Dim attachmentId As String
+
+    attachmentId = "00000000-0000-0000-0000-000000000001"
+    Set files = db.Attachments("customers", "id", 42)
+
+    ' Compile-time coverage for browser delivery. The sample is not executed by CI.
+    If False Then
+        Call files.SendToBrowser(attachmentId, "contract.pdf")
+    End If
+End Sub

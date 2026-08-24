@@ -61,6 +61,11 @@ public sealed class XPScriptTranspiler
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
+            .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
+            .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
+            .Replace("XPScriptDatabaseAttachmentRuntime.ForDomino(", "XPScriptDatabaseAttachmentApi.ForDomino(", StringComparison.Ordinal)
+            .Replace("XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(", "XPScriptDatabaseAttachmentApi.SetSupabaseBucket(", StringComparison.Ordinal);
         var usesSqlite = source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
@@ -123,6 +128,9 @@ public sealed class XPScriptTranspiler
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
         if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";
         generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
+        generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.Build(usesSqlite, usesMsSql) + "\n";
+        generated += "\n\n" + DatabaseAttachmentRuntimeV2Source.Build(usesSqlite, usesMsSql) + "\n";
+        generated += "\n\n" + DatabaseAttachmentRuntimeV3Source.Code + "\n";
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";

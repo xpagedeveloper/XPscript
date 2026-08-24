@@ -90,6 +90,75 @@ internal sealed class NativeHttpJsonPreprocessor
                         $"XPScriptHttpUiFormHelpers.ResponseJson({pair.Key})",
                         RegexOptions.IgnoreCase);
                 }
+                else if (pair.Value.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "QueryArray", "GetRow", "SaveRow" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptSqliteDataSourceExtensions.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.Attachments\s*\(",
+                        $"XPScriptDatabaseAttachmentRuntime.ForSqlite({pair.Key}, ",
+                        RegexOptions.IgnoreCase);
+                }
+                else if (pair.Value.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "QueryArray", "GetRow", "SaveRow" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptMsSqlDataSourceExtensions.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.Attachments\s*\(",
+                        $"XPScriptDatabaseAttachmentRuntime.ForMsSql({pair.Key}, ",
+                        RegexOptions.IgnoreCase);
+                }
+                else if (pair.Value.Equals("HTTPDBSupabase", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "QueryArray", "GetRow", "SaveRow" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptHttpDatabaseDataSourceExtensions.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.Attachments\s*\(",
+                        $"XPScriptDatabaseAttachmentRuntime.ForSupabase({pair.Key}, ",
+                        RegexOptions.IgnoreCase);
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.SetAttachmentBucket\s*\(",
+                        $"XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket({pair.Key}, ",
+                        RegexOptions.IgnoreCase);
+                }
+                else if (pair.Value.Equals("HTTPDBDominoRest", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var method in new[] { "GetViewArray", "QueryArray", "GetRow", "SaveRow" })
+                    {
+                        rewritten = Regex.Replace(
+                            rewritten,
+                            $@"\b{escapedName}\.{method}\s*\(",
+                            $"XPScriptHttpDatabaseDataSourceExtensions.{method}({pair.Key}, ",
+                            RegexOptions.IgnoreCase);
+                    }
+                    rewritten = Regex.Replace(
+                        rewritten,
+                        $@"\b{escapedName}\.Attachments\s*\(",
+                        $"XPScriptDatabaseAttachmentRuntime.ForDomino({pair.Key}, ",
+                        RegexOptions.IgnoreCase);
+                }
                 else if (pair.Value.Equals("XPAi", StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var method in new[] { "AddTool", "RemoveTool", "HasTool", "GetTool", "ClearTools", "GetToolNames", "ToolCount" })
@@ -108,7 +177,7 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAsyncHttp", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAsyncHttp", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptSqliteDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptMsSqlDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDatabaseAttachmentRuntime", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
