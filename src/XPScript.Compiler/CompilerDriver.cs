@@ -60,6 +60,31 @@ public sealed class CompilerDriver
         }
     }
 
+    internal async Task<CompileResult> CompileForRunWithResultAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
+    {
+        string source = "";
+        try
+        {
+            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
+
+            if (!File.Exists(sourcePath))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
+
+            source = await File.ReadAllTextAsync(sourcePath);
+            var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier);
+            return CompileResult.Ok(executablePath);
+        }
+        catch (CompilerException ex)
+        {
+            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
+        }
+        catch (Exception)
+        {
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
+        }
+    }
+
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
@@ -91,7 +116,7 @@ public sealed class CompilerDriver
             var publishDir = Path.Combine(tempRoot, "publish");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
-            var csproj = BuildGeneratedProject(rid, selfContained, stagedManagedReferences);
+            var csproj = BuildGeneratedProject(rid, selfContained, stagedManagedReferences, publishSingleFile: true);
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -137,6 +162,125 @@ public sealed class CompilerDriver
         {
             try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
+    }
+
+    private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
+    {
+        var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        var originalSource = await File.ReadAllTextAsync(sourcePath);
+        var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
+        var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
+        var source = managedReferences.Source;
+
+        var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
+        ValidateNativeDependencies(sourcePath, nativeDependencies);
+        ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
+
+        var transpiler = new XPScriptTranspiler();
+        string generatedSource;
+        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
+            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+
+        var runOutputDirectory = Path.GetFullPath(outputDirectory);
+        if (!Directory.Exists(runOutputDirectory))
+            throw new CompilerException("Run output directory does not exist.");
+        CompilerPathSecurity.HardenTemporaryDirectory(runOutputDirectory);
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
+
+        try
+        {
+            var projectPath = Path.Combine(tempRoot, "Generated.csproj");
+            var programPath = Path.Combine(tempRoot, "Program.cs");
+            var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
+
+            var csproj = BuildGeneratedProject(rid, selfContained: false, stagedManagedReferences, publishSingleFile: false);
+            await File.WriteAllTextAsync(projectPath, csproj);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await File.WriteAllTextAsync(programPath, generatedSource);
+            CompilerPathSecurity.HardenTemporaryFile(programPath);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "dotnet", UseShellExecute = false, RedirectStandardOutput = true,
+                RedirectStandardError = true, CreateNoWindow = true,
+                WorkingDirectory = tempRoot
+            };
+            psi.ArgumentList.Add("build"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(runOutputDirectory); psi.ArgumentList.Add("--nologo");
+            psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
+            psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add("false");
+            CompilerBuildEnvironment.Configure(psi, tempRoot);
+
+            using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet build.");
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var stdout = await stdoutTask; var stderr = await stderrTask;
+
+            if (process.ExitCode != 0)
+            {
+                var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+            }
+
+            StageRunNativeDependencies(sourcePath, runOutputDirectory, nativeDependencies, managedReferences.Native);
+
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid);
+            if (generatedExecutable is null)
+                throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
+
+            if (!rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    var mode = File.GetUnixFileMode(generatedExecutable);
+                    File.SetUnixFileMode(generatedExecutable, mode | UnixFileMode.UserExecute);
+                }
+                catch (PlatformNotSupportedException) { }
+            }
+
+            return generatedExecutable;
+        }
+        finally
+        {
+            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
+        }
+    }
+
+    private static void StageRunNativeDependencies(
+        string sourcePath,
+        string outputDirectory,
+        IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> managedNativeDependencies)
+    {
+        var sourceDirectory = SourceDirectory(sourcePath);
+        var seenNames = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+        foreach (var dependency in nativeDependencies)
+        {
+            var source = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
+            StageRunNativeDependency(source, outputDirectory, dependency.LoadName, seenNames);
+        }
+
+        foreach (var dependency in managedNativeDependencies)
+        {
+            var source = ResolveProjectLocalPath(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
+            StageRunNativeDependency(source, outputDirectory, Path.GetFileName(source), seenNames);
+        }
+    }
+
+    private static void StageRunNativeDependency(string source, string outputDirectory, string fileName, HashSet<string> seenNames)
+    {
+        fileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(fileName) || !seenNames.Add(fileName))
+            throw new CompilerException("Multiple run dependencies would use the same file name: " + fileName);
+
+        var target = Path.Combine(outputDirectory, fileName);
+        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native dependency");
+        CompilerPathSecurity.HardenTemporaryFile(target);
     }
 
     private static void ValidateNativeDependencies(string sourcePath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
@@ -241,7 +385,8 @@ public sealed class CompilerDriver
     private static string BuildGeneratedProject(
         string runtimeIdentifier,
         bool selfContained,
-        IReadOnlyList<StagedManagedReference> references)
+        IReadOnlyList<StagedManagedReference> references,
+        bool publishSingleFile)
     {
         var itemGroup = new StringBuilder();
         if (references.Count > 0)
@@ -257,6 +402,13 @@ public sealed class CompilerDriver
             itemGroup.AppendLine("  </ItemGroup>");
         }
 
+        var publishProperties = publishSingleFile
+            ? $"""
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
+"""
+            : string.Empty;
+
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -267,9 +419,7 @@ public sealed class CompilerDriver
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
-  </PropertyGroup>
+{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
     }
