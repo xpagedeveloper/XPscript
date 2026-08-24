@@ -5,6 +5,8 @@ internal static class CrossPlatformRuntimeSource
     public const string Code = """
 internal static class XPCrossPlatformRuntime
 {
+    private static IEnumerator<string>? DirEnumerator;
+
     public static string Platform()
     {
         if (OperatingSystem.IsWindows()) return "Windows";
@@ -17,6 +19,59 @@ internal static class XPCrossPlatformRuntime
     public static bool FileExists(object? path) => File.Exists(XPScriptRuntime.CStr(path));
 
     public static bool DirExists(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+
+    public static bool IsFile(object? path)
+    {
+        var value = XPScriptRuntime.CStr(path);
+        return File.Exists(value) && !Directory.Exists(value);
+    }
+
+    public static bool IsDir(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+
+    public static string Dir(object? pattern = null, int mode = 0)
+    {
+        if (pattern is not null)
+        {
+            if (mode < 0 || mode > 3)
+                throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.");
+
+            var raw = XPScriptRuntime.CStr(pattern);
+            if (string.IsNullOrWhiteSpace(raw)) raw = "*";
+
+            var directoryPart = Path.GetDirectoryName(raw);
+            var directory = string.IsNullOrEmpty(directoryPart)
+                ? Environment.CurrentDirectory
+                : Path.GetFullPath(directoryPart);
+            var mask = Path.GetFileName(raw);
+            if (string.IsNullOrEmpty(mask)) mask = "*";
+            if (!Directory.Exists(directory))
+                throw new DirectoryNotFoundException("Directory does not exist.");
+
+            IEnumerable<string> entries = mode switch
+            {
+                0 => Directory.EnumerateFileSystemEntries(directory, mask, SearchOption.TopDirectoryOnly),
+                1 => Directory.EnumerateFiles(directory, mask, SearchOption.TopDirectoryOnly),
+                2 => Directory.EnumerateDirectories(directory, mask, SearchOption.TopDirectoryOnly),
+                3 => Directory.EnumerateFiles(directory, mask, SearchOption.AllDirectories),
+                _ => throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.")
+            };
+
+            DirEnumerator?.Dispose();
+            DirEnumerator = entries
+                .Select(entry => mode == 3 ? Path.GetRelativePath(directory, entry) : Path.GetFileName(entry))
+                .Where(name => !string.IsNullOrEmpty(name) && name != "." && name != "..")
+                .GetEnumerator();
+        }
+
+        if (DirEnumerator is null) return "";
+        if (!DirEnumerator.MoveNext())
+        {
+            DirEnumerator.Dispose();
+            DirEnumerator = null;
+            return "";
+        }
+        return DirEnumerator.Current;
+    }
 
     public static string StrTemplate(object? template, object? values)
     {
