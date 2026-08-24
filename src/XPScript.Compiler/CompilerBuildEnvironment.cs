@@ -23,10 +23,6 @@ internal static class CompilerBuildEnvironment
             ? CreatePrivateDirectory(cacheRoot, "environment")
             : root;
 
-        // Process temp remains invocation-local. The dotnet user/profile state is safe to
-        // reuse for transient run builds because the persistent cache is owner-only.
-        // Keeping DOTNET_CLI_HOME and the profile stable avoids paying a fresh CLI/tooling
-        // cold-start on every edit-run cycle while release compile remains one-shot isolated.
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
         var profile = CreatePrivateDirectory(environmentRoot, "profile");
@@ -67,6 +63,9 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBuildSDKsPath");
         startInfo.Environment.Remove("MSBUILDSDKSPATH");
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
+
+        if (usePersistentRunCache)
+            ConfigureFastRunBuild(startInfo, root);
     }
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo)
@@ -120,14 +119,109 @@ internal static class CompilerBuildEnvironment
         if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
             startInfo.ArgumentList.Add("--no-restore");
 
-        // Reuse obj state only when this process can claim the cache entry. Concurrent
-        // builds of the same script fall back to their invocation-local obj directory.
-        // This preserves compiler isolation while allowing normal edit-run cycles to reuse
-        // generated MSBuild/Roslyn state across separate xpscript invocations.
         var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
         var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
         if (TryClaimIntermediateCache(intermediateRoot))
             startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+    }
+
+    private static void ConfigureFastRunBuild(ProcessStartInfo startInfo, string workspace)
+    {
+        if (startInfo.ArgumentList.Count < 2) return;
+
+        var projectPath = Path.GetFullPath(startInfo.ArgumentList[1]);
+        var generatedPath = Path.Combine(workspace, "Program.cs");
+        var outputDirectory = ReadOutputDirectory(startInfo);
+        if (!File.Exists(projectPath) || !File.Exists(generatedPath) || outputDirectory is null) return;
+
+        var projectText = File.ReadAllText(projectPath);
+        var generatedSource = File.ReadAllText(generatedPath);
+        var hasManagedReferences = projectText.Contains("<HintPath>", StringComparison.OrdinalIgnoreCase);
+
+        RewriteRunProject(projectPath, workspace, projectText, addSentinelTarget: !RunRoslynCompiler.CanCompile(generatedSource, hasManagedReferences));
+        RemoveOptionWithValue(startInfo, "-r", "--runtime");
+        RemoveOptionWithValue(startInfo, "--self-contained");
+
+        if (!RunRoslynCompiler.CanCompile(generatedSource, hasManagedReferences))
+            return;
+
+        RunRoslynCompiler.CompileAsync(generatedSource, outputDirectory).GetAwaiter().GetResult();
+        CreateRunSentinel(outputDirectory);
+        ReplaceWithNoOp(startInfo);
+    }
+
+    private static void RewriteRunProject(string projectPath, string workspace, string projectText, bool addSentinelTarget)
+    {
+        var rewritten = Regex.Replace(projectText, @"\s*<RuntimeIdentifier>.*?</RuntimeIdentifier>\s*", Environment.NewLine, RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        rewritten = Regex.Replace(rewritten, @"\s*<SelfContained>.*?</SelfContained>\s*", Environment.NewLine, RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        if (!rewritten.Contains("<UseAppHost>", StringComparison.OrdinalIgnoreCase))
+            rewritten = rewritten.Replace("    <TargetFramework>net10.0</TargetFramework>", "    <TargetFramework>net10.0</TargetFramework>" + Environment.NewLine + "    <UseAppHost>false</UseAppHost>", StringComparison.Ordinal);
+
+        if (addSentinelTarget && !rewritten.Contains("XPScriptCreateRunSentinel", StringComparison.Ordinal))
+        {
+            const string target = """
+  <Target Name="XPScriptCreateRunSentinel" AfterTargets="Build">
+    <Touch Files="$(OutputPath)Generated.exe" AlwaysCreate="true" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <Touch Files="$(OutputPath)Generated" AlwaysCreate="true" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
+  </Target>
+""";
+            rewritten = rewritten.Replace("</Project>", target + "</Project>", StringComparison.Ordinal);
+        }
+
+        File.WriteAllText(projectPath, rewritten);
+        CompilerPathSecurity.HardenTemporaryFile(projectPath);
+
+        var propsPath = Path.Combine(workspace, "Directory.Build.props");
+        if (!File.Exists(propsPath)) return;
+        var props = File.ReadAllText(propsPath);
+        props = Regex.Replace(props, @"\s*<ApplicationIcon>.*?</ApplicationIcon>\s*", Environment.NewLine, RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        File.WriteAllText(propsPath, props);
+        CompilerPathSecurity.HardenTemporaryFile(propsPath);
+    }
+
+    private static string? ReadOutputDirectory(ProcessStartInfo startInfo)
+    {
+        for (var i = 0; i + 1 < startInfo.ArgumentList.Count; i++)
+        {
+            if (startInfo.ArgumentList[i] is "-o" or "--output")
+                return Path.GetFullPath(startInfo.ArgumentList[i + 1]);
+        }
+        return null;
+    }
+
+    private static void RemoveOptionWithValue(ProcessStartInfo startInfo, params string[] optionNames)
+    {
+        for (var i = startInfo.ArgumentList.Count - 2; i >= 0; i--)
+        {
+            if (!optionNames.Contains(startInfo.ArgumentList[i], StringComparer.OrdinalIgnoreCase)) continue;
+            startInfo.ArgumentList.RemoveAt(i + 1);
+            startInfo.ArgumentList.RemoveAt(i);
+        }
+    }
+
+    private static void CreateRunSentinel(string outputDirectory)
+    {
+        var sentinel = Path.Combine(outputDirectory, OperatingSystem.IsWindows() ? "Generated.exe" : "Generated");
+        File.WriteAllBytes(sentinel, []);
+        CompilerPathSecurity.HardenTemporaryFile(sentinel);
+    }
+
+    private static void ReplaceWithNoOp(ProcessStartInfo startInfo)
+    {
+        startInfo.ArgumentList.Clear();
+        if (OperatingSystem.IsWindows())
+        {
+            startInfo.FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+            startInfo.ArgumentList.Add("/d");
+            startInfo.ArgumentList.Add("/c");
+            startInfo.ArgumentList.Add("exit 0");
+        }
+        else
+        {
+            startInfo.FileName = "/bin/sh";
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add("true");
+        }
     }
 
     private static string ExtractSourceIdentity(string generatedSource)
@@ -196,7 +290,6 @@ internal static class CompilerBuildEnvironment
             }
             catch (ArgumentException)
             {
-                // Process no longer exists.
             }
 
             File.Delete(lockPath);
