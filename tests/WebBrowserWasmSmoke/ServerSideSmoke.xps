@@ -1,0 +1,10 @@
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ServerTransform(value As String) As String
+    ServerTransform = UCase(value) & "-SERVER"
+End Function
+
+Sub Main()
+    Print ServerTransform("wasm")
+End Sub
