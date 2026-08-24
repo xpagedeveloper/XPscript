@@ -37,7 +37,7 @@ internal sealed class XpsBrowserWasmServerBridgeBundle
 internal static class XpsBrowserWasmServerBridgeCompiler
 {
     private const string Platform = "browser-wasm";
-    private const string BridgeCompilerVersion = "2";
+    private const string BridgeCompilerVersion = "3";
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
@@ -99,11 +99,13 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop",
                 "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser",
                 StringComparison.Ordinal);
+            browserGenerated = BrowserWasmServerBridgeTransportInstaller.TransformGenerated(browserGenerated);
+            var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
 
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), browserGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildBrowserProject(typeof(BrowserFormHost).Assembly.Location), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserRuntimeConstant("BrowserModuleJs"), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
 
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
@@ -113,7 +115,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             CopyDirectory(builtAppRoot, appRoot);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserRuntimeConstant("BrowserModuleJs"), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
             var serverGenerated = new XPScriptTranspiler().TranspileRestricted(
