@@ -50,23 +50,26 @@ jobs:
           $compileOutput = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- compile ./samples/unified-cli-smoke.xps --framework-dependent -o $output 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "xpscript compile failed.`n$compileOutput" }
           if (-not (Test-Path $output)) { throw "Unified CLI compile output was not created: $output" }
-          if (-not ($compileOutput | Where-Object { $_ -like 'compile: *' })) { throw "Compile progress output missing.`n$compileOutput" }
+          if (-not ($compileOutput | Where-Object { $_ -like 'Started to compile unified-cli-smoke.xps*' })) { throw "Compile start status missing.`n$compileOutput" }
+          if (-not ($compileOutput | Where-Object { $_ -like 'Compiling unified-cli-smoke.xps*' })) { throw "Compile progress status missing.`n$compileOutput" }
+          if (-not ($compileOutput | Where-Object { $_ -like 'Compiled unified-cli-smoke.xps in *' })) { throw "Compile completion status missing.`n$compileOutput" }
       - name: Verify quiet xpscript run
         shell: pwsh
         run: |
           $output = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run ./samples/unified-cli-smoke.xps 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "xpscript run failed.`n$output" }
           if ($output -notcontains 'UNIFIED-CLI=OK') { throw "Unified CLI runtime output mismatch.`n$output" }
-          if ($output | Where-Object { $_ -like 'run: *' -or $_ -like 'compile: *' }) { throw "Default xpscript run must not emit compiler info.`n$output" }
+          if ($output | Where-Object { $_ -like 'Started to compile *' -or $_ -like 'Compiling *' -or $_ -like 'Compiled *' }) { throw "Default xpscript run must not emit compiler info.`n$output" }
       - name: Verify xpscript run info
         shell: pwsh
         run: |
           $output = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run ./samples/unified-cli-smoke.xps --info 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "xpscript run --info failed.`n$output" }
           if ($output -notcontains 'UNIFIED-CLI=OK') { throw "Unified CLI runtime output mismatch with --info.`n$output" }
-          if (-not ($output | Where-Object { $_ -like 'run: compiling *' })) { throw "Run compile info missing.`n$output" }
-          if (-not ($output | Where-Object { $_ -like 'run: compiled in *' })) { throw "Run compile timing missing.`n$output" }
-          if (-not ($output | Where-Object { $_ -like 'run: starting program*' })) { throw "Run lifecycle info missing.`n$output" }
+          if (-not ($output | Where-Object { $_ -like 'Started to compile unified-cli-smoke.xps*' })) { throw "Run compile start info missing.`n$output" }
+          if (-not ($output | Where-Object { $_ -like 'Compiling unified-cli-smoke.xps*' })) { throw "Run compile progress info missing.`n$output" }
+          if (-not ($output | Where-Object { $_ -like 'Compiled unified-cli-smoke.xps in *' })) { throw "Run compile timing missing.`n$output" }
+          if (-not ($output | Where-Object { $_ -like 'Starting program*' })) { throw "Run lifecycle info missing.`n$output" }
       - name: Verify direct compile shortcut
         shell: pwsh
         run: |
