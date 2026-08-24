@@ -17,8 +17,10 @@ Sub Main()
     Dim id1 As String
     Dim id2 As String
     Dim replacementId As String
+    Dim metadataId As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
+    Dim hasModified As Boolean
 
     connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
     If connectionString = "" Then
@@ -47,15 +49,17 @@ Sub Main()
     Print "MSSQL-ATTACH-DUPLICATE-IDS=" & CStr(id1 <> id2)
     Print "MSSQL-ATTACH-NAME=" & CStr(created1.Get("originalName"))
     Print "MSSQL-ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
-    Print "MSSQL-ATTACH-NO-MODIFIED=" & CStr(Not created1.Contains("modified"))
+    hasModified = created1.Contains("modified")
+    Print "MSSQL-ATTACH-NO-MODIFIED=" & CStr(Not hasModified)
 
     Set matches = files.FindByName("contracts.pdf")
     Print "MSSQL-ATTACH-FIND-NAME=" & CStr(matches.Count)
     Set metadata = files.GetMetadata(id1)
-    Print "MSSQL-ATTACH-METADATA-ID=" & CStr(metadata.Get("attachmentId") = id1)
+    metadataId = CStr(metadata.Get("attachmentId"))
+    Print "MSSQL-ATTACH-METADATA-ID=" & CStr(metadataId = id1)
 
     sourceLength = FileLen(sourcePath)
-    Call files.Get(id1, targetPath)
+    Call files.SaveToDisk(id1, targetPath)
     targetLength = FileLen(targetPath)
     Print "MSSQL-ATTACH-SAME-LENGTH=" & CStr(sourceLength = targetLength)
 
