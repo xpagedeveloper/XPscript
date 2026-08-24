@@ -28,12 +28,14 @@ internal static class XPCrossPlatformRuntime
 
     public static bool IsDir(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
 
-    public static string Dir(object? pattern = null, int mode = 0)
+    public static string Dir(object? pattern = null, int mode = 0, int maxDepth = 3)
     {
         if (pattern is not null)
         {
             if (mode < 0 || mode > 3)
                 throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.");
+            if (maxDepth < 0 || maxDepth > 32)
+                throw new XPScriptRuntimeException(5, "Dir maxDepth must be between 0 and 32.");
 
             var raw = XPScriptRuntime.CStr(pattern);
             if (string.IsNullOrWhiteSpace(raw)) raw = "*";
@@ -52,7 +54,7 @@ internal static class XPCrossPlatformRuntime
                 0 => Directory.EnumerateFileSystemEntries(directory, mask, SearchOption.TopDirectoryOnly),
                 1 => Directory.EnumerateFiles(directory, mask, SearchOption.TopDirectoryOnly),
                 2 => Directory.EnumerateDirectories(directory, mask, SearchOption.TopDirectoryOnly),
-                3 => Directory.EnumerateFiles(directory, mask, SearchOption.AllDirectories),
+                3 => EnumerateFilesLimitedDepth(directory, mask, maxDepth),
                 _ => throw new XPScriptRuntimeException(5, "Dir mode must be 0, 1, 2, or 3.")
             };
 
@@ -71,6 +73,31 @@ internal static class XPCrossPlatformRuntime
             return "";
         }
         return DirEnumerator.Current;
+    }
+
+    private static IEnumerable<string> EnumerateFilesLimitedDepth(string root, string mask, int maxDepth)
+    {
+        var pending = new Stack<(string Directory, int Depth)>();
+        pending.Push((root, 0));
+
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            foreach (var file in Directory.EnumerateFiles(current.Directory, mask, SearchOption.TopDirectoryOnly))
+                yield return file;
+
+            if (current.Depth >= maxDepth) continue;
+
+            foreach (var child in Directory.EnumerateDirectories(current.Directory, "*", SearchOption.TopDirectoryOnly))
+            {
+                FileAttributes attributes;
+                try { attributes = File.GetAttributes(child); }
+                catch (IOException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
+                if ((attributes & FileAttributes.ReparsePoint) != 0) continue;
+                pending.Push((child, current.Depth + 1));
+            }
+        }
     }
 
     public static string StrTemplate(object? template, object? values)
