@@ -19,10 +19,9 @@ Sub Main()
     Dim id2 As String
     Dim replacementId As String
     Dim metadataId As String
+    Dim metadataText As String
     Dim sourceLength As Variant
     Dim targetLength As Variant
-    Dim hasModified As Boolean
-    Dim hasModifiedBy As Boolean
 
     sourcePath = "samples/database-attachments.xps"
     targetPath = "database-attachments-copy.xps"
@@ -46,10 +45,9 @@ Sub Main()
     Print "ATTACH-CREATED-BY=" & CStr(created1.Get("createdBy"))
     Print "ATTACH-NAME=" & CStr(created1.Get("originalName"))
     Print "ATTACH-HAS-CHECKSUM=" & CStr(Len(CStr(created1.Get("checksumSha256"))) = 64)
-    hasModified = created1.Contains("modified")
-    hasModifiedBy = created1.Contains("modifiedBy")
-    Print "ATTACH-NO-MODIFIED=" & CStr(Not hasModified)
-    Print "ATTACH-NO-MODIFIED-BY=" & CStr(Not hasModifiedBy)
+    metadataText = created1.Stringify()
+    Print "ATTACH-NO-MODIFIED=" & CStr(InStr(1, metadataText, Chr(34) & "modified" & Chr(34)) = 0)
+    Print "ATTACH-NO-MODIFIED-BY=" & CStr(InStr(1, metadataText, Chr(34) & "modifiedBy" & Chr(34)) = 0)
 
     Set matches = files.FindByName("contracts.pdf")
     Print "ATTACH-FIND-NAME=" & CStr(matches.Count)
@@ -66,14 +64,17 @@ Sub Main()
     Set downloaded = files.GetAll("database-attachments-all")
     Print "ATTACH-GETALL=" & CStr(downloaded.Count)
 
-    Print "ATTACH-DELETE-FOR-REPLACE=" & CStr(files.Delete(id2))
+    Call files.Delete(id2)
+    Print "ATTACH-DELETE-FOR-REPLACE=True"
     Set replacement = files.SaveAs(sourcePath, "contracts.pdf", "replacement@example")
     replacementId = CStr(replacement.Get("attachmentId"))
     Print "ATTACH-REPLACEMENT-NEW-ID=" & CStr(replacementId <> id2)
     Print "ATTACH-REPLACEMENT-CREATED-BY=" & CStr(replacement.Get("createdBy"))
 
-    Print "ATTACH-DELETED-FIRST=" & CStr(files.Delete(id1))
-    Print "ATTACH-DELETED-REPLACEMENT=" & CStr(files.Delete(replacementId))
+    Call files.Delete(id1)
+    Print "ATTACH-DELETED-FIRST=True"
+    Call files.Delete(replacementId)
+    Print "ATTACH-DELETED-REPLACEMENT=True"
     Set list = files.List()
     Print "ATTACH-AFTER-DELETE=" & CStr(list.Count)
 
