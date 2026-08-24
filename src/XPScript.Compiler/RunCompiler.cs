@@ -67,7 +67,7 @@ internal static class RunCompiler
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
 
-        if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed))
+        if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
             var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, cancellationToken).ConfigureAwait(false);
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
