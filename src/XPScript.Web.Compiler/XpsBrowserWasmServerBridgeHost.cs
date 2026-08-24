@@ -97,7 +97,7 @@ internal static class XpsBrowserWasmServerBridgeHost
         BridgeRequest request;
         try
         {
-            using var document = JsonDocument.Parse(context.Request.Body.Span, new JsonDocumentOptions { MaxDepth = 32 });
+            using var document = JsonDocument.Parse(context.Request.Body, new JsonDocumentOptions { MaxDepth = 32 });
             request = ParseRequest(document.RootElement);
         }
         catch (JsonException)
