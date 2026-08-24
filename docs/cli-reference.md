@@ -6,8 +6,9 @@ This page is the searchable reference for the XPScript compiler and host command
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| compile | `xpscriptc source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program. | [hello.xps](../demo/console/hello.xps) |
-| `run` | `xpscriptc run source.xps [arguments...]` | `source.xps`: program to compile/run; following values are exposed through `Application.Args`. | Compiles into an isolated temporary output and runs the program immediately. | [application-runtime.xps](../samples/application-runtime.xps) |
+| compile | `xpscriptc source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout. | [hello.xps](../demo/console/hello.xps) |
+| `run` | `xpscriptc run source.xps [arguments...]` | `source.xps`: program to compile/run; following values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--info` | `xpscriptc run source.xps --info` | none | Shows run compilation progress, elapsed compile time, program start, and exit code on stderr. Without `--info`, `run` emits only program output and errors. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
 | `--runtime` | `--runtime RID` | `RID`: one of the supported runtime identifiers such as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. | Compiles/publishes for an explicit target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `--framework-dependent` | `--framework-dependent` | none | Produces framework-dependent output instead of a self-contained application. | [hello.xps](../demo/console/hello.xps) |
