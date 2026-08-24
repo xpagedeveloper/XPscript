@@ -22,7 +22,7 @@ internal static class XpsBrowserWasmServerBridgeHost
     private static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(30);
     private static readonly ConcurrentDictionary<string, SessionCompanion> Sessions = new(StringComparer.Ordinal);
 
-    public static async Task<bool> TryHandleAsync(XpsBrowserWasmBundle bundle, string relativePath, XpsWebContext context)
+    public static async Task<bool> TryHandleAsync(XpsBrowserWasmServerBridgeBundle bundle, string relativePath, XpsWebContext context)
     {
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(context);
@@ -141,7 +141,7 @@ internal static class XpsBrowserWasmServerBridgeHost
         return true;
     }
 
-    private static SessionCompanion GetOrCreateSession(XpsBrowserWasmBundle bundle, string sessionId)
+    private static SessionCompanion GetOrCreateSession(XpsBrowserWasmServerBridgeBundle bundle, string sessionId)
     {
         var key = bundle.SourceHash + "\0" + sessionId;
         if (Sessions.TryGetValue(key, out var existing)) return existing;
