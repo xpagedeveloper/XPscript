@@ -69,23 +69,40 @@ jobs:
           if (-not ($compileOutput | Where-Object { $_ -like 'Started to compile unified-cli-smoke.xps*' })) { throw "Compile start status missing.`n$compileOutput" }
           if (-not ($compileOutput | Where-Object { $_ -like 'Compiling unified-cli-smoke.xps*' })) { throw "Compile progress status missing.`n$compileOutput" }
           if (-not ($compileOutput | Where-Object { $_ -like 'Compiled unified-cli-smoke.xps in *' })) { throw "Compile completion status missing.`n$compileOutput" }
-      - name: Compile and run reference runtime batch1 sample
+      - name: Benchmark repeated reference runtime run
         shell: pwsh
         run: |
-          $ext = if ($IsWindows) { '.exe' } else { '' }
-          $compiled = "./out/reference-runtime-batch1$ext"
-          $compileOutput = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- compile ./samples/reference-runtime-batch1.xps --framework-dependent -o $compiled 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw "reference-runtime-batch1 compile failed.`n$compileOutput" }
-          if (-not (Test-Path $compiled)) { throw "reference-runtime-batch1 compile output was not created: $compiled" }
+          $cli = './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
+          $sample = './samples/reference-runtime-batch1.xps'
+          $expectedValues = @('INSTRB=3', 'STRRIGHT=two/three', 'CVDATE=2026', 'REGEXVALIDATE=True', 'REGEXMATCHS=9,88', 'B64DEC=Fredrik')
+          $times = @()
 
-          $runOutput = @(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- run ./samples/reference-runtime-batch1.xps --info 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw "reference-runtime-batch1 run failed.`n$runOutput" }
-          foreach ($expected in @('INSTRB=3', 'STRRIGHT=two/three', 'CVDATE=2026', 'REGEXVALIDATE=True', 'REGEXMATCHS=9,88', 'B64DEC=Fredrik')) {
-            if ($runOutput -notcontains $expected) { throw "reference-runtime-batch1 output missing '$expected'.`n$runOutput" }
+          for ($i = 1; $i -le 5; $i++) {
+            $watch = [System.Diagnostics.Stopwatch]::StartNew()
+            $runOutput = @(dotnet $cli run $sample --info 2>&1)
+            $exitCode = $LASTEXITCODE
+            $watch.Stop()
+            $seconds = [Math]::Round($watch.Elapsed.TotalSeconds, 3)
+            $times += $seconds
+            Write-Host "REFERENCE-RUNTIME-BATCH1-RUN-$i=$seconds s"
+            $runOutput | ForEach-Object { Write-Host $_ }
+
+            if ($exitCode -ne 0) { throw "reference-runtime-batch1 run $i failed.`n$runOutput" }
+            foreach ($expected in $expectedValues) {
+              if ($runOutput -notcontains $expected) { throw "reference-runtime-batch1 run $i output missing '$expected'.`n$runOutput" }
+            }
+            if ($i -eq 1) {
+              if (-not ($runOutput | Where-Object { $_ -like 'Compiled reference-runtime-batch1.xps in *' })) {
+                throw "reference-runtime-batch1 first run did not compile.`n$runOutput"
+              }
+            } elseif (-not ($runOutput | Where-Object { $_ -like 'Run cache hit for reference-runtime-batch1.xps*' })) {
+              throw "reference-runtime-batch1 run $i was not an artifact-cache hit.`n$runOutput"
+            }
           }
-          if (-not ($runOutput | Where-Object { $_ -like 'Compiled reference-runtime-batch1.xps in *' -or $_ -like 'Run cache hit for reference-runtime-batch1.xps*' })) {
-            throw "reference-runtime-batch1 did not complete the run compilation/cache path.`n$runOutput"
-          }
+
+          $cachedAverage = [Math]::Round((($times[1..4] | Measure-Object -Average).Average), 3)
+          Write-Host "REFERENCE-RUNTIME-BATCH1-FIRST=$($times[0]) s"
+          Write-Host "REFERENCE-RUNTIME-BATCH1-CACHED-AVG=$cachedAverage s"
       - name: Verify quiet xpscript run
         shell: pwsh
         run: |
