@@ -180,11 +180,11 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
-    public static string[] Files(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
-        EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: false).ToArray();
+    public static LSArray Files(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
+        ToXPScriptArray("String", EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: false).Cast<object?>());
 
-    public static string[] Directories(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
-        EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: true).ToArray();
+    public static LSArray Directories(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
+        ToXPScriptArray("String", EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: true).Cast<object?>());
 
     private static IEnumerable<string> EnumeratePaths(object? pathOrPattern, object? maskValue, bool recursive, int maxDepth, bool directories)
     {
@@ -258,13 +258,13 @@ internal static class XPCrossPlatformRuntime
     public static void AppendFile(object? path, object? content, object? charset = null) =>
         File.AppendAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
 
-    public static string[] ReadLines(object? path, object? charset = null)
+    public static LSArray ReadLines(object? path, object? charset = null)
     {
-        var values = new List<string>();
+        var values = new List<object?>();
         using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
         string? line;
         while ((line = reader.ReadLine()) is not null) values.Add(line);
-        return values.ToArray();
+        return ToXPScriptArray("String", values);
     }
 
     public static void WriteLines(object? path, object? values, object? charset = null)
@@ -273,10 +273,23 @@ internal static class XPCrossPlatformRuntime
         foreach (var value in EnumerateValues(values)) writer.WriteLine(XPScriptRuntime.CStr(value));
     }
 
-    public static byte[] ReadBytes(object? path) => File.ReadAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+    public static LSArray ReadBytes(object? path)
+    {
+        var bytes = File.ReadAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+        return ToXPScriptArray("Byte", bytes.Cast<object?>());
+    }
 
     public static void WriteBytes(object? path, object? values) =>
         File.WriteAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)), ToBytes(values));
+
+    private static LSArray ToXPScriptArray(string elementType, IEnumerable<object?> values)
+    {
+        var items = values.ToList();
+        if (items.Count == 0) return new LSArray(elementType, true);
+        var array = new LSArray(elementType, true, [0], [items.Count - 1]);
+        for (var i = 0; i < items.Count; i++) array.Set(items[i], i);
+        return array;
+    }
 
     private static IEnumerable<object?> EnumerateValues(object? values)
     {
