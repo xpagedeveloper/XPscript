@@ -13,14 +13,37 @@ on:
       - 'samples/file-io-platform-semantics.xps'
       - 'samples/file-convenience.xps'
       - 'docs/file-io-reference.md'
+      - 'scripts/_patch_convenience_arrays.py'
       - '.github/workflows/cross-platform-file-io-platform-semantics.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  prepare-convenience-arrays:
+    if: github.head_ref == 'feature/dir-filter-isfile-isdir'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - run: python ./scripts/_patch_convenience_arrays.py
+      - shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/XPScript.Compiler/CrossPlatformRuntimeSource.cs
+          git commit -m 'Return XPscript arrays from filesystem helpers'
+          git push origin HEAD:${{ github.head_ref }}
+
   platform-semantics:
+    needs: prepare-convenience-arrays
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +51,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
