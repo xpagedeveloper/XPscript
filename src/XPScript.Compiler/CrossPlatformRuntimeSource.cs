@@ -100,6 +100,223 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
+    public sealed class XPFileInfoValue
+    {
+        public string Name { get; }
+        public string FullPath { get; }
+        public string Extension { get; }
+        public long Length { get; }
+        public DateTime Created { get; }
+        public DateTime Modified { get; }
+        public DateTime Accessed { get; }
+        public bool IsFile { get; }
+        public bool IsDirectory { get; }
+        public bool IsLink { get; }
+        public int Attributes { get; }
+
+        public XPFileInfoValue(string path)
+        {
+            FullPath = Path.GetFullPath(path);
+            FileSystemInfo info;
+            if (File.Exists(FullPath)) info = new System.IO.FileInfo(FullPath);
+            else if (Directory.Exists(FullPath)) info = new DirectoryInfo(FullPath);
+            else throw new FileNotFoundException("Path not found.", FullPath);
+
+            Name = info.Name;
+            Extension = info.Extension;
+            Created = info.CreationTime;
+            Modified = info.LastWriteTime;
+            Accessed = info.LastAccessTime;
+            IsFile = info is System.IO.FileInfo;
+            IsDirectory = info is DirectoryInfo;
+            IsLink = info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0;
+            Attributes = XPScriptFileSystemRuntime.GetFileAttr(FullPath);
+            Length = info is System.IO.FileInfo file ? file.Length : 0L;
+        }
+    }
+
+    public static XPFileInfoValue FileInfo(object? path) =>
+        new(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+
+    public static string FileHash(object? path, object? algorithm = null)
+    {
+        var file = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        var name = algorithm is null ? "SHA256" : XPScriptRuntime.CStr(algorithm).Trim().ToUpperInvariant().Replace("-", "", StringComparison.Ordinal);
+        using System.Security.Cryptography.HashAlgorithm hash = name switch
+        {
+            "SHA256" => System.Security.Cryptography.SHA256.Create(),
+            "SHA384" => System.Security.Cryptography.SHA384.Create(),
+            "SHA512" => System.Security.Cryptography.SHA512.Create(),
+            "SHA1" => System.Security.Cryptography.SHA1.Create(),
+            "MD5" => System.Security.Cryptography.MD5.Create(),
+            _ => throw new XPScriptRuntimeException(5, "FileHash algorithm must be SHA256, SHA384, SHA512, SHA1, or MD5.")
+        };
+        using var stream = File.OpenRead(file);
+        return Convert.ToHexString(hash.ComputeHash(stream));
+    }
+
+    public static bool FileEquals(object? leftValue, object? rightValue)
+    {
+        var left = Path.GetFullPath(XPScriptRuntime.CStr(leftValue));
+        var right = Path.GetFullPath(XPScriptRuntime.CStr(rightValue));
+        var leftInfo = new System.IO.FileInfo(left);
+        var rightInfo = new System.IO.FileInfo(right);
+        if (!leftInfo.Exists || !rightInfo.Exists) return false;
+        if (leftInfo.Length != rightInfo.Length) return false;
+        if (string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return true;
+
+        const int bufferSize = 128 * 1024;
+        using var a = new FileStream(left, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+        using var b = new FileStream(right, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+        var ab = new byte[bufferSize];
+        var bb = new byte[bufferSize];
+        while (true)
+        {
+            var ac = a.Read(ab, 0, ab.Length);
+            var bc = b.Read(bb, 0, bb.Length);
+            if (ac != bc) return false;
+            if (ac == 0) return true;
+            if (!ab.AsSpan(0, ac).SequenceEqual(bb.AsSpan(0, bc))) return false;
+        }
+    }
+
+    public static string[] Files(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
+        EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: false).ToArray();
+
+    public static string[] Directories(object? pathOrPattern, object? maskValue = null, bool recursive = false, int maxDepth = 3) =>
+        EnumeratePaths(pathOrPattern, maskValue, recursive, maxDepth, directories: true).ToArray();
+
+    private static IEnumerable<string> EnumeratePaths(object? pathOrPattern, object? maskValue, bool recursive, int maxDepth, bool directories)
+    {
+        if (maxDepth < 0 || maxDepth > 32)
+            throw new XPScriptRuntimeException(5, "Filesystem maxDepth must be between 0 and 32.");
+
+        var raw = XPScriptRuntime.CStr(pathOrPattern);
+        if (string.IsNullOrWhiteSpace(raw)) raw = ".";
+        string root;
+        string mask;
+        if (maskValue is not null)
+        {
+            root = Path.GetFullPath(raw);
+            mask = XPScriptRuntime.CStr(maskValue);
+            if (string.IsNullOrWhiteSpace(mask)) mask = "*";
+        }
+        else if (raw.IndexOfAny(['*', '?']) >= 0)
+        {
+            var directoryPart = Path.GetDirectoryName(raw);
+            root = Path.GetFullPath(string.IsNullOrEmpty(directoryPart) ? "." : directoryPart);
+            mask = Path.GetFileName(raw);
+            if (string.IsNullOrWhiteSpace(mask)) mask = "*";
+        }
+        else
+        {
+            root = Path.GetFullPath(raw);
+            mask = "*";
+        }
+        if (!Directory.Exists(root)) throw new DirectoryNotFoundException("Directory does not exist.");
+
+        foreach (var value in EnumerateLimited(root, mask, recursive ? maxDepth : 0, directories))
+            yield return Path.GetFullPath(value);
+    }
+
+    private static IEnumerable<string> EnumerateLimited(string root, string mask, int maxDepth, bool directories)
+    {
+        var pending = new Stack<(string Directory, int Depth)>();
+        pending.Push((root, 0));
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            var matches = directories
+                ? Directory.EnumerateDirectories(current.Directory, mask, SearchOption.TopDirectoryOnly)
+                : Directory.EnumerateFiles(current.Directory, mask, SearchOption.TopDirectoryOnly);
+            foreach (var match in matches) yield return match;
+
+            if (current.Depth >= maxDepth) continue;
+            foreach (var child in Directory.EnumerateDirectories(current.Directory, "*", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
+                    pending.Push((child, current.Depth + 1));
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+    }
+
+    public static string ReadFile(object? path, object? charset = null)
+    {
+        var encoding = ResolveTextEncoding(charset);
+        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), encoding, detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
+    }
+
+    public static void WriteFile(object? path, object? content, object? charset = null) =>
+        File.WriteAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+
+    public static void AppendFile(object? path, object? content, object? charset = null) =>
+        File.AppendAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+
+    public static string[] ReadLines(object? path, object? charset = null)
+    {
+        var values = new List<string>();
+        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
+        string? line;
+        while ((line = reader.ReadLine()) is not null) values.Add(line);
+        return values.ToArray();
+    }
+
+    public static void WriteLines(object? path, object? values, object? charset = null)
+    {
+        using var writer = new StreamWriter(Path.GetFullPath(XPScriptRuntime.CStr(path)), append: false, ResolveTextEncoding(charset));
+        foreach (var value in EnumerateValues(values)) writer.WriteLine(XPScriptRuntime.CStr(value));
+    }
+
+    public static byte[] ReadBytes(object? path) => File.ReadAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+
+    public static void WriteBytes(object? path, object? values) =>
+        File.WriteAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)), ToBytes(values));
+
+    private static IEnumerable<object?> EnumerateValues(object? values)
+    {
+        if (values is LSArray array)
+        {
+            if (!array.IsAllocated) yield break;
+            var lower = array.LBound();
+            var upper = array.UBound();
+            for (var i = lower; i <= upper; i++) yield return array.Get(new object?[] { i });
+            yield break;
+        }
+        if (values is System.Collections.IEnumerable enumerable && values is not string)
+        {
+            foreach (var value in enumerable) yield return value;
+            yield break;
+        }
+        throw new XPScriptRuntimeException(13, "Expected an array or enumerable value.");
+    }
+
+    private static byte[] ToBytes(object? values)
+    {
+        if (values is byte[] bytes) return bytes;
+        var result = new List<byte>();
+        foreach (var value in EnumerateValues(values)) result.Add(XPScriptRuntime.CByte(value));
+        return result.ToArray();
+    }
+
+    private static Encoding ResolveTextEncoding(object? charset)
+    {
+        if (charset is null || string.IsNullOrWhiteSpace(XPScriptRuntime.CStr(charset))) return new UTF8Encoding(false);
+        var name = XPScriptRuntime.CStr(charset).Trim();
+        var normalized = name.Replace("_", "-", StringComparison.Ordinal).ToLowerInvariant();
+        if (normalized is "utf8" or "utf-8") return new UTF8Encoding(false);
+        if (normalized is "utf16" or "utf-16" or "unicode") return new UnicodeEncoding(false, true);
+        if (normalized is "utf-16be" or "unicodefffe") return new UnicodeEncoding(true, true);
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        try { return System.Text.Encoding.GetEncoding(name); }
+        catch (ArgumentException) { throw new XPScriptRuntimeException(5, "Unsupported text charset: " + name); }
+    }
+
     public static string StrTemplate(object? template, object? values)
     {
         var text = XPScriptRuntime.CStr(template);

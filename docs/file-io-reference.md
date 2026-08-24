@@ -52,6 +52,19 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 | `IsDir` | `IsDir(path)` | `path`: filesystem path. | Returns `True` when the path exists and is a directory; otherwise `False`. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
 | `Dir` | `Dir([pattern] [, mode [, maxDepth]])` | optional `pattern`: path/search mask. optional `mode`: omitted or `0` = files and directories in the current directory level; `1` = files only in the current level; `2` = directories only in the current level; `3` = files recursively. optional `maxDepth`: recursion depth for mode `3`, default `3`, valid `0..32`. Depth `0` searches only the starting directory, `1` includes one subdirectory level, and so on. Call `Dir()` again to continue the current enumeration. | Enumerates filesystem entries using target-filesystem matching semantics. `.` and `..` are always excluded. Mode `3` is bounded, skips reparse-point/symbolic-link directories, and returns paths relative to the searched directory so nested files retain their subdirectory path. | [file-io-platform-semantics.xps](../samples/file-io-platform-semantics.xps) |
 
+| `FileInfo` | `FileInfo(path)` | `path`: existing file or directory. | Returns a metadata object with `Name`, `FullPath`, `Extension`, `Length`, `Created`, `Modified`, `Accessed`, `IsFile`, `IsDirectory`, `IsLink`, and `Attributes`. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `FileHash` | `FileHash(path [, algorithm])` | `algorithm`: optional `SHA256` (default), `SHA384`, `SHA512`; legacy compatibility also accepts `SHA1` and `MD5`. | Streams the file and returns an uppercase hexadecimal digest. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `FileEquals` | `FileEquals(path1, path2)` | two file paths. | Returns `True` when files have equal length and byte-for-byte content. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `Files` | `Files(pathOrPattern [, mask [, recursive [, maxDepth]]])` | path/pattern, optional mask, recursive flag, optional depth `0..32` (default `3`). | Returns a String array of matching full file paths; recursive traversal skips link/reparse directories. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `Directories` | `Directories(pathOrPattern [, mask [, recursive [, maxDepth]]])` | path/pattern, optional mask, recursive flag, optional depth `0..32` (default `3`). | Returns a String array of matching full directory paths and works directly with `ForAll`. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadFile` | `ReadFile(path [, charset])` | file path and optional charset. | Reads an entire text file. UTF-8 is the default; BOMs are detected. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteFile` | `WriteFile path, content [, charset]` | path, text, optional charset. | Replaces an entire text file. Function-call syntax is also accepted. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `AppendFile` | `AppendFile path, content [, charset]` | path, text, optional charset. | Appends text to a file. Function-call syntax is also accepted. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadLines` | `ReadLines(path [, charset])` | path and optional charset. | Returns a String array with one element per text line. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteLines` | `WriteLines path, values [, charset]` | path, array/list values, optional charset. | Writes one array/list value per line. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `ReadBytes` | `ReadBytes(path)` | file path. | Returns the complete file as a Byte array. | [file-convenience.xps](../samples/file-convenience.xps) |
+| `WriteBytes` | `WriteBytes path, values` | path and Byte array/array-like value. | Replaces a file with the supplied bytes. | [file-convenience.xps](../samples/file-convenience.xps) |
+
 ### `GetFileAttr(fullPath)` attribute values
 
 `GetFileAttr` returns an integer bit mask. Test a specific attribute with a bitwise `And`, for example:
@@ -79,6 +92,14 @@ Common attribute bits are:
 - `16384` (`Encrypted`) — encrypted attribute where the runtime/filesystem exposes it.
 
 The result is a bit mask, not a single value. Windows can therefore return combinations such as `Directory + Hidden = 18`. On macOS/Linux, XPScript explicitly adds `Hidden (2)` for dot-prefixed names because hidden state is conventionally represented by the filename rather than a native Windows-style attribute. Other bits are whatever the underlying .NET runtime and filesystem report for that path; do not assume Windows-only metadata such as `Archive` or `System` exists on Unix-like systems.
+
+### Whole-file convenience API
+
+`Files(...)`, `Directories(...)`, `ReadLines(...)`, and `ReadBytes(...)` return arrays that can be consumed directly by `ForAll`. Recursive `Files`/`Directories` use the same bounded-depth model as recursive `Dir`: default depth `3`, valid range `0..32`, and link/reparse-point directories are not traversed.
+
+Text helpers accept .NET charset names. Common names include `utf-8`, `utf-16`, `utf-16be`, `iso-8859-1`, and other ISO/code-page names available through the platform encoding provider. UTF-8 without BOM is used when charset is omitted; readers still detect BOMs.
+
+`FileHash` defaults to SHA-256. SHA-384 and SHA-512 are recommended alternatives. SHA-1 and MD5 are available only for compatibility with legacy file manifests and should not be chosen for security-sensitive integrity checks.
 
 ### `Dir` mode examples
 

@@ -27,6 +27,13 @@ internal sealed class FileIoExtensionsPreprocessor
                 continue;
             }
 
+            var wholeFileWrite = Regex.Match(line, @"^(WriteFile|AppendFile|WriteLines|WriteBytes)\s+(.+)$", RegexOptions.IgnoreCase);
+            if (wholeFileWrite.Success)
+            {
+                output.Add(indent + $"Call XPCrossPlatformRuntime.{wholeFileWrite.Groups[1].Value}({wholeFileWrite.Groups[2].Value})");
+                continue;
+            }
+
             var lockMatch = Regex.Match(line, @"^(Lock|Unlock)\s+#?([^,\s]+)(?:\s*,\s*(.+))?$", RegexOptions.IgnoreCase);
             if (lockMatch.Success)
             {
