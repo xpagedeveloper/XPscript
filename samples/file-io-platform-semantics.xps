@@ -6,6 +6,7 @@ Sub Main()
     Dim hiddenAttr As Integer
     Dim driveErr As Integer
     Dim deleteOpenErr As Integer
+    Dim recursiveFound As Boolean
 
     MkDir "xps-platform-semantics"
     ChDir "xps-platform-semantics"
@@ -34,6 +35,68 @@ Sub Main()
     Open "normal-probe.txt" For Output As #fileNumber
     Print #fileNumber, "normal"
     Close #fileNumber
+
+    MkDir "subdir"
+    fileNumber = FreeFile
+    Open "subdir/nested.txt" For Output As #fileNumber
+    Print #fileNumber, "nested"
+    Close #fileNumber
+
+    If Not IsFile("CaseProbe.TXT") Then
+        Error 9720, "IsFile did not identify a file"
+    End If
+    If IsFile("subdir") Then
+        Error 9721, "IsFile identified a directory as a file"
+    End If
+    If Not IsDir("subdir") Then
+        Error 9722, "IsDir did not identify a directory"
+    End If
+    If IsDir("CaseProbe.TXT") Then
+        Error 9723, "IsDir identified a file as a directory"
+    End If
+    Print "ISFILE_ISDIR=OK"
+
+    found = Dir("*", 2)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9724, "Dir returned a dot entry"
+        End If
+        If found = "subdir" Then Exit Do
+        found = Dir()
+    Loop
+    If found <> "subdir" Then
+        Error 9725, "Dir mode 2 did not return the subdirectory"
+    End If
+    Print "DIR_MODE2=OK"
+
+    found = Dir("*", 1)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9726, "Dir returned a dot entry"
+        End If
+        If found = "normal-probe.txt" Then Exit Do
+        found = Dir()
+    Loop
+    If found <> "normal-probe.txt" Then
+        Error 9727, "Dir mode 1 did not return the file"
+    End If
+    Print "DIR_MODE1=OK"
+
+    recursiveFound = False
+    found = Dir("*.txt", 3)
+    Do While found <> ""
+        If found = "." Or found = ".." Then
+            Error 9728, "Recursive Dir returned a dot entry"
+        End If
+        If found = "subdir/nested.txt" Or found = "subdir\nested.txt" Then
+            recursiveFound = True
+        End If
+        found = Dir()
+    Loop
+    If Not recursiveFound Then
+        Error 9729, "Dir mode 3 did not return the nested file"
+    End If
+    Print "DIR_MODE3=OK"
 
     fileNumber = FreeFile
     Open "delete-open-probe.txt" For Output As #fileNumber
@@ -88,6 +151,8 @@ Sub Main()
     Kill "CaseProbe.TXT"
     Kill ".hidden-probe"
     Kill "normal-probe.txt"
+    Kill "subdir/nested.txt"
+    RmDir "subdir"
     ChDir ".."
     RmDir "xps-platform-semantics"
 
