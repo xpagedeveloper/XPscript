@@ -79,6 +79,13 @@ internal static class NotesRuntimeSourceBuilder
             "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    internal XPScriptNotesSession SessionForItem => Session;\n    internal bool TryGetItemInfo(string name) => Session.Api.TryGetFirstItemInfo(_handle, name, out _);\n\n    public XPScriptNotesItem? GetFirstItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0 || !Session.Api.TryGetFirstItemInfo(_handle, name, out _)) return null;\n        return new XPScriptNotesItem(Session, this, name);\n    }\n\n    public uint NoteId { get; private set; }",
             "document-item-surface");
 
+        // Prefer the Notes runtime's own build number (GETBUILD/NSFDbGetBuildVersion)
+        // and retain file-version metadata only as a fallback.
+        source = ReplaceRequired(source,
+            "NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);",
+            "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
+            "session-build-version");
+
         return source;
     }
 
