@@ -20,12 +20,16 @@ Sub Main()
     Dim view As NotesView
     Dim docs As NotesDocumentCollection
     Dim doc As NotesDocument
+    Dim item As NotesItem
+    Dim itemCopy As NotesItem
     Dim name1 As NotesName
     Dim name2 As NotesName
     Dim dt1 As NotesDateTime
     Dim dt2 As NotesDateTime
+    Dim itemDate As NotesDateTime
     Dim agentResult As NotesAgentResult
     Dim noteId As String
+    Dim values As Variant
 
     If NOTES_INI = "" Then
         Set session = New NotesSession(NOTES_RUNTIME)
@@ -34,6 +38,9 @@ Sub Main()
     End If
 
     Print "USERNAME=" & session.Username
+    Print "COMMON_USERNAME=" & session.CommonUsername
+    Print "NOTES_VERSION=" & session.NotesVersion
+    Print "NOTES_BUILD_VERSION=" & CStr(session.NotesBuildVersion)
 
     Set name1 = session.CreateName(session.Username)
     Set name2 = session.CreateName("CN=Ada Lovelace/O=Example")
@@ -66,6 +73,7 @@ Sub Main()
                 If Not (doc Is Nothing) Then
                     Print "VIEW_DOC_UNID=" & doc.UniversalId
                     Print "VIEW_DOC_FORM=" & doc.GetString("Form")
+                    Call TestItemSurface(doc)
                     Call doc.Recycle()
                     Set doc = Nothing
                 End If
@@ -84,6 +92,7 @@ Sub Main()
                 Set doc = localDb.GetDocumentByNoteId(noteId)
                 If Not (doc Is Nothing) Then
                     Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
+                    Call TestItemSurface(doc)
                     Call doc.Recycle()
                     Set doc = Nothing
                 End If
@@ -142,4 +151,39 @@ Sub Main()
 
     Call session.Recycle()
     Print "NOTES-V1-DONE"
+End Sub
+
+Sub TestItemSurface(doc As NotesDocument)
+    Dim item As NotesItem
+    Dim itemDate As NotesDateTime
+    Dim values As Variant
+
+    Set item = doc.GetFirstItem("Form")
+    If item Is Nothing Then Exit Sub
+
+    Print "ITEM_NAME=" & item.Name
+    Print "ITEM_TYPE=" & CStr(item.Type)
+    Print "ITEM_TEXT=" & item.Text
+    Print "ITEM_VALUE_LENGTH=" & CStr(item.ValueLength)
+    Print "ITEM_IS_AUTHORS=" & CStr(item.IsAuthors)
+    Print "ITEM_IS_ENCRYPTED=" & CStr(item.IsEncrypted)
+    Print "ITEM_IS_NAMES=" & CStr(item.IsNames)
+    Print "ITEM_IS_PROTECTED=" & CStr(item.IsProtected)
+    Print "ITEM_IS_READERS=" & CStr(item.IsReaders)
+    Print "ITEM_IS_SIGNED=" & CStr(item.IsSigned)
+    Print "ITEM_IS_SUMMARY=" & CStr(item.IsSummary)
+    Print "ITEM_LAST_MODIFIED=" & item.LastModified.LocalTime
+
+    values = item.Values
+    Print "ITEM_VALUES_UBOUND=" & CStr(UBound(values))
+
+    Set itemDate = item.DateTimeValue
+    If Not (itemDate Is Nothing) Then
+        Print "ITEM_DATETIME=" & itemDate.LocalTime
+        Call itemDate.Recycle()
+        Set itemDate = Nothing
+    End If
+
+    Call item.Recycle()
+    Set item = Nothing
 End Sub
