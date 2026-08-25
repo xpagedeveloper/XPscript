@@ -54,7 +54,8 @@ internal sealed class UIExtensionPreprocessor
             output.Add(indent + rewritten);
         }
 
-        return new AttachmentCollectionPreprocessor().Transform(string.Join(Environment.NewLine, output));
+        var transformed = new NotesRuntimePreprocessor().Transform(string.Join(Environment.NewLine, output));
+        return new AttachmentCollectionPreprocessor().Transform(transformed);
     }
 
     private static string CreateFormExpression(string rawArguments)
