@@ -116,12 +116,17 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
     public int Type => MapType(Info());
     public long ValueLength => Info().ValueLength;
 
-    public LSArray Values
+    public object Values
     {
         get
         {
             var info = Info();
             return LSOperatorArrayRuntime.CreateArray(Session.Api.GetItemValues(_document.NativeHandle, info, Session));
+        }
+        set
+        {
+            EnsureItemAlive();
+            Session.Api.SetItemValues(_document.NativeHandle, _name, value);
         }
     }
 
