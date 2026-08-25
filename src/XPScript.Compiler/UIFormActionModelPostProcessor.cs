@@ -71,6 +71,7 @@ internal sealed class XPScriptUIForm
                 """
     public int GridColumns => _gridColumns;
     public string Theme => _theme;
+    public bool ShowValidationErrors { get; set; } = true;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     public object GetData() => _data;
