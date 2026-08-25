@@ -1,0 +1,57 @@
+name: ForAll Iterable Semantics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptListRuntimeSource.cs'
+      - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
+      - 'samples/forall-iterable.xps'
+      - 'samples/forall-multidim-error.xps'
+      - 'skills/xpscript-programming/SKILL.md'
+      - 'docs/forall-iteration.md'
+      - '.github/workflows/forall-iterable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  forall:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify unified iterable sources
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/forall-iterable.xps
+          if ($LASTEXITCODE -ne 0) { throw "ForAll iterable sample failed.`n$($output -join [Environment]::NewLine)" }
+          if ($output -notcontains 'FORALL_ITERABLE=OK') { throw "ForAll iterable marker missing.`n$($output -join [Environment]::NewLine)" }
+
+      - name: Reject multidimensional arrays
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/forall-multidim-error.xps 2>&1
+          $exit = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exit -eq 0) { throw 'ForAll unexpectedly accepted a multidimensional array.' }
+          $text = $output -join [Environment]::NewLine
+          if ($text -notmatch 'one-dimensional') { throw "Expected multidimensional-array ForAll error was not reported.`n$text" }
