@@ -13,6 +13,12 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort SigCdV5HotspotBegin = unchecked((ushort)-130);
     private const ushort SigCdV6HotspotBeginContinuation = unchecked((ushort)-140);
 
+    internal bool SaveAttachment(nint note, string attachmentName, string outputPath) =>
+        SaveAttachment(note, attachmentName, outputPath, null);
+
+    internal bool SaveRichTextAttachment(nint note, string richTextItemName, string attachmentName, string outputPath) =>
+        SaveAttachment(note, attachmentName, outputPath, richTextItemName);
+
     internal bool SaveAttachment(nint note, string attachmentName, string outputPath, string? richTextItemName)
     {
         EnsureInitialized();
