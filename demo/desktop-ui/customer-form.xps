@@ -8,6 +8,7 @@ Sub Main()
     Call form.AddTextField("name", "Name")
     Call form.AddTextField("email", "Email")
     Call form.SetRequired("name", True)
+    Call form.SetRegexValidation("email", "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
     result = form.ShowDialog()
     answer = MsgBox("UIForm result: " & result, 0, "XPScript desktop")
