@@ -12,5 +12,9 @@ Sub Main()
     result = form.ShowDialog()
     answer = MsgBox("UIForm result: " & result, 0, "XPScript desktop")
     Print "DIALOG=" & result
+    If result = "OK" Then
+        Print "NAME=" & form.GetFieldValueString("name")
+        Print "EMAIL=" & form.GetFieldValueString("email")
+    End If
     Print "MSGBOX=" & CStr(answer)
 End Sub
