@@ -7,5 +7,6 @@ internal static class NotesRuntimeSource
         NotesRuntimeValueSource.Code + "\n\n" +
         NotesRuntimeDataSource.Code + "\n\n" +
         NotesRuntimeItemSource.Code + "\n\n" +
+        NotesRuntimeAttachmentSource.Code + "\n\n" +
         NotesNativeApiSource.Code;
 }
