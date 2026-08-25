@@ -111,7 +111,7 @@ internal sealed partial class XPScriptNotesNativeApi
         {
             Zero(buffer, capacity);
             var length = Resolve<NSFItemConvertToTextDelegate>("NSFItemConvertToText")(
-                note, itemName.Pointer, buffer, checked((ushort)capacity), (byte)'\n');
+                note, itemName.Pointer, buffer, checked((ushort)capacity), (byte)';');
             return length == 0 ? "" : FromLmbcs(buffer, length);
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
@@ -124,32 +124,187 @@ internal sealed partial class XPScriptNotesNativeApi
             case NotesTypeText:
                 return new object?[] { GetItemText(note, info.Name) };
             case NotesTypeTextList:
-                using (var itemName = ToLmbcs(info.Name))
-                {
-                    var count = Resolve<NSFItemGetTextListEntriesDelegate>("NSFItemGetTextListEntries")(note, itemName.Pointer);
-                    var values = new object?[count];
-                    for (ushort i = 0; i < count; i++)
-                    {
-                        var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(65535);
-                        try
-                        {
-                            Zero(buffer, 65535);
-                            var length = Resolve<NSFItemGetTextListEntryDelegate>("NSFItemGetTextListEntry")(
-                                note, itemName.Pointer, i, buffer, ushort.MaxValue);
-                            values[i] = length == 0 ? "" : FromLmbcs(buffer, length);
-                        }
-                        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
-                    }
-                    return values;
-                }
+                return GetTextListValues(note, info.Name);
             case NotesTypeNumber:
                 return new object?[] { GetItemNumber(note, info.Name) };
+            case NotesTypeNumberRange:
+                return GetNumberListValues(info);
             case NotesTypeTime:
                 return new object?[] { XPScriptNotesDateTime.FromNative(session, GetItemTime(note, info.Name)) };
+            case NotesTypeTimeRange:
+                return GetTimeListValues(info, session);
             default:
                 return new object?[] { ConvertItemToText(note, info.Name) };
         }
     }
+
+    internal void SetItemValues(nint note, string name, object? value)
+    {
+        var info = GetFirstItemInfo(note, name);
+        var isArray = value is LSArray;
+        var values = ExpandValues(value);
+        if (values.Length == 0)
+        {
+            SetTextValuePreserveFlags(note, info, "");
+            return;
+        }
+
+        if (values.All(v => v is XPScriptNotesDateTime))
+        {
+            var dates = values.Cast<XPScriptNotesDateTime>().Select(v => v.NativeValue).ToArray();
+            if (!isArray && dates.Length == 1) SetItemDateTimeValue(note, name, dates[0]);
+            else SetTimeListValue(note, info, dates);
+            return;
+        }
+
+        if (values.All(IsNumericValue))
+        {
+            var numbers = values.Select(XPScriptRuntime.CDbl).ToArray();
+            if (!isArray && numbers.Length == 1)
+            {
+                SetItemNumber(note, name, numbers[0]);
+                SetItemFlags(note, name, info.Flags);
+            }
+            else SetNumberListValue(note, info, numbers);
+            return;
+        }
+
+        if (values.All(v => v is null or string))
+        {
+            var strings = values.Select(XPScriptRuntime.CStr).ToArray();
+            if (!isArray && strings.Length == 1) SetTextValuePreserveFlags(note, info, strings[0]);
+            else SetTextListValue(note, info, strings);
+            return;
+        }
+
+        throw new XPScriptRuntimeException(13, "NotesItem.Values supports homogeneous text, number, or NotesDateTime values in V1.");
+    }
+
+    private object?[] GetTextListValues(nint note, string name)
+    {
+        using var itemName = ToLmbcs(name);
+        var count = Resolve<NSFItemGetTextListEntriesDelegate>("NSFItemGetTextListEntries")(note, itemName.Pointer);
+        var values = new object?[count];
+        for (ushort i = 0; i < count; i++)
+        {
+            var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(65535);
+            try
+            {
+                Zero(buffer, 65535);
+                var length = Resolve<NSFItemGetTextListEntryDelegate>("NSFItemGetTextListEntry")(
+                    note, itemName.Pointer, i, buffer, ushort.MaxValue);
+                values[i] = length == 0 ? "" : FromLmbcs(buffer, length);
+            }
+            finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
+        }
+        return values;
+    }
+
+    private object?[] GetNumberListValues(XPScriptNotesItemInfo info)
+    {
+        var raw = CopyItemValueWithoutType(info);
+        if (raw.Length < 4) return Array.Empty<object?>();
+        var count = ReadHostUInt16(raw, 0);
+        var required = checked(4 + count * sizeof(double));
+        if (raw.Length < required) throw new XPScriptRuntimeException(5, "Invalid Notes number-list item data.");
+        var values = new object?[count];
+        for (var i = 0; i < count; i++) values[i] = BitConverter.ToDouble(raw, 4 + i * sizeof(double));
+        return values;
+    }
+
+    private object?[] GetTimeListValues(XPScriptNotesItemInfo info, XPScriptNotesSession session)
+    {
+        var raw = CopyItemValueWithoutType(info);
+        if (raw.Length < 4) return Array.Empty<object?>();
+        var count = ReadHostUInt16(raw, 0);
+        var size = System.Runtime.InteropServices.Marshal.SizeOf<XPScriptNotesTimeDate>();
+        var required = checked(4 + count * size);
+        if (raw.Length < required) throw new XPScriptRuntimeException(5, "Invalid Notes date-time-list item data.");
+        var values = new object?[count];
+        var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(size);
+        try
+        {
+            for (var i = 0; i < count; i++)
+            {
+                System.Runtime.InteropServices.Marshal.Copy(raw, 4 + i * size, buffer, size);
+                var td = System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesTimeDate>(buffer);
+                values[i] = XPScriptNotesDateTime.FromNative(session, td);
+            }
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
+        return values;
+    }
+
+    private void SetTextValuePreserveFlags(nint note, XPScriptNotesItemInfo info, string value)
+    {
+        SetItemText(note, info.Name, value);
+        SetItemFlags(note, info.Name, info.Flags);
+    }
+
+    private void SetTextListValue(nint note, XPScriptNotesItemInfo info, string[] values)
+    {
+        if (values.Length == 0) { SetTextValuePreserveFlags(note, info, ""); return; }
+        using var itemName = ToLmbcs(info.Name);
+        using var first = ToLmbcs(values[0]);
+        Check(Resolve<NSFItemCreateTextListDelegate>("NSFItemCreateTextList")(
+            note, itemName.Pointer, first.Pointer, checked((ushort)first.Length)), "NSFItemCreateTextList");
+        for (var i = 1; i < values.Length; i++)
+        {
+            using var entry = ToLmbcs(values[i]);
+            Check(Resolve<NSFItemAppendTextListDelegate>("NSFItemAppendTextList")(
+                note, itemName.Pointer, entry.Pointer, checked((ushort)entry.Length), 1), "NSFItemAppendTextList");
+        }
+        SetItemFlags(note, info.Name, info.Flags);
+    }
+
+    private void SetNumberListValue(nint note, XPScriptNotesItemInfo info, double[] values)
+    {
+        var length = checked(4 + values.Length * sizeof(double));
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(length);
+        try
+        {
+            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 0, checked((short)values.Length));
+            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 2, 0);
+            var bytes = new byte[values.Length * sizeof(double)];
+            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
+            if (bytes.Length > 0) System.Runtime.InteropServices.Marshal.Copy(bytes, 0, nint.Add(pointer, 4), bytes.Length);
+            Check(Resolve<NSFItemModifyValueDelegate>("NSFItemModifyValue")(
+                note, info.ItemBlock, info.Flags, NotesTypeNumberRange, pointer, checked((uint)length)), "NSFItemModifyValue(number list)");
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+    }
+
+    private void SetTimeListValue(nint note, XPScriptNotesItemInfo info, XPScriptNotesTimeDate[] values)
+    {
+        var tdSize = System.Runtime.InteropServices.Marshal.SizeOf<XPScriptNotesTimeDate>();
+        var length = checked(4 + values.Length * tdSize);
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(length);
+        try
+        {
+            Zero(pointer, length);
+            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 0, checked((short)values.Length));
+            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 2, 0);
+            for (var i = 0; i < values.Length; i++)
+                System.Runtime.InteropServices.Marshal.StructureToPtr(values[i], nint.Add(pointer, 4 + i * tdSize), false);
+            Check(Resolve<NSFItemModifyValueDelegate>("NSFItemModifyValue")(
+                note, info.ItemBlock, info.Flags, NotesTypeTimeRange, pointer, checked((uint)length)), "NSFItemModifyValue(time list)");
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+    }
+
+    private static object?[] ExpandValues(object? value)
+    {
+        if (value is not LSArray array) return new object?[] { value };
+        if (!array.IsAllocated) return Array.Empty<object?>();
+        if (array.Rank != 1) throw new XPScriptRuntimeException(13, "NotesItem.Values requires a one-dimensional array.");
+        var values = new List<object?>();
+        for (var i = array.LBound(); i <= array.UBound(); i++) values.Add(array.Get(i));
+        return values.ToArray();
+    }
+
+    private static bool IsNumericValue(object? value) => value is byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal;
+
+    private static ushort ReadHostUInt16(byte[] value, int offset) => BitConverter.ToUInt16(value, offset);
 
     internal void SetItemFlags(nint note, string name, ushort newFlags)
     {
@@ -226,6 +381,12 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFItemGetTextListEntryDelegate(nint note, nint itemName, ushort position, nint output, ushort outputLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFItemCreateTextListDelegate(nint note, nint itemName, nint itemText, ushort textLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFItemAppendTextListDelegate(nint note, nint itemName, nint itemText, ushort textLength, int allowDuplicates);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFItemModifyValueDelegate(nint note, XPScriptNotesBlockId itemBlock, ushort itemFlags, ushort itemType, nint itemValue, uint valueLength);
