@@ -6,188 +6,71 @@ internal static class NotesRuntimeSourceBuilder
     {
         var source = NotesRuntimeSource.Code;
 
+        // HCOLLECTION is a WORD-sized handle in the Notes C API. Keep the public
+        // runtime sources readable with nint during composition, then normalize the
+        // collection-only ABI here. DBHANDLE/NOTEHANDLE remain native handles.
         source = ReplaceRequired(source,
-            """
-internal unsafe struct XPScriptNotesCollectionPosition
-{
-    public ushort Level;
-    public byte MinLevel;
-    public byte MaxLevel;
-    public fixed uint Tumbler[32];
-}
-""",
-            """
-internal struct XPScriptNotesCollectionPosition
-{
-    public ushort Level;
-    public byte MinLevel;
-    public byte MaxLevel;
-    public uint Tumbler00; public uint Tumbler01; public uint Tumbler02; public uint Tumbler03;
-    public uint Tumbler04; public uint Tumbler05; public uint Tumbler06; public uint Tumbler07;
-    public uint Tumbler08; public uint Tumbler09; public uint Tumbler10; public uint Tumbler11;
-    public uint Tumbler12; public uint Tumbler13; public uint Tumbler14; public uint Tumbler15;
-    public uint Tumbler16; public uint Tumbler17; public uint Tumbler18; public uint Tumbler19;
-    public uint Tumbler20; public uint Tumbler21; public uint Tumbler22; public uint Tumbler23;
-    public uint Tumbler24; public uint Tumbler25; public uint Tumbler26; public uint Tumbler27;
-    public uint Tumbler28; public uint Tumbler29; public uint Tumbler30; public uint Tumbler31;
-}
-""",
-            "collection-position");
-
-        // Strong session ownership prevents native handles from becoming unreachable before Recycle().
-        source = ReplaceRequired(source,
-            "private readonly List<WeakReference<XPScriptNotesObject>> _children = [];",
-            "private readonly List<XPScriptNotesObject> _children = [];",
-            "session-child-ownership");
-        source = ReplaceRequired(source,
-            """
-        lock (_gate)
-        {
-            EnsureAlive();
-            _children.RemoveAll(reference => !reference.TryGetTarget(out _));
-            _children.Add(new WeakReference<XPScriptNotesObject>(value));
-        }
-""",
-            """
-        lock (_gate)
-        {
-            EnsureAlive();
-            _children.Add(value);
-        }
-""",
-            "session-register");
-        source = ReplaceRequired(source,
-            """
-        lock (_gate)
-            _children.RemoveAll(reference => !reference.TryGetTarget(out var target) || ReferenceEquals(target, value));
-""",
-            """
-        lock (_gate)
-            _children.Remove(value);
-""",
-            "session-unregister");
-        source = ReplaceRequired(source,
-            """
-                children = _children
-                    .Select(reference => reference.TryGetTarget(out var target) ? target : null)
-                    .Where(target => target is not null)
-                    .Cast<XPScriptNotesObject>()
-                    .ToList();
-                _children.Clear();
-""",
-            """
-                children = [.. _children];
-                _children.Clear();
-""",
-            "session-recycle-children");
-
-        // Track database ownership separately so recycling a database closes its dependent
-        // views, documents and collections before NSFDbClose.
-        source = ReplaceRequired(source,
-            "protected XPScriptNotesSession Session { get; }\n    public bool IsRecycled => _recycled;",
-            "protected XPScriptNotesSession Session { get; }\n    internal virtual XPScriptNotesDatabase? OwningDatabase => null;\n    public bool IsRecycled => _recycled;",
-            "object-owner-contract");
-        source = ReplaceRequired(source,
-            """
-    internal void Unregister(XPScriptNotesObject value)
-    {
-        lock (_gate)
-            _children.Remove(value);
-    }
-
-    internal void EnsureAlive()
-""",
-            """
-    internal void Unregister(XPScriptNotesObject value)
-    {
-        lock (_gate)
-            _children.Remove(value);
-    }
-
-    internal void RecycleDatabaseChildren(XPScriptNotesDatabase database)
-    {
-        List<XPScriptNotesObject> children;
-        lock (_gate)
-            children = _children.Where(child => ReferenceEquals(child.OwningDatabase, database)).ToList();
-        for (var i = children.Count - 1; i >= 0; i--)
-            children[i].Recycle();
-    }
-
-    internal void EnsureAlive()
-""",
-            "database-child-recycle-helper");
-        source = ReplaceRequired(source,
-            """
-    protected override void ReleaseNative()
-    {
-        var handle = Interlocked.Exchange(ref _handle, 0);
-        if (handle != 0) Session.Api.CloseDatabase(handle);
-    }
-}
-
-internal sealed class XPScriptNotesView
-""",
-            """
-    protected override void ReleaseNative()
-    {
-        Session.RecycleDatabaseChildren(this);
-        var handle = Interlocked.Exchange(ref _handle, 0);
-        if (handle != 0) Session.Api.CloseDatabase(handle);
-    }
-}
-
-internal sealed class XPScriptNotesView
-""",
-            "database-recycle-order");
-        source = ReplaceRequired(source,
-            "public string Name { get; }\n\n    public XPScriptNotesDocument? GetFirstDocumentByKey",
-            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    public string Name { get; }\n\n    public XPScriptNotesDocument? GetFirstDocumentByKey",
-            "view-owner");
-        source = ReplaceRequired(source,
-            "public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
-            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
-            "collection-owner");
-        source = ReplaceRequired(source,
-            "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }",
-            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    internal nint NativeHandle { get { EnsureAlive(); return _handle; } }",
-            "document-owner");
-
-        // HCOLLECTION is WORD even in current 64-bit C API builds.
-        source = ReplaceRequired(source,
-            "private nint _handle;\n    private readonly XPScriptNotesDatabase _database;\n\n    internal XPScriptNotesView(XPScriptNotesSession session, XPScriptNotesDatabase database, nint handle, string name)",
-            "private ushort _handle;\n    private readonly XPScriptNotesDatabase _database;\n\n    internal XPScriptNotesView(XPScriptNotesSession session, XPScriptNotesDatabase database, ushort handle, string name)",
+            "private nint _handle;\n\n    internal XPScriptNotesView(XPScriptNotesSession session, XPScriptNotesDatabase database, nint handle, string name)",
+            "private ushort _handle;\n\n    internal XPScriptNotesView(XPScriptNotesSession session, XPScriptNotesDatabase database, ushort handle, string name)",
             "view-handle");
+        source = ReplaceRequired(source,
+            "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    public string Name { get; }",
+            "internal ushort NativeHandle { get { EnsureAlive(); return _handle; } }\n    public string Name { get; }",
+            "view-native-handle");
         source = ReplaceRequired(source,
             "var handle = Interlocked.Exchange(ref _handle, 0);\n        if (handle != 0) Session.Api.CloseView(handle);",
             "var handle = _handle;\n        _handle = 0;\n        if (handle != 0) Session.Api.CloseView(handle);",
             "view-close");
-        source = ReplaceRequired(source, "internal nint OpenView(nint db, string name)", "internal ushort OpenView(nint db, string name)", "open-view-return");
-        source = ReplaceRequired(source, "internal void CloseView(nint handle)", "internal void CloseView(ushort handle)", "close-view-arg");
-        source = ReplaceRequired(source, "internal unsafe IReadOnlyList<uint> FindViewByName(nint collection, string key, int maximum)", "internal IReadOnlyList<uint> FindViewByName(ushort collection, string key, int maximum)", "find-view-arg");
-        source = ReplaceRequired(source, "internal IReadOnlyList<uint> FullTextSearch(nint db, nint collection, string query, int maximum)", "internal IReadOnlyList<uint> FullTextSearch(nint db, ushort collection, string query, int maximum)", "ft-public-collection");
-        source = ReplaceRequired(source, "private IReadOnlyList<uint> FullTextSearchCore(nint db, nint collection, string query, int maximum)", "private IReadOnlyList<uint> FullTextSearchCore(nint db, ushort collection, string query, int maximum)", "ft-core-collection");
-        source = ReplaceRequired(source, "private unsafe IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount)", "private IReadOnlyList<uint> ReadNoteIds(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount)", "read-noteids-collection");
-        source = ReplaceRequired(source, "out nint collection, nint viewNote", "out ushort collection, nint viewNote", "nif-open-collection");
-        source = ReplaceRequired(source, "private delegate ushort NIFCloseCollectionDelegate(nint collection);", "private delegate ushort NIFCloseCollectionDelegate(ushort collection);", "nif-close-collection");
-        source = ReplaceRequired(source, "private delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort findFlags", "private delegate ushort NIFFindByNameDelegate(ushort collection, nint name, ushort findFlags", "nif-find-name");
-        source = ReplaceRequired(source, "private delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position", "private delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position", "nif-read-entries");
-        source = ReplaceRequired(source, "private delegate ushort FTSearchDelegate(nint db, ref nint search, nint collection, nint query", "private delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query", "ft-search-collection");
-        source = ReplaceRequired(source,
-            "private delegate void OSUnlockObjectDelegate(nint handle);",
-            "private delegate int OSUnlockObjectDelegate(nint handle);",
-            "os-unlock-bool");
 
-        // LotusScript TimeZone is an integer hour-oriented zone value, not minutes.
         source = ReplaceRequired(source,
-            "public int TimeZone { get { EnsureAlive(); return (int)_value.Offset.TotalMinutes; } }",
-            "public int TimeZone { get { EnsureAlive(); return (int)_value.Offset.TotalHours; } }",
-            "datetime-timezone");
+            "internal nint OpenView(nint db, string name)",
+            "internal ushort OpenView(nint db, string name)",
+            "open-view-return");
+        source = ReplaceRequired(source,
+            "internal void UpdateCollection(nint collection)",
+            "internal void UpdateCollection(ushort collection)",
+            "update-view-arg");
+        source = ReplaceRequired(source,
+            "internal void CloseView(nint collection)",
+            "internal void CloseView(ushort collection)",
+            "close-view-arg");
+        source = ReplaceRequired(source,
+            "out nint collection, nint viewNote, nint viewUnid, nint collapsedList, nint selectedList",
+            "out ushort collection, nint viewNote, nint viewUnid, nint collapsedList, nint selectedList",
+            "nif-open-collection");
+        source = ReplaceRequired(source,
+            "internal delegate ushort NIFUpdateCollectionDelegate(nint collection);",
+            "internal delegate ushort NIFUpdateCollectionDelegate(ushort collection);",
+            "nif-update-collection");
+        source = ReplaceRequired(source,
+            "internal delegate ushort NIFCloseCollectionDelegate(nint collection);",
+            "internal delegate ushort NIFCloseCollectionDelegate(ushort collection);",
+            "nif-close-collection");
 
-        // ERR_FT_NOMATCHES = PKG_FT (0x0F00) + 34. Strip remote/display status bits.
         source = ReplaceRequired(source,
-            "if (status != 0 && count == 0) return Array.Empty<uint>();\n            Check(status, \"FTSearch\");",
-            "if ((status & 0x3fff) == 0x0f22) return Array.Empty<uint>();\n            Check(status, \"FTSearch\");",
-            "ft-error-handling");
+            "internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum)",
+            "internal IReadOnlyList<uint> FindViewByTextKey(ushort collection, string key, int maximum)",
+            "find-view-key");
+        source = ReplaceRequired(source,
+            "private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)",
+            "private IReadOnlyList<uint> ReadNoteIds(ushort collection, ref XPScriptNotesCollectionPosition position, uint requested)",
+            "read-view-ids");
+        source = ReplaceRequired(source,
+            "internal IReadOnlyList<uint> FullTextSearch(nint db, nint collection, string query, int maximum)",
+            "internal IReadOnlyList<uint> FullTextSearch(nint db, ushort collection, string query, int maximum)",
+            "ft-view-handle");
+        source = ReplaceRequired(source,
+            "internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
+            "internal delegate ushort NIFFindByNameDelegate(ushort collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
+            "nif-find-name");
+        source = ReplaceRequired(source,
+            "internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
+            "internal delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
+            "nif-read-entries");
+        source = ReplaceRequired(source,
+            "internal delegate ushort FTSearchDelegate(nint db, ref nint search, nint collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
+            "internal delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
+            "ft-search-collection");
 
         return source;
     }
