@@ -1,0 +1,53 @@
+' XPScript desktop UI theme and field presentation demo
+' Theme options: System, Light, Dark
+
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Styled customer form", 760, 520, True)
+    Dim result As String
+
+    Call form.SetTheme("Dark")
+    Call form.SetGridColumns(12)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextField("email", "Email")
+    Call form.AddTextField("company", "Company")
+    Call form.AddSelect("country", "Country")
+    Call form.AddTextArea("notes", "Notes")
+
+    Call form.AddOption("country", "Sweden")
+    Call form.AddOption("country", "Norway")
+    Call form.AddOption("country", "Denmark")
+    Call form.AddOption("country", "Finland")
+
+    Call form.SetRequired("name", True)
+    Call form.SetRequired("email", True)
+    Call form.SetRegexValidation("email", "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
+    Call form.SetFieldPlaceholder("name", "Ada Lovelace")
+    Call form.SetFieldPlaceholder("email", "ada@example.com")
+    Call form.SetFieldPlaceholder("company", "Analytical Engines Ltd")
+    Call form.SetFieldPlaceholder("notes", "Add customer notes...")
+
+    Call form.SetFieldTooltip("name", "Required customer name")
+    Call form.SetFieldTooltip("email", "Must be a valid email address")
+    Call form.SetFieldTooltip("country", "Choose the customer's country")
+
+    Call form.SetFieldPosition("name", 1, 1, 6, 1)
+    Call form.SetFieldPosition("email", 1, 7, 6, 1)
+    Call form.SetFieldPosition("company", 2, 1, 6, 1)
+    Call form.SetFieldPosition("country", 2, 7, 6, 1)
+    Call form.SetFieldPosition("notes", 3, 1, 12, 2)
+
+    result = form.ShowDialog()
+    Print "DIALOG=" & result
+
+    If result = "OK" Then
+        Print "NAME=" & form.GetFieldValueString("name")
+        Print "EMAIL=" & form.GetFieldValueString("email")
+        Print "COMPANY=" & form.GetFieldValueString("company")
+        Print "COUNTRY=" & form.GetFieldValueString("country")
+        Print "NOTES=" & form.GetFieldValueString("notes")
+    End If
+End Sub
