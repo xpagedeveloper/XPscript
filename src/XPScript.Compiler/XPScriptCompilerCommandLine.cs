@@ -201,7 +201,6 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                parseRunOptions = false;
                 scriptArgs.Add(value);
             }
 
