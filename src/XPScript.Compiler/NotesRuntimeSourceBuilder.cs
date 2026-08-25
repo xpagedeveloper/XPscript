@@ -65,7 +65,7 @@ internal static class NotesRuntimeSourceBuilder
             "nif-find-name");
         source = ReplaceRequired(source,
             "internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
-            "internal delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
+            "internal delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
             "nif-read-entries");
         source = ReplaceRequired(source,
             "internal delegate ushort FTSearchDelegate(nint db, ref nint search, nint collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
