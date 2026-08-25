@@ -8,7 +8,8 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        if (generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
+        if (generated.Contains("theme = form.Theme", StringComparison.Ordinal) &&
+            generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
             generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
@@ -32,6 +33,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
             resizable = form.Resizable,
+            theme = form.Theme,
             gridColumns = form.GridColumns,
             fields = fields.Select(field => new
             {
