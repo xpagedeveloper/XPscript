@@ -104,14 +104,20 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
+    public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
+    public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
     public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }
+    public string GMTTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDateGmt(_value)); } }
+    public string ZoneTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDate(_value)); } }
     public string DateOnly
     {
         get
         {
             EnsureAlive();
-            var text = LocalTime;
-            return DateTime.TryParse(text, out var value) ? value.ToShortDateString() : text;
+            var value = Session.Api.ExpandTimeDate(_value);
+            return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" +
+                value.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + "-" +
+                value.Day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
     public string TimeOnly
@@ -119,8 +125,10 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         get
         {
             EnsureAlive();
-            var text = LocalTime;
-            return DateTime.TryParse(text, out var value) ? value.ToLongTimeString() : text;
+            var value = Session.Api.ExpandTimeDate(_value);
+            return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" +
+                value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" +
+                value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
