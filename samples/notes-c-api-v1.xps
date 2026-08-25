@@ -51,71 +51,88 @@ Sub Main()
 
     Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
     Print "LOCAL_DB=" & localDb.FilePath
+    Print "LOCAL_DB_ISOPEN=" & CStr(localDb.IsOpen)
 
-    Set view = localDb.OpenView(VIEW_NAME)
-    If VIEW_KEY <> "" Then
-        Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
-        Print "VIEW_MATCHES=" & CStr(docs.Count)
-        Print "VIEW_UBOUND=" & CStr(UBound(docs))
-        If docs.Count > 0 Then
-            noteId = docs(0)
-            Print "VIEW_NOTEID=" & noteId
-            Set doc = localDb.GetDocumentByNoteId(noteId)
-            If Not (doc Is Nothing) Then
-                Print "VIEW_DOC_UNID=" & doc.UniversalId
-                Print "VIEW_DOC_FORM=" & doc.GetString("Form")
-                Call doc.Recycle()
-                Set doc = Nothing
+    If localDb.IsOpen Then
+        Set view = localDb.OpenView(VIEW_NAME)
+        If VIEW_KEY <> "" And Not (view Is Nothing) Then
+            Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
+            Print "VIEW_MATCHES=" & CStr(docs.Count)
+            Print "VIEW_UBOUND=" & CStr(UBound(docs))
+            If docs.Count > 0 Then
+                noteId = docs(0)
+                Print "VIEW_NOTEID=" & noteId
+                Set doc = localDb.GetDocumentByNoteId(noteId)
+                If Not (doc Is Nothing) Then
+                    Print "VIEW_DOC_UNID=" & doc.UniversalId
+                    Print "VIEW_DOC_FORM=" & doc.GetString("Form")
+                    Call doc.Recycle()
+                    Set doc = Nothing
+                End If
+            End If
+            Call docs.Recycle()
+            Set docs = Nothing
+        End If
+
+        Set docs = localDb.Search("@All", 10)
+        If Not (docs Is Nothing) Then
+            Print "FORMULA_MATCHES=" & CStr(docs.Count)
+            Print "FORMULA_UBOUND=" & CStr(UBound(docs))
+            If docs.Count > 0 Then
+                noteId = docs(0)
+                Print "SEARCH_NOTEID=" & noteId
+                Set doc = localDb.GetDocumentByNoteId(noteId)
+                If Not (doc Is Nothing) Then
+                    Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
+                    Call doc.Recycle()
+                    Set doc = Nothing
+                End If
+            End If
+            Call docs.Recycle()
+            Set docs = Nothing
+        End If
+
+        ' Requires an FT index. Uncomment after selecting a suitable database/query.
+        ' Set docs = localDb.FullTextSearch("test", 10)
+        ' If Not (docs Is Nothing) Then
+        '     Print "FT_MATCHES=" & CStr(docs.Count)
+        '     If docs.Count > 0 Then
+        '         noteId = docs(0)
+        '         Set doc = localDb.GetDocumentByNoteId(noteId)
+        '     End If
+        '     Call docs.Recycle()
+        ' End If
+        ' Set docs = Nothing
+
+        If AGENT_NAME <> "" Then
+            Set agentResult = localDb.RunAgent(AGENT_NAME)
+            If Not (agentResult Is Nothing) Then
+                Print "AGENT_SUCCESS=" & CStr(agentResult.Success)
+                Print "AGENT_OUTPUT=" & agentResult.Output
+                Call agentResult.Recycle()
+                Set agentResult = Nothing
             End If
         End If
-        Call docs.Recycle()
-        Set docs = Nothing
-    End If
-
-    Set docs = localDb.Search("@All", 10)
-    Print "FORMULA_MATCHES=" & CStr(docs.Count)
-    Print "FORMULA_UBOUND=" & CStr(UBound(docs))
-    If docs.Count > 0 Then
-        noteId = docs(0)
-        Print "SEARCH_NOTEID=" & noteId
-        Set doc = localDb.GetDocumentByNoteId(noteId)
-        If Not (doc Is Nothing) Then
-            Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
-            Call doc.Recycle()
-            Set doc = Nothing
-        End If
-    End If
-    Call docs.Recycle()
-    Set docs = Nothing
-
-    ' Requires an FT index. Uncomment after selecting a suitable database/query.
-    ' Set docs = localDb.FullTextSearch("test", 10)
-    ' Print "FT_MATCHES=" & CStr(docs.Count)
-    ' If docs.Count > 0 Then
-    '     noteId = docs(0)
-    '     Set doc = localDb.GetDocumentByNoteId(noteId)
-    ' End If
-    ' Call docs.Recycle()
-    ' Set docs = Nothing
-
-    If AGENT_NAME <> "" Then
-        Set agentResult = localDb.RunAgent(AGENT_NAME)
-        Print "AGENT_SUCCESS=" & CStr(agentResult.Success)
-        Print "AGENT_OUTPUT=" & agentResult.Output
-        Call agentResult.Recycle()
-        Set agentResult = Nothing
+    Else
+        ' All database operations return Nothing while IsOpen is False.
+        Set docs = localDb.Search("@All")
+        Print "CLOSED_DB_SEARCH_IS_NOTHING=" & CStr(docs Is Nothing)
     End If
 
     If SERVER_NAME <> "" And SERVER_DATABASE <> "" Then
         Set serverDb = session.OpenDatabase(SERVER_NAME, SERVER_DATABASE)
         Print "SERVER_DB=" & serverDb.Server & "!!" & serverDb.FilePath
+        Print "SERVER_DB_ISOPEN=" & CStr(serverDb.IsOpen)
         Call serverDb.Recycle()
         Set serverDb = Nothing
     End If
 
-    Call view.Recycle()
-    Set view = Nothing
+    If Not (view Is Nothing) Then
+        Call view.Recycle()
+        Set view = Nothing
+    End If
     Call localDb.Recycle()
+    Print "LOCAL_DB_ISOPEN_AFTER_RECYCLE=" & CStr(localDb.IsOpen)
     Set localDb = Nothing
 
     Call dt2.Recycle()
