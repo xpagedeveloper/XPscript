@@ -43,6 +43,17 @@ internal sealed partial class XPScriptNotesNativeApi
         return note;
     }
 
+    internal nint TryOpenNote(nint db, uint noteId)
+    {
+        EnsureInitialized();
+        var status = Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(db, noteId, 0, out var note);
+        if (status == 0) return note;
+        var message = LoadStatusText(status);
+        if (IsMissingNoteStatus(message)) return 0;
+        Check(status, "NSFNoteOpen");
+        return 0;
+    }
+
     internal nint OpenNoteByUnid(nint db, string text)
     {
         EnsureInitialized();
@@ -50,6 +61,24 @@ internal sealed partial class XPScriptNotesNativeApi
         Check(Resolve<NSFNoteOpenByUnidDelegate>("NSFNoteOpenByUNID")(db, ref unid, 0, out var note), "NSFNoteOpenByUNID");
         return note;
     }
+
+    internal nint TryOpenNoteByUnid(nint db, string text)
+    {
+        EnsureInitialized();
+        var unid = ParseUnid(text);
+        var status = Resolve<NSFNoteOpenByUnidDelegate>("NSFNoteOpenByUNID")(db, ref unid, 0, out var note);
+        if (status == 0) return note;
+        var message = LoadStatusText(status);
+        if (IsMissingNoteStatus(message)) return 0;
+        Check(status, "NSFNoteOpenByUNID");
+        return 0;
+    }
+
+    private static bool IsMissingNoteStatus(string message) =>
+        message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("does not exist", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("deleted", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("invalid note", StringComparison.OrdinalIgnoreCase);
 
     internal void CloseNote(nint note)
     {
