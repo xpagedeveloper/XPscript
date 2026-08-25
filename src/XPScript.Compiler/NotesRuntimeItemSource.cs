@@ -10,26 +10,30 @@ internal static class XPScriptNotesItemApi
         if (documentValue is not XPScriptNotesDocument document)
             throw new XPScriptRuntimeException(13, "GetFirstItem requires a NotesDocument.");
         var name = XPScriptRuntime.CStr(nameValue).Trim();
-        if (name.Length == 0) return null;
-        if (!document.TryGetItemInfo(name)) return null;
-        return new XPScriptNotesItem(document.SessionForItem, document, name);
+        if (name.Length == 0 || !document.TryGetItemInfo(name, out var info)) return null;
+        return Create(document.SessionForItem, document, info);
     }
+
+    internal static XPScriptNotesItem Create(XPScriptNotesSession session, XPScriptNotesDocument document, XPScriptNotesItemInfo info) =>
+        info.DataType == XPScriptNotesNativeApi.NotesTypeComposite
+            ? new XPScriptNotesRichTextItem(session, document, info.Name)
+            : new XPScriptNotesItem(session, document, info.Name);
 }
 
-internal sealed class XPScriptNotesItem : XPScriptNotesObject
+internal class XPScriptNotesItem : XPScriptNotesObject
 {
-    private readonly XPScriptNotesDocument _document;
-    private readonly string _name;
+    protected readonly XPScriptNotesDocument Document;
+    protected readonly string ItemName;
     private bool _removed;
 
     internal XPScriptNotesItem(XPScriptNotesSession session, XPScriptNotesDocument document, string name) : base(session)
     {
-        _document = document;
-        _name = name;
+        Document = document;
+        ItemName = name;
     }
 
-    public XPScriptNotesDocument Parent { get { EnsureItemAlive(); return _document; } }
-    public string Name { get { EnsureItemAlive(); return _name; } }
+    public XPScriptNotesDocument Parent { get { EnsureItemAlive(); return Document; } }
+    public string Name { get { EnsureItemAlive(); return ItemName; } }
 
     public XPScriptNotesDateTime? DateTimeValue
     {
@@ -37,13 +41,13 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         {
             var info = Info();
             if (info.DataType != XPScriptNotesNativeApi.NotesTypeTime) return null;
-            return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetItemTime(_document.NativeHandle, _name));
+            return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetItemTime(Document.NativeHandle, ItemName));
         }
         set
         {
             EnsureItemAlive();
             if (value is null) throw new XPScriptRuntimeException(13, "DateTimeValue must be a NotesDateTime.");
-            Session.Api.SetItemDateTimeValue(_document.NativeHandle, _name, value.NativeValue);
+            Session.Api.SetItemDateTimeValue(Document.NativeHandle, ItemName, value.NativeValue);
         }
     }
 
@@ -100,7 +104,7 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         get
         {
             EnsureItemAlive();
-            return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetItemModifiedTime(_document.NativeHandle, _name));
+            return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetItemModifiedTime(Document.NativeHandle, ItemName));
         }
     }
 
@@ -109,7 +113,7 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         get
         {
             EnsureItemAlive();
-            return Session.Api.ConvertItemToText(_document.NativeHandle, _name);
+            return Session.Api.ConvertItemToText(Document.NativeHandle, ItemName);
         }
     }
 
@@ -121,19 +125,19 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         get
         {
             var info = Info();
-            return LSOperatorArrayRuntime.CreateArray(Session.Api.GetItemValues(_document.NativeHandle, info, Session));
+            return LSOperatorArrayRuntime.CreateArray(Session.Api.GetItemValues(Document.NativeHandle, info, Session));
         }
         set
         {
             EnsureItemAlive();
-            Session.Api.SetItemValues(_document.NativeHandle, _name, value);
+            Session.Api.SetItemValues(Document.NativeHandle, ItemName, value);
         }
     }
 
     public void Remove()
     {
         EnsureItemAlive();
-        Session.Api.RemoveItemByBlock(_document.NativeHandle, _name);
+        Session.Api.RemoveItemByBlock(Document.NativeHandle, ItemName);
         _removed = true;
     }
 
@@ -146,15 +150,16 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
             throw new XPScriptRuntimeException(13, "CopyToDocument requires a NotesDocument.");
 
         var newName = XPScriptRuntime.CStr(nameValue).Trim();
-        if (newName.Length == 0) newName = _name;
-        Session.Api.CopyItemToDocument(_document.NativeHandle, _name, destination.NativeHandle, newName);
-        return new XPScriptNotesItem(Session, destination, newName);
+        if (newName.Length == 0) newName = ItemName;
+        Session.Api.CopyItemToDocument(Document.NativeHandle, ItemName, destination.NativeHandle, newName);
+        var info = Session.Api.GetFirstItemInfo(destination.NativeHandle, newName);
+        return XPScriptNotesItemApi.Create(Session, destination, info);
     }
 
-    private XPScriptNotesItemInfo Info()
+    protected XPScriptNotesItemInfo Info()
     {
         EnsureItemAlive();
-        return Session.Api.GetFirstItemInfo(_document.NativeHandle, _name);
+        return Session.Api.GetFirstItemInfo(Document.NativeHandle, ItemName);
     }
 
     private bool HasFlag(ushort flag) => (Info().Flags & flag) != 0;
@@ -165,14 +170,14 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
     {
         var info = Info();
         var flags = update(info.Flags);
-        if (flags != info.Flags) Session.Api.SetItemFlags(_document.NativeHandle, _name, flags);
+        if (flags != info.Flags) Session.Api.SetItemFlags(Document.NativeHandle, ItemName, flags);
     }
 
-    private void EnsureItemAlive()
+    protected void EnsureItemAlive()
     {
         EnsureAlive();
         if (_removed) throw new XPScriptRuntimeException(91, "NotesItem has been removed from its document.");
-        _ = _document.NativeHandle;
+        _ = Document.NativeHandle;
     }
 
     private static int MapType(XPScriptNotesItemInfo info)
@@ -212,6 +217,22 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
     }
 
     protected override void ReleaseNative() => _removed = true;
+}
+
+internal sealed class XPScriptNotesRichTextItem : XPScriptNotesItem
+{
+    internal XPScriptNotesRichTextItem(XPScriptNotesSession session, XPScriptNotesDocument document, string name)
+        : base(session, document, name) { }
+
+    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)
+    {
+        EnsureItemAlive();
+        return Session.Api.SaveRichTextAttachment(
+            Document.NativeHandle,
+            ItemName,
+            XPScriptRuntime.CStr(attachmentNameValue),
+            XPScriptRuntime.CStr(pathValue));
+    }
 }
 """;
 }
