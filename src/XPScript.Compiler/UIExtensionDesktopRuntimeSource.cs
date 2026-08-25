@@ -8,8 +8,22 @@ internal static class XPScriptUIDesktopAdapter
     private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
     private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
 
+    private static System.Reflection.MethodInfo? ResolveShowDialog(Type type) =>
+        type.GetMethod(
+            "ShowDialog",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [typeof(string), typeof(Func<string, string, string>)],
+            modifiers: null)
+        ?? type.GetMethod(
+            "ShowDialog",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [typeof(string)],
+            modifiers: null);
+
     public static bool IsAvailable =>
-        HostType?.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) is not null;
+        HostType is Type type && ResolveShowDialog(type) is not null;
 
     public static string ShowDialog(
         XPScriptUIForm form,
@@ -19,7 +33,7 @@ internal static class XPScriptUIDesktopAdapter
         Action<XPScriptUIField, IReadOnlyList<string>> applyMany)
     {
         var type = HostType ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is unavailable.");
-        var method = type.GetMethod("ShowDialog", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        var method = ResolveShowDialog(type)
             ?? throw new XPScriptRuntimeException(5, "XPScript desktop UI bridge is incomplete.");
 
         RegisterEventDispatcher(type, form);
