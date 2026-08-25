@@ -34,8 +34,7 @@ internal struct XPScriptNotesCollectionPosition
 """,
             "collection-position");
 
-        // Keep child wrappers strongly rooted until explicit Recycle() or session shutdown.
-        // Native Notes handles must never depend on the managed wrapper surviving by accident.
+        // Strong session ownership prevents native handles from becoming unreachable before Recycle().
         source = ReplaceRequired(source,
             "private readonly List<WeakReference<XPScriptNotesObject>> _children = [];",
             "private readonly List<XPScriptNotesObject> _children = [];",
@@ -82,6 +81,77 @@ internal struct XPScriptNotesCollectionPosition
 """,
             "session-recycle-children");
 
+        // Track database ownership separately so recycling a database closes its dependent
+        // views, documents and collections before NSFDbClose.
+        source = ReplaceRequired(source,
+            "protected XPScriptNotesSession Session { get; }\n    public bool IsRecycled => _recycled;",
+            "protected XPScriptNotesSession Session { get; }\n    internal virtual XPScriptNotesDatabase? OwningDatabase => null;\n    public bool IsRecycled => _recycled;",
+            "object-owner-contract");
+        source = ReplaceRequired(source,
+            """
+    internal void Unregister(XPScriptNotesObject value)
+    {
+        lock (_gate)
+            _children.Remove(value);
+    }
+
+    internal void EnsureAlive()
+""",
+            """
+    internal void Unregister(XPScriptNotesObject value)
+    {
+        lock (_gate)
+            _children.Remove(value);
+    }
+
+    internal void RecycleDatabaseChildren(XPScriptNotesDatabase database)
+    {
+        List<XPScriptNotesObject> children;
+        lock (_gate)
+            children = _children.Where(child => ReferenceEquals(child.OwningDatabase, database)).ToList();
+        for (var i = children.Count - 1; i >= 0; i--)
+            children[i].Recycle();
+    }
+
+    internal void EnsureAlive()
+""",
+            "database-child-recycle-helper");
+        source = ReplaceRequired(source,
+            """
+    protected override void ReleaseNative()
+    {
+        var handle = Interlocked.Exchange(ref _handle, 0);
+        if (handle != 0) Session.Api.CloseDatabase(handle);
+    }
+}
+
+internal sealed class XPScriptNotesView
+""",
+            """
+    protected override void ReleaseNative()
+    {
+        Session.RecycleDatabaseChildren(this);
+        var handle = Interlocked.Exchange(ref _handle, 0);
+        if (handle != 0) Session.Api.CloseDatabase(handle);
+    }
+}
+
+internal sealed class XPScriptNotesView
+""",
+            "database-recycle-order");
+        source = ReplaceRequired(source,
+            "public string Name { get; }\n\n    public XPScriptNotesDocument? GetFirstDocumentByKey",
+            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    public string Name { get; }\n\n    public XPScriptNotesDocument? GetFirstDocumentByKey",
+            "view-owner");
+        source = ReplaceRequired(source,
+            "public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "collection-owner");
+        source = ReplaceRequired(source,
+            "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }",
+            "internal override XPScriptNotesDatabase? OwningDatabase => _database;\n    internal nint NativeHandle { get { EnsureAlive(); return _handle; } }",
+            "document-owner");
+
         // HCOLLECTION is WORD even in current 64-bit C API builds.
         source = ReplaceRequired(source,
             "private nint _handle;\n    private readonly XPScriptNotesDatabase _database;\n\n    internal XPScriptNotesView(XPScriptNotesSession session, XPScriptNotesDatabase database, nint handle, string name)",
@@ -102,23 +172,21 @@ internal struct XPScriptNotesCollectionPosition
         source = ReplaceRequired(source, "private delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort findFlags", "private delegate ushort NIFFindByNameDelegate(ushort collection, nint name, ushort findFlags", "nif-find-name");
         source = ReplaceRequired(source, "private delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position", "private delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position", "nif-read-entries");
         source = ReplaceRequired(source, "private delegate ushort FTSearchDelegate(nint db, ref nint search, nint collection, nint query", "private delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query", "ft-search-collection");
-
         source = ReplaceRequired(source,
             "private delegate void OSUnlockObjectDelegate(nint handle);",
             "private delegate int OSUnlockObjectDelegate(nint handle);",
             "os-unlock-bool");
 
-        // NotesDateTime.TimeZone follows LotusScript and is an hour-oriented integer,
-        // not a raw offset in minutes.
+        // LotusScript TimeZone is an integer hour-oriented zone value, not minutes.
         source = ReplaceRequired(source,
             "public int TimeZone { get { EnsureAlive(); return (int)_value.Offset.TotalMinutes; } }",
             "public int TimeZone { get { EnsureAlive(); return (int)_value.Offset.TotalHours; } }",
             "datetime-timezone");
 
-        // Do not turn an arbitrary FT error into an empty result merely because retNumDocs is zero.
+        // ERR_FT_NOMATCHES = PKG_FT (0x0F00) + 34. Strip remote/display status bits.
         source = ReplaceRequired(source,
             "if (status != 0 && count == 0) return Array.Empty<uint>();\n            Check(status, \"FTSearch\");",
-            "Check(status, \"FTSearch\");",
+            "if ((status & 0x3fff) == 0x0f22) return Array.Empty<uint>();\n            Check(status, \"FTSearch\");",
             "ft-error-handling");
 
         return source;
