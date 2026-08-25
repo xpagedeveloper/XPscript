@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class HclIsDefinedRuntimeSource
 {
-    public const string Code = """
+    public static string Code => """
 internal static class LSHclPlatformConstantRuntime
 {
     public static bool IsDefined(object? value)
@@ -26,5 +26,5 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""";
+""" + "\n\n" + NotesRuntimeSource.Code;
 }
