@@ -113,8 +113,17 @@ internal sealed class XPScriptNotesSession : IDisposable
         EnsureAlive();
         var server = XPScriptRuntime.CStr(serverValue).Trim();
         var file = XPScriptRuntime.CStr(fileValue).Trim();
-        if (file.Length == 0) throw new XPScriptRuntimeException(5, "Notes database path cannot be empty.");
-        return new XPScriptNotesDatabase(this, Api.OpenDatabase(server, file), server, file);
+        if (file.Length == 0)
+            return new XPScriptNotesDatabase(this, 0, server, file);
+
+        try
+        {
+            return new XPScriptNotesDatabase(this, Api.OpenDatabase(server, file), server, file);
+        }
+        catch (XPScriptRuntimeException)
+        {
+            return new XPScriptNotesDatabase(this, 0, server, file);
+        }
     }
 
     public XPScriptNotesName CreateName(object? nameValue)
