@@ -13,6 +13,7 @@ internal sealed class NotesRuntimePreprocessor
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var notesVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesDocumentCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var raw in lines)
         {
@@ -25,6 +26,8 @@ internal sealed class NotesRuntimePreprocessor
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
                 notesVariables.Add(name);
+                if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase))
+                    notesDocumentCollections.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
                 continue;
@@ -33,8 +36,12 @@ internal sealed class NotesRuntimePreprocessor
             var dim = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+({NotesTypePattern})\s*$", RegexOptions.IgnoreCase);
             if (dim.Success)
             {
-                notesVariables.Add(dim.Groups[1].Value);
-                output.Add(indent + $"Dim {dim.Groups[1].Value} As Variant");
+                var name = dim.Groups[1].Value;
+                var type = dim.Groups[2].Value;
+                notesVariables.Add(name);
+                if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase))
+                    notesDocumentCollections.Add(name);
+                output.Add(indent + $"Dim {name} As Variant");
                 continue;
             }
 
@@ -51,6 +58,21 @@ internal sealed class NotesRuntimePreprocessor
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && notesVariables.Contains(set.Groups[1].Value))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
+
+            foreach (var collectionName in notesDocumentCollections)
+            {
+                var escaped = Regex.Escape(collectionName);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\bUBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
+                    $"({collectionName}.Count - 1)",
+                    RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\bLBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
+                    "0",
+                    RegexOptions.IgnoreCase);
+            }
 
             output.Add(indent + rewritten);
         }
