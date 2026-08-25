@@ -72,6 +72,11 @@ internal sealed class NotesRuntimePreprocessor
                     $@"\bLBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
                     "0",
                     RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\b{escaped}\s*\(\s*([^()]*)\s*\)",
+                    $"{collectionName}.GetNoteIdString($1)",
+                    RegexOptions.IgnoreCase);
             }
 
             output.Add(indent + rewritten);
