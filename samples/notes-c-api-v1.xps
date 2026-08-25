@@ -25,6 +25,7 @@ Sub Main()
     Dim dt1 As NotesDateTime
     Dim dt2 As NotesDateTime
     Dim agentResult As NotesAgentResult
+    Dim noteId As String
 
     If NOTES_INI = "" Then
         Set session = New NotesSession(NOTES_RUNTIME)
@@ -55,13 +56,17 @@ Sub Main()
     If VIEW_KEY <> "" Then
         Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
         Print "VIEW_MATCHES=" & CStr(docs.Count)
+        Print "VIEW_UBOUND=" & CStr(UBound(docs))
         If docs.Count > 0 Then
-            Set doc = docs.Get(0)
-            Print "VIEW_DOC_NOTEID=" & doc.NoteIdHex
-            Print "VIEW_DOC_UNID=" & doc.UniversalId
-            Print "VIEW_DOC_FORM=" & doc.GetString("Form")
-            Call doc.Recycle()
-            Set doc = Nothing
+            noteId = docs(0)
+            Print "VIEW_NOTEID=" & noteId
+            Set doc = localDb.GetDocumentByNoteId(noteId)
+            If Not (doc Is Nothing) Then
+                Print "VIEW_DOC_UNID=" & doc.UniversalId
+                Print "VIEW_DOC_FORM=" & doc.GetString("Form")
+                Call doc.Recycle()
+                Set doc = Nothing
+            End If
         End If
         Call docs.Recycle()
         Set docs = Nothing
@@ -69,12 +74,16 @@ Sub Main()
 
     Set docs = localDb.Search("@All", 10)
     Print "FORMULA_MATCHES=" & CStr(docs.Count)
+    Print "FORMULA_UBOUND=" & CStr(UBound(docs))
     If docs.Count > 0 Then
-        Set doc = docs.Get(0)
-        Print "SEARCH_DOC_NOTEID=" & doc.NoteIdHex
-        Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
-        Call doc.Recycle()
-        Set doc = Nothing
+        noteId = docs(0)
+        Print "SEARCH_NOTEID=" & noteId
+        Set doc = localDb.GetDocumentByNoteId(noteId)
+        If Not (doc Is Nothing) Then
+            Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
+            Call doc.Recycle()
+            Set doc = Nothing
+        End If
     End If
     Call docs.Recycle()
     Set docs = Nothing
@@ -82,6 +91,10 @@ Sub Main()
     ' Requires an FT index. Uncomment after selecting a suitable database/query.
     ' Set docs = localDb.FullTextSearch("test", 10)
     ' Print "FT_MATCHES=" & CStr(docs.Count)
+    ' If docs.Count > 0 Then
+    '     noteId = docs(0)
+    '     Set doc = localDb.GetDocumentByNoteId(noteId)
+    ' End If
     ' Call docs.Recycle()
     ' Set docs = Nothing
 
