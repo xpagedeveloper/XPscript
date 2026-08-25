@@ -12,10 +12,11 @@ When syntax or behavior is uncertain, consult these files in this order:
 
 1. `docs/language-reference.md` — language syntax and built-ins.
 2. `docs/api-reference.md` — runtime objects and higher-level APIs.
-3. `docs/file-io-reference.md` — filesystem and file I/O.
-4. Database-specific docs such as `docs/sqlite.md` and `docs/mssql.md`.
-5. `samples/*.xps` and `demo/**/*.xps` — executable examples.
-6. Compiler/runtime implementation only when documentation is ambiguous.
+3. `docs/forall-iteration.md` — the common `ForAll` iterable contract.
+4. `docs/file-io-reference.md` — filesystem and file I/O.
+5. Database-specific docs such as `docs/sqlite.md` and `docs/mssql.md`.
+6. `samples/*.xps` and `demo/**/*.xps` — executable examples.
+7. Compiler/runtime implementation only when documentation is ambiguous.
 
 Do not invent a built-in or class member because it exists in a related language.
 
@@ -93,7 +94,7 @@ When using XPDB or XPAI, follow the exact constructor/member names shown by the 
 
 XPscript arrays use XPscript array semantics and support helpers such as `Array`, `ReDim`, `LBound`, `UBound`, `Join`, `Explode`, and array helper functions documented in the language reference.
 
-`ForAll` can iterate XPscript Lists and supported array/enumerable values.
+`ForAll` is the single first-class iteration model for supported iterable values. Use the same syntax for one-dimensional arrays, Lists, JSON arrays/enumerables, database row/result collections, filesystem arrays, other runtime enumerable values, and XPscript classes that expose an iterator.
 
 ```xpscript
 files = Files("src", "*.xps", True)
@@ -103,9 +104,32 @@ ForAll file In files
 End ForAll
 ```
 
-Do not redeclare the `ForAll` iteration alias immediately before the loop unless a current sample specifically requires it.
+Only one-dimensional arrays can be used with `ForAll`. Multidimensional arrays are not flattened and raise runtime error 13; use explicit nested `For` loops for their dimensions.
 
-Lists have separate tag/value semantics. Do not treat an XPscript List as an ordinary array when code relies on `ListTag`, `IsElement`, or keyed list access.
+Lists retain their tag/value alias semantics under `ForAll`. Do not treat an XPscript List as an ordinary array when code relies on `ListTag`, `IsElement`, or keyed list access.
+
+A user class can participate in `ForAll` by exposing a public parameterless `Iterator()` function that returns another supported iterable value:
+
+```xpscript
+Class Words
+    Public Function Iterator() As Variant
+        Iterator = Array("one", "two", "three")
+    End Function
+End Class
+
+Sub Main()
+    Dim words As Words
+    Set words = New Words()
+
+    ForAll word In words
+        Print word
+    End ForAll
+End Sub
+```
+
+`Iterator()` must not return the object itself. Do not invent collection-specific loop constructs when the runtime value can integrate with `ForAll`.
+
+Do not redeclare the `ForAll` iteration alias immediately before the loop unless a current sample specifically requires it.
 
 ## Filesystem APIs
 
@@ -308,10 +332,11 @@ When asked to write an XPscript program:
 4. Instantiate every class with `New`; preserve independent per-instance state.
 5. Prefer modern convenience APIs (`Files`, `ReadFile`, `FileInfo`, `Path`, etc.) over legacy/stateful APIs unless compatibility is requested.
 6. Use XPscript arrays/Lists rather than CLR/.NET collection assumptions.
-7. Keep code cross-platform unless the user explicitly requests one OS.
-8. Do not silently invent unsupported overloads, properties, or optional arguments.
-9. If modifying the language or runtime, add/update an executable `.xps` regression sample and documentation in the same change.
-10. If the change affects how an LLM should write XPscript, update this skill in the same PR.
+7. Use `ForAll` as the common loop for supported iterable values; do not create type-specific loop models.
+8. Keep code cross-platform unless the user explicitly requests one OS.
+9. Do not silently invent unsupported overloads, properties, or optional arguments.
+10. If modifying the language or runtime, add/update an executable `.xps` regression sample and documentation in the same change.
+11. If the change affects how an LLM should write XPscript, update this skill in the same PR.
 
 ## Verification checklist
 
@@ -320,7 +345,8 @@ Before presenting code as valid XPscript, check:
 - Every variable required by `Option Declare` is declared.
 - Every class construction uses `New`.
 - Optional arguments match documented signatures.
-- `ForAll` is used only with supported Lists/arrays/enumerables.
+- `ForAll` is used only with supported iterables and never with multidimensional arrays.
+- Iterable user classes expose public parameterless `Iterator()` returning another iterable.
 - Function return values use XPscript semantics.
 - File/directory recursion is bounded where appropriate.
 - Path behavior is portable where the program claims to be portable.
@@ -330,6 +356,6 @@ Before presenting code as valid XPscript, check:
 
 ## Maintenance rule
 
-This file is a living LLM contract for XPscript. Any PR that changes user-visible language syntax, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, database/AI APIs, or recommended idioms should review and update this file in the same PR when the change affects code generation guidance.
+This file is a living LLM contract for XPscript. Any PR that changes user-visible language syntax, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, database/AI APIs, iteration behavior, or recommended idioms should review and update this file in the same PR when the change affects code generation guidance.
 
 Keep this skill concise and operational. Link to authoritative docs for exhaustive reference instead of duplicating the entire language manual.
