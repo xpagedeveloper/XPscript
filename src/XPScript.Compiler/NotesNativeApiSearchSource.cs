@@ -60,7 +60,13 @@ internal sealed partial class XPScriptNotesNativeApi
         EnsureInitialized();
         using var text = ToLmbcs(key);
         var position = XPScriptNotesCollectionPosition.Create();
-        Check(Resolve<NIFFindByNameDelegate>("NIFFindByName")(collection, text.Pointer, 0, ref position, out var matches), "NIFFindByName");
+        var status = Resolve<NIFFindByNameDelegate>("NIFFindByName")(collection, text.Pointer, 0, ref position, out var matches);
+        if (status != 0)
+        {
+            var message = LoadStatusText(status);
+            if (message.Contains("not found", StringComparison.OrdinalIgnoreCase)) return Array.Empty<uint>();
+            Check(status, "NIFFindByName");
+        }
         if (matches == 0) return Array.Empty<uint>();
         var requested = maximum > 0 ? Math.Min(matches, (uint)maximum) : matches;
         return ReadNoteIds(collection, ref position, requested);
@@ -68,40 +74,55 @@ internal sealed partial class XPScriptNotesNativeApi
 
     private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)
     {
-        Check(Resolve<NIFReadEntriesDelegate>("NIFReadEntries")(
-            collection,
-            ref position,
-            NavigateCurrent,
-            0,
-            NavigateNext,
-            requested,
-            ReadMaskNoteId,
-            out var buffer,
-            out _,
-            out _,
-            out var returned,
-            out _), "NIFReadEntries");
+        var ids = new List<uint>(checked((int)Math.Min(requested, int.MaxValue)));
+        var remaining = requested;
+        var firstRead = true;
 
-        if (buffer == 0 || returned == 0) return Array.Empty<uint>();
-        var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(buffer);
-        if (pointer == 0)
+        while (remaining > 0)
         {
-            Resolve<OSMemFreeDelegate>("OSMemFree")(buffer);
-            throw new XPScriptRuntimeException(5, "Unable to lock Notes NIF result memory.");
-        }
+            Check(Resolve<NIFReadEntriesDelegate>("NIFReadEntries")(
+                collection,
+                ref position,
+                firstRead ? NavigateCurrent : NavigateNext,
+                firstRead ? 0u : 1u,
+                NavigateNext,
+                remaining,
+                ReadMaskNoteId,
+                out var buffer,
+                out var bufferLength,
+                out _,
+                out var returned,
+                out _), "NIFReadEntries");
 
-        try
-        {
-            var ids = new uint[returned];
-            for (var i = 0; i < returned; i++)
-                ids[i] = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(pointer, checked((int)i * 4)));
-            return ids;
+            if (buffer == 0 || returned == 0)
+            {
+                if (buffer != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(buffer);
+                break;
+            }
+
+            try
+            {
+                var minimumBytes = checked((long)returned * sizeof(uint));
+                if (bufferLength < minimumBytes)
+                    throw new XPScriptRuntimeException(5, "NIFReadEntries returned a NOTEID buffer shorter than the reported entry count.");
+
+                var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(buffer);
+                if (pointer == 0)
+                    throw new XPScriptRuntimeException(5, "Unable to lock Notes NIF result memory.");
+                try
+                {
+                    for (var i = 0u; i < returned; i++)
+                        ids.Add(unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(pointer, checked((int)i * sizeof(uint)))));
+                }
+                finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(buffer); }
+            }
+            finally { Resolve<OSMemFreeDelegate>("OSMemFree")(buffer); }
+
+            remaining -= Math.Min(remaining, returned);
+            firstRead = false;
+            if (returned == 0) break;
         }
-        finally
-        {
-            Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(buffer);
-            Resolve<OSMemFreeDelegate>("OSMemFree")(buffer);
-        }
+        return ids;
     }
 
     internal IReadOnlyList<uint> Search(nint db, string formula, int maximum)
@@ -223,7 +244,7 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSLockObjectDelegate(nint handle);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSUnlockObjectDelegate(nint handle);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort OSMemFreeDelegate(nint handle);
