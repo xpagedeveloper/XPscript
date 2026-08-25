@@ -11,24 +11,27 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort SigCdHotspotBegin = unchecked((ushort)-87);
     private const ushort SigCdV4HotspotBegin = unchecked((ushort)-83);
     private const ushort SigCdV5HotspotBegin = unchecked((ushort)-130);
-    private const ushort SigCdV6HotspotBeginContinuation = unchecked((ushort)-140);
 
     internal bool SaveAttachment(nint note, string attachmentName, string outputPath) =>
-        SaveAttachment(note, attachmentName, outputPath, null);
+        SaveAttachmentCore(note, attachmentName, outputPath);
 
-    internal bool SaveRichTextAttachment(nint note, string richTextItemName, string attachmentName, string outputPath) =>
-        SaveAttachment(note, attachmentName, outputPath, richTextItemName);
+    internal bool SaveRichTextAttachment(nint note, string richTextItemName, string attachmentName, string outputPath)
+    {
+        EnsureInitialized();
+        richTextItemName = richTextItemName.Trim();
+        attachmentName = attachmentName.Trim();
+        outputPath = outputPath.Trim();
+        if (richTextItemName.Length == 0 || attachmentName.Length == 0 || outputPath.Length == 0) return false;
+        if (!TryResolveRichTextAttachment(note, richTextItemName, attachmentName, out var internalName)) return false;
+        return SaveAttachmentCore(note, internalName, outputPath);
+    }
 
-    internal bool SaveAttachment(nint note, string attachmentName, string outputPath, string? richTextItemName)
+    private bool SaveAttachmentCore(nint note, string attachmentName, string outputPath)
     {
         EnsureInitialized();
         attachmentName = attachmentName.Trim();
         outputPath = outputPath.Trim();
         if (attachmentName.Length == 0 || outputPath.Length == 0) return false;
-
-        if (richTextItemName is not null && !RichTextReferencesAttachment(note, richTextItemName, attachmentName))
-            return false;
-
         if (!TryFindAttachment(note, attachmentName, out var itemBlock)) return false;
 
         if (Directory.Exists(outputPath) || outputPath.EndsWith(Path.DirectorySeparatorChar) || outputPath.EndsWith(Path.AltDirectorySeparatorChar))
@@ -37,7 +40,10 @@ internal sealed partial class XPScriptNotesNativeApi
             outputPath = Path.GetFullPath(outputPath);
 
         using var path = ToLmbcs(outputPath);
-        return Resolve<NSFNoteExtractFileDelegate>("NSFNoteExtractFile")(note, itemBlock, path.Pointer, 0) == 0;
+        var status = Resolve<NSFNoteExtractFileDelegate>("NSFNoteExtractFile")(note, itemBlock, path.Pointer, 0);
+        if (status == 0) return true;
+        Check(status, "NSFNoteExtractFile");
+        return false;
     }
 
     private bool TryFindAttachment(nint note, string attachmentName, out XPScriptNotesBlockId itemBlock)
@@ -82,6 +88,8 @@ internal sealed partial class XPScriptNotesNativeApi
             System.Runtime.InteropServices.Marshal.Copy(nint.Add(valuePointer, 2), raw, 0, rawLength);
             if (raw.Length < FileObjectFixedSize) return false;
 
+            var objectType = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(raw.AsSpan(0, 2));
+            if (objectType != 0) return false; // OBJECT_FILE
             var fileNameLength = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(raw.AsSpan(6, 2));
             if (fileNameLength == 0 || FileObjectFixedSize + fileNameLength > raw.Length) return false;
 
@@ -97,16 +105,36 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(valueBlock.Pool); }
     }
 
-    private bool RichTextReferencesAttachment(nint note, string itemName, string attachmentName)
+    private bool TryResolveRichTextAttachment(nint note, string itemName, string requestedName, out string internalName)
     {
-        if (!TryGetFirstItemInfo(note, itemName, out var info) || info.DataType != NotesTypeComposite)
-            return false;
+        internalName = "";
+        using var itemNameText = ToLmbcs(itemName);
+        var status = Resolve<NSFItemInfoDelegate>("NSFItemInfo")(
+            note, itemNameText.Pointer, checked((ushort)itemNameText.Length),
+            out var currentItem, out var dataType, out var valueBlock, out var valueLength);
+        if (status != 0) return false;
 
-        var found = false;
+        while (true)
+        {
+            if (dataType == NotesTypeComposite && TryResolveAttachmentInComposite(valueBlock, valueLength, requestedName, out internalName))
+                return true;
+
+            status = Resolve<NSFItemInfoNextDelegate>("NSFItemInfoNext")(
+                note, currentItem, itemNameText.Pointer, checked((ushort)itemNameText.Length),
+                out var nextItem, out dataType, out valueBlock, out valueLength);
+            if (status != 0) return false;
+            currentItem = nextItem;
+        }
+    }
+
+    private bool TryResolveAttachmentInComposite(XPScriptNotesBlockId valueBlock, uint valueLength, string requestedName, out string internalName)
+    {
+        var resolved = "";
         EnumCompositeActionDelegate callback = (record, signature, recordLength, context) =>
         {
-            if (found || record == 0 || recordLength < 12 || !IsHotspotBeginSignature(signature)) return 0;
+            if (resolved.Length > 0 || record == 0 || recordLength < 12 || !IsHotspotBeginSignature(signature)) return 0;
 
+            // HOTSPOTBEGIN records use WSIG: Header(4), Type(2), Flags(4), DataLength(2).
             var hotspotType = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(record, 4));
             if (hotspotType != HotspotTypeFile) return 0;
 
@@ -114,29 +142,29 @@ internal sealed partial class XPScriptNotesNativeApi
             if (dataLength == 0 || dataLength > recordLength - 12) return 0;
 
             var data = nint.Add(record, 12);
-            var internalLength = ZeroTerminatedLength(data, dataLength);
-            if (internalLength >= dataLength) return 0;
+            var firstLength = ZeroTerminatedLength(data, dataLength);
+            if (firstLength >= dataLength) return 0;
 
-            var original = nint.Add(data, internalLength + 1);
-            var remaining = checked((int)dataLength - internalLength - 1);
-            var originalLength = ZeroTerminatedLength(original, remaining);
+            var second = nint.Add(data, firstLength + 1);
+            var remaining = checked((int)dataLength - firstLength - 1);
+            var secondLength = ZeroTerminatedLength(second, remaining);
 
-            var internalName = internalLength == 0 ? "" : FromLmbcs(data, internalLength);
-            var originalName = originalLength == 0 ? "" : FromLmbcs(original, originalLength);
-            found = string.Equals(originalName, attachmentName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(internalName, attachmentName, StringComparison.OrdinalIgnoreCase);
+            var firstName = firstLength == 0 ? "" : FromLmbcs(data, firstLength);
+            var secondName = secondLength == 0 ? "" : FromLmbcs(second, secondLength);
+            if (string.Equals(firstName, requestedName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(secondName, requestedName, StringComparison.OrdinalIgnoreCase))
+                resolved = firstName.Length > 0 ? firstName : requestedName;
             return 0;
         };
 
-        var status = Resolve<EnumCompositeBufferDelegate>("EnumCompositeBuffer")(
-            info.ValueBlock, info.ValueLength, callback, 0);
+        _ = Resolve<EnumCompositeBufferDelegate>("EnumCompositeBuffer")(valueBlock, valueLength, callback, 0);
         GC.KeepAlive(callback);
-        return status == 0 && found;
+        internalName = resolved;
+        return resolved.Length > 0;
     }
 
     private static bool IsHotspotBeginSignature(ushort signature) =>
-        signature == SigCdHotspotBegin || signature == SigCdV4HotspotBegin ||
-        signature == SigCdV5HotspotBegin || signature == SigCdV6HotspotBeginContinuation;
+        signature == SigCdHotspotBegin || signature == SigCdV4HotspotBegin || signature == SigCdV5HotspotBegin;
 
     private static int ZeroTerminatedLength(nint pointer, int maximum)
     {
