@@ -272,6 +272,35 @@ internal sealed class XPScriptUIForm
 """, "field-actions");
         }
 
+        if (!generated.Contains("if (!ShowValidationErrors) { SetFieldValue(field.Name, submitted); return; }", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"private\s+void\s+ApplySubmittedValue\s*\(\s*XPScriptUIField\s+field\s*,\s*string\s+submitted\s*\)\s*\{",
+                """
+    private void ApplySubmittedValue(XPScriptUIField field, string submitted)
+    {
+        if (!ShowValidationErrors) { SetFieldValue(field.Name, submitted); return; }
+""", "validation-bypass-scalar");
+        }
+
+        if (!generated.Contains("if (!ShowValidationErrors) {", StringComparison.Ordinal) ||
+            !generated.Contains("var rawValues = XPScriptNativeJson.CreateArray();", StringComparison.Ordinal))
+        {
+            generated = ReplaceRequiredRegex(generated,
+                @"private\s+void\s+ApplySubmittedValues\s*\(\s*XPScriptUIField\s+field\s*,\s*IReadOnlyList<string>\s+submitted\s*\)\s*\{",
+                """
+    private void ApplySubmittedValues(XPScriptUIField field, IReadOnlyList<string> submitted)
+    {
+        if (!ShowValidationErrors)
+        {
+            var rawValues = XPScriptNativeJson.CreateArray();
+            foreach (var value in submitted) rawValues.Add(value);
+            _data.Set(field.Name, rawValues);
+            return;
+        }
+""", "validation-bypass-multi");
+        }
+
         return new UIFormDirtyTrackingPostProcessor().Transform(generated);
     }
 
