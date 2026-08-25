@@ -1,5 +1,7 @@
 ' XPScript desktop UI theme and field presentation demo
 ' Theme options: System, Light, Dark
+' ShowValidationErrors=True validates on OK and shows red inline field errors.
+' Set it to False when the script should handle validation itself.
 
 Option Declare
 
@@ -8,6 +10,7 @@ Sub Main()
     Dim result As String
 
     Call form.SetTheme("Dark")
+    form.ShowValidationErrors = True
     Call form.SetGridColumns(12)
 
     Call form.AddTextField("name", "Name")
