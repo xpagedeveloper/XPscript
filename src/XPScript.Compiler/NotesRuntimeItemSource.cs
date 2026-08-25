@@ -3,6 +3,19 @@ namespace XPScript.Compiler;
 internal static class NotesRuntimeItemSource
 {
     public const string Code = """
+internal static class XPScriptNotesItemApi
+{
+    public static XPScriptNotesItem? GetFirstItem(object? documentValue, object? nameValue)
+    {
+        if (documentValue is not XPScriptNotesDocument document)
+            throw new XPScriptRuntimeException(13, "GetFirstItem requires a NotesDocument.");
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        if (name.Length == 0) return null;
+        if (!document.TryGetItemInfo(name)) return null;
+        return new XPScriptNotesItem(document.SessionForItem, document, name);
+    }
+}
+
 internal sealed class XPScriptNotesItem : XPScriptNotesObject
 {
     private readonly XPScriptNotesDocument _document;
@@ -13,7 +26,6 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
     {
         _document = document;
         _name = name;
-        document.RegisterItem(this);
     }
 
     public XPScriptNotesDocument Parent { get { EnsureItemAlive(); return _document; } }
@@ -127,13 +139,11 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         EnsureItemAlive();
         if (documentValue is not XPScriptNotesDocument destination)
             throw new XPScriptRuntimeException(13, "CopyToDocument requires a NotesDocument.");
-        if (!ReferenceEquals(destination.SessionObject, Session))
-            throw new XPScriptRuntimeException(13, "CopyToDocument requires a NotesDocument from the same NotesSession.");
 
         var newName = XPScriptRuntime.CStr(nameValue).Trim();
         if (newName.Length == 0) newName = _name;
         Session.Api.CopyItemToDocument(_document.NativeHandle, _name, destination.NativeHandle, newName);
-        return destination.CreateItemWrapper(newName);
+        return new XPScriptNotesItem(Session, destination, newName);
     }
 
     private XPScriptNotesItemInfo Info()
@@ -196,11 +206,7 @@ internal sealed class XPScriptNotesItem : XPScriptNotesObject
         };
     }
 
-    protected override void ReleaseNative()
-    {
-        _document.UnregisterItem(this);
-        _removed = true;
-    }
+    protected override void ReleaseNative() => _removed = true;
 }
 """;
 }
