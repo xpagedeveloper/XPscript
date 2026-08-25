@@ -51,16 +51,18 @@ internal sealed partial class XPScriptNotesNativeApi
     private const uint ReadMaskNoteId = 0x00000001;
     private const ushort NavigateCurrent = 0;
     private const ushort NavigateNext = 1;
+    private const ushort FindPartial = 0x0001;
     private const uint FtSearchSetCollection = 0x00000001;
     private const uint FtSearchReturnIdTable = 0x00000010;
     private const ushort AgentRedirectMemory = 2;
 
-    internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum)
+    internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum, bool exactMatch)
     {
         EnsureInitialized();
         using var text = ToLmbcs(key);
         var position = XPScriptNotesCollectionPosition.Create();
-        var status = Resolve<NIFFindByNameDelegate>("NIFFindByName")(collection, text.Pointer, 0, ref position, out var matches);
+        var flags = exactMatch ? (ushort)0 : FindPartial;
+        var status = Resolve<NIFFindByNameDelegate>("NIFFindByName")(collection, text.Pointer, flags, ref position, out var matches);
         if (status != 0)
         {
             var message = LoadStatusText(status);
