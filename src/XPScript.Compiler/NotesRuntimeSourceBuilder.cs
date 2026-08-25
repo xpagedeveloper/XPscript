@@ -71,15 +71,20 @@ internal static class NotesRuntimeSourceBuilder
             "internal delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
             "ft-search-collection");
 
-        // Add the NotesItem/NotesRichTextItem surface directly to NotesDocument.
-        // Item wrappers never retain BLOCKIDs or pointers between calls.
+        // NotesDocument exposes item creation/replacement while item wrappers remain
+        // lazy and resolve fresh BLOCKIDs for every operation.
         source = ReplaceRequired(source,
-            "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    public uint NoteId { get; private set; }",
-            "internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    internal XPScriptNotesSession SessionForItem => Session;\n    internal bool TryGetItemInfo(string name, out XPScriptNotesItemInfo info) => Session.Api.TryGetFirstItemInfo(_handle, name, out info);\n\n    public XPScriptNotesItem? GetFirstItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0 || !Session.Api.TryGetFirstItemInfo(_handle, name, out var info)) return null;\n        return XPScriptNotesItemApi.Create(Session, this, info);\n    }\n\n    public XPScriptNotesItem CreateNotesItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        Session.Api.SetItemText(_handle, name, \"\");\n        var info = Session.Api.GetFirstItemInfo(_handle, name);\n        return XPScriptNotesItemApi.Create(Session, this, info);\n    }\n\n    public XPScriptNotesItem ReplaceItemValue(object? nameValue, object? value)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        if (!Session.Api.HasItem(_handle, name)) Session.Api.SetItemText(_handle, name, \"\");\n        Session.Api.SetItemValues(_handle, name, value);\n        var info = Session.Api.GetFirstItemInfo(_handle, name);\n        return XPScriptNotesItemApi.Create(Session, this, info);\n    }\n\n    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureAlive();\n        return Session.Api.SaveAttachment(_handle, XPScriptRuntime.CStr(attachmentNameValue), XPScriptRuntime.CStr(pathValue));\n    }\n\n    public uint NoteId { get; private set; }",
+            "internal bool TryGetItemInfo(string name)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out _);\n    }",
+            "internal bool TryGetItemInfo(string name, out XPScriptNotesItemInfo info)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out info);\n    }",
+            "document-item-info");
+
+        source = ReplaceRequired(source,
+            "public XPScriptNotesItem? GetFirstItem(object? nameValue)\n        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);\n\n    public bool HasItem(object? nameValue)",
+            "public XPScriptNotesItem? GetFirstItem(object? nameValue)\n        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);\n\n    public XPScriptNotesItem CreateNotesItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        Session.Api.SetItemText(_handle, name, \"\");\n        return XPScriptNotesItemApi.Create(Session, this, Session.Api.GetFirstItemInfo(_handle, name));\n    }\n\n    public XPScriptNotesItem ReplaceItemValue(object? nameValue, object? value)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        if (!Session.Api.HasItem(_handle, name)) Session.Api.SetItemText(_handle, name, \"\");\n        Session.Api.SetItemValues(_handle, name, value);\n        return XPScriptNotesItemApi.Create(Session, this, Session.Api.GetFirstItemInfo(_handle, name));\n    }\n\n    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureAlive();\n        return Session.Api.SaveAttachment(_handle, XPScriptRuntime.CStr(attachmentNameValue), XPScriptRuntime.CStr(pathValue));\n    }\n\n    public bool HasItem(object? nameValue)",
             "document-item-surface");
 
-        // Prefer the Notes runtime's own build number (GETBUILD/NSFDbGetBuildVersion)
-        // and retain file-version metadata only as a fallback.
+        // Prefer the Notes runtime's own build number and retain file-version
+        // metadata only as a fallback.
         source = ReplaceRequired(source,
             "NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);",
             "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
