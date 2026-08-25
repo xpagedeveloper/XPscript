@@ -99,6 +99,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     private XPScriptNotesDateTime(XPScriptNotesSession session, XPScriptNotesTimeDate value) : base(session) => _value = value;
 
     internal static XPScriptNotesDateTime CreateNow(XPScriptNotesSession session) => new(session, session.Api.CurrentTimeDate());
+    internal static XPScriptNotesDateTime FromNative(XPScriptNotesSession session, XPScriptNotesTimeDate value) => new(session, value);
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
