@@ -1,0 +1,115 @@
+' HCL Notes/Domino C API wrapper V1 manual test.
+' Requires a local Notes or Domino installation and valid Notes configuration.
+' Update the constants below for your environment before running.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const NOTES_INI = ""
+    Const LOCAL_DATABASE = "names.nsf"
+    Const SERVER_NAME = ""
+    Const SERVER_DATABASE = ""
+    Const VIEW_NAME = "People"
+    Const VIEW_KEY = ""
+    Const AGENT_NAME = ""
+
+    Dim session As NotesSession
+    Dim localDb As NotesDatabase
+    Dim serverDb As NotesDatabase
+    Dim view As NotesView
+    Dim docs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim name1 As NotesName
+    Dim name2 As NotesName
+    Dim dt1 As NotesDateTime
+    Dim dt2 As NotesDateTime
+    Dim agentResult As NotesAgentResult
+
+    If NOTES_INI = "" Then
+        Set session = New NotesSession(NOTES_RUNTIME)
+    Else
+        Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    End If
+
+    Print "USERNAME=" & session.Username
+
+    Set name1 = session.CreateName(session.Username)
+    Set name2 = session.CreateName("CN=Ada Lovelace/O=Example")
+    Print "NAME1_CANONICAL=" & name1.Canonical
+    Print "NAME1_ABBREVIATED=" & name1.Abbreviated
+    Print "NAME2_COMMON=" & name2.Common
+    Print "NAME2_ORGANIZATION=" & name2.Organization
+
+    Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
+    Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
+    Print "DT1_LOCAL=" & dt1.LocalTime
+    Print "DT1_GMT=" & dt1.GMTTime
+    Print "DT1_ZONE=" & CStr(dt1.TimeZone)
+    Print "DT2_LOCAL=" & dt2.LocalTime
+
+    Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
+    Print "LOCAL_DB=" & localDb.FilePath
+
+    Set view = localDb.OpenView(VIEW_NAME)
+    If VIEW_KEY <> "" Then
+        Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
+        Print "VIEW_MATCHES=" & CStr(docs.Count)
+        If docs.Count > 0 Then
+            Set doc = docs.Get(0)
+            Print "VIEW_DOC_NOTEID=" & doc.NoteIdHex
+            Print "VIEW_DOC_UNID=" & doc.UniversalId
+            Print "VIEW_DOC_FORM=" & doc.GetString("Form")
+            Call doc.Recycle()
+            Set doc = Nothing
+        End If
+        Call docs.Recycle()
+        Set docs = Nothing
+    End If
+
+    Set docs = localDb.Search("@All", 10)
+    Print "FORMULA_MATCHES=" & CStr(docs.Count)
+    If docs.Count > 0 Then
+        Set doc = docs.Get(0)
+        Print "SEARCH_DOC_NOTEID=" & doc.NoteIdHex
+        Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
+        Call doc.Recycle()
+        Set doc = Nothing
+    End If
+    Call docs.Recycle()
+    Set docs = Nothing
+
+    ' Requires an FT index. Uncomment after selecting a suitable database/query.
+    ' Set docs = localDb.FullTextSearch("test", 10)
+    ' Print "FT_MATCHES=" & CStr(docs.Count)
+    ' Call docs.Recycle()
+    ' Set docs = Nothing
+
+    If AGENT_NAME <> "" Then
+        Set agentResult = localDb.RunAgent(AGENT_NAME)
+        Print "AGENT_SUCCESS=" & CStr(agentResult.Success)
+        Print "AGENT_OUTPUT=" & agentResult.Output
+        Call agentResult.Recycle()
+        Set agentResult = Nothing
+    End If
+
+    If SERVER_NAME <> "" And SERVER_DATABASE <> "" Then
+        Set serverDb = session.OpenDatabase(SERVER_NAME, SERVER_DATABASE)
+        Print "SERVER_DB=" & serverDb.Server & "!!" & serverDb.FilePath
+        Call serverDb.Recycle()
+        Set serverDb = Nothing
+    End If
+
+    Call view.Recycle()
+    Set view = Nothing
+    Call localDb.Recycle()
+    Set localDb = Nothing
+
+    Call dt2.Recycle()
+    Call dt1.Recycle()
+    Call name2.Recycle()
+    Call name1.Recycle()
+
+    Call session.Recycle()
+    Print "NOTES-V1-DONE"
+End Sub
