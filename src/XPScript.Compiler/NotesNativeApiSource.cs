@@ -1,0 +1,9 @@
+namespace XPScript.Compiler;
+
+internal static class NotesNativeApiSource
+{
+    public static string Code =>
+        NotesNativeApiBaseSource.Code + "\n\n" +
+        NotesNativeApiDocumentSource.Code + "\n\n" +
+        NotesNativeApiSearchSource.Code;
+}
