@@ -26,5 +26,5 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""" + "\n\n" + NotesRuntimeSource.Code;
+""" + "\n\n" + NotesRuntimeSourceBuilder.Build();
 }
