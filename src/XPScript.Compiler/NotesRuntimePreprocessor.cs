@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesName|NotesDateTime|NotesAgentResult";
+    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult";
 
     public string Transform(string source)
     {
@@ -51,7 +51,7 @@ internal sealed class NotesRuntimePreprocessor
                 "XPScriptNotes.CreateSession($1)",
                 RegexOptions.IgnoreCase);
 
-            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
+            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
             if (unsupportedNew.Success)
                 throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
 
