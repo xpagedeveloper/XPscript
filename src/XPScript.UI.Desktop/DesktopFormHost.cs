@@ -52,12 +52,13 @@ public static class DesktopFormHost
         var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
         var fieldPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
         var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
+        var fieldValidationTexts = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
-        var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap };
+        var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
         var automaticRow = 0;
         foreach (var field in request.Fields)
@@ -76,6 +77,16 @@ public static class DesktopFormHost
             ApplyFieldHints(field, editor);
             editors[field.Name] = editor;
             fieldPanel.Children.Add(editor);
+
+            var fieldValidation = new TextBlock
+            {
+                IsVisible = false,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Brushes.Red,
+                FontSize = 12
+            };
+            fieldValidationTexts[field.Name] = fieldValidation;
+            fieldPanel.Children.Add(fieldValidation);
 
             var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
@@ -259,6 +270,39 @@ public static class DesktopFormHost
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
         {
+            foreach (var errorText in fieldValidationTexts.Values)
+            {
+                errorText.Text = string.Empty;
+                errorText.IsVisible = false;
+            }
+            validationText.IsVisible = false;
+
+            if (request.ShowValidationErrors)
+            {
+                Control? firstInvalidEditor = null;
+                foreach (var field in request.Fields)
+                {
+                    if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!editors.TryGetValue(field.Name, out var editor)) continue;
+                    optionOverrides.TryGetValue(field.Name, out var allowedOptions);
+                    var validationError = ValidateEditorValue(field, editor, allowedOptions);
+                    if (validationError is null) continue;
+
+                    if (fieldValidationTexts.TryGetValue(field.Name, out var errorText))
+                    {
+                        errorText.Text = validationError;
+                        errorText.IsVisible = true;
+                    }
+                    firstInvalidEditor ??= editor;
+                }
+
+                if (firstInvalidEditor is not null)
+                {
+                    firstInvalidEditor.Focus();
+                    return;
+                }
+            }
+
             var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
             foreach (var field in request.Fields)
             {
@@ -268,19 +312,10 @@ public static class DesktopFormHost
                     continue;
                 }
                 if (!editors.TryGetValue(field.Name, out var editor)) continue;
-                optionOverrides.TryGetValue(field.Name, out var allowedOptions);
-                var validationError = ValidateEditorValue(field, editor, allowedOptions);
-                if (validationError is not null)
-                {
-                    validationText.Text = validationError;
-                    validationText.IsVisible = true;
-                    editor.Focus();
-                    return;
-                }
                 var value = ReadEditorValue(field, editor);
                 if (value is not null) values[field.Name] = value.Value;
             }
-            validationText.IsVisible = false;
+
             result = new DesktopFormResult("OK", new ReadOnlyDictionary<string, JsonElement>(values));
             window.Close();
         };
@@ -421,6 +456,20 @@ public static class DesktopFormHost
             return null;
         }
         if (string.IsNullOrEmpty(text)) return null;
+
+        if (field.RegexPattern.Length > 0)
+        {
+            try
+            {
+                if (!Regex.IsMatch(text, field.RegexPattern, RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250)))
+                    return $"{field.LabelOrName()} does not match the required format.";
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return $"{field.LabelOrName()} could not be validated in time.";
+            }
+        }
+
         switch (field.Type)
         {
             case "NumberField":
@@ -430,37 +479,37 @@ public static class DesktopFormHost
                 if (field.Maximum.HasValue && number > field.Maximum.Value) return $"{field.LabelOrName()} must be at most {field.Maximum.Value.ToString(CultureInfo.InvariantCulture)}.";
                 break;
             case "DateField":
-      if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
-          return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format.";
-      if (field.DateMinimum.Length > 0 && DateTime.TryParseExact(field.DateMinimum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMinimum) && dateValue < dateMinimum)
-          return $"{field.LabelOrName()} must be on or after {field.DateMinimum}.";
-      if (field.DateMaximum.Length > 0 && DateTime.TryParseExact(field.DateMaximum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMaximum) && dateValue > dateMaximum)
-          return $"{field.LabelOrName()} must be on or before {field.DateMaximum}.";
-      break;
+                if (!DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
+                    return $"{field.LabelOrName()} must contain a valid date in yyyy-MM-dd format.";
+                if (field.DateMinimum.Length > 0 && DateTime.TryParseExact(field.DateMinimum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMinimum) && dateValue < dateMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.DateMinimum}.";
+                if (field.DateMaximum.Length > 0 && DateTime.TryParseExact(field.DateMaximum, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateMaximum) && dateValue > dateMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.DateMaximum}.";
+                break;
             case "TimeField":
-      if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeValue))
-          return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format.";
-      if (field.TimeMinimum.Length > 0 && TimeOnly.TryParseExact(field.TimeMinimum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMinimum) && timeValue < timeMinimum)
-          return $"{field.LabelOrName()} must be at or after {field.TimeMinimum}.";
-      if (field.TimeMaximum.Length > 0 && TimeOnly.TryParseExact(field.TimeMaximum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMaximum) && timeValue > timeMaximum)
-          return $"{field.LabelOrName()} must be at or before {field.TimeMaximum}.";
-      break;
+                if (!TimeOnly.TryParseExact(text, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeValue))
+                    return $"{field.LabelOrName()} must contain a valid time in HH:mm or HH:mm:ss format.";
+                if (field.TimeMinimum.Length > 0 && TimeOnly.TryParseExact(field.TimeMinimum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMinimum) && timeValue < timeMinimum)
+                    return $"{field.LabelOrName()} must be at or after {field.TimeMinimum}.";
+                if (field.TimeMaximum.Length > 0 && TimeOnly.TryParseExact(field.TimeMaximum, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeMaximum) && timeValue > timeMaximum)
+                    return $"{field.LabelOrName()} must be at or before {field.TimeMaximum}.";
+                break;
             case "DateTimeField":
-      if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
-          return $"{field.LabelOrName()} must contain a valid local date/time.";
-      if (field.DateTimeMinimum.Length > 0 && DateTime.TryParseExact(field.DateTimeMinimum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMinimum) && dateTimeValue < dateTimeMinimum)
-          return $"{field.LabelOrName()} must be on or after {field.DateTimeMinimum}.";
-      if (field.DateTimeMaximum.Length > 0 && DateTime.TryParseExact(field.DateTimeMaximum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMaximum) && dateTimeValue > dateTimeMaximum)
-          return $"{field.LabelOrName()} must be on or before {field.DateTimeMaximum}.";
-      break;
+                if (!DateTime.TryParseExact(text, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
+                    return $"{field.LabelOrName()} must contain a valid local date/time.";
+                if (field.DateTimeMinimum.Length > 0 && DateTime.TryParseExact(field.DateTimeMinimum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMinimum) && dateTimeValue < dateTimeMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.DateTimeMinimum}.";
+                if (field.DateTimeMaximum.Length > 0 && DateTime.TryParseExact(field.DateTimeMaximum, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeMaximum) && dateTimeValue > dateTimeMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.DateTimeMaximum}.";
+                break;
             case "MonthField":
-      if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthValue))
-          return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format.";
-      if (field.MonthMinimum.Length > 0 && DateTime.TryParseExact(field.MonthMinimum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMinimum) && monthValue < monthMinimum)
-          return $"{field.LabelOrName()} must be on or after {field.MonthMinimum}.";
-      if (field.MonthMaximum.Length > 0 && DateTime.TryParseExact(field.MonthMaximum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMaximum) && monthValue > monthMaximum)
-          return $"{field.LabelOrName()} must be on or before {field.MonthMaximum}.";
-      break;
+                if (!DateTime.TryParseExact(text, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthValue))
+                    return $"{field.LabelOrName()} must contain a valid month in yyyy-MM format.";
+                if (field.MonthMinimum.Length > 0 && DateTime.TryParseExact(field.MonthMinimum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMinimum) && monthValue < monthMinimum)
+                    return $"{field.LabelOrName()} must be on or after {field.MonthMinimum}.";
+                if (field.MonthMaximum.Length > 0 && DateTime.TryParseExact(field.MonthMaximum, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthMaximum) && monthValue > monthMaximum)
+                    return $"{field.LabelOrName()} must be on or before {field.MonthMaximum}.";
+                break;
             case "ColorField": if (!Regex.IsMatch(text, "^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant)) return $"{field.LabelOrName()} must contain a color in #RRGGBB format."; break;
             case "EmailField":
                 try { var address = new MailAddress(text); if (!address.Address.Equals(text, StringComparison.OrdinalIgnoreCase)) return $"{field.LabelOrName()} must contain a valid email address."; }

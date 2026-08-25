@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Avalonia;
+using Avalonia.Styling;
 
 namespace XPScript.UI.Desktop;
 
@@ -58,6 +60,8 @@ public sealed record DesktopFormRequest(
     bool Resizable,
     IReadOnlyList<DesktopFormField> Fields)
 {
+    public string Theme { get; init; } = "System";
+    public bool ShowValidationErrors { get; init; } = true;
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
     public string ApplicationTitle { get; init; } = string.Empty;
@@ -84,6 +88,8 @@ public static class XpsUIDesktopRuntimeBridge
         var request = JsonSerializer.Deserialize<DesktopFormRequest>(json, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIForm request is empty.");
 
+        ApplyTheme(request.Theme);
+
         var fields = request.Fields.Select(field => field.Type switch
         {
             "Separator" => field with
@@ -106,6 +112,29 @@ public static class XpsUIDesktopRuntimeBridge
         }).ToArray();
 
         return request with { Fields = fields };
+    }
+
+    private static void ApplyTheme(string theme)
+    {
+        if (!IsSupportedPlatform()) return;
+
+        var variant = theme.Trim().ToLowerInvariant() switch
+        {
+            "" or "system" => ThemeVariant.Default,
+            "light" => ThemeVariant.Light,
+            "dark" => ThemeVariant.Dark,
+            _ => throw new InvalidOperationException("Desktop UIForm theme must be System, Light, or Dark.")
+        };
+
+        if (Application.Current is null)
+        {
+            AppBuilder.Configure<XpsDesktopApplication>()
+                .UsePlatformDetect()
+                .SetupWithoutStarting();
+        }
+
+        if (Application.Current is not null)
+            Application.Current.RequestedThemeVariant = variant;
     }
 
     public static string SerializeResult(DesktopFormResult result)

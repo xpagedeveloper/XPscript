@@ -35,6 +35,17 @@ xpscriptc .\demo\desktop-ui\customer-form.xps -o .\out\demo-desktop.exe --framew
 
 Demonstrates a native UIForm with text fields and required validation.
 
+## Themed desktop UIForm
+
+Source: [`desktop-ui/themed-form.xps`](desktop-ui/themed-form.xps)
+
+```powershell
+xpscriptc .\demo\desktop-ui\themed-form.xps -o .\out\demo-desktop-themed.exe --framework-dependent
+.\out\demo-desktop-themed.exe
+```
+
+Demonstrates Fluent light/dark/system themes, grid layout, placeholders, tooltips, required and regex validation, inline validation errors, and `UIForm.ShowValidationErrors` behavior.
+
 ## Browser WebAssembly UIForm
 
 Source: [`browser-wasm/customer-form.xps`](browser-wasm/customer-form.xps)
