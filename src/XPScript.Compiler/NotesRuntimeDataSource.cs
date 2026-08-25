@@ -19,6 +19,7 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
     internal nint Handle { get { EnsureAlive(); return _handle; } }
     public string Server { get; }
     public string FilePath { get; }
+    public bool IsOpen => !IsRecycled && _handle != 0;
 
     internal void RegisterChild(XPScriptNotesOwnedObject child)
     {
@@ -31,52 +32,73 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
         lock (_childrenGate) _children.Remove(child);
     }
 
-    public XPScriptNotesView OpenView(object? nameValue)
+    public XPScriptNotesView? OpenView(object? nameValue)
     {
         EnsureAlive();
+        if (!IsOpen) return null;
         var name = XPScriptRuntime.CStr(nameValue).Trim();
         if (name.Length == 0) throw new XPScriptRuntimeException(5, "Notes view name cannot be empty.");
         return new XPScriptNotesView(Session, this, Session.Api.OpenView(_handle, name), name);
     }
 
-    public XPScriptNotesDocument OpenDocumentByNoteId(object? noteIdValue) => OpenByNoteId(XPScriptNotesConvert.NoteId(noteIdValue));
-
-    internal XPScriptNotesDocument OpenByNoteId(uint noteId)
+    public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue)
     {
         EnsureAlive();
-        return new XPScriptNotesDocument(Session, this, Session.Api.OpenNote(_handle, noteId), noteId);
+        if (!IsOpen) return null;
+        return OpenByNoteId(XPScriptNotesConvert.NoteId(noteIdValue));
     }
 
-    public XPScriptNotesDocument OpenDocumentByUNID(object? unidValue)
+    public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByNoteId(noteIdValue);
+
+    internal XPScriptNotesDocument? OpenByNoteId(uint noteId)
     {
         EnsureAlive();
-        var note = Session.Api.OpenNoteByUnid(_handle, XPScriptRuntime.CStr(unidValue).Trim());
-        return new XPScriptNotesDocument(Session, this, note, Session.Api.GetNoteId(note));
+        if (!IsOpen) return null;
+        var note = Session.Api.TryOpenNote(_handle, noteId);
+        return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, noteId);
     }
 
-    public XPScriptNotesDocumentCollection Search(object? formulaValue) => Search(formulaValue, 0);
-
-    public XPScriptNotesDocumentCollection Search(object? formulaValue, object? maxResultsValue)
+    public XPScriptNotesDocument? GetDocumentByUNID(object? unidValue)
     {
         EnsureAlive();
+        if (!IsOpen) return null;
+        var note = Session.Api.TryOpenNoteByUnid(_handle, XPScriptRuntime.CStr(unidValue).Trim());
+        return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, Session.Api.GetNoteId(note));
+    }
+
+    public XPScriptNotesDocument? OpenDocumentByUNID(object? unidValue) => GetDocumentByUNID(unidValue);
+
+    public XPScriptNotesDocumentCollection? Search(object? formulaValue) => Search(formulaValue, 0);
+
+    public XPScriptNotesDocumentCollection? Search(object? formulaValue, object? maxResultsValue)
+    {
+        EnsureAlive();
+        if (!IsOpen) return null;
         var ids = Session.Api.Search(_handle, XPScriptRuntime.CStr(formulaValue), XPScriptNotesConvert.NonNegativeInt(maxResultsValue, "maxResults"));
         return new XPScriptNotesDocumentCollection(Session, this, ids);
     }
 
-    public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);
+    public XPScriptNotesDocumentCollection? FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);
 
-    public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue, object? maxResultsValue)
+    public XPScriptNotesDocumentCollection? FullTextSearch(object? queryValue, object? maxResultsValue)
     {
         EnsureAlive();
+        if (!IsOpen) return null;
         var ids = Session.Api.FullTextSearch(_handle, 0, XPScriptRuntime.CStr(queryValue), XPScriptNotesConvert.NonNegativeInt(maxResultsValue, "maxResults"));
         return new XPScriptNotesDocumentCollection(Session, this, ids);
     }
 
-    public XPScriptNotesAgentResult RunAgent(object? nameValue) => RunAgentCore(nameValue, null);
-
-    public XPScriptNotesAgentResult RunAgent(object? nameValue, object? documentValue)
+    public XPScriptNotesAgentResult? RunAgent(object? nameValue)
     {
         EnsureAlive();
+        if (!IsOpen) return null;
+        return RunAgentCore(nameValue, null);
+    }
+
+    public XPScriptNotesAgentResult? RunAgent(object? nameValue, object? documentValue)
+    {
+        EnsureAlive();
+        if (!IsOpen) return null;
         if (documentValue is not XPScriptNotesDocument document)
             throw new XPScriptRuntimeException(13, "RunAgent document context must be a NotesDocument.");
         return RunAgentCore(nameValue, document);
@@ -84,7 +106,6 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
 
     private XPScriptNotesAgentResult RunAgentCore(object? nameValue, XPScriptNotesDocument? document)
     {
-        EnsureAlive();
         var name = XPScriptRuntime.CStr(nameValue).Trim();
         if (name.Length == 0) throw new XPScriptRuntimeException(5, "Notes agent name cannot be empty.");
         var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);
@@ -190,23 +211,22 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     public int Count { get { EnsureAlive(); return _noteIds.Length; } }
 
-    public uint GetNoteId(object? indexValue)
+    public string GetNoteIdString(object? indexValue)
     {
         EnsureAlive();
         var index = XPScriptRuntime.CInt(indexValue);
         if (index < 0 || index >= _noteIds.Length) throw new XPScriptRuntimeException(9, "NotesDocumentCollection index is out of range.");
-        return _noteIds[index];
+        return _noteIds[index].ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    public XPScriptNotesDocument Get(object? indexValue)
-        => Database.OpenByNoteId(GetNoteId(indexValue));
-
-    public XPScriptNotesDocument? FirstDocument { get { EnsureAlive(); return _noteIds.Length == 0 ? null : Database.OpenByNoteId(_noteIds[0]); } }
+    public string Get(object? indexValue) => GetNoteIdString(indexValue);
+    public string? FirstNoteId { get { EnsureAlive(); return _noteIds.Length == 0 ? null : _noteIds[0].ToString("X8", System.Globalization.CultureInfo.InvariantCulture); } }
 
     public System.Collections.IEnumerator GetEnumerator()
     {
         EnsureAlive();
-        foreach (var id in _noteIds) yield return Database.OpenByNoteId(id);
+        foreach (var id in _noteIds)
+            yield return id.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     protected override void ReleaseOwnedNative() => _noteIds = [];
