@@ -48,8 +48,8 @@ internal static class NotesRuntimeSourceBuilder
             "nif-close-collection");
 
         source = ReplaceRequired(source,
-            "internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum)",
-            "internal IReadOnlyList<uint> FindViewByTextKey(ushort collection, string key, int maximum)",
+            "internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum, bool exactMatch)",
+            "internal IReadOnlyList<uint> FindViewByTextKey(ushort collection, string key, int maximum, bool exactMatch)",
             "find-view-key");
         source = ReplaceRequired(source,
             "private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)",
@@ -64,7 +64,7 @@ internal static class NotesRuntimeSourceBuilder
             "internal delegate ushort NIFFindByNameDelegate(ushort collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
             "nif-find-name");
         source = ReplaceRequired(source,
-            "internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out uint bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
+            "internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
             "internal delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
             "nif-read-entries");
         source = ReplaceRequired(source,
