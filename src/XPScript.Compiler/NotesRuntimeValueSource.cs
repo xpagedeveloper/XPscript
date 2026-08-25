@@ -100,6 +100,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     internal static XPScriptNotesDateTime CreateNow(XPScriptNotesSession session) => new(session, session.Api.CurrentTimeDate());
     internal static XPScriptNotesDateTime FromNative(XPScriptNotesSession session, XPScriptNotesTimeDate value) => new(session, value);
+    internal static object FromNativeObject(XPScriptNotesTimeDate value) => throw new XPScriptRuntimeException(13, "Use NotesDocument.GetDateTime for Notes time/date fields.");
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
