@@ -243,9 +243,19 @@ internal sealed class XPScriptNotesDocument : XPScriptNotesOwnedObject
     }
 
     internal nint NativeHandle { get { EnsureAlive(); return _handle; } }
+    internal XPScriptNotesSession SessionForItem => Session;
     public uint NoteId { get; private set; }
     public string NoteIdHex => NoteId.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
     public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }
+
+    internal bool TryGetItemInfo(string name)
+    {
+        EnsureAlive();
+        return Session.Api.TryGetFirstItemInfo(_handle, name, out _);
+    }
+
+    public XPScriptNotesItem? GetFirstItem(object? nameValue)
+        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);
 
     public bool HasItem(object? nameValue)
     {
