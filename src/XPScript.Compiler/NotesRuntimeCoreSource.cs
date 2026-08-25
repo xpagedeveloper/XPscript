@@ -74,6 +74,9 @@ internal sealed class XPScriptNotesSession : IDisposable
             {
                 Api.Initialize(NotesIni.Length == 0 ? null : NotesIni);
                 Username = Api.GetUserName();
+                CommonUsername = ExtractCommonUsername(Api.CanonicalizeName(Username));
+                NotesVersion = ResolveNotesVersion(RuntimeDirectory, NotesIni);
+                NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);
                 ActiveSession = this;
             }
             catch
@@ -89,7 +92,77 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string NotesIni { get; }
     public string Username { get; }
     public string UserName => Username;
+    public string CommonUsername { get; }
+    public string CommonUserName => CommonUsername;
+    public string NotesVersion { get; }
+    public long NotesBuildVersion { get; }
     public bool IsRecycled => _recycled;
+
+    private static string ExtractCommonUsername(string canonical)
+    {
+        foreach (var part in canonical.Split('/'))
+        {
+            var text = part.Trim();
+            if (text.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)) return text[3..];
+        }
+        return canonical;
+    }
+
+    private static string ResolveNotesVersion(string runtimeDirectory, string notesIni)
+    {
+        var iniPath = notesIni.Length > 0 ? notesIni : Path.Combine(runtimeDirectory, "notes.ini");
+        try
+        {
+            if (File.Exists(iniPath))
+            {
+                foreach (var line in File.ReadLines(iniPath))
+                {
+                    const string key = "FaultRecovery_Build=";
+                    if (!line.StartsWith(key, StringComparison.OrdinalIgnoreCase)) continue;
+                    var value = line[key.Length..].Trim();
+                    if (value.StartsWith("Release ", StringComparison.OrdinalIgnoreCase)) value = value[8..].Trim();
+                    if (value.Length > 0) return value;
+                }
+            }
+        }
+        catch { }
+
+        var path = RuntimeLibraryPath(runtimeDirectory);
+        try
+        {
+            var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(path);
+            var value = info.ProductVersion;
+            if (string.IsNullOrWhiteSpace(value)) value = info.FileVersion;
+            return value?.Trim() ?? "";
+        }
+        catch { return ""; }
+    }
+
+    private static long ResolveNotesBuildVersion(string runtimeDirectory)
+    {
+        var path = RuntimeLibraryPath(runtimeDirectory);
+        try
+        {
+            var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(path);
+            return info.FileBuildPart;
+        }
+        catch { return 0; }
+    }
+
+    private static string RuntimeLibraryPath(string runtimeDirectory)
+    {
+        var candidates = OperatingSystem.IsWindows()
+            ? new[] { "nnotes.dll" }
+            : OperatingSystem.IsMacOS()
+                ? new[] { "libnotes.dylib", "libnotes64.dylib" }
+                : new[] { "libnotes.so", "libnotes64.so" };
+        foreach (var candidate in candidates)
+        {
+            var path = Path.Combine(runtimeDirectory, candidate);
+            if (File.Exists(path)) return path;
+        }
+        return Path.Combine(runtimeDirectory, candidates[0]);
+    }
 
     internal void Register(XPScriptNotesObject value)
     {
