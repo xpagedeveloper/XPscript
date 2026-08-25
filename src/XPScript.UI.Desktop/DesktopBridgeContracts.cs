@@ -61,6 +61,7 @@ public sealed record DesktopFormRequest(
     IReadOnlyList<DesktopFormField> Fields)
 {
     public string Theme { get; init; } = "System";
+    public bool ShowValidationErrors { get; init; } = true;
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
     public string ApplicationTitle { get; init; } = string.Empty;
