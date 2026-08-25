@@ -54,6 +54,7 @@ internal sealed class XPScriptUIForm
                 @"private\s+int\s+_gridColumns\s*=\s*1\s*;",
                 """
     private int _gridColumns = 1;
+    private string _theme = "System";
     private readonly List<XPScriptUIButton> _buttons = [];
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
     private bool _refreshAllRequested;
@@ -69,6 +70,7 @@ internal sealed class XPScriptUIForm
                 @"public\s+int\s+GridColumns\s*=>\s*_gridColumns\s*;",
                 """
     public int GridColumns => _gridColumns;
+    public string Theme => _theme;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     public object GetData() => _data;
@@ -81,6 +83,15 @@ internal sealed class XPScriptUIForm
             generated = ReplaceRequiredRegex(generated,
                 @"public\s+object\?\s+GetFieldValue\s*\(\s*object\?\s+name\s*\)",
                 """
+    public void SetTheme(object? theme)
+    {
+        var value = XPScriptRuntime.CStr(theme).Trim();
+        if (value.Equals("System", StringComparison.OrdinalIgnoreCase)) _theme = "System";
+        else if (value.Equals("Light", StringComparison.OrdinalIgnoreCase)) _theme = "Light";
+        else if (value.Equals("Dark", StringComparison.OrdinalIgnoreCase)) _theme = "Dark";
+        else throw new XPScriptRuntimeException(5, "UIForm theme must be System, Light, or Dark.");
+    }
+
     public void SetFieldLabel(object? name, object? label)
     {
         FindField(name).Label = XPScriptRuntime.CStr(label);
