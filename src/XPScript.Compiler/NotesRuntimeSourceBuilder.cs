@@ -72,8 +72,6 @@ internal static class NotesRuntimeSourceBuilder
             "internal delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
             "ft-search-collection");
 
-        // NotesDocument exposes item creation/replacement while item wrappers remain
-        // lazy and resolve fresh BLOCKIDs for every operation.
         source = ReplaceRequired(source,
             "internal bool TryGetItemInfo(string name)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out _);\n    }",
             "internal bool TryGetItemInfo(string name, out XPScriptNotesItemInfo info)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out info);\n    }",
@@ -84,22 +82,17 @@ internal static class NotesRuntimeSourceBuilder
             "public XPScriptNotesItem? GetFirstItem(object? nameValue)\n        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);\n\n    public XPScriptNotesItem CreateNotesItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        Session.Api.SetItemText(_handle, name, \"\");\n        return XPScriptNotesItemApi.Create(Session, this, Session.Api.GetFirstItemInfo(_handle, name));\n    }\n\n    public XPScriptNotesItem ReplaceItemValue(object? nameValue, object? value)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Notes item name cannot be empty.\");\n        if (!Session.Api.HasItem(_handle, name)) Session.Api.SetItemText(_handle, name, \"\");\n        Session.Api.SetItemValues(_handle, name, value);\n        return XPScriptNotesItemApi.Create(Session, this, Session.Api.GetFirstItemInfo(_handle, name));\n    }\n\n    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureAlive();\n        return Session.Api.SaveAttachment(_handle, XPScriptRuntime.CStr(attachmentNameValue), XPScriptRuntime.CStr(pathValue));\n    }\n\n    public bool HasItem(object? nameValue)",
             "document-item-surface");
 
-        // Prefer the Notes runtime's own build number and retain file-version
-        // metadata only as a fallback.
         source = ReplaceRequired(source,
             "NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);",
             "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
             "session-build-version");
 
-        // HCL's 64-bit C API keeps Domino handles 32-bit. Only actual addresses
-        // (native library handles, char*, callback/context pointers) are nint.
         source = NormalizeDominoHandles(source);
         return source;
     }
 
     private static string NormalizeDominoHandles(string source)
     {
-        // Public/runtime-owned database and note handles.
         source = source.Replace(
             "private nint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",
             "private uint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, uint handle, string server, string filePath)",
@@ -117,26 +110,25 @@ internal static class NotesRuntimeSourceBuilder
             "internal uint NativeHandle { get { EnsureAlive(); return _handle; } }\n    internal XPScriptNotesSession SessionForItem",
             StringComparison.Ordinal);
 
-        // BLOCKID.pool is DHANDLE; BLOCKID.block is WORD.
         source = source.Replace("public nint Pool;\n    public ushort Block;", "public uint Pool;\n    public ushort Block;", StringComparison.Ordinal);
 
-        // Managed helper signatures whose named values are Domino handles.
         source = Regex.Replace(source, @"\binternal nint OpenDatabase\(", "internal uint OpenDatabase(");
         source = Regex.Replace(source, @"\binternal nint (OpenNote|TryOpenNote|OpenNoteByUnid|TryOpenNoteByUnid)\(", "internal uint $1(");
         source = Regex.Replace(source, @"\bnint\s+(db|note|sourceNote|destinationNote|documentContext)\b", "uint $1");
         source = Regex.Replace(source, @"\bnint\s+(formulaHandle|results|outputHandle)\b", "uint $1");
         source = Regex.Replace(source, @"\bref nint searchHandle\b", "ref uint searchHandle");
 
-        // C API delegates: DBHANDLE/NOTEHANDLE/DHANDLE are 32-bit; pointers stay nint.
         source = source.Replace("out nint db", "out uint db", StringComparison.Ordinal);
         source = source.Replace("out nint note", "out uint note", StringComparison.Ordinal);
         source = source.Replace("out nint formula", "out uint formula", StringComparison.Ordinal);
         source = source.Replace("out nint buffer", "out uint buffer", StringComparison.Ordinal);
         source = source.Replace("out nint outputHandle", "out uint outputHandle", StringComparison.Ordinal);
         source = source.Replace("out nint results", "out uint results", StringComparison.Ordinal);
+        source = source.Replace("out nint search", "out uint search", StringComparison.Ordinal);
         source = source.Replace("ref nint search", "ref uint search", StringComparison.Ordinal);
         source = source.Replace("nint idTable", "uint idTable", StringComparison.Ordinal);
         source = source.Replace("nint selection", "uint selection", StringComparison.Ordinal);
+        source = source.Replace("nint unreadList", "uint unreadList", StringComparison.Ordinal);
 
         source = source.Replace("OSLockObjectDelegate(nint handle)", "OSLockObjectDelegate(uint handle)", StringComparison.Ordinal);
         source = source.Replace("OSUnlockObjectDelegate(nint handle)", "OSUnlockObjectDelegate(uint handle)", StringComparison.Ordinal);
@@ -146,7 +138,6 @@ internal static class NotesRuntimeSourceBuilder
         source = source.Replace("AgentSetDocumentContextDelegate(nint context, nint note)", "AgentSetDocumentContextDelegate(nint context, uint note)", StringComparison.Ordinal);
         source = source.Replace("AgentRunDelegate(nint agent, nint context, nint selection", "AgentRunDelegate(nint agent, nint context, uint selection", StringComparison.Ordinal);
         source = source.Replace("AgentQueryStdoutBufferDelegate(nint context, out nint outputHandle", "AgentQueryStdoutBufferDelegate(nint context, out uint outputHandle", StringComparison.Ordinal);
-
         source = source.Replace("NIFOpenCollectionDelegate(nint viewDb, nint dataDb", "NIFOpenCollectionDelegate(uint viewDb, uint dataDb", StringComparison.Ordinal);
 
         return source;
