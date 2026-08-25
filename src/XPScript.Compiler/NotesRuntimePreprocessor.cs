@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesName|NotesDateTime|NotesAgentResult";
+    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesName|NotesDateTime|NotesAgentResult";
 
     public string Transform(string source)
     {
@@ -51,9 +51,9 @@ internal sealed class NotesRuntimePreprocessor
                 "XPScriptNotes.CreateSession($1)",
                 RegexOptions.IgnoreCase);
 
-            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
+            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
             if (unsupportedNew.Success)
-                throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, or NotesView.");
+                throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && notesVariables.Contains(set.Groups[1].Value))
@@ -89,7 +89,7 @@ internal sealed class NotesRuntimePreprocessor
     {
         var args = rawArguments.Trim();
         if (!type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, or NotesView.");
+            throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
         if (string.IsNullOrWhiteSpace(args))
             throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
         return $"XPScriptNotes.CreateSession({args})";
