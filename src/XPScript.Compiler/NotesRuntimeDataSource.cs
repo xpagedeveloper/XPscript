@@ -139,16 +139,24 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     public string Name { get; }
 
     public XPScriptNotesDocument? GetFirstDocumentByKey(object? keyValue)
+        => GetFirstDocumentByKey(keyValue, true);
+
+    public XPScriptNotesDocument? GetFirstDocumentByKey(object? keyValue, object? exactMatchValue)
     {
         EnsureAlive();
-        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1);
+        var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, exactMatch);
         return ids.Count == 0 ? null : Database.OpenByNoteId(ids[0]);
     }
 
     public XPScriptNotesDocumentCollection GetAllDocumentsByKey(object? keyValue)
+        => GetAllDocumentsByKey(keyValue, true);
+
+    public XPScriptNotesDocumentCollection GetAllDocumentsByKey(object? keyValue, object? exactMatchValue)
     {
         EnsureAlive();
-        return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0));
+        var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, exactMatch));
     }
 
     public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);
@@ -182,13 +190,16 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     public int Count { get { EnsureAlive(); return _noteIds.Length; } }
 
-    public XPScriptNotesDocument Get(object? indexValue)
+    public uint GetNoteId(object? indexValue)
     {
         EnsureAlive();
         var index = XPScriptRuntime.CInt(indexValue);
         if (index < 0 || index >= _noteIds.Length) throw new XPScriptRuntimeException(9, "NotesDocumentCollection index is out of range.");
-        return Database.OpenByNoteId(_noteIds[index]);
+        return _noteIds[index];
     }
+
+    public XPScriptNotesDocument Get(object? indexValue)
+        => Database.OpenByNoteId(GetNoteId(indexValue));
 
     public XPScriptNotesDocument? FirstDocument { get { EnsureAlive(); return _noteIds.Length == 0 ? null : Database.OpenByNoteId(_noteIds[0]); } }
 
