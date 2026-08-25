@@ -8,5 +8,6 @@ internal static class NotesNativeApiSource
         NotesNativeApiTimeSource.Code + "\n\n" +
         NotesNativeApiDocumentSource.Code + "\n\n" +
         NotesNativeApiItemSource.Code + "\n\n" +
+        NotesNativeApiAttachmentSource.Code + "\n\n" +
         NotesNativeApiSearchSource.Code;
 }
