@@ -113,4 +113,4 @@ This separation is deliberate so additional C API modules such as rich text, MIM
 
 ## V1 manual validation
 
-The repository includes [`samples/notes-c-api-surface.xps`](../samples/notes-c-api-surface.xps). Its `Main` routine does not initialize Notes, so normal CI can compile the surface without an HCL installation. The helper routine exercises the generated API and is intended to be adapted for manual testing on a system with the HCL Notes/Domino runtime installed.
+The repository includes [notes-c-api-surface.xps](../samples/notes-c-api-surface.xps). Its `Main` routine does not initialize Notes, so normal CI can compile the surface without an HCL installation. The helper routine exercises the generated API and is intended to be adapted for manual testing on a system with the HCL Notes/Domino runtime installed.
