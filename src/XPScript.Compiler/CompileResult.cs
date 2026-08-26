@@ -33,8 +33,30 @@ public sealed class CompileResult
     public static CompileResult Error(IEnumerable<CompileDiagnostic> errors) => new()
     {
         Result = "error",
-        Errors = errors.ToList()
+        Errors = NormalizeDiagnostics(errors)
     };
+
+    private static List<CompileDiagnostic> NormalizeDiagnostics(IEnumerable<CompileDiagnostic> errors)
+    {
+        var result = errors.ToList();
+        foreach (var diagnostic in result)
+        {
+            var generatedLocation = string.IsNullOrWhiteSpace(diagnostic.File) &&
+                                    diagnostic.Line > 0 &&
+                                    string.IsNullOrWhiteSpace(diagnostic.Code);
+            if (!generatedLocation) continue;
+
+            if (CompilerDiagnosticMode.Debug)
+            {
+                diagnostic.File = "Program.cs";
+                continue;
+            }
+
+            diagnostic.Line = 0;
+            diagnostic.Position = 0;
+        }
+        return result;
+    }
 }
 
 public sealed class CompileDiagnostic
