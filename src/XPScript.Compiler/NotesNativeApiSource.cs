@@ -8,6 +8,7 @@ internal static class NotesNativeApiSource
         NotesNativeApiVersionSource.Code + "\n\n" +
         NotesNativeApiTimeSource.Code + "\n\n" +
         NotesNativeApiDatabaseSource.Code + "\n\n" +
+        NotesNativeApiReplicaSource.Code + "\n\n" +
         NotesNativeApiDocumentSource.Code + "\n\n" +
         NotesNativeApiItemSource.Code + "\n\n" +
         NotesNativeApiAttachmentSource.Code + "\n\n" +
