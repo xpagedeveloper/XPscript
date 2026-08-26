@@ -10,6 +10,19 @@ internal static class XPScriptNotes
 
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory, object? notesIni) =>
         new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni));
+
+    public static void RecycleValue(object? value)
+    {
+        if (value is null) return;
+        if (value is XPScriptNotesObject notesObject) { notesObject.Recycle(); return; }
+        if (value is XPScriptNotesSession session) session.Recycle();
+    }
+
+    public static void RecycleForReplacement(object? current, object? replacement)
+    {
+        if (current is null || ReferenceEquals(current, replacement)) return;
+        RecycleValue(current);
+    }
 }
 
 internal abstract class XPScriptNotesObject : IDisposable
@@ -50,6 +63,11 @@ internal sealed class XPScriptNotesSession : IDisposable
 {
     private static readonly object SessionGate = new();
     private static XPScriptNotesSession? ActiveSession;
+
+    static XPScriptNotesSession()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => RecycleActiveSessionAtProcessExit();
+    }
 
     private readonly object _childrenGate = new();
     private readonly List<XPScriptNotesObject> _children = [];
@@ -97,6 +115,43 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string NotesVersion { get; }
     public long NotesBuildVersion { get; }
     public bool IsRecycled => _recycled;
+
+    private static void RecycleActiveSessionAtProcessExit()
+    {
+        XPScriptNotesSession? session;
+        lock (SessionGate) session = ActiveSession;
+        if (session is null || session._recycled) return;
+
+        try
+        {
+            var unrecycled = session.GetUnrecycledObjectDescriptions();
+            if (unrecycled.Count > 0)
+                Console.Error.WriteLine("Warning: unrecycled Notes objects at process exit: " + string.Join(", ", unrecycled) + ". Recycling them automatically.");
+            else
+                Console.Error.WriteLine("Warning: NotesSession was not recycled before process exit. Recycling it automatically.");
+        }
+        catch { }
+
+        try { session.Recycle(); }
+        catch (Exception ex)
+        {
+            try { Console.Error.WriteLine("Warning: failed to recycle NotesSession during process exit: " + ex.Message); }
+            catch { }
+        }
+    }
+
+    private List<string> GetUnrecycledObjectDescriptions()
+    {
+        lock (_childrenGate)
+        {
+            return _children
+                .Where(value => !value.IsRecycled)
+                .GroupBy(value => value.GetType().Name.Replace("XPScript", "", StringComparison.Ordinal))
+                .OrderBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => group.Key + " x" + group.Count().ToString(System.Globalization.CultureInfo.InvariantCulture))
+                .ToList();
+        }
+    }
 
     private static string ExtractCommonUsername(string canonical)
     {
