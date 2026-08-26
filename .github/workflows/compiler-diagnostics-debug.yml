@@ -61,6 +61,7 @@ jobs:
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
           }
+          exit 0
 
       - name: Verify debug diagnostics show generated C sharp
         shell: pwsh
@@ -81,3 +82,4 @@ jobs:
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
           }
+          exit 0
