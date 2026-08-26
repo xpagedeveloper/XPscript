@@ -9,7 +9,7 @@ internal static class NotesDocumentCollectionPostProcessor
         source = ReplaceRequired(
             source,
             "    protected XPScriptNotesDatabase Database { get; }\n\n    protected sealed override void ReleaseNative()",
-            "    protected XPScriptNotesDatabase Database { get; }\n    internal XPScriptNotesDatabase OwningDatabase => Database;\n\n    protected sealed override void ReleaseNative()",
+            "    protected XPScriptNotesDatabase Database { get; }\n    internal XPScriptNotesDatabase OwningDatabase => Database;\n    internal void EnsureAliveForCollectionOperation() => EnsureAlive();\n\n    protected sealed override void ReleaseNative()",
             "owned-object-parent-database");
 
         source = ReplaceRequired(
@@ -91,6 +91,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
     {
         EnsureAlive();
         var document = RequireDocument(documentValue, "GetNextDocument");
+        document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
 
         var index = document.NoteId == _lastFetchedNoteId && _lastFetchedIndex >= 0 &&
@@ -113,6 +114,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         uint noteId;
         if (documentOrNoteId is XPScriptNotesDocument document)
         {
+            document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
             noteId = document.NoteId;
         }
@@ -130,6 +132,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         EnsureAlive();
         if (documentOrCollection is XPScriptNotesDocument document)
         {
+            document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
             if (Array.IndexOf(_noteIds, document.NoteId) < 0)
                 _noteIds = [.. _noteIds, document.NoteId];
@@ -159,6 +162,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         EnsureAlive();
         if (documentOrCollection is XPScriptNotesDocument document)
         {
+            document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
             RemoveIds([document.NoteId]);
             return;
@@ -179,8 +183,6 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     private XPScriptNotesDocument RequireDocument(object? value, string member)
         => value as XPScriptNotesDocument ?? throw new XPScriptRuntimeException(13, member + " requires a NotesDocument.");
-
-    private void EnsureAliveForCollectionOperation() => EnsureAlive();
 
     private void EnsureSameReplica(XPScriptNotesDatabase database)
     {
