@@ -15,6 +15,8 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort NoteClassView = 0x0008;
     private const ushort NoteMemberId = 1;
     private const ushort NoteMemberOid = 2;
+    private const ushort ErrMask = 0x3FFF;
+    private const ushort ErrItemNotFound = 0x0222;
 
     internal nint OpenView(nint db, string name)
     {
@@ -117,7 +119,18 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         EnsureInitialized();
         using var itemName = ToLmbcs(name);
-        return Resolve<NSFItemIsPresentDelegate>("NSFItemIsPresent")(note, itemName.Pointer, checked((ushort)Math.Min(itemName.Length, ushort.MaxValue))) != 0;
+        var nameLength = checked((ushort)Math.Min(itemName.Length, ushort.MaxValue));
+
+        if (TryResolve<NSFItemIsPresentDelegate>("NSFItemIsPresent", out var isPresent) && isPresent is not null)
+            return isPresent(note, itemName.Pointer, nameLength) != 0;
+
+        var status = Resolve<NSFItemInfoDelegate>("NSFItemInfo")(
+            note, itemName.Pointer, nameLength,
+            out _, out _, out _, out _);
+        if (status == 0) return true;
+        if ((status & ErrMask) == ErrItemNotFound) return false;
+        Check(status, "NSFItemInfo");
+        return false;
     }
 
     internal string GetItemText(nint note, string name)
