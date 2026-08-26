@@ -24,10 +24,10 @@ internal static class NotesThreadLifecyclePostProcessor
 
         public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
+            var isNativeApiMethod = node.Parent is ClassDeclarationSyntax parent &&
+                parent.Identifier.ValueText == "XPScriptNotesNativeApi";
             var visited = (MethodDeclarationSyntax?)base.VisitMethodDeclaration(node) ?? node;
-            if (visited.Body is null) return visited;
-            if (visited.Parent is not ClassDeclarationSyntax parent || parent.Identifier.ValueText != "XPScriptNotesNativeApi")
-                return visited;
+            if (!isNativeApiMethod || visited.Body is null) return visited;
 
             var name = visited.Identifier.ValueText;
             if (name is "Initialize" or "Terminate" or "Dispose" or "EnterNotesThread" or "ExitNotesThread" or "MarkProcessInitializationThread" or "ResolveRaw")
