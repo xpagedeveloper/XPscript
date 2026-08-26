@@ -35,7 +35,7 @@ internal sealed partial class XPScriptNotesNativeApi
                 idFileText.Pointer,
                 passwordText.Pointer,
                 userName,
-                userNameCapacity - 1,
+                checked((ushort)(userNameCapacity - 1)),
                 KfmSwitchIdDontSetEnvVar,
                 0);
             Check(status, "SECKFMSwitchToIDFile");
@@ -59,7 +59,7 @@ internal sealed partial class XPScriptNotesNativeApi
             var found = Resolve<OSGetEnvironmentStringDelegate>("OSGetEnvironmentString")(
                 variableName.Pointer,
                 buffer,
-                capacity - 1);
+                checked((ushort)(capacity - 1)));
             return found == 0 ? "" : FromLmbcsZeroTerminated(buffer, capacity - 1);
         }
         finally
@@ -76,14 +76,14 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate int OSGetEnvironmentStringDelegate(nint variableName, nint returnValueBuffer, int bufferLength);
+    private delegate int OSGetEnvironmentStringDelegate(nint variableName, nint returnValueBuffer, ushort bufferLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort SECKFMSwitchToIDFileDelegate(
         nint idFileName,
         nint password,
         nint userName,
-        int maxUserNameLength,
+        ushort maxUserNameLength,
         uint flags,
         nint reserved);
 }
