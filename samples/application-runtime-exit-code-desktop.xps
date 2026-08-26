@@ -1,0 +1,10 @@
+Option Declare
+
+Sub DesktopMarker()
+    MsgBox "unused"
+End Sub
+
+Sub Main()
+    Application.ExitCode = 9
+    Print "EXITCODE=" & CStr(Application.ExitCode)
+End Sub

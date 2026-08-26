@@ -18,6 +18,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, true);
         source = RewriteWritableApplicationProperty(source, "Width", WidthStateKey, false);
         source = RewriteWritableApplicationProperty(source, "Height", HeightStateKey, false);
+        source = RewriteExitCode(source);
 
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
@@ -47,6 +48,21 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.Path\b", "XPScriptApplicationRuntime.Path", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.FileName\b", "XPScriptApplicationRuntime.FileName", RegexOptions.IgnoreCase);
         return source;
+    }
+
+    private static string RewriteExitCode(string source)
+    {
+        source = Regex.Replace(
+            source,
+            @"(?im)^(?<indent>\s*)Application\.ExitCode\s*=\s*(?<value>.+?)\s*$",
+            m => m.Groups["indent"].Value + "System.Environment.ExitCode = XPScriptRuntime.CInt(" + m.Groups["value"].Value + ")",
+            RegexOptions.CultureInvariant);
+
+        return Regex.Replace(
+            source,
+            @"\bApplication\.ExitCode\b",
+            "System.Environment.ExitCode",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static string RewriteWritableApplicationProperty(string source, string propertyName, string stateKey, bool emitBuildIconMarker)

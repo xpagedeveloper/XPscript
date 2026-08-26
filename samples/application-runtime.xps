@@ -10,6 +10,7 @@ Sub Main()
     Print "EXEDIR=" & Application.ExecutableDirectory
     Print "TEMPPATH=" & Application.TempPath
     Print "TEMPFOLDER=" & Application.TempFolder
+    Print "EXITCODE=" & CStr(Application.ExitCode)
     Print "ARGCOUNT=" & CStr(Application.ArgCount)
     Print "COMMANDLINE=" & Application.CommandLine
 
