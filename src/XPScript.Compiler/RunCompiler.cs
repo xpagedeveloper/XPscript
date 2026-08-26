@@ -10,6 +10,7 @@ internal static class RunCompiler
         string sourcePath,
         string outputDirectory,
         string runtimeIdentifier,
+        bool debug = false,
         CancellationToken cancellationToken = default)
     {
         string source = "";
@@ -21,23 +22,19 @@ internal static class RunCompiler
                 return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]);
 
             source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-            var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
+            var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, debug, cancellationToken).ConfigureAwait(false);
             return CompileResult.Ok(runnable);
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(CompilerDiagnosticParser.Parse(
-                ex.Message,
-                sourcePath,
-                source,
-                CompilerDiagnosticMode.Debug));
+            return CompileResult.Error(CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug));
         }
         catch (Exception ex)
         {
             return CompileResult.Error([new CompileDiagnostic
             {
                 File = Path.GetFileName(sourcePath),
-                Description = "Run compilation failed: " + ex.Message
+                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message
             }]);
         }
     }
@@ -46,6 +43,7 @@ internal static class RunCompiler
         string sourcePath,
         string outputDirectory,
         string runtimeIdentifier,
+        bool debug,
         CancellationToken cancellationToken)
     {
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
@@ -69,7 +67,7 @@ internal static class RunCompiler
 
         if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
-            var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, cancellationToken).ConfigureAwait(false);
+            var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
             return assembly;
         }
