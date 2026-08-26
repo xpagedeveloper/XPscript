@@ -27,15 +27,30 @@ try
 internal sealed class LSArray
 {
     private readonly Dictionary<int, object?> _values = new();
-    public LSArray(string typeName, bool dynamic) { }
-    public LSArray(string typeName, bool dynamic, int[] lower, int[] upper) { }
+    private readonly int _lower;
+    private readonly int _upper;
+    public LSArray(string typeName, bool dynamic) { ElementType = typeName; IsAllocated = false; }
+    public LSArray(string typeName, bool dynamic, int[] lower, int[] upper)
+    {
+        ElementType = typeName;
+        IsAllocated = true;
+        _lower = lower.Length == 0 ? 0 : lower[0];
+        _upper = upper.Length == 0 ? -1 : upper[0];
+    }
+    public string ElementType { get; }
+    public bool IsAllocated { get; }
+    public int Rank => IsAllocated ? 1 : 0;
+    public int LBound(int dimension = 1) => _lower;
+    public int UBound(int dimension = 1) => _upper;
     public void Set(object? value, int index) => _values[index] = value;
     public object? Get(int index) => _values.TryGetValue(index, out var value) ? value : null;
 }
 
 internal static class XPScriptRuntime
 {
+    public static byte CByte(object? value) => Convert.ToByte(value);
     public static int CInt(object? value) => Convert.ToInt32(value);
+    public static long CLng(object? value) => Convert.ToInt64(value);
     public static string CStr(object? value) => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 }
 
