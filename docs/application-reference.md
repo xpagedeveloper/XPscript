@@ -18,6 +18,7 @@ The complete runnable reference is [samples/application-object.xps](../samples/a
 | `Application.TempFolder` | `Application.TempFolder` | none | Compatibility alias for `Application.TempPath`. | [application-object.xps](../samples/application-object.xps) |
 | `Application.Path` | `Application.Path` | none | Compatibility alias for `Application.ExecutablePath`. | [application-object.xps](../samples/application-object.xps) |
 | `Application.FileName` | `Application.FileName` | none | Compatibility alias for `Application.ExecutableFileName`. | [application-object.xps](../samples/application-object.xps) |
+| `Application.ExitCode` | `Application.ExitCode = value` | `value`: integer process exit code. | Gets or sets the process exit code for compiled console and desktop applications. The default is `0`; the final value is returned to the operating system when the program exits. | [application-runtime-exit-code.xps](../samples/application-runtime-exit-code.xps) |
 
 ## Application UI metadata
 
@@ -55,4 +56,4 @@ All four state proxies expose the same member set below.
 
 ## Read-only runtime properties
 
-`Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.Title`, `Icon`, `Width` and `Height` are intentionally writable metadata properties.
+`Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Title`, `Icon`, `Width` and `Height` are intentionally writable metadata properties.
