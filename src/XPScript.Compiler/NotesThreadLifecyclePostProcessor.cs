@@ -1,43 +1,51 @@
-using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace XPScript.Compiler;
 
 internal static class NotesThreadLifecyclePostProcessor
 {
-    private static readonly Regex EnsureInitializedCall = new(
-        @"(?m)^(?<indent>[ \t]*)EnsureInitialized\(\);",
-        RegexOptions.CultureInvariant);
-
     public static string Apply(string source)
     {
-        var scopeIndex = 0;
-        source = EnsureInitializedCall.Replace(source, match =>
-            match.Groups["indent"].Value +
-            "using var __notesThreadScope" + scopeIndex++ + " = EnterNotesThread();");
-
         source = ReplaceRequired(source,
             "        _initialized = true;",
             "        _initialized = true;\n        MarkProcessInitializationThread();",
             "process-initialization-thread");
 
-        // Cleanup methods are also callable directly from Recycle() and therefore need
-        // their own thread scopes even though they historically did not call EnsureInitialized().
-        source = ReplaceRequired(source,
-            "    internal void CloseDatabase(nint db)\n    {\n        if (db != 0) Check(Resolve<NSFDbCloseDelegate>(\"NSFDbClose\")(db), \"NSFDbClose\");\n    }",
-            "    internal void CloseDatabase(nint db)\n    {\n        using var __notesThreadScopeCloseDatabase = EnterNotesThread();\n        if (db != 0) Check(Resolve<NSFDbCloseDelegate>(\"NSFDbClose\")(db), \"NSFDbClose\");\n    }",
-            "close-database-thread-scope");
+        var root = CSharpSyntaxTree.ParseText(source).GetRoot();
+        var rewritten = new ThreadScopeRewriter().Visit(root);
+        return rewritten?.ToFullString() ?? source;
+    }
 
-        source = ReplaceRequired(source,
-            "    internal void CloseView(nint collection)\n    {\n        if (collection != 0) Check(Resolve<NIFCloseCollectionDelegate>(\"NIFCloseCollection\")(collection), \"NIFCloseCollection\");\n    }",
-            "    internal void CloseView(nint collection)\n    {\n        using var __notesThreadScopeCloseView = EnterNotesThread();\n        if (collection != 0) Check(Resolve<NIFCloseCollectionDelegate>(\"NIFCloseCollection\")(collection), \"NIFCloseCollection\");\n    }",
-            "close-view-thread-scope");
+    private sealed class ThreadScopeRewriter : CSharpSyntaxRewriter
+    {
+        private int _scopeIndex;
 
-        source = ReplaceRequired(source,
-            "    internal void CloseNote(nint note)\n    {\n        if (note != 0) Check(Resolve<NSFNoteCloseDelegate>(\"NSFNoteClose\")(note), \"NSFNoteClose\");\n    }",
-            "    internal void CloseNote(nint note)\n    {\n        using var __notesThreadScopeCloseNote = EnterNotesThread();\n        if (note != 0) Check(Resolve<NSFNoteCloseDelegate>(\"NSFNoteClose\")(note), \"NSFNoteClose\");\n    }",
-            "close-note-thread-scope");
+        public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
+        {
+            var visited = (MethodDeclarationSyntax?)base.VisitMethodDeclaration(node) ?? node;
+            if (visited.Body is null) return visited;
+            if (visited.Parent is not ClassDeclarationSyntax parent || parent.Identifier.ValueText != "XPScriptNotesNativeApi")
+                return visited;
 
-        return source;
+            var name = visited.Identifier.ValueText;
+            if (name is "Initialize" or "Terminate" or "Dispose" or "EnterNotesThread" or "ExitNotesThread" or "MarkProcessInitializationThread" or "ResolveRaw")
+                return visited;
+
+            var bodyText = visited.Body.ToString();
+            var performsNativeWork =
+                bodyText.Contains("EnsureInitialized()", StringComparison.Ordinal) ||
+                bodyText.Contains("Resolve<", StringComparison.Ordinal) ||
+                bodyText.Contains("TryResolve<", StringComparison.Ordinal);
+
+            if (!performsNativeWork || bodyText.Contains("EnterNotesThread()", StringComparison.Ordinal))
+                return visited;
+
+            var statement = SyntaxFactory.ParseStatement(
+                "using var __notesThreadScope" + _scopeIndex++ + " = EnterNotesThread();\n");
+            return visited.WithBody(visited.Body.WithStatements(visited.Body.Statements.Insert(0, statement)));
+        }
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string name)
