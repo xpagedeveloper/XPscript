@@ -98,21 +98,13 @@ internal sealed class NotesRuntimePreprocessor
             foreach (var collectionName in notesDocumentCollections)
             {
                 var escaped = Regex.Escape(collectionName);
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\bUBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
-                    $"({collectionName}.Count - 1)",
-                    RegexOptions.IgnoreCase);
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\bLBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
-                    "0",
-                    RegexOptions.IgnoreCase);
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\b{escaped}\s*\(\s*([^()]*)\s*\)",
-                    $"{collectionName}.GetNoteIdString($1)",
-                    RegexOptions.IgnoreCase);
+                if (Regex.IsMatch(rewritten, $@"\b(?:LBound|UBound)\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)", RegexOptions.IgnoreCase))
+                    throw new CompilerException("LBound/UBound are no longer supported for NotesDocumentCollection. Use Count and document navigation methods.");
+                if (Regex.IsMatch(rewritten, $@"\b{escaped}\s*\(", RegexOptions.IgnoreCase))
+                    throw new CompilerException("NotesDocumentCollection index syntax is no longer supported. Use GetDocument, GetFirstDocument, or GetNextDocument.");
+                if (Regex.IsMatch(rewritten, $@"\b{escaped}\.Get\s*\(", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(rewritten, $@"\b{escaped}\.GetNoteIdString\s*\(", RegexOptions.IgnoreCase))
+                    throw new CompilerException("NotesDocumentCollection.Get/GetNoteIdString are no longer supported. Use GetDocument instead.");
             }
 
             output.Add(indent + rewritten);

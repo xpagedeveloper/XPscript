@@ -7,6 +7,9 @@ Sub CompileNotesSurface()
     Dim session As New NotesSession("C:\Program Files\HCL\Notes")
     Dim db As NotesDatabase
     Dim dbCopy As NotesDatabase
+    Dim docs As NotesDocumentCollection
+    Dim otherDocs As NotesDocumentCollection
+    Dim doc As NotesDocument
     Dim name As NotesName
     Dim whenValue As NotesDateTime
 
@@ -25,6 +28,17 @@ Sub CompileNotesSurface()
 
     Set db = session.OpenDatabase("", "apps\customers.nsf")
     Print db.ReplicaID
+
+    Set docs = db.CreateDocumentCollection()
+    Set otherDocs = db.CreateDocumentCollection()
+    Print docs.Count
+    Set doc = docs.GetFirstDocument()
+    Set doc = docs.GetDocument("00000001")
+    Set doc = docs.GetNextDocument(doc)
+    Call docs.AddDocument(doc)
+    Call docs.AddDocument(otherDocs)
+    Call docs.RemoveDocument(doc)
+    Call docs.RemoveDocument(otherDocs)
 
     Set dbCopy = db.CreateCopy("", "apps\customers-copy.nsf")
     Print dbCopy.ReplicaID
