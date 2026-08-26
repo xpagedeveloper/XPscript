@@ -120,10 +120,6 @@ internal sealed partial class XPScriptNotesNativeApi
         EnsureInitialized();
         using var itemName = ToLmbcs(name);
         var nameLength = checked((ushort)Math.Min(itemName.Length, ushort.MaxValue));
-
-        if (TryResolve<NSFItemIsPresentDelegate>("NSFItemIsPresent", out var isPresent) && isPresent is not null)
-            return isPresent(note, itemName.Pointer, nameLength) != 0;
-
         var status = Resolve<NSFItemInfoDelegate>("NSFItemInfo")(
             note, itemName.Pointer, nameLength,
             out _, out _, out _, out _);
