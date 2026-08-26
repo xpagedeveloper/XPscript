@@ -54,7 +54,7 @@ Missing / future:
 
 ## NotesView
 
-Implemented: `Name`, `GetFirstDocumentByKey`, `GetAllDocumentsByKey`, `FTSearch`, `Refresh`, `Recycle`.
+Implemented: `Name`, `GetDocumentByKey`, `GetAllDocumentsByKey`, `FTSearch`, `Refresh`, `Recycle`.
 
 Missing / future:
 
