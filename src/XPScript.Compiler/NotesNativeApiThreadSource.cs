@@ -5,14 +5,14 @@ internal static class NotesNativeApiThreadSource
     public const string Code = """
 internal sealed partial class XPScriptNotesNativeApi
 {
-    [ThreadStatic]
+    [System.ThreadStatic]
     private static int NotesThreadScopeDepth;
 
     private int _processInitializationManagedThreadId;
 
     internal void MarkProcessInitializationThread()
     {
-        _processInitializationManagedThreadId = Environment.CurrentManagedThreadId;
+        _processInitializationManagedThreadId = System.Environment.CurrentManagedThreadId;
     }
 
     internal NotesThreadScope EnterNotesThread()
@@ -22,7 +22,7 @@ internal sealed partial class XPScriptNotesNativeApi
             throw new XPScriptRuntimeException(91, "Notes C API runtime is not initialized.");
 
         // NotesInitExtended initializes the thread that performed process initialization.
-        if (Environment.CurrentManagedThreadId == _processInitializationManagedThreadId)
+        if (System.Environment.CurrentManagedThreadId == _processInitializationManagedThreadId)
             return default;
 
         if (NotesThreadScopeDepth == 0)
@@ -46,7 +46,7 @@ internal sealed partial class XPScriptNotesNativeApi
             ResolveRaw<NotesTermThreadDelegate>("NotesTermThread")();
     }
 
-    private T ResolveRaw<T>(string name) where T : Delegate
+    private T ResolveRaw<T>(string name) where T : System.Delegate
     {
         EnsureNotDisposed();
         try
@@ -54,13 +54,13 @@ internal sealed partial class XPScriptNotesNativeApi
             return System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<T>(
                 System.Runtime.InteropServices.NativeLibrary.GetExport(_library, name));
         }
-        catch (EntryPointNotFoundException)
+        catch (System.EntryPointNotFoundException)
         {
             throw new XPScriptRuntimeException(453, "Notes/Domino C API entry point is unavailable: " + name);
         }
     }
 
-    internal readonly struct NotesThreadScope : IDisposable
+    internal readonly struct NotesThreadScope : System.IDisposable
     {
         private readonly XPScriptNotesNativeApi? _owner;
         private readonly bool _ownsInitialization;
