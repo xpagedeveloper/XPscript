@@ -6,13 +6,28 @@ internal sealed class NotesRuntimePreprocessor
 {
     private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult";
 
+    private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "RunAgent"],
+        ["NotesView"] = ["GetFirstDocumentByKey", "GetFirstDocument", "GetNextDocument"],
+        ["NotesDocumentCollection"] = ["GetFirstDocument", "GetNextDocument", "GetDocument"],
+        ["NotesDocument"] = ["GetFirstItem"]
+    };
+
+    private static readonly Dictionary<string, string[]> NothingReturningProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["NotesItem"] = ["DateTimeValue"],
+        ["NotesRichTextItem"] = ["DateTimeValue"]
+    };
+
     public string Transform(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
-        var output = new List<string>(lines.Length + 16);
+        var output = new List<string>(lines.Length + 32);
         var notesVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesVariableTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var notesDocumentCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var notesDocuments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var notesItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -28,7 +43,7 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
-                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
+                RegisterNotesVariable(name, type, notesVariables, notesVariableTypes, notesDocumentCollections, notesDocuments, notesItems);
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
                 continue;
@@ -39,8 +54,9 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = dim.Groups[1].Value;
                 var type = dim.Groups[2].Value;
-                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
+                RegisterNotesVariable(name, type, notesVariables, notesVariableTypes, notesDocumentCollections, notesDocuments, notesItems);
                 output.Add(indent + $"Dim {name} As Variant");
+                output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
                 continue;
             }
 
@@ -68,7 +84,7 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = recycle.Groups[1].Value;
                 output.Add(indent + $"Call XPScriptNotes.RecycleValue({name})");
-                output.Add(indent + $"{name} = Nothing");
+                output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
                 continue;
             }
 
@@ -81,6 +97,11 @@ internal sealed class NotesRuntimePreprocessor
                     rhs = RewriteDocumentItemValues(rhs, documentName);
                 foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
                     rhs = RewriteNotesItemValues(rhs, itemName);
+                rhs = RewriteNothingReturningMembers(rhs, notesVariableTypes);
+                rhs = rhs.Equals("Nothing", StringComparison.OrdinalIgnoreCase)
+                    ? "XPScriptNotes.NothingValue"
+                    : $"XPScriptNotes.NormalizeObjectResult({rhs})";
+
                 var temp = "__notesReplacement" + (++replacementIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 output.Add(indent + $"Dim {temp} As Variant");
                 output.Add(indent + $"{temp} = {rhs}");
@@ -94,6 +115,8 @@ internal sealed class NotesRuntimePreprocessor
 
             foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
                 rewritten = RewriteNotesItemValues(rewritten, itemName);
+
+            rewritten = RewriteNothingReturningMembers(rewritten, notesVariableTypes);
 
             foreach (var collectionName in notesDocumentCollections)
             {
@@ -117,14 +140,75 @@ internal sealed class NotesRuntimePreprocessor
         string name,
         string type,
         ISet<string> notesVariables,
+        IDictionary<string, string> notesVariableTypes,
         ISet<string> documentCollections,
         ISet<string> documents,
         ISet<string> items)
     {
         notesVariables.Add(name);
+        notesVariableTypes[name] = type;
         if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase)) documentCollections.Add(name);
         if (type.Equals("NotesDocument", StringComparison.OrdinalIgnoreCase)) documents.Add(name);
         if (type.Equals("NotesItem", StringComparison.OrdinalIgnoreCase) || type.Equals("NotesRichTextItem", StringComparison.OrdinalIgnoreCase)) items.Add(name);
+    }
+
+    private static string RewriteNothingReturningMembers(string line, IReadOnlyDictionary<string, string> notesVariableTypes)
+    {
+        foreach (var pair in notesVariableTypes.OrderByDescending(value => value.Key.Length))
+        {
+            if (NothingReturningMethods.TryGetValue(pair.Value, out var methods))
+            {
+                foreach (var method in methods)
+                    line = WrapMethodCalls(line, pair.Key, method);
+            }
+
+            if (NothingReturningProperties.TryGetValue(pair.Value, out var properties))
+            {
+                foreach (var property in properties)
+                    line = WrapPropertyRead(line, pair.Key, property);
+            }
+        }
+        return line;
+    }
+
+    private static string WrapMethodCalls(string line, string variableName, string methodName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(variableName)}\.{Regex.Escape(methodName)}\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset);
+            if (!match.Success) break;
+            if (IsInsideNothingNormalizer(line, match.Index))
+            {
+                offset = match.Index + match.Length;
+                continue;
+            }
+
+            var open = line.IndexOf('(', match.Index);
+            var close = FindMatchingParen(line, open);
+            if (close < 0) break;
+            var call = line[match.Index..(close + 1)];
+            var replacement = "XPScriptNotes.NormalizeObjectResult(" + call + ")";
+            line = line[..match.Index] + replacement + line[(close + 1)..];
+            offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static string WrapPropertyRead(string line, string variableName, string propertyName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(variableName)}\.{Regex.Escape(propertyName)}\b(?!\s*=)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return pattern.Replace(line, match => IsInsideNothingNormalizer(line, match.Index)
+            ? match.Value
+            : "XPScriptNotes.NormalizeObjectResult(" + match.Value + ")");
+    }
+
+    private static bool IsInsideNothingNormalizer(string line, int memberIndex)
+    {
+        const string prefix = "XPScriptNotes.NormalizeObjectResult(";
+        var start = Math.Max(0, memberIndex - prefix.Length);
+        return line.AsSpan(start, memberIndex - start).EndsWith(prefix, StringComparison.Ordinal);
     }
 
     private static string RewriteDocumentItemValues(string line, string documentName)
