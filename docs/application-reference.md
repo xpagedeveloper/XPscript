@@ -54,6 +54,19 @@ All four state proxies expose the same member set below.
 | `State.Count` | `scope.Count` | none | Returns the number of keys in the scope. | [application-object.xps](../samples/application-object.xps) |
 | `State.Keys` | `scope.Keys` | none | Returns the state keys ordered case-insensitively by the local runtime. | [application-object.xps](../samples/application-object.xps) |
 
+## Persistent settings and secrets
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.Registry.User.Get` | `Application.Registry.User.Get(path, name)` | registry/config path and value name | Reads a current-user persistent setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Registry.User.Set` | `Application.Registry.User.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a current-user setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Registry.System.Get` | `Application.Registry.System.Get(path, name)` | registry/config path and value name | Reads a machine-wide persistent setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Registry.System.Set` | `Application.Registry.System.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a machine-wide setting and may require elevated OS permissions. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Secrets.Get` | `Application.Secrets.Get(service, account)` | service/application identifier and account | Reads a secret from Credential Manager, Keychain or Linux Secret Service. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Secrets.Set` | `Application.Secrets.Set(service, account, secret)` | service/application identifier, account and secret | Adds or replaces a secret in the operating-system credential store. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+
+Windows registry values support `String`, `ExpandString`, `Binary`, `DWord`, `MultiString` and `QWord`. Linux and macOS preserve equivalent type metadata in their file-backed application settings. See [Application Registry and Secrets](application-registry-secrets.md) for the platform paths, type mapping, Linux Secret Service requirements and security details.
+
 ## Read-only runtime properties
 
 `Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Title`, `Icon`, `Width` and `Height` are intentionally writable metadata properties.
