@@ -5,6 +5,8 @@ namespace XPScript.Compiler;
 
 internal static class CompilerDiagnosticParser
 {
+    private const string GeneratedMarker = "XPSCRIPT-GENERATED-DIAGNOSTIC|";
+
     public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug)
     {
         var result = new List<CompileDiagnostic>();
@@ -53,6 +55,21 @@ internal static class CompilerDiagnosticParser
 
     private static void AddGeneratedDiagnostics(string message, List<CompileDiagnostic> result)
     {
+        var markerPattern = new Regex(
+            @"^XPSCRIPT-GENERATED-DIAGNOSTIC\|(?<file>[^|\r\n]+)\|(?<line>\d+)\|(?<pos>\d+)\|(?<id>CS\d+)\|(?<desc>[^\r\n]*)$",
+            RegexOptions.IgnoreCase | RegexOptions.Multiline);
+
+        foreach (Match match in markerPattern.Matches(message))
+        {
+            result.Add(new CompileDiagnostic
+            {
+                File = DiagnosticFileName(match.Groups["file"].Value),
+                Line = int.Parse(match.Groups["line"].Value),
+                Position = int.Parse(match.Groups["pos"].Value),
+                Description = $"{match.Groups["id"].Value}: {Humanize(match.Groups["desc"].Value.Trim())}"
+            });
+        }
+
         var generatedPattern = new Regex(
             @"(?:^|[\\/])?(?<file>Program\.cs)\((?<line>\d+),(?<pos>\d+)\):\s*error\s+(?<id>CS\d+):\s*(?<desc>.*?)(?:\s*\[|$)",
             RegexOptions.IgnoreCase | RegexOptions.Multiline);
@@ -158,7 +175,8 @@ internal static class CompilerDiagnosticParser
     private static string FirstDiagnosticLine(string message) =>
         message.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
-            .FirstOrDefault(line => line.Length > 0) ?? "Compilation failed.";
+            .FirstOrDefault(line => line.Length > 0 && !line.StartsWith(GeneratedMarker, StringComparison.Ordinal))
+        ?? "Compilation failed.";
 
     private static string Humanize(string description)
     {
