@@ -80,12 +80,20 @@ internal sealed class XPScriptNotesSession : IDisposable
         if (runtimeDirectory.Length == 0)
             throw new XPScriptRuntimeException(5, "NotesSession requires the Notes/Domino runtime directory.");
 
+        var resolvedRuntimeDirectory = Path.GetFullPath(runtimeDirectory);
+        if (!Directory.Exists(resolvedRuntimeDirectory))
+            throw new XPScriptRuntimeException(5, "Notes Directory " + resolvedRuntimeDirectory + " does not exists.");
+
+        var notesLibraryPath = Path.Combine(resolvedRuntimeDirectory, "nnotes.dll");
+        if (!File.Exists(notesLibraryPath))
+            throw new XPScriptRuntimeException(5, "nnotes.dll can't be found in Notes Directory " + resolvedRuntimeDirectory + ".");
+
         lock (SessionGate)
         {
             if (ActiveSession is not null && !ActiveSession._recycled)
                 throw new XPScriptRuntimeException(5, "Only one NotesSession may be active in a process at a time.");
 
-            RuntimeDirectory = Path.GetFullPath(runtimeDirectory);
+            RuntimeDirectory = resolvedRuntimeDirectory;
             NotesIni = string.IsNullOrWhiteSpace(notesIni) ? "" : Path.GetFullPath(notesIni);
             Api = new XPScriptNotesNativeApi(RuntimeDirectory);
             try
