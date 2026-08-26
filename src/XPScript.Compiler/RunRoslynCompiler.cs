@@ -138,22 +138,39 @@ global using System.Threading.Tasks;
         var errors = diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
         if (errors.Length == 0) return "Generated code failed to compile.";
 
-        var lines = new List<string>(errors.Length);
+        var lines = new List<string>(CompilerDiagnosticMode.Debug ? errors.Length * 2 : errors.Length);
         foreach (var diagnostic in errors)
         {
-            var span = diagnostic.Location.GetMappedLineSpan();
-            if (span.IsValid)
+            var mapped = diagnostic.Location.GetMappedLineSpan();
+            if (mapped.IsValid)
             {
-                var path = string.IsNullOrWhiteSpace(span.Path) ? "Program.cs" : span.Path;
-                lines.Add($"{path}({span.StartLinePosition.Line + 1},{span.StartLinePosition.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}");
+                var path = string.IsNullOrWhiteSpace(mapped.Path) ? "Program.cs" : mapped.Path;
+                lines.Add(FormatDiagnostic(path, mapped.StartLinePosition, diagnostic));
             }
             else
             {
                 lines.Add($"Program.cs(0,0): error {diagnostic.Id}: {diagnostic.GetMessage()}");
             }
+
+            if (!CompilerDiagnosticMode.Debug)
+                continue;
+
+            var physical = diagnostic.Location.GetLineSpan();
+            if (!physical.IsValid)
+                continue;
+
+            var physicalPath = string.IsNullOrWhiteSpace(physical.Path) ? "Program.cs" : Path.GetFileName(physical.Path);
+            var duplicatesMapped = mapped.IsValid &&
+                                   string.Equals(Path.GetFileName(mapped.Path), physicalPath, StringComparison.OrdinalIgnoreCase) &&
+                                   mapped.StartLinePosition.Equals(physical.StartLinePosition);
+            if (!duplicatesMapped)
+                lines.Add(FormatDiagnostic(physicalPath, physical.StartLinePosition, diagnostic));
         }
         return "Generated code failed to compile." + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
+
+    private static string FormatDiagnostic(string path, LinePosition position, Diagnostic diagnostic) =>
+        $"{path}({position.Line + 1},{position.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}";
 
     private static async Task WriteRuntimeConfigAsync(string outputRoot, CancellationToken cancellationToken)
     {
