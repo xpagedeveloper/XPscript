@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Application.ExitCode = 7
+    Print "EXITCODE=" & CStr(Application.ExitCode)
+End Sub
