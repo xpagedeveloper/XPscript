@@ -81,7 +81,9 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
         nint networkPath = 0;
         try
         {
-            var path = fileText.Pointer;
+            // HCL documents a NULL pathname as the local Notes/Domino data directory.
+            // For a remote server, build a network pathname to that server's data directory.
+            var path = file.Length == 0 && server.Length == 0 ? 0 : fileText.Pointer;
             if (server.Length > 0)
             {
                 networkPath = System.Runtime.InteropServices.Marshal.AllocHGlobal(4096);
