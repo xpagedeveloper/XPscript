@@ -168,13 +168,19 @@ global using System.Threading.Tasks;
                                    string.Equals(Path.GetFileName(mapped.Path), physicalPath, StringComparison.OrdinalIgnoreCase) &&
                                    mapped.StartLinePosition.Equals(physicalPosition);
             if (!duplicatesMapped)
-                lines.Add(FormatDiagnostic(physicalPath, physicalPosition, diagnostic));
+                lines.Add(FormatGeneratedDiagnostic(physicalPath, physicalPosition, diagnostic));
         }
         return "Generated code failed to compile." + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
 
     private static string FormatDiagnostic(string path, LinePosition position, Diagnostic diagnostic) =>
         $"{path}({position.Line + 1},{position.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}";
+
+    private static string FormatGeneratedDiagnostic(string path, LinePosition position, Diagnostic diagnostic)
+    {
+        var description = diagnostic.GetMessage().Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Replace("|", "/", StringComparison.Ordinal);
+        return $"XPSCRIPT-GENERATED-DIAGNOSTIC|{path}|{position.Line + 1}|{position.Character + 1}|{diagnostic.Id}|{description}";
+    }
 
     private static async Task WriteRuntimeConfigAsync(string outputRoot, CancellationToken cancellationToken)
     {
