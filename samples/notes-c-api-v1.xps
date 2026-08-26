@@ -1,24 +1,38 @@
 ' HCL Notes/Domino C API wrapper V1 manual test.
 ' Requires a local Notes or Domino installation and valid Notes configuration.
-' Update the constants below for your environment before running.
+' Update the values below for your environment before running.
 
 Option Declare
 
 Sub Main()
-    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
-    Const NOTES_INI = ""
-    Const LOCAL_DATABASE = "names.nsf"
-    Const SERVER_NAME = ""
-    Const SERVER_DATABASE = ""
-    Const REPLICA_SERVER = ""
-    Const REPLICA_ID = ""
-    Const VIEW_NAME = "People"
-    Const VIEW_KEY = ""
-    Const AGENT_NAME = ""
-    Const RICH_TEXT_ITEM = "Body"
-    Const ATTACHMENT_NAME = ""
-    Const ATTACHMENT_OUTPUT = ""
-    Const ENABLE_ITEM_WRITE_TEST = False
+    Dim NOTES_RUNTIME As String
+    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Dim NOTES_INI As String
+    NOTES_INI = ""
+    Dim LOCAL_DATABASE As String
+    LOCAL_DATABASE = "names.nsf"
+    Dim SERVER_NAME As String
+    SERVER_NAME = ""
+    Dim SERVER_DATABASE As String
+    SERVER_DATABASE = ""
+    Dim REPLICA_SERVER As String
+    REPLICA_SERVER = ""
+    Dim REPLICA_ID As String
+    REPLICA_ID = ""
+    Dim VIEW_NAME As String
+    VIEW_NAME = "People"
+    Dim VIEW_KEY As String
+    VIEW_KEY = ""
+    Dim AGENT_NAME As String
+    AGENT_NAME = ""
+    Dim RICH_TEXT_ITEM As String
+    RICH_TEXT_ITEM = "Body"
+    Dim ATTACHMENT_NAME As String
+    ATTACHMENT_NAME = ""
+    Dim ATTACHMENT_OUTPUT As String
+    ATTACHMENT_OUTPUT = ""
+    Dim ENABLE_ITEM_WRITE_TEST As Boolean
+    ENABLE_ITEM_WRITE_TEST = False
 
     Dim session As NotesSession
     Dim localDb As NotesDatabase
