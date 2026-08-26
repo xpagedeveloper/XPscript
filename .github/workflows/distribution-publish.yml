@@ -37,6 +37,19 @@ jobs:
           if (-not (Get-ChildItem $path -File | Where-Object Name -Match '^xpscript(\.exe)?$|^xpscript\.dll$')) {
             throw 'Unified publish output does not contain xpscript.'
           }
+      - name: Verify CLI version output
+        shell: pwsh
+        run: |
+          $expected = 'XPScript Version 1.0 - (c) XPageDeveloper.com 2026'
+          foreach ($option in @('--version', '--info', '--debug')) {
+            $output = & ./publish/xpscript/xpscript $option
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $option exited with code $LASTEXITCODE." }
+            if (($output -join "`n").Trim() -ne $expected) { throw "Unexpected xpscript $option output: $($output -join ' | ')" }
+          }
+
+          $defaultOutput = & ./publish/xpscript/xpscript
+          if ($LASTEXITCODE -ne 0) { throw "xpscript without arguments exited with code $LASTEXITCODE." }
+          if ($defaultOutput[0] -ne $expected) { throw "Expected version banner as first line without arguments." }
       - name: Upload XPscript toolchain artifact
         uses: actions/upload-artifact@v4
         with:
