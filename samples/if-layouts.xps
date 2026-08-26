@@ -16,6 +16,14 @@ Sub Main()
     textValue = "Else"
     If textValue = "Else" Then Print "STRING_ELSE=OK"
 
+    If False Then Error 9101
+    Print "INLINE_ERROR=OK"
+
+    If False Then    ' comment keeps this as a block If
+        Error 9102
+    End If
+    Print "COMMENTED_BLOCK_THEN=OK"
+
     If True Then
         Print "BLOCK=OK"
     End If
