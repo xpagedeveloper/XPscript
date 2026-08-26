@@ -39,6 +39,7 @@ Sub Main()
     Dim serverDb As NotesDatabase
     Dim replicaDb As NotesDatabase
     Dim view As NotesView
+    Dim groupView As NotesView
     Dim docs As NotesDocumentCollection
     Dim doc As NotesDocument
     Dim name1 As NotesName
@@ -97,6 +98,19 @@ Sub Main()
             End If
             Call docs.Recycle()
             Set docs = Nothing
+        End If
+
+        Set groupView = localDb.OpenView("($VIMGroups)")
+        If groupView <> Nothing Then
+            Print "VIMGROUPS_BEGIN"
+            Set doc = groupView.GetFirstDocument()
+            Do While doc <> Nothing
+                Print "GROUP_NAME=" & doc.GetString("ListName")
+                Set doc = groupView.GetNextDocument(doc)
+            Loop
+            Print "VIMGROUPS_END"
+            Call groupView.Recycle()
+            Set groupView = Nothing
         End If
 
         Set docs = localDb.Search("@All", 10)
@@ -186,7 +200,16 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
     Dim richText As NotesRichTextItem
     Dim itemDate As NotesDateTime
     Dim values As Variant
+    Dim itemNames As Variant
+    Dim itemIndex As Integer
     Dim saved As Boolean
+
+    itemNames = doc.Items
+    Print "DOCUMENT_ITEMS_BEGIN"
+    For itemIndex = LBound(itemNames) To UBound(itemNames)
+        Print "DOCUMENT_ITEM=" & itemNames(itemIndex)
+    Next
+    Print "DOCUMENT_ITEMS_END"
 
     Set item = doc.GetFirstItem("Form")
     If item <> Nothing Then
