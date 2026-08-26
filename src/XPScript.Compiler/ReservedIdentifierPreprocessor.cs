@@ -9,7 +9,7 @@ internal sealed class ReservedIdentifierPreprocessor
         "Program", "Script",
         "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO", "XPScriptFileSystemRuntime", "XPScriptApplicationRuntime",
         "XPScriptEvaluateRuntime", "XPScriptEvaluateCollectionRuntime", "XPScriptEvaluateSemanticsRuntime", "XPScriptEvaluateFunctionArityRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
-        "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker",
+        "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker", "LSObjectIdentityRuntime",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
         "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement", "XPAi", "XPAiResponse",
         "UIForm", "UIData", "UIItem", "UIFieldValue"
@@ -33,7 +33,7 @@ internal sealed class ReservedIdentifierPreprocessor
             CheckNamedDeclaration(code, index + 1);
             CheckParameters(code, index + 1);
         }
-        return source;
+        return new GeneralSyntaxPreprocessor().Transform(source);
     }
 
     private static void CheckVariableDeclarations(string code, int line)
