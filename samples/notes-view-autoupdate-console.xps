@@ -1,0 +1,115 @@
+' HCL Notes/Domino NotesView AutoUpdate console sample.
+' Demonstrates two independent NotesView objects against the same view.
+
+Option Declare
+
+Sub Main()
+    Dim NOTES_RUNTIME As String
+    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+
+    Dim DATABASE_PATH As String
+    DATABASE_PATH = "names.nsf"
+
+    Dim VIEW_NAME As String
+    VIEW_NAME = "($VIMGroups)"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim liveView As NotesView
+    Dim frozenView As NotesView
+    Dim liveDoc As NotesDocument
+    Dim frozenDoc As NotesDocument
+    Dim liveDone As Boolean
+    Dim frozenDone As Boolean
+
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+
+    If Not (db <> Nothing) Then
+        Print "DATABASE_IS_NOTHING=True"
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    If Not db.IsOpen Then
+        Print "DATABASE_ISOPEN=False"
+        Call db.Recycle()
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    Set liveView = db.OpenView(VIEW_NAME)
+    Set frozenView = db.OpenView(VIEW_NAME)
+
+    If Not (liveView <> Nothing) Or Not (frozenView <> Nothing) Then
+        Print "VIEW_OPEN_FAILED=True"
+        If liveView <> Nothing Then Call liveView.Recycle()
+        If frozenView <> Nothing Then Call frozenView.Recycle()
+        Call db.Recycle()
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    liveView.AutoUpdate = True
+    frozenView.AutoUpdate = False
+
+    Print "LIVE_AUTOUPDATE=" & CStr(liveView.AutoUpdate)
+    Print "FROZEN_AUTOUPDATE=" & CStr(frozenView.AutoUpdate)
+
+    Set liveDoc = liveView.GetFirstDocument()
+    Set frozenDoc = frozenView.GetFirstDocument()
+
+    liveDone = False
+    frozenDone = False
+
+    Do While Not liveDone Or Not frozenDone
+        If Not liveDone Then
+            If Not (liveDoc <> Nothing) Then
+                liveDone = True
+            Else
+                Print "LIVE_GROUP=" & liveDoc.GetString("ListName")
+                Set liveDoc = liveView.GetNextDocument(liveDoc)
+            End If
+        End If
+
+        If Not frozenDone Then
+            If Not (frozenDoc <> Nothing) Then
+                frozenDone = True
+            Else
+                Print "FROZEN_GROUP=" & frozenDoc.GetString("ListName")
+                Set frozenDoc = frozenView.GetNextDocument(frozenDoc)
+            End If
+        End If
+    Loop
+
+    ' GetFirstDocument always rewinds to the beginning of each view instance.
+    Set liveDoc = liveView.GetFirstDocument()
+    If liveDoc <> Nothing Then
+        Print "LIVE_FIRST_AGAIN=" & liveDoc.GetString("ListName")
+        Call liveDoc.Recycle()
+        Set liveDoc = Nothing
+    End If
+
+    Set frozenDoc = frozenView.GetFirstDocument()
+    If frozenDoc <> Nothing Then
+        Print "FROZEN_FIRST_AGAIN=" & frozenDoc.GetString("ListName")
+        Call frozenDoc.Recycle()
+        Set frozenDoc = Nothing
+    End If
+
+    ' Explicit Refresh updates the frozen view snapshot.
+    Call frozenView.Refresh()
+    Set frozenDoc = frozenView.GetFirstDocument()
+    If frozenDoc <> Nothing Then
+        Print "FROZEN_FIRST_AFTER_REFRESH=" & frozenDoc.GetString("ListName")
+        Call frozenDoc.Recycle()
+        Set frozenDoc = Nothing
+    End If
+
+    Call frozenView.Recycle()
+    Call liveView.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+
+    Print "NOTES-VIEW-AUTOUPDATE-DONE"
+End Sub

@@ -1,0 +1,289 @@
+' HCL Notes/Domino C API wrapper V1 manual test.
+' Requires a local Notes or Domino installation and valid Notes configuration.
+' Update the values below for your environment before running.
+
+Option Declare
+
+Sub Main()
+    Dim NOTES_RUNTIME As String
+    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Dim NOTES_INI As String
+    NOTES_INI = ""
+    Dim LOCAL_DATABASE As String
+    LOCAL_DATABASE = "names.nsf"
+    Dim SERVER_NAME As String
+    SERVER_NAME = ""
+    Dim SERVER_DATABASE As String
+    SERVER_DATABASE = ""
+    Dim REPLICA_SERVER As String
+    REPLICA_SERVER = ""
+    Dim REPLICA_ID As String
+    REPLICA_ID = ""
+    Dim VIEW_NAME As String
+    VIEW_NAME = "People"
+    Dim VIEW_KEY As String
+    VIEW_KEY = ""
+    Dim AGENT_NAME As String
+    AGENT_NAME = ""
+    Dim RICH_TEXT_ITEM As String
+    RICH_TEXT_ITEM = "Body"
+    Dim ATTACHMENT_NAME As String
+    ATTACHMENT_NAME = ""
+    Dim ATTACHMENT_OUTPUT As String
+    ATTACHMENT_OUTPUT = ""
+    Dim ENABLE_ITEM_WRITE_TEST As Boolean
+    ENABLE_ITEM_WRITE_TEST = False
+
+    Dim session As NotesSession
+    Dim localDb As NotesDatabase
+    Dim serverDb As NotesDatabase
+    Dim replicaDb As NotesDatabase
+    Dim view As NotesView
+    Dim groupView As NotesView
+    Dim docs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim name1 As NotesName
+    Dim name2 As NotesName
+    Dim dt1 As NotesDateTime
+    Dim dt2 As NotesDateTime
+    Dim agentResult As NotesAgentResult
+    Dim noteId As String
+
+    If NOTES_INI = "" Then
+        Set session = New NotesSession(NOTES_RUNTIME)
+    Else
+        Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    End If
+
+    Print "USERNAME=" & session.Username
+    Print "COMMON_USERNAME=" & session.CommonUsername
+    Print "NOTES_VERSION=" & session.NotesVersion
+    Print "NOTES_BUILD_VERSION=" & CStr(session.NotesBuildVersion)
+
+    Set name1 = session.CreateName(session.Username)
+    Set name2 = session.CreateName("CN=Ada Lovelace/O=Example")
+    Print "NAME1_CANONICAL=" & name1.Canonical
+    Print "NAME1_ABBREVIATED=" & name1.Abbreviated
+    Print "NAME2_COMMON=" & name2.Common
+    Print "NAME2_ORGANIZATION=" & name2.Organization
+
+    Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
+    Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
+    Print "DT1_LOCAL=" & dt1.LocalTime
+    Print "DT1_GMT=" & dt1.GMTTime
+    Print "DT1_ZONE=" & CStr(dt1.TimeZone)
+    Print "DT2_LOCAL=" & dt2.LocalTime
+
+    Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
+    Print "LOCAL_DB=" & localDb.FilePath
+    Print "LOCAL_DB_ISOPEN=" & CStr(localDb.IsOpen)
+
+    If localDb.IsOpen Then
+        Set view = localDb.OpenView(VIEW_NAME)
+        If VIEW_KEY <> "" And view <> Nothing Then
+            Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
+            Print "VIEW_MATCHES=" & CStr(docs.Count)
+            Print "VIEW_UBOUND=" & CStr(UBound(docs))
+            If docs.Count > 0 Then
+                noteId = docs(0)
+                Print "VIEW_NOTEID=" & noteId
+                Set doc = localDb.GetDocumentByNoteId(noteId)
+                If doc <> Nothing Then
+                    Print "VIEW_DOC_UNID=" & doc.UniversalId
+                    Print "VIEW_DOC_FORM=" & doc.GetString("Form")
+                    Call TestItemSurface(doc, ENABLE_ITEM_WRITE_TEST, RICH_TEXT_ITEM, ATTACHMENT_NAME, ATTACHMENT_OUTPUT)
+                    Call doc.Recycle()
+                    Set doc = Nothing
+                End If
+            End If
+            Call docs.Recycle()
+            Set docs = Nothing
+        End If
+
+        Set groupView = localDb.OpenView("($VIMGroups)")
+        If groupView <> Nothing Then
+            Print "VIMGROUPS_BEGIN"
+            Set doc = groupView.GetFirstDocument()
+            Do While doc <> Nothing
+                Print "GROUP_NAME=" & doc.GetString("ListName")
+                Set doc = groupView.GetNextDocument(doc)
+            Loop
+            Print "VIMGROUPS_END"
+            Call groupView.Recycle()
+            Set groupView = Nothing
+        End If
+
+        Set docs = localDb.Search("@All", 10)
+        If docs <> Nothing Then
+            Print "FORMULA_MATCHES=" & CStr(docs.Count)
+            Print "FORMULA_UBOUND=" & CStr(UBound(docs))
+            If docs.Count > 0 Then
+                noteId = docs(0)
+                Print "SEARCH_NOTEID=" & noteId
+                Set doc = localDb.GetDocumentByNoteId(noteId)
+                If doc <> Nothing Then
+                    Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
+                    Call TestItemSurface(doc, ENABLE_ITEM_WRITE_TEST, RICH_TEXT_ITEM, ATTACHMENT_NAME, ATTACHMENT_OUTPUT)
+                    Call doc.Recycle()
+                    Set doc = Nothing
+                End If
+            End If
+            Call docs.Recycle()
+            Set docs = Nothing
+        End If
+
+        ' Requires an FT index. Uncomment after selecting a suitable database/query.
+        ' Set docs = localDb.FTSearch("test", 10)
+        ' If docs <> Nothing Then
+        '     Print "FT_MATCHES=" & CStr(docs.Count)
+        '     If docs.Count > 0 Then
+        '         noteId = docs(0)
+        '         Set doc = localDb.GetDocumentByNoteId(noteId)
+        '     End If
+        '     Call docs.Recycle()
+        ' End If
+        ' Set docs = Nothing
+
+        If AGENT_NAME <> "" Then
+            Set agentResult = localDb.RunAgent(AGENT_NAME)
+            If agentResult <> Nothing Then
+                Print "AGENT_SUCCESS=" & CStr(agentResult.Success)
+                Print "AGENT_OUTPUT=" & agentResult.Output
+                Call agentResult.Recycle()
+                Set agentResult = Nothing
+            End If
+        End If
+    Else
+        Set docs = localDb.Search("@All")
+        Print "CLOSED_DB_SEARCH_IS_NOTHING=" & CStr(Not (docs <> Nothing))
+    End If
+
+    If REPLICA_ID <> "" Then
+        Set replicaDb = session.OpenByReplicaID(REPLICA_SERVER, REPLICA_ID)
+        Print "REPLICA_DB_ISOPEN=" & CStr(replicaDb.IsOpen)
+        If replicaDb.IsOpen Then
+            Print "REPLICA_DB_SERVER=" & replicaDb.Server
+            Print "REPLICA_DB_FILEPATH=" & replicaDb.FilePath
+            Print "REPLICA_DB_ID=" & replicaDb.ReplicaID
+        End If
+        Call replicaDb.Recycle()
+        Set replicaDb = Nothing
+    End If
+
+    If SERVER_NAME <> "" And SERVER_DATABASE <> "" Then
+        Set serverDb = session.OpenDatabase(SERVER_NAME, SERVER_DATABASE)
+        Print "SERVER_DB=" & serverDb.Server & "!!" & serverDb.FilePath
+        Print "SERVER_DB_ISOPEN=" & CStr(serverDb.IsOpen)
+        Call serverDb.Recycle()
+        Set serverDb = Nothing
+    End If
+
+    If view <> Nothing Then
+        Call view.Recycle()
+        Set view = Nothing
+    End If
+    Call localDb.Recycle()
+    Print "LOCAL_DB_IS_NOTHING_AFTER_RECYCLE=" & CStr(Not (localDb <> Nothing))
+
+    Call dt2.Recycle()
+    Call dt1.Recycle()
+    Call name2.Recycle()
+    Call name1.Recycle()
+
+    Call session.Recycle()
+    Print "NOTES-V1-DONE"
+End Sub
+
+Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As String, attachmentName As String, attachmentOutput As String)
+    Dim item As NotesItem
+    Dim copiedItem As NotesItem
+    Dim richText As NotesRichTextItem
+    Dim itemDate As NotesDateTime
+    Dim values As Variant
+    Dim itemNames As Variant
+    Dim itemIndex As Integer
+    Dim saved As Boolean
+
+    itemNames = doc.Items
+    Print "DOCUMENT_ITEMS_BEGIN"
+    For itemIndex = LBound(itemNames) To UBound(itemNames)
+        Print "DOCUMENT_ITEM=" & itemNames(itemIndex)
+    Next
+    Print "DOCUMENT_ITEMS_END"
+
+    Set item = doc.GetFirstItem("Form")
+    If item <> Nothing Then
+        Print "ITEM_NAME=" & item.Name
+        Print "ITEM_TYPE=" & CStr(item.Type)
+        Print "ITEM_TEXT=" & item.Text
+        Print "ITEM_VALUE_LENGTH=" & CStr(item.ValueLength)
+        Print "ITEM_IS_AUTHORS=" & CStr(item.IsAuthors)
+        Print "ITEM_IS_ENCRYPTED=" & CStr(item.IsEncrypted)
+        Print "ITEM_IS_NAMES=" & CStr(item.IsNames)
+        Print "ITEM_IS_PROTECTED=" & CStr(item.IsProtected)
+        Print "ITEM_IS_READERS=" & CStr(item.IsReaders)
+        Print "ITEM_IS_SIGNED=" & CStr(item.IsSigned)
+        Print "ITEM_IS_SUMMARY=" & CStr(item.IsSummary)
+        Print "ITEM_LAST_MODIFIED=" & item.LastModified.LocalTime
+
+        values = item.Values
+        Print "ITEM_VALUES_UBOUND=" & CStr(UBound(values))
+
+        Set itemDate = item.DateTimeValue
+        If itemDate <> Nothing Then
+            Print "ITEM_DATETIME=" & itemDate.LocalTime
+            Call itemDate.Recycle()
+            Set itemDate = Nothing
+        End If
+
+        Call item.Recycle()
+        Set item = Nothing
+    End If
+
+    If enableWrites Then
+        Set item = doc.ReplaceItemValue("XPScriptV1Test", "created by XPscript Notes V1")
+        Print "REPLACE_ITEM_VALUE=" & item.Text
+        item.IsSummary = True
+        Print "REPLACE_ITEM_SUMMARY=" & CStr(item.IsSummary)
+
+        Set copiedItem = item.CopyToDocument(doc, "XPScriptV1CopyTest")
+        Print "COPIED_ITEM_NAME=" & copiedItem.Name
+        Call copiedItem.Remove()
+        Call copiedItem.Recycle()
+        Set copiedItem = Nothing
+
+        Call item.Remove()
+        Call item.Recycle()
+        Set item = Nothing
+
+        Set item = doc.CreateNotesItem("XPScriptV1EmptyItem")
+        Print "CREATED_ITEM_NAME=" & item.Name
+        Call item.Remove()
+        Call item.Recycle()
+        Set item = Nothing
+    End If
+
+    Set item = doc.GetFirstItem(richTextItemName)
+    If item <> Nothing Then
+        If item.Type = 1 Then
+            Set richText = item
+            Print "RICHTEXT_UNFORMATTED=" & richText.GetUnformattedText()
+
+            If attachmentName <> "" And attachmentOutput <> "" Then
+                saved = richText.SaveAttachment(attachmentName, attachmentOutput)
+                Print "RICHTEXT_ATTACHMENT_SAVED=" & CStr(saved)
+            End If
+
+            Call richText.Recycle()
+            Set richText = Nothing
+        Else
+            Call item.Recycle()
+            Set item = Nothing
+        End If
+    End If
+
+    If attachmentName <> "" And attachmentOutput <> "" Then
+        saved = doc.SaveAttachment(attachmentName, attachmentOutput)
+        Print "DOCUMENT_ATTACHMENT_SAVED=" & CStr(saved)
+    End If
+End Sub

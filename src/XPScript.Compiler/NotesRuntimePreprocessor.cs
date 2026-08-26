@@ -1,0 +1,234 @@
+using System.Text.RegularExpressions;
+
+namespace XPScript.Compiler;
+
+internal sealed class NotesRuntimePreprocessor
+{
+    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult";
+
+    public string Transform(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var output = new List<string>(lines.Length + 16);
+        var notesVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesDocumentCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesDocuments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var replacementIndex = 0;
+
+        foreach (var raw in lines)
+        {
+            var indent = raw[..(raw.Length - raw.TrimStart().Length)];
+            var line = raw.Trim();
+
+            var dimNew = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+({NotesTypePattern})\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            if (dimNew.Success)
+            {
+                var name = dimNew.Groups[1].Value;
+                var type = dimNew.Groups[2].Value;
+                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
+                output.Add(indent + $"Dim {name} As Variant");
+                output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
+                continue;
+            }
+
+            var dim = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+({NotesTypePattern})\s*$", RegexOptions.IgnoreCase);
+            if (dim.Success)
+            {
+                var name = dim.Groups[1].Value;
+                var type = dim.Groups[2].Value;
+                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
+                output.Add(indent + $"Dim {name} As Variant");
+                continue;
+            }
+
+            var rewritten = Regex.Replace(
+                line,
+                @"\bNew\s+NotesSession\s*\((.*)\)",
+                "XPScriptNotes.CreateSession($1)",
+                RegexOptions.IgnoreCase);
+
+            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
+            if (unsupportedNew.Success)
+                throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
+
+            var recycle = Regex.Match(rewritten, @"^(?:Call\s+)?([A-Za-z_]\w*)\.Recycle\s*\(\s*\)\s*$", RegexOptions.IgnoreCase);
+            if (recycle.Success && notesVariables.Contains(recycle.Groups[1].Value))
+            {
+                var name = recycle.Groups[1].Value;
+                output.Add(indent + $"Call XPScriptNotes.RecycleValue({name})");
+                output.Add(indent + $"{name} = Nothing");
+                continue;
+            }
+
+            var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+            if (set.Success && notesVariables.Contains(set.Groups[1].Value))
+            {
+                var name = set.Groups[1].Value;
+                var rhs = set.Groups[2].Value.Trim();
+                foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length))
+                    rhs = RewriteDocumentItemValues(rhs, documentName);
+                foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
+                    rhs = RewriteNotesItemValues(rhs, itemName);
+                var temp = "__notesReplacement" + (++replacementIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                output.Add(indent + $"Dim {temp} As Variant");
+                output.Add(indent + $"{temp} = {rhs}");
+                output.Add(indent + $"Call XPScriptNotes.RecycleForReplacement({name}, {temp})");
+                output.Add(indent + $"{name} = {temp}");
+                continue;
+            }
+
+            foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length))
+                rewritten = RewriteDocumentItemValues(rewritten, documentName);
+
+            foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
+                rewritten = RewriteNotesItemValues(rewritten, itemName);
+
+            foreach (var collectionName in notesDocumentCollections)
+            {
+                var escaped = Regex.Escape(collectionName);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\bUBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
+                    $"({collectionName}.Count - 1)",
+                    RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\bLBound\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)",
+                    "0",
+                    RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\b{escaped}\s*\(\s*([^()]*)\s*\)",
+                    $"{collectionName}.GetNoteIdString($1)",
+                    RegexOptions.IgnoreCase);
+            }
+
+            output.Add(indent + rewritten);
+        }
+
+        return string.Join(Environment.NewLine, output);
+    }
+
+    private static void RegisterNotesVariable(
+        string name,
+        string type,
+        ISet<string> notesVariables,
+        ISet<string> documentCollections,
+        ISet<string> documents,
+        ISet<string> items)
+    {
+        notesVariables.Add(name);
+        if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase)) documentCollections.Add(name);
+        if (type.Equals("NotesDocument", StringComparison.OrdinalIgnoreCase)) documents.Add(name);
+        if (type.Equals("NotesItem", StringComparison.OrdinalIgnoreCase) || type.Equals("NotesRichTextItem", StringComparison.OrdinalIgnoreCase)) items.Add(name);
+    }
+
+    private static string RewriteDocumentItemValues(string line, string documentName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(documentName)}\.GetItemValue\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset);
+            if (!match.Success) break;
+            var open = line.IndexOf('(', match.Index);
+            var close = FindMatchingParen(line, open);
+            if (close < 0) break;
+
+            var args = line[(open + 1)..close].Trim();
+            var next = close + 1;
+            while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
+
+            string replacement;
+            int consumedThrough;
+            if (next < line.Length && line[next] == '(')
+            {
+                var indexClose = FindMatchingParen(line, next);
+                if (indexClose < 0) break;
+                var index = line[(next + 1)..indexClose].Trim();
+                replacement = $"XPScriptNotesValueApi.GetDocumentItemValueAt({documentName}, {args}, {index})";
+                consumedThrough = indexClose;
+            }
+            else
+            {
+                replacement = $"XPScriptNotesValueApi.GetDocumentItemValues({documentName}, {args})";
+                consumedThrough = close;
+            }
+
+            line = line[..match.Index] + replacement + line[(consumedThrough + 1)..];
+            offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static string RewriteNotesItemValues(string line, string itemName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(itemName)}\.Values\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset);
+            if (!match.Success) break;
+            var next = match.Index + match.Length;
+            while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
+
+            if (next < line.Length && line[next] == '=')
+            {
+                offset = next + 1;
+                continue;
+            }
+
+            string replacement;
+            int consumedThrough = match.Index + match.Length - 1;
+            if (next < line.Length && line[next] == '(')
+            {
+                var close = FindMatchingParen(line, next);
+                if (close < 0) break;
+                var index = line[(next + 1)..close].Trim();
+                replacement = $"XPScriptNotesValueApi.GetItemValueAt({itemName}, {index})";
+                consumedThrough = close;
+            }
+            else
+            {
+                replacement = $"XPScriptNotesValueApi.GetItemValues({itemName})";
+            }
+
+            line = line[..match.Index] + replacement + line[(consumedThrough + 1)..];
+            offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static int FindMatchingParen(string text, int open)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = open; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < text.Length && text[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
+    }
+
+    private static string CreateExpression(string type, string rawArguments)
+    {
+        var args = rawArguments.Trim();
+        if (!type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
+        if (string.IsNullOrWhiteSpace(args))
+            throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
+        return $"XPScriptNotes.CreateSession({args})";
+    }
+}

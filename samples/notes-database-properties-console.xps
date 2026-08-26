@@ -1,0 +1,27 @@
+' Minimal HCL Notes console example.
+' Change NOTES_RUNTIME if Notes is installed elsewhere.
+
+Option Declare
+
+Sub Main()
+    Dim NOTES_RUNTIME As String
+    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+
+    Set session = New NotesSession(NOTES_RUNTIME)
+
+    Print "Username: " & session.Username
+
+    Set db = session.OpenDatabase("", "names.nsf")
+
+    If db.IsOpen Then
+        Print "Database title: " & db.Title
+    Else
+        Print "Could not open names.nsf"
+    End If
+
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub

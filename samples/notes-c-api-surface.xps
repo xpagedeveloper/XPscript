@@ -1,0 +1,65 @@
+' Compile-only surface probe for the HCL Notes/Domino C API wrapper.
+' Main does not create NotesSession, so CI does not require an installed Notes runtime.
+
+Option Declare
+
+Sub CompileNotesSurface()
+    Dim session As New NotesSession("C:\Program Files\HCL\Notes")
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim docs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim name As NotesName
+    Dim whenValue As NotesDateTime
+    Dim agentResult As NotesAgentResult
+
+    Print session.Username
+
+    Set name = session.CreateName("CN=Ada Lovelace/O=Example")
+    Print name.Canonical
+    Print name.Abbreviated
+    Print name.Common
+    Print name.Organization
+
+    Set whenValue = session.CreateDateTime("2026-08-25 12:00:00")
+    Call whenValue.AdjustDay(1)
+    Print whenValue.LocalTime
+
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Set view = db.OpenView("CustomersByNumber")
+    Set docs = view.GetAllDocumentsByKey("CUST-10042")
+
+    If docs.Count > 0 Then
+        Set doc = docs.Get(0)
+        Print doc.GetString("CompanyName")
+        Call doc.SetString("Status", "Processed")
+        Call doc.SetNumber("Amount", 125.5)
+        Call doc.SetDateTime("ProcessedAt", whenValue)
+        Call doc.Save()
+        Call doc.Recycle()
+    End If
+
+    Call docs.Recycle()
+    Set docs = db.Search("Form = ""Customer"" & Status = ""Active""")
+    Call docs.Recycle()
+
+    Set docs = db.FullTextSearch("Acme AND Sweden", 100)
+    Call docs.Recycle()
+
+    Set docs = view.FullTextSearch("Acme", 100)
+    Call docs.Recycle()
+
+    Set agentResult = db.RunAgent("UpdateCustomers")
+    Print agentResult.Output
+    Call agentResult.Recycle()
+
+    Call view.Recycle()
+    Call db.Recycle()
+    Call whenValue.Recycle()
+    Call name.Recycle()
+    Call session.Recycle()
+End Sub
+
+Sub Main()
+    Print "NOTES-C-API-SURFACE=COMPILED"
+End Sub

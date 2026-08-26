@@ -73,6 +73,10 @@ internal sealed class UIExtensionDesktopPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
         generated = NormalizeLineEndings(generated);
 
+        if (generated.Contains("XPScriptNotes.CreateSession(", StringComparison.Ordinal) &&
+            !generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
+            generated += "\n" + NotesRuntimeSourceBuilder.Build() + "\n";
+
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
 
