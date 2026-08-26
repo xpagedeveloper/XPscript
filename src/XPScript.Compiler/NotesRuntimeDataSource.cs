@@ -220,6 +220,15 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
     }
 
     public string Get(object? indexValue) => GetNoteIdString(indexValue);
+
+    public XPScriptNotesDocument? GetDocument(object? indexValue)
+    {
+        EnsureAlive();
+        var index = XPScriptRuntime.CInt(indexValue);
+        if (index < 0 || index >= _noteIds.Length) throw new XPScriptRuntimeException(9, "NotesDocumentCollection index is out of range.");
+        return Database.OpenByNoteId(_noteIds[index]);
+    }
+
     public string? FirstNoteId { get { EnsureAlive(); return _noteIds.Length == 0 ? null : _noteIds[0].ToString("X8", System.Globalization.CultureInfo.InvariantCulture); } }
 
     public System.Collections.IEnumerator GetEnumerator()
