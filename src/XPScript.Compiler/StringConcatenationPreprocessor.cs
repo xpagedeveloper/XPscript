@@ -46,7 +46,8 @@ internal sealed class StringConcatenationPreprocessor
             output[i] = assignment.Groups["indent"].Value + assignment.Groups["prefix"].Value + rewritten + comment;
         }
 
-        return string.Join("\n", output);
+        return string.Join("\n", output)
+            .Replace("XPScriptNullRuntime.IsNull(", "LSObjectIdentityRuntime.IsNullOrNothing(", StringComparison.Ordinal);
     }
 
     private static string Rewrite(string expression)
