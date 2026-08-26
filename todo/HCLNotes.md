@@ -14,6 +14,15 @@ This tracks functionality still missing or needing validation in the XPscript HC
 - Verify LMBCS translation constants and Unicode/path behavior with non-ASCII names and paths.
 - Verify NotesSession initialization with default `notes.ini` and explicit `notes.ini` paths.
 - Verify graceful shutdown/recycle with many child objects and error paths.
+- Manually validate `NotesInitThread`/`NotesTermThread` behavior under multi-threaded .NET hosts and Domino server runtime conditions.
+
+## Domino server integration
+
+Current target: standalone XPscript processes running with a Domino server runtime, server `notes.ini`, and the configured server ID file.
+
+Very low priority / future:
+
+- Native Domino server add-in task mode, including `AddInMain`, `AddInShouldTerminate`, server task lifecycle, `load xpscript`, `tell xpscript ...`, console logging and controlled shutdown. This is intentionally lower priority than validating the standalone server process model.
 
 ## NotesSession
 

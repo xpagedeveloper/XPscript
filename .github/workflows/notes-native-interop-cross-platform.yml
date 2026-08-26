@@ -6,8 +6,11 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
+      - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
       - 'tests/NativeInteropSmoke/**'
       - 'docs/notes-c-api.md'
+      - 'docs/notes-cross-platform-testing.md'
+      - 'todo/HCLNotes.md'
       - '.github/workflows/notes-native-interop-cross-platform.yml'
   workflow_dispatch:
 
@@ -29,5 +32,13 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
+      - name: Compile generated Notes runtime
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-thread-probe
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
+            samples/notes-c-api-surface.xps \
+            --framework-dependent \
+            -o artifacts/notes-thread-probe/notes-thread-probe
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release

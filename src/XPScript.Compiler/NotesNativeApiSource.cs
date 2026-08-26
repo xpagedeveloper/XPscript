@@ -11,5 +11,6 @@ internal static class NotesNativeApiSource
         NotesNativeApiDocumentSource.Code + "\n\n" +
         NotesNativeApiItemSource.Code + "\n\n" +
         NotesNativeApiAttachmentSource.Code + "\n\n" +
-        NotesNativeApiSearchSource.Code;
+        NotesNativeApiSearchSource.Code + "\n\n" +
+        NotesNativeApiThreadSource.Code;
 }
