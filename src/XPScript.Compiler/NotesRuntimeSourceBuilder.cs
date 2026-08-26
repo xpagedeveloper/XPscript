@@ -72,6 +72,16 @@ internal static class NotesRuntimeSourceBuilder
             "internal delegate ushort FTSearchDelegate(nint db, ref nint search, ushort collection, nint query, uint options, ushort limit, nint idTable, out uint numDocs, nint reserved, out nint results);",
             "ft-search-collection");
 
+        // Public NotesDatabase/NotesView full-text API is named FTSearch.
+        source = ReplaceRequired(source,
+            "public XPScriptNotesDocumentCollection? FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);\n\n    public XPScriptNotesDocumentCollection? FullTextSearch(object? queryValue, object? maxResultsValue)",
+            "public XPScriptNotesDocumentCollection? FTSearch(object? queryValue) => FTSearch(queryValue, 0);\n\n    public XPScriptNotesDocumentCollection? FTSearch(object? queryValue, object? maxResultsValue)",
+            "database-ftsearch-name");
+        source = ReplaceRequired(source,
+            "public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);\n\n    public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue, object? maxResultsValue)",
+            "public XPScriptNotesDocumentCollection FTSearch(object? queryValue) => FTSearch(queryValue, 0);\n\n    public XPScriptNotesDocumentCollection FTSearch(object? queryValue, object? maxResultsValue)",
+            "view-ftsearch-name");
+
         source = ReplaceRequired(source,
             "internal bool TryGetItemInfo(string name)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out _);\n    }",
             "internal bool TryGetItemInfo(string name, out XPScriptNotesItemInfo info)\n    {\n        EnsureAlive();\n        return Session.Api.TryGetFirstItemInfo(_handle, name, out info);\n    }",
