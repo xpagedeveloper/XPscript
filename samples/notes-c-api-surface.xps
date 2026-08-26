@@ -31,7 +31,7 @@ Sub CompileNotesSurface()
     Print db.ReplicaID
     Set dbCopy = db.CreateCopy("", "apps\customers-copy.nsf")
     Call db.SetReplicaId("85258D12004A1234")
-    If Not dbCopy Is Nothing Then Call dbCopy.Recycle()
+    Call dbCopy.Recycle()
 
     Set view = db.OpenView("CustomersByNumber")
     Set docs = view.GetAllDocumentsByKey("CUST-10042")
