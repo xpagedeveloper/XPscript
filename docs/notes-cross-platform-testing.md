@@ -26,7 +26,7 @@ GitHub Actions runs `tests/NativeInteropSmoke` on Ubuntu and macOS. The test int
 
 On Linux the smoke test uses `libc.so.6`. On macOS it uses `/usr/lib/libSystem.B.dylib`.
 
-The workflow also builds the compiler and compiles `samples/notes-c-api-surface.xps`, which validates that the generated Notes runtime including the thread-lifecycle code compiles on both Ubuntu and macOS.
+The workflow also builds the compiler and compiles [`samples/notes-c-api-surface.xps`](../samples/notes-c-api-surface.xps), which validates that the generated Notes runtime including the thread-lifecycle code compiles on both Ubuntu and macOS.
 
 ## Manual Notes/Domino tests
 
