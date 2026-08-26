@@ -29,9 +29,9 @@ NotesDatabase.CreateCopy(server, filePath) As NotesDatabase
 
 - `server` is the destination Domino server. Use an empty string for the local Notes/Domino data directory.
 - `filePath` is the destination NSF path.
-- The source `NotesDatabase` must be open.
+- The source `NotesDatabase` must be open. A closed source raises runtime error 91.
 - An empty destination path raises runtime error 5.
-- A closed source database returns `Nothing`.
+- A successful call always returns a `NotesDatabase` for the newly created database.
 - The returned `NotesDatabase` owns the native handle for the newly created database and should be recycled normally.
 
 XPscript maps this operation to `NSFDbCreateAndCopy` with `NOTE_CLASS_ALL` and without `DBCOPY_REPLICA`. This matches LotusScript `NotesDatabase.CreateCopy`: the destination is a copy, not a replica, and receives a new replica ID.
