@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
