@@ -55,13 +55,13 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(
             source,
             @"(?im)^(?<indent>\s*)Application\.ExitCode\s*=\s*(?<value>.+?)\s*$",
-            m => m.Groups["indent"].Value + "XPScriptApplicationRuntime.ExitCode = XPScriptRuntime.CInt(" + m.Groups["value"].Value + ")",
+            m => m.Groups["indent"].Value + "System.Environment.ExitCode = XPScriptRuntime.CInt(" + m.Groups["value"].Value + ")",
             RegexOptions.CultureInvariant);
 
         return Regex.Replace(
             source,
             @"\bApplication\.ExitCode\b",
-            "XPScriptApplicationRuntime.ExitCode",
+            "System.Environment.ExitCode",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
