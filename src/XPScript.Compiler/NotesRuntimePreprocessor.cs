@@ -50,6 +50,15 @@ internal sealed class NotesRuntimePreprocessor
                 "XPScriptNotes.CreateSession($1)",
                 RegexOptions.IgnoreCase);
 
+            if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
+                throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
+
+            rewritten = Regex.Replace(
+                rewritten,
+                @"\.GetDocumentByKey\s*\(",
+                ".GetFirstDocumentByKey(",
+                RegexOptions.IgnoreCase);
+
             var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
             if (unsupportedNew.Success)
                 throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
