@@ -79,7 +79,7 @@ Sub Main()
 
     If localDb.IsOpen Then
         Set view = localDb.OpenView(VIEW_NAME)
-        If VIEW_KEY <> "" And Not (view Is Nothing) Then
+        If VIEW_KEY <> "" And view <> Nothing Then
             Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
             Print "VIEW_MATCHES=" & CStr(docs.Count)
             Print "VIEW_UBOUND=" & CStr(UBound(docs))
@@ -87,7 +87,7 @@ Sub Main()
                 noteId = docs(0)
                 Print "VIEW_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
-                If Not (doc Is Nothing) Then
+                If doc <> Nothing Then
                     Print "VIEW_DOC_UNID=" & doc.UniversalId
                     Print "VIEW_DOC_FORM=" & doc.GetString("Form")
                     Call TestItemSurface(doc, ENABLE_ITEM_WRITE_TEST, RICH_TEXT_ITEM, ATTACHMENT_NAME, ATTACHMENT_OUTPUT)
@@ -100,14 +100,14 @@ Sub Main()
         End If
 
         Set docs = localDb.Search("@All", 10)
-        If Not (docs Is Nothing) Then
+        If docs <> Nothing Then
             Print "FORMULA_MATCHES=" & CStr(docs.Count)
             Print "FORMULA_UBOUND=" & CStr(UBound(docs))
             If docs.Count > 0 Then
                 noteId = docs(0)
                 Print "SEARCH_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
-                If Not (doc Is Nothing) Then
+                If doc <> Nothing Then
                     Print "SEARCH_DOC_FORM=" & doc.GetString("Form")
                     Call TestItemSurface(doc, ENABLE_ITEM_WRITE_TEST, RICH_TEXT_ITEM, ATTACHMENT_NAME, ATTACHMENT_OUTPUT)
                     Call doc.Recycle()
@@ -120,7 +120,7 @@ Sub Main()
 
         ' Requires an FT index. Uncomment after selecting a suitable database/query.
         ' Set docs = localDb.FTSearch("test", 10)
-        ' If Not (docs Is Nothing) Then
+        ' If docs <> Nothing Then
         '     Print "FT_MATCHES=" & CStr(docs.Count)
         '     If docs.Count > 0 Then
         '         noteId = docs(0)
@@ -132,7 +132,7 @@ Sub Main()
 
         If AGENT_NAME <> "" Then
             Set agentResult = localDb.RunAgent(AGENT_NAME)
-            If Not (agentResult Is Nothing) Then
+            If agentResult <> Nothing Then
                 Print "AGENT_SUCCESS=" & CStr(agentResult.Success)
                 Print "AGENT_OUTPUT=" & agentResult.Output
                 Call agentResult.Recycle()
@@ -141,7 +141,7 @@ Sub Main()
         End If
     Else
         Set docs = localDb.Search("@All")
-        Print "CLOSED_DB_SEARCH_IS_NOTHING=" & CStr(docs Is Nothing)
+        Print "CLOSED_DB_SEARCH_IS_NOTHING=" & CStr(Not (docs <> Nothing))
     End If
 
     If REPLICA_ID <> "" Then
@@ -164,7 +164,7 @@ Sub Main()
         Set serverDb = Nothing
     End If
 
-    If Not (view Is Nothing) Then
+    If view <> Nothing Then
         Call view.Recycle()
         Set view = Nothing
     End If
@@ -190,7 +190,7 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
     Dim saved As Boolean
 
     Set item = doc.GetFirstItem("Form")
-    If Not (item Is Nothing) Then
+    If item <> Nothing Then
         Print "ITEM_NAME=" & item.Name
         Print "ITEM_TYPE=" & CStr(item.Type)
         Print "ITEM_TEXT=" & item.Text
@@ -208,7 +208,7 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
         Print "ITEM_VALUES_UBOUND=" & CStr(UBound(values))
 
         Set itemDate = item.DateTimeValue
-        If Not (itemDate Is Nothing) Then
+        If itemDate <> Nothing Then
             Print "ITEM_DATETIME=" & itemDate.LocalTime
             Call itemDate.Recycle()
             Set itemDate = Nothing
@@ -242,7 +242,7 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
     End If
 
     Set item = doc.GetFirstItem(richTextItemName)
-    If Not (item Is Nothing) Then
+    If item <> Nothing Then
         If item.Type = 1 Then
             Set richText = item
             Print "RICHTEXT_UNFORMATTED=" & richText.GetUnformattedText()
