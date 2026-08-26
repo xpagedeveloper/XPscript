@@ -28,15 +28,9 @@ Sub CompileNotesSurface()
 
     Set dbCopy = db.CreateCopy("", "apps\customers-copy.nsf")
     Print dbCopy.ReplicaID
-    Call dbCopy.Recycle()
 
     Call db.SetReplicaId("85258D12004A1234")
     Print db.ReplicaID
-
-    Call db.Recycle()
-    Call whenValue.Recycle()
-    Call name.Recycle()
-    Call session.Recycle()
 End Sub
 
 Sub Main()
