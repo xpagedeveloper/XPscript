@@ -261,7 +261,8 @@ public static class XPScriptCompilerCommandLine
                 var compileTask = RunCompiler.CompileWithResultAsync(
                     sourcePath,
                     runOutputDirectory,
-                    currentRuntimeIdentifier);
+                    currentRuntimeIdentifier,
+                    debug);
                 var compileResult = info
                     ? await WaitWithProgressAsync(
                         compileTask,
