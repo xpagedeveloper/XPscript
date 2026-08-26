@@ -10,6 +10,8 @@ Sub Main()
     Const LOCAL_DATABASE = "names.nsf"
     Const SERVER_NAME = ""
     Const SERVER_DATABASE = ""
+    Const REPLICA_SERVER = ""
+    Const REPLICA_ID = ""
     Const VIEW_NAME = "People"
     Const VIEW_KEY = ""
     Const AGENT_NAME = ""
@@ -21,6 +23,7 @@ Sub Main()
     Dim session As NotesSession
     Dim localDb As NotesDatabase
     Dim serverDb As NotesDatabase
+    Dim replicaDb As NotesDatabase
     Dim view As NotesView
     Dim docs As NotesDocumentCollection
     Dim doc As NotesDocument
@@ -102,7 +105,7 @@ Sub Main()
         End If
 
         ' Requires an FT index. Uncomment after selecting a suitable database/query.
-        ' Set docs = localDb.FullTextSearch("test", 10)
+        ' Set docs = localDb.FTSearch("test", 10)
         ' If Not (docs Is Nothing) Then
         '     Print "FT_MATCHES=" & CStr(docs.Count)
         '     If docs.Count > 0 Then
@@ -125,6 +128,18 @@ Sub Main()
     Else
         Set docs = localDb.Search("@All")
         Print "CLOSED_DB_SEARCH_IS_NOTHING=" & CStr(docs Is Nothing)
+    End If
+
+    If REPLICA_ID <> "" Then
+        Set replicaDb = session.OpenByReplicaID(REPLICA_SERVER, REPLICA_ID)
+        Print "REPLICA_DB_ISOPEN=" & CStr(replicaDb.IsOpen)
+        If replicaDb.IsOpen Then
+            Print "REPLICA_DB_SERVER=" & replicaDb.Server
+            Print "REPLICA_DB_FILEPATH=" & replicaDb.FilePath
+            Print "REPLICA_DB_ID=" & replicaDb.ReplicaID
+        End If
+        Call replicaDb.Recycle()
+        Set replicaDb = Nothing
     End If
 
     If SERVER_NAME <> "" And SERVER_DATABASE <> "" Then
@@ -212,22 +227,27 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
         Set item = Nothing
     End If
 
+    Set item = doc.GetFirstItem(richTextItemName)
+    If Not (item Is Nothing) Then
+        If item.Type = 1 Then
+            Set richText = item
+            Print "RICHTEXT_UNFORMATTED=" & richText.GetUnformattedText()
+
+            If attachmentName <> "" And attachmentOutput <> "" Then
+                saved = richText.SaveAttachment(attachmentName, attachmentOutput)
+                Print "RICHTEXT_ATTACHMENT_SAVED=" & CStr(saved)
+            End If
+
+            Call richText.Recycle()
+            Set richText = Nothing
+        Else
+            Call item.Recycle()
+            Set item = Nothing
+        End If
+    End If
+
     If attachmentName <> "" And attachmentOutput <> "" Then
         saved = doc.SaveAttachment(attachmentName, attachmentOutput)
         Print "DOCUMENT_ATTACHMENT_SAVED=" & CStr(saved)
-
-        Set item = doc.GetFirstItem(richTextItemName)
-        If Not (item Is Nothing) Then
-            If item.Type = 1 Then
-                Set richText = item
-                saved = richText.SaveAttachment(attachmentName, attachmentOutput)
-                Print "RICHTEXT_ATTACHMENT_SAVED=" & CStr(saved)
-                Call richText.Recycle()
-                Set richText = Nothing
-            Else
-                Call item.Recycle()
-                Set item = Nothing
-            End If
-        End If
     End If
 End Sub
