@@ -83,6 +83,11 @@ internal static class NotesRuntimeSourceBuilder
             "document-item-surface");
 
         source = ReplaceRequired(source,
+            "public string Server { get; }\n    public string FilePath { get; }\n    public bool IsOpen => !IsRecycled && _handle != 0;",
+            "public XPScriptNotesSession Parent => Session;\n    public string Server { get; }\n    public string FilePath { get; }\n    public string FileName\n    {\n        get\n        {\n            var normalized = FilePath.Replace('\\', '/');\n            var slash = normalized.LastIndexOf('/');\n            return slash < 0 ? normalized : normalized[(slash + 1)..];\n        }\n    }\n    public bool IsOpen => !IsRecycled && _handle != 0;\n    public string Title\n    {\n        get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseTitle(_handle) : \"\"; }\n        set { EnsureAlive(); if (IsOpen) Session.Api.SetDatabaseTitle(_handle, value ?? \"\"); }\n    }\n    public string Categories\n    {\n        get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseCategories(_handle) : \"\"; }\n        set { EnsureAlive(); if (IsOpen) Session.Api.SetDatabaseCategories(_handle, value ?? \"\"); }\n    }\n    public string TemplateName { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseTemplateName(_handle) : \"\"; } }\n    public string DesignTemplateName { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseDesignTemplateName(_handle) : \"\"; } }\n    public string ReplicaID { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseReplicaId(_handle) : \"\"; } }\n    public long Size { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseSpaceUsage(_handle).Size : 0L; } }\n    public double PercentUsed { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseSpaceUsage(_handle).PercentUsed : 0d; } }\n    public int CurrentAccessLevel { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseCurrentAccessLevel(_handle) : 0; } }",
+            "database-properties");
+
+        source = ReplaceRequired(source,
             "NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);",
             "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
             "session-build-version");
