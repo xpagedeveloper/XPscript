@@ -109,7 +109,7 @@ global using System.Threading.Tasks;
         {
             try { File.Delete(assemblyPath); } catch { }
             try { File.Delete(pdbPath); } catch { }
-            throw new CompilerException(BuildDiagnostics(emit.Diagnostics));
+            throw new CompilerException(BuildDiagnostics(emit.Diagnostics), BuildGeneratedDiagnostics(emit.Diagnostics));
         }
 
         CompilerPathSecurity.HardenTemporaryFile(assemblyPath);
@@ -142,7 +142,7 @@ global using System.Threading.Tasks;
         var errors = diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
         if (errors.Length == 0) return "Generated code failed to compile.";
 
-        var lines = new List<string>(errors.Length * 2);
+        var lines = new List<string>(errors.Length);
         foreach (var diagnostic in errors)
         {
             var mapped = diagnostic.Location.GetMappedLineSpan();
@@ -155,32 +155,33 @@ global using System.Threading.Tasks;
             {
                 lines.Add($"Program.cs(0,0): error {diagnostic.Id}: {diagnostic.GetMessage()}");
             }
-
-            if (diagnostic.Location.SourceTree is null)
-                continue;
-
-            var sourceText = diagnostic.Location.SourceTree.GetText();
-            var physicalPosition = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
-            var physicalPath = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
-                ? "Program.cs"
-                : Path.GetFileName(diagnostic.Location.SourceTree.FilePath);
-            var duplicatesMapped = mapped.IsValid &&
-                                   string.Equals(Path.GetFileName(mapped.Path), physicalPath, StringComparison.OrdinalIgnoreCase) &&
-                                   mapped.StartLinePosition.Equals(physicalPosition);
-            if (!duplicatesMapped)
-                lines.Add(FormatGeneratedDiagnostic(physicalPath, physicalPosition, diagnostic));
         }
         return "Generated code failed to compile." + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
 
+    private static IReadOnlyList<CompileDiagnostic> BuildGeneratedDiagnostics(IEnumerable<Diagnostic> diagnostics)
+    {
+        var result = new List<CompileDiagnostic>();
+        foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+        {
+            if (diagnostic.Location.SourceTree is null) continue;
+            var sourceText = diagnostic.Location.SourceTree.GetText();
+            var position = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
+            result.Add(new CompileDiagnostic
+            {
+                File = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
+                    ? "Program.cs"
+                    : Path.GetFileName(diagnostic.Location.SourceTree.FilePath),
+                Line = position.Line + 1,
+                Position = position.Character + 1,
+                Description = $"{diagnostic.Id}: {diagnostic.GetMessage()}"
+            });
+        }
+        return result;
+    }
+
     private static string FormatDiagnostic(string path, LinePosition position, Diagnostic diagnostic) =>
         $"{path}({position.Line + 1},{position.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}";
-
-    private static string FormatGeneratedDiagnostic(string path, LinePosition position, Diagnostic diagnostic)
-    {
-        var description = diagnostic.GetMessage().Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Replace("|", "/", StringComparison.Ordinal);
-        return $"XPSCRIPT-GENERATED-DIAGNOSTIC|{path}|{position.Line + 1}|{position.Character + 1}|{diagnostic.Id}|{description}";
-    }
 
     private static async Task WriteRuntimeConfigAsync(string outputRoot, CancellationToken cancellationToken)
     {
