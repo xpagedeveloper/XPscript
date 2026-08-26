@@ -71,12 +71,12 @@ jobs:
           $stdoutPath = [System.IO.Path]::GetTempFileName()
           $stderrPath = [System.IO.Path]::GetTempFileName()
           try {
-            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/root.xps --info --debug --result-format text 1> $stdoutPath 2> $stderrPath
+            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/generated-csharp-error.xps --info --debug --result-format text 1> $stdoutPath 2> $stderrPath
             $exitCode = $LASTEXITCODE
             $stdout = Get-Content -Raw $stdoutPath
 
             if ($exitCode -ne 2) { throw "Expected exit code 2, got $exitCode.`n$stdout" }
-            if ($stdout -notmatch '(?m)^\s*file:\s*compile-error\.xps\s*$') { throw "Debug output lost the source-mapped XPScript diagnostic.`n$stdout" }
+            if ($stdout -notmatch '(?m)^\s*file:\s*generated-csharp-error\.xps\s*$') { throw "Debug output lost the source-mapped XPScript diagnostic.`n$stdout" }
             if ($stdout -notmatch '(?m)^\s*file:\s*Program\.cs\s*$') { throw "Debug output did not include generated Program.cs.`n$stdout" }
             if ($stdout -notmatch 'CS\d{4}') { throw "Debug output did not include a C# diagnostic identifier.`n$stdout" }
           } finally {
