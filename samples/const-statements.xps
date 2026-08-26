@@ -1,0 +1,27 @@
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const TEXT_VALUE As String = "hello"
+    Const INTEGER_VALUE As Integer = 42
+    Const LONG_VALUE As Long = 2147483648
+    Const DOUBLE_VALUE As Double = 12.5
+    Const BOOLEAN_VALUE As Boolean = True
+
+    Const INFERRED_INTEGER = 7
+    Const INFERRED_LONG = 2147483648
+    Const INFERRED_DOUBLE = 3.25
+    Const INFERRED_BOOLEAN = False
+
+    Print "NOTES_RUNTIME=" & NOTES_RUNTIME
+    Print "TEXT_VALUE=" & TEXT_VALUE
+    Print "INTEGER_VALUE=" & CStr(INTEGER_VALUE)
+    Print "LONG_VALUE=" & CStr(LONG_VALUE)
+    Print "DOUBLE_VALUE=" & CStr(DOUBLE_VALUE)
+    Print "BOOLEAN_VALUE=" & CStr(BOOLEAN_VALUE)
+    Print "INFERRED_INTEGER=" & CStr(INFERRED_INTEGER)
+    Print "INFERRED_LONG=" & CStr(INFERRED_LONG)
+    Print "INFERRED_DOUBLE=" & CStr(INFERRED_DOUBLE)
+    Print "INFERRED_BOOLEAN=" & CStr(INFERRED_BOOLEAN)
+    Print "CONST_STATEMENTS=OK"
+End Sub
