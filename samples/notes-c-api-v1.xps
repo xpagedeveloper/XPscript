@@ -169,8 +169,7 @@ Sub Main()
         Set view = Nothing
     End If
     Call localDb.Recycle()
-    Print "LOCAL_DB_ISOPEN_AFTER_RECYCLE=" & CStr(localDb.IsOpen)
-    Set localDb = Nothing
+    Print "LOCAL_DB_IS_NOTHING_AFTER_RECYCLE=" & CStr(Not (localDb <> Nothing))
 
     Call dt2.Recycle()
     Call dt1.Recycle()
