@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
@@ -35,11 +36,12 @@ global using System.Threading.Tasks;
     public static async Task<string> CompileAsync(
         string generatedSource,
         string outputDirectory,
+        bool debug = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return await CompileCoreAsync(generatedSource, outputDirectory, cancellationToken).ConfigureAwait(false);
+            return await CompileCoreAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException)
         {
@@ -54,10 +56,12 @@ global using System.Threading.Tasks;
     private static async Task<string> CompileCoreAsync(
         string generatedSource,
         string outputDirectory,
+        bool debug,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
+        _ = debug;
 
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
@@ -105,7 +109,7 @@ global using System.Threading.Tasks;
         {
             try { File.Delete(assemblyPath); } catch { }
             try { File.Delete(pdbPath); } catch { }
-            throw new CompilerException(BuildDiagnostics(emit.Diagnostics));
+            throw new CompilerException(BuildDiagnostics(emit.Diagnostics), BuildGeneratedDiagnostics(emit.Diagnostics));
         }
 
         CompilerPathSecurity.HardenTemporaryFile(assemblyPath);
@@ -141,11 +145,11 @@ global using System.Threading.Tasks;
         var lines = new List<string>(errors.Length);
         foreach (var diagnostic in errors)
         {
-            var span = diagnostic.Location.GetMappedLineSpan();
-            if (span.IsValid)
+            var mapped = diagnostic.Location.GetMappedLineSpan();
+            if (mapped.IsValid)
             {
-                var path = string.IsNullOrWhiteSpace(span.Path) ? "Program.cs" : span.Path;
-                lines.Add($"{path}({span.StartLinePosition.Line + 1},{span.StartLinePosition.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}");
+                var path = string.IsNullOrWhiteSpace(mapped.Path) ? "Program.cs" : mapped.Path;
+                lines.Add(FormatDiagnostic(path, mapped.StartLinePosition, diagnostic));
             }
             else
             {
@@ -154,6 +158,30 @@ global using System.Threading.Tasks;
         }
         return "Generated code failed to compile." + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
+
+    private static IReadOnlyList<CompileDiagnostic> BuildGeneratedDiagnostics(IEnumerable<Diagnostic> diagnostics)
+    {
+        var result = new List<CompileDiagnostic>();
+        foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+        {
+            if (diagnostic.Location.SourceTree is null) continue;
+            var sourceText = diagnostic.Location.SourceTree.GetText();
+            var position = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
+            result.Add(new CompileDiagnostic
+            {
+                File = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
+                    ? "Program.cs"
+                    : Path.GetFileName(diagnostic.Location.SourceTree.FilePath),
+                Line = position.Line + 1,
+                Position = position.Character + 1,
+                Description = $"{diagnostic.Id}: {diagnostic.GetMessage()}"
+            });
+        }
+        return result;
+    }
+
+    private static string FormatDiagnostic(string path, LinePosition position, Diagnostic diagnostic) =>
+        $"{path}({position.Line + 1},{position.Character + 1}): error {diagnostic.Id}: {diagnostic.GetMessage()}";
 
     private static async Task WriteRuntimeConfigAsync(string outputRoot, CancellationToken cancellationToken)
     {

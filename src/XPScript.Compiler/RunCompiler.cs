@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
@@ -10,8 +11,10 @@ internal static class RunCompiler
         string sourcePath,
         string outputDirectory,
         string runtimeIdentifier,
+        bool debug = false,
         CancellationToken cancellationToken = default)
     {
+        debug = debug || CompilerDiagnosticMode.Debug;
         string source = "";
         try
         {
@@ -21,23 +24,22 @@ internal static class RunCompiler
                 return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]);
 
             source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-            var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
+            var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, debug, cancellationToken).ConfigureAwait(false);
             return CompileResult.Ok(runnable);
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error([new CompileDiagnostic
-            {
-                File = Path.GetFileName(sourcePath),
-                Description = ex.Message
-            }]);
+            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false);
+            if (debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics);
         }
         catch (Exception ex)
         {
             return CompileResult.Error([new CompileDiagnostic
             {
                 File = Path.GetFileName(sourcePath),
-                Description = "Run compilation failed: " + ex.Message
+                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message
             }]);
         }
     }
@@ -46,6 +48,7 @@ internal static class RunCompiler
         string sourcePath,
         string outputDirectory,
         string runtimeIdentifier,
+        bool debug,
         CancellationToken cancellationToken)
     {
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
@@ -69,7 +72,7 @@ internal static class RunCompiler
 
         if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
-            var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, cancellationToken).ConfigureAwait(false);
+            var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
             return assembly;
         }
@@ -80,6 +83,7 @@ internal static class RunCompiler
             generatedSource,
             managedReferences,
             nativeDependencies,
+            debug,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -89,6 +93,7 @@ internal static class RunCompiler
         string generatedSource,
         ManagedAssemblyReferencePreprocessor.Result managedReferences,
         IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
+        bool debug,
         CancellationToken cancellationToken)
     {
         var tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-build-");
@@ -102,33 +107,23 @@ internal static class RunCompiler
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
-            var psi = new ProcessStartInfo
+            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+            if (build.ExitCode != 0)
             {
-                FileName = "dotnet",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                WorkingDirectory = tempRoot
-            };
-            psi.ArgumentList.Add("build");
-            psi.ArgumentList.Add(projectPath);
-            psi.ArgumentList.Add("-c");
-            psi.ArgumentList.Add("Release");
-            psi.ArgumentList.Add("-o");
-            psi.ArgumentList.Add(outputRoot);
-            psi.ArgumentList.Add("--nologo");
-            psi.ArgumentList.Add("-p:UseAppHost=false");
-            CompilerBuildEnvironment.Configure(psi, tempRoot);
+                var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
+                IReadOnlyList<CompileDiagnostic> generatedDiagnostics = [];
+                if (debug)
+                {
+                    await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
+                    CompilerPathSecurity.HardenTemporaryFile(programPath);
+                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+                    generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
+                }
 
-            using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + stdout + Environment.NewLine + stderr);
+                throw new CompilerException(
+                    "Generated code failed to compile." + Environment.NewLine + diagnosticText,
+                    generatedDiagnostics);
+            }
 
             var assemblyPath = Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
@@ -141,6 +136,71 @@ internal static class RunCompiler
         {
             try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
+    }
+
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> ExecuteBuildAsync(
+        string tempRoot,
+        string projectPath,
+        string outputRoot,
+        CancellationToken cancellationToken)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = tempRoot
+        };
+        psi.ArgumentList.Add("build");
+        psi.ArgumentList.Add(projectPath);
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add("Release");
+        psi.ArgumentList.Add("-o");
+        psi.ArgumentList.Add(outputRoot);
+        psi.ArgumentList.Add("--nologo");
+        psi.ArgumentList.Add("--no-incremental");
+        psi.ArgumentList.Add("-p:UseAppHost=false");
+        CompilerBuildEnvironment.Configure(psi, tempRoot);
+
+        using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false));
+    }
+
+    private static IReadOnlyList<CompileDiagnostic> ParseGeneratedBuildDiagnostics(string text)
+    {
+        var result = new List<CompileDiagnostic>();
+        var pattern = new Regex(
+            @"(?:^|[\\/])Program\.cs\((?<line>\d+),(?<pos>\d+)\):\s*error\s+(?<id>CS\d+):\s*(?<desc>.*?)(?:\s*\[|$)",
+            RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        foreach (Match match in pattern.Matches(text))
+        {
+            result.Add(new CompileDiagnostic
+            {
+                File = "Program.cs",
+                Line = int.Parse(match.Groups["line"].Value),
+                Position = int.Parse(match.Groups["pos"].Value),
+                Description = $"{match.Groups["id"].Value}: {match.Groups["desc"].Value.Trim()}"
+            });
+        }
+        return result;
+    }
+
+    private static string DisableSourceMappings(string generatedSource)
+    {
+        var lines = generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].TrimStart();
+            if (!trimmed.StartsWith("#line ", StringComparison.Ordinal)) continue;
+            var indentLength = lines[i].Length - trimmed.Length;
+            lines[i] = new string(' ', indentLength) + "#line default";
+        }
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static IReadOnlyList<(string Name, string Path)> StageManagedReferences(
