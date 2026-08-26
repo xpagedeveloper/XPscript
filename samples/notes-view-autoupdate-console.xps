@@ -19,8 +19,6 @@ Sub Main()
     Dim frozenView As NotesView
     Dim liveDoc As NotesDocument
     Dim frozenDoc As NotesDocument
-    Dim liveNext As NotesDocument
-    Dim frozenNext As NotesDocument
     Dim liveDone As Boolean
     Dim frozenDone As Boolean
 
@@ -70,10 +68,7 @@ Sub Main()
                 liveDone = True
             Else
                 Print "LIVE_GROUP=" & liveDoc.GetString("ListName")
-                Set liveNext = liveView.GetNextDocument(liveDoc)
-                Call liveDoc.Recycle()
-                Set liveDoc = liveNext
-                Set liveNext = Nothing
+                Set liveDoc = liveView.GetNextDocument(liveDoc)
             End If
         End If
 
@@ -82,10 +77,7 @@ Sub Main()
                 frozenDone = True
             Else
                 Print "FROZEN_GROUP=" & frozenDoc.GetString("ListName")
-                Set frozenNext = frozenView.GetNextDocument(frozenDoc)
-                Call frozenDoc.Recycle()
-                Set frozenDoc = frozenNext
-                Set frozenNext = Nothing
+                Set frozenDoc = frozenView.GetNextDocument(frozenDoc)
             End If
         End If
     Loop
