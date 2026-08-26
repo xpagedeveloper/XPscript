@@ -174,9 +174,6 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort NSFItemInfoNextDelegate(nint note, XPScriptNotesBlockId currentItem, nint itemName, ushort nameLength, out XPScriptNotesBlockId itemBlock, out ushort dataType, out XPScriptNotesBlockId valueBlock, out uint valueLength);
-
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFNoteExtractFileDelegate(nint note, XPScriptNotesBlockId itemBlock, nint fileName, nint decryptionKey);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
