@@ -4,8 +4,7 @@
 Option Declare
 
 Sub Main()
-    Dim NOTES_RUNTIME As String
-    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
 
     Dim session As NotesSession
     Dim db As NotesDatabase
