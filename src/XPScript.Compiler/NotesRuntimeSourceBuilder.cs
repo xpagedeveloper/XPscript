@@ -151,6 +151,18 @@ internal static class NotesRuntimeSourceBuilder
         source = source.Replace("FTCloseSearchDelegate(nint search)", "FTCloseSearchDelegate(uint search)", StringComparison.Ordinal);
         source = source.Replace("IDScanDelegate(nint table", "IDScanDelegate(uint table", StringComparison.Ordinal);
         source = source.Replace("NSFSearchDelegate(uint db, nint formula", "NSFSearchDelegate(uint db, uint formula", StringComparison.Ordinal);
+        source = source.Replace(
+            "Resolve<OSTranslate32Delegate>(\"OSTranslate32\")(TranslateUtf8ToLmbcs, input, checked((uint)bytes.Length), checked((uint)(capacity - 1)), output)",
+            "Resolve<OSTranslate32Delegate>(\"OSTranslate32\")(TranslateUtf8ToLmbcs, input, checked((uint)bytes.Length), output, checked((uint)(capacity - 1)))",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "Resolve<OSTranslate32Delegate>(\"OSTranslate32\")(TranslateLmbcsToUtf8, input, checked((uint)length), checked((uint)(capacity - 1)), output)",
+            "Resolve<OSTranslate32Delegate>(\"OSTranslate32\")(TranslateLmbcsToUtf8, input, checked((uint)length), output, checked((uint)(capacity - 1)))",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "OSTranslate32Delegate(ushort mode, nint input, uint inputLength, uint outputSize, nint output)",
+            "OSTranslate32Delegate(ushort mode, nint input, uint inputLength, nint output, uint outputSize)",
+            StringComparison.Ordinal);
         source = source.Replace("AgentSetDocumentContextDelegate(nint context, nint note)", "AgentSetDocumentContextDelegate(nint context, uint note)", StringComparison.Ordinal);
         source = source.Replace("AgentRunDelegate(nint agent, nint context, nint selection", "AgentRunDelegate(nint agent, nint context, uint selection", StringComparison.Ordinal);
         source = source.Replace("AgentQueryStdoutBufferDelegate(nint context, out nint outputHandle", "AgentQueryStdoutBufferDelegate(nint context, out uint outputHandle", StringComparison.Ordinal);
