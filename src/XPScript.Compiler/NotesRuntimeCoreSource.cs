@@ -105,6 +105,7 @@ internal sealed class XPScriptNotesSession : IDisposable
                 CommonUsername = ExtractCommonUsername(Api.CanonicalizeName(Username));
                 NotesVersion = ResolveNotesVersion(RuntimeDirectory, NotesIni);
                 NotesBuildVersion = ResolveNotesBuildVersion(RuntimeDirectory);
+                Platform = ResolvePlatform();
                 ActiveSession = this;
             }
             catch
@@ -125,6 +126,7 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string CommonUserName => CommonUsername;
     public string NotesVersion { get; }
     public long NotesBuildVersion { get; }
+    public string Platform { get; }
     public bool IsRecycled => _recycled;
 
     private static void RecycleActiveSessionAtProcessExit()
@@ -172,6 +174,17 @@ internal sealed class XPScriptNotesSession : IDisposable
             if (text.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)) return text[3..];
         }
         return canonical;
+    }
+
+    private static string ResolvePlatform()
+    {
+        if (OperatingSystem.IsWindows())
+            return Environment.Is64BitProcess ? "Windows/64" : "Windows/32";
+        if (OperatingSystem.IsLinux())
+            return Environment.Is64BitProcess ? "Linux/64" : "UNIX";
+        if (OperatingSystem.IsMacOS())
+            return Environment.Is64BitProcess ? "Macintosh/64" : "Macintosh";
+        return "UNIX";
     }
 
     private static string ResolveNotesVersion(string runtimeDirectory, string notesIni)

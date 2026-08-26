@@ -29,4 +29,4 @@ End If
 
 The distinction is therefore based on code after `Then`, excluding whitespace and comments. If code follows `Then`, XPscript uses the single-line form. If no code follows `Then`, XPscript uses the block form.
 
-See [`samples/if-layouts.xps`](../samples/if-layouts.xps) for executable coverage of the supported layouts.
+See [samples/if-layouts.xps](../samples/if-layouts.xps) for executable coverage of the supported layouts.
