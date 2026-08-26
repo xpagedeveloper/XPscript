@@ -168,7 +168,7 @@ internal static class LSOperatorArrayRuntime
             try { if (string.Equals(XPScriptRuntime.CStr(item), target, comparison)) return (long)i; }
             catch { }
         }
-        return null;
+        return XPScriptNullRuntime.NullValue;
     }
 
     public static LSArray ArrayUnique(object? sourceArray) => ArrayUnique(sourceArray, _compareNoCase ? 1 : 0);
