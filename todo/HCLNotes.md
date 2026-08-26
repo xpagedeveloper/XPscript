@@ -4,7 +4,6 @@ This tracks functionality still missing or needing validation in the XPscript HC
 
 ## Post-merge compiler fixes
 
-- Add `Const` statement support in `AdvancedXPScriptTranspiler.EmitStatement`, including procedure-local constants such as `Const NOTES_RUNTIME = "C:\\Program Files\\HCL\\Notes"`. Add compiler tests for String, Integer, Long, Double and Boolean constants. This currently blocks `samples/notes-database-properties-console.xps` with `Unsupported statement` after the Notes wrapper branch is merged to `main`.
 - Improve generated-code diagnostics so normal compiler output maps errors back to the original `.xps` source line instead of exposing `Program.cs` line numbers. Add a new `--debug` option that preserves/shows generated `Program.cs` diagnostics and line numbers for compiler/runtime debugging, while default `--info` output remains source-mapped to `.xps`.
 - Support LotusScript-style object identity checks for runtime/external object types, including `If doc Is Nothing Then` and `If Not doc Is Nothing Then` without requiring parentheses around the expression after `Not`. Add compiler tests covering `Is Nothing`, `Is Not Nothing`, `Not doc Is Nothing`, and equivalent nested/combined conditions for Notes wrapper objects.
 - Verify and implement comma-separated `Dim` declarations with mixed types on one line, for example `Dim a As String, b As String, c As Integer, d As Long, doc As NotesDocument`. Ensure each variable receives its own declared type and add compiler tests for scalars, objects, and mixed declarations.
