@@ -13,6 +13,7 @@ internal static class RunCompiler
         bool debug = false,
         CancellationToken cancellationToken = default)
     {
+        debug = debug || CompilerDiagnosticMode.Debug;
         string source = "";
         try
         {
