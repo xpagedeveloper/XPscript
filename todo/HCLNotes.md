@@ -2,6 +2,10 @@
 
 This tracks functionality still missing or needing validation in the XPscript HCL Notes/Domino C API wrapper.
 
+## Post-merge compiler fixes
+
+- Add `Const` statement support in `AdvancedXPScriptTranspiler.EmitStatement`, including procedure-local constants such as `Const NOTES_RUNTIME = "C:\\Program Files\\HCL\\Notes"`. Add compiler tests for String, Integer, Long, Double and Boolean constants. This currently blocks `samples/notes-database-properties-console.xps` with `Unsupported statement` after the Notes wrapper branch is merged to `main`.
+
 ## Build and runtime validation
 
 - Add a compiler-only probe that transpiles and compiles the generated Notes runtime without requiring an HCL installation.
