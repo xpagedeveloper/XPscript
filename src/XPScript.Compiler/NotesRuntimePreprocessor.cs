@@ -14,6 +14,8 @@ internal sealed class NotesRuntimePreprocessor
         var output = new List<string>(lines.Length + 16);
         var notesVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var notesDocumentCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesDocuments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var notesItems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var replacementIndex = 0;
 
         foreach (var raw in lines)
@@ -26,9 +28,7 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
-                notesVariables.Add(name);
-                if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase))
-                    notesDocumentCollections.Add(name);
+                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
                 continue;
@@ -39,9 +39,7 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = dim.Groups[1].Value;
                 var type = dim.Groups[2].Value;
-                notesVariables.Add(name);
-                if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase))
-                    notesDocumentCollections.Add(name);
+                RegisterNotesVariable(name, type, notesVariables, notesDocumentCollections, notesDocuments, notesItems);
                 output.Add(indent + $"Dim {name} As Variant");
                 continue;
             }
@@ -78,6 +76,12 @@ internal sealed class NotesRuntimePreprocessor
                 continue;
             }
 
+            foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length))
+                rewritten = RewriteDocumentItemValues(rewritten, documentName);
+
+            foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
+                rewritten = RewriteNotesItemValues(rewritten, itemName);
+
             foreach (var collectionName in notesDocumentCollections)
             {
                 var escaped = Regex.Escape(collectionName);
@@ -102,6 +106,116 @@ internal sealed class NotesRuntimePreprocessor
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static void RegisterNotesVariable(
+        string name,
+        string type,
+        ISet<string> notesVariables,
+        ISet<string> documentCollections,
+        ISet<string> documents,
+        ISet<string> items)
+    {
+        notesVariables.Add(name);
+        if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase)) documentCollections.Add(name);
+        if (type.Equals("NotesDocument", StringComparison.OrdinalIgnoreCase)) documents.Add(name);
+        if (type.Equals("NotesItem", StringComparison.OrdinalIgnoreCase) || type.Equals("NotesRichTextItem", StringComparison.OrdinalIgnoreCase)) items.Add(name);
+    }
+
+    private static string RewriteDocumentItemValues(string line, string documentName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(documentName)}\.GetItemValue\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset);
+            if (!match.Success) break;
+            var open = line.IndexOf('(', match.Index);
+            var close = FindMatchingParen(line, open);
+            if (close < 0) break;
+
+            var args = line[(open + 1)..close].Trim();
+            var next = close + 1;
+            while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
+
+            string replacement;
+            int consumedThrough;
+            if (next < line.Length && line[next] == '(')
+            {
+                var indexClose = FindMatchingParen(line, next);
+                if (indexClose < 0) break;
+                var index = line[(next + 1)..indexClose].Trim();
+                replacement = $"XPScriptNotesValueApi.GetDocumentItemValueAt({documentName}, {args}, {index})";
+                consumedThrough = indexClose;
+            }
+            else
+            {
+                replacement = $"XPScriptNotesValueApi.GetDocumentItemValues({documentName}, {args})";
+                consumedThrough = close;
+            }
+
+            line = line[..match.Index] + replacement + line[(consumedThrough + 1)..];
+            offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static string RewriteNotesItemValues(string line, string itemName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(itemName)}\.Values\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset);
+            if (!match.Success) break;
+            var next = match.Index + match.Length;
+            while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
+
+            if (next < line.Length && line[next] == '=')
+            {
+                offset = next + 1;
+                continue;
+            }
+
+            string replacement;
+            int consumedThrough = match.Index + match.Length - 1;
+            if (next < line.Length && line[next] == '(')
+            {
+                var close = FindMatchingParen(line, next);
+                if (close < 0) break;
+                var index = line[(next + 1)..close].Trim();
+                replacement = $"XPScriptNotesValueApi.GetItemValueAt({itemName}, {index})";
+                consumedThrough = close;
+            }
+            else
+            {
+                replacement = $"XPScriptNotesValueApi.GetItemValues({itemName})";
+            }
+
+            line = line[..match.Index] + replacement + line[(consumedThrough + 1)..];
+            offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static int FindMatchingParen(string text, int open)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = open; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < text.Length && text[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
     }
 
     private static string CreateExpression(string type, string rawArguments)
