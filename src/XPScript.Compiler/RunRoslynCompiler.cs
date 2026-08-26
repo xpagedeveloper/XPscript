@@ -36,11 +36,12 @@ global using System.Threading.Tasks;
     public static async Task<string> CompileAsync(
         string generatedSource,
         string outputDirectory,
+        bool debug = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return await CompileCoreAsync(generatedSource, outputDirectory, cancellationToken).ConfigureAwait(false);
+            return await CompileCoreAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException)
         {
@@ -55,6 +56,7 @@ global using System.Threading.Tasks;
     private static async Task<string> CompileCoreAsync(
         string generatedSource,
         string outputDirectory,
+        bool debug,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
@@ -106,7 +108,7 @@ global using System.Threading.Tasks;
         {
             try { File.Delete(assemblyPath); } catch { }
             try { File.Delete(pdbPath); } catch { }
-            throw new CompilerException(BuildDiagnostics(emit.Diagnostics));
+            throw new CompilerException(BuildDiagnostics(emit.Diagnostics, debug));
         }
 
         CompilerPathSecurity.HardenTemporaryFile(assemblyPath);
@@ -134,12 +136,12 @@ global using System.Threading.Tasks;
         return builder.ToImmutable();
     }
 
-    private static string BuildDiagnostics(IEnumerable<Diagnostic> diagnostics)
+    private static string BuildDiagnostics(IEnumerable<Diagnostic> diagnostics, bool debug)
     {
         var errors = diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
         if (errors.Length == 0) return "Generated code failed to compile.";
 
-        var lines = new List<string>(CompilerDiagnosticMode.Debug ? errors.Length * 2 : errors.Length);
+        var lines = new List<string>(debug ? errors.Length * 2 : errors.Length);
         foreach (var diagnostic in errors)
         {
             var mapped = diagnostic.Location.GetMappedLineSpan();
@@ -153,7 +155,7 @@ global using System.Threading.Tasks;
                 lines.Add($"Program.cs(0,0): error {diagnostic.Id}: {diagnostic.GetMessage()}");
             }
 
-            if (!CompilerDiagnosticMode.Debug)
+            if (!debug)
                 continue;
 
             var physical = diagnostic.Location.GetLineSpan();
