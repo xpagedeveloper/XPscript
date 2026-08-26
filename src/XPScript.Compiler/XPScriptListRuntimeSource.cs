@@ -12,7 +12,7 @@ internal interface ILSList
     IEnumerable<KeyValuePair<string, object?>> SnapshotEntries();
 }
 
-internal sealed class LSList<T> : ILSList
+internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections.IEnumerable
 {
     private readonly Dictionary<string, T> _values = new(StringComparer.CurrentCulture);
     private readonly List<string> _order = [];
@@ -60,6 +60,11 @@ internal sealed class LSList<T> : ILSList
                 yield return new LSListAlias<T>(this, tag);
         }
     }
+
+    public System.Collections.IEnumerable XPScriptItems() => Aliases();
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+        XPScriptItems().GetEnumerator();
 
     public IEnumerable<KeyValuePair<string, object?>> SnapshotEntries()
     {

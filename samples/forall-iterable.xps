@@ -1,0 +1,57 @@
+Option Declare
+
+Class Words
+    Public Function Iterator() As Variant
+        Iterator = Array("one", "two", "three")
+    End Function
+End Class
+
+Sub Main()
+    Dim numbers(2) As Integer
+    Dim tags List As String
+    Dim words As Words
+    Dim count As Integer
+    Dim files As Variant
+
+    numbers(0) = 10
+    numbers(1) = 20
+    numbers(2) = 30
+
+    count = 0
+    ForAll value In numbers
+        count = count + 1
+    End ForAll
+    If count <> 3 Then
+        Error 9701
+    End If
+
+    tags("a") = "alpha"
+    tags("b") = "beta"
+    count = 0
+    ForAll value In tags
+        count = count + 1
+    End ForAll
+    If count <> 2 Then
+        Error 9702
+    End If
+
+    files = Files(".", "forall-*.xps", False)
+    count = 0
+    ForAll file In files
+        count = count + 1
+    End ForAll
+    If count < 1 Then
+        Error 9703
+    End If
+
+    Set words = New Words()
+    count = 0
+    ForAll word In words
+        count = count + 1
+    End ForAll
+    If count <> 3 Then
+        Error 9704
+    End If
+
+    Print "FORALL_ITERABLE=OK"
+End Sub
