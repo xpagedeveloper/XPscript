@@ -13,12 +13,24 @@ Sub Main()
     rate = 12.5
     enabled = True
 
-    If a <> "alpha" Then Error 5, "String a type/value mismatch"
-    If b <> "beta" Then Error 5, "String b type/value mismatch"
-    If c <> 42 Then Error 5, "Integer type/value mismatch"
-    If d <> 2147483648 Then Error 5, "Long type/value mismatch"
-    If rate <> 12.5 Then Error 5, "Double type/value mismatch"
-    If Not enabled Then Error 5, "Boolean type/value mismatch"
+    If a <> "alpha" Then
+        Error 5, "String a type/value mismatch"
+    End If
+    If b <> "beta" Then
+        Error 5, "String b type/value mismatch"
+    End If
+    If c <> 42 Then
+        Error 5, "Integer type/value mismatch"
+    End If
+    If d <> 2147483648 Then
+        Error 5, "Long type/value mismatch"
+    End If
+    If rate <> 12.5 Then
+        Error 5, "Double type/value mismatch"
+    End If
+    If Not enabled Then
+        Error 5, "Boolean type/value mismatch"
+    End If
 
     If obj Is Nothing Then
         Print "CLASS_NOTHING=OK"
