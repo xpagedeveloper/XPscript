@@ -520,6 +520,7 @@ internal static class LSForAllRuntime
 
     private void EmitStatement(StringBuilder sb, string line)
     {
+        if (TryEmitConst(sb, line)) return;
         if (TryEmitDim(sb, line)) return;
 
         if (TryEmitSingleLineIf(sb, line)) return;
@@ -661,6 +662,39 @@ internal static class LSForAllRuntime
         }
 
         throw new CompilerException($"Unsupported statement: {line}");
+    }
+
+    private bool TryEmitConst(StringBuilder sb, string line)
+    {
+        var match = Regex.Match(
+            line,
+            @"^Const\s+([A-Za-z_]\w*)\s*(?:As\s+(String|Integer|Long|Double|Boolean))?\s*=\s*(.+)$",
+            RegexOptions.IgnoreCase);
+        if (!match.Success) return false;
+
+        var name = match.Groups[1].Value;
+        var rawValue = match.Groups[3].Value.Trim();
+        var xpscriptType = string.IsNullOrWhiteSpace(match.Groups[2].Value)
+            ? InferConstType(rawValue)
+            : match.Groups[2].Value;
+        var mapped = MapType(xpscriptType);
+        RegisterVariable(name, xpscriptType, false);
+        Write(sb, $"const {mapped} {name} = {TransformExpression(rawValue)};");
+        return true;
+    }
+
+    private static string InferConstType(string rawValue)
+    {
+        var value = rawValue.Trim();
+        if (value.Length >= 2 && value[0] == '"' && value[^1] == '"') return "String";
+        if (value.Equals("True", StringComparison.OrdinalIgnoreCase) || value.Equals("False", StringComparison.OrdinalIgnoreCase)) return "Boolean";
+        if (Regex.IsMatch(value, @"^[+-]?\d+$"))
+        {
+            if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _)) return "Integer";
+            if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _)) return "Long";
+        }
+        if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)) return "Double";
+        throw new CompilerException("Const without As requires a String, Integer, Long, Double, or Boolean literal.");
     }
 
     private bool TryEmitDim(StringBuilder sb, string line)
