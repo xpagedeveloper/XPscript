@@ -40,6 +40,7 @@ public static class XPScriptCompilerCommandLine
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         string? target = null;
         var restricted = false;
+        var debug = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
 
@@ -59,6 +60,8 @@ public static class XPScriptCompilerCommandLine
                     resultFormat = args[++i].ToLowerInvariant();
                 else if (args[i] == "--restricted")
                     restricted = true;
+                else if (args[i] == "--debug")
+                    debug = true;
                 else if (args[i] == "--source-root" && i + 1 < args.Length)
                 {
                     restricted = true;
@@ -75,6 +78,7 @@ public static class XPScriptCompilerCommandLine
             if (target is not null && target != "webiis")
                 throw new ArgumentException("--target currently supports webiis.");
 
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
             WriteProgress($"Started to compile {sourceName}");
@@ -142,6 +146,7 @@ public static class XPScriptCompilerCommandLine
             var parseRunOptions = true;
             var restricted = false;
             var info = false;
+            var debug = false;
             var sourceRoots = new List<string>();
             var sourcePreprocessors = new List<string>();
 
@@ -157,6 +162,12 @@ public static class XPScriptCompilerCommandLine
                 if (parseRunOptions && value == "--info")
                 {
                     info = true;
+                    continue;
+                }
+
+                if (parseRunOptions && value == "--debug")
+                {
+                    debug = true;
                     continue;
                 }
 
@@ -204,6 +215,7 @@ public static class XPScriptCompilerCommandLine
                 scriptArgs.Add(value);
             }
 
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var currentRuntimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
             if (!runtimeIdentifier.Equals(currentRuntimeIdentifier, StringComparison.OrdinalIgnoreCase))
                 throw new PlatformNotSupportedException(
@@ -339,6 +351,7 @@ public static class XPScriptCompilerCommandLine
 
             var nextArgs = new List<string> { "run", nextSourcePath };
             if (info) nextArgs.Add("--info");
+            if (debug) nextArgs.Add("--debug");
             if (restricted)
             {
                 nextArgs.Add("--restricted");
@@ -439,8 +452,8 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  {runCommand} <source.xps> [--info] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--debug] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {runCommand} <source.xps> [--info] [--debug] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -455,6 +468,8 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports live progress on one console line while preserving structured result output on stdout.
 The run command stays quiet by default. Use --info to show the same live compilation status and runtime lifecycle information.
+Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
+Use --debug to include generated C# compiler diagnostics and physical Program.cs locations when available.
 The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
