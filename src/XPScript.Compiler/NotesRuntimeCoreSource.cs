@@ -6,10 +6,13 @@ internal static class NotesRuntimeCoreSource
 internal static class XPScriptNotes
 {
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>
-        new(XPScriptRuntime.CStr(runtimeDirectory), null);
+        new(XPScriptRuntime.CStr(runtimeDirectory), null, null);
 
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory, object? notesIni) =>
-        new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni));
+        new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni), null);
+
+    public static XPScriptNotesSession CreateSession(object? runtimeDirectory, object? notesIni, object? idPassword) =>
+        new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni), XPScriptRuntime.CStr(idPassword));
 
     public static void RecycleValue(object? value)
     {
@@ -74,7 +77,7 @@ internal sealed class XPScriptNotesSession : IDisposable
     private bool _recycled;
     private bool _recycling;
 
-    internal XPScriptNotesSession(string runtimeDirectory, string? notesIni)
+    internal XPScriptNotesSession(string runtimeDirectory, string? notesIni, string? idPassword)
     {
         runtimeDirectory = runtimeDirectory.Trim();
         if (runtimeDirectory.Length == 0)
@@ -98,7 +101,10 @@ internal sealed class XPScriptNotesSession : IDisposable
             Api = new XPScriptNotesNativeApi(RuntimeDirectory);
             try
             {
-                Api.Initialize(NotesIni.Length == 0 ? null : NotesIni);
+                if (string.IsNullOrEmpty(idPassword))
+                    Api.Initialize(NotesIni.Length == 0 ? null : NotesIni);
+                else
+                    Api.Initialize(NotesIni.Length == 0 ? null : NotesIni, idPassword);
                 Username = Api.GetUserName();
                 CommonUsername = ExtractCommonUsername(Api.CanonicalizeName(Username));
                 NotesVersion = ResolveNotesVersion(RuntimeDirectory, NotesIni);
@@ -107,7 +113,8 @@ internal sealed class XPScriptNotesSession : IDisposable
             }
             catch
             {
-                Api.Dispose();
+                try { Api.ReleasePasswordHook(); }
+                finally { Api.Dispose(); }
                 throw;
             }
         }
@@ -317,7 +324,8 @@ internal sealed class XPScriptNotesSession : IDisposable
                     catch { Unregister(child); }
                 }
 
-                Api.Terminate();
+                try { Api.ReleasePasswordHook(); }
+                finally { Api.Terminate(); }
                 _recycled = true;
             }
             finally
