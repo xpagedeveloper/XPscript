@@ -10,13 +10,16 @@ internal static class XPScriptNullRuntime
     // exposing a private XPScript sentinel type to referenced .NET assemblies.
     public static readonly object NullValue = System.DBNull.Value;
 
-    public static bool IsNull(object? value) => ReferenceEquals(value, System.DBNull.Value);
-    public static bool IsEmpty(object? value) => value is null;
-    public static bool IsObject(object? value) => IsNull(value) ? false : XPScriptRuntime.IsObject(value);
-    public static bool IsScalar(object? value) => IsNull(value) ? true : XPScriptRuntime.IsScalar(value);
+    private static bool IsVariantNull(object? value) => ReferenceEquals(value, System.DBNull.Value);
+    private static bool IsObjectNothing(object? value) => value is ILSObjectReference reference && reference.IsNothing;
 
-    public static int DataType(object? value) => IsNull(value) ? 1 : XPScriptRuntime.DataType(value);
-    public static string TypeName(object? value) => IsNull(value) ? "NULL" : XPScriptRuntime.TypeName(value);
+    public static bool IsNull(object? value) => IsVariantNull(value) || IsObjectNothing(value);
+    public static bool IsEmpty(object? value) => value is null;
+    public static bool IsObject(object? value) => IsVariantNull(value) ? false : XPScriptRuntime.IsObject(value);
+    public static bool IsScalar(object? value) => IsVariantNull(value) ? true : XPScriptRuntime.IsScalar(value);
+
+    public static int DataType(object? value) => IsVariantNull(value) ? 1 : XPScriptRuntime.DataType(value);
+    public static string TypeName(object? value) => IsVariantNull(value) ? "NULL" : XPScriptRuntime.TypeName(value);
 
     public static bool ConditionValue(object? value)
     {
@@ -124,7 +127,7 @@ internal static class XPScriptCoercion
 
     public static object? PowerVariant(object? left, object? right)
     {
-        if (XPScriptNullRuntime.IsNull(left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
+        if (XPScriptNullRuntime.IsNull(value: left) || XPScriptNullRuntime.IsNull(right)) return XPScriptNullRuntime.NullValue;
         var number = ToDouble(left, "exponentiation");
         var exponent = ToDouble(right, "exponentiation");
         if ((number == 0d && exponent <= 0d) || (number < 0d && exponent != Math.Truncate(exponent)))
