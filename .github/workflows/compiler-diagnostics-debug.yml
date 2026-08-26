@@ -1,0 +1,83 @@
+name: Compiler Diagnostics Debug
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/CompileResult.cs'
+      - 'src/XPScript.Compiler/CompilerDiagnosticMode.cs'
+      - 'src/XPScript.Compiler/CompilerDiagnosticParser.cs'
+      - 'src/XPScript.Compiler/RunCompiler.cs'
+      - 'src/XPScript.Compiler/RunRoslynCompiler.cs'
+      - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
+      - 'src/XPScript.Compiler/CompilerSourceLineDirectivePostProcessor.cs'
+      - 'samples/include-source-map/**'
+      - 'docs/compiler-diagnostics.md'
+      - '.github/workflows/compiler-diagnostics-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Verify normal diagnostics hide generated C sharp
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $stdoutPath = [System.IO.Path]::GetTempFileName()
+          $stderrPath = [System.IO.Path]::GetTempFileName()
+          try {
+            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/root.xps --info --result-format text 1> $stdoutPath 2> $stderrPath
+            $exitCode = $LASTEXITCODE
+            $stdout = Get-Content -Raw $stdoutPath
+            $stderr = Get-Content -Raw $stderrPath
+
+            if ($exitCode -ne 2) { throw "Expected exit code 2, got $exitCode.`nstdout:`n$stdout`nstderr:`n$stderr" }
+            if ($stdout -notmatch '(?m)^\s*file:\s*compile-error\.xps\s*$') { throw "Original XPScript file was not reported.`n$stdout" }
+            if ($stdout -notmatch '(?m)^\s*line:\s*5\s*$') { throw "Original XPScript line 5 was not reported.`n$stdout" }
+            if ($stdout -match 'Program\.cs') { throw "Normal diagnostic leaked Program.cs.`n$stdout" }
+            if ($stderr -match 'Program\.cs') { throw "Normal --info output leaked Program.cs.`n$stderr" }
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
+          }
+
+      - name: Verify debug diagnostics show generated C sharp
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $stdoutPath = [System.IO.Path]::GetTempFileName()
+          $stderrPath = [System.IO.Path]::GetTempFileName()
+          try {
+            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/root.xps --info --debug --result-format text 1> $stdoutPath 2> $stderrPath
+            $exitCode = $LASTEXITCODE
+            $stdout = Get-Content -Raw $stdoutPath
+
+            if ($exitCode -ne 2) { throw "Expected exit code 2, got $exitCode.`n$stdout" }
+            if ($stdout -notmatch '(?m)^\s*file:\s*compile-error\.xps\s*$') { throw "Debug output lost the source-mapped XPScript diagnostic.`n$stdout" }
+            if ($stdout -notmatch '(?m)^\s*file:\s*Program\.cs\s*$') { throw "Debug output did not include generated Program.cs.`n$stdout" }
+            if ($stdout -notmatch 'CS\d{4}') { throw "Debug output did not include a C# diagnostic identifier.`n$stdout" }
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
+          }
