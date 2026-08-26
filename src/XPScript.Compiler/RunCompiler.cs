@@ -26,11 +26,11 @@ internal static class RunCompiler
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error([new CompileDiagnostic
-            {
-                File = Path.GetFileName(sourcePath),
-                Description = ex.Message
-            }]);
+            return CompileResult.Error(CompilerDiagnosticParser.Parse(
+                ex.Message,
+                sourcePath,
+                source,
+                CompilerDiagnosticMode.Debug));
         }
         catch (Exception ex)
         {
