@@ -51,11 +51,12 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime.xps -o ./out/application-runtime.exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Application runtime compilation failed.' }
 
-      - name: Verify zero arguments
+      - name: Verify zero arguments and default exit code
         shell: pwsh
         run: |
           $output = & ./out/application-runtime.exe
           if ($LASTEXITCODE -ne 0) { throw "Application runtime exited with code $LASTEXITCODE." }
+          if ($output -notcontains 'EXITCODE=0') { throw 'Expected default Application.ExitCode=0.' }
           if ($output -notcontains 'ARGCOUNT=0') { throw 'Expected ARGCOUNT=0.' }
           if ($output -notcontains 'COMMANDLINE=') { throw 'Expected empty Application.CommandLine for zero arguments.' }
           if ($output | Where-Object { $_ -like 'ARG0=*' }) { throw 'Unexpected ARG0 output for zero arguments.' }
@@ -96,6 +97,32 @@ jobs:
           if ($exeDir -ne [System.IO.Path]::GetDirectoryName($exePath)) { throw 'ExecutableDirectory does not match ExecutablePath.' }
           if ([string]::IsNullOrWhiteSpace($tempPath) -or -not (Test-Path -LiteralPath $tempPath -PathType Container)) { throw 'TempPath is invalid.' }
           if ($tempFolder -ne $tempPath) { throw "TempFolder alias mismatch. TempPath='$tempPath' TempFolder='$tempFolder'." }
+
+      - name: Verify console Application.ExitCode
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime-exit-code.xps -o ./out/application-runtime-exit-code.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Console exit-code sample compilation failed.' }
+          $output = & ./out/application-runtime-exit-code.exe
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -ne 7) { throw "Expected console exit code 7, got $exitCode." }
+          if ($output -notcontains 'EXITCODE=7') { throw 'Application.ExitCode getter did not return 7.' }
+
+      - name: Verify desktop Application.ExitCode
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-runtime-exit-code-desktop.xps -o ./out/application-runtime-exit-code-desktop.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop exit-code sample compilation failed.' }
+          $output = & ./out/application-runtime-exit-code-desktop.exe
+          $exitCode = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($exitCode -ne 9) { throw "Expected desktop exit code 9, got $exitCode." }
+          if ($output -notcontains 'EXITCODE=9') { throw 'Desktop Application.ExitCode getter did not return 9.' }
 
       - name: Verify out-of-range argument error
         shell: pwsh
