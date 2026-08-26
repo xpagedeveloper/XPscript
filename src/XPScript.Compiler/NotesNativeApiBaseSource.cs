@@ -171,7 +171,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
 
     internal LmbcsBuffer ToLmbcs(string value)
     {
-        EnsureNotDisposed();
+        EnsureInitialized();
         var bytes = System.Text.Encoding.UTF8.GetBytes(value ?? "");
         var input = System.Runtime.InteropServices.Marshal.AllocHGlobal(Math.Max(1, bytes.Length));
         var capacity = Math.Max(16, checked(bytes.Length * 4 + 8));
@@ -196,6 +196,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
     internal string FromLmbcs(nint input, int length)
     {
         if (input == 0 || length <= 0) return "";
+        EnsureInitialized();
         var capacity = Math.Max(16, checked(length * 4 + 8));
         var output = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
         try
@@ -219,7 +220,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
     internal void Check(ushort status, string operation)
     {
         if (status == 0) return;
-        var message = LoadStatusText(status);
+        var message = _initialized ? LoadStatusText(status) : "";
         throw new XPScriptRuntimeException(5, operation + " failed with Notes status 0x" + status.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + (message.Length == 0 ? "." : ": " + message));
     }
 
@@ -279,21 +280,22 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
 
     private ArgvBuffer BuildArgv(IReadOnlyList<string> args)
     {
-        var values = new List<LmbcsBuffer>();
+        var values = new List<nint>();
         var argv = System.Runtime.InteropServices.Marshal.AllocHGlobal(IntPtr.Size * args.Count);
         try
         {
             for (var i = 0; i < args.Count; i++)
             {
-                var value = ToLmbcs(args[i]);
+                var value = System.Runtime.InteropServices.Marshal.StringToHGlobalAnsi(args[i] ?? "");
                 values.Add(value);
-                System.Runtime.InteropServices.Marshal.WriteIntPtr(argv, i * IntPtr.Size, value.Pointer);
+                System.Runtime.InteropServices.Marshal.WriteIntPtr(argv, i * IntPtr.Size, value);
             }
             return new ArgvBuffer(argv, values);
         }
         catch
         {
-            foreach (var value in values) value.Dispose();
+            foreach (var value in values)
+                if (value != 0) System.Runtime.InteropServices.Marshal.FreeHGlobal(value);
             System.Runtime.InteropServices.Marshal.FreeHGlobal(argv);
             throw;
         }
@@ -322,12 +324,13 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
 
     private sealed class ArgvBuffer : IDisposable
     {
-        private readonly List<LmbcsBuffer> _values;
-        internal ArgvBuffer(nint pointer, List<LmbcsBuffer> values) { Pointer = pointer; _values = values; }
+        private readonly List<nint> _values;
+        internal ArgvBuffer(nint pointer, List<nint> values) { Pointer = pointer; _values = values; }
         internal nint Pointer { get; private set; }
         public void Dispose()
         {
-            foreach (var value in _values) value.Dispose();
+            foreach (var value in _values)
+                if (value != 0) System.Runtime.InteropServices.Marshal.FreeHGlobal(value);
             if (Pointer != 0) System.Runtime.InteropServices.Marshal.FreeHGlobal(Pointer);
             Pointer = 0;
         }
