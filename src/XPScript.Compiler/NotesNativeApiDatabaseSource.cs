@@ -70,6 +70,45 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
     }
 
+    internal string LocateDatabaseByReplicaId(string server, string replicaId)
+    {
+        EnsureInitialized();
+        var id = ParseReplicaId(replicaId);
+        nint db = 0;
+        try
+        {
+            // Opening an empty path yields the local/server database directory handle.
+            db = OpenDatabase(server, "");
+            const int capacity = 4096;
+            var output = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
+            try
+            {
+                Zero(output, capacity);
+                Check(Resolve<NSFDbLocateByReplicaIDDelegate>("NSFDbLocateByReplicaID")(
+                    db, ref id, output, checked((ushort)(capacity - 1))), "NSFDbLocateByReplicaID");
+                return FromLmbcsZeroTerminated(output, capacity - 1);
+            }
+            finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(output); }
+        }
+        finally
+        {
+            if (db != 0) CloseDatabase(db);
+        }
+    }
+
+    private static XPScriptNotesTimeDate ParseReplicaId(string text)
+    {
+        text = (text ?? "").Replace("-", "", StringComparison.Ordinal).Replace(":", "", StringComparison.Ordinal).Trim();
+        if (text.Length != 16 || text.Any(c => !Uri.IsHexDigit(c)))
+            throw new XPScriptRuntimeException(13, "Notes replica ID must contain exactly 16 hexadecimal characters.");
+
+        return new XPScriptNotesTimeDate
+        {
+            Innards1 = uint.Parse(text[..8], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture),
+            Innards0 = uint.Parse(text[8..], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture)
+        };
+    }
+
     internal (long Size, double PercentUsed) GetDatabaseSpaceUsage(nint db)
     {
         EnsureInitialized();
@@ -96,6 +135,8 @@ internal sealed partial class XPScriptNotesNativeApi
     internal delegate ushort NSFDbInfoSetDelegate(nint db, nint buffer);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFDbReplicaInfoGetDelegate(nint db, nint replicaInfo);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFDbLocateByReplicaIDDelegate(nint db, ref XPScriptNotesTimeDate replicaId, nint pathName, ushort pathNameSize);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFDbSpaceUsageDelegate(nint db, out uint allocatedBytes, out uint freeBytes);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
