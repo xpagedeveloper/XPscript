@@ -61,6 +61,7 @@ global using System.Threading.Tasks;
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
+        _ = debug;
 
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
@@ -108,7 +109,7 @@ global using System.Threading.Tasks;
         {
             try { File.Delete(assemblyPath); } catch { }
             try { File.Delete(pdbPath); } catch { }
-            throw new CompilerException(BuildDiagnostics(emit.Diagnostics, debug));
+            throw new CompilerException(BuildDiagnostics(emit.Diagnostics));
         }
 
         CompilerPathSecurity.HardenTemporaryFile(assemblyPath);
@@ -136,12 +137,12 @@ global using System.Threading.Tasks;
         return builder.ToImmutable();
     }
 
-    private static string BuildDiagnostics(IEnumerable<Diagnostic> diagnostics, bool debug)
+    private static string BuildDiagnostics(IEnumerable<Diagnostic> diagnostics)
     {
         var errors = diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
         if (errors.Length == 0) return "Generated code failed to compile.";
 
-        var lines = new List<string>(debug ? errors.Length * 2 : errors.Length);
+        var lines = new List<string>(errors.Length * 2);
         foreach (var diagnostic in errors)
         {
             var mapped = diagnostic.Location.GetMappedLineSpan();
@@ -155,19 +156,19 @@ global using System.Threading.Tasks;
                 lines.Add($"Program.cs(0,0): error {diagnostic.Id}: {diagnostic.GetMessage()}");
             }
 
-            if (!debug || diagnostic.Location.SourceTree is null)
+            if (diagnostic.Location.SourceTree is null)
                 continue;
 
-            var physical = diagnostic.Location.SourceTree.GetLineSpan(diagnostic.Location.SourceSpan);
-            if (!physical.IsValid)
-                continue;
-
-            var physicalPath = string.IsNullOrWhiteSpace(physical.Path) ? "Program.cs" : Path.GetFileName(physical.Path);
+            var sourceText = diagnostic.Location.SourceTree.GetText();
+            var physicalPosition = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
+            var physicalPath = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
+                ? "Program.cs"
+                : Path.GetFileName(diagnostic.Location.SourceTree.FilePath);
             var duplicatesMapped = mapped.IsValid &&
                                    string.Equals(Path.GetFileName(mapped.Path), physicalPath, StringComparison.OrdinalIgnoreCase) &&
-                                   mapped.StartLinePosition.Equals(physical.StartLinePosition);
+                                   mapped.StartLinePosition.Equals(physicalPosition);
             if (!duplicatesMapped)
-                lines.Add(FormatDiagnostic(physicalPath, physical.StartLinePosition, diagnostic));
+                lines.Add(FormatDiagnostic(physicalPath, physicalPosition, diagnostic));
         }
         return "Generated code failed to compile." + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
