@@ -25,6 +25,18 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - name: Verify normal CLI build creates root publish output
+        shell: pwsh
+        run: |
+          if (Test-Path 'publish/xpscript') { Remove-Item 'publish/xpscript' -Recurse -Force }
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'Normal XPScript.Cli build failed.' }
+          $path = 'publish/xpscript'
+          if (-not (Test-Path $path)) { throw "Normal CLI build did not create: $path" }
+          if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Publish folder is empty after normal CLI build: $path" }
+          if (-not (Get-ChildItem $path -File | Where-Object Name -Match '^xpscript(\.exe)?$|^xpscript\.dll$')) {
+            throw 'Normal CLI build publish output does not contain xpscript.'
+          }
       - name: Publish unified toolchain
         shell: pwsh
         run: ./scripts/publish-distributions.ps1
