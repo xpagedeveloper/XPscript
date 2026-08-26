@@ -5,6 +5,7 @@ This tracks functionality still missing or needing validation in the XPscript HC
 ## Post-merge compiler fixes
 
 - Add `Const` statement support in `AdvancedXPScriptTranspiler.EmitStatement`, including procedure-local constants such as `Const NOTES_RUNTIME = "C:\\Program Files\\HCL\\Notes"`. Add compiler tests for String, Integer, Long, Double and Boolean constants. This currently blocks `samples/notes-database-properties-console.xps` with `Unsupported statement` after the Notes wrapper branch is merged to `main`.
+- Improve generated-code diagnostics so normal compiler output maps errors back to the original `.xps` source line instead of exposing `Program.cs` line numbers. Add a new `--debug` option that preserves/shows generated `Program.cs` diagnostics and line numbers for compiler/runtime debugging, while default `--info` output remains source-mapped to `.xps`.
 
 ## Build and runtime validation
 
