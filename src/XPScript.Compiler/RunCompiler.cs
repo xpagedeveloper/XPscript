@@ -79,6 +79,7 @@ internal static class RunCompiler
             generatedSource,
             managedReferences,
             nativeDependencies,
+            debug,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -88,6 +89,7 @@ internal static class RunCompiler
         string generatedSource,
         ManagedAssemblyReferencePreprocessor.Result managedReferences,
         IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
+        bool debug,
         CancellationToken cancellationToken)
     {
         var tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-build-");
@@ -101,33 +103,20 @@ internal static class RunCompiler
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
-            var psi = new ProcessStartInfo
+            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+            if (build.ExitCode != 0)
             {
-                FileName = "dotnet",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                WorkingDirectory = tempRoot
-            };
-            psi.ArgumentList.Add("build");
-            psi.ArgumentList.Add(projectPath);
-            psi.ArgumentList.Add("-c");
-            psi.ArgumentList.Add("Release");
-            psi.ArgumentList.Add("-o");
-            psi.ArgumentList.Add(outputRoot);
-            psi.ArgumentList.Add("--nologo");
-            psi.ArgumentList.Add("-p:UseAppHost=false");
-            CompilerBuildEnvironment.Configure(psi, tempRoot);
+                var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
+                if (debug)
+                {
+                    await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
+                    CompilerPathSecurity.HardenTemporaryFile(programPath);
+                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+                    diagnosticText += Environment.NewLine + generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr;
+                }
 
-            using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + stdout + Environment.NewLine + stderr);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+            }
 
             var assemblyPath = Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
@@ -140,6 +129,52 @@ internal static class RunCompiler
         {
             try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
+    }
+
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> ExecuteBuildAsync(
+        string tempRoot,
+        string projectPath,
+        string outputRoot,
+        CancellationToken cancellationToken)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = tempRoot
+        };
+        psi.ArgumentList.Add("build");
+        psi.ArgumentList.Add(projectPath);
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add("Release");
+        psi.ArgumentList.Add("-o");
+        psi.ArgumentList.Add(outputRoot);
+        psi.ArgumentList.Add("--nologo");
+        psi.ArgumentList.Add("--no-incremental");
+        psi.ArgumentList.Add("-p:UseAppHost=false");
+        CompilerBuildEnvironment.Configure(psi, tempRoot);
+
+        using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false));
+    }
+
+    private static string DisableSourceMappings(string generatedSource)
+    {
+        var lines = generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].TrimStart();
+            if (!trimmed.StartsWith("#line ", StringComparison.Ordinal)) continue;
+            var indentLength = lines[i].Length - trimmed.Length;
+            lines[i] = new string(' ', indentLength) + "#line default";
+        }
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static IReadOnlyList<(string Name, string Path)> StageManagedReferences(
