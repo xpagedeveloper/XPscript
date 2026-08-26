@@ -10,6 +10,7 @@
     <AssemblyTitle>XPScript</AssemblyTitle>
     <Product>XPScript</Product>
     <Copyright>(c) xpagedeveloper.com 2026</Copyright>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <UnifiedPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../publish/xpscript'))</UnifiedPublishDirectory>
   </PropertyGroup>
   <ItemGroup>
