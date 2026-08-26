@@ -68,6 +68,10 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = set.Groups[1].Value;
                 var rhs = set.Groups[2].Value.Trim();
+                foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length))
+                    rhs = RewriteDocumentItemValues(rhs, documentName);
+                foreach (var itemName in notesItems.OrderByDescending(value => value.Length))
+                    rhs = RewriteNotesItemValues(rhs, itemName);
                 var temp = "__notesReplacement" + (++replacementIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 output.Add(indent + $"Dim {temp} As Variant");
                 output.Add(indent + $"{temp} = {rhs}");
