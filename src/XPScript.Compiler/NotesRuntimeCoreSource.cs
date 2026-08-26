@@ -199,6 +199,25 @@ internal sealed class XPScriptNotesSession : IDisposable
         }
     }
 
+    public XPScriptNotesDatabase OpenByReplicaID(object? serverValue, object? replicaIdValue)
+    {
+        EnsureAlive();
+        var server = XPScriptRuntime.CStr(serverValue).Trim();
+        var replicaId = XPScriptRuntime.CStr(replicaIdValue).Trim();
+        var file = "";
+        try
+        {
+            file = Api.LocateDatabaseByReplicaId(server, replicaId);
+            if (file.Length == 0)
+                return new XPScriptNotesDatabase(this, 0, server, file);
+            return new XPScriptNotesDatabase(this, Api.OpenDatabase(server, file), server, file);
+        }
+        catch (XPScriptRuntimeException)
+        {
+            return new XPScriptNotesDatabase(this, 0, server, file);
+        }
+    }
+
     public XPScriptNotesName CreateName(object? nameValue)
     {
         EnsureAlive();
