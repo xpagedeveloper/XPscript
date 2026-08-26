@@ -150,6 +150,7 @@ internal static class NotesRuntimeSourceBuilder
         source = source.Replace("OSMemFreeDelegate(nint handle)", "OSMemFreeDelegate(uint handle)", StringComparison.Ordinal);
         source = source.Replace("FTCloseSearchDelegate(nint search)", "FTCloseSearchDelegate(uint search)", StringComparison.Ordinal);
         source = source.Replace("IDScanDelegate(nint table", "IDScanDelegate(uint table", StringComparison.Ordinal);
+        source = source.Replace("NSFSearchDelegate(uint db, nint formula", "NSFSearchDelegate(uint db, uint formula", StringComparison.Ordinal);
         source = source.Replace("AgentSetDocumentContextDelegate(nint context, nint note)", "AgentSetDocumentContextDelegate(nint context, uint note)", StringComparison.Ordinal);
         source = source.Replace("AgentRunDelegate(nint agent, nint context, nint selection", "AgentRunDelegate(nint agent, nint context, uint selection", StringComparison.Ordinal);
         source = source.Replace("AgentQueryStdoutBufferDelegate(nint context, out nint outputHandle", "AgentQueryStdoutBufferDelegate(nint context, out uint outputHandle", StringComparison.Ordinal);
