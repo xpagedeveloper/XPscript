@@ -6,6 +6,7 @@ Option Declare
 Sub CompileNotesSurface()
     Dim session As New NotesSession("C:\Program Files\HCL\Notes")
     Dim db As NotesDatabase
+    Dim dbCopy As NotesDatabase
     Dim view As NotesView
     Dim docs As NotesDocumentCollection
     Dim doc As NotesDocument
@@ -27,6 +28,11 @@ Sub CompileNotesSurface()
     Print whenValue.LocalTime
 
     Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Print db.ReplicaID
+    Set dbCopy = db.CreateCopy("", "apps\customers-copy.nsf")
+    Call db.SetReplicaId("85258D12004A1234")
+    If Not dbCopy Is Nothing Then Call dbCopy.Recycle()
+
     Set view = db.OpenView("CustomersByNumber")
     Set docs = view.GetAllDocumentsByKey("CUST-10042")
 
