@@ -11,9 +11,10 @@ internal sealed class NotesRuntimePreprocessor
         ArgumentNullException.ThrowIfNull(source);
 
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
-        var output = new List<string>(lines.Length + 8);
+        var output = new List<string>(lines.Length + 16);
         var notesVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var notesDocumentCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var replacementIndex = 0;
 
         foreach (var raw in lines)
         {
@@ -55,9 +56,27 @@ internal sealed class NotesRuntimePreprocessor
             if (unsupportedNew.Success)
                 throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
 
+            var recycle = Regex.Match(rewritten, @"^(?:Call\s+)?([A-Za-z_]\w*)\.Recycle\s*\(\s*\)\s*$", RegexOptions.IgnoreCase);
+            if (recycle.Success && notesVariables.Contains(recycle.Groups[1].Value))
+            {
+                var name = recycle.Groups[1].Value;
+                output.Add(indent + $"Call XPScriptNotes.RecycleValue({name})");
+                output.Add(indent + $"{name} = Nothing");
+                continue;
+            }
+
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && notesVariables.Contains(set.Groups[1].Value))
-                rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
+            {
+                var name = set.Groups[1].Value;
+                var rhs = set.Groups[2].Value.Trim();
+                var temp = "__notesReplacement" + (++replacementIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                output.Add(indent + $"Dim {temp} As Variant");
+                output.Add(indent + $"{temp} = {rhs}");
+                output.Add(indent + $"Call XPScriptNotes.RecycleForReplacement({name}, {temp})");
+                output.Add(indent + $"{name} = {temp}");
+                continue;
+            }
 
             foreach (var collectionName in notesDocumentCollections)
             {
