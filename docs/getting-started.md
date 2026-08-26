@@ -54,6 +54,22 @@ xpscriptc hello.xps --runtime linux-x64 -o hello
 xpscriptc hello.xps --runtime osx-arm64 -o hello
 ```
 
+Cross-compilation is supported. For example, on a Linux machine you can create a self-contained Windows x64 console application:
+
+```bash
+xpscript compile app.xps --runtime win-x64 -o app.exe
+```
+
+The resulting Windows application includes the required .NET runtime and does not require .NET 10 to be installed on the target computer.
+
+To create a smaller Windows x64 application that requires .NET 10 on the target computer, add `--framework-dependent`:
+
+```bash
+xpscript compile app.xps --runtime win-x64 --framework-dependent -o app.exe
+```
+
+The host operating system and target runtime are independent. The same Linux installation of `xpscript` can target Windows, Linux or macOS by selecting the appropriate runtime identifier.
+
 Supported deployment RIDs include `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`.
 
 ## Compiler parameters
