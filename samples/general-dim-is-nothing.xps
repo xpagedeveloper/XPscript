@@ -5,6 +5,7 @@ End Class
 
 Sub Main()
     Dim a As String, b As String, c As Integer, d As Long, rate As Double, enabled As Boolean, obj As TestObject, doc As NotesDocument
+    Dim emptyValue As Variant
 
     a = "alpha"
     b = "beta"
@@ -32,10 +33,21 @@ Sub Main()
         Error 5, "Boolean type/value mismatch"
     End If
 
+    If IsNull(emptyValue) Then
+        Error 5, "Empty Variant must not be Null"
+    End If
+    Print "EMPTY_ISNULL=FALSE"
+
     If obj Is Nothing Then
         Print "CLASS_NOTHING=OK"
     Else
         Error 5, "New object reference should initially be Nothing"
+    End If
+
+    If IsNull(obj) Then
+        Print "CLASS_NOTHING_ISNULL=OK"
+    Else
+        Error 5, "IsNull must return True for object Nothing"
     End If
 
     Set obj = New TestObject()
@@ -44,6 +56,10 @@ Sub Main()
         Print "CLASS_IS_NOT_NOTHING=OK"
     Else
         Error 5, "Object reference should not be Nothing after New"
+    End If
+
+    If IsNull(obj) Then
+        Error 5, "Bound object must not be Null"
     End If
 
     If Not obj Is Nothing Then
@@ -56,6 +72,12 @@ Sub Main()
         Print "EXTERNAL_NOTHING=OK"
     Else
         Error 5, "External object reference should initially be Nothing"
+    End If
+
+    If IsNull(doc) Then
+        Print "NOTES_NOTHING_ISNULL=OK"
+    Else
+        Error 5, "IsNull must return True for Notes object Nothing"
     End If
 
     If doc Is Not Nothing Then

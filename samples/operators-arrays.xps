@@ -59,6 +59,13 @@ Sub Main()
     idx = ArrayGetIndex(appended, "five")
     Print "GETINDEX=" & CStr(idx)
 
+    idx = ArrayGetIndex(appended, "missing")
+    If IsNull(idx) Then
+        Print "GETINDEX-MISS-NULL=OK"
+    Else
+        Error 5, "ArrayGetIndex must return Null when no match is found"
+    End If
+
     exploded = Explode(",", "A,a,B,b,B")
     Print "EXPLODE=" & Join(exploded, "|")
 
