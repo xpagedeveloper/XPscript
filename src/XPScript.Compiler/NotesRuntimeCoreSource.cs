@@ -87,10 +87,6 @@ internal sealed class XPScriptNotesSession : IDisposable
         if (!Directory.Exists(resolvedRuntimeDirectory))
             throw new XPScriptRuntimeException(5, "Notes Directory " + resolvedRuntimeDirectory + " does not exists.");
 
-        var notesLibraryPath = Path.Combine(resolvedRuntimeDirectory, "nnotes.dll");
-        if (!File.Exists(notesLibraryPath))
-            throw new XPScriptRuntimeException(5, "nnotes.dll can't be found in Notes Directory " + resolvedRuntimeDirectory + ".");
-
         lock (SessionGate)
         {
             if (ActiveSession is not null && !ActiveSession._recycled)
