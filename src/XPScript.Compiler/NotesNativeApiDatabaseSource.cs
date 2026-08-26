@@ -29,7 +29,7 @@ internal sealed partial class XPScriptNotesNativeApi
             Zero(info, NsfInfoSize);
             Zero(output, NsfInfoSize);
             Check(Resolve<NSFDbInfoGetDelegate>("NSFDbInfoGet")(db, info), "NSFDbInfoGet");
-            Resolve<NSFDbInfoParseDelegate>("NSFDbInfoParse")(info, what, output, NsfInfoSize - 1);
+            Resolve<NSFDbInfoParseDelegate>("NSFDbInfoParse")(info, what, output, checked((ushort)(NsfInfoSize - 1)));
             return FromLmbcsZeroTerminated(output, NsfInfoSize - 1);
         }
         finally
@@ -89,7 +89,7 @@ internal sealed partial class XPScriptNotesNativeApi
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFDbInfoGetDelegate(nint db, nint buffer);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate void NSFDbInfoParseDelegate(nint info, ushort what, nint buffer, int length);
+    internal delegate void NSFDbInfoParseDelegate(nint info, ushort what, nint buffer, ushort length);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate void NSFDbInfoModifyDelegate(nint info, ushort what, nint buffer);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
