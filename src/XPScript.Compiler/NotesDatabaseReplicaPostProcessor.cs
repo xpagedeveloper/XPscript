@@ -19,10 +19,11 @@ internal static class NotesDatabaseReplicaPostProcessor
     private const string ExtraCode = """
 internal sealed partial class XPScriptNotesDatabase
 {
-    public XPScriptNotesDatabase? CreateCopy(object? serverValue, object? filePathValue)
+    public XPScriptNotesDatabase CreateCopy(object? serverValue, object? filePathValue)
     {
         EnsureAlive();
-        if (!IsOpen) return null;
+        if (!IsOpen)
+            throw new XPScriptRuntimeException(91, "CreateCopy requires an open NotesDatabase.");
 
         var server = XPScriptRuntime.CStr(serverValue).Trim();
         var filePath = XPScriptRuntime.CStr(filePathValue).Trim();
