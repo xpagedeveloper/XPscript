@@ -4,9 +4,9 @@ on:
   pull_request:
     paths:
       - 'src/XPScript.Cli/**'
-      - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler.Core/**'
       - 'src/XPScript.UI.Desktop/**'
-      - 'src/XPScript.Web.Cgi/**'
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.Web.FastCgi/**'
       - 'src/XPScript.Web.Kestrel/**'
@@ -25,67 +25,22 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Publish distributions
+      - name: Publish unified toolchain
         shell: pwsh
-        run: ./scripts/publish-distributions.ps1 -Package all
-      - name: Verify distribution outputs
+        run: ./scripts/publish-distributions.ps1
+      - name: Verify unified publish output
         shell: pwsh
         run: |
-          $required = @(
-            'artifacts/distributions/compiler',
-            'artifacts/distributions/desktop-runtime',
-            'artifacts/distributions/cgi',
-            'artifacts/distributions/fastcgi',
-            'artifacts/distributions/kestrel'
-          )
-          foreach ($path in $required) {
-            if (-not (Test-Path $path)) { throw "Missing distribution folder: $path" }
-            if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Distribution is empty: $path" }
+          $path = 'publish/xpscript'
+          if (-not (Test-Path $path)) { throw "Missing publish folder: $path" }
+          if (-not (Get-ChildItem $path -File -ErrorAction SilentlyContinue)) { throw "Publish folder is empty: $path" }
+          if (-not (Get-ChildItem $path -File | Where-Object Name -Match '^xpscript(\.exe)?$|^xpscript\.dll$')) {
+            throw 'Unified publish output does not contain xpscript.'
           }
-
-          if (-not (Get-ChildItem 'artifacts/distributions/compiler' -File | Where-Object Name -Match '^xpscriptc(\.exe)?$|^xpscriptc\.dll$')) {
-            throw 'Compiler distribution does not contain xpscriptc.'
-          }
-          if (-not (Get-ChildItem 'artifacts/distributions/cgi' -File | Where-Object Name -Match '^XPScript\.Web\.Cgi(\.exe)?$|^XPScript\.Web\.Cgi\.dll$')) {
-            throw 'CGI distribution does not contain the CGI host.'
-          }
-          foreach ($path in @('artifacts/distributions/fastcgi','artifacts/distributions/kestrel')) {
-            if (-not (Get-ChildItem $path -File | Where-Object Name -Match '^xpscript(\.exe)?$|^xpscript\.dll$')) {
-              throw "Web distribution does not contain xpscript: $path"
-            }
-          }
-      - name: Upload compiler artifact
+      - name: Upload XPscript toolchain artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xpscript-compiler
-          path: artifacts/distributions/compiler/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload desktop runtime artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-desktop-runtime
-          path: artifacts/distributions/desktop-runtime/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload CGI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-cgi
-          path: artifacts/distributions/cgi/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload FastCGI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-fastcgi
-          path: artifacts/distributions/fastcgi/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload Kestrel artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xpscript-kestrel
-          path: artifacts/distributions/kestrel/
+          name: xpscript-toolchain
+          path: publish/xpscript/
           if-no-files-found: error
           retention-days: 14
