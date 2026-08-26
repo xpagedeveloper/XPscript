@@ -27,7 +27,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
     }
 
-    internal nint CreateDatabaseCopy(string sourceServer, string sourceFile, string destinationServer, string destinationFile)
+    internal uint CreateDatabaseCopy(string sourceServer, string sourceFile, string destinationServer, string destinationFile)
     {
         EnsureInitialized();
         using var sourceFileText = ToLmbcs(sourceFile);
@@ -80,7 +80,7 @@ internal sealed partial class XPScriptNotesNativeApi
         ushort noteClass,
         ushort limit,
         uint flags,
-        out nint returnHandle);
+        out uint returnHandle);
 }
 """;
 }
