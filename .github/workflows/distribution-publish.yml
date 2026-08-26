@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/XPScript.Cli/**'
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+      - 'src/XPScript.Compiler/Program.cs'
       - 'src/XPScript.Compiler.Core/**'
       - 'src/XPScript.UI.Desktop/**'
       - 'src/XPScript.Web.Compiler/**'
@@ -12,7 +13,6 @@ on:
       - 'src/XPScript.Web.Kestrel/**'
       - 'src/XPScript.Web.Runtime/**'
       - 'scripts/publish-distributions.ps1'
-      - 'docs/getting-started.md'
       - '.github/workflows/distribution-publish.yml'
   workflow_dispatch:
 
