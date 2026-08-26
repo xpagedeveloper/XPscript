@@ -155,10 +155,10 @@ global using System.Threading.Tasks;
                 lines.Add($"Program.cs(0,0): error {diagnostic.Id}: {diagnostic.GetMessage()}");
             }
 
-            if (!debug)
+            if (!debug || diagnostic.Location.SourceTree is null)
                 continue;
 
-            var physical = diagnostic.Location.GetLineSpan();
+            var physical = diagnostic.Location.SourceTree.GetLineSpan(diagnostic.Location.SourceSpan);
             if (!physical.IsValid)
                 continue;
 
