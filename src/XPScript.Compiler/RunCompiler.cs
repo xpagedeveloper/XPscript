@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
@@ -28,7 +29,10 @@ internal static class RunCompiler
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug));
+            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false);
+            if (debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics);
         }
         catch (Exception ex)
         {
@@ -107,15 +111,18 @@ internal static class RunCompiler
             if (build.ExitCode != 0)
             {
                 var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
+                IReadOnlyList<CompileDiagnostic> generatedDiagnostics = [];
                 if (debug)
                 {
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
                     var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
-                    diagnosticText += Environment.NewLine + generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr;
+                    generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
                 }
 
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                throw new CompilerException(
+                    "Generated code failed to compile." + Environment.NewLine + diagnosticText,
+                    generatedDiagnostics);
             }
 
             var assemblyPath = Path.Combine(outputRoot, "Generated.dll");
@@ -162,6 +169,25 @@ internal static class RunCompiler
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false));
+    }
+
+    private static IReadOnlyList<CompileDiagnostic> ParseGeneratedBuildDiagnostics(string text)
+    {
+        var result = new List<CompileDiagnostic>();
+        var pattern = new Regex(
+            @"(?:^|[\\/])Program\.cs\((?<line>\d+),(?<pos>\d+)\):\s*error\s+(?<id>CS\d+):\s*(?<desc>.*?)(?:\s*\[|$)",
+            RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        foreach (Match match in pattern.Matches(text))
+        {
+            result.Add(new CompileDiagnostic
+            {
+                File = "Program.cs",
+                Line = int.Parse(match.Groups["line"].Value),
+                Position = int.Parse(match.Groups["pos"].Value),
+                Description = $"{match.Groups["id"].Value}: {match.Groups["desc"].Value.Trim()}"
+            });
+        }
+        return result;
     }
 
     private static string DisableSourceMappings(string generatedSource)
