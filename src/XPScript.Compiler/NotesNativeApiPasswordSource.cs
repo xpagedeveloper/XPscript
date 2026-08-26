@@ -44,14 +44,15 @@ internal sealed partial class XPScriptNotesNativeApi
         _passwordBuffer = System.Runtime.InteropServices.Marshal.StringToHGlobalAnsi(idPassword);
         _passwordLength = 0;
         while (System.Runtime.InteropServices.Marshal.ReadByte(_passwordBuffer, _passwordLength) != 0) _passwordLength++;
-        _passwordHandler = HandlePasswordRequest;
+        var handler = new PasswordEmHandlerDelegate(HandlePasswordRequest);
+        _passwordHandler = handler;
 
         try
         {
             var status = Resolve<EMRegisterDelegate>("EMRegister")(
                 EmGetPassword,
                 EmRegBefore,
-                _passwordHandler,
+                handler,
                 0,
                 out _passwordRegistration);
             if (status != 0)
@@ -75,20 +76,14 @@ internal sealed partial class XPScriptNotesNativeApi
             if (record == 0 || _passwordBuffer == 0 || _passwordLength <= 0)
                 return ErrBsafeUserAbort;
 
-            var eventId = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(record, 0));
-            if (eventId != EmGetPassword)
+            var extensionRecord = System.Runtime.InteropServices.Marshal.PtrToStructure<PasswordEmRecord>(record);
+            if (extensionRecord.EventId != EmGetPassword || extensionRecord.Arguments == 0)
                 return ErrBsafeUserAbort;
-
-            // EMRECORD contains three WORD fields followed by VARARG_PTR. On Win64 the
-            // pointer is aligned at offset 8. On the legacy 32-bit Notes ABI it follows
-            // the three WORD fields at offset 6.
-            var argumentListOffset = IntPtr.Size == 8 ? 8 : 6;
-            var arguments = System.Runtime.InteropServices.Marshal.ReadIntPtr(record, argumentListOffset);
-            if (arguments == 0) return ErrBsafeUserAbort;
 
             // VARARG_GET consumes native argument slots. DWORD uses the first slot;
             // pointer arguments use the following two slots.
             var slot = IntPtr.Size == 8 ? 8 : 4;
+            var arguments = extensionRecord.Arguments;
             var maxPasswordLength = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(arguments, 0));
             var returnLength = System.Runtime.InteropServices.Marshal.ReadIntPtr(arguments, slot);
             var returnPassword = System.Runtime.InteropServices.Marshal.ReadIntPtr(arguments, slot * 2);
@@ -158,6 +153,15 @@ internal sealed partial class XPScriptNotesNativeApi
     private void EnsureNotDisposedForPasswordHook()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(XPScriptNotesNativeApi));
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct PasswordEmRecord
+    {
+        public ushort EventId;
+        public ushort NotificationType;
+        public ushort Status;
+        public nint Arguments;
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
