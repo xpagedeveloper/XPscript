@@ -26,5 +26,5 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""" + "\n\n" + NotesDatabaseReplicaPostProcessor.Apply(NotesRuntimeSourceBuilder.Build());
+""" + "\n\n" + NotesNothingPostProcessor.Apply(NotesDatabaseReplicaPostProcessor.Apply(NotesRuntimeSourceBuilder.Build()));
 }
