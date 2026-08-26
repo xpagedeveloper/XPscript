@@ -1,0 +1,70 @@
+Option Declare
+
+Class TestObject
+End Class
+
+Sub Main()
+    Dim a As String, b As String, c As Integer, d As Long, rate As Double, enabled As Boolean, obj As TestObject, doc As NotesDocument
+
+    a = "alpha"
+    b = "beta"
+    c = 42
+    d = 2147483648
+    rate = 12.5
+    enabled = True
+
+    If a <> "alpha" Then
+        Error 5, "String a type/value mismatch"
+    End If
+    If b <> "beta" Then
+        Error 5, "String b type/value mismatch"
+    End If
+    If c <> 42 Then
+        Error 5, "Integer type/value mismatch"
+    End If
+    If d <> 2147483648 Then
+        Error 5, "Long type/value mismatch"
+    End If
+    If rate <> 12.5 Then
+        Error 5, "Double type/value mismatch"
+    End If
+    If Not enabled Then
+        Error 5, "Boolean type/value mismatch"
+    End If
+
+    If obj Is Nothing Then
+        Print "CLASS_NOTHING=OK"
+    Else
+        Error 5, "New object reference should initially be Nothing"
+    End If
+
+    Set obj = New TestObject()
+
+    If obj Is Not Nothing Then
+        Print "CLASS_IS_NOT_NOTHING=OK"
+    Else
+        Error 5, "Object reference should not be Nothing after New"
+    End If
+
+    If Not obj Is Nothing Then
+        Print "CLASS_NOT_IS_NOTHING=OK"
+    Else
+        Error 5, "Not obj Is Nothing should be true"
+    End If
+
+    If doc Is Nothing Then
+        Print "EXTERNAL_NOTHING=OK"
+    Else
+        Error 5, "External object reference should initially be Nothing"
+    End If
+
+    If doc Is Not Nothing Then
+        Error 5, "External object unexpectedly non-Nothing"
+    End If
+
+    If Not doc Is Nothing Then
+        Error 5, "Not doc Is Nothing unexpectedly true"
+    End If
+
+    Print "GENERAL_DIM_IS_NOTHING=OK"
+End Sub

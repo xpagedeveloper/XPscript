@@ -55,6 +55,14 @@ internal interface ILSObjectReference
     bool IsNothing { get; }
 }
 
+internal static class LSObjectIdentityRuntime
+{
+    public static bool IsNothing(object? value) =>
+        value is ILSObjectReference reference ? reference.IsNothing : value is null;
+
+    public static bool IsNotNothing(object? value) => !IsNothing(value);
+}
+
 internal sealed class LSRef<T> : ILSObjectReference, IXPScriptIterable, System.Collections.IEnumerable where T : LSObjectBase
 {
     public T? Value { get; private set; }
