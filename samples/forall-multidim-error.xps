@@ -1,0 +1,9 @@
+Option Declare
+
+Sub Main()
+    Dim matrix(1, 1) As Integer
+
+    ForAll value In matrix
+        Print value
+    End ForAll
+End Sub
