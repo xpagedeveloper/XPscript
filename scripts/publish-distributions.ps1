@@ -15,7 +15,7 @@ if (Test-Path $output) {
 }
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 
-$args = @('publish', $project, '-c', $Configuration, '-o', $output, '--nologo')
+$args = @('publish', $project, '-c', $Configuration, '-o', $output, '--nologo', '-p:SkipUnifiedPublish=true')
 if ($Runtime) {
     $args += @('-r', $Runtime)
 }
