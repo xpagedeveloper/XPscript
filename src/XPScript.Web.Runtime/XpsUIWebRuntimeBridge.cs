@@ -45,7 +45,7 @@ public static class XpsUIWebRuntimeBridge
     public static string[] FormValues(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return XpsWebContextAccessor.Current.Request.Form(name).ToArray();
+        return XpsWebContextAccessor.Current.Request.FormAll(name).ToArray();
     }
 
     public static string FileJson(string name, long maxFileBytes, bool multiple)
