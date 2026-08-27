@@ -11,6 +11,7 @@ Sub Main()
     Dim nullValue As Variant
     Dim objectValue As HttpBoundaryObject
 
+    http.AllowPrivateNetwork = True
     nullValue = Null
 
     Set response = http.Post("http://127.0.0.1:18080/inspect", emptyValue)
