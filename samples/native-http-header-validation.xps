@@ -3,56 +3,57 @@ Option Declare
 Sub Main()
     Dim http As New HttpClient
     Dim response As HttpResponse
+    Dim errCode As Integer
 
-    On Error GoTo BadName
+    On Error Resume Next
     Call http.SetHeader("Bad Header", "value")
-    Print "BAD-NAME-NOT-REJECTED"
-    GoTo AfterBadName
-BadName:
-    Print "BAD-NAME-ERR=" & CStr(Err)
-    Resume AfterBadName
-AfterBadName:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-NAME-NOT-REJECTED"
+    Else
+        Print "BAD-NAME-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo BadValue
+    On Error Resume Next
     Call http.SetHeader("X-Test", "safe" & Chr(13) & Chr(10) & "Injected: yes")
-    Print "BAD-VALUE-NOT-REJECTED"
-    GoTo AfterBadValue
-BadValue:
-    Print "BAD-VALUE-ERR=" & CStr(Err)
-    Resume AfterBadValue
-AfterBadValue:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-VALUE-NOT-REJECTED"
+    Else
+        Print "BAD-VALUE-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo BadFraming
+    On Error Resume Next
     Call http.SetHeader("Content-Length", "1")
-    Print "BAD-FRAMING-NOT-REJECTED"
-    GoTo AfterBadFraming
-BadFraming:
-    Print "BAD-FRAMING-ERR=" & CStr(Err)
-    Resume AfterBadFraming
-AfterBadFraming:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-FRAMING-NOT-REJECTED"
+    Else
+        Print "BAD-FRAMING-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo BadScheme
+    On Error Resume Next
     Set response = http.Get("file:///etc/passwd")
-    Print "BAD-SCHEME-NOT-REJECTED"
-    GoTo AfterBadScheme
-BadScheme:
-    Print "BAD-SCHEME-ERR=" & CStr(Err)
-    Resume AfterBadScheme
-AfterBadScheme:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-SCHEME-NOT-REJECTED"
+    Else
+        Print "BAD-SCHEME-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo PrivateTarget
+    On Error Resume Next
     Set response = http.Get("http://127.0.0.1:18080/")
-    Print "PRIVATE-TARGET-NOT-REJECTED"
-    GoTo AfterPrivateTarget
-PrivateTarget:
-    Print "PRIVATE-TARGET-ERR=" & CStr(Err)
-    Resume AfterPrivateTarget
-AfterPrivateTarget:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "PRIVATE-TARGET-NOT-REJECTED"
+    Else
+        Print "PRIVATE-TARGET-ERR=" & CStr(errCode)
+    End If
 
     Call http.SetHeader("X-Valid-Header", "valid-value")
     Print "VALID-HEADER=OK"
