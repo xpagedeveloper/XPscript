@@ -8,6 +8,7 @@ Sub Main()
 
     Print "DEFAULT_TIMEOUT=" & CStr(client.Timeout)
     client.Timeout = 5
+    client.AllowPrivateNetwork = True
 
     Set response = client.Get("http://127.0.0.1:18080/redirect")
     Print "REDIRECT_STATUS=" & CStr(response.StatusCode)
