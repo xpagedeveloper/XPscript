@@ -106,11 +106,12 @@ internal static class ServiceCommand
         if (File.Exists(unitPath))
             throw new InvalidOperationException("A systemd service named '" + name + "' already exists.");
 
+        var disabledPolicy = startMode == "disabled" ? "RefuseManualStart=yes\n" : string.Empty;
         var escapedExecutable = EscapeSystemdArgument(executable);
         var unit = $"""
 [Unit]
 Description={EscapeSystemdDescription(displayName)}
-
+{disabledPolicy}
 [Service]
 Type=simple
 ExecStart={escapedExecutable}
@@ -123,19 +124,10 @@ WantedBy=multi-user.target
         await File.WriteAllTextAsync(unitPath, unit, new UTF8Encoding(false)).ConfigureAwait(false);
         EnsureSuccess(await RunProcessAsync("systemctl", ["daemon-reload"]).ConfigureAwait(false), "systemctl daemon-reload failed.");
 
-        switch (startMode)
-        {
-            case "auto":
-                EnsureSuccess(await RunProcessAsync("systemctl", ["enable", unitName]).ConfigureAwait(false), "Unable to enable service '" + name + "'.");
-                break;
-            case "disabled":
-                EnsureSuccess(await RunProcessAsync("systemctl", ["disable", unitName]).ConfigureAwait(false), "Unable to disable service '" + name + "'.");
-                EnsureSuccess(await RunProcessAsync("systemctl", ["mask", unitName]).ConfigureAwait(false), "Unable to mask service '" + name + "'.");
-                break;
-            default:
-                EnsureSuccess(await RunProcessAsync("systemctl", ["disable", unitName]).ConfigureAwait(false), "Unable to set manual startup for service '" + name + "'.");
-                break;
-        }
+        if (startMode == "auto")
+            EnsureSuccess(await RunProcessAsync("systemctl", ["enable", unitName]).ConfigureAwait(false), "Unable to enable service '" + name + "'.");
+        else
+            EnsureSuccess(await RunProcessAsync("systemctl", ["disable", unitName]).ConfigureAwait(false), "Unable to disable automatic startup for service '" + name + "'.");
 
         Console.WriteLine("Installed service: " + name);
         Console.WriteLine("Display name: " + displayName);
