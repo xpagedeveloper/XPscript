@@ -1,0 +1,35 @@
+[RoutePrefix:/api/users]
+[Authenticated]
+[Role:api-user]
+
+Public Class CreateUserRequest
+    [Required]
+    [MaxLength:100]
+    Public Name As String
+
+    [Required]
+    [Email]
+    Public Email As String
+End Class
+
+[Get:/]
+Function ListUsers() As String
+    ListUsers = "users"
+End Function
+
+[Get:/{id}]
+Function GetUser(id As Integer, details As Boolean) As String
+    GetUser = "user-" & CStr(id) & " details=" & CStr(details)
+End Function
+
+[Post:/]
+[Role:editor]
+Sub CreateUser(payload As CreateUserRequest)
+    Response.Created("/api/users/42", payload)
+End Sub
+
+[Delete:/{id}]
+[Role:]
+Sub DeleteUser(id As Integer)
+    Response.NoContent()
+End Sub
