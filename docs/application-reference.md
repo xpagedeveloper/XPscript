@@ -20,6 +20,18 @@ The complete runnable reference is [samples/application-object.xps](../samples/a
 | `Application.FileName` | `Application.FileName` | none | Compatibility alias for `Application.ExecutableFileName`. | [application-object.xps](../samples/application-object.xps) |
 | `Application.ExitCode` | `Application.ExitCode = value` | `value`: integer process exit code. | Gets or sets the process exit code for compiled console and desktop applications. The default is `0`; the final value is returned to the operating system when the program exits. | [application-runtime-exit-code.xps](../samples/application-runtime-exit-code.xps) |
 
+## System log
+
+`Application.SystemLog` writes to the operating system's central system log. The source/tag is derived from the compiled executable file name. The optional `eventId` must be a non-negative integer.
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.SystemLog.Info` | `Application.SystemLog.Info(message [, eventId])` | `message`: text; `eventId`: optional non-negative integer. | Writes an informational system-log entry. On Windows this uses Event Log, and on Linux/macOS it uses the platform system logger. | [application-systemlog.xps](../samples/application-systemlog.xps) |
+| `Application.SystemLog.Warning` | `Application.SystemLog.Warning(message [, eventId])` | `message`: text; `eventId`: optional non-negative integer. | Writes a warning system-log entry. | [application-systemlog.xps](../samples/application-systemlog.xps) |
+| `Application.SystemLog.Error` | `Application.SystemLog.Error(message [, eventId])` | `message`: text; `eventId`: optional non-negative integer. | Writes an error system-log entry. | [application-systemlog.xps](../samples/application-systemlog.xps) |
+
+Windows entries are written through the Windows Event Log API. Linux and macOS entries are submitted through `/usr/bin/logger`, which routes them into the platform's configured system logging facility. A logging failure raises an XPScript runtime error rather than silently discarding the entry.
+
 ## Application UI metadata
 
 These properties are writable. Their values are stored in the application state used by the applicable UI/build runtime.
@@ -61,7 +73,7 @@ All four state proxies expose the same member set below.
 | `Application.Registry.User.Get` | `Application.Registry.User.Get(path, name)` | registry/config path and value name | Reads a current-user persistent setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Registry.User.Set` | `Application.Registry.User.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a current-user setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Registry.System.Get` | `Application.Registry.System.Get(path, name)` | registry/config path and value name | Reads a machine-wide persistent setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
-| `Application.Registry.System.Set` | `Application.Registry.System.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a machine-wide setting and may require elevated OS permissions. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Registry.System.Set` | `Application.Registry.System.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a machine-wide persistent setting and may require elevated OS permissions. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Secrets.Get` | `Application.Secrets.Get(service, account)` | service/application identifier and account | Reads a secret from Credential Manager, Keychain or Linux Secret Service. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Secrets.Set` | `Application.Secrets.Set(service, account, secret)` | service/application identifier, account and secret | Adds or replaces a secret in the operating-system credential store. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 
