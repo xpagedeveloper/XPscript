@@ -133,7 +133,7 @@ public static class XpsRestBinder
                     continue;
                 }
 
-                var queryValues = context.Request.Query(name);
+                var queryValues = context.Request.QueryAll(name);
                 if (queryValues.Count > 0)
                 {
                     arguments[i] = ConvertScalar(queryValues[0], ValueParameterType(parameter), name);
@@ -178,12 +178,12 @@ public static class XpsRestBinder
                     value = ConvertScalar(routeValue, parameterType, binding.ParameterName);
                     return true;
                 case "QUERY":
-                    var queryValues = context.Request.Query(sourceName);
+                    var queryValues = context.Request.QueryAll(sourceName);
                     if (queryValues.Count == 0) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
                     value = ConvertScalar(queryValues[0], parameterType, binding.ParameterName);
                     return true;
                 case "HEADER":
-                    var headerValues = context.Request.Header(sourceName);
+                    var headerValues = context.Request.HeaderAll(sourceName);
                     if (headerValues.Count == 0) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
                     value = ConvertScalar(headerValues[0], parameterType, binding.ParameterName);
                     return true;
