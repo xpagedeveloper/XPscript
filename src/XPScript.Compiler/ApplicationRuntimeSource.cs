@@ -297,5 +297,5 @@ internal static class XPScriptApplicationRuntime
     public static string Path => ExecutablePath;
     public static string FileName => ExecutableFileName;
 }
-""" + ApplicationPersistenceRuntimeSource.Code;
+""" + ApplicationPersistenceRuntimeSource.Code + ApplicationSystemLogRuntimeSource.Code;
 }
