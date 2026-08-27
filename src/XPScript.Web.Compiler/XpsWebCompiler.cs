@@ -14,9 +14,13 @@ public sealed class XpsWebCompiler
 {
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
+    private const long DefaultPersistentCacheMaxBytes = 512L * 1024 * 1024;
+    private static readonly TimeSpan DefaultPersistentCacheMaxAge = TimeSpan.FromDays(7);
+    private static readonly TimeSpan PersistentCacheSweepInterval = TimeSpan.FromMinutes(5);
     private static readonly Regex MainOrInitialize = new(@"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b", RegexOptions.CultureInvariant);
     private static readonly Regex ScriptClassMarker = new(@"internal\s+static\s+class\s+Script\s*\{", RegexOptions.CultureInvariant);
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> PersistentCacheSweeps = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
     {
@@ -57,6 +61,7 @@ public sealed class XpsWebCompiler
         if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase) || parsed.Routes.Count == 0) return null;
 
         var artifactDirectory = PersistentArtifactDirectory(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity);
+        MaintainPersistentCache(persistentCacheDirectory, artifactDirectory);
         var assemblyPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.dll");
         if (!File.Exists(assemblyPath)) return null;
 
@@ -65,6 +70,7 @@ public sealed class XpsWebCompiler
             var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
             var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
+            TouchPersistentArtifact(artifactDirectory);
             return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
@@ -90,6 +96,7 @@ public sealed class XpsWebCompiler
         if (!Path.GetExtension(fullSourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Web source files must use the .xps extension.");
 
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
+        XpsWebRecursionValidator.Validate(source, fullSourcePath);
         var parsed = new XpsWebRouteMetadataParser().Parse(new ServerSideMetadataPreprocessor().Transform(source));
         if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase))
             return await CompileBrowserWasmAsync(fullSourcePath, fullSourceRoot, parsed, cancellationToken).ConfigureAwait(false);
@@ -192,6 +199,119 @@ public sealed class XpsWebCompiler
             if (Path.GetFullPath(directory).Equals(Path.GetFullPath(artifactDirectory), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
             try { Directory.Delete(directory, recursive: true); } catch { }
         }
+        TouchPersistentArtifact(artifactDirectory);
+        MaintainPersistentCache(cacheRoot, artifactDirectory, force: true);
+    }
+
+    private static void MaintainPersistentCache(string cacheRoot, string? preserveDirectory, bool force = false)
+    {
+        string root;
+        try { root = Path.GetFullPath(cacheRoot); }
+        catch { return; }
+        if (!Directory.Exists(root)) return;
+
+        var now = DateTimeOffset.UtcNow;
+        var nowTicks = DateTime.UtcNow.Ticks;
+        if (!force && PersistentCacheSweeps.TryGetValue(root, out var lastTicks) && nowTicks - lastTicks < PersistentCacheSweepInterval.Ticks)
+            return;
+        if (PersistentCacheSweeps.Count > 256) PersistentCacheSweeps.Clear();
+        PersistentCacheSweeps[root] = nowTicks;
+
+        var maxBytes = PersistentCacheMaxBytes();
+        var cutoff = now - PersistentCacheMaxAge();
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        string? preserve = null;
+        try { if (!string.IsNullOrWhiteSpace(preserveDirectory)) preserve = Path.GetFullPath(preserveDirectory); } catch { }
+        var artifacts = new List<(string Path, long Bytes, DateTimeOffset LastWrite)>();
+
+        try
+        {
+            foreach (var sourceDirectory in Directory.EnumerateDirectories(root))
+            {
+                foreach (var artifactDirectory in Directory.EnumerateDirectories(sourceDirectory))
+                {
+                    string full;
+                    try { full = Path.GetFullPath(artifactDirectory); } catch { continue; }
+                    DateTimeOffset lastWrite;
+                    try { lastWrite = Directory.GetLastWriteTimeUtc(full); } catch { continue; }
+
+                    if (preserve is not null && full.Equals(preserve, comparison))
+                    {
+                        artifacts.Add((full, DirectoryBytes(full), lastWrite));
+                        continue;
+                    }
+                    if (lastWrite < cutoff)
+                    {
+                        TryDeleteCacheDirectory(full);
+                        continue;
+                    }
+                    artifacts.Add((full, DirectoryBytes(full), lastWrite));
+                }
+            }
+
+            var total = artifacts.Sum(item => item.Bytes);
+            if (total > maxBytes)
+            {
+                foreach (var item in artifacts.OrderBy(item => item.LastWrite))
+                {
+                    if (total <= maxBytes) break;
+                    if (preserve is not null && item.Path.Equals(preserve, comparison)) continue;
+                    if (TryDeleteCacheDirectory(item.Path)) total = Math.Max(0, total - item.Bytes);
+                }
+            }
+
+            foreach (var sourceDirectory in Directory.EnumerateDirectories(root))
+            {
+                try { if (!Directory.EnumerateFileSystemEntries(sourceDirectory).Any()) Directory.Delete(sourceDirectory); } catch { }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static long PersistentCacheMaxBytes()
+    {
+        var raw = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CACHE_MAX_BYTES");
+        return long.TryParse(raw, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            && parsed >= 16L * 1024 * 1024 && parsed <= 16L * 1024 * 1024 * 1024
+            ? parsed
+            : DefaultPersistentCacheMaxBytes;
+    }
+
+    private static TimeSpan PersistentCacheMaxAge()
+    {
+        var raw = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CACHE_MAX_AGE_HOURS");
+        return int.TryParse(raw, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var hours)
+            && hours >= 1 && hours <= 8760
+            ? TimeSpan.FromHours(hours)
+            : DefaultPersistentCacheMaxAge;
+    }
+
+    private static long DirectoryBytes(string directory)
+    {
+        long total = 0;
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(directory))
+            {
+                try { total = checked(total + new FileInfo(file).Length); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OverflowException) { }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        return total;
+    }
+
+    private static bool TryDeleteCacheDirectory(string directory)
+    {
+        try { Directory.Delete(directory, recursive: true); return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    private static void TouchPersistentArtifact(string artifactDirectory)
+    {
+        try { Directory.SetLastWriteTimeUtc(artifactDirectory, DateTime.UtcNow); } catch { }
     }
 
     private static async Task WriteAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken)
@@ -378,10 +498,30 @@ internal static class Script
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for web compilation.");
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            TryKillProcessTree(process);
+            try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
+            throw;
+        }
         var stdout = await stdoutTask.ConfigureAwait(false);
         var stderr = await stderrTask.ConfigureAwait(false);
         if (process.ExitCode != 0) throw new XpsWebCompilationException("Generated web assembly failed to compile." + Environment.NewLine + RedactBuildOutput(stdout + Environment.NewLine + stderr, psi.WorkingDirectory));
+    }
+
+    private static void TryKillProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+        }
     }
 
     private static string RedactBuildOutput(string value, string workspace)
