@@ -22,6 +22,7 @@ try
     {
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "new" => XpsScaffolder.Run(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -411,25 +412,28 @@ static void WriteHelp()
 XPScript CLI
 (c) xpagedeveloper.com 2026
 
-One executable is used for compiler, runtime execution and web hosting.
+One executable is used for compiler, runtime execution, project scaffolding and web hosting.
 
 Usage:
   xpscript compile <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
   xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
   xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
-  xpscript web [--config FILE] --root DIR [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
+  xpscript new <rest|web|desktop> <directory>
+  xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--sessions]
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES]
+  xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
 
 Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture.
+  new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
   web      Run the standalone Kestrel web runtime.
   fastcgi  Run the FastCGI web runtime.
 
@@ -441,13 +445,22 @@ Config:
   Paths inside the config file are resolved relative to the config file directory.
   Explicit command-line values override matching values from the config file.
 
+Scaffolding:
+  A target directory is mandatory. Use . to create the starter in the current directory.
+  Missing directories are created automatically.
+  Existing index.xps or main.xps files are never overwritten.
+
 Examples:
+  xpscript new rest ./myapi
+  xpscript new web ./mysite
+  xpscript new desktop ./myapp
+  xpscript new rest .
   xpscript compile hello.xps
   xpscript compile hello.xps --runtime linux-x64 -o hello
   xpscript run hello.xps
   xpscript run hello.xps -- --runtime passed-to-script
+  xpscript web ./site
   xpscript web --config ./production.cfg
-  xpscript web --root ./site
   xpscript web --root ./site --sessions
   xpscript web --root ./site --default-document home.xps
   xpscript web --root ./site --static-files
