@@ -52,12 +52,16 @@ public sealed class XpsWebRouteMetadataParser
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new StringBuilder(source.Length);
         var pending = new List<string>();
+        var fileDefaults = new List<string>();
         var pendingValidation = new List<string>();
         var validationRules = new List<XpsValidationRule>();
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase);
         var precompileTargets = new List<string>();
         string? platform = null;
         string? currentClass = null;
+        string? routePrefix = null;
+        var fileDefaultsSectionOpen = false;
+        var routeProcedureSeen = false;
 
         foreach (var raw in lines)
         {
@@ -66,6 +70,7 @@ public sealed class XpsWebRouteMetadataParser
             var classMatch = ClassPattern.Match(raw);
             if (classMatch.Success)
             {
+                fileDefaultsSectionOpen = false;
                 if (pending.Count > 0) throw new XpsWebRouteMetadataException("Web route attributes cannot be applied to a Class declaration.");
                 if (pendingValidation.Count > 0) throw new XpsWebRouteMetadataException("Validation attributes must immediately precede a class field.");
                 currentClass = classMatch.Groups[1].Value;
@@ -124,6 +129,20 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                if (attribute.StartsWith("RoutePrefix:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentClass is not null) throw new XpsWebRouteMetadataException("RoutePrefix cannot be declared inside a Class.");
+                    if (routeProcedureSeen) throw new XpsWebRouteMetadataException("RoutePrefix must be declared before the first web route procedure.");
+                    if (routePrefix is not null) throw new XpsWebRouteMetadataException("A web source may declare only one [RoutePrefix:...] attribute.");
+                    if (pending.Any(x => !IsFileDefaultAttribute(x))) throw new XpsWebRouteMetadataException("Only Anonymous, Authenticated and Role metadata may precede RoutePrefix.");
+                    foreach (var item in pending) AddFileDefault(fileDefaults, item);
+                    pending.Clear();
+                    routePrefix = NormalizeRouteTemplate(attribute[12..]);
+                    fileDefaultsSectionOpen = true;
+                    output.AppendLine();
+                    continue;
+                }
+
                 if (!IsKnownRouteAttribute(attribute))
                 {
                     Console.Error.WriteLine($"error: Unsupported web route attribute '[{attribute}]'. Ignoring rule.");
@@ -132,7 +151,16 @@ public sealed class XpsWebRouteMetadataParser
                 }
 
                 if (currentClass is not null) throw new XpsWebRouteMetadataException("Web route attributes cannot be declared inside a Class.");
-                pending.Add(attribute);
+
+                if (fileDefaultsSectionOpen && IsFileDefaultAttribute(attribute))
+                {
+                    AddFileDefault(fileDefaults, attribute);
+                    output.AppendLine();
+                    continue;
+                }
+
+                fileDefaultsSectionOpen = false;
+                AddPendingRouteAttribute(pending, attribute);
                 output.AppendLine();
                 continue;
             }
@@ -164,12 +192,19 @@ public sealed class XpsWebRouteMetadataParser
                 if (!procedure.Success) throw new XpsWebRouteMetadataException("Web route attributes must immediately precede a Sub or Function declaration.");
                 var name = procedure.Groups[1].Value;
                 var parameterBindings = ParseParameterBindings(raw, out var sanitizedDeclaration);
-                var descriptor = BuildDescriptor(name, pending) with { ParameterBindings = parameterBindings };
+                var effectiveAttributes = MergeFileDefaults(fileDefaults, pending);
+                var descriptor = BuildDescriptor(name, effectiveAttributes) with { ParameterBindings = parameterBindings };
+                if (routePrefix is not null && descriptor.RouteTemplate is not null)
+                    descriptor = descriptor with { RouteTemplate = CombineRoutePrefix(routePrefix, descriptor.RouteTemplate) };
                 if (!routes.TryAdd(name, descriptor)) throw new XpsWebRouteMetadataException($"Duplicate web route metadata for procedure '{name}'.");
+                routeProcedureSeen = true;
                 pending.Clear();
                 output.AppendLine(sanitizedDeclaration);
                 continue;
             }
+
+            if (fileDefaultsSectionOpen && trimmed.Length > 0 && !trimmed.StartsWith("'", StringComparison.Ordinal))
+                fileDefaultsSectionOpen = false;
 
             output.AppendLine(raw);
         }
@@ -243,7 +278,7 @@ public sealed class XpsWebRouteMetadataParser
             attribute.Equals("Cors", StringComparison.OrdinalIgnoreCase) ||
             attribute.StartsWith("Cors:", StringComparison.OrdinalIgnoreCase) ||
             attribute.StartsWith("RateLimit:", StringComparison.OrdinalIgnoreCase)) return true;
-        return TryParseHttpMethodAttribute(attribute, out _);
+        return TryParseHttpMethodRouteAttribute(attribute, out _, out _) || TryParseHttpMethodAttribute(attribute, out _);
     }
 
     private static bool IsValidationAttribute(string attribute) =>
@@ -251,6 +286,63 @@ public sealed class XpsWebRouteMetadataParser
         attribute.Equals("Email", StringComparison.OrdinalIgnoreCase) ||
         attribute.StartsWith("MaxLength:", StringComparison.OrdinalIgnoreCase) ||
         attribute.StartsWith("Range:", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsFileDefaultAttribute(string attribute) =>
+        attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
+        attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase) ||
+        attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAuthAttribute(string attribute) =>
+        attribute.Equals("Anonymous", StringComparison.OrdinalIgnoreCase) ||
+        attribute.Equals("Authenticated", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRoleAttribute(string attribute) =>
+        attribute.StartsWith("Role:", StringComparison.OrdinalIgnoreCase);
+
+    private static void AddFileDefault(List<string> defaults, string attribute)
+    {
+        if (IsRoleAttribute(attribute) && attribute[5..].Trim().Length == 0)
+        {
+            defaults.RemoveAll(x => IsRoleAttribute(x));
+            return;
+        }
+        defaults.Add(attribute);
+    }
+
+    private static IReadOnlyList<string> MergeFileDefaults(IReadOnlyList<string> defaults, IReadOnlyList<string> procedureAttributes)
+    {
+        var merged = new List<string>(defaults);
+        if (procedureAttributes.Any(IsAuthAttribute)) merged.RemoveAll(x => IsAuthAttribute(x));
+        if (procedureAttributes.Any(IsRoleAttribute)) merged.RemoveAll(x => IsRoleAttribute(x));
+
+        foreach (var attribute in procedureAttributes)
+        {
+            if (IsRoleAttribute(attribute) && attribute[5..].Trim().Length == 0) continue;
+            merged.Add(attribute);
+        }
+        return merged;
+    }
+
+    private static void AddPendingRouteAttribute(List<string> pending, string attribute)
+    {
+        if (!TryParseHttpMethodRouteAttribute(attribute, out var method, out var route))
+        {
+            pending.Add(attribute);
+            return;
+        }
+
+        pending.Add(method);
+        var existingRoutes = pending.Where(x => x.StartsWith("Route:", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (existingRoutes.Length == 0)
+        {
+            pending.Add("Route:" + route);
+            return;
+        }
+
+        var existingRoute = NormalizeRouteTemplate(existingRoutes[0][6..]);
+        if (!string.Equals(existingRoute, route, StringComparison.OrdinalIgnoreCase))
+            throw new XpsWebRouteMetadataException("HTTP method route attributes on one procedure must use the same route path.");
+    }
 
     private static XpsValidationRule ParseValidationRule(string typeName, string memberName, string attribute)
     {
@@ -369,6 +461,13 @@ public sealed class XpsWebRouteMetadataParser
         return route.Length > 1 ? route.TrimEnd('/') : route;
     }
 
+    private static string CombineRoutePrefix(string prefix, string route)
+    {
+        if (prefix == "/") return route;
+        if (route == "/") return prefix;
+        return NormalizeRouteTemplate(prefix + route);
+    }
+
     private static void ValidateExplicitRouteDuplicates(IEnumerable<XpsWebRouteDescriptor> routes)
     {
         var explicitRoutes = routes.Where(x => x.RouteTemplate is not null).ToArray();
@@ -390,6 +489,22 @@ public sealed class XpsWebRouteMetadataParser
     }
 
     private static void AddUnique(List<string> values, string value) { if (!values.Contains(value, StringComparer.OrdinalIgnoreCase)) values.Add(value); }
+
+    private static bool TryParseHttpMethodRouteAttribute(string attribute, out string method, out string route)
+    {
+        method = string.Empty;
+        route = string.Empty;
+        var candidate = attribute.Trim();
+        var separator = candidate.IndexOf(':');
+        if (separator <= 0) return false;
+        var methodCandidate = candidate[..separator].Trim();
+        if (!ShorthandHttpMethods.Contains(methodCandidate)) return false;
+        var routeCandidate = candidate[(separator + 1)..].Trim();
+        if (routeCandidate.Length == 0) throw new XpsWebRouteMetadataException($"{methodCandidate} route requires a path, for example [{methodCandidate}:/api/items].");
+        method = methodCandidate.ToUpperInvariant();
+        route = NormalizeRouteTemplate(routeCandidate);
+        return true;
+    }
 
     private static bool TryParseHttpMethodAttribute(string attribute, out string method)
     {
