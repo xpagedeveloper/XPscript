@@ -8,7 +8,8 @@ internal sealed class GeneralSyntaxPreprocessor
     public string Transform(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        var normalized = NormalizeDimDeclarations(source);
+        var visible = new DefaultVisibilityPreprocessor().Transform(source);
+        var normalized = NormalizeDimDeclarations(visible);
         return RewriteObjectIdentity(normalized);
     }
 
