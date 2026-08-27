@@ -10,10 +10,16 @@ public sealed class XPScriptTranspiler
 
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
-        var includeResult = new IncludeSourcePreprocessor().Transform(source, sourceName);
+        var serviceDefinition = XpsServiceScriptParser.Parse(source, sourceName);
+        var includeResult = new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
         try
         {
-            return TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
+            var generated = TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
+            if (!serviceDefinition.IsService) return generated;
+
+            generated = XpsServiceGeneratedCodePostProcessor.Transform(generated, serviceDefinition);
+            generated += "\n\n" + XpsServiceRuntimeSource.Build(serviceDefinition) + "\n";
+            return generated;
         }
         catch (CompilerException ex)
         {
