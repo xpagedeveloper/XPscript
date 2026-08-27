@@ -19,6 +19,7 @@ public sealed class XPScriptTranspiler
 
             generated = XpsServiceGeneratedCodePostProcessor.Transform(generated, serviceDefinition);
             generated += "\n\n" + XpsServiceRuntimeSource.Build(serviceDefinition) + "\n";
+            generated = XpsWindowsServiceHostPostProcessor.Transform(generated, serviceDefinition);
             return generated;
         }
         catch (CompilerException ex)
@@ -147,7 +148,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
 
         if (usesAi) generated = new AiSessionRuntimePostProcessor().Transform(generated);
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);
