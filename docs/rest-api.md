@@ -27,7 +27,66 @@ Supported explicit bindings are:
 - `[FromHeader:"Header-Name"]`
 - `[FromBody]`
 
-Without an explicit binding the runtime checks a matching route parameter, then query string, then JSON body for a complex type.
+Without an explicit binding the runtime checks a matching route parameter, then query string, then JSON body for a complex type. Query and header binding preserve HTTP multi-value semantics internally.
+
+## Request object
+
+For direct request access, singular methods return the first value and `All` methods return every value.
+
+```xpscript
+Dim id As String
+Dim token As String
+
+id = Request.Query("id")
+token = Request.BearerToken
+```
+
+Request properties currently implemented:
+
+- `Request.Method`
+- `Request.Path`
+- `Request.PathInfo`
+- `Request.QueryString`
+- `Request.Query_String`
+- `Request.Query_String_Decoded`
+- `Request.ContentType`
+- `Request.ContentLength`
+- `Request.Body`
+- `Request.Host`
+- `Request.Scheme`
+- `Request.RemoteAddress`
+- `Request.Protocol`
+- `Request.Headers`
+- `Request.Cookies`
+- `Request.CgiVariables`
+- `Request.Authorization`
+- `Request.BearerToken`
+- `Request.CancellationToken`
+- `Request.IsCancellationRequested`
+
+Request methods currently implemented:
+
+- `Request.Query(name)`
+- `Request.QueryAll(name)`
+- `Request.Form(name)`
+- `Request.FormAll(name)`
+- `Request.Header(name)`
+- `Request.HeaderAll(name)`
+- `Request.Cookie(name)`
+- `Request.Cgi(name)`
+- `Request.BodyText()`
+- `Request.BodyBytes()`
+- `Request.Files()`
+- `Request.Files(name)`
+- `Request.FileFirst(name)`
+
+`Query`, `Form` and `Header` return the first value or an empty string when the value is missing. `QueryAll`, `FormAll` and `HeaderAll` return all values. `Cookie` and `Cgi` return `Null` when the named value is missing.
+
+`QueryFirst`, `FormFirst` and `HeaderFirst` remain compatibility aliases. New code should use `Query`, `Form` and `Header`.
+
+`Request.Authorization` returns the first Authorization header value. `Request.BearerToken` returns the token only when exactly one Authorization value exists, uses the Bearer scheme and contains a non-empty token. Ambiguous or malformed Authorization input returns `Null`.
+
+CGI-compatible variables are normalized across Kestrel, FastCGI and CGI. The base set includes `REQUEST_METHOD`, `REQUEST_URI`, `QUERY_STRING`, `PATH_INFO`, `SCRIPT_NAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR`, `CONTENT_TYPE`, `CONTENT_LENGTH` and `HTTPS`. Request headers are also exposed as CGI-style `HTTP_*` variables. CGI and FastCGI preserve additional transport-provided environment variables.
 
 ## JSON body
 
@@ -87,6 +146,8 @@ Base response members currently implemented:
 - `Response.Clear()`
 - `Response.Redirect(url, statusCode)`
 - `Response.Complete()`
+
+`SetHeader` replaces existing values for the header. `AppendHeader` preserves existing values and appends another value. `RemoveHeader` removes the header. Response header names and values are validated. Cookie names, values and options are validated before `Set-Cookie` is emitted.
 
 REST response helpers currently implemented:
 
