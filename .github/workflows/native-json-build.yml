@@ -12,6 +12,7 @@ on:
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/ClassOverloadValidator.cs'
       - 'src/XPScript.Compiler/DefaultVisibilityPreprocessor.cs'
+      - 'src/XPScript.Compiler/GeneralSyntaxPreprocessor.cs'
       - 'src/XPScript.Compiler/PropertyLetCompatibilityPreprocessor.cs'
       - 'samples/native-json-regression.xps'
       - 'samples/default-private-class-json.xps'
@@ -114,11 +115,13 @@ jobs:
         run: |
           $badExe = if ($IsWindows) { './out/class-member-conflict-invalid.exe' } else { './out/class-member-conflict-invalid' }
           $badOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-member-conflict-invalid.xps -o $badExe --framework-dependent 2>&1)
-          if ($LASTEXITCODE -eq 0) { throw 'Field/property conflict unexpectedly compiled.' }
+          $expectedFailure = $LASTEXITCODE
+          if ($expectedFailure -eq 0) { throw 'Field/property conflict unexpectedly compiled.' }
           $joined = $badOutput -join "`n"
           if ($joined -notmatch "cannot declare field and property 'Name' with the same name") {
             throw "Field/property conflict diagnostic was missing or unexpected.`n$joined"
           }
+          $global:LASTEXITCODE = 0
       - name: Verify JSON resource limits and rollback
         shell: pwsh
         run: |
