@@ -17,19 +17,19 @@ Function ListUsers() As String
     ListUsers = "ok"
 End Function
 
-[Get:/{id}]
 [Role:editor]
+[Get:/{id}]
 Function GetUser(id As Integer) As String
     GetUser = CStr(id)
 End Function
 
-[Delete:/{id}]
 [Role:]
+[Delete:/{id}]
 Sub DeleteUser(id As Integer)
 End Sub
 
-[Get:/public]
 [Anonymous]
+[Get:/public]
 Function PublicUsers() As String
     PublicUsers = "public"
 End Function
