@@ -3,36 +3,57 @@ Option Declare
 Sub Main()
     Dim http As New HttpClient
     Dim response As HttpResponse
+    Dim errCode As Integer
 
-    On Error GoTo BadName
+    On Error Resume Next
     Call http.SetHeader("Bad Header", "value")
-    Print "BAD-NAME-NOT-REJECTED"
-    GoTo AfterBadName
-BadName:
-    Print "BAD-NAME-ERR=" & CStr(Err)
-    Resume AfterBadName
-AfterBadName:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-NAME-NOT-REJECTED"
+    Else
+        Print "BAD-NAME-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo BadValue
+    On Error Resume Next
     Call http.SetHeader("X-Test", "safe" & Chr(13) & Chr(10) & "Injected: yes")
-    Print "BAD-VALUE-NOT-REJECTED"
-    GoTo AfterBadValue
-BadValue:
-    Print "BAD-VALUE-ERR=" & CStr(Err)
-    Resume AfterBadValue
-AfterBadValue:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-VALUE-NOT-REJECTED"
+    Else
+        Print "BAD-VALUE-ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo BadScheme
-    Set response = http.Get("file:///etc/passwd")
-    Print "BAD-SCHEME-NOT-REJECTED"
-    GoTo AfterBadScheme
-BadScheme:
-    Print "BAD-SCHEME-ERR=" & CStr(Err)
-    Resume AfterBadScheme
-AfterBadScheme:
+    On Error Resume Next
+    Call http.SetHeader("Content-Length", "1")
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-FRAMING-NOT-REJECTED"
+    Else
+        Print "BAD-FRAMING-ERR=" & CStr(errCode)
+    End If
+
+    On Error Resume Next
+    Set response = http.Get("file:///etc/passwd")
+    errCode = Err
+    On Error GoTo 0
+    If errCode = 0 Then
+        Print "BAD-SCHEME-NOT-REJECTED"
+    Else
+        Print "BAD-SCHEME-ERR=" & CStr(errCode)
+    End If
+
+    On Error Resume Next
+    Set response = http.Get("http://127.0.0.1:18080/")
+    errCode = Err
+    On Error GoTo 0
+    If errCode = 0 Then
+        Print "PRIVATE-TARGET-NOT-REJECTED"
+    Else
+        Print "PRIVATE-TARGET-ERR=" & CStr(errCode)
+    End If
 
     Call http.SetHeader("X-Valid-Header", "valid-value")
     Print "VALID-HEADER=OK"

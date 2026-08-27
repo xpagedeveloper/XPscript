@@ -36,8 +36,8 @@ Available helpers:
 
 - `http.GetJson(url)` returns a `JsonDocument` and requires a successful HTTP status.
 - `http.PostJson(url, data)` sends JSON and returns `HttpResponse`.
-- `http.PutJson(url, data)` sends JSON and returns `HttpResponse`.
-- `http.PatchJson(url, data)` sends JSON and returns `HttpResponse`.
+- `http.PutJson(url, data)` sends JSON with PUT.
+- `http.PatchJson(url, data)` sends JSON with PATCH.
 - `response.Json()` parses the response body and returns a `JsonDocument`.
 
 The JSON write helpers set `Content-Type` to `application/json; charset=utf-8`.
@@ -131,6 +131,18 @@ Call http.SetHeader("Authorization", "Bearer " & token)
 
 Headers can be removed with `RemoveHeader(name)` or all cleared with `ClearHeaders()`.
 
+## Private and local endpoints
+
+Private, loopback, link-local and other non-public network destinations are blocked by default. If an application intentionally calls a trusted local service or intranet API, opt in on that client instance:
+
+```xpscript
+Dim http As New HttpClient
+http.AllowPrivateNetwork = True
+Set response = http.Get("http://127.0.0.1:8080/health")
+```
+
+Only enable `AllowPrivateNetwork` when the destination is trusted and application-controlled. Keep it disabled when any part of the destination URL can come from request data or other untrusted input.
+
 ## Security and limits
 
-Outgoing URLs must be absolute `http://` or `https://` URLs. The native client does not automatically follow redirects. Request bodies are limited to 8 MiB and response bodies to 64 MiB. Header names and values are validated to prevent malformed or injected headers.
+Outgoing URLs must be absolute `http://` or `https://` URLs. URL user information is rejected. By default the native client resolves destinations before sending and rejects loopback, unspecified, link-local, private, carrier-grade NAT, benchmark and multicast/reserved network addresses. `AllowPrivateNetwork = True` explicitly disables that destination restriction for trusted intranet or local endpoints. The native client does not automatically follow redirects. Request bodies are limited to 8 MiB and response bodies to 64 MiB. Header names and values are validated to prevent malformed or injected headers.

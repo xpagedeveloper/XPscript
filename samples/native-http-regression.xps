@@ -5,6 +5,7 @@ Sub Main()
     Dim response As HttpResponse
 
     http.Timeout = 5
+    http.AllowPrivateNetwork = True
     Print "TIMEOUT=" & CStr(http.Timeout)
 
     Call http.SetHeader("X-XPScript-Test", "alpha")

@@ -90,6 +90,20 @@ Each instance must keep its own state.
 
 When using XPDB or XPAI, follow the exact constructor/member names shown by the current database/AI docs and samples. Never infer those signatures from older examples or another language.
 
+## HTTP client security
+
+`HttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
+
+For a trusted application-controlled intranet or local endpoint, opt in on that client instance:
+
+```xpscript
+Dim http As New HttpClient
+http.AllowPrivateNetwork = True
+Set response = http.Get("http://127.0.0.1:8080/health")
+```
+
+Do not enable `AllowPrivateNetwork` merely to make a user-supplied URL work. Request framing and transport headers such as `Host`, `Content-Length`, and `Transfer-Encoding` are runtime-managed and must not be set with `SetHeader`.
+
 ## Arrays, Lists, and ForAll
 
 XPscript arrays use XPscript array semantics and support helpers such as `Array`, `ReDim`, `LBound`, `UBound`, `Join`, `Explode`, and array helper functions documented in the language reference.

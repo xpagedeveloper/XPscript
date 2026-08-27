@@ -7,6 +7,8 @@ Sub Main()
     Dim firstFile As Variant
     Dim secondFile As Variant
 
+    client.AllowPrivateNetwork = True
+
     Set response = client.Get("http://127.0.0.1:18080/binary")
     Print "SINGLE_FILENAME=" & response.FileName
     Print "SINGLE_LENGTH=" & CStr(response.BodyLength)

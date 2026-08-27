@@ -17,13 +17,15 @@ internal sealed class XPScriptHttpClient : IDisposable
     private readonly System.Net.Http.HttpClient _client;
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
+    private bool _allowPrivateNetwork;
     private bool _disposed;
 
     public XPScriptHttpClient()
     {
         _handler = new System.Net.Http.HttpClientHandler
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            UseCookies = false
         };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
@@ -47,10 +49,22 @@ internal sealed class XPScriptHttpClient : IDisposable
         }
     }
 
+    public bool AllowPrivateNetwork
+    {
+        get => _allowPrivateNetwork;
+        set
+        {
+            EnsureNotDisposed();
+            _allowPrivateNetwork = value;
+        }
+    }
+
     public void SetHeader(object? nameValue, object? value)
     {
         EnsureNotDisposed();
         var name = ValidateHeaderName(nameValue);
+        if (IsTransportOwnedRequestHeader(name))
+            throw new XPScriptRuntimeException(5, "HTTP framing and transport headers are managed by the runtime.");
         var text = XPScriptRuntime.CStr(value);
         ValidateHeaderValue(text);
         _headers[name] = text;
@@ -90,6 +104,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new XPScriptRuntimeException(5, "HTTP URL must be an absolute http:// or https:// URL.");
+        ValidateOutboundTarget(uri, _allowPrivateNetwork);
 
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
         if (bodyValue is not null && method != System.Net.Http.HttpMethod.Get && method != System.Net.Http.HttpMethod.Delete)
@@ -155,6 +170,66 @@ internal sealed class XPScriptHttpClient : IDisposable
         }
     }
 
+    private static void ValidateOutboundTarget(Uri uri, bool allowPrivateNetwork)
+    {
+        if (!string.IsNullOrEmpty(uri.UserInfo))
+            throw new XPScriptRuntimeException(5, "HTTP URL user information is not permitted.");
+        if (uri.HostNameType == UriHostNameType.Unknown || string.IsNullOrWhiteSpace(uri.Host))
+            throw new XPScriptRuntimeException(5, "HTTP URL host is invalid.");
+        if (allowPrivateNetwork) return;
+
+        System.Net.IPAddress[] addresses;
+        if (System.Net.IPAddress.TryParse(uri.Host, out var literal))
+        {
+            addresses = [literal];
+        }
+        else
+        {
+            try { addresses = System.Net.Dns.GetHostAddresses(uri.DnsSafeHost); }
+            catch (System.Net.Sockets.SocketException)
+            {
+                throw new XPScriptRuntimeException(5, "HTTP host could not be resolved.");
+            }
+        }
+
+        if (addresses.Length == 0)
+            throw new XPScriptRuntimeException(5, "HTTP host could not be resolved.");
+        if (addresses.Any(IsPrivateOrLocalAddress))
+            throw new XPScriptRuntimeException(5, "HTTP target resolves to a private or local network address. Set AllowPrivateNetwork=True only for trusted intranet or local endpoints.");
+    }
+
+    private static bool IsPrivateOrLocalAddress(System.Net.IPAddress address)
+    {
+        if (System.Net.IPAddress.IsLoopback(address)) return true;
+        if (address.Equals(System.Net.IPAddress.Any) || address.Equals(System.Net.IPAddress.IPv6Any) ||
+            address.Equals(System.Net.IPAddress.None) || address.Equals(System.Net.IPAddress.IPv6None)) return true;
+
+        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+        var bytes = address.GetAddressBytes();
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            return bytes[0] == 0 ||
+                   bytes[0] == 10 ||
+                   bytes[0] == 127 ||
+                   (bytes[0] == 169 && bytes[1] == 254) ||
+                   (bytes[0] == 172 && bytes[1] is >= 16 and <= 31) ||
+                   (bytes[0] == 192 && bytes[1] == 168) ||
+                   (bytes[0] == 100 && bytes[1] is >= 64 and <= 127) ||
+                   (bytes[0] == 198 && bytes[1] is 18 or 19) ||
+                   bytes[0] >= 224;
+        }
+
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            return address.IsIPv6LinkLocal ||
+                   address.IsIPv6Multicast ||
+                   (bytes[0] & 0xfe) == 0xfc ||
+                   address.Equals(System.Net.IPAddress.IPv6Loopback);
+        }
+
+        return true;
+    }
+
     private static byte[] ReadResponseBody(System.Net.Http.HttpContent content, CancellationToken cancellationToken, out Encoding encoding)
     {
         if (content.Headers.ContentLength is long declaredLength && declaredLength > MaxResponseBodyBytes)
@@ -218,6 +293,17 @@ internal sealed class XPScriptHttpClient : IDisposable
                 throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
         }
     }
+
+    private static bool IsTransportOwnedRequestHeader(string name) =>
+        name.Equals("Host", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Connection", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("TE", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Trailer", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Upgrade", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsHeaderTokenCharacter(char c) =>
         char.IsAsciiLetterOrDigit(c) || c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~';

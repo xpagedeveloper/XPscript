@@ -10,7 +10,9 @@ Sub Main()
     Dim emptyValue As Variant
     Dim nullValue As Variant
     Dim objectValue As HttpBoundaryObject
+    Dim errCode As Integer
 
+    http.AllowPrivateNetwork = True
     nullValue = Null
 
     Set response = http.Post("http://127.0.0.1:18080/inspect", emptyValue)
@@ -27,35 +29,35 @@ Sub Main()
     Set response = http.Get("http://127.0.0.1:18080/header-null")
     Print "NULL_HEADER=" & response.Body
 
-    On Error GoTo EmptyUrlError
+    On Error Resume Next
     Set response = http.Get(emptyValue)
-    Print "EMPTY_URL_NOT_REJECTED"
-    GoTo AfterEmptyUrl
-EmptyUrlError:
-    Print "EMPTY_URL_ERR=" & CStr(Err)
-    Resume AfterEmptyUrl
-AfterEmptyUrl:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "EMPTY_URL_NOT_REJECTED"
+    Else
+        Print "EMPTY_URL_ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo NullUrlError
+    On Error Resume Next
     Set response = http.Get(nullValue)
-    Print "NULL_URL_NOT_REJECTED"
-    GoTo AfterNullUrl
-NullUrlError:
-    Print "NULL_URL_ERR=" & CStr(Err)
-    Resume AfterNullUrl
-AfterNullUrl:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "NULL_URL_NOT_REJECTED"
+    Else
+        Print "NULL_URL_ERR=" & CStr(errCode)
+    End If
 
-    On Error GoTo NothingBodyError
+    On Error Resume Next
     Set response = http.Post("http://127.0.0.1:18080/inspect", objectValue)
-    Print "NOTHING_BODY_NOT_REJECTED"
-    GoTo AfterNothingBody
-NothingBodyError:
-    Print "NOTHING_BODY_ERR=" & CStr(Err)
-    Resume AfterNothingBody
-AfterNothingBody:
+    errCode = Err
     On Error GoTo 0
+    If errCode = 0 Then
+        Print "NOTHING_BODY_NOT_REJECTED"
+    Else
+        Print "NOTHING_BODY_ERR=" & CStr(errCode)
+    End If
 
     Print "HTTP_NULL_BOUNDARIES=OK"
 End Sub

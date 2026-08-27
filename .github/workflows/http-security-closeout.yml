@@ -43,16 +43,22 @@ jobs:
             'MaxRequestBodyBytes = 8 * 1024 * 1024',
             'MaxResponseBodyBytes = 64 * 1024 * 1024',
             'AllowAutoRedirect = false',
+            'UseCookies = false',
             'TimeSpan.FromSeconds(30)',
             'double.IsNaN(value)',
             'double.IsInfinity(value)',
             'ValidateHeaderName(nameValue)',
             'ValidateHeaderValue(text)',
+            'IsTransportOwnedRequestHeader(name)',
+            'HTTP framing and transport headers are managed by the runtime.',
             'value.IndexOfAny(',
             'HTTP header value contains a prohibited control character.',
             'UriKind.Absolute',
             'Uri.UriSchemeHttp',
             'Uri.UriSchemeHttps',
+            'AllowPrivateNetwork',
+            'ValidateOutboundTarget(uri, _allowPrivateNetwork)',
+            'IsPrivateOrLocalAddress',
             'HttpCompletionOption.ResponseHeadersRead',
             '_client.Dispose()',
             '_handler.Dispose()',
@@ -78,7 +84,7 @@ jobs:
           }
           throw 'Local HTTP regression server did not start.'
 
-      - name: Verify header validation and URL scheme policy
+      - name: Verify header, framing and URL target validation
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out/http-security | Out-Null
@@ -90,10 +96,10 @@ jobs:
           $exit = $LASTEXITCODE
           $output | ForEach-Object { Write-Host $_ }
           if ($exit -ne 0) { throw "HTTP header-validation sample failed at runtime.`n$output" }
-          foreach ($required in @('BAD-NAME-ERR=5','BAD-VALUE-ERR=5','BAD-SCHEME-ERR=5','VALID-HEADER=OK')) {
+          foreach ($required in @('BAD-NAME-ERR=5','BAD-VALUE-ERR=5','BAD-FRAMING-ERR=5','BAD-SCHEME-ERR=5','PRIVATE-TARGET-ERR=5','VALID-HEADER=OK')) {
             if ($output -notcontains $required) { throw "Missing HTTP validation marker: $required`n$output" }
           }
-          foreach ($forbidden in @('BAD-NAME-NOT-REJECTED','BAD-VALUE-NOT-REJECTED','BAD-SCHEME-NOT-REJECTED')) {
+          foreach ($forbidden in @('BAD-NAME-NOT-REJECTED','BAD-VALUE-NOT-REJECTED','BAD-FRAMING-NOT-REJECTED','BAD-SCHEME-NOT-REJECTED','PRIVATE-TARGET-NOT-REJECTED')) {
             if ($output -contains $forbidden) { throw "Unsafe HTTP behavior observed: $forbidden" }
           }
 
