@@ -61,25 +61,48 @@ public sealed class XpsWebRequest
     public CancellationToken CancellationToken { get; }
     public bool IsCancellationRequested => CancellationToken.IsCancellationRequested;
 
+    public string Authorization => Header("Authorization");
+
+    public string? BearerToken
+    {
+        get
+        {
+            var values = HeaderAll("Authorization");
+            if (values.Count != 1) return null;
+
+            var authorization = values[0];
+            const string prefix = "Bearer ";
+            if (!authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+
+            var token = authorization[prefix.Length..].Trim();
+            return token.Length == 0 ? null : token;
+        }
+    }
+
     public string? Cgi(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return CgiVariables.TryGetValue(name, out var value) ? value : null;
     }
 
-    public IReadOnlyList<string> Query(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
+    public string Query(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
+        QueryAll(name, maxQueryChars, maxFields).FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<string> QueryAll(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
         GetValues(ParseUrlEncoded(QueryString, maxQueryChars, maxFields, "query string"), name);
 
     public string QueryFirst(string name, int maxQueryChars = 16_384, int maxFields = 256) =>
-        Query(name, maxQueryChars, maxFields).FirstOrDefault() ?? string.Empty;
+        Query(name, maxQueryChars, maxFields);
 
-    public IReadOnlyList<string> Header(string name)
+    public string Header(string name) => HeaderAll(name).FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<string> HeaderAll(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return Headers.TryGetValue(name, out var values) ? values : Array.Empty<string>();
     }
 
-    public string HeaderFirst(string name) => Header(name).FirstOrDefault() ?? string.Empty;
+    public string HeaderFirst(string name) => Header(name);
 
     public string? Cookie(string name)
     {
@@ -101,7 +124,16 @@ public sealed class XpsWebRequest
         return Body.ToArray();
     }
 
-    public IReadOnlyList<string> Form(
+    public string Form(
+        string name,
+        int maxBytes = 16 * 1024 * 1024,
+        int maxFields = 256,
+        int maxFiles = 32,
+        int maxFileBytes = 8 * 1024 * 1024,
+        int maxPartHeaderBytes = 16 * 1024) =>
+        FormAll(name, maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes).FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<string> FormAll(
         string name,
         int maxBytes = 16 * 1024 * 1024,
         int maxFields = 256,
@@ -130,7 +162,7 @@ public sealed class XpsWebRequest
         int maxFiles = 32,
         int maxFileBytes = 8 * 1024 * 1024,
         int maxPartHeaderBytes = 16 * 1024) =>
-        Form(name, maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes).FirstOrDefault() ?? string.Empty;
+        Form(name, maxBytes, maxFields, maxFiles, maxFileBytes, maxPartHeaderBytes);
 
     public IReadOnlyList<XpsUploadedFile> Files(
         int maxBytes = 16 * 1024 * 1024,
