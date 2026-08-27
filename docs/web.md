@@ -181,6 +181,18 @@ Already compiled files are reused while their source/dependency snapshot remains
 
 ## Request
 
+The Request API uses a singular method for the common first-value case and an `All` method when HTTP permits multiple values.
+
+```xpscript
+Dim id As String
+Dim tenant As String
+Dim token As String
+
+id = Request.Query("id")
+tenant = Request.Header("X-Tenant-ID")
+token = Request.BearerToken
+```
+
 Important properties:
 
 | Member | Description |
@@ -197,15 +209,47 @@ Important properties:
 | `Request.Scheme` | Request scheme. |
 | `Request.RemoteAddress` | Client/peer address supplied by the host. |
 | `Request.Protocol` | HTTP protocol. |
-| `Request.CgiVariables` | CGI variable collection. |
+| `Request.Authorization` | First Authorization header value, or an empty string. |
+| `Request.BearerToken` | Bearer token when exactly one valid Bearer Authorization value exists, otherwise Null. |
+| `Request.Headers` | Read-only multi-value header collection. |
+| `Request.Cookies` | Read-only cookie collection. |
+| `Request.CgiVariables` | Read-only CGI-compatible variable collection. |
 
-Methods include `Query(name)`, `QueryFirst(name)`, `Header(name)`, `HeaderFirst(name)`, `Cookie(name)`, `BodyText()`, `BodyBytes()`, `Form(name)`, `FormFirst(name)`, `Files()`, `Files(name)`, `FileFirst(name)` and `Cgi(name)`.
+Request value methods:
 
-All CGI variables supplied by the transport are available through the Request object.
+| Method | Result |
+|---|---|
+| `Request.Query(name)` | First decoded query value, or an empty string. |
+| `Request.QueryAll(name)` | All decoded query values. |
+| `Request.Form(name)` | First form value, or an empty string. |
+| `Request.FormAll(name)` | All form values. |
+| `Request.Header(name)` | First header value, or an empty string. |
+| `Request.HeaderAll(name)` | All header values. |
+| `Request.Cookie(name)` | Cookie value, or Null when missing. |
+| `Request.Cgi(name)` | CGI-compatible variable value, or Null when missing. |
+
+`QueryFirst`, `FormFirst` and `HeaderFirst` remain compatibility aliases for `Query`, `Form` and `Header`. New code should use the shorter singular names.
+
+Query and form names are case-insensitive. Repeated query and form fields preserve their values through the `All` methods. Header lookup is case-insensitive and preserves multiple header values.
+
+Body and upload methods include `BodyText()`, `BodyBytes()`, `Files()`, `Files(name)` and `FileFirst(name)`. These methods enforce their configured size and count limits.
+
+`Request.Authorization` is a convenience alias for `Request.Header("Authorization")`. `Request.BearerToken` only accepts one Authorization header whose scheme is Bearer and whose token is non-empty. Multiple Authorization values are treated as ambiguous and produce `Null`.
 
 ## Response
 
 `Response` represents the outgoing HTTP response. Set `Response.ContentType` before writing when a specific media type is required. Use `Response.Write(value)` to append response content. For REST APIs prefer typed response helpers instead of constructing JSON strings manually.
+
+For headers and cookies use the explicit response methods:
+
+```xpscript
+Response.SetHeader("Cache-Control", "no-store")
+Response.AppendHeader("Vary", "Origin")
+Response.SetCookie("session", token)
+Response.DeleteCookie("session")
+```
+
+`SetHeader` replaces the values for a header. `AppendHeader` adds another value. `RemoveHeader` removes a header. Cookie values and options are validated by the runtime before a `Set-Cookie` header is emitted.
 
 See [Response object](rest-api.md#response-object) for the verified complete member list.
 
@@ -260,7 +304,9 @@ The runtime preserves other valid HTTP methods in `Request.Method` so applicatio
 
 ## CGI variables
 
-CGI and FastCGI transports populate CGI-compatible request variables. Use `Request.Cgi("VARIABLE_NAME")` when you need a specific variable. Prefer normalized Request properties such as `Method`, `ContentType`, `RemoteAddress` and `Query_String` when an equivalent property exists.
+CGI-compatible request variables are available in Kestrel, FastCGI and CGI hosting. Use `Request.Cgi("VARIABLE_NAME")` when you need a specific variable. Prefer normalized Request properties such as `Method`, `ContentType`, `RemoteAddress` and `Query_String` when an equivalent property exists.
+
+The normalized base set includes `REQUEST_METHOD`, `REQUEST_URI`, `QUERY_STRING`, `PATH_INFO`, `SCRIPT_NAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR`, `CONTENT_TYPE`, `CONTENT_LENGTH` and `HTTPS`. Incoming headers are also exposed using CGI-style `HTTP_*` names. CGI and FastCGI retain transport-provided environment variables in addition to the normalized values.
 
 ## IIS hosting
 
