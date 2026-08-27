@@ -1,0 +1,13 @@
+Option Declare
+Option Public
+
+Class InvalidPerson
+    Name As String
+
+    Property Get Name As String
+        Name = "invalid"
+    End Property
+End Class
+
+Sub Main()
+End Sub

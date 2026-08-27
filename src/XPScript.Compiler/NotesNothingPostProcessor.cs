@@ -15,6 +15,7 @@ internal sealed class XPScriptNotesNothing : ILSObjectReference
     internal static readonly XPScriptNotesNothing Value = new();
     private XPScriptNotesNothing() { }
     public bool IsNothing => true;
+    public object? ObjectValue => null;
     public override string ToString() => throw new InvalidCastException("Nothing cannot be converted to String.");
 }
 

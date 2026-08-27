@@ -10,7 +10,14 @@ on:
       - 'src/XPScript.Compiler/TypeCoercionRuntimeSource.cs'
       - 'src/XPScript.Compiler/CoreCompatibilityTranspiler.cs'
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'src/XPScript.Compiler/ClassOverloadValidator.cs'
+      - 'src/XPScript.Compiler/DefaultVisibilityPreprocessor.cs'
+      - 'src/XPScript.Compiler/GeneralSyntaxPreprocessor.cs'
+      - 'src/XPScript.Compiler/PropertyLetCompatibilityPreprocessor.cs'
       - 'samples/native-json-regression.xps'
+      - 'samples/default-private-class-json.xps'
+      - 'samples/option-public-visibility.xps'
+      - 'samples/class-member-conflict-invalid.xps'
       - 'samples/json-resource-limits.xps'
       - 'tests/JsonErrorInstrumentationProbe/**'
       - '.github/workflows/native-json-build.yml'
@@ -65,6 +72,7 @@ jobs:
             'ELEMENTVALUE=123',
             'STRINGIFY={"name":"Fredrik"}',
             'ENCODE=["TWO"]',
+            'CLASSJSON={"id":7,"name":"USER-ANNA"}',
             'DECODE={"ok":true}',
             'EMPTYJSON=null',
             'NULLJSON=null',
@@ -74,9 +82,46 @@ jobs:
             if ($output -notcontains $value) { throw "Native JSON output missing: $value`n$output" }
           }
           $joined = $output -join "`n"
-          if ($joined -match 'NullSentinel|ILSObjectReference|LSRef') {
-            throw "Internal NULL/object-reference representation leaked into JSON output.`n$output"
+          if ($joined -match 'NullSentinel|ILSObjectReference|LSRef|do-not-serialize|mPassword|__IsDeleted') {
+            throw "Internal/private XPscript class state leaked into JSON output.`n$output"
           }
+      - name: Verify class default visibility
+        shell: pwsh
+        run: |
+          $privateExe = if ($IsWindows) { './out/default-private-class-json.exe' } else { './out/default-private-class-json' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/default-private-class-json.xps -o $privateExe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Default-private class sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $privateExe }
+          $privateOutput = @(& $privateExe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Default-private class regression failed.`n$privateOutput" }
+          if ($privateOutput -notcontains 'DEFAULTPRIVATE={"visible":"yes"}') {
+            throw "Default-private class JSON output was unexpected.`n$privateOutput"
+          }
+          if (($privateOutput -join "`n") -match 'secret|hidden') {
+            throw "Default-private member leaked into JSON.`n$privateOutput"
+          }
+
+          $publicExe = if ($IsWindows) { './out/option-public-visibility.exe' } else { './out/option-public-visibility' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/option-public-visibility.xps -o $publicExe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Option Public sample compilation failed.' }
+          if (-not $IsWindows) { chmod +x $publicExe }
+          $publicOutput = @(& $publicExe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Option Public regression failed.`n$publicOutput" }
+          if ($publicOutput -notcontains 'OPTIONPUBLIC={"value":"ok","display":"DISPLAY-ok"}') {
+            throw "Option Public class JSON output was unexpected.`n$publicOutput"
+          }
+      - name: Reject field and property name conflicts
+        shell: pwsh
+        run: |
+          $badExe = if ($IsWindows) { './out/class-member-conflict-invalid.exe' } else { './out/class-member-conflict-invalid' }
+          $badOutput = @(dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/class-member-conflict-invalid.xps -o $badExe --framework-dependent 2>&1)
+          $expectedFailure = $LASTEXITCODE
+          if ($expectedFailure -eq 0) { throw 'Field/property conflict unexpectedly compiled.' }
+          $joined = $badOutput -join "`n"
+          if ($joined -notmatch "cannot declare field and property 'Name' with the same name") {
+            throw "Field/property conflict diagnostic was missing or unexpected.`n$joined"
+          }
+          $global:LASTEXITCODE = 0
       - name: Verify JSON resource limits and rollback
         shell: pwsh
         run: |

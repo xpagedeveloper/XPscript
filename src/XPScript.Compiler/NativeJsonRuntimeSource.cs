@@ -10,9 +10,15 @@ internal static class XPScriptNativeJson
     private const int MaxNodes = 100_000;
     private const long MaxEstimatedPayloadBytes = 16L * 1024 * 1024;
 
-    private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new()
+    private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new(System.Text.Json.JsonSerializerDefaults.Web)
     {
-        MaxDepth = MaxDepth
+        MaxDepth = MaxDepth,
+        IncludeFields = true,
+        Converters =
+        {
+            new LSRefJsonConverterFactory(),
+            new LSObjectJsonConverterFactory()
+        }
     };
 
     public static XPScriptJsonDocument CreateDocument() => new(new System.Text.Json.Nodes.JsonObject());
@@ -61,7 +67,8 @@ internal static class XPScriptNativeJson
                 null => null,
                 _ when XPScriptNullRuntime.IsNull(value) => null,
                 ILSObjectReference reference when reference.IsNothing => null,
-                ILSObjectReference => throw new XPScriptRuntimeException(5, "Bound XPScript object references are not supported for JSON conversion."),
+                ILSObjectReference reference => ToNode(reference.ObjectValue),
+                LSArray array => ArrayToNode(array),
                 XPScriptJsonDocument document => document.Node?.DeepClone(),
                 XPScriptJsonObject obj => obj.Node.DeepClone(),
                 XPScriptJsonArray array => array.Node.DeepClone(),
@@ -91,6 +98,33 @@ internal static class XPScriptNativeJson
 
         ValidateBudget(node);
         return node;
+    }
+
+    private static System.Text.Json.Nodes.JsonNode ArrayToNode(LSArray array)
+    {
+        if (!array.IsAllocated) return new System.Text.Json.Nodes.JsonArray();
+        if (array.Rank < 1) return new System.Text.Json.Nodes.JsonArray();
+
+        var indices = new int[array.Rank];
+        return BuildDimension(0);
+
+        System.Text.Json.Nodes.JsonArray BuildDimension(int dimension)
+        {
+            var result = new System.Text.Json.Nodes.JsonArray();
+            for (var index = array.LBound(dimension + 1); index <= array.UBound(dimension + 1); index++)
+            {
+                indices[dimension] = index;
+                if (dimension + 1 < array.Rank)
+                {
+                    result.Add(BuildDimension(dimension + 1));
+                    continue;
+                }
+
+                var subscripts = indices.Select(value => (object?)value).ToArray();
+                result.Add(ToNode(array.Get(subscripts)));
+            }
+            return result;
+        }
     }
 
     internal static object? FromNode(System.Text.Json.Nodes.JsonNode? node)

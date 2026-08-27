@@ -1,7 +1,21 @@
 Option Declare
 
 Class JsonBoundaryPerson
-    Public Name As String
+    Public Id As Integer
+    Private mName As String
+    Private mPassword As String
+
+    Public Property Get Name As String
+        Name = "USER-" & mName
+    End Property
+
+    Public Property Let Name As String
+        mName = UCase(Trim(Name))
+    End Property
+
+    Public Property Let Password As String
+        mPassword = Password
+    End Property
 End Class
 
 Sub Main()
@@ -14,6 +28,7 @@ Sub Main()
     Dim emptyValue As Variant
     Dim nullValue As Variant
     Dim missingPerson As JsonBoundaryPerson
+    Dim person As JsonBoundaryPerson
 
     Set document = JsonDocument.Parse("{""name"":""Alice"",""active"":true}")
     Print "DOCUMENT=" & document.Stringify()
@@ -44,6 +59,12 @@ Sub Main()
 
     Print "STRINGIFY=" & JsonStringify(obj)
     Print "ENCODE=" & JsonEncode(arr)
+
+    Set person = New JsonBoundaryPerson
+    person.Id = 7
+    person.Name = " anna "
+    person.Password = "do-not-serialize"
+    Print "CLASSJSON=" & JsonStringify(person)
 
     Set decoded = JsonDecode("{""ok"":true}")
     Print "DECODE=" & decoded.Stringify()
