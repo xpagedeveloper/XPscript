@@ -16,10 +16,78 @@ internal sealed class ClassOverloadValidator
     public void Validate(string source, string sourceName)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        ValidateMemberConflicts(lines, sourceName);
         var methods = CollectMethods(lines);
         if (methods.Count == 0) return;
         ValidateDuplicateSignatures(methods, sourceName, lines);
         ValidateCalls(lines, methods, sourceName);
+    }
+
+    private static void ValidateMemberConflicts(string[] lines, string sourceName)
+    {
+        string? currentClass = null;
+        var members = new Dictionary<string, (string Kind, int Line)>(StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var original = lines[i];
+            var line = StripComment(original).Trim();
+            if (line.Length == 0) continue;
+
+            var classMatch = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
+            if (classMatch.Success)
+            {
+                currentClass = classMatch.Groups[1].Value;
+                members.Clear();
+                continue;
+            }
+
+            if (Regex.IsMatch(line, @"^End\s+Class$", RegexOptions.IgnoreCase))
+            {
+                currentClass = null;
+                members.Clear();
+                continue;
+            }
+
+            if (currentClass is null) continue;
+
+            var propertyMatch = Regex.Match(
+                line,
+                @"^(?:(?:Public|Private)\s+)?Property\s+(?:Get|Set|Let)\s+([A-Za-z_]\w*)\b",
+                RegexOptions.IgnoreCase);
+            if (propertyMatch.Success)
+            {
+                ValidateMemberKind(propertyMatch.Groups[1].Value, "property", currentClass, i + 1, original, sourceName, members);
+                continue;
+            }
+
+            var fieldMatch = Regex.Match(
+                line,
+                @"^(?:(?:Public|Private)\s+)?([A-Za-z_]\w*)\s+(?:List\s+)?As\s+[A-Za-z_]\w*\b",
+                RegexOptions.IgnoreCase);
+            if (fieldMatch.Success)
+                ValidateMemberKind(fieldMatch.Groups[1].Value, "field", currentClass, i + 1, original, sourceName, members);
+        }
+    }
+
+    private static void ValidateMemberKind(
+        string name,
+        string kind,
+        string className,
+        int lineNumber,
+        string original,
+        string sourceName,
+        Dictionary<string, (string Kind, int Line)> members)
+    {
+        if (members.TryGetValue(name, out var previous))
+        {
+            if (previous.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) return;
+            var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+            throw new CompilerException(
+                $"{sourceName}({lineNumber},1): Class '{className}' cannot declare field and property '{name}' with the same name; the conflicting {previous.Kind} was declared on line {previous.Line}.{Environment.NewLine}  {safeSource}");
+        }
+
+        members[name] = (kind, lineNumber);
     }
 
     private static List<Method> CollectMethods(string[] lines)
