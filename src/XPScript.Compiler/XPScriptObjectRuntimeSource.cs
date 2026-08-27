@@ -12,6 +12,7 @@ internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEn
 {
     private bool _deleted;
 
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool __IsDeleted => _deleted;
 
     public virtual void __Delete()
@@ -53,6 +54,7 @@ internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEn
 internal interface ILSObjectReference
 {
     bool IsNothing { get; }
+    object? ObjectValue { get; }
 }
 
 internal static class LSObjectIdentityRuntime
@@ -72,6 +74,7 @@ internal sealed class LSRef<T> : ILSObjectReference, IXPScriptIterable, System.C
     public T? Value { get; private set; }
 
     public bool IsNothing => Value is null;
+    object? ILSObjectReference.ObjectValue => Value;
 
     public LSRef()
     {
