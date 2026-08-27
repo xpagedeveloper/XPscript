@@ -26,7 +26,7 @@ internal static class XpsServiceScriptParser
     {
         var normalized = (source ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         var first = normalized.Split('\n').FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
-        if (!ServiceRule.IsMatch(first)) return XpsServiceDefinition.None(source);
+        if (!ServiceRule.IsMatch(first)) return XpsServiceDefinition.None(normalized);
 
         var lines = normalized.Split('\n');
         var output = new List<string>(lines.Length);
