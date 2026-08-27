@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text;
 
 namespace XPScript.Web.Runtime;
@@ -38,7 +39,7 @@ public sealed class XpsWebRequest
         Protocol = protocol ?? string.Empty;
         Cookies = new ReadOnlyDictionary<string, string>(
             new Dictionary<string, string>(cookies ?? throw new ArgumentNullException(nameof(cookies)), StringComparer.OrdinalIgnoreCase));
-        CgiVariables = FreezeCgiVariables(cgiVariables);
+        CgiVariables = BuildCgiVariables(cgiVariables);
         CancellationToken = cancellationToken;
     }
 
@@ -245,6 +246,59 @@ public sealed class XpsWebRequest
             result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<string>)Array.AsReadOnly(pair.Value.ToArray()), StringComparer.OrdinalIgnoreCase));
     }
 
+    private IReadOnlyDictionary<string, string?> BuildCgiVariables(IReadOnlyDictionary<string, string?>? values)
+    {
+        var copy = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (values is not null)
+        {
+            foreach (var pair in values)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key)) continue;
+                copy[pair.Key] = pair.Value;
+            }
+        }
+
+        var requestUri = string.IsNullOrEmpty(QueryString)
+            ? Path
+            : Path + (QueryString.StartsWith("?", StringComparison.Ordinal) ? QueryString : "?" + QueryString);
+        var serverName = Host;
+        var serverPort = Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? "443" : "80";
+        if (Uri.TryCreate($"{(string.IsNullOrWhiteSpace(Scheme) ? "http" : Scheme)}://{Host}", UriKind.Absolute, out var hostUri))
+        {
+            serverName = hostUri.Host;
+            serverPort = hostUri.Port.ToString(CultureInfo.InvariantCulture);
+        }
+
+        TryAdd(copy, "REQUEST_METHOD", Method);
+        TryAdd(copy, "REQUEST_URI", requestUri);
+        TryAdd(copy, "QUERY_STRING", QueryString.TrimStart('?'));
+        TryAdd(copy, "PATH_INFO", PathInfo);
+        TryAdd(copy, "SCRIPT_NAME", Path);
+        TryAdd(copy, "SERVER_NAME", serverName);
+        TryAdd(copy, "SERVER_PORT", serverPort);
+        TryAdd(copy, "SERVER_PROTOCOL", Protocol);
+        TryAdd(copy, "REMOTE_ADDR", RemoteAddress);
+        TryAdd(copy, "CONTENT_TYPE", ContentType);
+        TryAdd(copy, "CONTENT_LENGTH", ContentLength?.ToString(CultureInfo.InvariantCulture));
+        TryAdd(copy, "HTTPS", Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? "on" : "off");
+
+        foreach (var header in Headers)
+        {
+            if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) ||
+                header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var cgiName = "HTTP_" + header.Key.Replace('-', '_').ToUpperInvariant();
+            TryAdd(copy, cgiName, string.Join(", ", header.Value));
+        }
+
+        return new ReadOnlyDictionary<string, string?>(copy);
+    }
+
+    private static void TryAdd(Dictionary<string, string?> values, string name, string? value)
+    {
+        if (!values.ContainsKey(name)) values[name] = value;
+    }
+
     private static string DecodeRawQueryString(string value)
     {
         if (string.IsNullOrEmpty(value)) return string.Empty;
@@ -286,20 +340,6 @@ public sealed class XpsWebRequest
                 throw new ArgumentException("HTTP method contains an invalid token character.", nameof(method));
         }
         return normalized;
-    }
-
-    private static IReadOnlyDictionary<string, string?> FreezeCgiVariables(IReadOnlyDictionary<string, string?>? values)
-    {
-        var copy = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        if (values is not null)
-        {
-            foreach (var pair in values)
-            {
-                if (string.IsNullOrWhiteSpace(pair.Key)) continue;
-                copy[pair.Key] = pair.Value;
-            }
-        }
-        return new ReadOnlyDictionary<string, string?>(copy);
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> FreezeMultiValue(
