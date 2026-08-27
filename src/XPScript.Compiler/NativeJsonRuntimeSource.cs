@@ -13,7 +13,12 @@ internal static class XPScriptNativeJson
     private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new(System.Text.Json.JsonSerializerDefaults.Web)
     {
         MaxDepth = MaxDepth,
-        IncludeFields = true
+        IncludeFields = true,
+        Converters =
+        {
+            new LSRefJsonConverterFactory(),
+            new LSObjectJsonConverterFactory()
+        }
     };
 
     public static XPScriptJsonDocument CreateDocument() => new(new System.Text.Json.Nodes.JsonObject());
