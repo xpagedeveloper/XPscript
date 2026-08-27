@@ -8,6 +8,7 @@ Sub Main()
     baseUrl = Environ("XPSCRIPT_DEMO_HTTP_URL")
     If baseUrl = "" Then
         baseUrl = "http://127.0.0.1:8080/"
+        http.AllowPrivateNetwork = True
     End If
 
     http.Timeout = 10
