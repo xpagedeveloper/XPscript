@@ -43,11 +43,14 @@ internal sealed class DefaultVisibilityPreprocessor
 
             var procedure = Regex.Match(
                 code,
-                @"^(?:(Static)\s+)?(?:(Public|Private)\s+)?(Sub|Function)\b",
+                @"^(?:(Static)\s+)?(?:(Public|Private)\s+)?(Sub|Function)\s+([A-Za-z_]\w*)\b",
                 RegexOptions.IgnoreCase);
             if (procedure.Success)
             {
-                if (!procedure.Groups[2].Success)
+                var name = procedure.Groups[4].Value;
+                var isCompilerEntryPoint = !inClass &&
+                    (name.Equals("Main", StringComparison.OrdinalIgnoreCase) || name.Equals("Initialize", StringComparison.OrdinalIgnoreCase));
+                if (!procedure.Groups[2].Success && !isCompilerEntryPoint)
                     output[i] = PrefixVisibility(raw, defaultVisibility, procedure.Groups[1].Success);
                 inProcedure = true;
                 continue;
