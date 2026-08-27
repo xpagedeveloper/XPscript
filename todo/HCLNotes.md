@@ -100,7 +100,7 @@ Missing / future:
 
 ## NotesRichTextItem
 
-Implemented: `GetUnformattedText`, `SaveAttachment` for attachments referenced by that rich-text item.
+Implemented: inherited `Text` property plus `SaveAttachment` for attachments referenced by that rich-text item.
 
 Missing / future:
 
