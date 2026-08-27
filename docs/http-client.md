@@ -133,4 +133,4 @@ Headers can be removed with `RemoveHeader(name)` or all cleared with `ClearHeade
 
 ## Security and limits
 
-Outgoing URLs must be absolute `http://` or `https://` URLs. The native client does not automatically follow redirects. Request bodies are limited to 8 MiB and response bodies to 64 MiB. Header names and values are validated to prevent malformed or injected headers.
+Outgoing URLs must be absolute `http://` or `https://` URLs. URL user information is rejected. The native client resolves the destination before sending and rejects loopback, unspecified, link-local, private, carrier-grade NAT, benchmark and multicast/reserved network addresses to prevent server-side request forgery against local services. The native client does not automatically follow redirects. Request bodies are limited to 8 MiB and response bodies to 64 MiB. Header names and values are validated to prevent malformed or injected headers.
