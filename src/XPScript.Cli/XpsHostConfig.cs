@@ -12,6 +12,9 @@ internal static class XpsHostConfig
         ArgumentNullException.ThrowIfNull(commandArgs);
 
         var (configPath, explicitConfig, remainingArgs) = ExtractConfigPath(commandArgs);
+        if (command.Equals("web", StringComparison.OrdinalIgnoreCase))
+            remainingArgs = NormalizeWebPositionalRoot(remainingArgs);
+
         if (configPath is null)
         {
             var automaticPath = Path.Combine(AppContext.BaseDirectory, DefaultFileName);
@@ -50,6 +53,14 @@ internal static class XpsHostConfig
             ? ApplyWebEnvironment(merged)
             : merged;
         return NormalizeRootArgument(normalized);
+    }
+
+    private static string[] NormalizeWebPositionalRoot(string[] args)
+    {
+        if (args.Length == 0 || args[0].StartsWith("-", StringComparison.Ordinal)) return args;
+        if (HasAny(args, "--root"))
+            throw new ArgumentException("Specify the web root either as 'xpscript web PATH' or with --root, not both.");
+        return ["--root", args[0], .. args[1..]];
     }
 
     private static string[] NormalizeRootArgument(string[] args)
@@ -205,7 +216,7 @@ internal static class XpsHostConfig
         AddValue(result, cliArgs, "--session-same-site", config.SessionSameSite);
         AddFlag(result, cliArgs, "--session-secure", config.SessionSecure);
         AddFlag(result, cliArgs, "--operational-external", config.OperationalExternal);
-        AddValue(result, cliArgs, "--structured-log", config.StructuredLog is null ? null : ResolvePath(baseDirectory, config.StructuredLog));
+        AddValue(result, cliArgs, "--structured-log", config.StructuredLog is null ? null : ResolvePath(configDirectory: baseDirectory, value: config.StructuredLog));
         AddFlag(result, cliArgs, "--static-files", config.StaticFiles);
         AddValue(result, cliArgs, "--static-max-bytes", config.StaticMaxBytes);
         return result;
