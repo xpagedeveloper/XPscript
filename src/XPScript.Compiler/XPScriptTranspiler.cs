@@ -10,10 +10,17 @@ public sealed class XPScriptTranspiler
 
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
-        var includeResult = new IncludeSourcePreprocessor().Transform(source, sourceName);
+        var serviceDefinition = XpsServiceScriptParser.Parse(source, sourceName);
+        var includeResult = new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
         try
         {
-            return TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
+            var generated = TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
+            if (!serviceDefinition.IsService) return generated;
+
+            generated = XpsServiceGeneratedCodePostProcessor.Transform(generated, serviceDefinition);
+            generated += "\n\n" + XpsServiceRuntimeSource.Build(serviceDefinition) + "\n";
+            generated = XpsWindowsServiceHostPostProcessor.Transform(generated, serviceDefinition);
+            return generated;
         }
         catch (CompilerException ex)
         {
@@ -141,7 +148,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
         generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclIsDefinedRuntimeSource.Code + "\n";
+        generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
 
         if (usesAi) generated = new AiSessionRuntimePostProcessor().Transform(generated);
         generated = new UIExtensionDesktopPostProcessor().Transform(generated);

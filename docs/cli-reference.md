@@ -17,6 +17,17 @@ This page is the searchable reference for the XPScript compiler and host command
 | `--result-format xml` | `--result-format xml` | none | Emits structured XML compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--` | `-- scriptArg1 ...` | all following values are script arguments. | Ends compiler option parsing so option-looking values can be passed to the program. | [application-runtime.xps](../samples/application-runtime.xps) |
 
+## `xpscript service` host installation
+
+| Command/option | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `xpscript service install` | `xpscript service install EXECUTABLE --name NAME --display-name "DISPLAY NAME" [--start MODE]` | `EXECUTABLE`: compiled `[Service]` application. | Registers the compiled executable with Windows SCM, Linux systemd or macOS launchd. Installation refuses to overwrite an existing service with the same internal name. | [service-interval.xps](../samples/service-interval.xps) |
+| service `--name` | `--name NAME` | stable native service identifier. | Required. The value is validated before any native service-manager change is attempted. | [service-interval.xps](../samples/service-interval.xps) |
+| `--display-name` | `--display-name "DISPLAY NAME"` | human-readable service name. | Required. Windows uses the native DisplayName. Linux uses the systemd Description. macOS stores the display name as XPScript service metadata. | [service-interval.xps](../samples/service-interval.xps) |
+| service `--start` | `--start auto|manual|disabled` | startup mode. | Optional, defaults to `manual`. `auto` enables boot startup, `manual` permits manual start without boot startup, and `disabled` configures the native service manager to prevent service start. | [service-interval.xps](../samples/service-interval.xps) |
+
+Service files use `[Service]`, optional `[StopTimeout:value]`, `ServiceStart()`, one or more optional `[Interval:value]` procedures, and `ServiceStop()`. See [XPScript services](services.md) for the lifecycle contract.
+
 ## `xpscript web` Kestrel host
 
 | Command/option | Syntax | Parameters | Description | Example |

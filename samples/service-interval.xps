@@ -1,0 +1,20 @@
+[Service]
+[StopTimeout:30s]
+
+Sub ServiceStart()
+    Print "SERVICE-START"
+End Sub
+
+[Interval:30s]
+Sub CheckIncomingFiles()
+    Print "SERVICE-CHECK"
+End Sub
+
+[Interval:1h]
+Sub Cleanup()
+    Print "SERVICE-CLEANUP"
+End Sub
+
+Sub ServiceStop()
+    Print "SERVICE-STOP"
+End Sub

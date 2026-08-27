@@ -23,6 +23,7 @@ try
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
         "new" => XpsScaffolder.Run(args[1..]),
+        "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -419,6 +420,7 @@ Usage:
   xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
   xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
   xpscript new <rest|web|desktop> <directory>
+  xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--sessions]
@@ -434,6 +436,7 @@ Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture.
   new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
+  service  Install compiled XPScript services using the native service manager.
   web      Run the standalone Kestrel web runtime.
   fastcgi  Run the FastCGI web runtime.
 
@@ -459,6 +462,7 @@ Examples:
   xpscript compile hello.xps --runtime linux-x64 -o hello
   xpscript run hello.xps
   xpscript run hello.xps -- --runtime passed-to-script
+  xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript web ./site
   xpscript web --config ./production.cfg
   xpscript web --root ./site --sessions
@@ -473,6 +477,7 @@ Examples:
 
 Security defaults:
   Compile/run retain the existing restricted Include and source-root controls.
+  Service install validates service names and refuses to overwrite an existing service with the same name.
   Kestrel binds to loopback by default.
   Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
   Sessions are disabled by default.
