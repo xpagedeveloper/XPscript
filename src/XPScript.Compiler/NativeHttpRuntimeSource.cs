@@ -17,6 +17,7 @@ internal sealed class XPScriptHttpClient : IDisposable
     private readonly System.Net.Http.HttpClient _client;
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
+    private bool _allowPrivateNetwork;
     private bool _disposed;
 
     public XPScriptHttpClient()
@@ -44,6 +45,16 @@ internal sealed class XPScriptHttpClient : IDisposable
             {
                 throw new XPScriptRuntimeException(5, "HttpClient.Timeout is outside the supported range.");
             }
+        }
+    }
+
+    public bool AllowPrivateNetwork
+    {
+        get => _allowPrivateNetwork;
+        set
+        {
+            EnsureNotDisposed();
+            _allowPrivateNetwork = value;
         }
     }
 
@@ -90,7 +101,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new XPScriptRuntimeException(5, "HTTP URL must be an absolute http:// or https:// URL.");
-        ValidateOutboundTarget(uri);
+        ValidateOutboundTarget(uri, _allowPrivateNetwork);
 
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
         if (bodyValue is not null && method != System.Net.Http.HttpMethod.Get && method != System.Net.Http.HttpMethod.Delete)
@@ -156,12 +167,13 @@ internal sealed class XPScriptHttpClient : IDisposable
         }
     }
 
-    private static void ValidateOutboundTarget(Uri uri)
+    private static void ValidateOutboundTarget(Uri uri, bool allowPrivateNetwork)
     {
         if (!string.IsNullOrEmpty(uri.UserInfo))
             throw new XPScriptRuntimeException(5, "HTTP URL user information is not permitted.");
         if (uri.HostNameType == UriHostNameType.Unknown || string.IsNullOrWhiteSpace(uri.Host))
             throw new XPScriptRuntimeException(5, "HTTP URL host is invalid.");
+        if (allowPrivateNetwork) return;
 
         System.Net.IPAddress[] addresses;
         if (System.Net.IPAddress.TryParse(uri.Host, out var literal))
@@ -180,7 +192,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         if (addresses.Length == 0)
             throw new XPScriptRuntimeException(5, "HTTP host could not be resolved.");
         if (addresses.Any(IsPrivateOrLocalAddress))
-            throw new XPScriptRuntimeException(5, "HTTP target resolves to a private or local network address.");
+            throw new XPScriptRuntimeException(5, "HTTP target resolves to a private or local network address. Set AllowPrivateNetwork=True only for trusted intranet or local endpoints.");
     }
 
     private static bool IsPrivateOrLocalAddress(System.Net.IPAddress address)
