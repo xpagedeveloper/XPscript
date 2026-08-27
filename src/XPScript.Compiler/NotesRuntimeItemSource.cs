@@ -224,12 +224,6 @@ internal sealed class XPScriptNotesRichTextItem : XPScriptNotesItem
     internal XPScriptNotesRichTextItem(XPScriptNotesSession session, XPScriptNotesDocument document, string name)
         : base(session, document, name) { }
 
-    public string GetUnformattedText()
-    {
-        EnsureItemAlive();
-        return Session.Api.ConvertItemToText(Document.NativeHandle, ItemName);
-    }
-
     public bool SaveAttachment(object? attachmentNameValue, object? pathValue)
     {
         EnsureItemAlive();
