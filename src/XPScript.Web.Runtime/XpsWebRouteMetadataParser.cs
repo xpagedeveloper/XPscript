@@ -66,6 +66,8 @@ public sealed class XpsWebRouteMetadataParser
         foreach (var raw in lines)
         {
             var trimmed = raw.Trim();
+            if (fileDefaultsSectionOpen && trimmed.Length == 0)
+                fileDefaultsSectionOpen = false;
 
             var classMatch = ClassPattern.Match(raw);
             if (classMatch.Success)
