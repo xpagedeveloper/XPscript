@@ -23,6 +23,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.Registry\.User\b", "XPScriptApplicationRegistryRuntime.User", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Registry\.System\b", "XPScriptApplicationRegistryRuntime.System", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\b", "XPScriptApplicationSecretsRuntime", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.SystemLog\b", "XPScriptApplicationSystemLogRuntime", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bSession\.State\b", "XPScriptSessionRuntime.State", RegexOptions.IgnoreCase);
