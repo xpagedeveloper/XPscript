@@ -1,0 +1,18 @@
+Option Declare
+
+Class PrivateByDefault
+    Hidden As String
+    Public Visible As String
+
+    Public Sub SetHidden(ByVal value As String)
+        Hidden = value
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As PrivateByDefault
+    Set item = New PrivateByDefault
+    Call item.SetHidden("secret")
+    item.Visible = "yes"
+    Print "DEFAULTPRIVATE=" & JsonStringify(item)
+End Sub
