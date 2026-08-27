@@ -34,6 +34,16 @@ BadScheme:
 AfterBadScheme:
     On Error GoTo 0
 
+    On Error GoTo PrivateTarget
+    Set response = http.Get("http://127.0.0.1:18080/")
+    Print "PRIVATE-TARGET-NOT-REJECTED"
+    GoTo AfterPrivateTarget
+PrivateTarget:
+    Print "PRIVATE-TARGET-ERR=" & CStr(Err)
+    Resume AfterPrivateTarget
+AfterPrivateTarget:
+    On Error GoTo 0
+
     Call http.SetHeader("X-Valid-Header", "valid-value")
     Print "VALID-HEADER=OK"
 End Sub
