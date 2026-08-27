@@ -216,7 +216,7 @@ internal static class XpsHostConfig
         AddValue(result, cliArgs, "--session-same-site", config.SessionSameSite);
         AddFlag(result, cliArgs, "--session-secure", config.SessionSecure);
         AddFlag(result, cliArgs, "--operational-external", config.OperationalExternal);
-        AddValue(result, cliArgs, "--structured-log", config.StructuredLog is null ? null : ResolvePath(configDirectory: baseDirectory, value: config.StructuredLog));
+        AddValue(result, cliArgs, "--structured-log", config.StructuredLog is null ? null : ResolvePath(baseDirectory, config.StructuredLog));
         AddFlag(result, cliArgs, "--static-files", config.StaticFiles);
         AddValue(result, cliArgs, "--static-max-bytes", config.StaticMaxBytes);
         return result;
