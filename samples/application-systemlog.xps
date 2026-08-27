@@ -1,8 +1,10 @@
-Application.SystemLog.Info("Application started")
-Application.SystemLog.Info("Application started with event id", 1000)
-Application.SystemLog.Warning("Input file is missing")
-Application.SystemLog.Warning("Input file is missing with event id", 2001)
-Application.SystemLog.Error("Database connection failed")
-Application.SystemLog.Error("Database connection failed with event id", 3001)
+Sub Main()
+    Application.SystemLog.Info("Application started")
+    Application.SystemLog.Info("Application started with event id", 1000)
+    Application.SystemLog.Warning("Input file is missing")
+    Application.SystemLog.Warning("Input file is missing with event id", 2001)
+    Application.SystemLog.Error("Database connection failed")
+    Application.SystemLog.Error("Database connection failed with event id", 3001)
 
-Print "APPLICATION-SYSTEMLOG=OK"
+    Print "APPLICATION-SYSTEMLOG=OK"
+End Sub
