@@ -17,11 +17,15 @@ Sub Index()
     Response.SetCookie("demo", "abc")
     Response.Write(Request.Method)
     Response.Write("|")
-    Response.Write(Request.QueryFirst("name"))
+    Response.Write(Request.Query("name"))
     Response.Write("|")
-    Response.Write(Request.HeaderFirst("X-Test"))
+    Response.Write(Request.Header("X-Test"))
     Response.Write("|")
     Response.Write(Request.Cookie("client"))
+    Response.Write("|")
+    Response.Write(Request.BearerToken)
+    Response.Write("|")
+    Response.Write(Request.Cgi("REMOTE_ADDR"))
     Response.Write("|")
     Response.Write(Server.HtmlEncode("<x>"))
     Response.Write("|")
@@ -34,7 +38,7 @@ End Sub
 [Post]
 Sub FormPost()
     Response.ContentType = "text/plain; charset=utf-8"
-    Response.Write(Request.FormFirst("value"))
+    Response.Write(Request.Form("value"))
     Response.Write("|")
     Response.Write(Request.BodyText())
 End Sub
@@ -72,7 +76,8 @@ try
         var probeRequest = new XpsWebRequest(
             "GET", "/", "", "name=probe", new Dictionary<string, IReadOnlyList<string>>(),
             null, 0, ReadOnlyMemory<byte>.Empty, "localhost", "http", "127.0.0.1", "HTTP/1.1",
-            new Dictionary<string, string>());
+            new Dictionary<string, string>(),
+            cgiVariables: new Dictionary<string, string?> { ["REMOTE_ADDR"] = "127.0.0.1" });
         var probeResponse = new XpsWebResponse();
         var probeContext = new XpsWebContext(
             probeRequest,
@@ -99,7 +104,8 @@ try
         "/?name=Fredrik+Norling",
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["X-Test"] = ["header-value"]
+            ["X-Test"] = ["header-value"],
+            ["Authorization"] = ["Bearer api-token"]
         },
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -107,7 +113,7 @@ try
         });
     AssertStatus(get, 200);
     var getBody = Encoding.UTF8.GetString(get.Body.Span);
-    if (getBody != "GET|Fredrik Norling|header-value|cookie-value|&lt;x&gt;|a+b|\"alpha\"")
+    if (getBody != "GET|Fredrik Norling|header-value|cookie-value|api-token|127.0.0.1|&lt;x&gt;|a+b|\"alpha\"")
         throw new Exception("XPScript Request/Response/Server GET surface returned unexpected data: " + getBody);
     if (!get.Headers.TryGetValue("X-XPScript", out var testHeader) || testHeader.Single() != "web-objects")
         throw new Exception("XPScript response header was not preserved.");
@@ -155,10 +161,15 @@ try
     if (badHeader.Headers.ContainsKey("Injected")) throw new Exception("Header injection produced an injected header.");
 
     var directRequest = new XpsWebRequest(
-        "POST", "/", "", "?a=1&a=2", new Dictionary<string, IReadOnlyList<string>>(),
+        "POST", "/", "", "?a=1&a=2", new Dictionary<string, IReadOnlyList<string>>
+        {
+            ["Authorization"] = ["Bearer one", "Bearer two"]
+        },
         "text/plain", 5, Encoding.UTF8.GetBytes("hello"), "localhost", "http", null, "HTTP/1.1",
         new Dictionary<string, string>());
-    if (!directRequest.Query("a").SequenceEqual(["1", "2"])) throw new Exception("Multi-value query semantics failed.");
+    if (directRequest.Query("a") != "1") throw new Exception("Single query semantics failed.");
+    if (!directRequest.QueryAll("a").SequenceEqual(["1", "2"])) throw new Exception("Multi-value query semantics failed.");
+    if (directRequest.BearerToken is not null) throw new Exception("Ambiguous Authorization values produced a bearer token.");
     try
     {
         _ = directRequest.BodyText(4);
@@ -220,7 +231,8 @@ static async Task<XpsWebResponse> SendAsync(
         "http",
         "127.0.0.1",
         "HTTP/1.1",
-        cookies ?? new Dictionary<string, string>());
+        cookies ?? new Dictionary<string, string>(),
+        cgiVariables: new Dictionary<string, string?> { ["REMOTE_ADDR"] = "127.0.0.1" });
     var response = new XpsWebResponse();
     var context = new XpsWebContext(
         request,
