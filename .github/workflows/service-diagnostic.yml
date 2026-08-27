@@ -25,10 +25,18 @@ jobs:
           code=${PIPESTATUS[0]}
           echo "code=$code" >> "$GITHUB_OUTPUT"
           exit 0
+      - name: Compile service sample
+        if: steps.build.outputs.code == '0'
+        shell: bash
+        run: |
+          mkdir -p ./out/service-diagnostic
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/service-interval.xps -o ./out/service-diagnostic/service-interval --framework-dependent
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: service-build-log
           path: service-build.log
       - name: Preserve build result
+        if: always()
         shell: bash
         run: exit ${{ steps.build.outputs.code }}
