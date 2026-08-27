@@ -1,0 +1,17 @@
+Option Declare
+Option Public
+
+Class PublicByDefault
+    Value As String
+
+    Property Get Display As String
+        Display = "DISPLAY-" & Value
+    End Property
+End Class
+
+Sub Main()
+    Dim item As PublicByDefault
+    Set item = New PublicByDefault
+    item.Value = "ok"
+    Print "OPTIONPUBLIC=" & JsonStringify(item)
+End Sub
