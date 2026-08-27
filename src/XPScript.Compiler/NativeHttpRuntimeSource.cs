@@ -24,7 +24,8 @@ internal sealed class XPScriptHttpClient : IDisposable
     {
         _handler = new System.Net.Http.HttpClientHandler
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            UseCookies = false
         };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
@@ -62,6 +63,8 @@ internal sealed class XPScriptHttpClient : IDisposable
     {
         EnsureNotDisposed();
         var name = ValidateHeaderName(nameValue);
+        if (IsTransportOwnedRequestHeader(name))
+            throw new XPScriptRuntimeException(5, "HTTP framing and transport headers are managed by the runtime.");
         var text = XPScriptRuntime.CStr(value);
         ValidateHeaderValue(text);
         _headers[name] = text;
@@ -290,6 +293,17 @@ internal sealed class XPScriptHttpClient : IDisposable
                 throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
         }
     }
+
+    private static bool IsTransportOwnedRequestHeader(string name) =>
+        name.Equals("Host", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Connection", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("TE", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Trailer", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Upgrade", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsHeaderTokenCharacter(char c) =>
         char.IsAsciiLetterOrDigit(c) || c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~';
