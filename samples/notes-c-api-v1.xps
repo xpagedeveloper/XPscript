@@ -267,7 +267,7 @@ Sub TestItemSurface(doc As Variant, enableWrites As Boolean, richTextItemName As
     If item <> Nothing Then
         If item.Type = 1 Then
             Set richText = item
-            Print "RICHTEXT_UNFORMATTED=" & richText.GetUnformattedText()
+            Print "RICHTEXT_TEXT=" & richText.Text
 
             If attachmentName <> "" And attachmentOutput <> "" Then
                 saved = richText.SaveAttachment(attachmentName, attachmentOutput)
