@@ -24,6 +24,16 @@ BadValue:
 AfterBadValue:
     On Error GoTo 0
 
+    On Error GoTo BadFraming
+    Call http.SetHeader("Content-Length", "1")
+    Print "BAD-FRAMING-NOT-REJECTED"
+    GoTo AfterBadFraming
+BadFraming:
+    Print "BAD-FRAMING-ERR=" & CStr(Err)
+    Resume AfterBadFraming
+AfterBadFraming:
+    On Error GoTo 0
+
     On Error GoTo BadScheme
     Set response = http.Get("file:///etc/passwd")
     Print "BAD-SCHEME-NOT-REJECTED"
