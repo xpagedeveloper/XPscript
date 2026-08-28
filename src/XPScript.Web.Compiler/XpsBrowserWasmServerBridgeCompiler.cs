@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security;
@@ -42,7 +41,15 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> BuildGates = new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed class BuildGate
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int Users { get; set; }
+    }
+
+    private static readonly object BuildGateSync = new();
+    private static readonly Dictionary<string, BuildGate> BuildGates = new(StringComparer.OrdinalIgnoreCase);
 
     public static async Task<XpsBrowserWasmServerBridgeBundle> GetOrBuildAsync(
         string sourcePath,
@@ -77,8 +84,17 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         if (File.Exists(marker) && IsValidAppRoot(appRoot) && File.Exists(serverAssembly))
             return new XpsBrowserWasmServerBridgeBundle(bundle, plan, serverAssembly);
 
-        var gate = BuildGates.GetOrAdd(cacheRoot, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var gate = RentBuildGate(cacheRoot);
+        try
+        {
+            await gate.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            ReturnBuildGate(cacheRoot, gate);
+            throw;
+        }
+
         string? workspace = null;
         try
         {
@@ -144,7 +160,35 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         finally
         {
             if (workspace is not null) TryDelete(workspace);
-            gate.Release();
+            gate.Semaphore.Release();
+            ReturnBuildGate(cacheRoot, gate);
+        }
+    }
+
+    private static BuildGate RentBuildGate(string key)
+    {
+        lock (BuildGateSync)
+        {
+            if (!BuildGates.TryGetValue(key, out var gate))
+            {
+                gate = new BuildGate();
+                BuildGates.Add(key, gate);
+            }
+            gate.Users++;
+            return gate;
+        }
+    }
+
+    private static void ReturnBuildGate(string key, BuildGate gate)
+    {
+        lock (BuildGateSync)
+        {
+            if (gate.Users <= 0) return;
+            gate.Users--;
+            if (gate.Users != 0) return;
+            if (!BuildGates.TryGetValue(key, out var current) || !ReferenceEquals(current, gate)) return;
+            BuildGates.Remove(key);
+            gate.Semaphore.Dispose();
         }
     }
 
@@ -255,10 +299,30 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for " + operation + ".");
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            TryKillProcessTree(process);
+            try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
+            throw;
+        }
         var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false);
         if (process.ExitCode != 0)
             throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + Redact(output, workingDirectory));
+    }
+
+    private static void TryKillProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+        }
     }
 
     private static string CreateBuildWorkspace()
