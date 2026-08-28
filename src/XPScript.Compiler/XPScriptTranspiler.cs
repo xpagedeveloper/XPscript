@@ -47,7 +47,6 @@ public sealed class XPScriptTranspiler
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new EvaluateByValSyntaxPreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
-        new NothingComparisonValidator().Validate(source, sourceName);
         new DateComparisonValidator().Validate(source, sourceName);
         new ClassOverloadValidator().Validate(source, sourceName);
         new SourceTypeValidator().Validate(source, sourceName);
@@ -168,8 +167,7 @@ public sealed class XPScriptTranspiler
         generated = ScopeErrorProtection(generated);
 
         foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
-        generated = generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
-        return UnhandledRuntimeErrorPostProcessor.Transform(generated);
+        return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
     }
 
     private static string NormalizeEvaluateRuntime(string code) => code
