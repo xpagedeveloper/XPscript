@@ -60,14 +60,6 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
     public XPScriptNotesDateTime Created { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentCreated(_handle)); } }
 
-    public void PutInFolder(object? folderNameValue) => PutInFolder(folderNameValue, false);
-    public void PutInFolder(object? folderNameValue, object? createOnFailValue)
-    {
-        EnsureAlive();
-        if (IsNewNote) return;
-        Session.Api.PutDocumentInFolder(Database.Handle, NoteId, XPScriptRuntime.CStr(folderNameValue), XPScriptRuntime.CBool(createOnFailValue));
-    }
-
     public void RemoveFromFolder(object? folderNameValue)
     {
         EnsureAlive();
@@ -129,13 +121,6 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         if (newName.Length == 0) newName = item.Name;
         Session.Api.CopyItemToDocument(item.Parent.NativeHandle, item.Name, _handle, newName);
         return GetFirstItem(newName) ?? throw new XPScriptRuntimeException(91, "Copied NotesItem could not be reopened.");
-    }
-
-    public void Send(object? attachFormValue) => Send(attachFormValue, null);
-    public void Send(object? attachFormValue, object? recipientsValue)
-    {
-        EnsureAlive();
-        Session.Api.SendDocument(_handle, XPScriptRuntime.CBool(attachFormValue), recipientsValue);
     }
 """;
 
