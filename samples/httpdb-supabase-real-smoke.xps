@@ -27,7 +27,6 @@ Sub Main()
     If tableName = "" Then Print "SUPABASE_TEST_TABLE_MISSING=True": Exit Sub
 
     Set supa = New XPDbSupabase(url, apiKey)
-    Call supa.SetBearerToken(apiKey)
     Call supa.SetSchema("public")
     Print "SUPABASE_REST_MODE=" & supa.Mode
 
