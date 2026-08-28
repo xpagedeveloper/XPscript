@@ -1,0 +1,257 @@
+' NotesDatabase full local smoke test for xpscript.nsf.
+' Requires HCL Notes/Domino runtime and a configured local Notes environment.
+'
+' The test is intentionally split into safe and destructive sections.
+' ENABLE_METADATA_WRITES tests Title, Categories, TemplateName and DesignTemplateName
+' by changing each value and restoring the original value immediately.
+' ENABLE_REMOVE_FT_INDEX calls RemoveFTIndex and therefore deletes the database FT index.
+'
+' See docs/notes-database-full-surface-test.md for database preparation.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const LOCAL_DATABASE = "xpscript.nsf"
+    Const TEST_VIEW = "XPScriptTestView"
+    Const TEST_AGENT = "XPScriptTestAgent"
+    Const TEST_PROFILE = "XPScriptTestProfile"
+    Const TEST_PROFILE_KEY = "Local"
+
+    Const ENABLE_METADATA_WRITES = True
+    Const ENABLE_FT_SEARCH = False
+    Const ENABLE_REMOVE_FT_INDEX = False
+    Const ENABLE_AGENT_TEST = False
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim parentSession As NotesSession
+    Dim view As NotesView
+    Dim docs As NotesDocumentCollection
+    Dim emptyDocs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim byId As NotesDocument
+    Dim byUnid As NotesDocument
+    Dim profile As NotesDocument
+    Dim created As NotesDateTime
+    Dim modified As NotesDateTime
+    Dim agentResult As NotesAgentResult
+
+    Dim originalTitle As String
+    Dim originalCategories As String
+    Dim originalTemplate As String
+    Dim originalDesignTemplate As String
+    Dim noteId As String
+    Dim unid As String
+
+    Print "NOTESDATABASE-TEST-BEGIN"
+
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set db = session.OpenDatabase("", LOCAL_DATABASE)
+
+    If db = Nothing Then
+        Print "FAIL: OpenDatabase returned Nothing"
+        GoTo Cleanup
+    End If
+
+    Print "IsOpen=" & CStr(db.IsOpen)
+    If Not db.IsOpen Then
+        Print "FAIL: xpscript.nsf is not open"
+        GoTo Cleanup
+    End If
+
+    ' ------------------------------------------------------------------
+    ' Basic NotesDatabase properties
+    ' ------------------------------------------------------------------
+    Set parentSession = db.Parent
+    Print "Parent.Username=" & parentSession.Username
+    Print "Server=" & db.Server
+    Print "FilePath=" & db.FilePath
+    Print "FileName=" & db.FileName
+    Print "Title=" & db.Title
+    Print "Categories=" & db.Categories
+    Print "TemplateName=" & db.TemplateName
+    Print "DesignTemplateName=" & db.DesignTemplateName
+    Print "ReplicaID=" & db.ReplicaID
+    Print "Size=" & CStr(db.Size)
+    Print "PercentUsed=" & CStr(db.PercentUsed)
+    Print "CurrentAccessLevel=" & CStr(db.CurrentAccessLevel)
+    Print "FileFormat=" & CStr(db.FileFormat)
+
+    Set created = db.Created
+    Set modified = db.LastModified
+    Print "Created=" & created.LocalTime
+    Print "LastModified=" & modified.LocalTime
+
+    ' ------------------------------------------------------------------
+    ' Read/write database-info properties.
+    ' Original values are restored after every write.
+    ' ------------------------------------------------------------------
+    If ENABLE_METADATA_WRITES Then
+        originalTitle = db.Title
+        originalCategories = db.Categories
+        originalTemplate = db.TemplateName
+        originalDesignTemplate = db.DesignTemplateName
+
+        db.Title = "XPscript property test"
+        Print "WRITE Title=" & db.Title
+        db.Title = originalTitle
+        Print "RESTORE Title=" & db.Title
+
+        db.Categories = "XPscriptTestCategory"
+        Print "WRITE Categories=" & db.Categories
+        db.Categories = originalCategories
+        Print "RESTORE Categories=" & db.Categories
+
+        db.TemplateName = "XPscriptTestTemplate"
+        Print "WRITE TemplateName=" & db.TemplateName
+        db.TemplateName = originalTemplate
+        Print "RESTORE TemplateName=" & db.TemplateName
+
+        db.DesignTemplateName = "XPscriptTestDesignTemplate"
+        Print "WRITE DesignTemplateName=" & db.DesignTemplateName
+        db.DesignTemplateName = originalDesignTemplate
+        Print "RESTORE DesignTemplateName=" & db.DesignTemplateName
+    Else
+        Print "SKIP: metadata write tests disabled"
+    End If
+
+    ' ------------------------------------------------------------------
+    ' CreateDocument, GetDocumentByID, GetDocumentByUNID
+    ' The test document remains in xpscript.nsf because NotesDocument delete
+    ' is not part of the current wrapper surface.
+    ' ------------------------------------------------------------------
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptTest")
+    Call doc.ReplaceItemValue("Subject", "XPscript NotesDatabase smoke test")
+    Call doc.ReplaceItemValue("XPScriptMarker", "notes-database-full-surface-test")
+    Call doc.Save()
+
+    noteId = doc.NoteIdHex
+    unid = doc.UniversalId
+    Print "CreateDocument.NoteID=" & noteId
+    Print "CreateDocument.UNID=" & unid
+
+    Set byId = db.GetDocumentByID(noteId)
+    If byId <> Nothing Then
+        Print "GetDocumentByID.Subject=" & byId.GetString("Subject")
+    Else
+        Print "FAIL: GetDocumentByID returned Nothing"
+    End If
+
+    Set byUnid = db.GetDocumentByUNID(unid)
+    If byUnid <> Nothing Then
+        Print "GetDocumentByUNID.Subject=" & byUnid.GetString("Subject")
+    Else
+        Print "FAIL: GetDocumentByUNID returned Nothing"
+    End If
+
+    ' Backward-compatible aliases.
+    Set byId = db.GetDocumentByNoteId(noteId)
+    Print "GetDocumentByNoteId alias works=" & CStr(byId <> Nothing)
+    Set byId = db.OpenDocumentByNoteId(noteId)
+    Print "OpenDocumentByNoteId alias works=" & CStr(byId <> Nothing)
+    Set byUnid = db.OpenDocumentByUNID(unid)
+    Print "OpenDocumentByUNID alias works=" & CStr(byUnid <> Nothing)
+
+    ' ------------------------------------------------------------------
+    ' Collections: CreateDocumentCollection, AllDocuments and Search
+    ' ------------------------------------------------------------------
+    Set emptyDocs = db.CreateDocumentCollection()
+    Print "CreateDocumentCollection.Count=" & CStr(emptyDocs.Count)
+    Call emptyDocs.AddDocument(doc)
+    Print "CreateDocumentCollection.CountAfterAdd=" & CStr(emptyDocs.Count)
+
+    Set docs = db.AllDocuments
+    Print "AllDocuments.Count=" & CStr(docs.Count)
+
+    Set docs = db.Search("XPScriptMarker=\"notes-database-full-surface-test\"")
+    Print "Search.Count=" & CStr(docs.Count)
+
+    ' ------------------------------------------------------------------
+    ' GetProfileDocument. NSFProfileOpen creates the profile if missing.
+    ' This profile is intentionally saved so it can be inspected in Notes.
+    ' ------------------------------------------------------------------
+    Set profile = db.GetProfileDocument(TEST_PROFILE, TEST_PROFILE_KEY)
+    Call profile.ReplaceItemValue("XPScriptProfileMarker", "profile-ok")
+    Call profile.Save()
+    Print "GetProfileDocument.Marker=" & profile.GetString("XPScriptProfileMarker")
+
+    ' ------------------------------------------------------------------
+    ' GetView plus the older OpenView alias.
+    ' Requires a view named XPScriptTestView in xpscript.nsf.
+    ' ------------------------------------------------------------------
+    Set view = db.GetView(TEST_VIEW)
+    If view <> Nothing Then
+        Print "GetView.Name=" & view.Name
+        Set byId = view.GetFirstDocument()
+        If byId <> Nothing Then
+            Print "GetView.FirstDocument.NoteID=" & byId.NoteIdHex
+        Else
+            Print "GetView.FirstDocument=Nothing"
+        End If
+        Call view.Recycle()
+        Set view = Nothing
+    Else
+        Print "FAIL: GetView(" & TEST_VIEW & ") returned Nothing"
+    End If
+
+    Set view = db.OpenView(TEST_VIEW)
+    Print "OpenView alias works=" & CStr(view <> Nothing)
+    If view <> Nothing Then
+        Call view.Recycle()
+        Set view = Nothing
+    End If
+
+    ' ------------------------------------------------------------------
+    ' FTSearch. Enable only when xpscript.nsf has a full-text index.
+    ' ------------------------------------------------------------------
+    If ENABLE_FT_SEARCH Then
+        Set docs = db.FTSearch("XPscript", 100)
+        Print "FTSearch.Count=" & CStr(docs.Count)
+    Else
+        Print "SKIP: FTSearch disabled"
+    End If
+
+    ' ------------------------------------------------------------------
+    ' RunAgent. Enable only when XPScriptTestAgent exists.
+    ' ------------------------------------------------------------------
+    If ENABLE_AGENT_TEST Then
+        Set agentResult = db.RunAgent(TEST_AGENT)
+        If agentResult <> Nothing Then
+            Print "RunAgent.Success=" & CStr(agentResult.Success)
+            Print "RunAgent.Status=" & CStr(agentResult.Status)
+            Print "RunAgent.Output=" & agentResult.Output
+        Else
+            Print "FAIL: RunAgent returned Nothing"
+        End If
+    Else
+        Print "SKIP: RunAgent disabled"
+    End If
+
+    ' ------------------------------------------------------------------
+    ' RemoveFTIndex is destructive. It is disabled by default.
+    ' ------------------------------------------------------------------
+    If ENABLE_REMOVE_FT_INDEX Then
+        Call db.RemoveFTIndex()
+        Print "RemoveFTIndex=CALLED"
+    Else
+        Print "SKIP: RemoveFTIndex disabled"
+    End If
+
+    Print "NOTESDATABASE-TEST-END"
+
+Cleanup:
+    If agentResult <> Nothing Then Call agentResult.Recycle()
+    If profile <> Nothing Then Call profile.Recycle()
+    If byUnid <> Nothing Then Call byUnid.Recycle()
+    If byId <> Nothing Then Call byId.Recycle()
+    If doc <> Nothing Then Call doc.Recycle()
+    If emptyDocs <> Nothing Then Call emptyDocs.Recycle()
+    If docs <> Nothing Then Call docs.Recycle()
+    If view <> Nothing Then Call view.Recycle()
+    If modified <> Nothing Then Call modified.Recycle()
+    If created <> Nothing Then Call created.Recycle()
+    If db <> Nothing Then Call db.Recycle()
+    If session <> Nothing Then Call session.Recycle()
+End Sub
