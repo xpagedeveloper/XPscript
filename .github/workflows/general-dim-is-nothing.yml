@@ -62,23 +62,40 @@ jobs:
         shell: pwsh
         run: |
           $invalid = Join-Path $env:RUNNER_TEMP 'invalid-nothing-comparison.xps'
+          $cases = @('value <> Nothing', 'Nothing <> value', 'value = Nothing', 'Nothing = value')
+          foreach ($expression in $cases) {
+            @"
+          Option Declare
+          Class Example
+          End Class
+          Sub Main()
+              Dim value As Example
+              If $expression Then
+                  Print "INVALID"
+              End If
+          End Sub
+          "@ | Set-Content -Path $invalid
+
+            $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $invalid 2>&1
+            if ($LASTEXITCODE -eq 0) { throw "Invalid Nothing comparison unexpectedly compiled: $expression.`n$($output -join [Environment]::NewLine)" }
+            $text = $output -join [Environment]::NewLine
+            if ($text -notmatch "Nothing cannot be compared with '(<>|=)'") { throw "Expected Nothing comparison diagnostic was missing for $expression.`n$text" }
+            if ($text -notmatch "Is Nothing.*Is Not Nothing") { throw "Expected replacement syntax guidance was missing for $expression.`n$text" }
+          }
+
+          $valid = Join-Path $env:RUNNER_TEMP 'valid-set-nothing.xps'
           @'
           Option Declare
           Class Example
           End Class
           Sub Main()
               Dim value As Example
-              If value <> Nothing Then
-                  Print "INVALID"
-              End If
+              Set value = Nothing
+              Print "SET_NOTHING=OK"
           End Sub
-          '@ | Set-Content -Path $invalid
-
-          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $invalid 2>&1
-          if ($LASTEXITCODE -eq 0) { throw "Invalid Nothing comparison unexpectedly compiled.`n$($output -join [Environment]::NewLine)" }
-          $text = $output -join [Environment]::NewLine
-          if ($text -notmatch "Nothing cannot be compared with '<>'") { throw "Expected Nothing comparison diagnostic was missing.`n$text" }
-          if ($text -notmatch "Is Nothing.*Is Not Nothing") { throw "Expected replacement syntax guidance was missing.`n$text" }
+          '@ | Set-Content -Path $valid
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $valid 2>&1
+          if ($LASTEXITCODE -ne 0 -or $output -notcontains 'SET_NOTHING=OK') { throw "Set value = Nothing must remain valid.`n$($output -join [Environment]::NewLine)" }
 
       - name: Hide generated CSharp runtime stack traces
         shell: pwsh
@@ -95,6 +112,6 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw "Runtime failure unexpectedly returned success.`n$($output -join [Environment]::NewLine)" }
           $text = $output -join [Environment]::NewLine
           if ($text -notmatch 'XPscript runtime error') { throw "XPscript runtime error message was missing.`n$text" }
-          if ($text -match 'Unhandled exception|System\.XPScriptRuntimeException|Program\.cs| at Script\.| at Program\.') {
+          if ($text -match 'Unhandled exception|XPScriptRuntimeException|Program\.cs| at Script\.| at Program\.') {
               throw "Generated CSharp/.NET stack trace leaked to the user.`n$text"
           }
