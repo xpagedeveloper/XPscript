@@ -17,6 +17,9 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort NoteMemberParentNoteId = 10;
     private const ushort NoteMemberResponses = 12;
     private const uint DeletedNoteIdFlag = 0x80000000u;
+    private const uint DesignTypeShared = 0;
+    private const ushort NotesErrorMask = 0x3fff;
+    private const ushort ErrorNotFound = 0x0404;
 
     internal XPScriptNotesTimeDate GetDocumentCreated(uint note)
     {
@@ -200,6 +203,35 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    internal void PutDocumentInFolder(uint db, uint noteId, string folderName, bool createOnFail)
+    {
+        folderName = folderName.Trim();
+        if (folderName.Length == 0) throw new XPScriptRuntimeException(5, "Folder name cannot be empty.");
+        using var name = ToLmbcs(folderName);
+        var status = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote")(db, name.Pointer, NoteClassView, out var folderNoteId);
+        if (status != 0)
+        {
+            if (!createOnFail || (status & NotesErrorMask) != ErrorNotFound)
+            {
+                Check(status, "NIFFindDesignNote(folder)");
+                return;
+            }
+
+            Check(Resolve<FolderCreateDelegate>("FolderCreate")(
+                db,
+                0,
+                0,
+                0,
+                name.Pointer,
+                checked((ushort)name.Length),
+                DesignTypeShared,
+                0,
+                out folderNoteId), "FolderCreate");
+        }
+
+        WithSingleIdTable(noteId, table => Check(Resolve<FolderDocAddDelegate>("FolderDocAdd")(db, 0, folderNoteId, table, 0), "FolderDocAdd"));
+    }
+
     internal void RemoveDocumentFromFolder(uint db, uint noteId, string folderName)
     {
         folderName = folderName.Trim();
@@ -240,6 +272,8 @@ internal sealed partial class XPScriptNotesNativeApi
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDInsertDelegate(uint table, uint id, nint inserted);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDeleteDelegate(uint table, uint id, nint deleted);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDestroyTableDelegate(uint table);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderCreateDelegate(uint dataDb, uint folderDb, uint formatNoteId, uint formatDb, nint name, ushort nameLength, uint folderType, uint flags, out uint folderNoteId);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderDocAddDelegate(uint dataDb, uint folderDb, uint folderNoteId, uint idTable, uint flags);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderDocRemoveDelegate(uint dataDb, uint folderDb, uint folderNoteId, uint idTable, uint flags);
 }
 """;

@@ -25,6 +25,8 @@ Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDa
     Set dt = doc.Created
 
     Call doc.RemoveItem("TemporaryField")
+    Call doc.PutInFolder("XPscript Test")
+    Call doc.PutInFolder("XPscript Create On Fail", True)
     Call doc.RemoveFromFolder("XPscript Test")
     Call doc.MarkRead()
     Call doc.MarkUnread()
