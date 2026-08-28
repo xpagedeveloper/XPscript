@@ -135,6 +135,8 @@ Sub Main()
         Print "SESSION-ID-NEW=" & ai.SessionId
         Call ai.Dispose()
 
+        ' CI compatibility fixture uses a trusted local mock server.
+        http.AllowPrivateNetwork = True
         Set httpRequest = http.GetAsync(compatBase & "/async/http", "OnHttpComplete", "http-77")
         Call httpRequest.Wait()
         Print "HTTP-ASYNC-DONE=" & CStr(httpRequest.IsCompleted)

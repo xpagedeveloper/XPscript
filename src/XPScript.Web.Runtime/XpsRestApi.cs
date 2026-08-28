@@ -63,7 +63,12 @@ public sealed class XpsRequestBody
             }
             return JsonSerializer.Deserialize(_request.Body.Span, type, XpsRestJson.Options);
         }
-        catch (JsonException ex) { throw new XpsRestBindingException("Request body contains invalid JSON.", ex); }
+        catch (JsonException ex)
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
+                Console.Error.WriteLine($"REST JSON deserialization failed for {type.FullName}: {ex}");
+            throw new XpsRestBindingException("Request body contains invalid JSON.", ex);
+        }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         { throw new XpsRestBindingException("Unable to construct XPScript request model.", ex.InnerException); }
     }

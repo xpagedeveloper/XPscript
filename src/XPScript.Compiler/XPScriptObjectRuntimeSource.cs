@@ -9,7 +9,7 @@ internal interface IXPScriptIterable
 }
 
 [System.Text.Json.Serialization.JsonConverter(typeof(LSObjectJsonConverterFactory))]
-internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEnumerable
+internal abstract class LSObjectBase : IXPScriptIterable
 {
     private bool _deleted;
 
@@ -47,9 +47,6 @@ internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEn
 
         return LSForAllRuntime.Enumerate(value);
     }
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-        XPScriptItems().GetEnumerator();
 }
 
 internal interface ILSObjectReference
@@ -132,7 +129,7 @@ public sealed class LSRefJsonConverterFactory : System.Text.Json.Serialization.J
     {
         var itemType = typeToConvert.GetGenericArguments()[0];
         var converterType = typeof(LSRefJsonConverter<>).MakeGenericType(itemType);
-        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType)
+        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType, nonPublic: true)
             ?? throw new InvalidOperationException("Unable to create XPscript object-reference JSON converter."));
     }
 }
@@ -142,7 +139,7 @@ internal sealed class LSRefJsonConverter<T> : System.Text.Json.Serialization.Jso
     public override LSRef<T>? Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
     {
         if (reader.TokenType == System.Text.Json.JsonTokenType.Null) return new LSRef<T>();
-        var value = System.Text.Json.JsonSerializer.Deserialize<T>(ref reader, options);
+        var value = new LSObjectJsonConverter<T>().Read(ref reader, typeof(T), options);
         return value is null ? new LSRef<T>() : LSRef<T>.Create(value);
     }
 
@@ -153,7 +150,7 @@ internal sealed class LSRefJsonConverter<T> : System.Text.Json.Serialization.Jso
             writer.WriteNullValue();
             return;
         }
-        System.Text.Json.JsonSerializer.Serialize(writer, value.Value, options);
+        new LSObjectJsonConverter<T>().Write(writer, value.Value!, options);
     }
 }
 
@@ -165,7 +162,7 @@ public sealed class LSObjectJsonConverterFactory : System.Text.Json.Serializatio
     public override System.Text.Json.Serialization.JsonConverter CreateConverter(Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
     {
         var converterType = typeof(LSObjectJsonConverter<>).MakeGenericType(typeToConvert);
-        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType)
+        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType, nonPublic: true)
             ?? throw new InvalidOperationException("Unable to create XPscript class JSON converter."));
     }
 }
