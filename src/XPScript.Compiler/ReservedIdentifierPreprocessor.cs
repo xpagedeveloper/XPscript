@@ -33,6 +33,8 @@ internal sealed class ReservedIdentifierPreprocessor
             CheckNamedDeclaration(code, index + 1);
             CheckParameters(code, index + 1);
         }
+
+        new NothingComparisonValidator().Validate(source, "input.xps");
         return new GeneralSyntaxPreprocessor().Transform(source);
     }
 
