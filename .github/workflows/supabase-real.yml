@@ -57,7 +57,6 @@ jobs:
           if ($response.StatusCode -ne 200) {
             throw "Supabase users table request returned HTTP $($response.StatusCode)."
           }
-
           if ([string]::IsNullOrWhiteSpace($response.Content)) {
             throw 'Supabase users table returned an empty response body.'
           }
@@ -80,135 +79,92 @@ jobs:
             $rest = "$base/rest/v1"
           }
 
-          $authHeaders = @{
+          $id = [Guid]::NewGuid().ToString()
+          $filter = "id=eq.$([Uri]::EscapeDataString($id))"
+          $rowUri = "$rest/users?$filter"
+          $created = $false
+
+          $headers = @{
             apikey = $env:SUPABASE_KEY
             Authorization = "Bearer $($env:SUPABASE_KEY)"
+            Accept = 'application/json'
+            'Content-Type' = 'application/json'
+            'Content-Profile' = 'public'
+            Prefer = 'return=representation,missing=default'
           }
 
-          # PostgREST exposes table metadata in its OpenAPI document. Use it to
-          # generate values only for required columns instead of hard-coding the
-          # project-specific users schema.
-          $openApiHeaders = @{}
-          foreach ($key in $authHeaders.Keys) { $openApiHeaders[$key] = $authHeaders[$key] }
-          $openApiHeaders['Accept'] = 'application/openapi+json'
-          $openApiHeaders['Accept-Profile'] = 'public'
+          function Get-SafeHttpFailure($errorRecord) {
+            $status = $errorRecord.Exception.Response.StatusCode.value__
+            $detail = $null
+            try {
+              if ($null -ne $errorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($errorRecord.ErrorDetails.Message)) {
+                $parsed = ConvertFrom-Json -InputObject $errorRecord.ErrorDetails.Message
+                $detail = @($parsed.code, $parsed.message, $parsed.details, $parsed.hint) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+                $detail = $detail -join ' | '
+              }
+            } catch { }
+            if ([string]::IsNullOrWhiteSpace($detail)) { return "HTTP $status" }
+            return "HTTP $status - $detail"
+          }
 
           try {
-            $specResponse = Invoke-WebRequest -Uri "$rest/" -Headers $openApiHeaders -Method Get -TimeoutSec 30
-            $spec = ConvertFrom-Json -InputObject $specResponse.Content
-          } catch {
-            $status = $_.Exception.Response.StatusCode.value__
-            throw "Could not read PostgREST OpenAPI metadata for CRUD test (HTTP $status)."
-          }
-
-          $tableSchema = $spec.definitions.users
-          if ($null -eq $tableSchema) {
-            throw 'PostgREST OpenAPI metadata does not expose a users definition.'
-          }
-
-          $token = [Guid]::NewGuid().ToString('N')
-          $payload = [ordered]@{}
-          $required = @($tableSchema.required)
-
-          function New-TestValue($name, $property, $token) {
-            $format = [string]$property.format
-            $type = [string]$property.type
-            if ($format -eq 'uuid') { return [Guid]::NewGuid().ToString() }
-            if ($format -eq 'date-time') { return [DateTime]::UtcNow.ToString('o') }
-            if ($format -eq 'date') { return [DateTime]::UtcNow.ToString('yyyy-MM-dd') }
-            if ($type -eq 'integer') { return [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() % 2000000000) }
-            if ($type -eq 'number') { return 123.45 }
-            if ($type -eq 'boolean') { return $true }
-            if ($type -eq 'array') { return @() }
-            if ($type -eq 'object') { return @{} }
-            return "xpscript-ci-$token-$name"
-          }
-
-          foreach ($name in $required) {
-            $property = $tableSchema.properties.$name
-            if ($null -eq $property) { continue }
-            if ($null -ne $property.default) { continue }
-            $payload[$name] = New-TestValue $name $property $token
-          }
-
-          $primaryKeys = @()
-          foreach ($propertyInfo in $tableSchema.properties.PSObject.Properties) {
-            $description = [string]$propertyInfo.Value.description
-            if ($description -match '<pk\s*/>') {
-              $primaryKeys += $propertyInfo.Name
+            $body = @{ id = $id } | ConvertTo-Json -Compress
+            try {
+              $createResponse = Invoke-WebRequest -Uri "$rest/users" -Headers $headers -Method Post -Body $body -TimeoutSec 30
+            } catch {
+              $failure = Get-SafeHttpFailure $_
+              throw "Supabase REST create failed: $failure"
             }
-          }
-          if ($primaryKeys.Count -eq 0 -and $tableSchema.properties.PSObject.Properties.Name -contains 'id') {
-            $primaryKeys = @('id')
-          }
-          if ($primaryKeys.Count -eq 0) {
-            throw 'Could not identify a primary key for public.users; refusing a delete test that could affect multiple rows.'
-          }
 
-          $writeHeaders = @{}
-          foreach ($key in $authHeaders.Keys) { $writeHeaders[$key] = $authHeaders[$key] }
-          $writeHeaders['Accept'] = 'application/json'
-          $writeHeaders['Content-Type'] = 'application/json'
-          $writeHeaders['Content-Profile'] = 'public'
-          $writeHeaders['Prefer'] = 'return=representation'
-
-          $createdRow = $null
-          $filterUri = $null
-          try {
-            $body = $payload | ConvertTo-Json -Depth 10 -Compress
-            $createResponse = Invoke-WebRequest -Uri "$rest/users" -Headers $writeHeaders -Method Post -Body $body -TimeoutSec 30
             if ($createResponse.StatusCode -notin @(200, 201)) {
-              throw "REST create returned HTTP $($createResponse.StatusCode)."
+              throw "Supabase REST create returned HTTP $($createResponse.StatusCode)."
             }
+            $created = $true
 
-            $created = ConvertFrom-Json -InputObject $createResponse.Content -NoEnumerate
-            $createdRows = @($created)
+            $createdRows = @(ConvertFrom-Json -InputObject $createResponse.Content -NoEnumerate)
             if ($createdRows.Count -ne 1) {
               throw "REST create expected exactly one returned row but received $($createdRows.Count)."
             }
-            $createdRow = $createdRows[0]
-
-            $filters = @()
-            foreach ($pk in $primaryKeys) {
-              $value = $createdRow.$pk
-              if ($null -eq $value) { throw "Created row did not return primary-key column '$pk'." }
-              $encoded = [Uri]::EscapeDataString("eq.$value")
-              $filters += "$pk=$encoded"
-            }
-            $filterUri = "$rest/users?" + ($filters -join '&')
-
-            $readHeaders = @{}
-            foreach ($key in $authHeaders.Keys) { $readHeaders[$key] = $authHeaders[$key] }
-            $readHeaders['Accept'] = 'application/json'
-            $readHeaders['Accept-Profile'] = 'public'
-
-            $readResponse = Invoke-WebRequest -Uri "$filterUri&select=*" -Headers $readHeaders -Method Get -TimeoutSec 30
-            $readRows = @(ConvertFrom-Json -InputObject $readResponse.Content -NoEnumerate)
-            if ($readRows.Count -ne 1) {
-              throw "REST read-after-create expected one row but received $($readRows.Count)."
+            if ([string]$createdRows[0].id -ne $id) {
+              throw 'REST create returned a row with an unexpected id.'
             }
             Write-Host 'SUPABASE_REST_CREATE=OK'
+
+            $readHeaders = @{
+              apikey = $env:SUPABASE_KEY
+              Authorization = "Bearer $($env:SUPABASE_KEY)"
+              Accept = 'application/json'
+              'Accept-Profile' = 'public'
+            }
+            $readResponse = Invoke-WebRequest -Uri "$rowUri&select=*" -Headers $readHeaders -Method Get -TimeoutSec 30
+            $readRows = @(ConvertFrom-Json -InputObject $readResponse.Content -NoEnumerate)
+            if ($readRows.Count -ne 1 -or [string]$readRows[0].id -ne $id) {
+              throw 'REST read-after-create did not return exactly the CI-created row.'
+            }
             Write-Host 'SUPABASE_REST_READ_AFTER_CREATE=OK'
           } finally {
-            if ($null -ne $createdRow -and -not [string]::IsNullOrWhiteSpace($filterUri)) {
+            if ($created) {
               try {
-                $deleteResponse = Invoke-WebRequest -Uri $filterUri -Headers $writeHeaders -Method Delete -TimeoutSec 30
+                $deleteResponse = Invoke-WebRequest -Uri $rowUri -Headers $headers -Method Delete -TimeoutSec 30
                 if ($deleteResponse.StatusCode -notin @(200, 204)) {
                   throw "REST delete returned HTTP $($deleteResponse.StatusCode)."
                 }
                 Write-Host 'SUPABASE_REST_DELETE=OK'
               } catch {
-                Write-Error "Cleanup failed; the CI-created users row may remain. $($_.Exception.Message)"
+                $failure = Get-SafeHttpFailure $_
+                Write-Error "Cleanup failed for the CI-created users row: $failure"
                 throw
               }
             }
           }
 
-          $verifyHeaders = @{}
-          foreach ($key in $authHeaders.Keys) { $verifyHeaders[$key] = $authHeaders[$key] }
-          $verifyHeaders['Accept'] = 'application/json'
-          $verifyHeaders['Accept-Profile'] = 'public'
-          $afterDelete = Invoke-WebRequest -Uri "$filterUri&select=*" -Headers $verifyHeaders -Method Get -TimeoutSec 30
+          $verifyHeaders = @{
+            apikey = $env:SUPABASE_KEY
+            Authorization = "Bearer $($env:SUPABASE_KEY)"
+            Accept = 'application/json'
+            'Accept-Profile' = 'public'
+          }
+          $afterDelete = Invoke-WebRequest -Uri "$rowUri&select=id" -Headers $verifyHeaders -Method Get -TimeoutSec 30
           $remainingRows = @(ConvertFrom-Json -InputObject $afterDelete.Content -NoEnumerate)
           if ($remainingRows.Count -ne 0) {
             throw 'REST delete verification failed: the CI-created row still exists.'
