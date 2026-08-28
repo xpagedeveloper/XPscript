@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Verify Supabase PostgreSQL connection
+      - name: Prepare IPv4 PostgreSQL connection
         shell: bash
         run: |
           set -euo pipefail
@@ -36,14 +36,44 @@ jobs:
             exit 1
           fi
 
+          db_host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          value = os.environ['SUPABASE_POSTGREE']
+          parsed = urlparse(value)
+          if parsed.scheme not in ('postgres', 'postgresql') or not parsed.hostname:
+              raise SystemExit('SUPABASE_POSTGREE must be a PostgreSQL URI (postgres:// or postgresql://).')
+          print(parsed.hostname)
+          PY
+          )"
+
+          ipv4="$(getent ahostsv4 "$db_host" | awk 'NR == 1 { print $1 }')"
+          if [ -z "$ipv4" ]; then
+            echo 'Could not resolve Supabase PostgreSQL hostname to IPv4.' >&2
+            exit 1
+          fi
+
+          if [[ "$SUPABASE_POSTGREE" == *\?* ]]; then
+            dsn="${SUPABASE_POSTGREE}&hostaddr=${ipv4}"
+          else
+            dsn="${SUPABASE_POSTGREE}?hostaddr=${ipv4}"
+          fi
+
+          echo "SUPABASE_POSTGREE_IPV4=$dsn" >> "$GITHUB_ENV"
+          echo "Resolved Supabase PostgreSQL host to IPv4 for GitHub runner connectivity."
+
+      - name: Verify Supabase PostgreSQL connection
+        shell: bash
+        run: |
+          set -euo pipefail
           export PGCONNECT_TIMEOUT=15
 
-          ping_result="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'select 1')"
+          ping_result="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'select 1')"
           test "$ping_result" = "1"
 
-          db_name="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
-          server_version="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
-          users_relation="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
+          db_name="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
+          server_version="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
+          users_relation="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
 
           echo "PostgreSQL connection successful."
           echo "Database: $db_name"
@@ -61,7 +91,7 @@ jobs:
           set -euo pipefail
           export PGCONNECT_TIMEOUT=15
 
-          output="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -At <<'SQL'
+          output="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -At <<'SQL'
           begin;
           create temp table xpscript_ci_postgres_smoke (
             id integer primary key,
