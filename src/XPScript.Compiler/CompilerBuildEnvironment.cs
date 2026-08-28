@@ -19,13 +19,16 @@ internal static class CompilerBuildEnvironment
         ArgumentNullException.ThrowIfNull(startInfo);
 
         var root = Path.GetFullPath(workspace);
-        CaptureGeneratedSourceForDiagnostics(root);
         var usePersistentRunCache = IsTransientRunBuild(startInfo);
         var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
         var environmentRoot = usePersistentRunCache
             ? CreatePrivateDirectory(cacheRoot, "environment")
             : root;
 
+        // Process temp remains invocation-local. The dotnet user/profile state is safe to
+        // reuse for transient run builds because the persistent cache is owner-only.
+        // Keeping DOTNET_CLI_HOME and the profile stable avoids paying a fresh CLI/tooling
+        // cold-start on every edit-run cycle while release compile remains one-shot isolated.
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
         var profile = CreatePrivateDirectory(environmentRoot, "profile");
@@ -66,18 +69,6 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBuildSDKsPath");
         startInfo.Environment.Remove("MSBUILDSDKSPATH");
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
-    }
-
-    private static void CaptureGeneratedSourceForDiagnostics(string root)
-    {
-        var destination = Environment.GetEnvironmentVariable("XPSCRIPT_CAPTURE_GENERATED_SOURCE");
-        if (string.IsNullOrWhiteSpace(destination)) return;
-        var source = Path.Combine(root, "Program.cs");
-        if (!File.Exists(source)) return;
-        destination = Path.GetFullPath(destination);
-        var parent = Path.GetDirectoryName(destination);
-        if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
-        File.Copy(source, destination, true);
     }
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo)
@@ -131,6 +122,10 @@ internal static class CompilerBuildEnvironment
         if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
             startInfo.ArgumentList.Add("--no-restore");
 
+        // Reuse obj state only when this process can claim the cache entry. Concurrent
+        // builds of the same script fall back to their invocation-local obj directory.
+        // This preserves compiler isolation while allowing normal edit-run cycles to reuse
+        // generated MSBuild/Roslyn state across separate xpscript invocations.
         var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
         var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
         if (TryClaimIntermediateCache(intermediateRoot))
@@ -203,6 +198,7 @@ internal static class CompilerBuildEnvironment
             }
             catch (ArgumentException)
             {
+                // Process no longer exists.
             }
 
             File.Delete(lockPath);
