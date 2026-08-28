@@ -1,0 +1,62 @@
+name: Supabase Real Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/HttpDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/SupabaseDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'samples/httpdb-supabase-real-smoke.xps'
+      - '.github/workflows/supabase-real.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  supabase:
+    name: Supabase real PostgREST through XPscript
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_RESTURL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_TEST_TABLE: users
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPDbSupabase REST CRUD against real Supabase
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_RESTURL secret is missing or empty.' }
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
+          New-Item -ItemType Directory -Force ./out/supabase | Out-Null
+          $exe = './out/supabase/xpdb-supabase-rest-real'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/httpdb-supabase-real-smoke.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'XPDbSupabase REST sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Real Supabase XPDbSupabase REST CRUD test failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          foreach ($value in @(
+            'SUPABASE_REST_MODE=REST',
+            'SUPABASE_SELECT_TYPE=Array',
+            'SUPABASE_XPSCRIPT_CREATE=OK',
+            'SUPABASE_XPSCRIPT_READ_AFTER_CREATE=OK',
+            'SUPABASE_XPSCRIPT_DELETE=OK',
+            'SUPABASE_XPSCRIPT_DELETE_VERIFIED=OK',
+            'SUPABASE_REAL=OK'
+          )) {
+            if ($output -notcontains $value) { throw "Supabase REST output missing: $value`n$output" }
+          }

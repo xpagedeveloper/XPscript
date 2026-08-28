@@ -1,0 +1,101 @@
+name: Supabase PostgreSQL Real Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/SupabaseDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'samples/xpdb-supabase-postgres-real.xps'
+      - '.github/workflows/supabase-postgres-real.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres:
+    name: Supabase real PostgreSQL through XPscript
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_RESTURL: ${{ secrets.SUPABASE_RESTURL }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Validate PostgreSQL secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo 'SUPABASE_URL secret is missing or empty.' >&2
+            exit 1
+          fi
+          case "$SUPABASE_URL" in
+            postgres://*|postgresql://*) ;;
+            *) echo 'SUPABASE_URL must contain a PostgreSQL URI for this test.' >&2; exit 1 ;;
+          esac
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPDbSupabase CRUD against real Supabase PostgreSQL
+        shell: pwsh
+        run: |
+          $pg = [Uri]$env:SUPABASE_URL
+          if ($pg.Host.EndsWith('.pooler.supabase.com', [StringComparison]::OrdinalIgnoreCase)) {
+            $userInfo = [Uri]::UnescapeDataString($pg.UserInfo)
+            $separator = $userInfo.IndexOf(':')
+            $user = if ($separator -ge 0) { $userInfo.Substring(0, $separator) } else { $userInfo }
+            $password = if ($separator -ge 0) { $userInfo.Substring($separator + 1) } else { '' }
+            if ($user -eq 'postgres') {
+              if ([string]::IsNullOrWhiteSpace($env:SUPABASE_RESTURL)) { throw 'SUPABASE_RESTURL is required to derive the Supabase pooler project ref.' }
+              $restUri = [Uri]$env:SUPABASE_RESTURL
+              $projectRef = $restUri.Host.Split('.')[0]
+              if ([string]::IsNullOrWhiteSpace($projectRef)) { throw 'Could not derive Supabase project ref from SUPABASE_RESTURL.' }
+              $builder = [UriBuilder]$pg
+              $builder.UserName = "postgres.$projectRef"
+              $builder.Password = $password
+              $env:SUPABASE_URL = $builder.Uri.AbsoluteUri
+              Write-Host 'Normalized Supabase pooler username for XPscript test.'
+            }
+          }
+
+          New-Item -ItemType Directory -Force ./out/supabase-postgres | Out-Null
+          $exe = './out/supabase-postgres/xpdb-supabase-postgres-real'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-supabase-postgres-real.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'XPDbSupabase PostgreSQL sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "XPDbSupabase PostgreSQL CRUD test failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'SUPABASE_POSTGRES_MODE=PostgreSQL',
+            'SUPABASE_POSTGRES_OPEN=True',
+            'SUPABASE_POSTGRES_USERS_EXISTS=True',
+            'SUPABASE_POSTGRES_CREATE=OK',
+            'SUPABASE_POSTGRES_QUERYTYPE=Array',
+            'SUPABASE_POSTGRES_ROWNAME=Ada',
+            'SUPABASE_POSTGRES_ROWACTIVE=True',
+            'SUPABASE_POSTGRES_READ=OK',
+            'SUPABASE_POSTGRES_UPDATED=1',
+            'SUPABASE_POSTGRES_UPDATEDNAME=Ada Updated',
+            'SUPABASE_POSTGRES_UPDATE=OK',
+            'SUPABASE_POSTGRES_ROLLBACKCOUNT=1',
+            'SUPABASE_POSTGRES_DELETED=1',
+            'SUPABASE_POSTGRES_DELETECOUNT=0',
+            'SUPABASE_POSTGRES_DELETE=OK',
+            'SUPABASE_POSTGRES_CLOSED=False',
+            'SUPABASE_POSTGRES=OK'
+          )) {
+            if ($output -notcontains $value) { throw "Supabase PostgreSQL output missing: $value`n$output" }
+          }

@@ -1,0 +1,63 @@
+' XPscript real Supabase PostgreSQL CRUD integration test
+' Uses SUPABASE_URL PostgreSQL connection string from CI.
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbSupabase
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+    Dim array As JsonArray
+    Dim row As JsonObject
+    Dim insertedId As Variant
+    Dim affected As Variant
+
+    connectionString = Environ("SUPABASE_URL")
+    If connectionString = "" Then Print "SUPABASE_POSTGRES_URL_MISSING=True": Exit Sub
+
+    Set db = New XPDbSupabase(connectionString)
+    Print "SUPABASE_POSTGRES_MODE=" & db.Mode
+    Print "SUPABASE_POSTGRES_OPEN=" & CStr(db.IsOpen)
+    Print "SUPABASE_POSTGRES_DATABASE=" & db.Database
+    Print "SUPABASE_POSTGRES_USERS_EXISTS=" & CStr(db.Scalar("select to_regclass('public.users') is not null"))
+
+    Call db.Execute("create temp table xpscript_ci_supabase_people (id integer generated always as identity primary key, name text not null, active boolean not null, amount numeric(10,2), note text)")
+
+    Call parameters.Set("name", "Ada")
+    Call parameters.Set("active", True)
+    Call parameters.Set("amount", 123.45)
+    insertedId = db.Scalar("insert into xpscript_ci_supabase_people(name, active, amount, note) values (@name, @active, @amount, null) returning id", parameters)
+    Print "SUPABASE_POSTGRES_INSERTEDID=" & CStr(insertedId)
+    Print "SUPABASE_POSTGRES_CREATE=OK"
+
+    Set rows = db.Query("select id, name, active, amount, note from xpscript_ci_supabase_people where id = " & CStr(insertedId))
+    Set array = rows.Root.AsArray()
+    If array.Count <> 1 Then Error 5, "Supabase PostgreSQL read-after-create failed."
+    Set row = array.Get(0)
+    Print "SUPABASE_POSTGRES_QUERYTYPE=" & rows.Root.Type
+    Print "SUPABASE_POSTGRES_ROWNAME=" & CStr(row.Get("name"))
+    Print "SUPABASE_POSTGRES_ROWACTIVE=" & CStr(row.Get("active"))
+    Print "SUPABASE_POSTGRES_READ=OK"
+
+    Call parameters.Set("name", "Ada Updated")
+    affected = db.Execute("update xpscript_ci_supabase_people set name = @name where id = " & CStr(insertedId), parameters)
+    Print "SUPABASE_POSTGRES_UPDATED=" & CStr(affected)
+    Print "SUPABASE_POSTGRES_UPDATEDNAME=" & CStr(db.Scalar("select name from xpscript_ci_supabase_people where id = " & CStr(insertedId)))
+    Print "SUPABASE_POSTGRES_UPDATE=OK"
+
+    Call parameters.Set("name", "Grace")
+    Call db.BeginTransaction()
+    Call db.Execute("insert into xpscript_ci_supabase_people(name, active, amount, note) values (@name, @active, @amount, null)", parameters)
+    Call db.Rollback()
+    Print "SUPABASE_POSTGRES_ROLLBACKCOUNT=" & CStr(db.Scalar("select count(*) from xpscript_ci_supabase_people"))
+
+    affected = db.Execute("delete from xpscript_ci_supabase_people where id = " & CStr(insertedId))
+    Print "SUPABASE_POSTGRES_DELETED=" & CStr(affected)
+    Print "SUPABASE_POSTGRES_DELETECOUNT=" & CStr(db.Scalar("select count(*) from xpscript_ci_supabase_people"))
+    Print "SUPABASE_POSTGRES_DELETE=OK"
+
+    Call db.Close()
+    Print "SUPABASE_POSTGRES_CLOSED=" & CStr(db.IsOpen)
+    Print "SUPABASE_POSTGRES=OK"
+End Sub

@@ -63,12 +63,14 @@ jobs:
           if ($text -match 'XPSCRIPT_MSSQL_SECRET_MARKER') { throw 'Connection string validation leaked a credential marker.' }
 
   integration:
+    name: SQL Server Express real CRUD through XPscript
     runs-on: ubuntu-latest
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
+          MSSQL_PID: Express
           MSSQL_SA_PASSWORD: ${{ format('Xps{0}Aa!', github.run_id) }}
         ports:
           - 1433:1433
@@ -95,7 +97,7 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/database-attachments-mssql.xps -o ./out/mssql-integration/database-attachments-mssql --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'SQL Server attachment regression compilation failed.' }
           chmod +x ./out/mssql-integration/xpdb-mssql ./out/mssql-integration/database-uiform-datasource-mssql ./out/mssql-integration/database-attachments-mssql
-      - name: Run SQL Server regression
+      - name: Run XPscript CRUD against SQL Server Express
         shell: pwsh
         env:
           XPSCRIPT_MSSQL_CONNECTION: Server=127.0.0.1,1433;Database=master;User ID=sa;Password=${{ format('Xps{0}Aa!', github.run_id) }};Encrypt=True;TrustServerCertificate=True;Connect Timeout=2
@@ -107,8 +109,12 @@ jobs:
             Start-Sleep -Seconds 2
           }
           $output | ForEach-Object { Write-Host $_ }
-          if ($exitCode -ne 0) { throw "SQL Server regression failed.`n$output" }
-          foreach ($value in @('OPEN=True','INSERTEDID=1','QUERYTYPE=Array','ROWCOUNT=1','ROWNAME=Ada','ROWACTIVE=True','SCALAR=1','ROLLBACKCOUNT=1','DATABASE=master','CLOSED=False','XPDBMSSQL=OK')) {
+          if ($exitCode -ne 0) { throw "SQL Server Express XPDbMsSql CRUD regression failed.`n$output" }
+          foreach ($value in @(
+            'OPEN=True','MSSQL-CREATE=OK','MSSQL-READ=OK','UPDATED=1','UPDATEDNAME=Ada Updated',
+            'MSSQL-UPDATE=OK','ROLLBACKCOUNT=1','DELETED=1','DELETECOUNT=0','MSSQL-DELETE=OK',
+            'DATABASE=master','CLOSED=False','XPDBMSSQL=OK'
+          )) {
             if ($output -notcontains $value) { throw "SQL Server output missing: $value`n$output" }
           }
       - name: Run SQL Server shared UIForm data-source regression

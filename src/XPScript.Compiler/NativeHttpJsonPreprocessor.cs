@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
+    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|XPDbSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
 
     public string Transform(string source)
     {
@@ -53,6 +53,7 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBSupabase\s*\((.*)\)", "new XPScriptHttpDbSupabase($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbSupabase\s*\((.*)\)", "new XPScriptDbSupabase($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBDominoRest\s*\((.*)\)", "new XPScriptHttpDbDominoRest($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDBSQLite\s*\((.*)\)", "new XPScriptDbSqlite($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMsSql\s*\((.*)\)", "new XPScriptDbMsSql($1)", RegexOptions.IgnoreCase);
@@ -178,7 +179,7 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAsyncHttp", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMySql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptSqliteDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptMsSqlDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDatabaseAttachmentRuntime", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNative", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAsyncHttp", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDb", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSupabase", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbSqlite", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMsSql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDbMySql", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptSqliteDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptMsSqlDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptDatabaseAttachmentRuntime", StringComparison.Ordinal) || set.Groups[2].Value.Contains("XPScriptAi", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
@@ -199,6 +200,11 @@ internal sealed class NativeHttpJsonPreprocessor
         {
             if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("HTTPDBSupabase requires baseUrl and apiKey arguments.");
             return $"new XPScriptHttpDbSupabase({args})";
+        }
+        if (type.Equals("XPDbSupabase", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPDbSupabase requires either a PostgreSQL connection string or REST baseUrl and apiKey arguments.");
+            return $"new XPScriptDbSupabase({args})";
         }
         if (type.Equals("HTTPDBDominoRest", StringComparison.OrdinalIgnoreCase))
         {
