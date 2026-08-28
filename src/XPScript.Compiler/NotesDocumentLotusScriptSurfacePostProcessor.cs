@@ -1,0 +1,143 @@
+namespace XPScript.Compiler;
+
+internal static class NotesDocumentLotusScriptSurfacePostProcessor
+{
+    public static string Apply(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        const string marker = """
+    public bool Remove(object? forceValue)
+    {
+        EnsureAlive();
+        return Session.Api.DeleteNote(_handle, XPScriptRuntime.CBool(forceValue));
+    }
+""";
+
+        const string replacement = """
+    public bool Remove(object? forceValue)
+    {
+        EnsureAlive();
+        return Session.Api.DeleteNote(_handle, XPScriptRuntime.CBool(forceValue));
+    }
+
+    public long Size { get { EnsureAlive(); return Session.Api.GetDocumentSize(_handle); } }
+    public XPScriptNotesDocumentCollection Responses { get { EnsureAlive(); return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.GetResponseIds(_handle)); } }
+    public string NoteID => NoteIdHex;
+    public string UniversalID { get => UniversalId; set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }
+    public string ParentDocumentUNID
+    {
+        get
+        {
+            EnsureAlive();
+            var parentId = Session.Api.GetParentNoteId(_handle);
+            if (parentId == 0) return "";
+            var parent = Database.OpenByNoteId(parentId);
+            if (parent is null) return "";
+            try { return parent.UniversalId; }
+            finally { parent.Recycle(); }
+        }
+    }
+    public XPScriptNotesDateTime LastModified { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastModified(_handle)); } }
+    public object Items
+    {
+        get
+        {
+            EnsureAlive();
+            var items = Session.Api.GetAllItemNames(_handle)
+                .Select(name => GetFirstItem(name))
+                .Where(item => item is not null)
+                .Cast<object?>()
+                .ToArray();
+            return LSOperatorArrayRuntime.CreateArray(items);
+        }
+    }
+    public bool IsNewNote { get { EnsureAlive(); return NoteId == 0; } }
+    public bool IsResponse { get { EnsureAlive(); return Session.Api.GetParentNoteId(_handle) != 0; } }
+    public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
+    public XPScriptNotesDateTime Created { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentCreated(_handle)); } }
+
+    public void PutInFolder(object? folderNameValue) => PutInFolder(folderNameValue, false);
+    public void PutInFolder(object? folderNameValue, object? createOnFailValue)
+    {
+        EnsureAlive();
+        if (IsNewNote) return;
+        Session.Api.PutDocumentInFolder(Database.Handle, NoteId, XPScriptRuntime.CStr(folderNameValue), XPScriptRuntime.CBool(createOnFailValue));
+    }
+
+    public void RemoveFromFolder(object? folderNameValue)
+    {
+        EnsureAlive();
+        if (IsNewNote) return;
+        Session.Api.RemoveDocumentFromFolder(Database.Handle, NoteId, XPScriptRuntime.CStr(folderNameValue));
+    }
+
+    public void MarkRead() => MarkRead(Session.Username);
+    public void MarkRead(object? userNameValue)
+    {
+        EnsureAlive();
+        if (IsNewNote) return;
+        Session.Api.SetDocumentUnread(Database.Handle, NoteId, XPScriptRuntime.CStr(userNameValue), false);
+    }
+
+    public void MarkUnread() => MarkUnread(Session.Username);
+    public void MarkUnread(object? userNameValue)
+    {
+        EnsureAlive();
+        if (IsNewNote) return;
+        Session.Api.SetDocumentUnread(Database.Handle, NoteId, XPScriptRuntime.CStr(userNameValue), true);
+    }
+
+    public void MakeResponse(object? parentDocumentValue)
+    {
+        EnsureAlive();
+        if (parentDocumentValue is not XPScriptNotesDocument parent)
+            throw new XPScriptRuntimeException(13, "MakeResponse requires a NotesDocument.");
+        if (!string.Equals(Session.Api.GetDatabaseReplicaId(Database.Handle), Session.Api.GetDatabaseReplicaId(parent.OwningDatabase.Handle), StringComparison.OrdinalIgnoreCase))
+            throw new XPScriptRuntimeException(13, "MakeResponse requires documents in the same database.");
+        Session.Api.MakeResponse(_handle, parent.NativeHandle);
+    }
+
+    public XPScriptNotesDocument CopyToDatabase(object? databaseValue)
+    {
+        EnsureAlive();
+        if (databaseValue is not XPScriptNotesDatabase destination || !destination.IsOpen)
+            throw new XPScriptRuntimeException(13, "CopyToDatabase requires an open NotesDatabase.");
+        var copied = Session.Api.CopyDocumentToDatabase(_handle, destination.Handle);
+        return new XPScriptNotesDocument(Session, destination, copied, Session.Api.GetNoteId(copied));
+    }
+
+    public void CopyAllItems(object? destinationValue) => CopyAllItems(destinationValue, false);
+    public void CopyAllItems(object? destinationValue, object? replaceValue)
+    {
+        EnsureAlive();
+        if (destinationValue is not XPScriptNotesDocument destination)
+            throw new XPScriptRuntimeException(13, "CopyAllItems requires a destination NotesDocument.");
+        Session.Api.CopyAllItems(_handle, destination.NativeHandle, XPScriptRuntime.CBool(replaceValue));
+    }
+
+    public XPScriptNotesItem CopyItem(object? itemValue) => CopyItem(itemValue, "");
+    public XPScriptNotesItem CopyItem(object? itemValue, object? newNameValue)
+    {
+        EnsureAlive();
+        if (itemValue is not XPScriptNotesItem item)
+            throw new XPScriptRuntimeException(13, "CopyItem requires a NotesItem.");
+        var newName = XPScriptRuntime.CStr(newNameValue).Trim();
+        if (newName.Length == 0) newName = item.Name;
+        Session.Api.CopyItemToDocument(item.Parent.NativeHandle, item.Name, _handle, newName);
+        return GetFirstItem(newName) ?? throw new XPScriptRuntimeException(91, "Copied NotesItem could not be reopened.");
+    }
+
+    public void Send(object? attachFormValue) => Send(attachFormValue, null);
+    public void Send(object? attachFormValue, object? recipientsValue)
+    {
+        EnsureAlive();
+        Session.Api.SendDocument(_handle, XPScriptRuntime.CBool(attachFormValue), recipientsValue);
+    }
+""";
+
+        if (!source.Contains(marker, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply NotesDocument LotusScript surface.");
+        return source.Replace(marker, replacement, StringComparison.Ordinal);
+    }
+}
