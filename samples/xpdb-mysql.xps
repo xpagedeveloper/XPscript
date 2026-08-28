@@ -1,0 +1,78 @@
+' XPscript MySQL/MariaDB real-database regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim connectionString As String
+    Dim db As XPDbMySql
+    Dim parameters As New JsonObject
+    Dim rows As JsonDocument
+    Dim array As JsonArray
+    Dim row As JsonObject
+    Dim insertedId As Variant
+    Dim committedId As Variant
+    Dim count As Variant
+
+    connectionString = Environ("XPSCRIPT_MYSQL_CONNECTION")
+    If connectionString = "" Then
+        Print "MYSQL-CONNECTION-MISSING=True"
+        Exit Sub
+    End If
+
+    Set db = New XPDbMySql(connectionString)
+    Print "OPEN=" & CStr(db.IsOpen)
+    Print "DATABASE=" & db.Database
+
+    Call db.Execute("DROP TABLE IF EXISTS xpdb_people")
+    Call db.Execute("CREATE TABLE xpdb_people (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, active BOOLEAN NOT NULL, amount DECIMAL(12,2) NULL, created_at DATETIME(6) NULL, note VARCHAR(100) NULL, payload BLOB NULL) ENGINE=InnoDB")
+
+    Call parameters.Set("name", "Ada")
+    Call parameters.Set("active", True)
+    Call parameters.Set("amount", 123.45)
+    Call parameters.Set("created", "2026-08-28 12:34:56.123456")
+    Call parameters.Set("note", Null)
+
+    Call db.Execute("INSERT INTO xpdb_people(name, active, amount, created_at, note, payload) VALUES (@name, @active, @amount, @created, @note, UNHEX('01020304'))", parameters)
+    insertedId = db.Scalar("SELECT LAST_INSERT_ID()")
+    Print "INSERTEDID=" & CStr(insertedId)
+
+    Set rows = db.Query("SELECT id, name, active, amount, created_at, note, payload FROM xpdb_people WHERE name = @name", parameters)
+    Set array = rows.Root.AsArray()
+    Set row = array.Get(0)
+    Print "QUERYTYPE=" & rows.Root.Type
+    Print "ROWCOUNT=" & CStr(array.Count)
+    Print "ROWNAME=" & CStr(row.Get("name"))
+    Print "ROWACTIVE=" & CStr(row.Get("active"))
+    Print "ROWAMOUNT=" & CStr(row.Get("amount"))
+    Print "ROWNOTEISNULL=" & CStr(db.Scalar("SELECT note IS NULL FROM xpdb_people WHERE id = 1"))
+    Print "ROWPAYLOAD=" & CStr(row.Get("payload"))
+
+    count = db.Scalar("SELECT COUNT(*) FROM xpdb_people")
+    Print "SCALAR=" & CStr(count)
+
+    Call parameters.Set("name", "Grace")
+    Call db.BeginTransaction()
+    Call db.Execute("INSERT INTO xpdb_people(name, active) VALUES (@name, @active)", parameters)
+    Call db.Rollback()
+    Print "ROLLBACKCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM xpdb_people"))
+
+    Call parameters.Set("name", "Linus")
+    Call db.BeginTransaction()
+    Call db.Execute("INSERT INTO xpdb_people(name, active) VALUES (@name, @active)", parameters)
+    committedId = db.Scalar("SELECT LAST_INSERT_ID()")
+    Call db.Commit()
+    Print "COMMITCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM xpdb_people"))
+    Print "COMMITTEDID=" & CStr(committedId)
+
+    Call parameters.Set("name", "Linus Updated")
+    Call parameters.Set("id", CStr(committedId))
+    Print "UPDATED=" & CStr(db.Execute("UPDATE xpdb_people SET name = @name WHERE id = @id", parameters))
+    Print "UPDATEDNAME=" & CStr(db.Scalar("SELECT name FROM xpdb_people WHERE id = @id", parameters))
+    Print "DELETED=" & CStr(db.Execute("DELETE FROM xpdb_people WHERE id = @id", parameters))
+    Print "DELETECOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM xpdb_people"))
+
+    Call db.Close()
+    Print "CLOSED=" & CStr(db.IsOpen)
+    Print "XPDBMYSQL=OK"
+End Sub

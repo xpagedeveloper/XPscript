@@ -1,0 +1,138 @@
+name: Real Database Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/MySqlDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'src/XPScript.Compiler/SqliteDbRuntimeSource.cs'
+      - 'samples/xpdb-mysql.xps'
+      - 'samples/xpdb-sqlite.xps'
+      - '.github/workflows/real-database-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mariadb:
+    name: MariaDB real server
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root-secret
+          MARIADB_DATABASE: xpscript
+          MARIADB_USER: xpscript
+          MARIADB_PASSWORD: xpscript-secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -uroot -proot-secret"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    env:
+      XPSCRIPT_MYSQL_CONNECTION: Server=127.0.0.1;Port=3306;Database=xpscript;User ID=xpscript;Password=xpscript-secret;SslMode=None
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPscript against MariaDB
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/mysql | Out-Null
+          $exe = './out/mysql/xpdb-mysql'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-mysql.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'MySQL/MariaDB sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "MySQL/MariaDB real-database regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'OPEN=True',
+            'DATABASE=xpscript',
+            'INSERTEDID=1',
+            'QUERYTYPE=Array',
+            'ROWCOUNT=1',
+            'ROWNAME=Ada',
+            'ROWACTIVE=True',
+            'ROWAMOUNT=123.45',
+            'ROWNOTEISNULL=1',
+            'ROWPAYLOAD=AQIDBA==',
+            'SCALAR=1',
+            'ROLLBACKCOUNT=1',
+            'COMMITCOUNT=2',
+            'UPDATED=1',
+            'UPDATEDNAME=Linus Updated',
+            'DELETED=1',
+            'DELETECOUNT=1',
+            'CLOSED=False',
+            'XPDBMYSQL=OK'
+          )) {
+            if ($output -notcontains $value) { throw "MariaDB output missing: $value`n$output" }
+          }
+
+  sqlite:
+    name: SQLite real file database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPscript against SQLite
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/sqlite | Out-Null
+          $exe = './out/sqlite/xpdb-sqlite'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-sqlite.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'SQLite sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "SQLite real-database regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @(
+            'INSERTED=1',
+            'LASTID=1',
+            'QUERYTYPE=Array',
+            'ROWCOUNT=1',
+            'ROWNAME=Ada',
+            'ROWACTIVE=1',
+            'SCALAR=1',
+            'ROLLBACKCOUNT=1',
+            'READONLY=True',
+            'READONLYCOUNT=1',
+            'XPDBSQLITE=OK'
+          )) {
+            if ($output -notcontains $value) { throw "SQLite output missing: $value`n$output" }
+          }
+
+      - name: Remove SQLite database
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item ./out/sqlite/xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
+          Remove-Item ./xpdb-sqlite-regression.db -Force -ErrorAction SilentlyContinue
