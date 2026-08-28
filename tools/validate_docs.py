@@ -48,7 +48,11 @@ for doc in sorted(DOCS.glob("*.md")):
         if not resolved.exists():
             fail(f"{doc.relative_to(ROOT)}: broken local link: {target}")
 
-    for match in re.finditer(r"`(samples/[^`]+)`", text):
+    # Sample paths written as inline code must be clickable, but inline code is
+    # valid as Markdown link text, e.g. [`samples/example.xps`](../samples/example.xps).
+    # Strip complete Markdown links before looking for unlinked sample references.
+    text_without_links = link_re.sub("", text)
+    for match in re.finditer(r"`(samples/[^`]+)`", text_without_links):
         fail(f"{doc.relative_to(ROOT)}: sample reference must be clickable: {match.group(1)}")
 
 if REFERENCE.exists():
