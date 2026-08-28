@@ -1,0 +1,84 @@
+name: Supabase PostgreSQL Real Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/supabase-postgres-real.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres:
+    name: Supabase real PostgreSQL
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_POSTGREE: ${{ secrets.SUPABASE_POSTGREE }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Verify Supabase PostgreSQL connection
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_POSTGREE:-}" ]; then
+            echo 'SUPABASE_POSTGREE secret is missing or empty.' >&2
+            exit 1
+          fi
+
+          export PGCONNECT_TIMEOUT=15
+
+          ping_result="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'select 1')"
+          test "$ping_result" = "1"
+
+          db_name="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
+          server_version="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
+          users_relation="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
+
+          echo "PostgreSQL connection successful."
+          echo "Database: $db_name"
+          echo "Server version: $server_version"
+          echo "public.users exists: $users_relation"
+
+          if [ "$users_relation" != "t" ]; then
+            echo 'Expected public.users to exist.' >&2
+            exit 1
+          fi
+
+      - name: Verify PostgreSQL transaction and data types
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGCONNECT_TIMEOUT=15
+
+          output="$(psql "$SUPABASE_POSTGREE" -v ON_ERROR_STOP=1 -At <<'SQL'
+          begin;
+          create temp table xpscript_ci_postgres_smoke (
+            id integer primary key,
+            name text not null,
+            amount numeric(10,2),
+            active boolean,
+            note text
+          ) on commit drop;
+          insert into xpscript_ci_postgres_smoke(id, name, amount, active, note)
+          values (1, 'Ada', 123.45, true, null);
+          select id || '|' || name || '|' || amount || '|' || active || '|' || (note is null)
+          from xpscript_ci_postgres_smoke
+          where id = 1;
+          rollback;
+          SQL
+          )"
+
+          echo "$output"
+          echo "$output" | grep -Fx '1|Ada|123.45|true|true'
+          echo 'SUPABASE_POSTGRES=OK'
