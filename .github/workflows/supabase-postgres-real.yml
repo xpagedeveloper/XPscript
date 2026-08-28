@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/SupabaseDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'src/XPScript.Compiler/CompilerBuildEnvironment.cs'
+      - 'samples/xpdb-supabase-postgres-real.xps'
       - '.github/workflows/supabase-postgres-real.yml'
   workflow_dispatch:
 
@@ -12,89 +16,66 @@ permissions:
 
 jobs:
   postgres:
-    name: Supabase real PostgreSQL
+    name: Supabase real PostgreSQL through XPscript
     runs-on: ubuntu-latest
     env:
-      SUPABASE_POSTGRES_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
 
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Validate PostgreSQL connection string
+      - name: Validate PostgreSQL secret
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_POSTGRES_URL:-}" ]; then
+          if [ -z "${SUPABASE_URL:-}" ]; then
             echo 'SUPABASE_URL secret is missing or empty.' >&2
             exit 1
           fi
-          case "$SUPABASE_POSTGRES_URL" in
+          case "$SUPABASE_URL" in
             postgres://*|postgresql://*) ;;
             *) echo 'SUPABASE_URL must contain a PostgreSQL URI for this test.' >&2; exit 1 ;;
           esac
 
-      - name: Verify Supabase PostgreSQL connection
-        shell: bash
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPDbSupabase CRUD against real Supabase PostgreSQL
+        shell: pwsh
         run: |
-          set -euo pipefail
-          export PGCONNECT_TIMEOUT=20
+          New-Item -ItemType Directory -Force ./out/supabase-postgres | Out-Null
+          $exe = './out/supabase-postgres/xpdb-supabase-postgres-real'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpdb-supabase-postgres-real.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'XPDbSupabase PostgreSQL sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "XPDbSupabase PostgreSQL CRUD test failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
 
-          ping_result="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select 1')"
-          test "$ping_result" = "1"
-
-          db_name="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
-          server_version="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
-          current_user_name="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select current_user')"
-          users_relation="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
-          users_count="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select count(*) from public.users')"
-
-          echo 'PostgreSQL connection successful.'
-          echo "Database: $db_name"
-          echo "Server version: $server_version"
-          echo "Current user: $current_user_name"
-          echo "public.users exists: $users_relation"
-          echo "public.users rows: $users_count"
-
-          if [ "$users_relation" != "t" ]; then
-            echo 'Expected public.users to exist.' >&2
-            exit 1
-          fi
-
-      - name: Verify PostgreSQL transaction, parameters and data types
-        shell: bash
-        run: |
-          set -euo pipefail
-          export PGCONNECT_TIMEOUT=20
-
-          output="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -At <<'SQL'
-          begin;
-          create temp table xpscript_ci_postgres_smoke (
-            id integer primary key,
-            name text not null,
-            amount numeric(10,2),
-            active boolean,
-            note text,
-            payload bytea,
-            created_at timestamptz not null
-          ) on commit drop;
-          insert into xpscript_ci_postgres_smoke(id, name, amount, active, note, payload, created_at)
-          values (1, 'Ada', 123.45, true, null, decode('01020304', 'hex'), '2026-08-28T12:34:56.123456Z');
-          select
-            id || '|' || name || '|' || amount || '|' || active || '|' ||
-            (note is null) || '|' || encode(payload, 'base64') || '|' ||
-            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
-          from xpscript_ci_postgres_smoke
-          where id = 1;
-          rollback;
-          SQL
-          )"
-
-          echo "$output"
-          echo "$output" | grep -F '1|Ada|123.45|true|true|AQIDBA==|2026-08-28T12:34:56.123456Z'
-          echo 'SUPABASE_POSTGRES=OK'
+          foreach ($value in @(
+            'SUPABASE_POSTGRES_MODE=PostgreSQL',
+            'SUPABASE_POSTGRES_OPEN=True',
+            'SUPABASE_POSTGRES_USERS_EXISTS=True',
+            'SUPABASE_POSTGRES_CREATE=OK',
+            'SUPABASE_POSTGRES_QUERYTYPE=Array',
+            'SUPABASE_POSTGRES_ROWNAME=Ada',
+            'SUPABASE_POSTGRES_ROWACTIVE=True',
+            'SUPABASE_POSTGRES_READ=OK',
+            'SUPABASE_POSTGRES_UPDATED=1',
+            'SUPABASE_POSTGRES_UPDATEDNAME=Ada Updated',
+            'SUPABASE_POSTGRES_UPDATE=OK',
+            'SUPABASE_POSTGRES_ROLLBACKCOUNT=1',
+            'SUPABASE_POSTGRES_DELETED=1',
+            'SUPABASE_POSTGRES_DELETECOUNT=0',
+            'SUPABASE_POSTGRES_DELETE=OK',
+            'SUPABASE_POSTGRES_CLOSED=False',
+            'SUPABASE_POSTGRES=OK'
+          )) {
+            if ($output -notcontains $value) { throw "Supabase PostgreSQL output missing: $value`n$output" }
+          }
