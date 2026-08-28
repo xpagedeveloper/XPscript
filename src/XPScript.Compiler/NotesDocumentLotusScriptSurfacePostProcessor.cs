@@ -6,6 +6,11 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        source = ReplaceRequired(source,
+            "    public uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
+            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
+            "document-identifiers");
+
         const string marker = """
     public bool Remove(object? forceValue)
     {
@@ -23,8 +28,6 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
 
     public long Size { get { EnsureAlive(); return Session.Api.GetDocumentSize(_handle); } }
     public XPScriptNotesDocumentCollection Responses { get { EnsureAlive(); return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.GetResponseIds(_handle)); } }
-    public string NoteID => NoteIdHex;
-    public string UniversalID { get => UniversalId; set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }
     public string ParentDocumentUNID
     {
         get
@@ -136,8 +139,20 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     }
 """;
 
-        if (!source.Contains(marker, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply NotesDocument LotusScript surface.");
-        return source.Replace(marker, replacement, StringComparison.Ordinal);
+        source = ReplaceRequired(source, marker, replacement, "document-surface");
+
+        // Response collections require OPEN_RESPONSE_ID_TABLE (0x1000) when documents are opened.
+        source = source.Replace("Resolve<NSFNoteOpenDelegate>(\"NSFNoteOpen\")(db, noteId, 0, out var note)",
+            "Resolve<NSFNoteOpenDelegate>(\"NSFNoteOpen\")(db, noteId, 0x1000, out var note)", StringComparison.Ordinal);
+        source = source.Replace("Resolve<NSFNoteOpenByUnidDelegate>(\"NSFNoteOpenByUNID\")(db, ref unid, 0, out var note)",
+            "Resolve<NSFNoteOpenByUnidDelegate>(\"NSFNoteOpenByUNID\")(db, ref unid, 0x1000, out var note)", StringComparison.Ordinal);
+        return source;
+    }
+
+    private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
+    {
+        if (!source.Contains(oldValue, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply NotesDocument LotusScript surface (" + stage + ").");
+        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
