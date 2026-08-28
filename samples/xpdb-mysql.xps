@@ -11,6 +11,7 @@ Sub Main()
     Dim array As JsonArray
     Dim row As JsonObject
     Dim insertedId As Variant
+    Dim committedId As Variant
     Dim count As Variant
 
     connectionString = Environ("XPSCRIPT_MYSQL_CONNECTION")
@@ -59,14 +60,16 @@ Sub Main()
     Call parameters.Set("name", "Linus")
     Call db.BeginTransaction()
     Call db.Execute("INSERT INTO xpdb_people(name, active) VALUES (@name, @active)", parameters)
+    committedId = db.Scalar("SELECT LAST_INSERT_ID()")
     Call db.Commit()
     Print "COMMITCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM xpdb_people"))
+    Print "COMMITTEDID=" & CStr(committedId)
 
     Call parameters.Set("name", "Linus Updated")
-    Call parameters.Set("id", "2")
+    Call parameters.Set("id", CStr(committedId))
     Print "UPDATED=" & CStr(db.Execute("UPDATE xpdb_people SET name = @name WHERE id = @id", parameters))
-    Print "UPDATEDNAME=" & CStr(db.Scalar("SELECT name FROM xpdb_people WHERE id = 2"))
-    Print "DELETED=" & CStr(db.Execute("DELETE FROM xpdb_people WHERE id = 2"))
+    Print "UPDATEDNAME=" & CStr(db.Scalar("SELECT name FROM xpdb_people WHERE id = @id", parameters))
+    Print "DELETED=" & CStr(db.Execute("DELETE FROM xpdb_people WHERE id = @id", parameters))
     Print "DELETECOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM xpdb_people"))
 
     Call db.Close()
