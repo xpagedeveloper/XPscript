@@ -79,8 +79,12 @@ jobs:
             $rest = "$base/rest/v1"
           }
 
-          $id = [Guid]::NewGuid().ToString()
-          $filter = "id=eq.$([Uri]::EscapeDataString($id))"
+          # public.users.id is bigint. Use a high, time-based value with a small
+          # random suffix to avoid colliding with application-generated rows.
+          $epochMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+          $suffix = Get-Random -Minimum 10 -Maximum 99
+          $id = [int64](($epochMs * 100) + $suffix)
+          $filter = "id=eq.$id"
           $rowUri = "$rest/users?$filter"
           $created = $false
 
@@ -125,7 +129,7 @@ jobs:
             if ($createdRows.Count -ne 1) {
               throw "REST create expected exactly one returned row but received $($createdRows.Count)."
             }
-            if ([string]$createdRows[0].id -ne $id) {
+            if ([int64]$createdRows[0].id -ne $id) {
               throw 'REST create returned a row with an unexpected id.'
             }
             Write-Host 'SUPABASE_REST_CREATE=OK'
@@ -138,7 +142,7 @@ jobs:
             }
             $readResponse = Invoke-WebRequest -Uri "$rowUri&select=*" -Headers $readHeaders -Method Get -TimeoutSec 30
             $readRows = @(ConvertFrom-Json -InputObject $readResponse.Content -NoEnumerate)
-            if ($readRows.Count -ne 1 -or [string]$readRows[0].id -ne $id) {
+            if ($readRows.Count -ne 1 -or [int64]$readRows[0].id -ne $id) {
               throw 'REST read-after-create did not return exactly the CI-created row.'
             }
             Write-Host 'SUPABASE_REST_READ_AFTER_CREATE=OK'
