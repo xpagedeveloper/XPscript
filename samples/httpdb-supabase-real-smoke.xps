@@ -29,6 +29,7 @@ Sub Main()
     End If
 
     Set supa = New HTTPDBSupabase(url, apiKey)
+    Call supa.SetBearerToken(apiKey)
     Call supa.SetSchema("public")
 
     Print "SUPABASE_BASEURL=" & supa.BaseUrl
