@@ -107,7 +107,6 @@ public sealed class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
-        generated = UnhandledRuntimeErrorPostProcessor.Transform(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
         generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
         generated = moduleGlobals.Inject(generated);
@@ -169,7 +168,8 @@ public sealed class XPScriptTranspiler
         generated = ScopeErrorProtection(generated);
 
         foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
-        return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        generated = generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        return UnhandledRuntimeErrorPostProcessor.Transform(generated);
     }
 
     private static string NormalizeEvaluateRuntime(string code) => code
