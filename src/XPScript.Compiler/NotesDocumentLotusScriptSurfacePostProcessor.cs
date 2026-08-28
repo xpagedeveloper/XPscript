@@ -8,7 +8,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
 
         source = ReplaceRequired(source,
             "    public uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
+            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
             "document-identifiers");
 
         const string marker = """
@@ -42,19 +42,6 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         }
     }
     public XPScriptNotesDateTime LastModified { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastModified(_handle)); } }
-    public object Items
-    {
-        get
-        {
-            EnsureAlive();
-            var items = Session.Api.GetAllItemNames(_handle)
-                .Select(name => GetFirstItem(name))
-                .Where(item => item is not null)
-                .Cast<object?>()
-                .ToArray();
-            return LSOperatorArrayRuntime.CreateArray(items);
-        }
-    }
     public bool IsNewNote { get { EnsureAlive(); return NoteId == 0; } }
     public bool IsResponse { get { EnsureAlive(); return Session.Api.GetParentNoteId(_handle) != 0; } }
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
@@ -132,6 +119,47 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         source = source.Replace("Resolve<NSFNoteOpenByUnidDelegate>(\"NSFNoteOpenByUNID\")(db, ref unid, 0, out var note)",
             "Resolve<NSFNoteOpenByUnidDelegate>(\"NSFNoteOpenByUNID\")(db, ref unid, 0x1000, out var note)", StringComparison.Ordinal);
         return source;
+    }
+
+    public static string ApplyBuiltSurface(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        source = ReplaceRequired(source,
+            "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
+            "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
+            "built-universalid-setter");
+
+        const string oldItems = """
+    public LSArray Items
+    {
+        get
+        {
+            EnsureAlive();
+            var names = Session.Api.GetItemNames(_handle);
+            if (names.Length == 0) return new LSArray("String", true);
+            var items = new LSArray("String", true, [0], [names.Length - 1]);
+            for (var i = 0; i < names.Length; i++) items.Set(names[i], i);
+            return items;
+        }
+    }
+""";
+        const string newItems = """
+    public object Items
+    {
+        get
+        {
+            EnsureAlive();
+            var items = Session.Api.GetAllItemNames(_handle)
+                .Select(name => GetFirstItem(name))
+                .Where(item => item is not null)
+                .Cast<object?>()
+                .ToArray();
+            return LSOperatorArrayRuntime.CreateArray(items);
+        }
+    }
+""";
+        return ReplaceRequired(source, oldItems, newItems, "built-document-items");
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
