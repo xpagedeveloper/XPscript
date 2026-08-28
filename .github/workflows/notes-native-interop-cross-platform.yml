@@ -34,6 +34,8 @@ jobs:
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
       - name: Compile generated Notes runtime
         shell: bash
+        env:
+          XPSCRIPT_CAPTURE_GENERATED_SOURCE: ${{ github.workspace }}/artifacts/generated-notes-Program.cs
         run: |
           mkdir -p artifacts/notes-thread-probe
           set +e
@@ -43,11 +45,12 @@ jobs:
             --debug \
             -o artifacts/notes-thread-probe/notes-thread-probe
           status=$?
-          echo "--- generated Program.cs candidates ---"
-          find . "${RUNNER_TEMP:-/tmp}" /tmp -type f -name Program.cs 2>/dev/null | sort -u | while read -r file; do
-            echo "--- $file ---"
-            sed -n '12386,12422p;14318,14330p;14551,14563p' "$file" || true
-          done
+          echo "--- captured generated Program.cs ---"
+          if [ -f artifacts/generated-notes-Program.cs ]; then
+            nl -ba artifacts/generated-notes-Program.cs | sed -n '12386,12422p;14318,14330p;14551,14563p'
+          else
+            echo "generated source was not captured"
+          fi
           exit $status
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
