@@ -14,7 +14,7 @@ Sub Main()
     Dim created As JsonDocument
     Dim createdRows As JsonArray
     Dim createdRow As JsonObject
-    Dim id As Variant
+    Dim rowId As Variant
     Dim filter As String
     Dim deleted As JsonDocument
 
@@ -35,19 +35,18 @@ Sub Main()
     Print "SUPABASE_SELECT_TYPE=" & doc.Root.Type
     Print "SUPABASE_ROWCOUNT=" & CStr(rows.Count)
 
-    ' public.users.id is bigint. Generate a high CI-only id and let all other
-    ' columns use database defaults. The workflow always uses a dedicated test project.
-    id = CDbl(Timer * 1000000) + 9000000000000000#
-    Call payload.Set("id", id)
+    ' public.users.id is bigint. Use a CI-only numeric id and let other columns use defaults.
+    rowId = 900000000 + CInt(Timer * 1000)
+    Call payload.Set("id", rowId)
 
     Set created = supa.Insert(tableName, payload)
     Set createdRows = created.Root.AsArray()
     If createdRows.Count <> 1 Then Error 5, "Supabase XPscript INSERT did not return one row."
     Set createdRow = createdRows.Get(0)
-    id = createdRow.Get("id")
+    rowId = createdRow.Get("id")
     Print "SUPABASE_XPSCRIPT_CREATE=OK"
 
-    filter = supa.Eq("id", id)
+    filter = supa.Eq("id", rowId)
     Set doc = supa.Select(tableName, filter & "&select=*")
     Set rows = doc.Root.AsArray()
     If rows.Count <> 1 Then Error 5, "Supabase XPscript read-after-create failed."
