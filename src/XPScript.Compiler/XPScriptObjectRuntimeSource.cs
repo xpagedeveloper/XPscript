@@ -142,7 +142,7 @@ internal sealed class LSRefJsonConverter<T> : System.Text.Json.Serialization.Jso
     public override LSRef<T>? Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
     {
         if (reader.TokenType == System.Text.Json.JsonTokenType.Null) return new LSRef<T>();
-        var value = System.Text.Json.JsonSerializer.Deserialize<T>(ref reader, options);
+        var value = new LSObjectJsonConverter<T>().Read(ref reader, typeof(T), options);
         return value is null ? new LSRef<T>() : LSRef<T>.Create(value);
     }
 
@@ -153,7 +153,7 @@ internal sealed class LSRefJsonConverter<T> : System.Text.Json.Serialization.Jso
             writer.WriteNullValue();
             return;
         }
-        System.Text.Json.JsonSerializer.Serialize(writer, value.Value, options);
+        new LSObjectJsonConverter<T>().Write(writer, value.Value!, options);
     }
 }
 
