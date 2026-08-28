@@ -5,9 +5,14 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/GeneralSyntaxPreprocessor.cs'
+      - 'src/XPScript.Compiler/NothingComparisonValidator.cs'
+      - 'src/XPScript.Compiler/UnhandledRuntimeErrorPostProcessor.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'samples/general-dim-is-nothing.xps'
+      - 'samples/notes-c-api-v1.xps'
+      - 'samples/notes-view-autoupdate-console.xps'
       - 'todo/HCLNotes.md'
       - '.github/workflows/general-dim-is-nothing.yml'
   workflow_dispatch:
@@ -51,4 +56,47 @@ jobs:
           )
           foreach ($marker in $required) {
             if ($output -notcontains $marker) { throw "Missing marker $marker.`n$($output -join [Environment]::NewLine)" }
+          }
+
+      - name: Reject equality comparisons with Nothing
+        shell: pwsh
+        run: |
+          $invalid = Join-Path $env:RUNNER_TEMP 'invalid-nothing-comparison.xps'
+          @'
+          Option Declare
+          Class Example
+          End Class
+          Sub Main()
+              Dim value As Example
+              If value <> Nothing Then
+                  Print "INVALID"
+              End If
+          End Sub
+          '@ | Set-Content -Path $invalid
+
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $invalid 2>&1
+          if ($LASTEXITCODE -eq 0) { throw "Invalid Nothing comparison unexpectedly compiled.`n$($output -join [Environment]::NewLine)" }
+          $text = $output -join [Environment]::NewLine
+          if ($text -notmatch "Nothing cannot be compared with '<>'") { throw "Expected Nothing comparison diagnostic was missing.`n$text" }
+          if ($text -notmatch "Is Nothing.*Is Not Nothing") { throw "Expected replacement syntax guidance was missing.`n$text" }
+
+      - name: Hide generated CSharp runtime stack traces
+        shell: pwsh
+        run: |
+          $runtimeFailure = Join-Path $env:RUNNER_TEMP 'runtime-failure.xps'
+          @'
+          Option Declare
+          Sub Main()
+              Dim divisor As Integer
+              divisor = 0
+              Print 10 / divisor
+          End Sub
+          '@ | Set-Content -Path $runtimeFailure
+
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $runtimeFailure 2>&1
+          if ($LASTEXITCODE -eq 0) { throw "Runtime failure unexpectedly returned success.`n$($output -join [Environment]::NewLine)" }
+          $text = $output -join [Environment]::NewLine
+          if ($text -notmatch 'XPscript runtime error') { throw "XPscript runtime error message was missing.`n$text" }
+          if ($text -match 'Unhandled exception|System\.DivideByZeroException|Program\.cs| at Script\.| at Program\.') {
+              throw "Generated CSharp/.NET stack trace leaked to the user.`n$text"
           }
