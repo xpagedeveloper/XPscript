@@ -47,6 +47,7 @@ public sealed class XPScriptTranspiler
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new EvaluateByValSyntaxPreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
+        new NothingComparisonValidator().Validate(source, sourceName);
         new DateComparisonValidator().Validate(source, sourceName);
         new ClassOverloadValidator().Validate(source, sourceName);
         new SourceTypeValidator().Validate(source, sourceName);
@@ -106,6 +107,7 @@ public sealed class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = UnhandledRuntimeErrorPostProcessor.Transform(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
         generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
         generated = moduleGlobals.Inject(generated);
