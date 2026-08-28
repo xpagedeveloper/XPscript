@@ -18,6 +18,8 @@ internal sealed partial class XPScriptNotesNativeApi
 
     internal void SetDatabaseTitle(nint db, string value) => SetDatabaseInfoPart(db, InfoParseTitle, value);
     internal void SetDatabaseCategories(nint db, string value) => SetDatabaseInfoPart(db, InfoParseCategories, value);
+    internal void SetDatabaseTemplateName(nint db, string value) => SetDatabaseInfoPart(db, InfoParseClass, value);
+    internal void SetDatabaseDesignTemplateName(nint db, string value) => SetDatabaseInfoPart(db, InfoParseDesignClass, value);
 
     private string GetDatabaseInfoPart(nint db, ushort what)
     {
@@ -77,7 +79,6 @@ internal sealed partial class XPScriptNotesNativeApi
         nint db = 0;
         try
         {
-            // Opening an empty path yields the local/server database directory handle.
             db = OpenDatabase(server, "");
             const int capacity = 4096;
             var output = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
