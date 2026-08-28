@@ -1,0 +1,42 @@
+' XPscript real Supabase/PostgREST smoke test
+' Uses SUPABASE_URL, SUPABASE_KEY and SUPABASE_TEST_TABLE from CI.
+
+Option Declare
+
+Sub Main()
+    Dim url As String
+    Dim apiKey As String
+    Dim tableName As String
+    Dim supa As HTTPDBSupabase
+    Dim doc As JsonDocument
+    Dim rows As JsonArray
+
+    url = Environ("SUPABASE_URL")
+    apiKey = Environ("SUPABASE_KEY")
+    tableName = Environ("SUPABASE_TEST_TABLE")
+
+    If url = "" Then
+        Print "SUPABASE_URL_MISSING=True"
+        Exit Sub
+    End If
+    If apiKey = "" Then
+        Print "SUPABASE_KEY_MISSING=True"
+        Exit Sub
+    End If
+    If tableName = "" Then
+        Print "SUPABASE_TEST_TABLE_MISSING=True"
+        Exit Sub
+    End If
+
+    Set supa = New HTTPDBSupabase(url, apiKey)
+    Call supa.SetSchema("public")
+
+    Print "SUPABASE_BASEURL=" & supa.BaseUrl
+    Print "SUPABASE_TABLE=" & tableName
+
+    Set doc = supa.Select(tableName, "select=*&limit=1")
+    Print "SUPABASE_SELECT_TYPE=" & doc.Root.Type
+    Set rows = doc.Root.AsArray()
+    Print "SUPABASE_ROWCOUNT=" & CStr(rows.Count)
+    Print "SUPABASE_REAL=OK"
+End Sub
