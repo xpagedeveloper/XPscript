@@ -18,7 +18,7 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort NoteMemberResponses = 12;
     private const uint DeletedNoteIdFlag = 0x80000000u;
 
-    internal XPScriptNotesTimeDate GetDocumentCreated(nint note)
+    internal XPScriptNotesTimeDate GetDocumentCreated(uint note)
     {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(28);
         try
@@ -30,7 +30,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    internal XPScriptNotesTimeDate GetDocumentLastModified(nint note)
+    internal XPScriptNotesTimeDate GetDocumentLastModified(uint note)
     {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(8);
         try
@@ -42,7 +42,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    internal uint GetParentNoteId(nint note)
+    internal uint GetParentNoteId(uint note)
     {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
         try
@@ -54,18 +54,18 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    internal uint[] GetResponseIds(nint note)
+    internal uint[] GetResponseIds(uint note)
     {
-        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(IntPtr.Size);
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
         try
         {
-            Zero(pointer, IntPtr.Size);
+            Zero(pointer, 4);
             Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, NoteMemberResponses, pointer);
-            var table = System.Runtime.InteropServices.Marshal.ReadIntPtr(pointer);
+            var table = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(pointer));
             if (table == 0) return [];
             var ids = new List<uint>();
             var first = true;
-            while (Resolve<IDScanDelegate>("IDScan")(table, first ? 1 : 0, out var id) != 0)
+            while (Resolve<NotesDocumentIDScanDelegate>("IDScan")(table, first ? 1 : 0, out var id) != 0)
             {
                 ids.Add(id);
                 first = false;
@@ -75,7 +75,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    internal string[] GetAllItemNames(nint note)
+    internal string[] GetAllItemNames(uint note)
     {
         var names = new List<string>();
         NSFItemScanProcDelegate callback = (spare, flags, name, nameLength, value, valueLength, context) =>
@@ -88,7 +88,7 @@ internal sealed partial class XPScriptNotesNativeApi
         return names.ToArray();
     }
 
-    internal long GetDocumentSize(nint note)
+    internal long GetDocumentSize(uint note)
     {
         long size = 0;
         NSFItemScanProcDelegate callback = (spare, flags, name, nameLength, value, valueLength, context) =>
@@ -101,7 +101,7 @@ internal sealed partial class XPScriptNotesNativeApi
         return size;
     }
 
-    internal void SetUnid(nint note, string text)
+    internal void SetUnid(uint note, string text)
     {
         var unid = ParseUnid(text);
         var oidPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(28);
@@ -116,7 +116,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(oidPointer); }
     }
 
-    internal void MakeResponse(nint note, nint parentNote)
+    internal void MakeResponse(uint note, uint parentNote)
     {
         var parentText = GetUnid(parentNote);
         var parent = ParseUnid(parentText);
@@ -135,18 +135,18 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }
 
-    internal nint CopyDocumentToDatabase(nint sourceNote, nint destinationDb)
+    internal uint CopyDocumentToDatabase(uint sourceNote, uint destinationDb)
     {
         Check(Resolve<NSFNoteCopyDelegate>("NSFNoteCopy")(sourceNote, out var copy), "NSFNoteCopy");
         try
         {
             Check(Resolve<NSFDbGenerateOidDelegate>("NSFDbGenerateOID")(destinationDb, out var oid), "NSFDbGenerateOID");
             var oidPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(28);
-            var dbPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(IntPtr.Size);
+            var dbPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
             try
             {
                 System.Runtime.InteropServices.Marshal.StructureToPtr(oid, oidPointer, false);
-                System.Runtime.InteropServices.Marshal.WriteIntPtr(dbPointer, destinationDb);
+                System.Runtime.InteropServices.Marshal.WriteInt32(dbPointer, unchecked((int)destinationDb));
                 Resolve<NSFNoteSetInfoDelegate>("NSFNoteSetInfo")(copy, NoteMemberOid, oidPointer);
                 Resolve<NSFNoteSetInfoDelegate>("NSFNoteSetInfo")(copy, NoteMemberId, 0);
                 Resolve<NSFNoteSetInfoDelegate>("NSFNoteSetInfo")(copy, 0, dbPointer);
@@ -166,7 +166,7 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void CopyAllItems(nint sourceNote, nint destinationNote, bool replace)
+    internal void CopyAllItems(uint sourceNote, uint destinationNote, bool replace)
     {
         foreach (var name in GetAllItemNames(sourceNote))
         {
@@ -175,14 +175,14 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void SetDocumentUnread(nint db, uint noteId, string userName, bool unread)
+    internal void SetDocumentUnread(uint db, uint noteId, string userName, bool unread)
     {
         userName = userName.Trim();
         if (userName.Length == 0) throw new XPScriptRuntimeException(5, "MarkRead/MarkUnread requires a user name.");
         using var user = ToLmbcs(userName);
         Check(Resolve<NSFDbGetUnreadNoteTableDelegate>("NSFDbGetUnreadNoteTable")(db, user.Pointer, checked((ushort)user.Length), 1, out var table), "NSFDbGetUnreadNoteTable");
         if (table == 0) return;
-        nint original = 0;
+        uint original = 0;
         try
         {
             Check(Resolve<IDTableCopyDelegate>("IDTableCopy")(table, out original), "IDTableCopy");
@@ -200,22 +200,7 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void PutDocumentInFolder(nint db, uint noteId, string folderName, bool createOnFail)
-    {
-        folderName = folderName.Trim();
-        if (folderName.Length == 0) throw new XPScriptRuntimeException(5, "Folder name cannot be empty.");
-        using var name = ToLmbcs(folderName);
-        var status = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote")(db, name.Pointer, NoteClassView, out var folderNoteId);
-        if (status != 0)
-        {
-            if (createOnFail)
-                throw new XPScriptRuntimeException(5, "PutInFolder createOnFail requires an existing folder in the current native backend.");
-            Check(status, "NIFFindDesignNote(folder)");
-        }
-        WithSingleIdTable(noteId, table => Check(Resolve<FolderDocAddDelegate>("FolderDocAdd")(db, 0, folderNoteId, table, 0), "FolderDocAdd"));
-    }
-
-    internal void RemoveDocumentFromFolder(nint db, uint noteId, string folderName)
+    internal void RemoveDocumentFromFolder(uint db, uint noteId, string folderName)
     {
         folderName = folderName.Trim();
         if (folderName.Length == 0) throw new XPScriptRuntimeException(5, "Folder name cannot be empty.");
@@ -224,7 +209,7 @@ internal sealed partial class XPScriptNotesNativeApi
         WithSingleIdTable(noteId, table => Check(Resolve<FolderDocRemoveDelegate>("FolderDocRemove")(db, 0, folderNoteId, table, 0), "FolderDocRemove"));
     }
 
-    private void WithSingleIdTable(uint noteId, Action<nint> action)
+    private void WithSingleIdTable(uint noteId, Action<uint> action)
     {
         Check(Resolve<IDCreateTableDelegate>("IDCreateTable")(4, out var table), "IDCreateTable");
         try
@@ -235,55 +220,27 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { _ = Resolve<IDDestroyTableDelegate>("IDDestroyTable")(table); }
     }
 
-    internal void SendDocument(nint note, bool attachForm, object? recipientsValue)
-    {
-        if (attachForm)
-            throw new XPScriptRuntimeException(5, "Send attachForm=True is not supported by the native C API compatibility layer yet.");
-
-        if (recipientsValue is not null)
-        {
-            var recipients = recipientsValue is LSArray array
-                ? string.Join(",", ExpandValues(array).Select(XPScriptRuntime.CStr).Where(v => v.Length > 0))
-                : XPScriptRuntime.CStr(recipientsValue);
-            SetItemText(note, "SendTo", recipients);
-        }
-
-        var sendTo = GetItemText(note, "SendTo").Trim();
-        if (sendTo.Length == 0) throw new XPScriptRuntimeException(5, "Send requires recipients or a SendTo item.");
-        SetItemText(note, "Recipients", sendTo);
-        SetItemText(note, "$AssistMail", "1");
-
-        var mailBox = OpenDatabase("", "mail.box");
-        try
-        {
-            var copy = CopyDocumentToDatabase(note, mailBox);
-            CloseNote(copy);
-        }
-        finally { CloseDatabase(mailBox); }
-    }
-
-    private void DeleteItemIfPresent(nint note, string name)
+    private void DeleteItemIfPresent(uint note, string name)
     {
         if (HasItem(note, name)) DeleteItem(note, name);
     }
 
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void NSFNoteSetInfoDelegate(nint note, ushort member, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbGenerateOidDelegate(nint db, out XPScriptNotesOid oid);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteCopyDelegate(nint source, out nint destination);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFItemAppendDelegate(nint note, ushort flags, nint name, ushort nameLength, ushort dataType, nint value, uint valueLength);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate int IDScanDelegate(nint table, int first, out uint id);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFItemScanDelegate(nint note, NSFItemScanProcDelegate callback, nint context);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void NSFNoteSetInfoDelegate(uint note, ushort member, nint value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbGenerateOidDelegate(uint db, out XPScriptNotesOid oid);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteCopyDelegate(uint source, out uint destination);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFItemAppendDelegate(uint note, ushort flags, nint name, ushort nameLength, ushort dataType, nint value, uint valueLength);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate int NotesDocumentIDScanDelegate(uint table, int first, out uint id);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFItemScanDelegate(uint note, NSFItemScanProcDelegate callback, nint context);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFItemScanProcDelegate(ushort spare, ushort flags, nint name, ushort nameLength, nint value, uint valueLength, nint context);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbGetUnreadNoteTableDelegate(nint db, nint userName, ushort userNameLength, int create, out nint table);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbUpdateUnreadDelegate(nint db, nint table);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbSetUnreadNoteTableDelegate(nint db, nint userName, ushort userNameLength, int force, nint original, nint updated);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDTableCopyDelegate(nint source, out nint destination);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDCreateTableDelegate(ushort alignment, out nint table);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDInsertDelegate(nint table, uint id, nint inserted);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDeleteDelegate(nint table, uint id, nint deleted);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDestroyTableDelegate(nint table);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderDocAddDelegate(nint dataDb, nint folderDb, uint folderNoteId, nint idTable, uint flags);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderDocRemoveDelegate(nint dataDb, nint folderDb, uint folderNoteId, nint idTable, uint flags);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbGetUnreadNoteTableDelegate(uint db, nint userName, ushort userNameLength, int create, out uint table);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbUpdateUnreadDelegate(uint db, uint table);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFDbSetUnreadNoteTableDelegate(uint db, nint userName, ushort userNameLength, int force, uint original, uint updated);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDTableCopyDelegate(uint source, out uint destination);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDCreateTableDelegate(ushort alignment, out uint table);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDInsertDelegate(uint table, uint id, nint inserted);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDeleteDelegate(uint table, uint id, nint deleted);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort IDDestroyTableDelegate(uint table);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FolderDocRemoveDelegate(uint dataDb, uint folderDb, uint folderNoteId, uint idTable, uint flags);
 }
 """;
 }
