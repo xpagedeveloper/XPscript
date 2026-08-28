@@ -1,4 +1,4 @@
-' XPScript SQL Server and SQL Server Express regression
+' XPScript SQL Server and SQL Server Express CRUD regression
 ' (c) xpagedeveloper.com 2026
 
 Option Declare
@@ -29,23 +29,33 @@ Sub Main()
     Call parameters.Set("active", True)
     insertedId = db.Scalar("INSERT INTO #xpdb_people(name, active) OUTPUT INSERTED.id VALUES (@name, @active)", parameters)
     Print "INSERTEDID=" & CStr(insertedId)
+    Print "MSSQL-CREATE=OK"
 
-    Set rows = db.Query("SELECT id, name, active FROM #xpdb_people WHERE name = @name", parameters)
+    Set rows = db.Query("SELECT id, name, active FROM #xpdb_people WHERE id = " & CStr(insertedId))
     Set array = rows.Root.AsArray()
     Set row = array.Get(0)
     Print "QUERYTYPE=" & rows.Root.Type
     Print "ROWCOUNT=" & CStr(array.Count)
     Print "ROWNAME=" & CStr(row.Get("name"))
     Print "ROWACTIVE=" & CStr(row.Get("active"))
+    Print "MSSQL-READ=OK"
 
-    count = db.Scalar("SELECT COUNT(*) FROM #xpdb_people")
-    Print "SCALAR=" & CStr(count)
+    Call parameters.Set("name", "Ada Updated")
+    count = db.Execute("UPDATE #xpdb_people SET name = @name WHERE id = " & CStr(insertedId), parameters)
+    Print "UPDATED=" & CStr(count)
+    Print "UPDATEDNAME=" & CStr(db.Scalar("SELECT name FROM #xpdb_people WHERE id = " & CStr(insertedId)))
+    Print "MSSQL-UPDATE=OK"
 
     Call parameters.Set("name", "Grace")
     Call db.BeginTransaction()
     Call db.Execute("INSERT INTO #xpdb_people(name, active) VALUES (@name, @active)", parameters)
     Call db.Rollback()
     Print "ROLLBACKCOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM #xpdb_people"))
+
+    count = db.Execute("DELETE FROM #xpdb_people WHERE id = " & CStr(insertedId))
+    Print "DELETED=" & CStr(count)
+    Print "DELETECOUNT=" & CStr(db.Scalar("SELECT COUNT(*) FROM #xpdb_people"))
+    Print "MSSQL-DELETE=OK"
 
     Print "DATABASE=" & db.Database
     Call db.Close()
