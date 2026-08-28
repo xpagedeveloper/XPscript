@@ -1,4 +1,4 @@
-' XPscript real Supabase/PostgREST smoke test
+' XPscript real Supabase/PostgREST CRUD integration test
 ' Uses SUPABASE_URL, SUPABASE_KEY and SUPABASE_TEST_TABLE from CI.
 
 Option Declare
@@ -10,34 +10,57 @@ Sub Main()
     Dim supa As HTTPDBSupabase
     Dim doc As JsonDocument
     Dim rows As JsonArray
+    Dim payload As New JsonObject
+    Dim created As JsonDocument
+    Dim createdRows As JsonArray
+    Dim createdRow As JsonObject
+    Dim id As Variant
+    Dim filter As String
+    Dim deleted As JsonDocument
 
     url = Environ("SUPABASE_URL")
     apiKey = Environ("SUPABASE_KEY")
     tableName = Environ("SUPABASE_TEST_TABLE")
 
-    If url = "" Then
-        Print "SUPABASE_URL_MISSING=True"
-        Exit Sub
-    End If
-    If apiKey = "" Then
-        Print "SUPABASE_KEY_MISSING=True"
-        Exit Sub
-    End If
-    If tableName = "" Then
-        Print "SUPABASE_TEST_TABLE_MISSING=True"
-        Exit Sub
-    End If
+    If url = "" Then Print "SUPABASE_URL_MISSING=True": Exit Sub
+    If apiKey = "" Then Print "SUPABASE_KEY_MISSING=True": Exit Sub
+    If tableName = "" Then Print "SUPABASE_TEST_TABLE_MISSING=True": Exit Sub
 
     Set supa = New HTTPDBSupabase(url, apiKey)
     Call supa.SetBearerToken(apiKey)
     Call supa.SetSchema("public")
 
-    Print "SUPABASE_BASEURL=" & supa.BaseUrl
-    Print "SUPABASE_TABLE=" & tableName
-
     Set doc = supa.Select(tableName, "select=*&limit=1")
-    Print "SUPABASE_SELECT_TYPE=" & doc.Root.Type
     Set rows = doc.Root.AsArray()
+    Print "SUPABASE_SELECT_TYPE=" & doc.Root.Type
     Print "SUPABASE_ROWCOUNT=" & CStr(rows.Count)
+
+    ' public.users.id is bigint. Generate a high CI-only id and let all other
+    ' columns use database defaults. The workflow always uses a dedicated test project.
+    id = CDbl(Timer * 1000000) + 9000000000000000#
+    Call payload.Set("id", id)
+
+    Set created = supa.Insert(tableName, payload)
+    Set createdRows = created.Root.AsArray()
+    If createdRows.Count <> 1 Then Error 5, "Supabase XPscript INSERT did not return one row."
+    Set createdRow = createdRows.Get(0)
+    id = createdRow.Get("id")
+    Print "SUPABASE_XPSCRIPT_CREATE=OK"
+
+    filter = supa.Eq("id", id)
+    Set doc = supa.Select(tableName, filter & "&select=*")
+    Set rows = doc.Root.AsArray()
+    If rows.Count <> 1 Then Error 5, "Supabase XPscript read-after-create failed."
+    Print "SUPABASE_XPSCRIPT_READ_AFTER_CREATE=OK"
+
+    Set deleted = supa.Delete(tableName, filter)
+    Set rows = deleted.Root.AsArray()
+    If rows.Count <> 1 Then Error 5, "Supabase XPscript DELETE did not return one row."
+    Print "SUPABASE_XPSCRIPT_DELETE=OK"
+
+    Set doc = supa.Select(tableName, filter & "&select=id")
+    Set rows = doc.Root.AsArray()
+    If rows.Count <> 0 Then Error 5, "Supabase XPscript DELETE verification failed."
+    Print "SUPABASE_XPSCRIPT_DELETE_VERIFIED=OK"
     Print "SUPABASE_REAL=OK"
 End Sub
