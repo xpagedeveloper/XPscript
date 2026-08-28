@@ -9,7 +9,7 @@ internal interface IXPScriptIterable
 }
 
 [System.Text.Json.Serialization.JsonConverter(typeof(LSObjectJsonConverterFactory))]
-internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEnumerable
+internal abstract class LSObjectBase : IXPScriptIterable
 {
     private bool _deleted;
 
@@ -47,9 +47,6 @@ internal abstract class LSObjectBase : IXPScriptIterable, System.Collections.IEn
 
         return LSForAllRuntime.Enumerate(value);
     }
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-        XPScriptItems().GetEnumerator();
 }
 
 internal interface ILSObjectReference
