@@ -73,6 +73,18 @@ internal static class NotesDatabaseLotusScriptSurfacePostProcessor
             "    public string DesignTemplateName\n    {\n        get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseDesignTemplateName(_handle) : \"\"; }\n        set { EnsureAlive(); if (IsOpen) Session.Api.SetDatabaseDesignTemplateName(_handle, value ?? \"\"); }\n    }",
             "database-design-template-name-writable");
 
+        source = ReplaceRequired(
+            source,
+            "    internal nint CreateNote(uint db)",
+            "    internal uint CreateNote(uint db)",
+            "built-create-note-handle");
+
+        source = ReplaceRequired(
+            source,
+            "    internal nint OpenProfile(uint db, string profileName, string profileKey)",
+            "    internal uint OpenProfile(uint db, string profileName, string profileKey)",
+            "built-open-profile-handle");
+
         return source;
     }
 
