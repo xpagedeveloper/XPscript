@@ -15,7 +15,7 @@ jobs:
     name: Supabase real PostgreSQL
     runs-on: ubuntu-latest
     env:
-      SUPABASE_POSTGREE: ${{ secrets.SUPABASE_POSTGREE }}
+      SUPABASE_POSTGRES_URL: ${{ secrets.SUPABASE_URL }}
 
     steps:
       - uses: actions/checkout@v6
@@ -26,83 +26,69 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Prepare IPv4 PostgreSQL connection
+      - name: Validate PostgreSQL connection string
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ -z "${SUPABASE_POSTGREE:-}" ]; then
-            echo 'SUPABASE_POSTGREE secret is missing or empty.' >&2
+          if [ -z "${SUPABASE_POSTGRES_URL:-}" ]; then
+            echo 'SUPABASE_URL secret is missing or empty.' >&2
             exit 1
           fi
-
-          db_host="$(python3 - <<'PY'
-          import os
-          from urllib.parse import urlparse
-          value = os.environ['SUPABASE_POSTGREE']
-          parsed = urlparse(value)
-          if parsed.scheme not in ('postgres', 'postgresql') or not parsed.hostname:
-              raise SystemExit('SUPABASE_POSTGREE must be a PostgreSQL URI (postgres:// or postgresql://).')
-          print(parsed.hostname)
-          PY
-          )"
-
-          ipv4="$(getent ahostsv4 "$db_host" | awk 'NR == 1 { print $1 }')"
-          if [ -z "$ipv4" ]; then
-            echo 'Could not resolve Supabase PostgreSQL hostname to IPv4.' >&2
-            exit 1
-          fi
-
-          if [[ "$SUPABASE_POSTGREE" == *\?* ]]; then
-            dsn="${SUPABASE_POSTGREE}&hostaddr=${ipv4}"
-          else
-            dsn="${SUPABASE_POSTGREE}?hostaddr=${ipv4}"
-          fi
-
-          echo "SUPABASE_POSTGREE_IPV4=$dsn" >> "$GITHUB_ENV"
-          echo "Resolved Supabase PostgreSQL host to IPv4 for GitHub runner connectivity."
+          case "$SUPABASE_POSTGRES_URL" in
+            postgres://*|postgresql://*) ;;
+            *) echo 'SUPABASE_URL must contain a PostgreSQL URI for this test.' >&2; exit 1 ;;
+          esac
 
       - name: Verify Supabase PostgreSQL connection
         shell: bash
         run: |
           set -euo pipefail
-          export PGCONNECT_TIMEOUT=15
+          export PGCONNECT_TIMEOUT=20
 
-          ping_result="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'select 1')"
+          ping_result="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select 1')"
           test "$ping_result" = "1"
 
-          db_name="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
-          server_version="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
-          users_relation="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
+          db_name="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select current_database()')"
+          server_version="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'show server_version')"
+          current_user_name="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select current_user')"
+          users_relation="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc "select to_regclass('public.users') is not null")"
+          users_count="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -Atc 'select count(*) from public.users')"
 
-          echo "PostgreSQL connection successful."
+          echo 'PostgreSQL connection successful.'
           echo "Database: $db_name"
           echo "Server version: $server_version"
+          echo "Current user: $current_user_name"
           echo "public.users exists: $users_relation"
+          echo "public.users rows: $users_count"
 
           if [ "$users_relation" != "t" ]; then
             echo 'Expected public.users to exist.' >&2
             exit 1
           fi
 
-      - name: Verify PostgreSQL transaction and data types
+      - name: Verify PostgreSQL transaction, parameters and data types
         shell: bash
         run: |
           set -euo pipefail
-          export PGCONNECT_TIMEOUT=15
+          export PGCONNECT_TIMEOUT=20
 
-          output="$(psql "$SUPABASE_POSTGREE_IPV4" -v ON_ERROR_STOP=1 -At <<'SQL'
+          output="$(psql "$SUPABASE_POSTGRES_URL" -v ON_ERROR_STOP=1 -At <<'SQL'
           begin;
           create temp table xpscript_ci_postgres_smoke (
             id integer primary key,
             name text not null,
             amount numeric(10,2),
             active boolean,
-            note text
+            note text,
+            payload bytea,
+            created_at timestamptz not null
           ) on commit drop;
-          insert into xpscript_ci_postgres_smoke(id, name, amount, active, note)
-          values (1, 'Ada', 123.45, true, null);
-          select id || '|' || name || '|' || amount || '|' || active || '|' || (note is null)
+          insert into xpscript_ci_postgres_smoke(id, name, amount, active, note, payload, created_at)
+          values (1, 'Ada', 123.45, true, null, decode('01020304', 'hex'), '2026-08-28T12:34:56.123456Z');
+          select
+            id || '|' || name || '|' || amount || '|' || active || '|' ||
+            (note is null) || '|' || encode(payload, 'base64') || '|' ||
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
           from xpscript_ci_postgres_smoke
           where id = 1;
           rollback;
@@ -110,5 +96,5 @@ jobs:
           )"
 
           echo "$output"
-          echo "$output" | grep -Fx '1|Ada|123.45|true|true'
+          echo "$output" | grep -F '1|Ada|123.45|true|true|AQIDBA==|2026-08-28T12:34:56.123456Z'
           echo 'SUPABASE_POSTGRES=OK'
