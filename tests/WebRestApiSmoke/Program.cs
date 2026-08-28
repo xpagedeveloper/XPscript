@@ -197,6 +197,7 @@ try
             throw new Exception("Response.OK did not serialize bound XPScript model data.");
     }
     if (Header(create, "Access-Control-Allow-Origin") != "*") throw new Exception("Wildcard CORS response header was missing.");
+    Console.WriteLine("WEB-REST-CLASS-JSON-BINDING=OK");
 
     var invalid = await SendAsync(
         dispatcher,
