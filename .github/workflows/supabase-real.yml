@@ -34,9 +34,20 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
 
           $base = $env:SUPABASE_URL.TrimEnd('/')
-          $headers = @{ apikey = $env:SUPABASE_KEY; Accept = 'application/openapi+json' }
+          if ($base.EndsWith('/rest/v1', [System.StringComparison]::OrdinalIgnoreCase)) {
+            $rest = $base
+          } else {
+            $rest = "$base/rest/v1"
+          }
+
+          $headers = @{
+            apikey = $env:SUPABASE_KEY
+            Authorization = "Bearer $($env:SUPABASE_KEY)"
+            Accept = 'application/openapi+json'
+          }
+
           try {
-            $schema = Invoke-RestMethod -Uri "$base/rest/v1/" -Headers $headers -Method Get -TimeoutSec 30
+            $schema = Invoke-RestMethod -Uri "$rest/" -Headers $headers -Method Get -TimeoutSec 30
           } catch {
             throw "Supabase PostgREST discovery failed. Check SUPABASE_URL/SUPABASE_KEY and API access. $($_.Exception.Message)"
           }
