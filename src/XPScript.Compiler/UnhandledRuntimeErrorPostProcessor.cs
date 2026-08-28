@@ -5,7 +5,7 @@ namespace XPScript.Compiler;
 internal static class UnhandledRuntimeErrorPostProcessor
 {
     private static readonly Regex MainBodyPattern = new(
-        @"(?ms)(?<header>public\s+static\s+void\s+Main\s*\(\s*string\[\]\s+args\s*\)\s*\{\s*)(?<body>XPScriptRuntime\.SetArgs\(args\);\s*Script\.[A-Za-z_]\w*\(\);\s*)(?<footer>\})",
+        @"(?ms)(?<header>public\s+static\s+void\s+Main\s*\(\s*string\[\]\s+args\s*\)\s*\{\s*)(?<body>.*?)(?<footer>^\s{4}\})",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static string Transform(string generated)
@@ -28,7 +28,7 @@ internal static class UnhandledRuntimeErrorPostProcessor
             "            Console.Error.WriteLine(XPScriptUnhandledRuntimeError.Format(ex));" + Environment.NewLine +
             "            Environment.ExitCode = 1;" + Environment.NewLine +
             "        }" + Environment.NewLine +
-            "    }";
+            match.Groups["footer"].Value;
 
         generated = generated[..match.Index] + replacement + generated[(match.Index + match.Length)..];
         return generated + Environment.NewLine + Environment.NewLine + RuntimeHelper;
