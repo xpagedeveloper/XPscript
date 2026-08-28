@@ -18,6 +18,8 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort NoteMemberResponses = 12;
     private const uint DeletedNoteIdFlag = 0x80000000u;
     private const uint DesignTypeShared = 0;
+    private const ushort NotesErrorMask = 0x3fff;
+    private const ushort ErrorNotFound = 0x0404;
 
     internal XPScriptNotesTimeDate GetDocumentCreated(uint note)
     {
@@ -209,7 +211,7 @@ internal sealed partial class XPScriptNotesNativeApi
         var status = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote")(db, name.Pointer, NoteClassView, out var folderNoteId);
         if (status != 0)
         {
-            if (!createOnFail)
+            if (!createOnFail || (status & NotesErrorMask) != ErrorNotFound)
             {
                 Check(status, "NIFFindDesignNote(folder)");
                 return;
