@@ -50,9 +50,6 @@ jobs:
       - name: Compile and run XPDbSupabase CRUD against real Supabase PostgreSQL
         shell: pwsh
         run: |
-          # Supabase shared poolers require postgres.<project-ref>. If the saved
-          # connection uses plain postgres, derive the project ref from the existing
-          # REST URL secret without introducing another secret or changing the DB work.
           $pg = [Uri]$env:SUPABASE_URL
           if ($pg.Host.EndsWith('.pooler.supabase.com', [StringComparison]::OrdinalIgnoreCase)) {
             $userInfo = [Uri]::UnescapeDataString($pg.UserInfo)
