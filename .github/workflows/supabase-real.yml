@@ -1,0 +1,77 @@
+name: Supabase Real Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/HttpDbRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs'
+      - 'samples/httpdb-supabase-real-smoke.xps'
+      - '.github/workflows/supabase-real.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  supabase:
+    name: Supabase real PostgREST
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify Supabase secrets and discover exposed table
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_URL secret is missing or empty.' }
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
+
+          $base = $env:SUPABASE_URL.TrimEnd('/')
+          $headers = @{ apikey = $env:SUPABASE_KEY; Accept = 'application/openapi+json' }
+          try {
+            $schema = Invoke-RestMethod -Uri "$base/rest/v1/" -Headers $headers -Method Get -TimeoutSec 30
+          } catch {
+            throw "Supabase PostgREST discovery failed. Check SUPABASE_URL/SUPABASE_KEY and API access. $($_.Exception.Message)"
+          }
+
+          $paths = @($schema.paths.PSObject.Properties.Name)
+          $tablePath = $paths | Where-Object {
+            $_ -match '^/[^/]+$' -and $_ -notmatch '^/rpc/'
+          } | Sort-Object | Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($tablePath)) {
+            throw 'Supabase credentials work, but no public PostgREST table/view is exposed. Expose one read-only test table in schema public.'
+          }
+
+          $table = $tablePath.TrimStart('/')
+          "SUPABASE_TEST_TABLE=$table" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Supabase PostgREST authenticated successfully; discovered an exposed table/view for read-only XPscript smoke testing."
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile and run XPscript against real Supabase
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/supabase | Out-Null
+          $exe = './out/supabase/httpdb-supabase-real-smoke'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/httpdb-supabase-real-smoke.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Supabase XPscript sample compilation failed.' }
+          chmod +x $exe
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Real Supabase XPscript smoke test failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+
+          foreach ($value in @('SUPABASE_SELECT_TYPE=Array', 'SUPABASE_REAL=OK')) {
+            if ($output -notcontains $value) { throw "Supabase output missing: $value`n$output" }
+          }
