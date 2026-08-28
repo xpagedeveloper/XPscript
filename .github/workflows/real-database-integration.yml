@@ -72,7 +72,7 @@ jobs:
             'ROWNAME=Ada',
             'ROWACTIVE=True',
             'ROWAMOUNT=123.45',
-            'ROWNOTEISNULL=True',
+            'ROWNOTEISNULL=1',
             'ROWPAYLOAD=AQIDBA==',
             'SCALAR=1',
             'ROLLBACKCOUNT=1',
