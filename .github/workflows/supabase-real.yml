@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   supabase:
-    name: Supabase real PostgREST
+    name: Supabase real PostgREST through XPscript
     runs-on: ubuntu-latest
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_RESTURL }}
@@ -28,171 +28,32 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Verify Supabase users table access
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_RESTURL secret is missing or empty.' }
-          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
-
-          $base = $env:SUPABASE_URL.TrimEnd('/')
-          if ($base.EndsWith('/rest/v1', [System.StringComparison]::OrdinalIgnoreCase)) {
-            $rest = $base
-          } else {
-            $rest = "$base/rest/v1"
-          }
-
-          $headers = @{
-            apikey = $env:SUPABASE_KEY
-            Authorization = "Bearer $($env:SUPABASE_KEY)"
-            Accept = 'application/json'
-          }
-
-          try {
-            $response = Invoke-WebRequest -Uri "$rest/users?select=*&limit=1" -Headers $headers -Method Get -TimeoutSec 30
-          } catch {
-            $status = $_.Exception.Response.StatusCode.value__
-            throw "Supabase users table request failed with HTTP $status. Check SUPABASE_RESTURL/SUPABASE_KEY and public.users API/RLS access."
-          }
-
-          if ($response.StatusCode -ne 200) {
-            throw "Supabase users table request returned HTTP $($response.StatusCode)."
-          }
-          if ([string]::IsNullOrWhiteSpace($response.Content)) {
-            throw 'Supabase users table returned an empty response body.'
-          }
-          try {
-            $null = ConvertFrom-Json -InputObject $response.Content -NoEnumerate
-          } catch {
-            throw 'Supabase users table did not return valid JSON.'
-          }
-          Write-Host 'Supabase users table authenticated successfully.'
-
-      - name: Create, read and delete a Supabase users row through REST
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $base = $env:SUPABASE_URL.TrimEnd('/')
-          if ($base.EndsWith('/rest/v1', [System.StringComparison]::OrdinalIgnoreCase)) {
-            $rest = $base
-          } else {
-            $rest = "$base/rest/v1"
-          }
-
-          # public.users.id is bigint. Use a high, time-based value with a small
-          # random suffix to avoid colliding with application-generated rows.
-          $epochMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-          $suffix = Get-Random -Minimum 10 -Maximum 99
-          $id = [int64](($epochMs * 100) + $suffix)
-          $filter = "id=eq.$id"
-          $rowUri = "$rest/users?$filter"
-          $created = $false
-
-          $headers = @{
-            apikey = $env:SUPABASE_KEY
-            Authorization = "Bearer $($env:SUPABASE_KEY)"
-            Accept = 'application/json'
-            'Content-Type' = 'application/json'
-            'Content-Profile' = 'public'
-            Prefer = 'return=representation,missing=default'
-          }
-
-          function Get-SafeHttpFailure($errorRecord) {
-            $status = $errorRecord.Exception.Response.StatusCode.value__
-            $detail = $null
-            try {
-              if ($null -ne $errorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($errorRecord.ErrorDetails.Message)) {
-                $parsed = ConvertFrom-Json -InputObject $errorRecord.ErrorDetails.Message
-                $detail = @($parsed.code, $parsed.message, $parsed.details, $parsed.hint) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
-                $detail = $detail -join ' | '
-              }
-            } catch { }
-            if ([string]::IsNullOrWhiteSpace($detail)) { return "HTTP $status" }
-            return "HTTP $status - $detail"
-          }
-
-          try {
-            $body = @{ id = $id } | ConvertTo-Json -Compress
-            try {
-              $createResponse = Invoke-WebRequest -Uri "$rest/users" -Headers $headers -Method Post -Body $body -TimeoutSec 30
-            } catch {
-              $failure = Get-SafeHttpFailure $_
-              throw "Supabase REST create failed: $failure"
-            }
-
-            if ($createResponse.StatusCode -notin @(200, 201)) {
-              throw "Supabase REST create returned HTTP $($createResponse.StatusCode)."
-            }
-            $created = $true
-
-            $createdRows = @(ConvertFrom-Json -InputObject $createResponse.Content -NoEnumerate)
-            if ($createdRows.Count -ne 1) {
-              throw "REST create expected exactly one returned row but received $($createdRows.Count)."
-            }
-            if ([int64]$createdRows[0].id -ne $id) {
-              throw 'REST create returned a row with an unexpected id.'
-            }
-            Write-Host 'SUPABASE_REST_CREATE=OK'
-
-            $readHeaders = @{
-              apikey = $env:SUPABASE_KEY
-              Authorization = "Bearer $($env:SUPABASE_KEY)"
-              Accept = 'application/json'
-              'Accept-Profile' = 'public'
-            }
-            $readResponse = Invoke-WebRequest -Uri "$rowUri&select=*" -Headers $readHeaders -Method Get -TimeoutSec 30
-            $readRows = @(ConvertFrom-Json -InputObject $readResponse.Content -NoEnumerate)
-            if ($readRows.Count -ne 1 -or [int64]$readRows[0].id -ne $id) {
-              throw 'REST read-after-create did not return exactly the CI-created row.'
-            }
-            Write-Host 'SUPABASE_REST_READ_AFTER_CREATE=OK'
-          } finally {
-            if ($created) {
-              try {
-                $deleteResponse = Invoke-WebRequest -Uri $rowUri -Headers $headers -Method Delete -TimeoutSec 30
-                if ($deleteResponse.StatusCode -notin @(200, 204)) {
-                  throw "REST delete returned HTTP $($deleteResponse.StatusCode)."
-                }
-                Write-Host 'SUPABASE_REST_DELETE=OK'
-              } catch {
-                $failure = Get-SafeHttpFailure $_
-                Write-Error "Cleanup failed for the CI-created users row: $failure"
-                throw
-              }
-            }
-          }
-
-          $verifyHeaders = @{
-            apikey = $env:SUPABASE_KEY
-            Authorization = "Bearer $($env:SUPABASE_KEY)"
-            Accept = 'application/json'
-            'Accept-Profile' = 'public'
-          }
-          $afterDelete = Invoke-WebRequest -Uri "$rowUri&select=id" -Headers $verifyHeaders -Method Get -TimeoutSec 30
-          $remainingRows = @(ConvertFrom-Json -InputObject $afterDelete.Content -NoEnumerate)
-          if ($remainingRows.Count -ne 0) {
-            throw 'REST delete verification failed: the CI-created row still exists.'
-          }
-          Write-Host 'SUPABASE_REST_DELETE_VERIFIED=OK'
-
       - name: Restore compiler
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
 
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
 
-      - name: Compile and run XPscript against real Supabase
+      - name: Compile and run XPscript CRUD against real Supabase
         shell: pwsh
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_RESTURL secret is missing or empty.' }
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
           New-Item -ItemType Directory -Force ./out/supabase | Out-Null
           $exe = './out/supabase/httpdb-supabase-real-smoke'
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/httpdb-supabase-real-smoke.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Supabase XPscript sample compilation failed.' }
           chmod +x $exe
           $output = @(& $exe 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw "Real Supabase XPscript smoke test failed.`n$output" }
+          if ($LASTEXITCODE -ne 0) { throw "Real Supabase XPscript CRUD test failed.`n$output" }
           $output | ForEach-Object { Write-Host $_ }
-
-          foreach ($value in @('SUPABASE_SELECT_TYPE=Array', 'SUPABASE_REAL=OK')) {
+          foreach ($value in @(
+            'SUPABASE_SELECT_TYPE=Array',
+            'SUPABASE_XPSCRIPT_CREATE=OK',
+            'SUPABASE_XPSCRIPT_READ_AFTER_CREATE=OK',
+            'SUPABASE_XPSCRIPT_DELETE=OK',
+            'SUPABASE_XPSCRIPT_DELETE_VERIFIED=OK',
+            'SUPABASE_REAL=OK'
+          )) {
             if ($output -notcontains $value) { throw "Supabase output missing: $value`n$output" }
           }
