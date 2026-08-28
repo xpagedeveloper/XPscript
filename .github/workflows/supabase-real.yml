@@ -20,6 +20,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_TEST_TABLE: users
 
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +28,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Verify Supabase secrets and discover exposed table
+      - name: Verify Supabase users table access
         shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_URL secret is missing or empty.' }
@@ -43,27 +44,23 @@ jobs:
           $headers = @{
             apikey = $env:SUPABASE_KEY
             Authorization = "Bearer $($env:SUPABASE_KEY)"
-            Accept = 'application/openapi+json'
+            Accept = 'application/json'
           }
 
           try {
-            $schema = Invoke-RestMethod -Uri "$rest/" -Headers $headers -Method Get -TimeoutSec 30
+            $response = Invoke-WebRequest -Uri "$rest/users?select=*&limit=1" -Headers $headers -Method Get -TimeoutSec 30
           } catch {
-            throw "Supabase PostgREST discovery failed. Check SUPABASE_URL/SUPABASE_KEY and API access. $($_.Exception.Message)"
+            $status = $_.Exception.Response.StatusCode.value__
+            throw "Supabase users table request failed with HTTP $status. Check SUPABASE_URL/SUPABASE_KEY and public.users API/RLS access."
           }
 
-          $paths = @($schema.paths.PSObject.Properties.Name)
-          $tablePath = $paths | Where-Object {
-            $_ -match '^/[^/]+$' -and $_ -notmatch '^/rpc/'
-          } | Sort-Object | Select-Object -First 1
-
-          if ([string]::IsNullOrWhiteSpace($tablePath)) {
-            throw 'Supabase credentials work, but no public PostgREST table/view is exposed. Expose one read-only test table in schema public.'
+          if ($response.StatusCode -ne 200) {
+            throw "Supabase users table request returned HTTP $($response.StatusCode)."
           }
 
-          $table = $tablePath.TrimStart('/')
-          "SUPABASE_TEST_TABLE=$table" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "Supabase PostgREST authenticated successfully; discovered an exposed table/view for read-only XPscript smoke testing."
+          $json = $response.Content | ConvertFrom-Json
+          if ($null -eq $json) { throw 'Supabase users table did not return JSON.' }
+          Write-Host 'Supabase users table authenticated successfully.'
 
       - name: Restore compiler
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
