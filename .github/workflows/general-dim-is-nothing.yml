@@ -87,9 +87,7 @@ jobs:
           @'
           Option Declare
           Sub Main()
-              Dim divisor As Integer
-              divisor = 0
-              Print 10 / divisor
+              Error 5, "runtime-failure"
           End Sub
           '@ | Set-Content -Path $runtimeFailure
 
@@ -97,6 +95,6 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw "Runtime failure unexpectedly returned success.`n$($output -join [Environment]::NewLine)" }
           $text = $output -join [Environment]::NewLine
           if ($text -notmatch 'XPscript runtime error') { throw "XPscript runtime error message was missing.`n$text" }
-          if ($text -match 'Unhandled exception|System\.DivideByZeroException|Program\.cs| at Script\.| at Program\.') {
+          if ($text -match 'Unhandled exception|System\.XPScriptRuntimeException|Program\.cs| at Script\.| at Program\.') {
               throw "Generated CSharp/.NET stack trace leaked to the user.`n$text"
           }
