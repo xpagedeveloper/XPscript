@@ -4,8 +4,8 @@ This test exercises the current XPscript `NotesDatabase` surface against a local
 
 Test programs:
 
-- `samples/notes-database-full-surface-test.xps`
-- `samples/notes-document-remove-test.xps` for `NotesDocument.Remove([force])`
+- [`samples/notes-database-full-surface-test.xps`](../samples/notes-database-full-surface-test.xps)
+- [`samples/notes-document-remove-test.xps`](../samples/notes-document-remove-test.xps) for `NotesDocument.Remove([force])`
 
 ## Required local environment
 
