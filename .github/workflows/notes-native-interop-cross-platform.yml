@@ -39,6 +39,7 @@ jobs:
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-c-api-surface.xps \
             --framework-dependent \
+            --debug \
             -o artifacts/notes-thread-probe/notes-thread-probe
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
