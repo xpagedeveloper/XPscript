@@ -12,6 +12,7 @@ internal static class CompilerBuildEnvironment
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
     private const string MySqlConnectorVersion = "2.6.2";
+    private const string NpgsqlVersion = "10.0.3";
 
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
@@ -226,6 +227,7 @@ internal static class CompilerBuildEnvironment
         var usesSqlite = source.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
+        var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
 
@@ -234,8 +236,13 @@ internal static class CompilerBuildEnvironment
             File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine);
             CompilerPathSecurity.HardenTemporaryFile(generatedSource);
         }
+        if (usesSupabaseDb)
+        {
+            File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine);
+            CompilerPathSecurity.HardenTemporaryFile(generatedSource);
+        }
 
-        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && !usesMsSql && !usesMySql && stagedIconName is null) return;
+        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && !usesMsSql && !usesMySql && !usesSupabaseDb && stagedIconName is null) return;
 
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
@@ -294,6 +301,12 @@ internal static class CompilerBuildEnvironment
         {
             itemEntries += $"""
     <PackageReference Include="MySqlConnector" Version="{MySqlConnectorVersion}" />
+""";
+        }
+        if (usesSupabaseDb)
+        {
+            itemEntries += $"""
+    <PackageReference Include="Npgsql" Version="{NpgsqlVersion}" />
 """;
         }
 
