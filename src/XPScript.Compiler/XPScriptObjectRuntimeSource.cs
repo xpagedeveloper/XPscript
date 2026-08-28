@@ -132,7 +132,7 @@ public sealed class LSRefJsonConverterFactory : System.Text.Json.Serialization.J
     {
         var itemType = typeToConvert.GetGenericArguments()[0];
         var converterType = typeof(LSRefJsonConverter<>).MakeGenericType(itemType);
-        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType)
+        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType, nonPublic: true)
             ?? throw new InvalidOperationException("Unable to create XPscript object-reference JSON converter."));
     }
 }
@@ -165,7 +165,7 @@ public sealed class LSObjectJsonConverterFactory : System.Text.Json.Serializatio
     public override System.Text.Json.Serialization.JsonConverter CreateConverter(Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
     {
         var converterType = typeof(LSObjectJsonConverter<>).MakeGenericType(typeToConvert);
-        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType)
+        return (System.Text.Json.Serialization.JsonConverter)(Activator.CreateInstance(converterType, nonPublic: true)
             ?? throw new InvalidOperationException("Unable to create XPscript class JSON converter."));
     }
 }
