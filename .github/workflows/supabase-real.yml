@@ -58,8 +58,14 @@ jobs:
             throw "Supabase users table request returned HTTP $($response.StatusCode)."
           }
 
-          $json = $response.Content | ConvertFrom-Json
-          if ($null -eq $json) { throw 'Supabase users table did not return JSON.' }
+          if ([string]::IsNullOrWhiteSpace($response.Content)) {
+            throw 'Supabase users table returned an empty response body.'
+          }
+          try {
+            $null = ConvertFrom-Json -InputObject $response.Content -NoEnumerate
+          } catch {
+            throw 'Supabase users table did not return valid JSON.'
+          }
           Write-Host 'Supabase users table authenticated successfully.'
 
       - name: Restore compiler
