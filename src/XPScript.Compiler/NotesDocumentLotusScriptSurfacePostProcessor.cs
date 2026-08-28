@@ -47,6 +47,14 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
     public XPScriptNotesDateTime Created { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentCreated(_handle)); } }
 
+    public void PutInFolder(object? folderNameValue) => PutInFolder(folderNameValue, false);
+    public void PutInFolder(object? folderNameValue, object? createOnFailValue)
+    {
+        EnsureAlive();
+        if (IsNewNote) return;
+        Session.Api.PutDocumentInFolder(Database.Handle, NoteId, XPScriptRuntime.CStr(folderNameValue), XPScriptRuntime.CBool(createOnFailValue));
+    }
+
     public void RemoveFromFolder(object? folderNameValue)
     {
         EnsureAlive();
