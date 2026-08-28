@@ -10,7 +10,7 @@ internal sealed class NothingComparisonValidator
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex SetNothingAssignment = new(
-        @"(?ix)^\s*Set\b.+?=\s*Nothing\s*$",
+        @"(?ix)\bSet\b[^:=\r\n]*=\s*Nothing\b",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public void Validate(string source, string sourceName)
@@ -22,9 +22,10 @@ internal sealed class NothingComparisonValidator
         for (var i = 0; i < lines.Length; i++)
         {
             var masked = MaskStringsAndComment(lines[i]);
-            if (masked.Trim().Length == 0 || SetNothingAssignment.IsMatch(masked))
+            if (masked.Trim().Length == 0)
                 continue;
 
+            masked = SetNothingAssignment.Replace(masked, match => new string(' ', match.Length));
             var match = InvalidComparison.Match(masked);
             if (!match.Success)
                 continue;
