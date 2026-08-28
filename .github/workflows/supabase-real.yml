@@ -18,7 +18,7 @@ jobs:
     name: Supabase real PostgREST
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_RESTURL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       SUPABASE_TEST_TABLE: users
 
@@ -31,7 +31,7 @@ jobs:
       - name: Verify Supabase users table access
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_URL secret is missing or empty.' }
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_URL)) { throw 'SUPABASE_RESTURL secret is missing or empty.' }
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_KEY)) { throw 'SUPABASE_KEY secret is missing or empty.' }
 
           $base = $env:SUPABASE_URL.TrimEnd('/')
@@ -51,7 +51,7 @@ jobs:
             $response = Invoke-WebRequest -Uri "$rest/users?select=*&limit=1" -Headers $headers -Method Get -TimeoutSec 30
           } catch {
             $status = $_.Exception.Response.StatusCode.value__
-            throw "Supabase users table request failed with HTTP $status. Check SUPABASE_URL/SUPABASE_KEY and public.users API/RLS access."
+            throw "Supabase users table request failed with HTTP $status. Check SUPABASE_RESTURL/SUPABASE_KEY and public.users API/RLS access."
           }
 
           if ($response.StatusCode -ne 200) {
