@@ -25,8 +25,6 @@ Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDa
     Set dt = doc.Created
 
     Call doc.RemoveItem("TemporaryField")
-    Call doc.PutInFolder("XPscript Test")
-    Call doc.PutInFolder("XPscript Test", False)
     Call doc.RemoveFromFolder("XPscript Test")
     Call doc.MarkRead()
     Call doc.MarkUnread()
@@ -35,6 +33,4 @@ Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDa
     Call doc.CopyAllItems(other)
     Call doc.CopyAllItems(other, True)
     Set copiedItem = doc.CopyItem(item, "CopiedItem")
-    Call doc.Send(False)
-    Call doc.Send(False, "recipient@example.com")
 End Sub
