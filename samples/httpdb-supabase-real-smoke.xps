@@ -7,7 +7,7 @@ Sub Main()
     Dim url As String
     Dim apiKey As String
     Dim tableName As String
-    Dim supa As HTTPDBSupabase
+    Dim supa As XPDbSupabase
     Dim doc As JsonDocument
     Dim rows As JsonArray
     Dim payload As New JsonObject
@@ -26,9 +26,10 @@ Sub Main()
     If apiKey = "" Then Print "SUPABASE_KEY_MISSING=True": Exit Sub
     If tableName = "" Then Print "SUPABASE_TEST_TABLE_MISSING=True": Exit Sub
 
-    Set supa = New HTTPDBSupabase(url, apiKey)
+    Set supa = New XPDbSupabase(url, apiKey)
     Call supa.SetBearerToken(apiKey)
     Call supa.SetSchema("public")
+    Print "SUPABASE_REST_MODE=" & supa.Mode
 
     Set doc = supa.Select(tableName, "select=*&limit=1")
     Set rows = doc.Root.AsArray()
