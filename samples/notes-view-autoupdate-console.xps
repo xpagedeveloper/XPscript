@@ -25,7 +25,7 @@ Sub Main()
     Set session = New NotesSession(NOTES_RUNTIME)
     Set db = session.OpenDatabase("", DATABASE_PATH)
 
-    If Not (db <> Nothing) Then
+    If db Is Nothing Then
         Print "DATABASE_IS_NOTHING=True"
         Call session.Recycle()
         Exit Sub
@@ -41,10 +41,10 @@ Sub Main()
     Set liveView = db.OpenView(VIEW_NAME)
     Set frozenView = db.OpenView(VIEW_NAME)
 
-    If Not (liveView <> Nothing) Or Not (frozenView <> Nothing) Then
+    If liveView Is Nothing Or frozenView Is Nothing Then
         Print "VIEW_OPEN_FAILED=True"
-        If liveView <> Nothing Then Call liveView.Recycle()
-        If frozenView <> Nothing Then Call frozenView.Recycle()
+        If liveView Is Not Nothing Then Call liveView.Recycle()
+        If frozenView Is Not Nothing Then Call frozenView.Recycle()
         Call db.Recycle()
         Call session.Recycle()
         Exit Sub
@@ -64,7 +64,7 @@ Sub Main()
 
     Do While Not liveDone Or Not frozenDone
         If Not liveDone Then
-            If Not (liveDoc <> Nothing) Then
+            If liveDoc Is Nothing Then
                 liveDone = True
             Else
                 Print "LIVE_GROUP=" & liveDoc.GetString("ListName")
@@ -73,7 +73,7 @@ Sub Main()
         End If
 
         If Not frozenDone Then
-            If Not (frozenDoc <> Nothing) Then
+            If frozenDoc Is Nothing Then
                 frozenDone = True
             Else
                 Print "FROZEN_GROUP=" & frozenDoc.GetString("ListName")
@@ -84,14 +84,14 @@ Sub Main()
 
     ' GetFirstDocument always rewinds to the beginning of each view instance.
     Set liveDoc = liveView.GetFirstDocument()
-    If liveDoc <> Nothing Then
+    If liveDoc Is Not Nothing Then
         Print "LIVE_FIRST_AGAIN=" & liveDoc.GetString("ListName")
         Call liveDoc.Recycle()
         Set liveDoc = Nothing
     End If
 
     Set frozenDoc = frozenView.GetFirstDocument()
-    If frozenDoc <> Nothing Then
+    If frozenDoc Is Not Nothing Then
         Print "FROZEN_FIRST_AGAIN=" & frozenDoc.GetString("ListName")
         Call frozenDoc.Recycle()
         Set frozenDoc = Nothing
@@ -100,7 +100,7 @@ Sub Main()
     ' Explicit Refresh updates the frozen view snapshot.
     Call frozenView.Refresh()
     Set frozenDoc = frozenView.GetFirstDocument()
-    If frozenDoc <> Nothing Then
+    If frozenDoc Is Not Nothing Then
         Print "FROZEN_FIRST_AFTER_REFRESH=" & frozenDoc.GetString("ListName")
         Call frozenDoc.Recycle()
         Set frozenDoc = Nothing

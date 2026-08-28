@@ -5,9 +5,12 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/GeneralSyntaxPreprocessor.cs'
+      - 'src/XPScript.Compiler/NothingComparisonValidator.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'samples/general-dim-is-nothing.xps'
+      - 'samples/notes-c-api-v1.xps'
+      - 'samples/notes-view-autoupdate-console.xps'
       - 'todo/HCLNotes.md'
       - '.github/workflows/general-dim-is-nothing.yml'
   workflow_dispatch:
@@ -52,3 +55,42 @@ jobs:
           foreach ($marker in $required) {
             if ($output -notcontains $marker) { throw "Missing marker $marker.`n$($output -join [Environment]::NewLine)" }
           }
+
+      - name: Reject equality comparisons with Nothing
+        shell: pwsh
+        run: |
+          $invalid = Join-Path $env:RUNNER_TEMP 'invalid-nothing-comparison.xps'
+          $cases = @('value <> Nothing', 'Nothing <> value', 'value = Nothing', 'Nothing = value')
+          foreach ($expression in $cases) {
+            @"
+          Option Declare
+          Class Example
+          End Class
+          Sub Main()
+              Dim value As Example
+              If $expression Then
+                  Print "INVALID"
+              End If
+          End Sub
+          "@ | Set-Content -Path $invalid
+
+            $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $invalid 2>&1
+            if ($LASTEXITCODE -eq 0) { throw "Invalid Nothing comparison unexpectedly compiled: $expression.`n$($output -join [Environment]::NewLine)" }
+            $text = $output -join [Environment]::NewLine
+            if ($text -notmatch "Nothing cannot be compared with '(<>|=)'") { throw "Expected Nothing comparison diagnostic was missing for $expression.`n$text" }
+            if ($text -notmatch "Is Nothing.*Is Not Nothing") { throw "Expected replacement syntax guidance was missing for $expression.`n$text" }
+          }
+
+          $valid = Join-Path $env:RUNNER_TEMP 'valid-set-nothing.xps'
+          @'
+          Option Declare
+          Class Example
+          End Class
+          Sub Main()
+              Dim value As Example
+              Set value = Nothing
+              Print "SET_NOTHING=OK"
+          End Sub
+          '@ | Set-Content -Path $valid
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $valid 2>&1
+          if ($LASTEXITCODE -ne 0 -or $output -notcontains 'SET_NOTHING=OK') { throw "Set value = Nothing must remain valid.`n$($output -join [Environment]::NewLine)" }
