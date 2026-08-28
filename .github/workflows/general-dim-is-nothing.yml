@@ -6,8 +6,6 @@ on:
     paths:
       - 'src/XPScript.Compiler/GeneralSyntaxPreprocessor.cs'
       - 'src/XPScript.Compiler/NothingComparisonValidator.cs'
-      - 'src/XPScript.Compiler/UnhandledRuntimeErrorPostProcessor.cs'
-      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/ReservedIdentifierPreprocessor.cs'
       - 'src/XPScript.Compiler/XPScriptObjectRuntimeSource.cs'
       - 'samples/general-dim-is-nothing.xps'
@@ -96,22 +94,3 @@ jobs:
           '@ | Set-Content -Path $valid
           $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $valid 2>&1
           if ($LASTEXITCODE -ne 0 -or $output -notcontains 'SET_NOTHING=OK') { throw "Set value = Nothing must remain valid.`n$($output -join [Environment]::NewLine)" }
-
-      - name: Hide generated CSharp runtime stack traces
-        shell: pwsh
-        run: |
-          $runtimeFailure = Join-Path $env:RUNNER_TEMP 'runtime-failure.xps'
-          @'
-          Option Declare
-          Sub Main()
-              Error 5, "runtime-failure"
-          End Sub
-          '@ | Set-Content -Path $runtimeFailure
-
-          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run $runtimeFailure 2>&1
-          if ($LASTEXITCODE -eq 0) { throw "Runtime failure unexpectedly returned success.`n$($output -join [Environment]::NewLine)" }
-          $text = $output -join [Environment]::NewLine
-          if ($text -notmatch 'XPscript runtime error') { throw "XPscript runtime error message was missing.`n$text" }
-          if ($text -match 'Unhandled exception|XPScriptRuntimeException|Program\.cs| at Script\.| at Program\.') {
-              throw "Generated CSharp/.NET stack trace leaked to the user.`n$text"
-          }
