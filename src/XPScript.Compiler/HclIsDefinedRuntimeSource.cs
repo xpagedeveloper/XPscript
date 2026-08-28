@@ -30,5 +30,6 @@ internal static class LSHclPlatformConstantRuntime
         NotesDatabaseReplicaPostProcessor.Apply(
             NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
                 NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                    NotesRuntimeSourceBuilder.Build()))));
+                    NotesDocumentNativeHandlePostProcessor.Apply(
+                        NotesRuntimeSourceBuilder.Build())))));
 }
