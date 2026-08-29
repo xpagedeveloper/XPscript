@@ -38,7 +38,7 @@ Sub Main()
         Exit Sub
     End If
 
-    Set entries = view.AllEntries
+    entries = view.AllEntries
     If entries.Count < 2 Then
         failures = failures + 1
         Print "FAIL AllEntries count"
@@ -46,7 +46,7 @@ Sub Main()
         Print "PASS AllEntries Count=" & CStr(entries.Count)
     End If
 
-    Set entry = entries.GetFirstEntry()
+    entry = entries.GetFirstEntry()
     If entry Is Nothing Then
         failures = failures + 1
         Print "FAIL GetFirstEntry"
@@ -93,36 +93,36 @@ Sub Main()
             Call directDoc.Recycle()
         End If
 
-        Set nextEntry = entries.GetNextEntry(entry)
+        nextEntry = entries.GetNextEntry(entry)
         If nextEntry Is Nothing Then failures = failures + 1 Else Call nextEntry.Recycle()
-        Set lookupEntry = entries.GetEntry(doc)
+        lookupEntry = entries.GetEntry(doc)
         If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
         If Not entries.Contains(doc) Then failures = failures + 1
         Call entry.Recycle()
     End If
 
-    Set nav = view.CreateViewNav()
+    nav = view.CreateViewNav()
     If nav.Count < entries.Count Then failures = failures + 1
-    Set entry = nav.GetFirst()
+    entry = nav.GetFirst()
     If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
-    Set entry = nav.GetLast()
+    entry = nav.GetLast()
     If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
-    Set entry = nav.GetFirstDocument()
+    entry = nav.GetFirstDocument()
     If entry Is Nothing Then
         failures = failures + 1
     Else
-        Set lookupEntry = nav.GetCurrent()
+        lookupEntry = nav.GetCurrent()
         If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
-        Set lookupEntry = nav.GetEntry(entry.Document)
+        lookupEntry = nav.GetEntry(entry.Document)
         If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
-        Set nextEntry = nav.GetNextDocument()
+        nextEntry = nav.GetNextDocument()
         If nextEntry Is Not Nothing Then Call nextEntry.Recycle()
         Call entry.Recycle()
     End If
 
-    Set entry = view.GetEntryByKey("Alpha")
+    entry = view.GetEntryByKey("Alpha")
     If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
-    Set keyEntries = view.GetAllEntriesByKey("Alpha")
+    keyEntries = view.GetAllEntriesByKey("Alpha")
     If keyEntries.Count < 1 Then failures = failures + 1
     Call keyEntries.Recycle()
 
