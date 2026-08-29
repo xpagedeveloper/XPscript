@@ -1,0 +1,48 @@
+' HCL Notes/Domino runtime regression for NotesView.ColumnNames.
+' Import samples/xpscript-notes-runtime-fixture.dxl into xpscript.nsf before running.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const DATABASE_PATH = "xpscript.nsf"
+    Const VIEW_NAME = "XPScriptTestView"
+
+    Dim session As New NotesSession(NOTES_RUNTIME)
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim names As Variant
+    Dim columnName As Variant
+    Dim count As Integer
+
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL database"
+        Exit Sub
+    End If
+
+    Set view = db.GetView(VIEW_NAME)
+    If view Is Nothing Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL view"
+        Exit Sub
+    End If
+
+    names = view.ColumnNames
+    count = 0
+    For Each columnName In names
+        Print "ColumnNames(" & CStr(count) & ")=" & CStr(columnName)
+        count = count + 1
+    Next
+
+    If count < 1 Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL empty"
+    ElseIf CStr(names(0)) <> "Subject" Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL first=" & CStr(names(0))
+    Else
+        Print "NOTES-VIEW-COLUMNNAMES=PASS count=" & CStr(count)
+    End If
+
+    Call view.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
