@@ -1,0 +1,250 @@
+' HCL Notes/Domino runtime validation for NotesDatabase lifecycle methods.
+'
+' Target source database: xpscript.nsf
+' This script ONLY creates/removes the temporary databases named below.
+' It never calls Remove on xpscript.nsf.
+'
+' Supported HCL Create patterns:
+'   Dim db As New NotesDatabase("", "")
+'   Call db.Create("server", "database.nsf", True)
+'
+'   Dim db As New NotesDatabase("", "database.nsf")
+'   If Not db.IsOpen Then Call db.Create("", "", True)
+'
+' XPscript extension:
+'   CreateCopy(server, dbfile, maxsize, includeDocuments)
+' includeDocuments defaults to False through the standard 2/3 argument overloads.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const NOTES_INI = ""
+    Const SOURCE_DATABASE = "xpscript.nsf"
+    Const CREATE_EXPLICIT_DATABASE = "xpscript-create-explicit-runtime-test.nsf"
+    Const CREATE_BOUND_DATABASE = "xpscript-create-bound-runtime-test.nsf"
+    Const DESIGN_COPY_DATABASE = "xpscript-design-copy-runtime-test.nsf"
+    Const FULL_COPY_DATABASE = "xpscript-full-copy-runtime-test.nsf"
+
+    Dim session As NotesSession
+    Dim sourceDb As NotesDatabase
+    Dim failures As Integer
+
+    failures = 0
+
+    If NOTES_INI = "" Then
+        Set session = New NotesSession(NOTES_RUNTIME)
+    Else
+        Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    End If
+
+    Set sourceDb = session.OpenDatabase("", SOURCE_DATABASE)
+    If sourceDb Is Nothing Or Not sourceDb.IsOpen Then
+        Print "FAIL source xpscript.nsf is not open"
+        If Not sourceDb Is Nothing Then Call sourceDb.Recycle()
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    Print "NOTES-DATABASE-LIFECYCLE-BEGIN"
+    failures = failures + TestCreateExplicitArguments(session, CREATE_EXPLICIT_DATABASE)
+    failures = failures + TestCreateBoundArguments(session, CREATE_BOUND_DATABASE)
+    failures = failures + TestCreateCopyDesignOnly(session, sourceDb, DESIGN_COPY_DATABASE)
+    failures = failures + TestCreateCopyWithDocuments(session, sourceDb, FULL_COPY_DATABASE)
+
+    If failures = 0 Then
+        Print "NOTES-DATABASE-LIFECYCLE=PASS"
+    Else
+        Print "NOTES-DATABASE-LIFECYCLE=FAIL COUNT=" & CStr(failures)
+    End If
+
+    Call sourceDb.Recycle()
+    Call session.Recycle()
+    Print "NOTES-DATABASE-LIFECYCLE-END"
+End Sub
+
+Function TestCreateExplicitArguments(ByVal session As Variant, ByVal path As String) As Integer
+    Dim db As New NotesDatabase("", "")
+    Dim reopened As NotesDatabase
+    Dim failures As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase.Create explicit server/file"
+    Call RemoveIfExists(session, path)
+
+    ' Same semantics as the HCL form:
+    ' Dim db As New NotesDatabase("", "")
+    ' Call db.Create("Zagreb", "inventry.nsf", True)
+    ' The runtime test uses the local server and a temporary NSF so it is self-contained.
+    Call db.Create("", path, True)
+
+    If Not db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL explicit Create openFlag=True did not open database"
+    Else
+        Print "PASS explicit Create openFlag=True"
+    End If
+
+    If db.Server <> "" Then
+        failures = failures + 1
+        Print "FAIL explicit Create Server=" & db.Server
+    End If
+    If db.FilePath <> path Then
+        failures = failures + 1
+        Print "FAIL explicit Create FilePath=" & db.FilePath
+    Else
+        Print "PASS explicit Create updates FilePath"
+    End If
+
+    Call db.Remove()
+    If db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL explicit Remove left database open"
+    Else
+        Print "PASS explicit Remove"
+    End If
+    Call db.Recycle()
+
+    Set reopened = session.OpenDatabase("", path)
+    If reopened.IsOpen Then
+        failures = failures + 1
+        Print "FAIL explicit Remove database still exists"
+    Else
+        Print "PASS explicit Remove database no longer exists"
+    End If
+    Call reopened.Recycle()
+
+    TestCreateExplicitArguments = failures
+End Function
+
+Function TestCreateBoundArguments(ByVal session As Variant, ByVal path As String) As Integer
+    Dim db As New NotesDatabase("", path)
+    Dim reopened As NotesDatabase
+    Dim failures As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase.Create constructor-bound server/file"
+    Call RemoveIfExists(session, path)
+
+    If db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL constructor-bound temporary database unexpectedly exists"
+    Else
+        Print "PASS constructor-bound database starts closed"
+        Call db.Create("", "", True)
+    End If
+
+    If Not db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL bound Create openFlag=True did not open database"
+    Else
+        Print "PASS bound Create reused constructor path"
+    End If
+    If db.FilePath <> path Then
+        failures = failures + 1
+        Print "FAIL bound Create FilePath=" & db.FilePath
+    End If
+
+    Call db.Remove()
+    Call db.Recycle()
+
+    Set reopened = session.OpenDatabase("", path)
+    If reopened.IsOpen Then
+        failures = failures + 1
+        Print "FAIL bound Remove database still exists"
+    Else
+        Print "PASS bound Remove database no longer exists"
+    End If
+    Call reopened.Recycle()
+
+    TestCreateBoundArguments = failures
+End Function
+
+Function TestCreateCopyDesignOnly(ByVal session As Variant, ByVal sourceDb As Variant, ByVal path As String) As Integer
+    Dim copyDb As NotesDatabase
+    Dim docs As NotesDocumentCollection
+    Dim failures As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase.CreateCopy design-only"
+    Call RemoveIfExists(session, path)
+
+    Set copyDb = sourceDb.CreateCopy("", path)
+    If copyDb Is Nothing Or Not copyDb.IsOpen Then
+        Print "FAIL CreateCopy design-only returned closed database"
+        TestCreateCopyDesignOnly = 1
+        Exit Function
+    End If
+
+    Set docs = copyDb.AllDocuments
+    If docs.Count <> 0 Then
+        failures = failures + 1
+        Print "FAIL CreateCopy default copied documents Count=" & CStr(docs.Count)
+    Else
+        Print "PASS CreateCopy default excludes documents"
+    End If
+    Call docs.Recycle()
+
+    Call copyDb.Remove()
+    Call copyDb.Recycle()
+    TestCreateCopyDesignOnly = failures
+End Function
+
+Function TestCreateCopyWithDocuments(ByVal session As Variant, ByVal sourceDb As Variant, ByVal path As String) As Integer
+    Dim copyDb As NotesDatabase
+    Dim sourceDocs As NotesDocumentCollection
+    Dim copyDocs As NotesDocumentCollection
+    Dim failures As Integer
+    Dim sourceCount As Integer
+    Dim copyCount As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase.CreateCopy includeDocuments=True"
+    Call RemoveIfExists(session, path)
+
+    Set sourceDocs = sourceDb.AllDocuments
+    sourceCount = sourceDocs.Count
+    Call sourceDocs.Recycle()
+
+    Set copyDb = sourceDb.CreateCopy("", path, 0, True)
+    If copyDb Is Nothing Or Not copyDb.IsOpen Then
+        Print "FAIL CreateCopy includeDocuments=True returned closed database"
+        TestCreateCopyWithDocuments = 1
+        Exit Function
+    End If
+
+    Set copyDocs = copyDb.AllDocuments
+    copyCount = copyDocs.Count
+    Call copyDocs.Recycle()
+
+    If copyCount <> sourceCount Then
+        failures = failures + 1
+        Print "FAIL CreateCopy includeDocuments=True source=" & CStr(sourceCount) & " copy=" & CStr(copyCount)
+    Else
+        Print "PASS CreateCopy includeDocuments=True Count=" & CStr(copyCount)
+    End If
+
+    Call copyDb.Remove()
+    Call copyDb.Recycle()
+    TestCreateCopyWithDocuments = failures
+End Function
+
+Sub RemoveIfExists(ByVal session As Variant, ByVal path As String)
+    Dim db As NotesDatabase
+    Dim errCode As Integer
+
+    Set db = session.OpenDatabase("", path)
+    If db Is Nothing Then Exit Sub
+    If Not db.IsOpen Then
+        Call db.Recycle()
+        Exit Sub
+    End If
+
+    errCode = 0
+    On Error Resume Next
+    Call db.Remove()
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then Print "INFO cleanup Remove Err=" & CStr(errCode) & " path=" & path
+    Call db.Recycle()
+End Sub

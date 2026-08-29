@@ -20,6 +20,13 @@ internal static class NotesDatabaseReplicaPostProcessor
 internal sealed partial class XPScriptNotesDatabase
 {
     public XPScriptNotesDatabase CreateCopy(object? serverValue, object? filePathValue)
+        => CreateCopy(serverValue, filePathValue, 0, false);
+
+    public XPScriptNotesDatabase CreateCopy(object? serverValue, object? filePathValue, object? maxSizeValue)
+        => CreateCopy(serverValue, filePathValue, maxSizeValue, false);
+
+    // XPscript extension: includeDocuments=True copies data notes as well as design notes.
+    public XPScriptNotesDatabase CreateCopy(object? serverValue, object? filePathValue, object? maxSizeValue, object? includeDocumentsValue)
     {
         EnsureAlive();
         if (!IsOpen)
@@ -30,7 +37,9 @@ internal sealed partial class XPScriptNotesDatabase
         if (filePath.Length == 0)
             throw new XPScriptRuntimeException(5, "CreateCopy destination file path cannot be empty.");
 
-        var handle = Session.Api.CreateDatabaseCopy(Server, FilePath, server, filePath);
+        ValidateLegacyMaxSize(maxSizeValue);
+        var includeDocuments = XPScriptRuntime.CBool(includeDocumentsValue);
+        var handle = Session.Api.CreateDatabaseCopy(Server, FilePath, server, filePath, includeDocuments);
         return new XPScriptNotesDatabase(Session, handle, server, filePath);
     }
 

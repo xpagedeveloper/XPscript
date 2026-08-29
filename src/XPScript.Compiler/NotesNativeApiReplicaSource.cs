@@ -6,6 +6,7 @@ internal static class NotesNativeApiReplicaSource
 internal sealed partial class XPScriptNotesNativeApi
 {
     private const ushort NoteClassAll = 0x7fff;
+    private const ushort NoteClassAllNonData = 0x7ffe;
 
     internal void SetDatabaseReplicaId(nint db, string replicaId)
     {
@@ -28,6 +29,9 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     internal uint CreateDatabaseCopy(string sourceServer, string sourceFile, string destinationServer, string destinationFile)
+        => CreateDatabaseCopy(sourceServer, sourceFile, destinationServer, destinationFile, false);
+
+    internal uint CreateDatabaseCopy(string sourceServer, string sourceFile, string destinationServer, string destinationFile, bool includeDocuments)
     {
         EnsureInitialized();
         using var sourceFileText = ToLmbcs(sourceFile);
@@ -59,8 +63,9 @@ internal sealed partial class XPScriptNotesNativeApi
                 destinationPath = destinationNetworkPath;
             }
 
+            var noteClass = includeDocuments ? NoteClassAll : NoteClassAllNonData;
             Check(Resolve<NSFDbCreateAndCopyDelegate>("NSFDbCreateAndCopy")(
-                sourcePath, destinationPath, NoteClassAll, 0, 0, out var newDb), "NSFDbCreateAndCopy");
+                sourcePath, destinationPath, noteClass, 0, 0, out var newDb), "NSFDbCreateAndCopy");
             return newDb;
         }
         finally
