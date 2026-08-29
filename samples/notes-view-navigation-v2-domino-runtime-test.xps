@@ -1,0 +1,112 @@
+' NotesView navigation V2 hierarchy regression.
+' Requires samples/xpscript-notes-runtime-fixture.dxl imported into xpscript.nsf.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const DATABASE_PATH = "xpscript.nsf"
+    Const VIEW_NAME = "XPScriptHierarchyView"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim nav As Variant
+    Dim category As Variant
+    Dim child As Variant
+    Dim sibling As Variant
+    Dim parent As Variant
+    Dim nextCategory As Variant
+    Dim subset As Variant
+    Dim posEntry As Variant
+    Dim failures As Integer
+
+    failures = 0
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    Set view = db.GetView(VIEW_NAME)
+
+    If view Is Nothing Then
+        Print "FAIL hierarchy view missing"
+        Exit Sub
+    End If
+
+    nav = view.CreateViewNav()
+    nav.CacheSize = 16
+    If nav.CacheSize <> 16 Then failures = failures + 1
+    If nav.Count < 5 Then failures = failures + 1
+
+    category = nav.GetFirst()
+    If category Is Nothing Then
+        failures = failures + 1
+    Else
+        If Not category.IsCategory Then failures = failures + 1
+        If category.ChildCount < 2 Then failures = failures + 1
+        If category.DescendantCount < 2 Then failures = failures + 1
+        If category.SiblingCount < 2 Then failures = failures + 1
+        If category.ColumnIndentLevel <> category.IndentLevel Then failures = failures + 1
+
+        child = nav.GetChild(category)
+        If child Is Nothing Then
+            failures = failures + 1
+        Else
+            If Not child.IsDocument Then failures = failures + 1
+            parent = nav.GetParent(child)
+            If parent Is Nothing Then failures = failures + 1
+            If Not parent Is Nothing Then
+                If parent.GetPosition() <> category.GetPosition() Then failures = failures + 1
+                Call parent.Recycle()
+            End If
+
+            sibling = nav.GetNextSibling(child)
+            If sibling Is Nothing Then failures = failures + 1
+            If Not sibling Is Nothing Then Call sibling.Recycle()
+
+            posEntry = nav.GetPos(child.GetPosition(), ".")
+            If posEntry Is Nothing Then failures = failures + 1
+            If Not posEntry Is Nothing Then Call posEntry.Recycle()
+            Call child.Recycle()
+        End If
+
+        nextCategory = nav.GetNextCategory(category)
+        If nextCategory Is Nothing Then failures = failures + 1
+        If Not nextCategory Is Nothing Then Call nextCategory.Recycle()
+
+        subset = view.CreateViewNavFromChildren(category)
+        If subset.Count <> category.ChildCount Then failures = failures + 1
+        Call subset.Recycle()
+
+        subset = view.CreateViewNavFromDescendants(category)
+        If subset.Count <> category.DescendantCount Then failures = failures + 1
+        Call subset.Recycle()
+
+        subset = view.CreateViewNavFromCategory("Group A")
+        If subset.Count < 3 Then failures = failures + 1
+        Call subset.Recycle()
+
+        Call category.Recycle()
+    End If
+
+    nav.MaxLevel = 0
+    If nav.Count < 2 Then failures = failures + 1
+    If nav.Count > 3 Then failures = failures + 1
+
+    posEntry = nav.GetNth(1)
+    If posEntry Is Nothing Then failures = failures + 1
+    If Not posEntry Is Nothing Then
+        Call nav.GotoEntry(posEntry)
+        Call nav.GotoNext(posEntry)
+        Call posEntry.Recycle()
+    End If
+
+    Call nav.Recycle()
+    Call view.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+
+    If failures = 0 Then
+        Print "NOTES-VIEW-NAVIGATION-V2=PASS"
+    Else
+        Print "NOTES-VIEW-NAVIGATION-V2=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub
