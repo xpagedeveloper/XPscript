@@ -76,6 +76,22 @@ jobs:
       - name: Build compiler
         run: dotnet build ./XPScriptCompiler.slnx -c Release --no-restore
 
+      - name: Compile Notes ComputeWithForm regression samples
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/required-gate/notes | Out-Null
+          $samples = @(
+            'samples/notes-document-lotusscript-surface.xps',
+            'samples/notes-computewithform-domino-runtime-test.xps'
+          )
+          foreach ($sample in $samples) {
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($sample)
+            $output = "./out/required-gate/notes/$name"
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "./$sample" -o $output --framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "Notes ComputeWithForm regression sample failed to compile: $sample" }
+          }
+          Write-Host 'NOTES-COMPUTEWITHFORM-COMPILE=OK'
+
       - name: Compile runnable demo programs
         shell: pwsh
         run: |
