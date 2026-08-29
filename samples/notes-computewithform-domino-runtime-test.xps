@@ -65,11 +65,11 @@ Sub Main()
     Print "DATABASE=" & db.FilePath
     Print "NOTES_VERSION=" & session.NotesVersion
 
-    Call TestRaiseErrorFalse(db, ERROR_FORM, failures)
-    Call TestNoErrorsRaiseErrorTrue(db, VALID_FORM, failures)
-    Call TestMultipleErrorsAndDedup(db, ERROR_FORM, failures)
-    Call TestArrayAssignedBeforeRaise(db, ERROR_FORM, failures)
-    Call TestDoDataTypesIgnored(db, VALID_FORM, failures)
+    failures = failures + TestRaiseErrorFalse(db, ERROR_FORM)
+    failures = failures + TestNoErrorsRaiseErrorTrue(db, VALID_FORM)
+    failures = failures + TestMultipleErrorsAndDedup(db, ERROR_FORM)
+    failures = failures + TestArrayAssignedBeforeRaise(db, ERROR_FORM)
+    failures = failures + TestDoDataTypesIgnored(db, VALID_FORM)
 
     If failures = 0 Then
         Print "COMPUTEWITHFORM-RUNTIME=PASS"
@@ -81,11 +81,13 @@ Sub Main()
     Call session.Recycle()
 End Sub
 
-Sub TestRaiseErrorFalse(db As Variant, formName As String, failures As Integer)
+Function TestRaiseErrorFalse(ByVal db As Variant, ByVal formName As String) As Integer
     Dim doc As NotesDocument
     Dim failedFields As Variant
     Dim ok As Boolean
+    Dim failures As Integer
 
+    failures = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
 
@@ -93,137 +95,166 @@ Sub TestRaiseErrorFalse(db As Variant, formName As String, failures As Integer)
     ok = doc.ComputeWithForm(False, False, failedFields)
 
     If ok Then
-        Call Fail(failures, "raiseError=False expected validation failure")
+        failures = failures + 1
+        Print "FAIL raiseError=False expected validation failure"
     ElseIf failedFields Is Nothing Then
-        Call Pass("raiseError=False leaves failedFields Nothing")
+        Print "PASS raiseError=False leaves failedFields Nothing"
     Else
-        Call Fail(failures, "raiseError=False did not leave failedFields Nothing")
+        failures = failures + 1
+        Print "FAIL raiseError=False did not leave failedFields Nothing"
     End If
 
     Call doc.Recycle()
-End Sub
+    TestRaiseErrorFalse = failures
+End Function
 
-Sub TestNoErrorsRaiseErrorTrue(db As Variant, formName As String, failures As Integer)
+Function TestNoErrorsRaiseErrorTrue(ByVal db As Variant, ByVal formName As String) As Integer
     Dim doc As NotesDocument
     Dim failedFields As Variant
     Dim ok As Boolean
+    Dim failures As Integer
+    Dim errCode As Integer
 
+    failures = 0
+    errCode = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
 
     failedFields = "SENTINEL"
+    On Error Resume Next
     ok = doc.ComputeWithForm(False, True, failedFields)
+    errCode = Err
+    On Error GoTo 0
 
-    If Not ok Then
-        Call Fail(failures, "valid form returned False")
+    If errCode <> 0 Then
+        failures = failures + 1
+        Print "FAIL valid form raised error " & CStr(errCode)
+    ElseIf Not ok Then
+        failures = failures + 1
+        Print "FAIL valid form returned False"
     ElseIf failedFields Is Nothing Then
-        Call Pass("raiseError=True with no errors leaves failedFields Nothing")
+        Print "PASS raiseError=True with no errors leaves failedFields Nothing"
     Else
-        Call Fail(failures, "valid form did not leave failedFields Nothing")
+        failures = failures + 1
+        Print "FAIL valid form did not leave failedFields Nothing"
     End If
 
     Call doc.Recycle()
-End Sub
+    TestNoErrorsRaiseErrorTrue = failures
+End Function
 
-Sub TestMultipleErrorsAndDedup(db As Variant, formName As String, failures As Integer)
+Function TestMultipleErrorsAndDedup(ByVal db As Variant, ByVal formName As String) As Integer
     Dim doc As NotesDocument
     Dim failedFields As Variant
-    Dim caught As Boolean
+    Dim errCode As Integer
     Dim i As Integer
-    Dim j As Integer
     Dim count As Integer
-    Dim hasOne As Boolean
-    Dim hasTwo As Boolean
-    Dim duplicate As Boolean
+    Dim countOne As Integer
+    Dim countTwo As Integer
+    Dim failures As Integer
+
+    failures = 0
+    errCode = 0
+    count = 0
+    countOne = 0
+    countTwo = 0
 
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
+    failedFields = "SENTINEL"
 
-    caught = False
-
-    On Error GoTo ValidationError
+    On Error Resume Next
     Call doc.ComputeWithForm(False, True, failedFields)
+    errCode = Err
     On Error GoTo 0
 
-    Call Fail(failures, "raiseError=True did not raise for invalid form")
-    Call doc.Recycle()
-    Exit Sub
-
-ValidationError:
-    caught = True
-    On Error GoTo 0
+    If errCode = 0 Then
+        failures = failures + 1
+        Print "FAIL raiseError=True did not raise for invalid form"
+    End If
 
     If failedFields Is Nothing Then
-        Call Fail(failures, "failedFields is Nothing after validation error")
-        Call doc.Recycle()
-        Exit Sub
-    End If
-
-    count = UBound(failedFields) - LBound(failedFields) + 1
-    If count < 2 Then
-        Call Fail(failures, "expected at least two failed field names")
-    End If
-
-    For i = LBound(failedFields) To UBound(failedFields)
-        Print "FAILED-FIELD=" & CStr(failedFields(i))
-        If CStr(failedFields(i)) = "CWFErrorOne" Then hasOne = True
-        If CStr(failedFields(i)) = "CWFErrorTwo" Then hasTwo = True
-
-        For j = i + 1 To UBound(failedFields)
-            If CStr(failedFields(i)) = CStr(failedFields(j)) Then duplicate = True
-        Next
-    Next
-
-    If Not hasOne Then Call Fail(failures, "CWFErrorOne missing from failedFields")
-    If Not hasTwo Then Call Fail(failures, "CWFErrorTwo missing from failedFields")
-    If duplicate Then
-        Call Fail(failures, "failedFields contains duplicate field names")
+        failures = failures + 1
+        Print "FAIL failedFields is Nothing after validation error"
     Else
-        Call Pass("failedFields contains unique field names")
-    End If
+        count = UBound(failedFields) - LBound(failedFields) + 1
+        For i = LBound(failedFields) To UBound(failedFields)
+            Print "FAILED-FIELD=" & CStr(failedFields(i))
+            If CStr(failedFields(i)) = "CWFErrorOne" Then countOne = countOne + 1
+            If CStr(failedFields(i)) = "CWFErrorTwo" Then countTwo = countTwo + 1
+        Next
 
-    If caught And hasOne And hasTwo And count >= 2 Then
-        Call Pass("raiseError=True returns multiple failed fields")
+        If count < 2 Then
+            failures = failures + 1
+            Print "FAIL expected at least two failed field names"
+        End If
+        If countOne = 0 Then
+            failures = failures + 1
+            Print "FAIL CWFErrorOne missing from failedFields"
+        End If
+        If countTwo = 0 Then
+            failures = failures + 1
+            Print "FAIL CWFErrorTwo missing from failedFields"
+        End If
+        If countOne > 1 Or countTwo > 1 Then
+            failures = failures + 1
+            Print "FAIL failedFields contains duplicate field names"
+        Else
+            Print "PASS failedFields contains unique field names"
+        End If
+        If countOne = 1 And countTwo = 1 And count >= 2 Then
+            Print "PASS raiseError=True returns multiple failed fields"
+        End If
     End If
 
     Call doc.Recycle()
-End Sub
+    TestMultipleErrorsAndDedup = failures
+End Function
 
-Sub TestArrayAssignedBeforeRaise(db As Variant, formName As String, failures As Integer)
+Function TestArrayAssignedBeforeRaise(ByVal db As Variant, ByVal formName As String) As Integer
     Dim doc As NotesDocument
     Dim failedFields As Variant
+    Dim errCode As Integer
+    Dim failures As Integer
 
+    failures = 0
+    errCode = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
+    failedFields = "SENTINEL"
 
-    On Error GoTo ValidationError
+    On Error Resume Next
     Call doc.ComputeWithForm(False, True, failedFields)
+    errCode = Err
     On Error GoTo 0
 
-    Call Fail(failures, "pre-raise test did not raise")
-    Call doc.Recycle()
-    Exit Sub
-
-ValidationError:
-    On Error GoTo 0
-    If failedFields Is Nothing Then
-        Call Fail(failures, "failedFields was not assigned before error was raised")
+    If errCode = 0 Then
+        failures = failures + 1
+        Print "FAIL pre-raise test did not raise"
+    ElseIf failedFields Is Nothing Then
+        failures = failures + 1
+        Print "FAIL failedFields was Nothing after raised validation error"
     ElseIf UBound(failedFields) >= LBound(failedFields) Then
-        Call Pass("failedFields assigned before raised validation error")
+        Print "PASS failedFields assigned before raised validation error"
     Else
-        Call Fail(failures, "failedFields array is empty in error handler")
+        failures = failures + 1
+        Print "FAIL failedFields array is empty after raised validation error"
     End If
 
     Call doc.Recycle()
-End Sub
+    TestArrayAssignedBeforeRaise = failures
+End Function
 
-Sub TestDoDataTypesIgnored(db As Variant, formName As String, failures As Integer)
+Function TestDoDataTypesIgnored(ByVal db As Variant, ByVal formName As String) As Integer
     Dim docFalse As NotesDocument
     Dim docTrue As NotesDocument
     Dim okFalse As Boolean
     Dim okTrue As Boolean
     Dim valueFalse As String
     Dim valueTrue As String
+    Dim failures As Integer
+
+    failures = 0
 
     Set docFalse = db.CreateDocument()
     Call docFalse.ReplaceItemValue("Form", formName)
@@ -236,24 +267,19 @@ Sub TestDoDataTypesIgnored(db As Variant, formName As String, failures As Intege
     valueTrue = docTrue.GetString("CWFDefault")
 
     If okFalse <> okTrue Then
-        Call Fail(failures, "doDataTypes changed ComputeWithForm return value")
+        failures = failures + 1
+        Print "FAIL doDataTypes changed ComputeWithForm return value"
     ElseIf valueFalse <> valueTrue Then
-        Call Fail(failures, "doDataTypes changed default-formula result")
+        failures = failures + 1
+        Print "FAIL doDataTypes changed default-formula result"
     ElseIf valueFalse <> "DEFAULT-VALUE" Then
-        Call Fail(failures, "valid form default formula did not execute")
+        failures = failures + 1
+        Print "FAIL valid form default formula did not execute"
     Else
-        Call Pass("doDataTypes=True and False have identical behavior")
+        Print "PASS doDataTypes=True and False have identical behavior"
     End If
 
     Call docTrue.Recycle()
     Call docFalse.Recycle()
-End Sub
-
-Sub Pass(message As String)
-    Print "PASS " & message
-End Sub
-
-Sub Fail(failures As Integer, message As String)
-    failures = failures + 1
-    Print "FAIL " & message
-End Sub
+    TestDoDataTypesIgnored = failures
+End Function
