@@ -1,0 +1,148 @@
+' NotesView navigation V1 runtime regression.
+' Requires samples/xpscript-notes-runtime-fixture.dxl imported into xpscript.nsf.
+' Navigation reads row metadata only. ColumnValues is loaded lazily from the row position.
+
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const DATABASE_PATH = "xpscript.nsf"
+    Const VIEW_NAME = "XPScriptTestView"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim nav As Variant
+    Dim entries As Variant
+    Dim entry As Variant
+    Dim nextEntry As Variant
+    Dim doc As NotesDocument
+    Dim directDoc As NotesDocument
+    Dim values As Variant
+    Dim docValues As Variant
+    Dim directValues As Variant
+    Dim value As Variant
+    Dim valueCount As Integer
+    Dim docValueCount As Integer
+    Dim directValueCount As Integer
+    Dim failures As Integer
+
+    failures = 0
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    Set view = db.GetView(VIEW_NAME)
+
+    If view Is Nothing Then
+        Print "FAIL fixture view missing"
+        Exit Sub
+    End If
+
+    Set entries = view.AllEntries
+    If entries.Count < 2 Then
+        failures = failures + 1
+        Print "FAIL AllEntries count"
+    Else
+        Print "PASS AllEntries Count=" & CStr(entries.Count)
+    End If
+
+    Set entry = entries.GetFirstEntry()
+    If entry Is Nothing Then
+        failures = failures + 1
+        Print "FAIL GetFirstEntry"
+    Else
+        If Not entry.IsDocument Then failures = failures + 1
+        If entry.IsCategory Then failures = failures + 1
+        If entry.IsTotal Then failures = failures + 1
+        If Not entry.IsValid Then failures = failures + 1
+        If entry.NoteID = "" Then failures = failures + 1
+        If entry.UniversalID = "" Then failures = failures + 1
+        If entry.GetPosition() = "" Then failures = failures + 1
+        Print "FirstEntry Position=" & entry.GetPosition() & " NoteID=" & entry.NoteID
+        Print "FirstEntry PositionSlash=" & entry.GetPosition("/")
+
+        values = entry.ColumnValues
+        valueCount = 0
+        For Each value In values
+            valueCount = valueCount + 1
+        Next
+        If valueCount < 1 Then
+            failures = failures + 1
+            Print "FAIL entry.ColumnValues empty"
+        Else
+            Print "PASS entry.ColumnValues Count=" & CStr(valueCount)
+        End If
+
+        Set doc = entry.Document
+        If doc Is Nothing Then
+            failures = failures + 1
+            Print "FAIL entry.Document"
+        Else
+            docValues = doc.ColumnValues
+            docValueCount = 0
+            For Each value In docValues
+                docValueCount = docValueCount + 1
+            Next
+            If docValueCount <> valueCount Then
+                failures = failures + 1
+                Print "FAIL shared row ColumnValues count"
+            Else
+                Print "PASS shared row ColumnValues"
+            End If
+
+            Set directDoc = db.GetDocumentByID(doc.NoteID)
+            directValues = directDoc.ColumnValues
+            directValueCount = 0
+            For Each value In directValues
+                directValueCount = directValueCount + 1
+            Next
+            If directValueCount <> 0 Then
+                failures = failures + 1
+                Print "FAIL direct document ColumnValues should be empty"
+            Else
+                Print "PASS direct document ColumnValues empty"
+            End If
+            Call directDoc.Recycle()
+        End If
+
+        Set nextEntry = entries.GetNextEntry(entry)
+        If nextEntry Is Nothing Then failures = failures + 1 Else Call nextEntry.Recycle()
+        If entries.GetEntry(doc) Is Nothing Then failures = failures + 1
+        If Not entries.Contains(doc) Then failures = failures + 1
+        Call entry.Recycle()
+    End If
+
+    Set nav = view.CreateViewNav()
+    If nav.Count < entries.Count Then failures = failures + 1
+    Set entry = nav.GetFirst()
+    If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
+    Set entry = nav.GetLast()
+    If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
+    Set entry = nav.GetFirstDocument()
+    If entry Is Nothing Then
+        failures = failures + 1
+    Else
+        If nav.GetCurrent() Is Nothing Then failures = failures + 1
+        If nav.GetEntry(entry.Document) Is Nothing Then failures = failures + 1
+        Set nextEntry = nav.GetNextDocument()
+        If nextEntry Is Not Nothing Then Call nextEntry.Recycle()
+        Call entry.Recycle()
+    End If
+
+    Set entry = view.GetEntryByKey("Alpha")
+    If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
+    Set entries = view.GetAllEntriesByKey("Alpha")
+    If entries.Count < 1 Then failures = failures + 1
+    Call entries.Recycle()
+
+    If Not doc Is Nothing Then Call doc.Recycle()
+    Call nav.Recycle()
+    Call view.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+
+    If failures = 0 Then
+        Print "NOTES-VIEW-NAVIGATION-V1=PASS"
+    Else
+        Print "NOTES-VIEW-NAVIGATION-V1=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub
