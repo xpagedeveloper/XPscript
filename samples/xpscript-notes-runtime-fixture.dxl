@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<database xmlns="http://www.lotus.com/dxl" version="14.5" replicaid="0000000000000000" path="xpscript.nsf" title="XPscript Notes Runtime Test">
+<database xmlns="http://www.lotus.com/dxl" version="14.5">
   <form name="XPScriptTest" publicaccess="false" designerversion="14.5">
     <body>
       <richtext>
@@ -52,8 +52,7 @@
   </view>
 
   <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5">
-    <trigger type="manual"/>
-    <documentset type="none"/>
+    <trigger type="agentlist"/>
     <code event="action">
       <lotusscript><![CDATA[Option Public
 Option Declare
