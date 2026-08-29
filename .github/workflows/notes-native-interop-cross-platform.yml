@@ -10,10 +10,13 @@ on:
       - 'src/XPScript.Compiler/NotesViewColumnNamesPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationV2PostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesViewNavigationV2FixPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs'
       - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
       - 'samples/notes-view-columnnames-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v1-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v2-domino-runtime-test.xps'
+      - 'samples/notes-view-navigation-v3-domino-runtime-test.xps'
       - 'tests/NativeInteropSmoke/**'
       - 'docs/notes-c-api.md'
       - 'docs/notes-cross-platform-testing.md'
@@ -71,5 +74,13 @@ jobs:
             samples/notes-view-navigation-v2-domino-runtime-test.xps \
             --framework-dependent \
             -o artifacts/notes-view-navigation-v2/notes-view-navigation-v2
+      - name: Compile NotesView navigation V3 regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-navigation-v3
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
+            samples/notes-view-navigation-v3-domino-runtime-test.xps \
+            --framework-dependent \
+            -o artifacts/notes-view-navigation-v3/notes-view-navigation-v3
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
