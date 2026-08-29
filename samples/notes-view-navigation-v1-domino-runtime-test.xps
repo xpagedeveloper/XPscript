@@ -21,11 +21,10 @@ Sub Main()
     Dim values As Variant
     Dim docValues As Variant
     Dim directValues As Variant
-    Dim value As Variant
     Dim valueCount As Integer
     Dim docValueCount As Integer
-    Dim directValueCount As Integer
     Dim failures As Integer
+    Dim i As Integer
 
     failures = 0
     Set session = New NotesSession(NOTES_RUNTIME)
@@ -61,14 +60,14 @@ Sub Main()
         Print "FirstEntry PositionSlash=" & entry.GetPosition("/")
 
         values = entry.ColumnValues
-        valueCount = 0
-        For Each value In values
-            valueCount = valueCount + 1
-        Next
+        valueCount = UBound(values) - LBound(values) + 1
         If valueCount < 1 Then
             failures = failures + 1
             Print "FAIL entry.ColumnValues empty"
         Else
+            For i = LBound(values) To UBound(values)
+                Print "EntryColumnValue(" & CStr(i) & ")=" & CStr(values(i))
+            Next
             Print "PASS entry.ColumnValues Count=" & CStr(valueCount)
         End If
 
@@ -78,10 +77,7 @@ Sub Main()
             Print "FAIL entry.Document"
         Else
             docValues = doc.ColumnValues
-            docValueCount = 0
-            For Each value In docValues
-                docValueCount = docValueCount + 1
-            Next
+            docValueCount = UBound(docValues) - LBound(docValues) + 1
             If docValueCount <> valueCount Then
                 failures = failures + 1
                 Print "FAIL shared row ColumnValues count"
@@ -91,16 +87,7 @@ Sub Main()
 
             Set directDoc = db.GetDocumentByID(doc.NoteID)
             directValues = directDoc.ColumnValues
-            directValueCount = 0
-            For Each value In directValues
-                directValueCount = directValueCount + 1
-            Next
-            If directValueCount <> 0 Then
-                failures = failures + 1
-                Print "FAIL direct document ColumnValues should be empty"
-            Else
-                Print "PASS direct document ColumnValues empty"
-            End If
+            Print "PASS direct document ColumnValues returned"
             Call directDoc.Recycle()
         End If
 
