@@ -26,12 +26,6 @@ internal static class NotesDatabaseCreateCompatibilityPostProcessor
 
         source = ReplaceRequired(
             source,
-            "        var handle = Session.Api.CreateDatabaseCopy(Server, FilePath, server, file, includeDocuments);",
-            "        var handle = Session.Api.CreateDatabaseCopy(_server, _filePath, server, file, includeDocuments);",
-            "database-copy-location-state");
-
-        source = ReplaceRequired(
-            source,
             "        var server = Server;\n        var file = FilePath;",
             "        var server = _server;\n        var file = _filePath;",
             "database-remove-location-state");
