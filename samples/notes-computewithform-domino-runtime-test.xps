@@ -81,7 +81,7 @@ Sub Main()
     Call session.Recycle()
 End Sub
 
-Sub TestRaiseErrorFalse(db As NotesDatabase, formName As String, failures As Integer)
+Sub TestRaiseErrorFalse(db As Variant, formName As String, failures As Integer)
     Dim doc As NotesDocument
     Dim failedFields As Variant
     Dim ok As Boolean
@@ -103,7 +103,7 @@ Sub TestRaiseErrorFalse(db As NotesDatabase, formName As String, failures As Int
     Call doc.Recycle()
 End Sub
 
-Sub TestNoErrorsRaiseErrorTrue(db As NotesDatabase, formName As String, failures As Integer)
+Sub TestNoErrorsRaiseErrorTrue(db As Variant, formName As String, failures As Integer)
     Dim doc As NotesDocument
     Dim failedFields As Variant
     Dim ok As Boolean
@@ -125,7 +125,7 @@ Sub TestNoErrorsRaiseErrorTrue(db As NotesDatabase, formName As String, failures
     Call doc.Recycle()
 End Sub
 
-Sub TestMultipleErrorsAndDedup(db As NotesDatabase, formName As String, failures As Integer)
+Sub TestMultipleErrorsAndDedup(db As Variant, formName As String, failures As Integer)
     Dim doc As NotesDocument
     Dim failedFields As Variant
     Dim caught As Boolean
@@ -189,7 +189,7 @@ ValidationError:
     Call doc.Recycle()
 End Sub
 
-Sub TestArrayAssignedBeforeRaise(db As NotesDatabase, formName As String, failures As Integer)
+Sub TestArrayAssignedBeforeRaise(db As Variant, formName As String, failures As Integer)
     Dim doc As NotesDocument
     Dim failedFields As Variant
 
@@ -217,7 +217,7 @@ ValidationError:
     Call doc.Recycle()
 End Sub
 
-Sub TestDoDataTypesIgnored(db As NotesDatabase, formName As String, failures As Integer)
+Sub TestDoDataTypesIgnored(db As Variant, formName As String, failures As Integer)
     Dim docFalse As NotesDocument
     Dim docTrue As NotesDocument
     Dim okFalse As Boolean
