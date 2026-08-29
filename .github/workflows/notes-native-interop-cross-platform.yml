@@ -12,6 +12,7 @@ on:
       - 'src/XPScript.Compiler/NotesViewNavigationV2PostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationV2FixPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesViewNavigationV3FixPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
       - 'samples/notes-view-columnnames-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v1-domino-runtime-test.xps'
