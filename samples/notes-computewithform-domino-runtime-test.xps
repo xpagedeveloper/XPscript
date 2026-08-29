@@ -140,7 +140,6 @@ Sub TestMultipleErrorsAndDedup(db As NotesDatabase, formName As String, failures
     Call doc.ReplaceItemValue("Form", formName)
 
     caught = False
-    failedFields = Nothing
 
     On Error GoTo ValidationError
     Call doc.ComputeWithForm(False, True, failedFields)
@@ -196,7 +195,6 @@ Sub TestArrayAssignedBeforeRaise(db As NotesDatabase, formName As String, failur
 
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
-    failedFields = Nothing
 
     On Error GoTo ValidationError
     Call doc.ComputeWithForm(False, True, failedFields)
