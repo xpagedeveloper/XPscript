@@ -10,6 +10,7 @@ Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDa
     Dim copied As NotesDocument
     Dim copiedItem As NotesItem
     Dim allItems As Variant
+    Dim computeErrors As Variant
 
     n = doc.Size
     Set responses = doc.Responses
@@ -23,6 +24,9 @@ Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDa
     b = doc.IsResponse
     b = doc.IsDeleted
     Set dt = doc.Created
+
+    b = doc.ComputeWithForm(False, False)
+    b = doc.ComputeWithForm(False, True, computeErrors)
 
     Call doc.RemoveItem("TemporaryField")
     Call doc.PutInFolder("XPscript Test")
