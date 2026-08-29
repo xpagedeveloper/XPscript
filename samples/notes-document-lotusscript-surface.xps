@@ -1,6 +1,9 @@
 ' Compile-time smoke for the LotusScript-compatible NotesDocument surface.
 Option Declare
 
+Sub Main()
+End Sub
+
 Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDatabase, item As NotesItem)
     Dim n As Long
     Dim s As String
