@@ -12,10 +12,12 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim view As NotesView
-    Dim nav As Variant
-    Dim entries As Variant
-    Dim entry As Variant
-    Dim nextEntry As Variant
+    Dim nav As NotesViewNavigator
+    Dim entries As NotesViewEntryCollection
+    Dim keyEntries As NotesViewEntryCollection
+    Dim entry As NotesViewEntry
+    Dim nextEntry As NotesViewEntry
+    Dim lookupEntry As NotesViewEntry
     Dim doc As NotesDocument
     Dim directDoc As NotesDocument
     Dim values As Variant
@@ -93,7 +95,8 @@ Sub Main()
 
         Set nextEntry = entries.GetNextEntry(entry)
         If nextEntry Is Nothing Then failures = failures + 1 Else Call nextEntry.Recycle()
-        If entries.GetEntry(doc) Is Nothing Then failures = failures + 1
+        Set lookupEntry = entries.GetEntry(doc)
+        If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
         If Not entries.Contains(doc) Then failures = failures + 1
         Call entry.Recycle()
     End If
@@ -108,8 +111,10 @@ Sub Main()
     If entry Is Nothing Then
         failures = failures + 1
     Else
-        If nav.GetCurrent() Is Nothing Then failures = failures + 1
-        If nav.GetEntry(entry.Document) Is Nothing Then failures = failures + 1
+        Set lookupEntry = nav.GetCurrent()
+        If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
+        Set lookupEntry = nav.GetEntry(entry.Document)
+        If lookupEntry Is Nothing Then failures = failures + 1 Else Call lookupEntry.Recycle()
         Set nextEntry = nav.GetNextDocument()
         If nextEntry Is Not Nothing Then Call nextEntry.Recycle()
         Call entry.Recycle()
@@ -117,11 +122,12 @@ Sub Main()
 
     Set entry = view.GetEntryByKey("Alpha")
     If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
-    Set entries = view.GetAllEntriesByKey("Alpha")
-    If entries.Count < 1 Then failures = failures + 1
-    Call entries.Recycle()
+    Set keyEntries = view.GetAllEntriesByKey("Alpha")
+    If keyEntries.Count < 1 Then failures = failures + 1
+    Call keyEntries.Recycle()
 
     If Not doc Is Nothing Then Call doc.Recycle()
+    Call entries.Recycle()
     Call nav.Recycle()
     Call view.Recycle()
     Call db.Recycle()
