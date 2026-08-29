@@ -6,9 +6,12 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesViewColumnNamesPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesViewNavigationPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
       - 'samples/notes-view-columnnames-domino-runtime-test.xps'
+      - 'samples/notes-view-navigation-v1-domino-runtime-test.xps'
       - 'tests/NativeInteropSmoke/**'
       - 'docs/notes-c-api.md'
       - 'docs/notes-cross-platform-testing.md'
@@ -34,17 +37,29 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
-      - name: Compile generated Notes runtime
+      - name: Compile Notes C API surface
         shell: bash
         run: |
-          mkdir -p artifacts/notes-thread-probe artifacts/notes-view-columnnames
+          mkdir -p artifacts/notes-thread-probe
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-c-api-surface.xps \
             --framework-dependent \
             -o artifacts/notes-thread-probe/notes-thread-probe
+      - name: Compile NotesView ColumnNames regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-columnnames
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-view-columnnames-domino-runtime-test.xps \
             --framework-dependent \
             -o artifacts/notes-view-columnnames/notes-view-columnnames
+      - name: Compile NotesView navigation V1 regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-navigation-v1
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
+            samples/notes-view-navigation-v1-domino-runtime-test.xps \
+            --framework-dependent \
+            -o artifacts/notes-view-navigation-v1/notes-view-navigation-v1
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
