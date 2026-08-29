@@ -4,6 +4,13 @@
 ' This script ONLY creates/removes the temporary databases named below.
 ' It never calls Remove on xpscript.nsf.
 '
+' Supported HCL Create patterns:
+'   Dim db As New NotesDatabase("", "")
+'   Call db.Create("server", "database.nsf", True)
+'
+'   Dim db As New NotesDatabase("", "database.nsf")
+'   If Not db.IsOpen Then Call db.Create("", "", True)
+'
 ' XPscript extension:
 '   CreateCopy(server, dbfile, maxsize, includeDocuments)
 ' includeDocuments defaults to False through the standard 2/3 argument overloads.
@@ -14,7 +21,8 @@ Sub Main()
     Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
     Const NOTES_INI = ""
     Const SOURCE_DATABASE = "xpscript.nsf"
-    Const CREATE_DATABASE = "xpscript-create-runtime-test.nsf"
+    Const CREATE_EXPLICIT_DATABASE = "xpscript-create-explicit-runtime-test.nsf"
+    Const CREATE_BOUND_DATABASE = "xpscript-create-bound-runtime-test.nsf"
     Const DESIGN_COPY_DATABASE = "xpscript-design-copy-runtime-test.nsf"
     Const FULL_COPY_DATABASE = "xpscript-full-copy-runtime-test.nsf"
 
@@ -39,7 +47,8 @@ Sub Main()
     End If
 
     Print "NOTES-DATABASE-LIFECYCLE-BEGIN"
-    failures = failures + TestCreate(session, CREATE_DATABASE)
+    failures = failures + TestCreateExplicitArguments(session, CREATE_EXPLICIT_DATABASE)
+    failures = failures + TestCreateBoundArguments(session, CREATE_BOUND_DATABASE)
     failures = failures + TestCreateCopyDesignOnly(session, sourceDb, DESIGN_COPY_DATABASE)
     failures = failures + TestCreateCopyWithDocuments(session, sourceDb, FULL_COPY_DATABASE)
 
@@ -54,49 +63,101 @@ Sub Main()
     Print "NOTES-DATABASE-LIFECYCLE-END"
 End Sub
 
-Function TestCreate(ByVal session As Variant, ByVal path As String) As Integer
-    Dim db As NotesDatabase
+Function TestCreateExplicitArguments(ByVal session As Variant, ByVal path As String) As Integer
+    Dim db As New NotesDatabase("", "")
     Dim reopened As NotesDatabase
     Dim failures As Integer
 
     failures = 0
-    Print "SECTION=NotesDatabase.Create"
-
+    Print "SECTION=NotesDatabase.Create explicit server/file"
     Call RemoveIfExists(session, path)
-    Set db = session.OpenDatabase("", path)
-    If db Is Nothing Then
-        Print "FAIL Create setup returned Nothing"
-        TestCreate = 1
-        Exit Function
-    End If
 
-    Call db.Create("", "", True)
+    ' Same semantics as the HCL form:
+    ' Dim db As New NotesDatabase("", "")
+    ' Call db.Create("Zagreb", "inventry.nsf", True)
+    ' The runtime test uses the local server and a temporary NSF so it is self-contained.
+    Call db.Create("", path, True)
+
     If Not db.IsOpen Then
         failures = failures + 1
-        Print "FAIL Create openFlag=True did not open database"
+        Print "FAIL explicit Create openFlag=True did not open database"
     Else
-        Print "PASS Create openFlag=True"
+        Print "PASS explicit Create openFlag=True"
+    End If
+
+    If db.Server <> "" Then
+        failures = failures + 1
+        Print "FAIL explicit Create Server=" & db.Server
+    End If
+    If db.FilePath <> path Then
+        failures = failures + 1
+        Print "FAIL explicit Create FilePath=" & db.FilePath
+    Else
+        Print "PASS explicit Create updates FilePath"
     End If
 
     Call db.Remove()
     If db.IsOpen Then
         failures = failures + 1
-        Print "FAIL Remove left database open"
+        Print "FAIL explicit Remove left database open"
     Else
-        Print "PASS Remove"
+        Print "PASS explicit Remove"
     End If
     Call db.Recycle()
 
     Set reopened = session.OpenDatabase("", path)
     If reopened.IsOpen Then
         failures = failures + 1
-        Print "FAIL Remove database still exists"
+        Print "FAIL explicit Remove database still exists"
     Else
-        Print "PASS Remove database no longer exists"
+        Print "PASS explicit Remove database no longer exists"
     End If
     Call reopened.Recycle()
 
-    TestCreate = failures
+    TestCreateExplicitArguments = failures
+End Function
+
+Function TestCreateBoundArguments(ByVal session As Variant, ByVal path As String) As Integer
+    Dim db As New NotesDatabase("", path)
+    Dim reopened As NotesDatabase
+    Dim failures As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase.Create constructor-bound server/file"
+    Call RemoveIfExists(session, path)
+
+    If db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL constructor-bound temporary database unexpectedly exists"
+    Else
+        Print "PASS constructor-bound database starts closed"
+        Call db.Create("", "", True)
+    End If
+
+    If Not db.IsOpen Then
+        failures = failures + 1
+        Print "FAIL bound Create openFlag=True did not open database"
+    Else
+        Print "PASS bound Create reused constructor path"
+    End If
+    If db.FilePath <> path Then
+        failures = failures + 1
+        Print "FAIL bound Create FilePath=" & db.FilePath
+    End If
+
+    Call db.Remove()
+    Call db.Recycle()
+
+    Set reopened = session.OpenDatabase("", path)
+    If reopened.IsOpen Then
+        failures = failures + 1
+        Print "FAIL bound Remove database still exists"
+    Else
+        Print "PASS bound Remove database no longer exists"
+    End If
+    Call reopened.Recycle()
+
+    TestCreateBoundArguments = failures
 End Function
 
 Function TestCreateCopyDesignOnly(ByVal session As Variant, ByVal sourceDb As Variant, ByVal path As String) As Integer
