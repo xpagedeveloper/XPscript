@@ -375,6 +375,7 @@ Function TestCollection(ByVal db As Variant) As Integer
     Dim work As NotesDocumentCollection
     Dim doc As NotesDocument
     Dim nextDoc As NotesDocument
+    Dim byId As NotesDocument
     Dim parentDb As NotesDatabase
     Dim noteId As String
 
@@ -385,20 +386,18 @@ Function TestCollection(ByVal db As Variant) As Integer
     Print "Parent=" & parentDb.FilePath
     Print "Count=" & CStr(docs.Count)
 
-    If docs.Count > 0 Then
-        noteId = docs(0)
-        Print "Indexer=" & noteId
-        Set doc = docs.GetFirstDocument()
-        If doc Is Nothing Then
-            failures = failures + 1
-        Else
-            Set nextDoc = docs.GetNextDocument(doc)
-            If nextDoc Is Not Nothing Then Call nextDoc.Recycle()
-            Set nextDoc = docs.GetDocument(doc)
-            If nextDoc Is Nothing Then failures = failures + 1 Else Call nextDoc.Recycle()
-            Set nextDoc = docs.GetDocument(noteId)
-            If nextDoc Is Nothing Then failures = failures + 1 Else Call nextDoc.Recycle()
-        End If
+    Set doc = docs.GetFirstDocument()
+    If doc Is Nothing Then
+        failures = failures + 1
+    Else
+        noteId = doc.NoteID
+        Print "FirstNoteID=" & noteId
+        Set nextDoc = docs.GetNextDocument(doc)
+        If nextDoc Is Not Nothing Then Call nextDoc.Recycle()
+        Set byId = docs.GetDocument(doc)
+        If byId Is Nothing Then failures = failures + 1 Else Call byId.Recycle()
+        Set byId = docs.GetDocument(noteId)
+        If byId Is Nothing Then failures = failures + 1 Else Call byId.Recycle()
     End If
 
     Set work = db.CreateDocumentCollection()
@@ -674,7 +673,6 @@ Function TestRaiseErrorFalse(ByVal db As Variant, ByVal formName As String) As I
     Dim failedFields As Variant
     Dim ok As Boolean
     Dim failures As Integer
-
     failures = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
@@ -692,7 +690,6 @@ Function TestNoErrorsRaiseErrorTrue(ByVal db As Variant, ByVal formName As Strin
     Dim ok As Boolean
     Dim failures As Integer
     Dim errCode As Integer
-
     failures = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
@@ -717,7 +714,6 @@ Function TestMultipleErrorsAndDedup(ByVal db As Variant, ByVal formName As Strin
     Dim countOne As Integer
     Dim countTwo As Integer
     Dim failures As Integer
-
     failures = 0
     countOne = 0
     countTwo = 0
@@ -729,7 +725,6 @@ Function TestMultipleErrorsAndDedup(ByVal db As Variant, ByVal formName As Strin
     Call doc.ComputeWithForm(False, True, failedFields)
     errCode = Err
     On Error GoTo 0
-
     If errCode = 0 Then failures = failures + 1
     If failedFields Is Nothing Then
         failures = failures + 1
@@ -751,7 +746,6 @@ Function TestArrayAssignedBeforeRaise(ByVal db As Variant, ByVal formName As Str
     Dim failedFields As Variant
     Dim errCode As Integer
     Dim failures As Integer
-
     failures = 0
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", formName)
@@ -775,7 +769,6 @@ Function TestDoDataTypesIgnored(ByVal db As Variant, ByVal formName As String) A
     Dim valueFalse As String
     Dim valueTrue As String
     Dim failures As Integer
-
     failures = 0
     Set docFalse = db.CreateDocument()
     Call docFalse.ReplaceItemValue("Form", formName)
