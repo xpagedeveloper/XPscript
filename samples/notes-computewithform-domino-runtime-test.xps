@@ -1,0 +1,261 @@
+' Real Domino runtime validation for NotesDocument.ComputeWithForm.
+'
+' Target database: xpscript.nsf
+' Requires a local HCL Notes/Domino runtime and two forms in xpscript.nsf.
+'
+' Required form 1: XPScriptCWFValid
+'   Add an editable text field named CWFDefault.
+'   Default value formula: "DEFAULT-VALUE"
+'   No failing validation formulas.
+'
+' Required form 2: XPScriptCWFErrors
+'   Add an editable text field named CWFErrorOne.
+'   Input validation formula:
+'       @If(CWFErrorOne = "OK"; @Success; @Failure("CWFErrorOne failed"))
+'   Add an editable text field named CWFErrorTwo.
+'   Input validation formula:
+'       @If(CWFErrorTwo = "OK"; @Success; @Failure("CWFErrorTwo failed"))
+'
+' The error form deliberately leaves both fields missing. Domino should therefore
+' report at least CWFErrorOne and CWFErrorTwo through CWF_ERROR_PROC.
+'
+' The test does not save its documents.
+
+Option Declare
+
+Sub Main()
+    Dim NOTES_RUNTIME As String
+    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+
+    Dim NOTES_INI As String
+    NOTES_INI = ""
+
+    Dim DATABASE_PATH As String
+    DATABASE_PATH = "xpscript.nsf"
+
+    Dim VALID_FORM As String
+    VALID_FORM = "XPScriptCWFValid"
+
+    Dim ERROR_FORM As String
+    ERROR_FORM = "XPScriptCWFErrors"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim failures As Integer
+
+    failures = 0
+
+    If NOTES_INI = "" Then
+        Set session = New NotesSession(NOTES_RUNTIME)
+    Else
+        Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    End If
+
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    If db Is Nothing Then
+        Print "FAIL database returned Nothing: " & DATABASE_PATH
+        Exit Sub
+    End If
+    If Not db.IsOpen Then
+        Print "FAIL database is not open: " & DATABASE_PATH
+        Exit Sub
+    End If
+
+    Print "COMPUTEWITHFORM-RUNTIME-BEGIN"
+    Print "DATABASE=" & db.FilePath
+    Print "NOTES_VERSION=" & session.NotesVersion
+
+    Call TestRaiseErrorFalse(db, ERROR_FORM, failures)
+    Call TestNoErrorsRaiseErrorTrue(db, VALID_FORM, failures)
+    Call TestMultipleErrorsAndDedup(db, ERROR_FORM, failures)
+    Call TestArrayAssignedBeforeRaise(db, ERROR_FORM, failures)
+    Call TestDoDataTypesIgnored(db, VALID_FORM, failures)
+
+    If failures = 0 Then
+        Print "COMPUTEWITHFORM-RUNTIME=PASS"
+    Else
+        Print "COMPUTEWITHFORM-RUNTIME=FAIL COUNT=" & CStr(failures)
+    End If
+
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
+
+Sub TestRaiseErrorFalse(db As NotesDatabase, formName As String, failures As Integer)
+    Dim doc As NotesDocument
+    Dim failedFields As Variant
+    Dim ok As Boolean
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", formName)
+
+    failedFields = "SENTINEL"
+    ok = doc.ComputeWithForm(False, False, failedFields)
+
+    If ok Then
+        Call Fail(failures, "raiseError=False expected validation failure")
+    ElseIf failedFields = Nothing Then
+        Call Pass("raiseError=False leaves failedFields Nothing")
+    Else
+        Call Fail(failures, "raiseError=False did not leave failedFields Nothing")
+    End If
+
+    Call doc.Recycle()
+End Sub
+
+Sub TestNoErrorsRaiseErrorTrue(db As NotesDatabase, formName As String, failures As Integer)
+    Dim doc As NotesDocument
+    Dim failedFields As Variant
+    Dim ok As Boolean
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", formName)
+
+    failedFields = "SENTINEL"
+    ok = doc.ComputeWithForm(False, True, failedFields)
+
+    If Not ok Then
+        Call Fail(failures, "valid form returned False")
+    ElseIf failedFields = Nothing Then
+        Call Pass("raiseError=True with no errors leaves failedFields Nothing")
+    Else
+        Call Fail(failures, "valid form did not leave failedFields Nothing")
+    End If
+
+    Call doc.Recycle()
+End Sub
+
+Sub TestMultipleErrorsAndDedup(db As NotesDatabase, formName As String, failures As Integer)
+    Dim doc As NotesDocument
+    Dim failedFields As Variant
+    Dim caught As Boolean
+    Dim i As Integer
+    Dim j As Integer
+    Dim count As Integer
+    Dim hasOne As Boolean
+    Dim hasTwo As Boolean
+    Dim duplicate As Boolean
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", formName)
+
+    caught = False
+    failedFields = Nothing
+
+    On Error GoTo ValidationError
+    Call doc.ComputeWithForm(False, True, failedFields)
+    On Error GoTo 0
+
+    Call Fail(failures, "raiseError=True did not raise for invalid form")
+    Call doc.Recycle()
+    Exit Sub
+
+ValidationError:
+    caught = True
+    On Error GoTo 0
+
+    If failedFields = Nothing Then
+        Call Fail(failures, "failedFields is Nothing after validation error")
+        Call doc.Recycle()
+        Exit Sub
+    End If
+
+    count = UBound(failedFields) - LBound(failedFields) + 1
+    If count < 2 Then
+        Call Fail(failures, "expected at least two failed field names")
+    End If
+
+    For i = LBound(failedFields) To UBound(failedFields)
+        Print "FAILED-FIELD=" & CStr(failedFields(i))
+        If CStr(failedFields(i)) = "CWFErrorOne" Then hasOne = True
+        If CStr(failedFields(i)) = "CWFErrorTwo" Then hasTwo = True
+
+        For j = i + 1 To UBound(failedFields)
+            If CStr(failedFields(i)) = CStr(failedFields(j)) Then duplicate = True
+        Next
+    Next
+
+    If Not hasOne Then Call Fail(failures, "CWFErrorOne missing from failedFields")
+    If Not hasTwo Then Call Fail(failures, "CWFErrorTwo missing from failedFields")
+    If duplicate Then
+        Call Fail(failures, "failedFields contains duplicate field names")
+    Else
+        Call Pass("failedFields contains unique field names")
+    End If
+
+    If caught And hasOne And hasTwo And count >= 2 Then
+        Call Pass("raiseError=True returns multiple failed fields")
+    End If
+
+    Call doc.Recycle()
+End Sub
+
+Sub TestArrayAssignedBeforeRaise(db As NotesDatabase, formName As String, failures As Integer)
+    Dim doc As NotesDocument
+    Dim failedFields As Variant
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", formName)
+    failedFields = Nothing
+
+    On Error GoTo ValidationError
+    Call doc.ComputeWithForm(False, True, failedFields)
+    On Error GoTo 0
+
+    Call Fail(failures, "pre-raise test did not raise")
+    Call doc.Recycle()
+    Exit Sub
+
+ValidationError:
+    On Error GoTo 0
+    If failedFields = Nothing Then
+        Call Fail(failures, "failedFields was not assigned before error was raised")
+    ElseIf UBound(failedFields) >= LBound(failedFields) Then
+        Call Pass("failedFields assigned before raised validation error")
+    Else
+        Call Fail(failures, "failedFields array is empty in error handler")
+    End If
+
+    Call doc.Recycle()
+End Sub
+
+Sub TestDoDataTypesIgnored(db As NotesDatabase, formName As String, failures As Integer)
+    Dim docFalse As NotesDocument
+    Dim docTrue As NotesDocument
+    Dim okFalse As Boolean
+    Dim okTrue As Boolean
+    Dim valueFalse As String
+    Dim valueTrue As String
+
+    Set docFalse = db.CreateDocument()
+    Call docFalse.ReplaceItemValue("Form", formName)
+    okFalse = docFalse.ComputeWithForm(False, False)
+    valueFalse = docFalse.GetString("CWFDefault")
+
+    Set docTrue = db.CreateDocument()
+    Call docTrue.ReplaceItemValue("Form", formName)
+    okTrue = docTrue.ComputeWithForm(True, False)
+    valueTrue = docTrue.GetString("CWFDefault")
+
+    If okFalse <> okTrue Then
+        Call Fail(failures, "doDataTypes changed ComputeWithForm return value")
+    ElseIf valueFalse <> valueTrue Then
+        Call Fail(failures, "doDataTypes changed default-formula result")
+    ElseIf valueFalse <> "DEFAULT-VALUE" Then
+        Call Fail(failures, "valid form default formula did not execute")
+    Else
+        Call Pass("doDataTypes=True and False have identical behavior")
+    End If
+
+    Call docTrue.Recycle()
+    Call docFalse.Recycle()
+End Sub
+
+Sub Pass(message As String)
+    Print "PASS " & message
+End Sub
+
+Sub Fail(failures As Integer, message As String)
+    failures = failures + 1
+    Print "FAIL " & message
+End Sub
