@@ -6,6 +6,7 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesViewColumnNamesPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
