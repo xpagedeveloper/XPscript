@@ -7,6 +7,7 @@ internal sealed class ParameterPassingPreprocessor
 {
     private const string ByRefPrefix = "__xps_byref_";
     private const string ByValPrefix = "__xps_byval_";
+    private const string ComputeWithFormHelper = "__XPSNotesComputeWithForm";
 
     private static readonly Regex ProcedureHeader = new(
         @"^(?<prefix>\s*(?:(?:Public|Private)\s+)?(?:Sub|Function)\s+[A-Za-z_]\w*\s*\()(?<args>.*)(?<suffix>\)\s*(?:As\s+[A-Za-z_]\w*)?\s*)$",
@@ -63,8 +64,125 @@ internal sealed class ParameterPassingPreprocessor
             lines[i] = ReplaceIdentifiers(line, activeParameters);
         }
 
-        return string.Join("\n", lines);
+        var transformed = string.Join("\n", lines);
+        transformed = RewriteNotesComputeWithFormCalls(transformed, out var usesComputeWithFormOutput);
+        if (!usesComputeWithFormOutput) return transformed;
+
+        return transformed + """
+
+Function __XPSNotesComputeWithForm(doc As NotesDocument, doDataTypes As Variant, raiseError As Variant, __xps_byref_failedFields As Variant) As Boolean
+    Dim __xps_cwf_success As Boolean
+    __xps_cwf_success = doc.__ComputeWithFormCapture(doDataTypes, raiseError, True)
+    __xps_byref_failedFields = doc.__ComputeWithFormCapturedFields()
+    If CBool(raiseError) And Not __xps_cwf_success Then
+        Call doc.__RaiseComputeWithFormCapturedError()
+    End If
+    __XPSNotesComputeWithForm = __xps_cwf_success
+End Function
+""";
     }
+
+    private static string RewriteNotesComputeWithFormCalls(string source, out bool changed)
+    {
+        changed = false;
+        var output = new StringBuilder(source.Length + 64);
+        var cursor = 0;
+        var marker = ".ComputeWithForm";
+
+        while (cursor < source.Length)
+        {
+            var index = source.IndexOf(marker, cursor, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                output.Append(source.AsSpan(cursor));
+                break;
+            }
+
+            var receiverEnd = index;
+            var receiverStart = receiverEnd - 1;
+            while (receiverStart >= cursor && (char.IsLetterOrDigit(source[receiverStart]) || source[receiverStart] is '_' or '.')) receiverStart--;
+            receiverStart++;
+            if (receiverStart >= receiverEnd || !IsReceiver(source[receiverStart..receiverEnd]))
+            {
+                output.Append(source.AsSpan(cursor, index + marker.Length - cursor));
+                cursor = index + marker.Length;
+                continue;
+            }
+
+            var open = index + marker.Length;
+            while (open < source.Length && char.IsWhiteSpace(source[open])) open++;
+            if (open >= source.Length || source[open] != '(')
+            {
+                output.Append(source.AsSpan(cursor, index + marker.Length - cursor));
+                cursor = index + marker.Length;
+                continue;
+            }
+
+            var close = FindMatchingParen(source, open);
+            if (close < 0)
+            {
+                output.Append(source.AsSpan(cursor));
+                break;
+            }
+
+            var args = SplitArguments(source[(open + 1)..close]);
+            if (args.Count != 3 || !Regex.IsMatch(args[2].Trim(), @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant))
+            {
+                output.Append(source.AsSpan(cursor, close - cursor + 1));
+                cursor = close + 1;
+                continue;
+            }
+
+            output.Append(source.AsSpan(cursor, receiverStart - cursor));
+            output.Append(ComputeWithFormHelper).Append('(')
+                .Append(source.AsSpan(receiverStart, receiverEnd - receiverStart)).Append(", ")
+                .Append(args[0].Trim()).Append(", ")
+                .Append(args[1].Trim()).Append(", ")
+                .Append(args[2].Trim()).Append(')');
+            changed = true;
+            cursor = close + 1;
+        }
+
+        return output.ToString();
+    }
+
+    private static bool IsReceiver(string value)
+    {
+        if (value.Length == 0 || !IsIdentifierStart(value[0])) return false;
+        for (var i = 1; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '.')
+            {
+                if (i + 1 >= value.Length || !IsIdentifierStart(value[i + 1])) return false;
+                continue;
+            }
+            if (!char.IsLetterOrDigit(c) && c != '_') return false;
+        }
+        return true;
+    }
+
+    private static int FindMatchingParen(string value, int openIndex)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = openIndex; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
+    }
+
+    private static bool IsIdentifierStart(char value) => char.IsLetter(value) || value == '_';
 
     private static List<string> SplitArguments(string value)
     {
