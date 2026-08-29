@@ -12,12 +12,12 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim view As NotesView
-    Dim nav As NotesViewNavigator
-    Dim entries As NotesViewEntryCollection
-    Dim keyEntries As NotesViewEntryCollection
-    Dim entry As NotesViewEntry
-    Dim nextEntry As NotesViewEntry
-    Dim lookupEntry As NotesViewEntry
+    Dim nav As Variant
+    Dim entries As Variant
+    Dim keyEntries As Variant
+    Dim entry As Variant
+    Dim nextEntry As Variant
+    Dim lookupEntry As Variant
     Dim doc As NotesDocument
     Dim directDoc As NotesDocument
     Dim values As Variant
