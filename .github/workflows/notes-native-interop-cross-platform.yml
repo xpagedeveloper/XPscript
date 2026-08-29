@@ -37,18 +37,26 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
-      - name: Compile generated Notes runtime
+      - name: Compile Notes C API surface
         shell: bash
         run: |
-          mkdir -p artifacts/notes-thread-probe artifacts/notes-view-columnnames artifacts/notes-view-navigation-v1
+          mkdir -p artifacts/notes-thread-probe
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-c-api-surface.xps \
             --framework-dependent \
             -o artifacts/notes-thread-probe/notes-thread-probe
+      - name: Compile NotesView ColumnNames regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-columnnames
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-view-columnnames-domino-runtime-test.xps \
             --framework-dependent \
             -o artifacts/notes-view-columnnames/notes-view-columnnames
+      - name: Compile NotesView navigation V1 regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-navigation-v1
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
             samples/notes-view-navigation-v1-domino-runtime-test.xps \
             --framework-dependent \
