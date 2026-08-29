@@ -94,7 +94,7 @@ Sub TestRaiseErrorFalse(db As NotesDatabase, formName As String, failures As Int
 
     If ok Then
         Call Fail(failures, "raiseError=False expected validation failure")
-    ElseIf failedFields = Nothing Then
+    ElseIf failedFields Is Nothing Then
         Call Pass("raiseError=False leaves failedFields Nothing")
     Else
         Call Fail(failures, "raiseError=False did not leave failedFields Nothing")
@@ -116,7 +116,7 @@ Sub TestNoErrorsRaiseErrorTrue(db As NotesDatabase, formName As String, failures
 
     If Not ok Then
         Call Fail(failures, "valid form returned False")
-    ElseIf failedFields = Nothing Then
+    ElseIf failedFields Is Nothing Then
         Call Pass("raiseError=True with no errors leaves failedFields Nothing")
     Else
         Call Fail(failures, "valid form did not leave failedFields Nothing")
@@ -154,7 +154,7 @@ ValidationError:
     caught = True
     On Error GoTo 0
 
-    If failedFields = Nothing Then
+    If failedFields Is Nothing Then
         Call Fail(failures, "failedFields is Nothing after validation error")
         Call doc.Recycle()
         Exit Sub
@@ -208,7 +208,7 @@ Sub TestArrayAssignedBeforeRaise(db As NotesDatabase, formName As String, failur
 
 ValidationError:
     On Error GoTo 0
-    If failedFields = Nothing Then
+    If failedFields Is Nothing Then
         Call Fail(failures, "failedFields was not assigned before error was raised")
     ElseIf UBound(failedFields) >= LBound(failedFields) Then
         Call Pass("failedFields assigned before raised validation error")
