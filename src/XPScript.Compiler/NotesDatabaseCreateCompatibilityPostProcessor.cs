@@ -8,15 +8,9 @@ internal static class NotesDatabaseCreateCompatibilityPostProcessor
 
         source = ReplaceRequired(
             source,
-            "    private readonly object _childrenGate = new();\n    private readonly List<XPScriptNotesOwnedObject> _children = [];\n    private nint _handle;",
-            "    private readonly object _childrenGate = new();\n    private readonly List<XPScriptNotesOwnedObject> _children = [];\n    private nint _handle;\n    private string _server;\n    private string _filePath;",
+            "        _handle = handle;\n        Server = server;\n        FilePath = filePath;\n    }\n\n    internal nint Handle",
+            "        _handle = handle;\n        _server = server;\n        _filePath = filePath;\n    }\n\n    private string _server;\n    private string _filePath;\n\n    internal nint Handle",
             "database-location-state");
-
-        source = ReplaceRequired(
-            source,
-            "        _handle = handle;\n        Server = server;\n        FilePath = filePath;",
-            "        _handle = handle;\n        _server = server;\n        _filePath = filePath;",
-            "database-location-constructor");
 
         source = ReplaceRequired(
             source,
