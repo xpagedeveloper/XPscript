@@ -12,8 +12,8 @@ Sub Main()
     Dim db As NotesDatabase
     Dim view As NotesView
     Dim names As Variant
-    Dim columnName As Variant
     Dim count As Integer
+    Dim i As Integer
 
     Set db = session.OpenDatabase("", DATABASE_PATH)
     If db Is Nothing Or Not db.IsOpen Then
@@ -28,16 +28,15 @@ Sub Main()
     End If
 
     names = view.ColumnNames
-    count = 0
-    For Each columnName In names
-        Print "ColumnNames(" & CStr(count) & ")=" & CStr(columnName)
-        count = count + 1
+    count = UBound(names) - LBound(names) + 1
+    For i = LBound(names) To UBound(names)
+        Print "ColumnNames(" & CStr(i) & ")=" & CStr(names(i))
     Next
 
     If count < 1 Then
         Print "NOTES-VIEW-COLUMNNAMES=FAIL empty"
-    ElseIf CStr(names(0)) <> "Subject" Then
-        Print "NOTES-VIEW-COLUMNNAMES=FAIL first=" & CStr(names(0))
+    ElseIf CStr(names(LBound(names))) <> "Subject" Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL first=" & CStr(names(LBound(names)))
     Else
         Print "NOTES-VIEW-COLUMNNAMES=PASS count=" & CStr(count)
     End If
