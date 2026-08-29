@@ -53,7 +53,8 @@ if ($defaultFormula.InnerText.Trim() -ne '"DEFAULT-VALUE"') {
 
 foreach ($fieldName in @('CWFErrorOne', 'CWFErrorTwo')) {
     $validation = Require-SingleNode -XPath "/dxl:database/dxl:form[@name='XPScriptCWFErrors']//dxl:field[@name='$fieldName']/dxl:code[@event='inputvalidation']/dxl:formula" -Label "$fieldName validation formula"
-    if ($validation.InnerText -notmatch [regex]::Escape("@Failure(\"$fieldName failed\")")) {
+    $expectedFailure = '@Failure("' + $fieldName + ' failed")'
+    if (-not $validation.InnerText.Contains($expectedFailure)) {
         throw "$fieldName validation formula does not contain the expected failure marker."
     }
 }
