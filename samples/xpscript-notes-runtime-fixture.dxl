@@ -1,62 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database xmlns="http://www.lotus.com/dxl" version="14.5">
   <form name="XPScriptTest" publicaccess="false" designerversion="14.5">
-    <body>
-      <richtext>
-        <pardef id="1"/>
-        <par def="1">Subject: <field type="text" kind="editable" name="Subject"><code event="defaultvalue"><formula>&quot;&quot;</formula></code></field></par>
-        <par def="1">Marker: <field type="text" kind="editable" name="XPScriptMarker"><code event="defaultvalue"><formula>&quot;&quot;</formula></code></field></par>
-        <par def="1">Body: <field type="richtext" kind="editable" name="Body"/></par>
-      </richtext>
-    </body>
+    <body><richtext><pardef id="1"/><par def="1">Subject: <field type="text" kind="editable" name="Subject"><code event="defaultvalue"><formula>&quot;&quot;</formula></code></field></par><par def="1">Marker: <field type="text" kind="editable" name="XPScriptMarker"><code event="defaultvalue"><formula>&quot;&quot;</formula></code></field></par><par def="1">Body: <field type="richtext" kind="editable" name="Body"/></par></richtext></body>
     <item name="$$ScriptName" summary="false" sign="true"><text>XPScriptTest</text></item>
   </form>
-
-  <form name="XPScriptCWFValid" publicaccess="false" designerversion="14.5">
-    <body>
-      <richtext>
-        <pardef id="1"/>
-        <par def="1">Default: <field type="text" kind="editable" name="CWFDefault"><code event="defaultvalue"><formula>&quot;DEFAULT-VALUE&quot;</formula></code></field></par>
-      </richtext>
-    </body>
-    <item name="$$ScriptName" summary="false" sign="true"><text>XPScriptCWFValid</text></item>
-  </form>
-
-  <form name="XPScriptCWFErrors" publicaccess="false" designerversion="14.5">
-    <body>
-      <richtext>
-        <pardef id="1"/>
-        <par def="1">Error one: <field type="text" kind="editable" name="CWFErrorOne">
-          <code event="defaultvalue"><formula>&quot;&quot;</formula></code>
-          <code event="inputvalidation"><formula>@If(CWFErrorOne = &quot;OK&quot;; @Success; @Failure(&quot;CWFErrorOne failed&quot;))</formula></code>
-        </field></par>
-        <par def="1">Error two: <field type="text" kind="editable" name="CWFErrorTwo">
-          <code event="defaultvalue"><formula>&quot;&quot;</formula></code>
-          <code event="inputvalidation"><formula>@If(CWFErrorTwo = &quot;OK&quot;; @Success; @Failure(&quot;CWFErrorTwo failed&quot;))</formula></code>
-        </field></par>
-      </richtext>
-    </body>
-    <item name="$$ScriptName" summary="false" sign="true"><text>XPScriptCWFErrors</text></item>
-  </form>
+  <form name="XPScriptCWFValid" publicaccess="false" designerversion="14.5"><body><richtext><pardef id="1"/><par def="1">Default: <field type="text" kind="editable" name="CWFDefault"><code event="defaultvalue"><formula>&quot;DEFAULT-VALUE&quot;</formula></code></field></par></richtext></body><item name="$$ScriptName" summary="false" sign="true"><text>XPScriptCWFValid</text></item></form>
+  <form name="XPScriptCWFErrors" publicaccess="false" designerversion="14.5"><body><richtext><pardef id="1"/><par def="1">Error one: <field type="text" kind="editable" name="CWFErrorOne"><code event="defaultvalue"><formula>&quot;&quot;</formula></code><code event="inputvalidation"><formula>@If(CWFErrorOne = &quot;OK&quot;; @Success; @Failure(&quot;CWFErrorOne failed&quot;))</formula></code></field></par><par def="1">Error two: <field type="text" kind="editable" name="CWFErrorTwo"><code event="defaultvalue"><formula>&quot;&quot;</formula></code><code event="inputvalidation"><formula>@If(CWFErrorTwo = &quot;OK&quot;; @Success; @Failure(&quot;CWFErrorTwo failed&quot;))</formula></code></field></par></richtext></body><item name="$$ScriptName" summary="false" sign="true"><text>XPScriptCWFErrors</text></item></form>
 
   <view name="XPScriptTestView" publicaccess="false" designerversion="14.5">
     <code event="selection"><formula>Form = &quot;XPScriptTest&quot;</formula></code>
-    <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true">
-      <columnheader title="Subject"/>
-      <code event="value"><formula>Subject</formula></code>
-    </column>
-    <column itemname="XPScriptMarker" width="24" resizable="true">
-      <columnheader title="Marker"/>
-      <code event="value"><formula>XPScriptMarker</formula></code>
-    </column>
+    <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true"><columnheader title="Subject"/><code event="value"><formula>Subject</formula></code></column>
+    <column itemname="XPScriptMarker" width="24" resizable="true"><columnheader title="Marker"/><code event="value"><formula>XPScriptMarker</formula></code></column>
   </view>
 
-  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5">
-    <trigger type="agentlist"/>
-    <code event="action">
-      <lotusscript><![CDATA[Option Public
-Option Declare
+  <view name="XPScriptHierarchyView" publicaccess="false" designerversion="14.5">
+    <code event="selection"><formula>Form = &quot;XPScriptTest&quot;</formula></code>
+    <column itemname="XPScriptGroup" width="18" sort="ascending" categorized="true" resizable="true"><columnheader title="Group"/><code event="value"><formula>XPScriptGroup</formula></code></column>
+    <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true"><columnheader title="Subject"/><code event="value"><formula>Subject</formula></code></column>
+  </view>
 
+  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5"><trigger type="agentlist"/><code event="action"><lotusscript><![CDATA[Option Public
+Option Declare
 Sub Initialize
     Dim session As New NotesSession
     Dim doc As NotesDocument
@@ -67,25 +31,9 @@ Sub Initialize
         Print "XPSCRIPT-AGENT-DOC=" & doc.UniversalID
     End If
 End Sub
-]]></lotusscript>
-    </code>
-  </agent>
+]]></lotusscript></code></agent>
 
-  <document form="XPScriptTest">
-    <item name="Form"><text>XPScriptTest</text></item>
-    <item name="Subject"><text>Alpha</text></item>
-    <item name="XPScriptMarker"><text>fixture-alpha</text></item>
-    <item name="TextList"><textlist><text>one</text><text>two</text><text>three</text></textlist></item>
-    <item name="NumberValue"><number>12.5</number></item>
-    <item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Alpha</par></richtext></item>
-  </document>
-
-  <document form="XPScriptTest">
-    <item name="Form"><text>XPScriptTest</text></item>
-    <item name="Subject"><text>Beta</text></item>
-    <item name="XPScriptMarker"><text>fixture-beta</text></item>
-    <item name="TextList"><textlist><text>red</text><text>green</text><text>blue</text></textlist></item>
-    <item name="NumberValue"><number>99</number></item>
-    <item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Beta</par></richtext></item>
-  </document>
+  <document form="XPScriptTest"><item name="Form"><text>XPScriptTest</text></item><item name="Subject"><text>Alpha</text></item><item name="XPScriptMarker"><text>fixture-alpha</text></item><item name="XPScriptGroup"><text>Group A</text></item><item name="TextList"><textlist><text>one</text><text>two</text><text>three</text></textlist></item><item name="NumberValue"><number>12.5</number></item><item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Alpha</par></richtext></item></document>
+  <document form="XPScriptTest"><item name="Form"><text>XPScriptTest</text></item><item name="Subject"><text>Beta</text></item><item name="XPScriptMarker"><text>fixture-beta</text></item><item name="XPScriptGroup"><text>Group A</text></item><item name="TextList"><textlist><text>red</text><text>green</text><text>blue</text></textlist></item><item name="NumberValue"><number>99</number></item><item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Beta</par></richtext></item></document>
+  <document form="XPScriptTest"><item name="Form"><text>XPScriptTest</text></item><item name="Subject"><text>Gamma</text></item><item name="XPScriptMarker"><text>fixture-gamma</text></item><item name="XPScriptGroup"><text>Group B</text></item><item name="TextList"><textlist><text>north</text><text>south</text></textlist></item><item name="NumberValue"><number>7</number></item><item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Gamma</par></richtext></item></document>
 </database>
