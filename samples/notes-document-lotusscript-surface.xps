@@ -1,7 +1,12 @@
 ' Compile-time smoke for the LotusScript-compatible NotesDocument surface.
+' This file is compiled by Required PR Gate but is not executed there.
 Option Declare
 
-Sub ExerciseDocument(doc As NotesDocument, other As NotesDocument, db As NotesDatabase, item As NotesItem)
+Sub Main()
+    Dim doc As NotesDocument
+    Dim other As NotesDocument
+    Dim db As NotesDatabase
+    Dim item As NotesItem
     Dim n As Long
     Dim s As String
     Dim b As Boolean
