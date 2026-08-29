@@ -15,25 +15,19 @@ internal static class NotesViewNavigationPostProcessor
         source = ReplaceRequired(
             source,
             "    internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    public string Name { get; }",
-            "    internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    internal XPScriptNotesDatabase OwningDatabaseForView => Database;\n    public string Name { get; }\n\n    internal XPScriptNotesViewRow[] ReadRows()\n        => Session.Api.ReadViewRows(_handle, Database, Name, Session);\n\n    internal XPScriptNotesViewRow? ResolveDocumentRow(uint noteId)\n        => ReadRows().FirstOrDefault(row => row.IsDocument && row.NoteId == noteId);\n\n    public XPScriptNotesViewEntryCollection AllEntries => CreateViewEntryCollection();\n\n    public XPScriptNotesViewEntryCollection CreateViewEntryCollection()\n    {\n        EnsureAlive();\n        return new XPScriptNotesViewEntryCollection(Session, this, ReadRows().Where(row => row.IsDocument));\n    }\n\n    public XPScriptNotesViewNavigator CreateViewNav()\n    {\n        EnsureAlive();\n        return new XPScriptNotesViewNavigator(Session, this, ReadRows());\n    }\n\n    public XPScriptNotesViewEntry? GetEntryByKey(object? keyValue)\n    {\n        EnsureAlive();\n        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, true);\n        if (ids.Count == 0) return null;\n        var row = ResolveDocumentRow(ids[0]);\n        return row is null ? null : new XPScriptNotesViewEntry(Session, this, row);\n    }\n\n    public XPScriptNotesViewEntryCollection GetAllEntriesByKey(object? keyValue)\n    {\n        EnsureAlive();\n        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, true);\n        var wanted = new HashSet<uint>(ids);\n        return new XPScriptNotesViewEntryCollection(Session, this, ReadRows().Where(row => row.IsDocument && wanted.Contains(row.NoteId)));\n    }",
+            "    internal nint NativeHandle { get { EnsureAlive(); return _handle; } }\n    public string Name { get; }\n\n    internal XPScriptNotesViewRow[] ReadRows()\n        => Session.Api.ReadViewRows(_handle, Database, Name, Session);\n\n    internal XPScriptNotesViewRow? ResolveDocumentRow(uint noteId)\n        => ReadRows().FirstOrDefault(row => row.IsDocument && row.NoteId == noteId);\n\n    public XPScriptNotesViewEntryCollection AllEntries => CreateViewEntryCollection();\n\n    public XPScriptNotesViewEntryCollection CreateViewEntryCollection()\n    {\n        EnsureAlive();\n        return new XPScriptNotesViewEntryCollection(Session, this, Database, ReadRows().Where(row => row.IsDocument));\n    }\n\n    public XPScriptNotesViewNavigator CreateViewNav()\n    {\n        EnsureAlive();\n        return new XPScriptNotesViewNavigator(Session, this, Database, ReadRows());\n    }\n\n    public XPScriptNotesViewEntry? GetEntryByKey(object? keyValue)\n    {\n        EnsureAlive();\n        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, true);\n        if (ids.Count == 0) return null;\n        var row = ResolveDocumentRow(ids[0]);\n        return row is null ? null : new XPScriptNotesViewEntry(Session, this, Database, row);\n    }\n\n    public XPScriptNotesViewEntryCollection GetAllEntriesByKey(object? keyValue)\n    {\n        EnsureAlive();\n        var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, true);\n        var wanted = new HashSet<uint>(ids);\n        return new XPScriptNotesViewEntryCollection(Session, this, Database, ReadRows().Where(row => row.IsDocument && wanted.Contains(row.NoteId)));\n    }",
             "view-navigation-surface");
 
         source = ReplaceRequired(
             source,
             "    internal XPScriptNotesDocument? OpenByNoteId(uint noteId)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        var note = Session.Api.TryOpenNote(_handle, noteId);\n        return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, noteId);\n    }",
-            "    internal XPScriptNotesDocument? OpenByNoteId(uint noteId) => OpenByNoteId(noteId, null);\n\n    internal XPScriptNotesDocument? OpenByNoteId(uint noteId, XPScriptNotesViewRow? row)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        var note = Session.Api.TryOpenNote(_handle, noteId);\n        return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, noteId, row);\n    }",
+            "    internal XPScriptNotesDocument? OpenByNoteId(uint noteId)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        var note = Session.Api.TryOpenNote(_handle, noteId);\n        return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, noteId);\n    }\n\n    internal XPScriptNotesDocument? OpenByNoteId(uint noteId, XPScriptNotesViewRow? row)\n    {\n        var document = OpenByNoteId(noteId);\n        if (document is not null && row is not null) XPScriptNotesViewRowContext.Attach(document, row);\n        return document;\n    }",
             "database-open-row-context");
 
         source = ReplaceRequired(
             source,
-            "    private nint _handle;\n\n    internal XPScriptNotesDocument(XPScriptNotesSession session, XPScriptNotesDatabase database, nint handle, uint noteId) : base(session, database)\n    {\n        _handle = handle;\n        NoteId = noteId;\n    }",
-            "    private nint _handle;\n    private readonly XPScriptNotesViewRow? _viewRow;\n\n    internal XPScriptNotesDocument(XPScriptNotesSession session, XPScriptNotesDatabase database, nint handle, uint noteId, XPScriptNotesViewRow? viewRow = null) : base(session, database)\n    {\n        _handle = handle;\n        NoteId = noteId;\n        _viewRow = viewRow;\n    }",
-            "document-row-context");
-
-        source = ReplaceRequired(
-            source,
             "    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }\n    public object?[] ColumnValues { get { EnsureAlive(); return _viewRow?.GetColumnValues() ?? Array.Empty<object?>(); } }",
+            "    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }\n    public object?[] ColumnValues\n    {\n        get\n        {\n            EnsureAlive();\n            return XPScriptNotesViewRowContext.TryGet(this, out var row) ? row.GetColumnValues() : Array.Empty<object?>();\n        }\n    }",
             "document-column-values");
 
         source = ReplaceRequired(
@@ -48,9 +42,29 @@ internal static class NotesViewNavigationPostProcessor
     public static string ApplyBuiltSurface(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        source = source.Replace("internal XPScriptNotesViewRow[] ReadViewRows(nint collection, XPScriptNotesDatabase database", "internal XPScriptNotesViewRow[] ReadViewRows(uint collection, XPScriptNotesDatabase database", StringComparison.Ordinal);
-        source = source.Replace("internal object?[] ReadViewRowColumnValues(nint db, string viewName", "internal object?[] ReadViewRowColumnValues(uint db, string viewName", StringComparison.Ordinal);
-        source = source.Replace("private object?[] ReadViewRowColumnValuesCore(nint collection", "private object?[] ReadViewRowColumnValuesCore(uint collection", StringComparison.Ordinal);
+
+        source = ReplaceRequired(
+            source,
+            "    internal XPScriptNotesViewRow[] ReadViewRows(nint collection, XPScriptNotesDatabase database, string viewName, XPScriptNotesSession session)",
+            "    internal XPScriptNotesViewRow[] ReadViewRows(ushort collection, XPScriptNotesDatabase database, string viewName, XPScriptNotesSession session)",
+            "built-read-view-rows");
+
+        source = ReplaceRequired(
+            source,
+            "    private object?[] ReadViewRowColumnValuesCore(nint collection, string positionText, XPScriptNotesSession session)",
+            "    private object?[] ReadViewRowColumnValuesCore(ushort collection, string positionText, XPScriptNotesSession session)",
+            "built-read-column-values-core");
+
+        source = source.Replace(
+            "return _navigationNoteIds.Length == 0 ? null : Database.OpenByNoteId(_navigationNoteIds[0]);",
+            "if (_navigationNoteIds.Length == 0) return null;\n        var noteId = _navigationNoteIds[0];\n        return Database.OpenByNoteId(noteId, ResolveDocumentRow(noteId));",
+            StringComparison.Ordinal);
+
+        source = source.Replace(
+            "return next >= _navigationNoteIds.Length ? null : Database.OpenByNoteId(_navigationNoteIds[next]);",
+            "if (next >= _navigationNoteIds.Length) return null;\n        var noteId = _navigationNoteIds[next];\n        return Database.OpenByNoteId(noteId, ResolveDocumentRow(noteId));",
+            StringComparison.Ordinal);
+
         return source;
     }
 
@@ -114,13 +128,42 @@ internal sealed class XPScriptNotesViewRow
     }
 }
 
+internal static class XPScriptNotesViewRowContext
+{
+    private sealed class Holder
+    {
+        internal Holder(XPScriptNotesViewRow row) => Row = row;
+        internal XPScriptNotesViewRow Row { get; }
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<XPScriptNotesDocument, Holder> Rows = new();
+
+    internal static void Attach(XPScriptNotesDocument document, XPScriptNotesViewRow row)
+    {
+        Rows.Remove(document);
+        Rows.Add(document, new Holder(row));
+    }
+
+    internal static bool TryGet(XPScriptNotesDocument document, out XPScriptNotesViewRow row)
+    {
+        if (Rows.TryGetValue(document, out var holder))
+        {
+            row = holder.Row;
+            return true;
+        }
+
+        row = null!;
+        return false;
+    }
+}
+
 internal sealed class XPScriptNotesViewEntry : XPScriptNotesOwnedObject
 {
     private XPScriptNotesViewRow? _row;
     private readonly XPScriptNotesView _view;
 
-    internal XPScriptNotesViewEntry(XPScriptNotesSession session, XPScriptNotesView view, XPScriptNotesViewRow row)
-        : base(session, view.OwningDatabaseForView)
+    internal XPScriptNotesViewEntry(XPScriptNotesSession session, XPScriptNotesView view, XPScriptNotesDatabase database, XPScriptNotesViewRow row)
+        : base(session, database)
     {
         _view = view;
         _row = row;
@@ -165,8 +208,12 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
     private readonly string _replicaId;
     private int _lastFetchedIndex = -1;
 
-    internal XPScriptNotesViewEntryCollection(XPScriptNotesSession session, XPScriptNotesView view, IEnumerable<XPScriptNotesViewRow> rows)
-        : base(session, view.OwningDatabaseForView)
+    internal XPScriptNotesViewEntryCollection(
+        XPScriptNotesSession session,
+        XPScriptNotesView view,
+        XPScriptNotesDatabase database,
+        IEnumerable<XPScriptNotesViewRow> rows)
+        : base(session, database)
     {
         _view = view;
         _rows = rows.Where(row => row.IsDocument).ToArray();
@@ -189,6 +236,7 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
     {
         EnsureAlive();
         var document = RequireDocument(documentValue, "GetEntry");
+        document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
         var index = Array.FindIndex(_rows, row => row.NoteId == document.NoteId);
         return OpenAt(index);
@@ -197,6 +245,7 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
     {
         EnsureAlive();
         var document = RequireDocument(documentValue, "Contains");
+        document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
         return Array.Exists(_rows, row => row.NoteId == document.NoteId);
     }
@@ -204,6 +253,7 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
     {
         EnsureAlive();
         var document = RequireDocument(documentValue, "AddEntry");
+        document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
         if (Array.Exists(_rows, row => row.NoteId == document.NoteId)) return;
         var row = _view.ResolveDocumentRow(document.NoteId);
@@ -215,6 +265,7 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
     {
         EnsureAlive();
         var document = RequireDocument(documentValue, "DeleteEntry");
+        document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
         _rows = _rows.Where(row => row.NoteId != document.NoteId).ToArray();
         ResetCursor();
@@ -237,9 +288,9 @@ internal sealed class XPScriptNotesViewEntryCollection : XPScriptNotesOwnedObjec
         EnsureAlive();
         if (index < 0 || index >= _rows.Length) { ResetCursor(); return null; }
         _lastFetchedIndex = index;
-        return new XPScriptNotesViewEntry(Session, _view, _rows[index]);
+        return new XPScriptNotesViewEntry(Session, _view, Database, _rows[index]);
     }
-    private XPScriptNotesDocument RequireDocument(object? value, string member)
+    private static XPScriptNotesDocument RequireDocument(object? value, string member)
         => value as XPScriptNotesDocument ?? throw new XPScriptRuntimeException(13, member + " requires a NotesDocument.");
     private void EnsureSameReplica(XPScriptNotesDatabase database)
     {
@@ -258,8 +309,12 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     private readonly string _replicaId;
     private int _currentIndex = -1;
 
-    internal XPScriptNotesViewNavigator(XPScriptNotesSession session, XPScriptNotesView view, IEnumerable<XPScriptNotesViewRow> rows)
-        : base(session, view.OwningDatabaseForView)
+    internal XPScriptNotesViewNavigator(
+        XPScriptNotesSession session,
+        XPScriptNotesView view,
+        XPScriptNotesDatabase database,
+        IEnumerable<XPScriptNotesViewRow> rows)
+        : base(session, database)
     {
         _view = view;
         _rows = rows.ToArray();
@@ -301,7 +356,7 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
         EnsureAlive();
         if (index < 0 || index >= _rows.Length) { if (move) _currentIndex = -1; return null; }
         if (move) _currentIndex = index;
-        return new XPScriptNotesViewEntry(Session, _view, _rows[index]);
+        return new XPScriptNotesViewEntry(Session, _view, Database, _rows[index]);
     }
     protected override void ReleaseOwnedNative() { _rows = []; _currentIndex = -1; }
 }
@@ -313,7 +368,6 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     private const uint ReadMaskSummaryValues = 0x00001000;
     private const uint NoteIdCategory = 0x80000000u;
     private const uint NoteIdCategoryTotal = 0xC0000000u;
-    private const ushort SignalMoreToDo = 0x0020;
 
     internal XPScriptNotesViewRow[] ReadViewRows(nint collection, XPScriptNotesDatabase database, string viewName, XPScriptNotesSession session)
     {
@@ -324,14 +378,14 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
         var position = XPScriptNotesCollectionPosition.Create();
         position.Level = 0;
         position.Tumbler[0] = 0;
-        var firstRead = true;
+
         while (true)
         {
             Check(Resolve<NIFReadEntriesDelegate>("NIFReadEntries")(
                 collection,
                 ref position,
                 NavigateNext,
-                firstRead ? 1u : 1u,
+                1,
                 NavigateNext,
                 uint.MaxValue,
                 ReadMaskNoteId | ReadMaskIndentLevels | ReadMaskIndexPosition,
@@ -339,13 +393,14 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
                 out var bufferLength,
                 out _,
                 out var returned,
-                out var signalFlags), "NIFReadEntries(view rows)");
-            firstRead = false;
+                out _), "NIFReadEntries(view rows)");
+
             if (buffer == 0 || returned == 0)
             {
                 if (buffer != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(buffer);
                 break;
             }
+
             try
             {
                 var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(buffer);
@@ -363,6 +418,7 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
                         var level = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, cursor));
                         var positionSize = checked(4 + ((int)level + 1) * 4);
                         EnsureViewBuffer(bufferLength, cursor, positionSize);
+
                         var parts = new string[level + 1];
                         for (var part = 0; part <= level; part++)
                         {
@@ -370,19 +426,30 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
                             parts[part] = tumbler.ToString(System.Globalization.CultureInfo.InvariantCulture);
                         }
                         cursor += positionSize;
+
                         var type = (noteId & NoteIdCategoryTotal) == NoteIdCategoryTotal
                             ? XPScriptNotesViewEntryType.Total
                             : (noteId & NoteIdCategory) != 0
                                 ? XPScriptNotesViewEntryType.Category
                                 : XPScriptNotesViewEntryType.Document;
-                        rows.Add(new XPScriptNotesViewRow(session, database, viewName, viewNoteId, noteId, string.Join(".", parts), level, indent, type));
+
+                        rows.Add(new XPScriptNotesViewRow(
+                            session,
+                            database,
+                            viewName,
+                            viewNoteId,
+                            noteId,
+                            string.Join(".", parts),
+                            level,
+                            indent,
+                            type));
                     }
                 }
                 finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(buffer); }
             }
             finally { Resolve<OSMemFreeDelegate>("OSMemFree")(buffer); }
-            if ((signalFlags & SignalMoreToDo) == 0) break;
         }
+
         return rows.ToArray();
     }
 
@@ -398,13 +465,25 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     {
         var position = ParseViewPosition(positionText);
         Check(Resolve<NIFReadEntriesDelegate>("NIFReadEntries")(
-            collection, ref position, NavigateCurrent, 0, NavigateCurrent, 1, ReadMaskSummaryValues,
-            out var buffer, out var bufferLength, out _, out var returned, out _), "NIFReadEntries(view column values)");
+            collection,
+            ref position,
+            NavigateCurrent,
+            0,
+            NavigateCurrent,
+            1,
+            ReadMaskSummaryValues,
+            out var buffer,
+            out var bufferLength,
+            out _,
+            out var returned,
+            out _), "NIFReadEntries(view column values)");
+
         if (buffer == 0 || returned == 0)
         {
             if (buffer != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(buffer);
             return Array.Empty<object?>();
         }
+
         try
         {
             var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(buffer);
@@ -414,7 +493,9 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
                 EnsureViewBuffer(bufferLength, 0, 4);
                 var tableLength = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, 0));
                 var itemCount = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, 2));
-                if (tableLength > bufferLength || tableLength < 4 + itemCount * 2) throw new XPScriptRuntimeException(5, "Invalid Notes ITEM_VALUE_TABLE.");
+                if (tableLength > bufferLength || tableLength < 4 + itemCount * 2)
+                    throw new XPScriptRuntimeException(5, "Invalid Notes ITEM_VALUE_TABLE.");
+
                 var lengths = new ushort[itemCount];
                 var cursor = 4;
                 for (var i = 0; i < itemCount; i++)
@@ -422,6 +503,7 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
                     lengths[i] = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, cursor));
                     cursor += 2;
                 }
+
                 var values = new object?[itemCount];
                 for (var i = 0; i < itemCount; i++)
                 {
@@ -442,12 +524,15 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
         var type = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, 0));
         var value = pointer + 2;
         var valueLength = length - 2;
+
         if (type == NotesTypeText) return valueLength == 0 ? "" : FromLmbcs(value, valueLength);
-        if (type == NotesTypeNumber && valueLength >= sizeof(double)) return System.Runtime.InteropServices.Marshal.PtrToStructure<double>(value);
+        if (type == NotesTypeNumber && valueLength >= sizeof(double))
+            return System.Runtime.InteropServices.Marshal.PtrToStructure<double>(value);
         if (type == NotesTypeTime && valueLength >= System.Runtime.InteropServices.Marshal.SizeOf<XPScriptNotesTimeDate>())
             return XPScriptNotesDateTime.FromNative(session, System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesTimeDate>(value));
         if (type == NotesTypeTextList) return DecodeViewTextList(value, valueLength);
-        return valueLength == 0 ? "" : FromLmbcs(value, valueLength);
+
+        return null;
     }
 
     private object?[] DecodeViewTextList(nint pointer, int length)
@@ -455,6 +540,7 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
         if (length < 2) return Array.Empty<object?>();
         var count = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, 0));
         if (length < 2 + count * 2) return Array.Empty<object?>();
+
         var lengths = new ushort[count];
         var cursor = 2;
         for (var i = 0; i < count; i++)
@@ -462,10 +548,12 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
             lengths[i] = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer, cursor));
             cursor += 2;
         }
+
         var values = new object?[count];
         for (var i = 0; i < count; i++)
         {
-            if (cursor + lengths[i] > length) throw new XPScriptRuntimeException(5, "Invalid Notes text-list view value.");
+            if (cursor + lengths[i] > length)
+                throw new XPScriptRuntimeException(5, "Invalid Notes text-list view value.");
             values[i] = lengths[i] == 0 ? "" : FromLmbcs(pointer + cursor, lengths[i]);
             cursor += lengths[i];
         }
@@ -475,7 +563,9 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     private static XPScriptNotesCollectionPosition ParseViewPosition(string text)
     {
         var parts = (text ?? "").Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0 || parts.Length > 32) throw new XPScriptRuntimeException(5, "Invalid Notes view position.");
+        if (parts.Length == 0 || parts.Length > 32)
+            throw new XPScriptRuntimeException(5, "Invalid Notes view position.");
+
         var position = XPScriptNotesCollectionPosition.Create();
         position.Level = checked((ushort)(parts.Length - 1));
         for (var i = 0; i < parts.Length; i++)
