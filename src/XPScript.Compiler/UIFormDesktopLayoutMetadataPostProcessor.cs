@@ -20,7 +20,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
         const string pattern = """
             var\s+request\s*=\s*new\s*\{\s*
             instanceId\s*=\s*form\.InstanceId\s*,\s*
-            modal\s*=\s*modal\s*,\s*
+            modal(?:\s*=\s*modal)?\s*,\s*
             title\s*=\s*form\.Title\s*,\s*
             width\s*=\s*form\.Width\s*>\s*0\s*\?\s*form\.Width\s*:\s*\(int\?\)null\s*,\s*
             height\s*=\s*form\.Height\s*>\s*0\s*\?\s*form\.Height\s*:\s*\(int\?\)null\s*,\s*
