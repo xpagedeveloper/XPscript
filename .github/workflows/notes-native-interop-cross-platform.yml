@@ -7,22 +7,11 @@ on:
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
-      - 'src/XPScript.Compiler/NotesViewColumnNamesPostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigationPostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigationV2PostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigationV2FixPostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigationV3FixPostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesViewNavigatorCachePostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
-      - 'samples/notes-view-columnnames-domino-runtime-test.xps'
-      - 'samples/notes-view-navigation-v1-domino-runtime-test.xps'
-      - 'samples/notes-view-navigation-v2-domino-runtime-test.xps'
-      - 'samples/notes-view-navigation-v3-domino-runtime-test.xps'
-      - 'samples/notes-view-navigator-cache-policy-compile.xps'
+      - 'src/XPScript.Compiler/NotesView*.cs'
+      - 'samples/notes-view-*.xps'
+      - 'scripts/validate-notes-view-navigator-cache-policy.ps1'
       - 'tests/NativeInteropSmoke/**'
-      - 'docs/notes-c-api.md'
-      - 'docs/notes-cross-platform-testing.md'
+      - 'docs/notes-*.md'
       - 'todo/HCLNotes.md'
       - '.github/workflows/notes-native-interop-cross-platform.yml'
   workflow_dispatch:
@@ -35,63 +24,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - name: Validate NotesView cache policy
+        shell: pwsh
+        run: ./scripts/validate-notes-view-navigator-cache-policy.ps1
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
       - name: Compile Notes C API surface
         shell: bash
         run: |
           mkdir -p artifacts/notes-thread-probe
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-c-api-surface.xps \
-            --framework-dependent \
-            -o artifacts/notes-thread-probe/notes-thread-probe
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-c-api-surface.xps --framework-dependent -o artifacts/notes-thread-probe/notes-thread-probe
       - name: Compile NotesView ColumnNames regression
         shell: bash
         run: |
           mkdir -p artifacts/notes-view-columnnames
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-view-columnnames-domino-runtime-test.xps \
-            --framework-dependent \
-            -o artifacts/notes-view-columnnames/notes-view-columnnames
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-view-columnnames-domino-runtime-test.xps --framework-dependent -o artifacts/notes-view-columnnames/notes-view-columnnames
       - name: Compile NotesView navigation V1 regression
         shell: bash
         run: |
           mkdir -p artifacts/notes-view-navigation-v1
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-view-navigation-v1-domino-runtime-test.xps \
-            --framework-dependent \
-            -o artifacts/notes-view-navigation-v1/notes-view-navigation-v1
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-view-navigation-v1-domino-runtime-test.xps --framework-dependent -o artifacts/notes-view-navigation-v1/notes-view-navigation-v1
       - name: Compile NotesView navigation V2 regression
         shell: bash
         run: |
           mkdir -p artifacts/notes-view-navigation-v2
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-view-navigation-v2-domino-runtime-test.xps \
-            --framework-dependent \
-            -o artifacts/notes-view-navigation-v2/notes-view-navigation-v2
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-view-navigation-v2-domino-runtime-test.xps --framework-dependent -o artifacts/notes-view-navigation-v2/notes-view-navigation-v2
       - name: Compile NotesView navigation V3 regression
         shell: bash
         run: |
           mkdir -p artifacts/notes-view-navigation-v3
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-view-navigation-v3-domino-runtime-test.xps \
-            --framework-dependent \
-            -o artifacts/notes-view-navigation-v3/notes-view-navigation-v3
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-view-navigation-v3-domino-runtime-test.xps --framework-dependent -o artifacts/notes-view-navigation-v3/notes-view-navigation-v3
       - name: Compile NotesView cache policy regression
         shell: bash
         run: |
           mkdir -p artifacts/notes-view-cache-policy
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
-            samples/notes-view-navigator-cache-policy-compile.xps \
-            --framework-dependent \
-            -o artifacts/notes-view-cache-policy/notes-view-cache-policy
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-view-navigator-cache-policy-compile.xps --framework-dependent -o artifacts/notes-view-cache-policy/notes-view-cache-policy
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
