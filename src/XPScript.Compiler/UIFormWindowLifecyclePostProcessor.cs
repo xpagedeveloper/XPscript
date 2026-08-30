@@ -31,8 +31,9 @@ internal sealed class UIFormWindowLifecyclePostProcessor
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
+        var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+        if (index < 0)
             throw new CompilerException("Unable to install UIForm window lifecycle (" + stage + ").");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        return source[..index] + newValue + source[(index + oldValue.Length)..];
     }
 }
