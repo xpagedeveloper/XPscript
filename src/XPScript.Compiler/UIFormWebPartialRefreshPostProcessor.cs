@@ -39,43 +39,7 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         }
 
         if (!generated.Contains("__xps_uiform_event", StringComparison.Ordinal))
-        {
-            generated = ReplaceRequiredRegex(
-                generated,
-                """if\s*\(XPScriptUIWebAdapter\.Method\.Equals\("POST",\s*StringComparison\.OrdinalIgnoreCase\)\)\s*\{\s*foreach\s*\(var\s+field\s+in\s+_fields\)\s*\{?\s*(?:if\s*\(field\.Type\s*==\s*"MultiListBox"\)\s*ApplySubmittedValues\(field,\s*XPScriptUIWebAdapter\.FormValues\(field\.Name\)\)\s*;\s*else\s*)?ApplySubmittedValue\(field,\s*XPScriptUIWebAdapter\.FormFirst\(field\.Name\)\)\s*;\s*\}?\s*return\s+"OK"\s*;\s*\}\s*XPScriptUIWebAdapter\.WriteHtml\(RenderWebForm\(\)\)\s*;\s*return\s+"Pending"\s*;""",
-                """
-            if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var field in _fields)
-                {
-                    if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
-                    else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
-                }
-
-                var eventToken = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event").Trim();
-                if (eventToken.Length > 0)
-                {
-                    var eventValue = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event_value");
-                    XPScriptUIWebAdapter.WriteHtml(DispatchRegisteredEvent(eventToken, eventValue));
-                    return "Pending";
-                }
-
-                var partialRegion = XPScriptUIWebAdapter.FormFirst("__xps_uiform_partial").Trim();
-                if (partialRegion.Length > 0)
-                {
-                    if (!_fields.Any(field => field.RegionId.Equals(partialRegion, StringComparison.Ordinal)))
-                        throw new XPScriptRuntimeException(5, $"UIForm partial refresh region '{partialRegion}' does not exist.");
-                    XPScriptUIWebAdapter.WriteHtml(RenderWebRegion(partialRegion));
-                    return "Pending";
-                }
-                return "OK";
-            }
-            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
-            return "Pending";
-""",
-                "web-post-dispatch",
-                RegexOptions.CultureInvariant | RegexOptions.Singleline);
-        }
+            generated = ReplaceWebPostDispatch(generated);
 
         if (!generated.Contains("private string RenderReactiveScript()", StringComparison.Ordinal))
         {
@@ -157,6 +121,57 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
         }
 
         return generated;
+    }
+
+    private static string ReplaceWebPostDispatch(string source)
+    {
+        const string methodToken = "    public string ShowDialog()\n    {";
+        const string startToken = "        if (XPScriptUIWebAdapter.Method.Equals(\"POST\", StringComparison.OrdinalIgnoreCase))";
+        const string writeToken = "        XPScriptUIWebAdapter.WriteHtml(RenderWebForm());";
+        const string endToken = "        return \"Pending\";";
+
+        var method = source.IndexOf(methodToken, StringComparison.Ordinal);
+        if (method < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:method).");
+        var start = source.IndexOf(startToken, method, StringComparison.Ordinal);
+        if (start < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:start).");
+        var write = source.IndexOf(writeToken, start, StringComparison.Ordinal);
+        if (write < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:write).");
+        var end = source.IndexOf(endToken, write + writeToken.Length, StringComparison.Ordinal);
+        if (end < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:end).");
+        end += endToken.Length;
+
+        const string replacement = """
+        if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var field in _fields)
+            {
+                if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
+                else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
+            }
+
+            var eventToken = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event").Trim();
+            if (eventToken.Length > 0)
+            {
+                var eventValue = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event_value");
+                XPScriptUIWebAdapter.WriteHtml(DispatchRegisteredEvent(eventToken, eventValue));
+                return "Pending";
+            }
+
+            var partialRegion = XPScriptUIWebAdapter.FormFirst("__xps_uiform_partial").Trim();
+            if (partialRegion.Length > 0)
+            {
+                if (!_fields.Any(field => field.RegionId.Equals(partialRegion, StringComparison.Ordinal)))
+                    throw new XPScriptRuntimeException(5, $"UIForm partial refresh region '{partialRegion}' does not exist.");
+                XPScriptUIWebAdapter.WriteHtml(RenderWebRegion(partialRegion));
+                return "Pending";
+            }
+            return "OK";
+        }
+        XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
+        return "Pending";
+""";
+
+        return source[..start] + replacement + source[end..];
     }
 
     private static string ReplaceRequiredRegex(

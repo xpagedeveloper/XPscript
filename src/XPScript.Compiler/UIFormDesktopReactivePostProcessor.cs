@@ -4,10 +4,18 @@ internal sealed class UIFormDesktopReactivePostProcessor
 {
     private const string MethodLookupSentinel = "types: [typeof(string), typeof(Func<string, string, string>)]";
     private const string InvokeSentinel = "new Func<string, string, string>(form.DispatchRegisteredEvent)";
+    private const string ModernLookupSentinel = "ResolveShowDialog(Type type)";
+    private const string ModernDispatchSentinel = "RegisterEventDispatcher(type, form);";
+    private const string ModernCallbackSentinel = "form.DispatchRegisteredEvent(eventToken, submittedValue)";
 
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+
+        if (generated.Contains(ModernLookupSentinel, StringComparison.Ordinal) &&
+            generated.Contains(ModernDispatchSentinel, StringComparison.Ordinal) &&
+            generated.Contains(ModernCallbackSentinel, StringComparison.Ordinal))
+            return generated;
 
         if (!generated.Contains(MethodLookupSentinel, StringComparison.Ordinal))
         {
