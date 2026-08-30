@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesView*.cs'
       - 'samples/notes-view-*.xps'
+      - 'scripts/*notes-view-cache*.ps1'
       - 'scripts/validate-notes-view-navigator-cache-policy.ps1'
       - 'tests/NativeInteropSmoke/**'
       - 'docs/notes-*.md'
@@ -32,7 +33,9 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Validate NotesView cache policy
         shell: pwsh
-        run: ./scripts/validate-notes-view-navigator-cache-policy.ps1
+        run: |
+          ./scripts/validate-notes-view-navigator-cache-policy.ps1
+          ./scripts/test-notes-view-cache-history-model.ps1
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
       - name: Compile Notes C API surface
