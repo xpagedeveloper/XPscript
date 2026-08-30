@@ -12,6 +12,7 @@ Sub Main()
     Dim db As NotesDatabase
     Dim view As NotesView
     Dim nav As Variant
+    Dim defaultNav As Variant
     Dim category As Variant
     Dim child As Variant
     Dim sibling As Variant
@@ -30,6 +31,11 @@ Sub Main()
         Print "FAIL hierarchy view missing"
         Exit Sub
     End If
+
+    view.AutoUpdate = False
+    defaultNav = view.CreateViewNav()
+    If defaultNav.CacheSize <> 64 Then failures = failures + 1
+    Call defaultNav.Recycle()
 
     nav = view.CreateViewNav(2)
     If nav.CacheSize <> 2 Then failures = failures + 1
@@ -85,6 +91,10 @@ Sub Main()
         Call category.Recycle()
     End If
 
+    nav.CacheSize = 512
+    If nav.CacheSize <> 512 Then failures = failures + 1
+    nav.CacheSize = 999
+    If nav.CacheSize <> 512 Then failures = failures + 1
     nav.CacheSize = 16
     If nav.CacheSize <> 16 Then failures = failures + 1
     If nav.Count < 5 Then failures = failures + 1
@@ -100,6 +110,12 @@ Sub Main()
         Call nav.GotoNext(posEntry)
         Call posEntry.Recycle()
     End If
+
+    Call view.Refresh()
+    nav.MaxLevel = 30
+    posEntry = nav.GetFirst()
+    If posEntry Is Nothing Then failures = failures + 1
+    If Not posEntry Is Nothing Then Call posEntry.Recycle()
 
     Call nav.Recycle()
     Call view.Recycle()
