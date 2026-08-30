@@ -36,6 +36,8 @@ internal sealed class UIExtensionDesktopPostProcessor
     private const string Replacement = """
     public string ShowDialog()
     {
+        _modal = true;
+        _visible = true;
         if (XPScriptUIWebAdapter.IsAvailable)
         {
             if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
@@ -45,15 +47,18 @@ internal sealed class UIExtensionDesktopPostProcessor
                     if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
                     else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
                 }
+                _visible = false;
                 return "OK";
             }
-            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
+            XPScriptUIWebAdapter.WriteHtml(RenderWebForm(true));
             return "Pending";
         }
 
         if (!XPScriptUIDesktopAdapter.IsAvailable)
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
-        return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
+        var result = XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
+        _visible = false;
+        return result;
     }
 
     private void ApplyDesktopValue(XPScriptUIField field, string submitted)
@@ -97,7 +102,7 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n";
 
         replaced = NormalizeLineEndings(replaced);
-
+        replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
         replaced = new UIFormCallbackModelPostProcessor().Transform(replaced);
@@ -126,6 +131,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormAdditionalFieldsPostProcessor().Transform(replaced);
         replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
+        replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
 
