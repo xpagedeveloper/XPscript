@@ -14,9 +14,6 @@ internal sealed class ApplicationUiMetadataPostProcessor
             applicationIcon = XPScriptRuntime.CStr(XPScriptApplicationRuntime.State.Get("__xps_application_icon")),
 """;
 
-    private const string OldWebWrite = "            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());";
-    private const string NewWebWrite = "            XPScriptUIWebAdapter.WriteHtml(XPScriptApplicationMetadataRuntime.WrapWebHtml(RenderWebForm()));";
-
     private const string RuntimeCode = """
 
 internal static class XPScriptApplicationMetadataRuntime
@@ -66,8 +63,14 @@ internal static class XPScriptApplicationMetadataRuntime
             generated = titlePattern.Replace(generated, replacement, 1);
         }
 
-        if (generated.Contains(OldWebWrite, StringComparison.Ordinal))
-            generated = generated.Replace(OldWebWrite, NewWebWrite, StringComparison.Ordinal);
+        if (!generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml(RenderWebForm())", StringComparison.Ordinal))
+        {
+            var webWrite = new Regex(
+                @"(?m)^(?<indent>\s*)XPScriptUIWebAdapter\.WriteHtml\(RenderWebForm\(\)\);\s*$",
+                RegexOptions.CultureInvariant);
+            if (webWrite.IsMatch(generated))
+                generated = webWrite.Replace(generated, "${indent}XPScriptUIWebAdapter.WriteHtml(XPScriptApplicationMetadataRuntime.WrapWebHtml(RenderWebForm()));", 1);
+        }
 
         if (!generated.Contains("internal static class XPScriptApplicationMetadataRuntime", StringComparison.Ordinal))
             generated += RuntimeCode;
