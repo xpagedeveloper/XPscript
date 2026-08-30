@@ -31,10 +31,8 @@ Sub Main()
         Exit Sub
     End If
 
-    nav = view.CreateViewNav()
-    nav.CacheSize = 16
-    If nav.CacheSize <> 16 Then failures = failures + 1
-    If nav.Count < 5 Then failures = failures + 1
+    nav = view.CreateViewNav(2)
+    If nav.CacheSize <> 2 Then failures = failures + 1
 
     category = nav.GetFirst()
     If category Is Nothing Then
@@ -86,6 +84,10 @@ Sub Main()
 
         Call category.Recycle()
     End If
+
+    nav.CacheSize = 16
+    If nav.CacheSize <> 16 Then failures = failures + 1
+    If nav.Count < 5 Then failures = failures + 1
 
     nav.MaxLevel = 0
     If nav.Count < 2 Then failures = failures + 1
