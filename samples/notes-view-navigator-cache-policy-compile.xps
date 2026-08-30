@@ -1,0 +1,23 @@
+' NotesView navigator cache policy compile regression.
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim nav As Variant
+
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    Set view = db.GetView("XPScriptHierarchyView")
+    view.AutoUpdate = False
+    nav = view.CreateViewNav()
+    nav.CacheSize = 512
+    Call view.Refresh()
+    Call nav.GetFirst()
+    Call nav.Recycle()
+    Call view.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
