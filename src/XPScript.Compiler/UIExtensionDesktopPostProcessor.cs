@@ -50,7 +50,7 @@ internal sealed class UIExtensionDesktopPostProcessor
                 _visible = false;
                 return "OK";
             }
-            XPScriptUIWebAdapter.WriteHtml(RenderWebForm(true));
+            XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
             return "Pending";
         }
 
