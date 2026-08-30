@@ -13,11 +13,13 @@ on:
       - 'src/XPScript.Compiler/NotesViewNavigationV2FixPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs'
       - 'src/XPScript.Compiler/NotesViewNavigationV3FixPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesViewNavigatorCachePostProcessor.cs'
       - 'src/XPScript.Compiler/NotesThreadLifecyclePostProcessor.cs'
       - 'samples/notes-view-columnnames-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v1-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v2-domino-runtime-test.xps'
       - 'samples/notes-view-navigation-v3-domino-runtime-test.xps'
+      - 'samples/notes-view-navigator-cache-policy-compile.xps'
       - 'tests/NativeInteropSmoke/**'
       - 'docs/notes-c-api.md'
       - 'docs/notes-cross-platform-testing.md'
@@ -83,5 +85,13 @@ jobs:
             samples/notes-view-navigation-v3-domino-runtime-test.xps \
             --framework-dependent \
             -o artifacts/notes-view-navigation-v3/notes-view-navigation-v3
+      - name: Compile NotesView cache policy regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-view-cache-policy
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- \
+            samples/notes-view-navigator-cache-policy-compile.xps \
+            --framework-dependent \
+            -o artifacts/notes-view-cache-policy/notes-view-cache-policy
       - name: Run native interop and unmanaged memory smoke test
         run: dotnet run --project tests/NativeInteropSmoke/NativeInteropSmoke.csproj -c Release
