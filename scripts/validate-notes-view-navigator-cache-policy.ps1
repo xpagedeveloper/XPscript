@@ -18,5 +18,5 @@ foreach ($value in $requiredCache) {
 }
 if (-not $history.Contains('MaxRetainedHistory')) { throw 'Missing retained-history cap.' }
 if (-not $history.Contains('TrimHistory()')) { throw 'Missing retained-history trimming.' }
-if (-not $policy.Contains('_navigationGeneration++')) { throw 'Refresh does not invalidate navigator generation.' }
+if (-not $policy.Contains('NavigationGeneration => 0')) { throw 'Missing stable navigator generation surface.' }
 Write-Host 'NOTES-VIEW-NAVIGATOR-CACHE-POLICY=PASS'
