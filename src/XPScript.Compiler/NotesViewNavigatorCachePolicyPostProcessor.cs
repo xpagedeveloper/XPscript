@@ -21,12 +21,6 @@ internal static class NotesViewNavigatorCachePolicyPostProcessor
         return source;
     }
 
-    public static string ApplyBuiltSurface(string source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        return source;
-    }
-
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
