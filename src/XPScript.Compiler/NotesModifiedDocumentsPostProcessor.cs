@@ -27,11 +27,79 @@ internal static class NotesModifiedDocumentsPostProcessor
         source = ReplaceRequired(
             source,
             "    internal ushort GetNoteClass(uint note)",
-            "    internal (uint[] NoteIds, uint[] DocumentNoteIds, uint[] DesignNoteIds, XPScriptNotesTimeDate UntilTime) GetModifiedNoteIds(nint database, ushort noteClassMask, XPScriptNotesTimeDate? since)\n    {\n        EnsureInitialized();\n        using var formulaText = ToLmbcs(\"@All\");\n        var compileStatus = Resolve<NSFFormulaCompileDelegate>(\"NSFFormulaCompile\")(\n            0, 0, formulaText.Pointer, checked((ushort)formulaText.Length),\n            out var formulaHandle, out _, out var compileError, out var errorLine, out var errorColumn, out _, out _);\n        if (compileStatus != 0 || compileError != 0)\n        {\n            if (formulaHandle != 0) Resolve<OSMemFreeDelegate>(\"OSMemFree\")(formulaHandle);\n            var code = compileStatus != 0 ? compileStatus : compileError;\n            throw new XPScriptRuntimeException(5, \"Notes modified-note formula compilation failed at line \" + errorLine + \", column \" + errorColumn + \" (0x\" + code.ToString(\"X4\", System.Globalization.CultureInfo.InvariantCulture) + \".\");\n        }\n\n        const ushort documentClass = 0x0001;\n        const ushort designClasses = 0x0FBE;\n        var ids = new List<uint>();\n        var documents = new List<uint>();\n        var design = new List<uint>();\n        NSFSearchProcDelegate callback = (_, matchPointer, _) =>\n        {\n            if (matchPointer == 0) return 0;\n            var match = System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesSearchMatch>(matchPointer);\n            if ((match.SERetFlags & SearchMatchFlag) == 0 || match.Id.NoteId == 0) return 0;\n            ids.Add(match.Id.NoteId);\n            if ((match.NoteClass & documentClass) != 0) documents.Add(match.Id.NoteId);\n            if ((match.NoteClass & designClasses) != 0) design.Add(match.Id.NoteId);\n            return 0;\n        };\n\n        var untilPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf<XPScriptNotesTimeDate>());\n        nint sincePointer = 0;\n        try\n        {\n            System.Runtime.InteropServices.Marshal.StructureToPtr(default(XPScriptNotesTimeDate), untilPointer, false);\n            if (since.HasValue)\n            {\n                sincePointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf<XPScriptNotesTimeDate>());\n                System.Runtime.InteropServices.Marshal.StructureToPtr(since.Value, sincePointer, false);\n            }\n            var searchStatus = Resolve<NSFSearchDelegate>(\"NSFSearch\")(database, formulaHandle, 0, 0, noteClassMask, sincePointer, callback, 0, untilPointer);\n            Check(searchStatus, \"NSFSearch(modified notes)\");\n            var until = System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesTimeDate>(untilPointer);\n            return (ids.Distinct().ToArray(), documents.Distinct().ToArray(), design.Distinct().ToArray(), until);\n        }\n        finally\n        {\n            if (sincePointer != 0) System.Runtime.InteropServices.Marshal.FreeHGlobal(sincePointer);\n            System.Runtime.InteropServices.Marshal.FreeHGlobal(untilPointer);\n            Resolve<OSMemFreeDelegate>(\"OSMemFree\")(formulaHandle);\n            GC.KeepAlive(callback);\n        }\n    }\n\n    internal ushort GetNoteClass(uint note)",
+            NativeModifiedRuntime + "\n\n    internal ushort GetNoteClass(uint note)",
             "native-modified-note-helper");
+
+        source += "\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate ushort XPScriptNSFDbGetModifiedNoteTableDelegate(uint database, ushort noteClassMask, XPScriptNotesTimeDate since, out XPScriptNotesTimeDate until, out uint table);\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate void XPScriptTimeConstantDelegate(ushort constantType, out XPScriptNotesTimeDate value);\n";
 
         return source;
     }
+
+    private const string NativeModifiedRuntime = """
+    internal (uint[] NoteIds, uint[] DocumentNoteIds, uint[] DesignNoteIds, XPScriptNotesTimeDate UntilTime) GetModifiedNoteIds(uint database, ushort noteClassMask, XPScriptNotesTimeDate? since)
+    {
+        EnsureInitialized();
+        var start = since ?? GetMinimumTimeDate();
+        var all = ReadModifiedNoteTable(database, noteClassMask, start, out var until);
+
+        const ushort documentClass = 0x0001;
+        const ushort designClasses = 0x0FBE;
+        var documentMask = (ushort)(noteClassMask & documentClass);
+        var designMask = (ushort)(noteClassMask & designClasses);
+
+        var documents = documentMask == 0
+            ? Array.Empty<uint>()
+            : IntersectModifiedIds(all, ReadModifiedNoteTable(database, documentMask, start, out _));
+        var design = designMask == 0
+            ? Array.Empty<uint>()
+            : IntersectModifiedIds(all, ReadModifiedNoteTable(database, designMask, start, out _));
+
+        return (all, documents, design, until);
+    }
+
+    private XPScriptNotesTimeDate GetMinimumTimeDate()
+    {
+        Resolve<XPScriptTimeConstantDelegate>("TimeConstant")(0, out var value);
+        return value;
+    }
+
+    private uint[] ReadModifiedNoteTable(uint database, ushort noteClassMask, XPScriptNotesTimeDate since, out XPScriptNotesTimeDate until)
+    {
+        var status = Resolve<XPScriptNSFDbGetModifiedNoteTableDelegate>("NSFDbGetModifiedNoteTable")(
+            database, noteClassMask, since, out until, out var table);
+        if (status != 0)
+        {
+            var message = LoadStatusText(status);
+            if (message.Contains("No documents have been modified", StringComparison.OrdinalIgnoreCase))
+                return Array.Empty<uint>();
+            Check(status, "NSFDbGetModifiedNoteTable");
+        }
+
+        if (table == 0) return Array.Empty<uint>();
+        try
+        {
+            var ids = new List<uint>();
+            var first = true;
+            while (Resolve<NotesDocumentIDScanDelegate>("IDScan")(table, first ? 1 : 0, out var id) != 0)
+            {
+                first = false;
+                if (id != 0) ids.Add(id);
+            }
+            return ids.Distinct().ToArray();
+        }
+        finally
+        {
+            _ = Resolve<IDDestroyTableDelegate>("IDDestroyTable")(table);
+        }
+    }
+
+    private static uint[] IntersectModifiedIds(uint[] all, uint[] subset)
+    {
+        if (all.Length == 0 || subset.Length == 0) return Array.Empty<uint>();
+        var selected = new HashSet<uint>(subset);
+        return all.Where(selected.Contains).ToArray();
+    }
+""";
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
