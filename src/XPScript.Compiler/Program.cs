@@ -6,9 +6,7 @@ var buildDate = Assembly.GetExecutingAssembly()
     .FirstOrDefault(attribute => string.Equals(attribute.Key, "XPScriptBuildDate", StringComparison.Ordinal))
     ?.Value ?? "unknown";
 
-Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate}");
-Console.WriteLine("XPageDeveloper.com (c)");
-Console.WriteLine();
+Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} XPageDeveloper.com (c)");
 
 return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
 
