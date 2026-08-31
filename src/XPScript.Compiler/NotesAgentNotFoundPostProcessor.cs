@@ -6,7 +6,7 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(
+        source = EnsureReplacement(
             source,
             "    internal string RunAgent(uint db, string name, uint documentContext)",
             "    internal string? RunAgent(uint db, string name, uint documentContext)",
@@ -27,20 +27,20 @@ internal static class NotesAgentNotFoundPostProcessor
         if ((status & 0x3FFF) == 0x0404) return null;
         Check(status, "NIFFindDesignNote(agent)");
 """;
-        source = ReplaceRequiredAfter(
+        source = EnsureReplacementAfter(
             source,
             "    internal string? RunAgent(uint db, string name, uint documentContext)",
             oldFindAgent,
             newFindAgent,
             "native-runagent-not-found");
 
-        source = ReplaceRequired(
+        source = EnsureReplacement(
             source,
             "    private XPScriptNotesAgentResult RunAgentCore(object? nameValue, XPScriptNotesDocument? document)",
             "    private XPScriptNotesAgentResult? RunAgentCore(object? nameValue, XPScriptNotesDocument? document)",
             "database-runagent-nullable");
 
-        source = ReplaceRequired(
+        source = EnsureReplacement(
             source,
             "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return new XPScriptNotesAgentResult(Session, this, output);",
             "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return output is null ? null : new XPScriptNotesAgentResult(Session, this, output);",
@@ -49,21 +49,27 @@ internal static class NotesAgentNotFoundPostProcessor
         return source;
     }
 
-    private static string ReplaceRequiredAfter(string source, string anchor, string oldValue, string newValue, string stage)
+    private static string EnsureReplacementAfter(string source, string anchor, string oldValue, string newValue, string stage)
     {
         var anchorIndex = source.IndexOf(anchor, StringComparison.Ordinal);
         if (anchorIndex < 0)
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + "-anchor).");
 
-        var matchIndex = source.IndexOf(oldValue, anchorIndex + anchor.Length, StringComparison.Ordinal);
+        var searchStart = anchorIndex + anchor.Length;
+        if (source.IndexOf(newValue, searchStart, StringComparison.Ordinal) >= 0)
+            return source;
+
+        var matchIndex = source.IndexOf(oldValue, searchStart, StringComparison.Ordinal);
         if (matchIndex < 0)
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + ").");
 
         return source[..matchIndex] + newValue + source[(matchIndex + oldValue.Length)..];
     }
 
-    private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
+    private static string EnsureReplacement(string source, string oldValue, string newValue, string stage)
     {
+        if (source.Contains(newValue, StringComparison.Ordinal))
+            return source;
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
