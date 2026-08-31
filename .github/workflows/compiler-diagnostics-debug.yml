@@ -64,6 +64,7 @@ jobs:
           exit 0
 
       - name: Verify debug diagnostics show generated C sharp
+        if: always()
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
@@ -71,14 +72,16 @@ jobs:
           $stdoutPath = [System.IO.Path]::GetTempFileName()
           $stderrPath = [System.IO.Path]::GetTempFileName()
           try {
-            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/generated-csharp-error.xps --info --debug --result-format text 1> $stdoutPath 2> $stderrPath
+            & dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- run ./samples/include-source-map/generated-csharp-error.xps --debug --result-format text 1> $stdoutPath 2> $stderrPath
             $exitCode = $LASTEXITCODE
             $stdout = Get-Content -Raw $stdoutPath
+            $stderr = Get-Content -Raw $stderrPath
 
             if ($exitCode -ne 2) { throw "Expected exit code 2, got $exitCode.`n$stdout" }
             if ($stdout -notmatch '(?m)^\s*file:\s*generated-csharp-error\.xps\s*$') { throw "Debug output lost the source-mapped XPScript diagnostic.`n$stdout" }
             if ($stdout -notmatch '(?m)^\s*file:\s*Program\.cs\s*$') { throw "Debug output did not include generated Program.cs.`n$stdout" }
             if ($stdout -notmatch 'CS\d{4}') { throw "Debug output did not include a C# diagnostic identifier.`n$stdout" }
+            if ($stderr -notmatch 'Started to compile|Compiling .* transient|Run cache hit') { throw "--debug did not include --info progress output.`n$stderr" }
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
           }

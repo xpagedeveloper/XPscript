@@ -6,6 +6,7 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
+      - 'src/XPScript.Compiler/NotesGetViewNotFoundPostProcessor.cs'
       - 'src/XPScript.Compiler/NotesDxlPostProcessor.cs'
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesView*.cs'

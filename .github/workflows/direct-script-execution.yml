@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         run: |
           $expectedDirectory = (Resolve-Path ./samples).Path
-          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps first 'second value'
+          $output = dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- run ./samples/direct-run.xps --debug first 'second value'
           if ($LASTEXITCODE -ne 0) { throw "Direct run failed with exit code $LASTEXITCODE.`n$output" }
           if ($output -notcontains 'ARGCOUNT=2') { throw "Argument count was not forwarded.`n$output" }
           if ($output -notcontains 'ARG0=first') { throw "First argument was not forwarded.`n$output" }
