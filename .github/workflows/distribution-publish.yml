@@ -52,16 +52,16 @@ jobs:
       - name: Verify CLI version output
         shell: pwsh
         run: |
-          $expected = 'XPScript Version 1.0 - (c) XPageDeveloper.com 2026'
+          $expected = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2} - XPageDeveloper\.com ©$'
           foreach ($option in @('--version', '--info', '--debug')) {
             $output = & ./publish/xpscript/xpscript $option
             if ($LASTEXITCODE -ne 0) { throw "xpscript $option exited with code $LASTEXITCODE." }
-            if (($output -join "`n").Trim() -ne $expected) { throw "Unexpected xpscript $option output: $($output -join ' | ')" }
+            if (($output -join "`n").Trim() -notmatch $expected) { throw "Unexpected xpscript $option output: $($output -join ' | ')" }
           }
 
           $defaultOutput = & ./publish/xpscript/xpscript
           if ($LASTEXITCODE -ne 0) { throw "xpscript without arguments exited with code $LASTEXITCODE." }
-          if ($defaultOutput[0] -ne $expected) { throw "Expected version banner as first line without arguments." }
+          if ($defaultOutput[0] -notmatch $expected) { throw "Expected current version banner as first line without arguments." }
       - name: Upload XPscript toolchain artifact
         uses: actions/upload-artifact@v4
         with:
