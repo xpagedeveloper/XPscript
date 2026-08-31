@@ -1,0 +1,40 @@
+' Compile-time regression for NotesStream, NotesAgent and NotesNoteCollection DXL input.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim stream As NotesStream
+    Dim agent As NotesAgent
+    Dim nc As NotesNoteCollection
+    Dim exporter As NotesDXLExporter
+
+    Set session = New NotesSession()
+    Set stream = session.CreateStream()
+    stream.Charset = "UTF-8"
+    Call stream.WriteText("surface")
+    stream.Position = 0
+    Print stream.ReadText()
+
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    Set agent = db.GetAgent("XPScriptTestAgent")
+    If Not agent Is Nothing Then
+        Print agent.Name
+        Print agent.Owner
+        Print agent.Trigger
+        Print agent.Target
+    End If
+
+    Set nc = db.CreateNoteCollection(False)
+    nc.SelectDocuments = True
+    Call nc.BuildCollection()
+    Set exporter = session.CreateDXLExporter()
+    Call exporter.Export(nc, "out/notes-dxl/extended-surface.dxl")
+
+    Call exporter.Recycle()
+    Call nc.Recycle()
+    If Not agent Is Nothing Then Call agent.Recycle()
+    Call db.Recycle()
+    Call stream.Recycle()
+    Call session.Recycle()
+End Sub

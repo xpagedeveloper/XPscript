@@ -1,0 +1,34 @@
+' Runtime regression for NotesNoteCollection as NotesDXLExporter input.
+Option Declare
+
+Sub Main()
+    Const DATABASE_PATH = "xpscript.nsf"
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim nc As NotesNoteCollection
+    Dim exporter As NotesDXLExporter
+    Dim path As String
+
+    path = "out/notes-dxl/note-collection-runtime.dxl"
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    If db Is Nothing Or Not db.IsOpen Then Error 9975, "xpscript.nsf is not open"
+
+    Set nc = db.CreateNoteCollection(False)
+    nc.SelectDocuments = True
+    nc.SelectionFormula = "Form=\"XPScriptTest\""
+    Call nc.BuildCollection()
+    If nc.Count < 3 Then Error 9976, "Expected fixture documents"
+
+    Set exporter = session.CreateDXLExporter()
+    Call exporter.Export(nc, path)
+    If Not FileExists(path) Then Error 9977, "NotesDXLExporter.Export did not create output"
+    If FileInfo(path).Length = 0 Then Error 9978, "NotesDXLExporter.Export created an empty file"
+    Print "DXL-LOG=" & exporter.Log
+
+    Call exporter.Recycle()
+    Call nc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NOTES-NOTE-COLLECTION-DXL=OK"
+End Sub
