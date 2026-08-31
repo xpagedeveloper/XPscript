@@ -12,14 +12,22 @@ internal static class NotesAgentNotFoundPostProcessor
             "    internal string? RunAgent(uint db, string name, uint documentContext)",
             "native-runagent-nullable");
 
-        const string oldFindAgent = """
+        const string oldRunAgentStart = """
+    internal string? RunAgent(uint db, string name, uint documentContext)
+    {
+        EnsureInitialized();
+        using var agentName = ToLmbcs(name);
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
         var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
         if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
             status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);
         Check(status, "NIFFindDesignNote(agent)");
 """;
-        const string newFindAgent = """
+        const string newRunAgentStart = """
+    internal string? RunAgent(uint db, string name, uint documentContext)
+    {
+        EnsureInitialized();
+        using var agentName = ToLmbcs(name);
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
         var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
         if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
@@ -29,8 +37,8 @@ internal static class NotesAgentNotFoundPostProcessor
 """;
         source = ReplaceRequired(
             source,
-            oldFindAgent,
-            newFindAgent,
+            oldRunAgentStart,
+            newRunAgentStart,
             "native-runagent-not-found");
 
         source = ReplaceRequired(
