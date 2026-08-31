@@ -108,10 +108,43 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
 
 internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 {
+    private static readonly string[] CleanedDxlRemovedElements =
+    {
+        "noteinfo",
+        "updatedby",
+        "revisions",
+        "wassignedby",
+        "agentrun",
+        "agentmodified",
+        "designchange",
+        "databaseinfo"
+    };
+
+    private static readonly string[] CleanedDxlRemovedAttributes =
+    {
+        "replicaid",
+        "maintenanceversion",
+        "milestonebuild"
+    };
+
     private uint _handle;
+    private bool _cleanedDxl;
+    private bool _exportDesignToFolders;
 
     internal XPScriptNotesDXLExporter(XPScriptNotesSession session) : base(session)
         => _handle = session.Api.CreateDxlExporter();
+
+    public bool CleanedDXL
+    {
+        get { EnsureAlive(); return _cleanedDxl; }
+        set { EnsureAlive(); _cleanedDxl = value; }
+    }
+
+    public bool ExportDesignToFolders
+    {
+        get { EnsureAlive(); return _exportDesignToFolders; }
+        set { EnsureAlive(); _exportDesignToFolders = value; }
+    }
 
     public int RichTextOption
     {
@@ -183,19 +216,28 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
     {
         EnsureAlive();
         RequireOpenDatabase(database, "ExportDatabaseDesign");
-        Session.Api.ExportDxlDesign(_handle, database.Handle, XPScriptRuntime.CStr(filePathValue));
+
+        if (_exportDesignToFolders)
+        {
+            ExportDatabaseDesignToFolders(database, XPScriptRuntime.CStr(filePathValue));
+            return;
+        }
+
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDesign(_handle, database.Handle, path));
     }
 
     public void ExportDesignElement(XPScriptNotesDatabase database, object? nameValue, object? designTypeValue, object? filePathValue)
     {
         EnsureAlive();
         RequireOpenDatabase(database, "ExportDesignElement");
-        Session.Api.ExportDxlDesignElement(
-            _handle,
-            database.Handle,
-            XPScriptRuntime.CStr(nameValue),
-            XPScriptRuntime.CStr(designTypeValue),
-            XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(
+            filePathValue,
+            path => Session.Api.ExportDxlDesignElement(
+                _handle,
+                database.Handle,
+                XPScriptRuntime.CStr(nameValue),
+                XPScriptRuntime.CStr(designTypeValue),
+                path));
     }
 
     public void ExportDocument(XPScriptNotesDocument document, object? filePathValue)
@@ -203,7 +245,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         EnsureAlive();
         if (document is null) throw new XPScriptRuntimeException(91, "NotesDXLExporter.ExportDocument requires a NotesDocument.");
         _ = document.OwnerDatabase.Handle;
-        Session.Api.ExportDxlDocument(_handle, document.NativeHandle, XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDocument(_handle, document.NativeHandle, path));
     }
 
     public void ExportDocumentCollection(XPScriptNotesDocumentCollection collection, object? filePathValue)
@@ -211,7 +253,364 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         EnsureAlive();
         if (collection is null) throw new XPScriptRuntimeException(91, "NotesDXLExporter.ExportDocumentCollection requires a NotesDocumentCollection.");
         var database = collection.OwnerDatabase;
-        Session.Api.ExportDxlDocumentCollection(_handle, database.Handle, collection.NativeNoteIds, XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDocumentCollection(_handle, database.Handle, collection.NativeNoteIds, path));
+    }
+
+    private void ExportDatabaseDesignToFolders(XPScriptNotesDatabase database, string rootPath)
+    {
+        var fullRootPath = System.IO.Path.GetFullPath(rootPath);
+        System.IO.Directory.CreateDirectory(fullRootPath);
+        var temporaryPath = System.IO.Path.Combine(
+            fullRootPath,
+            ".xpscript-design-export." + System.Guid.NewGuid().ToString("N") + ".tmp");
+
+        try
+        {
+            Session.Api.ExportDxlDesign(_handle, database.Handle, temporaryPath);
+            var document = LoadDxl(temporaryPath);
+            var timestamps = CaptureDesignFileTimes(document);
+            if (_cleanedDxl)
+                CleanDxl(document);
+            WriteDesignElements(document, fullRootPath, timestamps);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(temporaryPath))
+                System.IO.File.Delete(temporaryPath);
+        }
+    }
+
+    private void ExportToPath(object? filePathValue, System.Action<string> rawExport)
+    {
+        var targetPath = XPScriptRuntime.CStr(filePathValue);
+        if (!_cleanedDxl)
+        {
+            rawExport(targetPath);
+            return;
+        }
+
+        var fullTargetPath = System.IO.Path.GetFullPath(targetPath);
+        var targetDirectory = System.IO.Path.GetDirectoryName(fullTargetPath) ?? System.IO.Directory.GetCurrentDirectory();
+        System.IO.Directory.CreateDirectory(targetDirectory);
+        var temporaryPath = System.IO.Path.Combine(
+            targetDirectory,
+            "." + System.IO.Path.GetFileName(fullTargetPath) + "." + System.Guid.NewGuid().ToString("N") + ".xpscript-dxl.tmp");
+
+        try
+        {
+            rawExport(temporaryPath);
+            var document = LoadDxl(temporaryPath);
+            CleanDxl(document);
+            WriteDxl(document, fullTargetPath);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(temporaryPath))
+                System.IO.File.Delete(temporaryPath);
+        }
+    }
+
+    private static System.Xml.Linq.XDocument LoadDxl(string sourcePath)
+    {
+        var readerSettings = new System.Xml.XmlReaderSettings
+        {
+            DtdProcessing = System.Xml.DtdProcessing.Parse,
+            XmlResolver = null
+        };
+
+        using var reader = System.Xml.XmlReader.Create(sourcePath, readerSettings);
+        var document = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter produced an empty XML document.");
+        return document;
+    }
+
+    private static System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]> CaptureDesignFileTimes(System.Xml.Linq.XDocument document)
+    {
+        var result = new System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]>();
+        if (document.Root is null) return result;
+
+        foreach (var element in document.Root.Elements())
+        {
+            var created = FindDxlTime(element, "created");
+            var modified = FindDxlTime(element, "modified") ?? FindDxlTime(element, "revised");
+            result[element] = new System.DateTime?[] { created, modified };
+        }
+
+        return result;
+    }
+
+    private static System.DateTime? FindDxlTime(System.Xml.Linq.XElement element, string localName)
+    {
+        foreach (var descendant in element.Descendants())
+        {
+            if (!string.Equals(descendant.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var value = descendant.Value.Trim();
+            if (TryParseDxlDateTime(value, out var utc))
+                return utc;
+        }
+
+        var attribute = element.Attribute(localName);
+        if (attribute is not null && TryParseDxlDateTime(attribute.Value, out var attributeUtc))
+            return attributeUtc;
+
+        return null;
+    }
+
+    private static bool TryParseDxlDateTime(string value, out System.DateTime utc)
+    {
+        utc = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+
+        var formats = new[]
+        {
+            "yyyyMMdd'T'HHmmss','ffzzz",
+            "yyyyMMdd'T'HHmmss','ffzz",
+            "yyyyMMdd'T'HHmmsszzz",
+            "yyyyMMdd'T'HHmmsszz",
+            "yyyyMMdd'T'HHmmss','ff'Z'",
+            "yyyyMMdd'T'HHmmss'Z'",
+            "yyyyMMdd'T'HHmmss','ff",
+            "yyyyMMdd'T'HHmmss"
+        };
+
+        if (System.DateTimeOffset.TryParseExact(
+            value.Trim(),
+            formats,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AllowWhiteSpaces | System.Globalization.DateTimeStyles.AssumeUniversal,
+            out var parsed))
+        {
+            utc = parsed.UtcDateTime;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void CleanDxl(System.Xml.Linq.XDocument document)
+    {
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter cleaned DXL export requires an XML root.");
+
+        var elements = System.Linq.Enumerable.ToList(document.Root.DescendantsAndSelf());
+        foreach (var element in elements)
+        {
+            if (ShouldRemoveElement(element))
+            {
+                element.Remove();
+                continue;
+            }
+
+            var attributes = System.Linq.Enumerable.ToList(element.Attributes());
+            foreach (var attribute in attributes)
+            {
+                if (ShouldRemoveAttribute(attribute))
+                    attribute.Remove();
+            }
+        }
+
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter cleaned DXL export removed the XML document root.");
+
+        foreach (var element in document.Root.DescendantsAndSelf())
+        {
+            var attributes = System.Linq.Enumerable.ToArray(
+                System.Linq.Enumerable.ThenBy(
+                    System.Linq.Enumerable.ThenBy(
+                        System.Linq.Enumerable.OrderBy(
+                            element.Attributes(),
+                            attribute => attribute.IsNamespaceDeclaration ? 0 : 1),
+                        attribute => attribute.Name.NamespaceName,
+                        System.StringComparer.Ordinal),
+                    attribute => attribute.Name.LocalName,
+                    System.StringComparer.Ordinal));
+
+            element.RemoveAttributes();
+            foreach (var attribute in attributes)
+                element.Add(attribute);
+        }
+    }
+
+    private static void WriteDesignElements(
+        System.Xml.Linq.XDocument document,
+        string rootPath,
+        System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]> timestamps)
+    {
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter folder export requires an XML root.");
+
+        var counters = new System.Collections.Generic.Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var element in document.Root.Elements())
+        {
+            var localName = element.Name.LocalName;
+            if (string.Equals(localName, "document", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(localName, "databaseinfo", System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var folderName = GetDesignFolderName(localName);
+            var folderPath = System.IO.Path.Combine(rootPath, folderName);
+            System.IO.Directory.CreateDirectory(folderPath);
+
+            var title = GetDesignElementTitle(element);
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                counters.TryGetValue(folderName, out var index);
+                index++;
+                counters[folderName] = index;
+                title = localName + "-" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            var fileName = MakeSafeFileName(title) + ".dxl";
+            var filePath = GetUniqueFilePath(folderPath, fileName);
+            var output = new System.Xml.Linq.XDocument(
+                document.Declaration is null ? null : new System.Xml.Linq.XDeclaration(document.Declaration),
+                new System.Xml.Linq.XElement(element));
+            WriteDxl(output, filePath);
+
+            if (timestamps.TryGetValue(element, out var fileTimes))
+            {
+                if (fileTimes.Length > 0 && fileTimes[0].HasValue)
+                {
+                    try
+                    {
+                        System.IO.File.SetCreationTimeUtc(filePath, fileTimes[0].Value);
+                    }
+                    catch (System.PlatformNotSupportedException)
+                    {
+                    }
+                }
+
+                if (fileTimes.Length > 1 && fileTimes[1].HasValue)
+                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].Value);
+            }
+        }
+    }
+
+    private static string GetDesignFolderName(string localName)
+    {
+        switch (localName.ToLowerInvariant())
+        {
+            case "agent": return "agents";
+            case "form": return "forms";
+            case "subform": return "subforms";
+            case "view": return "views";
+            case "folder": return "folders";
+            case "scriptlibrary": return "scriptlibraries";
+            case "sharedfield": return "sharedfields";
+            case "sharedactions": return "sharedactions";
+            case "page": return "pages";
+            case "frameset": return "framesets";
+            case "outline": return "outlines";
+            case "navigator": return "navigators";
+            case "image": return "images";
+            case "resource": return "resources";
+            default: return localName.EndsWith("s", System.StringComparison.OrdinalIgnoreCase) ? localName : localName + "s";
+        }
+    }
+
+    private static string GetDesignElementTitle(System.Xml.Linq.XElement element)
+    {
+        var name = element.Attribute("name")?.Value;
+        if (!string.IsNullOrWhiteSpace(name)) return name;
+
+        var title = element.Attribute("title")?.Value;
+        if (!string.IsNullOrWhiteSpace(title)) return title;
+
+        foreach (var item in element.Elements())
+        {
+            if (!string.Equals(item.Name.LocalName, "item", System.StringComparison.OrdinalIgnoreCase)) continue;
+            var itemName = item.Attribute("name")?.Value;
+            if (!string.Equals(itemName, "$TITLE", System.StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(itemName, "$$ScriptName", System.StringComparison.OrdinalIgnoreCase)) continue;
+
+            var text = System.Linq.Enumerable.FirstOrDefault(item.Descendants(), child =>
+                string.Equals(child.Name.LocalName, "text", System.StringComparison.OrdinalIgnoreCase));
+            if (text is not null && !string.IsNullOrWhiteSpace(text.Value))
+                return text.Value;
+        }
+
+        return string.Empty;
+    }
+
+    private static string MakeSafeFileName(string value)
+    {
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var builder = new System.Text.StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            if (System.Array.IndexOf(invalid, ch) >= 0 || System.Char.IsControl(ch))
+                builder.Append('_');
+            else
+                builder.Append(ch);
+        }
+
+        var result = builder.ToString().Trim().TrimEnd('.');
+        return string.IsNullOrWhiteSpace(result) ? "untitled" : result;
+    }
+
+    private static string GetUniqueFilePath(string folderPath, string fileName)
+    {
+        var path = System.IO.Path.Combine(folderPath, fileName);
+        if (!System.IO.File.Exists(path)) return path;
+
+        var stem = System.IO.Path.GetFileNameWithoutExtension(fileName);
+        var extension = System.IO.Path.GetExtension(fileName);
+        var index = 2;
+        do
+        {
+            path = System.IO.Path.Combine(folderPath, stem + "-" + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + extension);
+            index++;
+        }
+        while (System.IO.File.Exists(path));
+
+        return path;
+    }
+
+    private static void WriteDxl(System.Xml.Linq.XDocument document, string targetPath)
+    {
+        var writerSettings = new System.Xml.XmlWriterSettings
+        {
+            Encoding = new System.Text.UTF8Encoding(false),
+            Indent = true,
+            NewLineChars = "\n",
+            NewLineHandling = System.Xml.NewLineHandling.Replace,
+            OmitXmlDeclaration = document.Declaration is null
+        };
+
+        using var writer = System.Xml.XmlWriter.Create(targetPath, writerSettings);
+        document.Save(writer);
+    }
+
+    private static bool ShouldRemoveElement(System.Xml.Linq.XElement element)
+    {
+        foreach (var localName in CleanedDxlRemovedElements)
+        {
+            if (string.Equals(element.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        if (string.Equals(element.Name.LocalName, "item", System.StringComparison.OrdinalIgnoreCase))
+        {
+            var itemName = element.Attribute("name")?.Value;
+            if (string.Equals(itemName, "$ClassData", System.StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldRemoveAttribute(System.Xml.Linq.XAttribute attribute)
+    {
+        foreach (var localName in CleanedDxlRemovedAttributes)
+        {
+            if (string.Equals(attribute.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static void RequireOpenDatabase(XPScriptNotesDatabase database, string member)
