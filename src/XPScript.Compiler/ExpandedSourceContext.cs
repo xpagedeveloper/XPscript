@@ -24,7 +24,7 @@ internal sealed class ExpandedSourceContext : IDisposable
 
     public bool Matches(string source, string sourcePath)
     {
-        if (!string.Equals(Source, source, StringComparison.Ordinal)) return false;
+        if (!string.Equals(NormalizeLineEndings(Source), NormalizeLineEndings(source), StringComparison.Ordinal)) return false;
         try
         {
             var identity = new FileSystemPathIdentity();
@@ -44,4 +44,7 @@ internal sealed class ExpandedSourceContext : IDisposable
         if (ReferenceEquals(Ambient.Value, this))
             Ambient.Value = _previous;
     }
+
+    private static string NormalizeLineEndings(string value) =>
+        value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 }
