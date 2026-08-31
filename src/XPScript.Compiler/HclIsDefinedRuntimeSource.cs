@@ -27,11 +27,12 @@ internal static class LSHclPlatformConstantRuntime
     }
 }
 """ + "\n\n" + NotesNothingPostProcessor.Apply(
-        NotesDatabaseReplicaPostProcessor.Apply(
-            NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
-                NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
-                    NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                        NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                            NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                NotesRuntimeSourceBuilder.Build())))))));
+        NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
+            NotesDatabaseReplicaPostProcessor.Apply(
+                NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
+                    NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
+                        NotesViewNavigationPostProcessor.ApplyBuiltSurface(
+                            NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                    NotesRuntimeSourceBuilder.Build()))))))));
 }
