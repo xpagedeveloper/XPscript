@@ -6,9 +6,22 @@ var buildDate = Assembly.GetExecutingAssembly()
     .FirstOrDefault(attribute => string.Equals(attribute.Key, "XPScriptBuildDate", StringComparison.Ordinal))
     ?.Value ?? "unknown";
 
-Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com ©");
+if (ShouldWriteBanner(args))
+    Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com ©");
 
 return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
+
+static bool ShouldWriteBanner(string[] arguments)
+{
+    for (var i = 0; i < arguments.Length; i++)
+    {
+        if (!arguments[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase)) continue;
+        if (i + 1 >= arguments.Length) return true;
+        return !arguments[i + 1].Equals("json", StringComparison.OrdinalIgnoreCase) &&
+               !arguments[i + 1].Equals("xml", StringComparison.OrdinalIgnoreCase);
+    }
+    return true;
+}
 
 static string[] NormalizeArguments(string[] arguments)
 {

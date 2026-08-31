@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/CompileResult.cs'
       - 'src/XPScript.Compiler/CompilerDiagnosticMode.cs'
       - 'src/XPScript.Compiler/CompilerDiagnosticParser.cs'
+      - 'src/XPScript.Compiler/ExpandedSourceContext.cs'
       - 'src/XPScript.Compiler/RunCompiler.cs'
       - 'src/XPScript.Compiler/RunRoslynCompiler.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
