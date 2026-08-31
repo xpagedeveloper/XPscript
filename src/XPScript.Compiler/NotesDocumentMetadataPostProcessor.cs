@@ -1,0 +1,126 @@
+namespace XPScript.Compiler;
+
+internal static class NotesDocumentMetadataPostProcessor
+{
+    public static string ApplyBuiltSurface(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        const string oldProperties = """
+    public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
+""";
+        const string newProperties = """
+    public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
+    public bool IsValid { get { EnsureAlive(); return NoteId == 0 || (NoteId & 0x80000000u) == 0; } }
+    public bool IsProfile
+    {
+        get
+        {
+            EnsureAlive();
+            return HasItem("$Name") && GetString("$Name").StartsWith("$profile_", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+    public bool IsDesign { get { EnsureAlive(); return ResolveDesignType().Length != 0; } }
+    public string DesignType { get { EnsureAlive(); return ResolveDesignType(); } }
+    public string DesignTitle
+    {
+        get
+        {
+            EnsureAlive();
+            if (!IsDesign) return "";
+            var names = GetDesignNames();
+            return names.Length == 0 ? "" : names[0];
+        }
+    }
+    public string DesignAlias
+    {
+        get
+        {
+            EnsureAlive();
+            if (!IsDesign) return "";
+            var names = GetDesignNames();
+            return names.Length <= 1 ? "" : string.Join("|", names.Skip(1));
+        }
+    }
+
+    private string ResolveDesignType()
+    {
+        var noteClass = Session.Api.GetNoteClass(_handle);
+        var flags = HasItem("$Flags") ? GetString("$Flags") : "";
+
+        if ((noteClass & 0x0002) != 0) return "HelpAbout";
+        if ((noteClass & 0x0004) != 0)
+        {
+            if (flags.Contains('U')) return "Subform";
+            if (flags.Contains('#')) return "Frameset";
+            if (flags.Contains('W')) return "Page";
+            if (flags.Contains('i')) return "ImageResource";
+            if (flags.Contains('@')) return "JavaResource";
+            if (flags.Contains('=')) return "StyleSheetResource";
+            if (flags.Contains('K')) return "XPage";
+            if (flags.Contains(';')) return "CustomControl";
+            if (flags.Contains('y')) return "SharedActions";
+            if (flags.Contains('g')) return "FileResource";
+            return "Form";
+        }
+        if ((noteClass & 0x0008) != 0)
+        {
+            if (flags.Contains('F')) return "Folder";
+            if (flags.Contains('G')) return "Navigator";
+            if (flags.Contains('^')) return "SharedColumn";
+            return "View";
+        }
+        if ((noteClass & 0x0010) != 0) return "Icon";
+        if ((noteClass & 0x0020) != 0) return "DesignCollection";
+        if ((noteClass & 0x0080) != 0) return "HelpIndex";
+        if ((noteClass & 0x0100) != 0) return "HelpUsing";
+        if ((noteClass & 0x0200) != 0)
+        {
+            if (flags.Contains('s')) return "ScriptLibrary";
+            if (flags.Contains('h')) return "JavaScriptLibrary";
+            if (flags.Contains('t')) return "DatabaseScript";
+            if (flags.Contains('k')) return "DataConnection";
+            if (flags.Contains('{')) return "WebService";
+            if (flags.Contains('z')) return "Servlet";
+            return "Agent";
+        }
+        if ((noteClass & 0x0400) != 0) return "SharedField";
+        if ((noteClass & 0x0800) != 0) return "ReplicationFormula";
+        return "";
+    }
+
+    private string[] GetDesignNames()
+    {
+        if (!Session.Api.TryGetFirstItemInfo(_handle, "$TITLE", out var info)) return [];
+        var values = Session.Api.GetItemValues(_handle, info, Session);
+        var names = new List<string>();
+        foreach (var value in values)
+        {
+            var text = XPScriptRuntime.CStr(value);
+            foreach (var part in text.Split('|'))
+            {
+                var name = part.Trim();
+                if (name.Length != 0) names.Add(name);
+            }
+        }
+        return names.ToArray();
+    }
+""";
+        source = ReplaceRequired(source, oldProperties, newProperties, "document-metadata-properties");
+
+        source = ReplaceRequired(source,
+            "    internal int GetDxlExporterInt(uint exporter, ushort property)",
+            "    internal ushort GetNoteClass(uint note)\n    {\n        EnsureInitialized();\n        var value = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));\n        try\n        {\n            System.Runtime.InteropServices.Marshal.WriteInt16(value, 0);\n            Resolve<XPScriptNSFNoteGetInfoDelegate>(\"NSFNoteGetInfo\")(note, 3, value);\n            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(value));\n        }\n        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }\n    }\n\n    internal int GetDxlExporterInt(uint exporter, ushort property)",
+            "native-note-class");
+
+        source += "\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate void XPScriptNSFNoteGetInfoDelegate(uint note, ushort noteMember, nint value);\n";
+        return source;
+    }
+
+    private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
+    {
+        if (!source.Contains(oldValue, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply NotesDocument metadata surface (" + stage + ").");
+        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+    }
+}

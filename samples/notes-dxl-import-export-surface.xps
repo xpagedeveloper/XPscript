@@ -46,15 +46,19 @@ Sub Main()
     Print exporter.ForceNoteFormat
     Print exporter.OutputDOCTYPE
     Call exporter.ExportDatabaseDesign(db, "out/notes-dxl/database-design.dxl")
+    Print exporter.Log
     Call exporter.ExportDesignElement(db, "XPScriptTest", "Form", "out/notes-dxl/form.dxl")
+    Print exporter.Log
 
     Set docs = db.Search("Form=\"XPScriptTest\"", 1)
     If docs.Count > 0 Then
         Set doc = docs.GetDocument(0)
         Call exporter.ExportDocument(doc, "out/notes-dxl/document.dxl")
+        Print exporter.Log
         Call doc.Recycle()
     End If
     Call exporter.ExportDocumentCollection(docs, "out/notes-dxl/documents.dxl")
+    Print exporter.Log
 
     Call docs.Recycle()
     Call exporter.Recycle()

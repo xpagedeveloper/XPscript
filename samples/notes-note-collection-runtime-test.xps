@@ -1,0 +1,64 @@
+' Runtime regression for LotusScript-compatible NotesNoteCollection.
+Option Declare
+
+Sub Main()
+    Const DATABASE_PATH = "xpscript.nsf"
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim nc As NotesNoteCollection
+    Dim docs As NotesNoteCollection
+    Dim design As NotesNoteCollection
+    Dim noteId As String
+    Dim seen As Integer
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    If db Is Nothing Or Not db.IsOpen Then Error 9950, "xpscript.nsf is not open"
+
+    Set nc = db.CreateNoteCollection(False)
+    If nc Is Nothing Then Error 9951, "CreateNoteCollection returned Nothing"
+    If nc.Parent.FilePath <> db.FilePath Then Error 9952, "NotesNoteCollection.Parent mismatch"
+
+    nc.SelectDocuments = True
+    nc.SelectionFormula = "Form=\"XPScriptTest\""
+    Call nc.BuildCollection()
+    Print "DOCUMENT-COUNT=" & CStr(nc.Count)
+    If nc.Count < 3 Then Error 9953, "Expected fixture documents in NotesNoteCollection"
+
+    seen = 0
+    noteId = nc.GetFirstNoteID()
+    Do While noteId <> ""
+        seen = seen + 1
+        noteId = nc.GetNextNoteID(noteId)
+    Loop
+    If seen <> nc.Count Then Error 9954, "Note ID iteration count mismatch"
+
+    Call nc.ClearCollection()
+    If nc.Count <> 0 Then Error 9955, "ClearCollection did not clear collection"
+
+    Set design = db.CreateNoteCollection(False)
+    Call design.SelectAllDesignElements(True)
+    Call design.BuildCollection()
+    Print "DESIGN-COUNT=" & CStr(design.Count)
+    If design.Count = 0 Then Error 9956, "SelectAllDesignElements returned no design notes"
+
+    Set docs = db.CreateNoteCollection(False)
+    docs.SelectDocuments = True
+    docs.SelectionFormula = "Subject=\"Alpha\""
+    Call docs.BuildCollection()
+    If docs.Count <> 1 Then Error 9957, "Expected one Alpha document"
+
+    Call nc.Add(docs)
+    If nc.Count <> 1 Then Error 9958, "Add NotesNoteCollection failed"
+    Call nc.Intersect(docs)
+    If nc.Count <> 1 Then Error 9959, "Intersect NotesNoteCollection failed"
+    Call nc.Remove(docs)
+    If nc.Count <> 0 Then Error 9960, "Remove NotesNoteCollection failed"
+
+    Call docs.Recycle()
+    Call design.Recycle()
+    Call nc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NOTES-NOTE-COLLECTION=OK"
+End Sub

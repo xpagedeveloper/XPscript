@@ -1,0 +1,41 @@
+' Runtime regression for LotusScript-compatible NotesStream.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim stream As NotesStream
+    Dim text As String
+    Dim path As String
+
+    path = "out/notes-stream/runtime.txt"
+    Set session = New NotesSession()
+    Set stream = session.CreateStream()
+
+    If stream.Bytes <> 0 Then Error 9961, "New NotesStream.Bytes must be 0"
+    If stream.Position <> 0 Then Error 9962, "New NotesStream.Position must be 0"
+    If Not stream.IsEOS Then Error 9963, "New NotesStream.IsEOS must be True"
+
+    stream.Charset = "UTF-8"
+    Call stream.WriteText("Alpha" & Chr(10) & "Beta")
+    If stream.Bytes = 0 Then Error 9964, "WriteText did not write data"
+    stream.Position = 0
+    text = stream.ReadText()
+    If text <> "Alpha" & Chr(10) & "Beta" Then Error 9965, "ReadText roundtrip failed"
+
+    Call stream.Truncate()
+    If stream.Bytes <> stream.Position Then Error 9966, "Truncate did not truncate at current position"
+    Call stream.Close()
+
+    If Not stream.Open(path) Then Error 9967, "NotesStream.Open failed"
+    Call stream.WriteText("stream-file")
+    Call stream.Close()
+
+    If Not stream.Open(path) Then Error 9968, "NotesStream reopen failed"
+    stream.Position = 0
+    If stream.ReadText() <> "stream-file" Then Error 9969, "NotesStream file roundtrip failed"
+    Call stream.Close()
+
+    Call stream.Recycle()
+    Call session.Recycle()
+    Print "NOTES-STREAM=OK"
+End Sub

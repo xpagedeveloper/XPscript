@@ -100,6 +100,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     internal static XPScriptNotesDateTime CreateNow(XPScriptNotesSession session) => new(session, session.Api.CurrentTimeDate());
     internal static XPScriptNotesDateTime FromNative(XPScriptNotesSession session, XPScriptNotesTimeDate value) => new(session, value);
+    internal static XPScriptNotesDateTime FromDateTime(XPScriptNotesSession session, DateTime value) => new(session, session.Api.ParseTimeDate(value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)));
     internal static object FromNativeObject(XPScriptNotesTimeDate value) => throw new XPScriptRuntimeException(13, "Use NotesDocument.GetDateTime for Notes time/date fields.");
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
@@ -115,9 +116,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
-            return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" +
-                value.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + "-" +
-                value.Day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
+            return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
     public string TimeOnly
@@ -126,9 +125,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
-            return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" +
-                value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" +
-                value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
+            return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
