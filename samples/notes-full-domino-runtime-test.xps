@@ -921,7 +921,7 @@ Function TestViewNavigationV1(ByVal db As Variant, ByVal viewName As String) As 
     Dim entry As Variant
     Dim nextEntry As Variant
     Dim lookupEntry As Variant
-    Dim doc As NotesDocument
+    Dim doc As Variant
     Dim values As Variant
     failures = 0
 
