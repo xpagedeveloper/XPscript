@@ -1,0 +1,35 @@
+' Compile-time surface regression for LotusScript NotesNoteCollection.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim nc As NotesNoteCollection
+    Dim exporter As NotesDXLExporter
+    Dim noteId As String
+
+    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    Set nc = db.CreateNoteCollection(False)
+
+    Call nc.SelectAllDesignElements(True)
+    nc.SelectAgents = False
+    nc.SelectionFormula = "@All"
+    Call nc.BuildCollection()
+
+    Print nc.Count
+    noteId = nc.GetFirstNoteID()
+    While noteId <> ""
+        Print noteId
+        noteId = nc.GetNextNoteID(noteId)
+    Wend
+
+    Set exporter = session.CreateDXLExporter()
+    Call exporter.Export(nc, "out/notes-dxl/note-collection.dxl")
+    Print exporter.Log
+
+    Call exporter.Recycle()
+    Call nc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
