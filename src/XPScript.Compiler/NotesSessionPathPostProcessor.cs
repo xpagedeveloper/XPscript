@@ -9,6 +9,10 @@ internal static class NotesSessionPathPostProcessor
         source = ReplaceRequired(
             source,
             """
+    private static string? TryResolveDefaultRuntimeDirectory()
+    {
+        try
+        {
             if (OperatingSystem.IsWindows())
             {
                 using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
@@ -21,25 +25,37 @@ internal static class NotesSessionPathPostProcessor
                 if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
                 return path;
             }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                const string path = "/Applications/HCL Notes.app/Contents/MacOS";
+                if (!Directory.Exists(path)) return null;
+                if (!File.Exists(Path.Combine(path, "libnotes.dylib")) &&
+                    !File.Exists(Path.Combine(path, "libnotes64.dylib"))) return null;
+                return path;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 """,
             """
+    private static string? TryResolveDefaultRuntimeDirectory()
+    {
+        try
+        {
             if (OperatingSystem.IsWindows())
             {
                 var notesPath = TryResolveWindowsRuntimeDirectory(@"Software\HCL\Notes\Installer");
                 if (notesPath is not null) return notesPath;
                 return TryResolveWindowsRuntimeDirectory(@"Software\HCL\Domino\Installer");
             }
-""",
-            "windows-notes-domino-runtime-order");
 
-        source = ReplaceRequired(
-            source,
-            """
             if (OperatingSystem.IsMacOS())
-""",
-            """
-            if (OperatingSystem.IsMacOS())
-""" + "\n" + """
             {
                 const string path = "/Applications/HCL Notes.app/Contents/MacOS";
                 if (!Directory.Exists(path)) return null;
@@ -68,15 +84,8 @@ internal static class NotesSessionPathPostProcessor
         if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
         return path;
     }
-
-    private static string? TryResolveDefaultRuntimeDirectory__sentinel()
 """,
-            "insert-windows-runtime-helper");
-
-        source = source.Replace(
-            "    private static string? TryResolveDefaultRuntimeDirectory__sentinel()\n            {\n                const string path = \"/Applications/HCL Notes.app/Contents/MacOS\";\n                if (!Directory.Exists(path)) return null;\n                if (!File.Exists(Path.Combine(path, \"libnotes.dylib\")) &&\n                    !File.Exists(Path.Combine(path, \"libnotes64.dylib\"))) return null;\n                return path;\n            }\n\n            return null;\n        }\n        catch\n        {\n            return null;\n        }\n    }\n",
-            "",
-            StringComparison.Ordinal);
+            "windows-notes-domino-runtime-order");
 
         source = ReplaceRequired(
             source,
