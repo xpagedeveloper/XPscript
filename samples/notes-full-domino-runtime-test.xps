@@ -1,7 +1,7 @@
 ' Consolidated HCL Notes/Domino runtime regression for XPscript.
 '
 ' Target database: xpscript.nsf
-' If the database is missing, this test creates it and imports the repository DXL fixture.
+' The test removes any existing xpscript.nsf from NotesSession.DataDir before importing the repository DXL fixture.
 '
 ' This master sample exercises the currently exposed Notes runtime surface across:
 ' NotesSession, NotesName, NotesDateTime, NotesDatabase, NotesDocument,
@@ -31,6 +31,7 @@ Sub Main()
     Dim importer As NotesDXLImporter
     Dim failures As Integer
     Dim bootstrapErr As Integer
+    Dim databaseFullPath As String
 
     failures = 0
     If NOTES_INI = "" Then
@@ -39,7 +40,48 @@ Sub Main()
         Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
     End If
 
-    Print "STEP=00/15 Bootstrap xpscript.nsf"
+    Print "STEP=00/15 Recreate xpscript.nsf"
+    If session Is Nothing Then
+        Print "BOOTSTRAP-ERROR NotesSession is Nothing"
+        Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+        Exit Sub
+    End If
+
+    If session.DataDir = "" Then
+        Print "BOOTSTRAP-ERROR NotesSession.DataDir is empty"
+        Call session.Recycle()
+        Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+        Exit Sub
+    End If
+
+    databaseFullPath = session.DataDir & "/" & DATABASE_PATH
+    If FileExists(databaseFullPath) Then
+        Print "FOUND " & databaseFullPath
+        Print "DELETE " & databaseFullPath
+        bootstrapErr = 0
+        On Error Resume Next
+        Kill databaseFullPath
+        bootstrapErr = Err
+        On Error GoTo 0
+        If bootstrapErr <> 0 Then
+            Print "BOOTSTRAP-DELETE-ERROR=" & CStr(bootstrapErr)
+            Call session.Recycle()
+            Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+            Exit Sub
+        End If
+        If FileExists(databaseFullPath) Then
+            Print "BOOTSTRAP-ERROR xpscript.nsf still exists after delete"
+            Call session.Recycle()
+            Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+            Exit Sub
+        End If
+        Print "REMOVED " & databaseFullPath
+    Else
+        Print "NOT FOUND " & databaseFullPath
+        Print "xpscript.nsf is already absent"
+    End If
+
+    Print "CREATE NotesDatabase for fresh xpscript.nsf"
     Set db = session.OpenDatabase("", DATABASE_PATH)
     If db Is Nothing Then
         Call session.Recycle()
@@ -47,25 +89,23 @@ Sub Main()
         Exit Sub
     End If
 
-    If Not db.IsOpen Then
-        bootstrapErr = 0
-        On Error Resume Next
-        Call db.Create("", "", True)
+    bootstrapErr = 0
+    On Error Resume Next
+    Call db.Create("", "", True)
+    bootstrapErr = Err
+    If bootstrapErr = 0 Then
+        Set importer = session.CreateDXLImporter()
+        Call importer.Import(FIXTURE_DXL, db)
         bootstrapErr = Err
-        If bootstrapErr = 0 Then
-            Set importer = session.CreateDXLImporter()
-            Call importer.Import(FIXTURE_DXL, db)
-            bootstrapErr = Err
-            If Not importer Is Nothing Then Call importer.Recycle()
-        End If
-        On Error GoTo 0
-        If bootstrapErr <> 0 Or Not db.IsOpen Then
-            Print "BOOTSTRAP-ERROR=" & CStr(bootstrapErr)
-            Call db.Recycle()
-            Call session.Recycle()
-            Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
-            Exit Sub
-        End If
+        If Not importer Is Nothing Then Call importer.Recycle()
+    End If
+    On Error GoTo 0
+    If bootstrapErr <> 0 Or Not db.IsOpen Then
+        Print "BOOTSTRAP-ERROR=" & CStr(bootstrapErr)
+        Call db.Recycle()
+        Call session.Recycle()
+        Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+        Exit Sub
     End If
 
     Print "NOTES-FULL-DOMINO-BEGIN"
