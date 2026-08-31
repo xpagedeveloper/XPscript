@@ -21,7 +21,7 @@ internal static class NotesDxlPostProcessor
         source = ReplaceRequired(
             source,
             "    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
-            "    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); } }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); }\n    }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
             "document-collection-noteids");
 
         source += "\n\n" + DxlRuntime;
@@ -108,10 +108,36 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
 
 internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 {
+    private static readonly string[] CleanedDxlRemovedElements =
+    {
+        "noteinfo",
+        "updatedby",
+        "revisions",
+        "wassignedby",
+        "agentrun",
+        "agentmodified",
+        "designchange",
+        "databaseinfo"
+    };
+
+    private static readonly string[] CleanedDxlRemovedAttributes =
+    {
+        "replicaid",
+        "maintenanceversion",
+        "milestonebuild"
+    };
+
     private uint _handle;
+    private bool _cleanedDxl;
 
     internal XPScriptNotesDXLExporter(XPScriptNotesSession session) : base(session)
         => _handle = session.Api.CreateDxlExporter();
+
+    public bool CleanedDXL
+    {
+        get { EnsureAlive(); return _cleanedDxl; }
+        set { EnsureAlive(); _cleanedDxl = value; }
+    }
 
     public int RichTextOption
     {
@@ -183,19 +209,21 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
     {
         EnsureAlive();
         RequireOpenDatabase(database, "ExportDatabaseDesign");
-        Session.Api.ExportDxlDesign(_handle, database.Handle, XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDesign(_handle, database.Handle, path));
     }
 
     public void ExportDesignElement(XPScriptNotesDatabase database, object? nameValue, object? designTypeValue, object? filePathValue)
     {
         EnsureAlive();
         RequireOpenDatabase(database, "ExportDesignElement");
-        Session.Api.ExportDxlDesignElement(
-            _handle,
-            database.Handle,
-            XPScriptRuntime.CStr(nameValue),
-            XPScriptRuntime.CStr(designTypeValue),
-            XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(
+            filePathValue,
+            path => Session.Api.ExportDxlDesignElement(
+                _handle,
+                database.Handle,
+                XPScriptRuntime.CStr(nameValue),
+                XPScriptRuntime.CStr(designTypeValue),
+                path));
     }
 
     public void ExportDocument(XPScriptNotesDocument document, object? filePathValue)
@@ -203,7 +231,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         EnsureAlive();
         if (document is null) throw new XPScriptRuntimeException(91, "NotesDXLExporter.ExportDocument requires a NotesDocument.");
         _ = document.OwnerDatabase.Handle;
-        Session.Api.ExportDxlDocument(_handle, document.NativeHandle, XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDocument(_handle, document.NativeHandle, path));
     }
 
     public void ExportDocumentCollection(XPScriptNotesDocumentCollection collection, object? filePathValue)
@@ -211,7 +239,115 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         EnsureAlive();
         if (collection is null) throw new XPScriptRuntimeException(91, "NotesDXLExporter.ExportDocumentCollection requires a NotesDocumentCollection.");
         var database = collection.OwnerDatabase;
-        Session.Api.ExportDxlDocumentCollection(_handle, database.Handle, collection.NativeNoteIds, XPScriptRuntime.CStr(filePathValue));
+        ExportToPath(filePathValue, path => Session.Api.ExportDxlDocumentCollection(_handle, database.Handle, collection.NativeNoteIds, path));
+    }
+
+    private void ExportToPath(object? filePathValue, Action<string> rawExport)
+    {
+        var targetPath = XPScriptRuntime.CStr(filePathValue);
+        if (!_cleanedDxl)
+        {
+            rawExport(targetPath);
+            return;
+        }
+
+        var fullTargetPath = System.IO.Path.GetFullPath(targetPath);
+        var targetDirectory = System.IO.Path.GetDirectoryName(fullTargetPath) ?? System.IO.Directory.GetCurrentDirectory();
+        var temporaryPath = System.IO.Path.Combine(
+            targetDirectory,
+            "." + System.IO.Path.GetFileName(fullTargetPath) + "." + Guid.NewGuid().ToString("N") + ".xpscript-dxl.tmp");
+
+        try
+        {
+            rawExport(temporaryPath);
+            WriteCleanedDxl(temporaryPath, fullTargetPath);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(temporaryPath))
+                System.IO.File.Delete(temporaryPath);
+        }
+    }
+
+    private static void WriteCleanedDxl(string sourcePath, string targetPath)
+    {
+        var readerSettings = new System.Xml.XmlReaderSettings
+        {
+            DtdProcessing = System.Xml.DtdProcessing.Parse,
+            XmlResolver = null
+        };
+
+        System.Xml.Linq.XDocument document;
+        using (var reader = System.Xml.XmlReader.Create(sourcePath, readerSettings))
+            document = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
+
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter cleaned DXL export produced an empty XML document.");
+
+        foreach (var element in document.Root.DescendantsAndSelf().ToList())
+        {
+            if (ShouldRemoveElement(element))
+            {
+                element.Remove();
+                continue;
+            }
+
+            foreach (var attribute in element.Attributes().ToList())
+            {
+                if (ShouldRemoveAttribute(attribute))
+                    attribute.Remove();
+            }
+        }
+
+        if (document.Root is null)
+            throw new XPScriptRuntimeException(5, "NotesDXLExporter cleaned DXL export removed the XML document root.");
+
+        foreach (var element in document.Root.DescendantsAndSelf())
+        {
+            var attributes = element.Attributes()
+                .OrderBy(attribute => attribute.IsNamespaceDeclaration ? 0 : 1)
+                .ThenBy(attribute => attribute.Name.NamespaceName, StringComparer.Ordinal)
+                .ThenBy(attribute => attribute.Name.LocalName, StringComparer.Ordinal)
+                .ToArray();
+
+            element.RemoveAttributes();
+            foreach (var attribute in attributes)
+                element.Add(attribute);
+        }
+
+        var writerSettings = new System.Xml.XmlWriterSettings
+        {
+            Encoding = new System.Text.UTF8Encoding(false),
+            Indent = true,
+            NewLineChars = "\n",
+            NewLineHandling = System.Xml.NewLineHandling.Replace,
+            OmitXmlDeclaration = document.Declaration is null
+        };
+
+        using var writer = System.Xml.XmlWriter.Create(targetPath, writerSettings);
+        document.Save(writer);
+    }
+
+    private static bool ShouldRemoveElement(System.Xml.Linq.XElement element)
+    {
+        foreach (var localName in CleanedDxlRemovedElements)
+        {
+            if (string.Equals(element.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldRemoveAttribute(System.Xml.Linq.XAttribute attribute)
+    {
+        foreach (var localName in CleanedDxlRemovedAttributes)
+        {
+            if (string.Equals(attribute.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static void RequireOpenDatabase(XPScriptNotesDatabase database, string member)
