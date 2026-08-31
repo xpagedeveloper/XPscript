@@ -59,6 +59,11 @@ jobs:
         run: |
           mkdir -p artifacts/notes-document-metadata
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-document-design-metadata-runtime-test.xps --framework-dependent -o artifacts/notes-document-metadata/notes-document-metadata
+      - name: Compile modified Notes documents regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-modified-documents
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-modified-documents-runtime-test.xps --framework-dependent -o artifacts/notes-modified-documents/notes-modified-documents
       - name: Compile Notes C API surface
         shell: bash
         run: |
