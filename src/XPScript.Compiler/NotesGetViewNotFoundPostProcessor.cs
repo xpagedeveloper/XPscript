@@ -34,7 +34,7 @@ internal static class NotesGetViewNotFoundPostProcessor
         source = ReplaceRequired(
             source,
             """
-    internal ushort OpenView(nint db, string name)
+    internal nint OpenView(nint db, string name)
     {
         EnsureInitialized();
         using var viewName = ToLmbcs(name);
@@ -44,7 +44,7 @@ internal static class NotesGetViewNotFoundPostProcessor
     }
 """,
             """
-    internal ushort OpenView(nint db, string name)
+    internal nint OpenView(nint db, string name)
     {
         EnsureInitialized();
         using var viewName = ToLmbcs(name);
@@ -53,7 +53,7 @@ internal static class NotesGetViewNotFoundPostProcessor
         return collection;
     }
 
-    internal ushort TryOpenView(nint db, string name)
+    internal nint TryOpenView(nint db, string name)
     {
         EnsureInitialized();
         using var viewName = ToLmbcs(name);
