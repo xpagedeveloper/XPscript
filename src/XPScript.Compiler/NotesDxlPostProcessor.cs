@@ -36,6 +36,60 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
     internal XPScriptNotesDXLImporter(XPScriptNotesSession session) : base(session)
         => _handle = session.Api.CreateDxlImporter();
 
+    public int ACLImportOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 1); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 1, value); }
+    }
+
+    public int DesignImportOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 2); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 2, value); }
+    }
+
+    public int DocumentImportOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 3); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 3, value); }
+    }
+
+    public bool CreateFTIndex
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterBool(_handle, 4); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterBoolProperty(_handle, 4, value); }
+    }
+
+    public bool ReplaceDbProperties
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterBool(_handle, 5); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterBoolProperty(_handle, 5, value); }
+    }
+
+    public int InputValidationOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 6); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 6, value); }
+    }
+
+    public bool ReplicaRequiredForReplaceOrUpdate
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterBool(_handle, 7); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterBoolProperty(_handle, 7, value); }
+    }
+
+    public bool ExitOnFirstFatalError
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterBool(_handle, 8); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterBoolProperty(_handle, 8, value); }
+    }
+
+    public int UnknownTokenLogOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 9); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 9, value); }
+    }
+
     public void Import(object? filePathValue, XPScriptNotesDatabase database)
     {
         EnsureAlive();
@@ -58,6 +112,72 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 
     internal XPScriptNotesDXLExporter(XPScriptNotesSession session) : base(session)
         => _handle = session.Api.CreateDxlExporter();
+
+    public int RichTextOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 6); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 6, value); }
+    }
+
+    public int ValidationStyle
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 8); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 8, value); }
+    }
+
+    public int MIMEOption
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 11); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 11, value); }
+    }
+
+    public bool ForceNoteFormat
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 30); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 30, value); }
+    }
+
+    public bool ExitOnFirstFatalError
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 31); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 31, value); }
+    }
+
+    public bool OutputDOCTYPE
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 34); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 34, value); }
+    }
+
+    public bool ConvertNotesBitmapsToGIF
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 35); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 35, value); }
+    }
+
+    public bool OmitRichtextAttachments
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 36); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 36, value); }
+    }
+
+    public bool OmitOLEObjects
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 37); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 37, value); }
+    }
+
+    public bool OmitMiscFileObjects
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 38); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 38, value); }
+    }
+
+    public bool OmitRichtextPictures
+    {
+        get { EnsureAlive(); return Session.Api.GetDxlExporterBool(_handle, 39); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterBoolProperty(_handle, 39, value); }
+    }
 
     public void ExportDatabaseDesign(XPScriptNotesDatabase database, object? filePathValue)
     {
