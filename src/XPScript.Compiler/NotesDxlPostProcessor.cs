@@ -268,9 +268,10 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         {
             Session.Api.ExportDxlDesign(_handle, database.Handle, temporaryPath);
             var document = LoadDxl(temporaryPath);
+            var timestamps = CaptureDesignFileTimes(document);
             if (_cleanedDxl)
                 CleanDxl(document);
-            WriteDesignElements(document, fullRootPath);
+            WriteDesignElements(document, fullRootPath, timestamps);
         }
         finally
         {
@@ -324,6 +325,71 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         return document;
     }
 
+    private static System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]> CaptureDesignFileTimes(System.Xml.Linq.XDocument document)
+    {
+        var result = new System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]>();
+        if (document.Root is null) return result;
+
+        foreach (var element in document.Root.Elements())
+        {
+            var created = FindDxlTime(element, "created");
+            var modified = FindDxlTime(element, "modified") ?? FindDxlTime(element, "revised");
+            result[element] = new System.DateTime?[] { created, modified };
+        }
+
+        return result;
+    }
+
+    private static System.DateTime? FindDxlTime(System.Xml.Linq.XElement element, string localName)
+    {
+        foreach (var descendant in element.Descendants())
+        {
+            if (!string.Equals(descendant.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var value = descendant.Value.Trim();
+            if (TryParseDxlDateTime(value, out var utc))
+                return utc;
+        }
+
+        var attribute = element.Attribute(localName);
+        if (attribute is not null && TryParseDxlDateTime(attribute.Value, out var attributeUtc))
+            return attributeUtc;
+
+        return null;
+    }
+
+    private static bool TryParseDxlDateTime(string value, out System.DateTime utc)
+    {
+        utc = default;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+
+        var formats = new[]
+        {
+            "yyyyMMdd'T'HHmmss','ffzzz",
+            "yyyyMMdd'T'HHmmss','ffzz",
+            "yyyyMMdd'T'HHmmsszzz",
+            "yyyyMMdd'T'HHmmsszz",
+            "yyyyMMdd'T'HHmmss','ff'Z'",
+            "yyyyMMdd'T'HHmmss'Z'",
+            "yyyyMMdd'T'HHmmss','ff",
+            "yyyyMMdd'T'HHmmss"
+        };
+
+        if (System.DateTimeOffset.TryParseExact(
+            value.Trim(),
+            formats,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AllowWhiteSpaces | System.Globalization.DateTimeStyles.AssumeUniversal,
+            out var parsed))
+        {
+            utc = parsed.UtcDateTime;
+            return true;
+        }
+
+        return false;
+    }
+
     private static void CleanDxl(System.Xml.Linq.XDocument document)
     {
         if (document.Root is null)
@@ -368,7 +434,10 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         }
     }
 
-    private static void WriteDesignElements(System.Xml.Linq.XDocument document, string rootPath)
+    private static void WriteDesignElements(
+        System.Xml.Linq.XDocument document,
+        string rootPath,
+        System.Collections.Generic.Dictionary<System.Xml.Linq.XElement, System.DateTime?[]> timestamps)
     {
         if (document.Root is null)
             throw new XPScriptRuntimeException(5, "NotesDXLExporter folder export requires an XML root.");
@@ -400,6 +469,23 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
                 document.Declaration is null ? null : new System.Xml.Linq.XDeclaration(document.Declaration),
                 new System.Xml.Linq.XElement(element));
             WriteDxl(output, filePath);
+
+            if (timestamps.TryGetValue(element, out var fileTimes))
+            {
+                if (fileTimes.Length > 0 && fileTimes[0].HasValue)
+                {
+                    try
+                    {
+                        System.IO.File.SetCreationTimeUtc(filePath, fileTimes[0].Value);
+                    }
+                    catch (System.PlatformNotSupportedException)
+                    {
+                    }
+                }
+
+                if (fileTimes.Length > 1 && fileTimes[1].HasValue)
+                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].Value);
+            }
         }
     }
 
@@ -455,7 +541,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         var builder = new System.Text.StringBuilder(value.Length);
         foreach (var ch in value)
         {
-            if (System.Array.IndexOf(invalid, ch) >= 0 || char.IsControl(ch))
+            if (System.Array.IndexOf(invalid, ch) >= 0 || System.Char.IsControl(ch))
                 builder.Append('_');
             else
                 builder.Append(ch);
