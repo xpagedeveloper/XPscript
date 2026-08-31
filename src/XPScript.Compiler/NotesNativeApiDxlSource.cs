@@ -65,12 +65,24 @@ internal sealed partial class XPScriptNotesNativeApi
 
     internal ushort GetDxlImporterWord(uint importer, ushort property)
     {
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));
+        try
+        {
+            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 0);
+            Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, property, pointer), "DXLGetImporterProperty");
+            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer));
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+    }
+
+    internal int GetDxlImporterInt(uint importer, ushort property)
+    {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
         try
         {
             System.Runtime.InteropServices.Marshal.WriteInt32(pointer, 0);
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, property, pointer), "DXLGetImporterProperty");
-            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer));
+            return System.Runtime.InteropServices.Marshal.ReadInt32(pointer);
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
@@ -88,6 +100,7 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     internal void SetDxlImporterWordProperty(uint importer, ushort property, int value) => SetDxlImporterWord(importer, property, checked((ushort)value));
+    internal void SetDxlImporterIntProperty(uint importer, ushort property, int value) => SetDxlImporterInt(importer, property, value);
     internal void SetDxlImporterBoolProperty(uint importer, ushort property, bool value) => SetDxlImporterBool(importer, property, value);
 
     internal void ImportDxlFile(uint importer, string filePath, uint database)
@@ -121,14 +134,14 @@ internal sealed partial class XPScriptNotesNativeApi
         if (handle != 0) Resolve<DXLDeleteExporterDelegate>("DXLDeleteExporter")(handle);
     }
 
-    internal ushort GetDxlExporterWord(uint exporter, ushort property)
+    internal int GetDxlExporterInt(uint exporter, ushort property)
     {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
         try
         {
             System.Runtime.InteropServices.Marshal.WriteInt32(pointer, 0);
             Check(Resolve<DXLGetExporterPropertyDelegate>("DXLGetExporterProperty")(exporter, property, pointer), "DXLGetExporterProperty");
-            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer));
+            return System.Runtime.InteropServices.Marshal.ReadInt32(pointer);
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
@@ -145,7 +158,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    internal void SetDxlExporterWordProperty(uint exporter, ushort property, int value) => SetDxlExporterWord(exporter, property, checked((ushort)value));
+    internal void SetDxlExporterIntProperty(uint exporter, ushort property, int value) => SetDxlExporterInt(exporter, property, value);
     internal void SetDxlExporterBoolProperty(uint exporter, ushort property, bool value) => SetDxlExporterBool(exporter, property, value);
 
     internal void ExportDxlDocument(uint exporter, uint note, string filePath)
@@ -224,6 +237,17 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
+    private void SetDxlImporterInt(uint importer, ushort property, int value)
+    {
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
+        try
+        {
+            System.Runtime.InteropServices.Marshal.WriteInt32(pointer, value);
+            Check(Resolve<DXLSetImporterPropertyDelegate>("DXLSetImporterProperty")(importer, property, pointer), "DXLSetImporterProperty");
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+    }
+
     private void SetDxlImporterBool(uint importer, ushort property, bool value)
     {
         var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
@@ -235,12 +259,12 @@ internal sealed partial class XPScriptNotesNativeApi
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    private void SetDxlExporterWord(uint exporter, ushort property, ushort value)
+    private void SetDxlExporterInt(uint exporter, ushort property, int value)
     {
-        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
         try
         {
-            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, unchecked((short)value));
+            System.Runtime.InteropServices.Marshal.WriteInt32(pointer, value);
             Check(Resolve<DXLSetExporterPropertyDelegate>("DXLSetExporterProperty")(exporter, property, pointer), "DXLSetExporterProperty");
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
