@@ -81,15 +81,21 @@ internal static class LSControlRuntime
         if (context.InHandler) return int.MinValue;
 
         var sourceLine = XPSourceLineRuntime.Current > 0 ? XPSourceLineRuntime.Current : statement;
-        var number = XPScriptErrorRuntime.Capture(LSExtendedErrorRuntime.Normalize(exception), sourceLine);
+        var normalized = LSExtendedErrorRuntime.Normalize(exception);
+        var number = XPScriptErrorRuntime.Capture(normalized, sourceLine);
 
         // On Error Resume Next continues immediately after the failing
         // statement and therefore must not leave an explicit Resume frame.
-        if (context.ResumeNext) return -1;
+        if (context.ResumeNext)
+        {
+            XPScriptRuntimeDebugTrace.TraceHandled(exception, normalized, sourceLine);
+            return -1;
+        }
 
         var handler = context.SpecificHandlers.TryGetValue(number, out var specific) ? specific : context.GeneralHandler;
         if (handler != 0)
         {
+            XPScriptRuntimeDebugTrace.TraceHandled(exception, normalized, sourceLine);
             context.Statement = statement;
             context.InHandler = true;
         }
