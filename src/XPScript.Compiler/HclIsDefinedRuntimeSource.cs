@@ -26,7 +26,7 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""" + "\n\n" + NotesNothingPostProcessor.Apply(
+""" + "\n\n" + RuntimeDebugTraceSource.Code + "\n\n" + NotesNothingPostProcessor.Apply(
         NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
             NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
                 NotesSessionPathPostProcessor.ApplyBuiltSurface(
