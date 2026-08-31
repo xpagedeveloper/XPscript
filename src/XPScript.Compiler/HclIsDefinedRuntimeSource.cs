@@ -31,12 +31,13 @@ internal static class LSHclPlatformConstantRuntime
             NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
                 NotesSessionPathPostProcessor.ApplyBuiltSurface(
                     NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
-                        NotesDxlImportResultPostProcessor.ApplyBuiltSurface(
-                            NotesDatabaseReplicaPostProcessor.Apply(
-                                NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
-                                    NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
-                                        NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                                            NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                    NotesRuntimeSourceBuilder.Build()))))))))))));
+                        NotesDxlExportResultPostProcessor.ApplyBuiltSurface(
+                            NotesDxlImportResultPostProcessor.ApplyBuiltSurface(
+                                NotesDatabaseReplicaPostProcessor.Apply(
+                                    NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
+                                        NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
+                                            NotesViewNavigationPostProcessor.ApplyBuiltSurface(
+                                                NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                    NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                        NotesRuntimeSourceBuilder.Build())))))))))))));
 }
