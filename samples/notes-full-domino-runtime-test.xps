@@ -297,7 +297,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Print "PercentUsed=" & CStr(db.PercentUsed)
     Print "CurrentAccessLevel=" & CStr(db.CurrentAccessLevel)
     Print "FileFormat=" & CStr(db.FileFormat)
-
     Set dt = db.Created
     Print "Created=" & dt.LocalTime
     Call dt.Recycle()
@@ -785,18 +784,19 @@ Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
 End Function
 
 Function TestStream(ByVal session As Variant) As Integer
-    Const STREAM_PATH = "xpscript-full-runtime-stream-test.txt"
     Dim failures As Integer
     Dim stream As NotesStream
     Dim text As String
     Dim errCode As Integer
+    Dim streamPath As String
     failures = 0
+    streamPath = "xpscript-full-runtime-stream-test.txt"
 
     Print "SECTION=NotesStream"
 
-    If FileExists(STREAM_PATH) Then
+    If FileExists(streamPath) Then
         On Error Resume Next
-        Kill STREAM_PATH
+        Kill streamPath
         On Error GoTo 0
     End If
 
@@ -818,13 +818,13 @@ Function TestStream(ByVal session As Variant) As Integer
     If text <> "Alpha" & Chr(10) & "Beta" Then failures = failures + 1
     Call stream.Close()
 
-    If Not stream.Open(STREAM_PATH) Then
+    If Not stream.Open(streamPath) Then
         failures = failures + 1
     Else
         Call stream.WriteText("stream-file")
         Call stream.Close()
 
-        If Not stream.Open(STREAM_PATH) Then
+        If Not stream.Open(streamPath) Then
             failures = failures + 1
         Else
             stream.Position = 0
@@ -842,7 +842,7 @@ Function TestStream(ByVal session As Variant) As Integer
 
     errCode = 0
     On Error Resume Next
-    If FileExists(STREAM_PATH) Then Kill STREAM_PATH
+    If FileExists(streamPath) Then Kill streamPath
     errCode = Err
     On Error GoTo 0
     If errCode <> 0 Then
