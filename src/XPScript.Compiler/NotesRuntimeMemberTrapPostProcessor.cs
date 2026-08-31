@@ -26,18 +26,31 @@ internal static class NotesRuntimeMemberTrapPostProcessor
 
     private static string? TryResolveDefaultRuntimeDirectory()
     {
-        if (!OperatingSystem.IsWindows()) return null;
         try
         {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
-            var raw = key?.GetValue("PROGDIR") as string;
-            if (string.IsNullOrWhiteSpace(raw)) return null;
+            if (OperatingSystem.IsWindows())
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
+                var raw = key?.GetValue("PROGDIR") as string;
+                if (string.IsNullOrWhiteSpace(raw)) return null;
 
-            var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('"'));
-            var path = Path.GetFullPath(expanded);
-            if (!Directory.Exists(path)) return null;
-            if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
-            return path;
+                var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('"'));
+                var path = Path.GetFullPath(expanded);
+                if (!Directory.Exists(path)) return null;
+                if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
+                return path;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                const string path = "/Applications/HCL Notes.app/Contents/MacOS";
+                if (!Directory.Exists(path)) return null;
+                if (!File.Exists(Path.Combine(path, "libnotes.dylib")) &&
+                    !File.Exists(Path.Combine(path, "libnotes64.dylib"))) return null;
+                return path;
+            }
+
+            return null;
         }
         catch
         {
