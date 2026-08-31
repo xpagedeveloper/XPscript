@@ -12,6 +12,7 @@ Sub Main()
     Dim noteId As String
     Dim count As Integer
     Dim itemCount As Integer
+    Dim items As Variant
 
     Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
@@ -35,8 +36,9 @@ Sub Main()
     If doc.DesignTitle <> "" Then Error 9907, "DesignTitle must be empty for a data note"
     If doc.DesignAlias <> "" Then Error 9908, "DesignAlias must be empty for a data note"
 
+    items = doc.Items
     itemCount = 0
-    ForAll item In doc.Items
+    ForAll item In items
         itemCount = itemCount + 1
         Print "ITEM=" & item.Name
     End ForAll
