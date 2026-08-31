@@ -13,6 +13,7 @@ Sub Main()
     Dim count As Integer
     Dim itemCount As Integer
     Dim items As Variant
+    Dim i As Integer
 
     Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
@@ -38,10 +39,10 @@ Sub Main()
 
     items = doc.Items
     itemCount = 0
-    ForAll item In items
+    For i = LBound(items) To UBound(items)
         itemCount = itemCount + 1
-        Print "ITEM=" & item.Name
-    End ForAll
+        Print "ITEM=" & items(i).Name
+    Next
     If itemCount < 2 Then Error 9909, "Items did not return NotesItem objects"
     Call doc.Recycle()
 
