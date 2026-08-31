@@ -6,9 +6,11 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
+      - 'src/XPScript.Compiler/NotesDxlPostProcessor.cs'
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesView*.cs'
       - 'samples/notes-view-*.xps'
+      - 'samples/notes-dxl-*.xps'
       - 'samples/notes-full-domino-runtime-test.xps'
       - 'scripts/*notes-view-cache*.ps1'
       - 'scripts/validate-notes-view-navigator-cache-policy.ps1'
@@ -44,6 +46,11 @@ jobs:
         run: |
           mkdir -p artifacts/notes-full-domino-runtime
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-full-domino-runtime-test.xps --framework-dependent -o artifacts/notes-full-domino-runtime/notes-full-domino-runtime
+      - name: Compile Notes DXL importer exporter surface
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-dxl
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-dxl-import-export-surface.xps --framework-dependent -o artifacts/notes-dxl/notes-dxl
       - name: Compile Notes C API surface
         shell: bash
         run: |
