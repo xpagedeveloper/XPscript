@@ -21,7 +21,7 @@ internal static class NotesDxlPostProcessor
         source = ReplaceRequired(
             source,
             "    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
-            "    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); }\n    }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); } }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
             "document-collection-noteids");
 
         source += "\n\n" + DxlRuntime;
@@ -242,7 +242,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         ExportToPath(filePathValue, path => Session.Api.ExportDxlDocumentCollection(_handle, database.Handle, collection.NativeNoteIds, path));
     }
 
-    private void ExportToPath(object? filePathValue, Action<string> rawExport)
+    private void ExportToPath(object? filePathValue, System.Action<string> rawExport)
     {
         var targetPath = XPScriptRuntime.CStr(filePathValue);
         if (!_cleanedDxl)
@@ -255,7 +255,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         var targetDirectory = System.IO.Path.GetDirectoryName(fullTargetPath) ?? System.IO.Directory.GetCurrentDirectory();
         var temporaryPath = System.IO.Path.Combine(
             targetDirectory,
-            "." + System.IO.Path.GetFileName(fullTargetPath) + "." + Guid.NewGuid().ToString("N") + ".xpscript-dxl.tmp");
+            "." + System.IO.Path.GetFileName(fullTargetPath) + "." + System.Guid.NewGuid().ToString("N") + ".xpscript-dxl.tmp");
 
         try
         {
@@ -306,8 +306,8 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
         {
             var attributes = element.Attributes()
                 .OrderBy(attribute => attribute.IsNamespaceDeclaration ? 0 : 1)
-                .ThenBy(attribute => attribute.Name.NamespaceName, StringComparer.Ordinal)
-                .ThenBy(attribute => attribute.Name.LocalName, StringComparer.Ordinal)
+                .ThenBy(attribute => attribute.Name.NamespaceName, System.StringComparer.Ordinal)
+                .ThenBy(attribute => attribute.Name.LocalName, System.StringComparer.Ordinal)
                 .ToArray();
 
             element.RemoveAttributes();
@@ -332,7 +332,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
     {
         foreach (var localName in CleanedDxlRemovedElements)
         {
-            if (string.Equals(element.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(element.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -343,7 +343,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
     {
         foreach (var localName in CleanedDxlRemovedAttributes)
         {
-            if (string.Equals(attribute.Name.LocalName, localName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(attribute.Name.LocalName, localName, System.StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
