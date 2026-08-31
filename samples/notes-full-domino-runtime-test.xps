@@ -71,10 +71,10 @@ Sub Main()
 End Sub
 
 Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
+    Dim failures As Integer
     Dim replicaDb As NotesDatabase
     Dim n As NotesName
     Dim dt As NotesDateTime
-    Dim failures As Integer
     failures = 0
 
     Print "SECTION=NotesSession"
@@ -91,21 +91,18 @@ Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
     Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)
     If replicaDb Is Nothing Or Not replicaDb.IsOpen Then failures = failures + 1
     If Not replicaDb Is Nothing Then Call replicaDb.Recycle()
-
     Set n = session.CreateName("CN=Ada Lovelace/OU=Engineering/O=Example/C=SE")
     If n Is Nothing Then failures = failures + 1 Else Call n.Recycle()
     Set dt = session.CreateDateTime("2026-08-29 08:00:00")
     If dt Is Nothing Then failures = failures + 1 Else Call dt.Recycle()
     Set dt = session.CreateDateTimeNow()
     If dt Is Nothing Then failures = failures + 1 Else Call dt.Recycle()
-
     TestSession = failures
 End Function
 
 Function TestName(ByVal session As Variant) As Integer
     Dim n As NotesName
     Dim internetName As NotesName
-
     Print "SECTION=NotesName"
     Set n = session.CreateName("CN=Ada Lovelace/OU=Engineering/OU=Platform/O=Example/C=SE")
     Print "Parent=" & n.Parent.Username
@@ -123,7 +120,6 @@ Function TestName(ByVal session As Variant) As Integer
     Print "ADMD=" & n.ADMD
     Print "PRMD=" & n.PRMD
     Call n.Recycle()
-
     Set internetName = session.CreateName("Ada Lovelace <ada@example.com>")
     Print "Addr821=" & internetName.Addr821
     Print "Addr822LocalPart=" & internetName.Addr822LocalPart
@@ -173,7 +169,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Dim oldTemplate As String
     Dim oldDesignTemplate As String
     failures = 0
-
     Print "SECTION=NotesDatabase"
     Set parentSession = db.Parent
     Print "Parent=" & parentSession.Username
@@ -196,7 +191,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Set dt = db.LastModified
     Print "LastModified=" & dt.LocalTime
     Call dt.Recycle()
-
     oldTitle = db.Title
     oldCategories = db.Categories
     oldTemplate = db.TemplateName
@@ -209,14 +203,12 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     db.Categories = oldCategories
     db.TemplateName = oldTemplate
     db.DesignTemplateName = oldDesignTemplate
-
     Set temp = db.CreateDocument()
     Call temp.ReplaceItemValue("Form", "XPScriptTest")
     Call temp.ReplaceItemValue("Subject", "Full runtime database surface")
     Call temp.Save()
     noteId = temp.NoteID
     unid = temp.UniversalID
-
     Set opened = db.GetDocumentByID(noteId)
     If opened Is Nothing Then failures = failures + 1 Else Call opened.Recycle()
     Set opened = db.GetDocumentByNoteId(noteId)
@@ -227,7 +219,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     If opened Is Nothing Then failures = failures + 1 Else Call opened.Recycle()
     Set opened = db.OpenDocumentByUNID(unid)
     If opened Is Nothing Then failures = failures + 1 Else Call opened.Recycle()
-
     Set docs = db.CreateDocumentCollection()
     Call docs.Recycle()
     Set docs = db.AllDocuments
@@ -236,7 +227,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Call docs.Recycle()
     Set docs = db.Search("Form=\"XPScriptTest\"", 1)
     Call docs.Recycle()
-
     errCode = 0
     On Error Resume Next
     Set docs = db.FTSearch("XPscript", 10)
@@ -247,23 +237,19 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Else
         Print "INFO NotesDatabase.FTSearch requires FT index Err=" & CStr(errCode)
     End If
-
     Set view = db.GetView(viewName)
     If view Is Nothing Then failures = failures + 1 Else Call view.Recycle()
     Set view = db.OpenView(viewName)
     If view Is Nothing Then failures = failures + 1 Else Call view.Recycle()
-
     Set profile = db.GetProfileDocument("XPScriptTestProfile", "FullRuntime")
     Call profile.ReplaceItemValue("XPScriptProfileMarker", "profile-ok")
     Call profile.Save()
     If profile.GetString("XPScriptProfileMarker") <> "profile-ok" Then failures = failures + 1
     Call profile.Recycle()
-
     Set result = db.RunAgent(agentName)
     If result Is Nothing Then failures = failures + 1 Else Call result.Recycle()
     Set result = db.RunAgent(agentName, temp)
     If result Is Nothing Then failures = failures + 1 Else Call result.Recycle()
-
     Call temp.Remove(True)
     Call temp.Recycle()
     TestDatabase = failures
@@ -284,7 +270,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     Dim originalUnid As String
     Dim attachmentSaved As Boolean
     failures = 0
-
     Print "SECTION=NotesDocument"
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
@@ -297,7 +282,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     Call dt.Recycle()
     Call doc.SetValue("GenericValue", "generic")
     Call doc.Save()
-
     Print "IsNewNote=" & CStr(doc.IsNewNote)
     Print "NoteID=" & doc.NoteID
     Print "NoteIdHex=" & doc.NoteIdHex
@@ -312,7 +296,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     Call dt.Recycle()
     Set dt = doc.LastModified
     Call dt.Recycle()
-
     If Not doc.HasItem("TextValue") Then failures = failures + 1
     If doc.GetString("TextValue") <> "hello" Then failures = failures + 1
     Print "GetNumber=" & CStr(doc.GetNumber("NumberValue"))
@@ -322,17 +305,14 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     values = doc.GetItemValue("TextValue")
     allItems = doc.Items
     Print "ItemsBounds=" & CStr(LBound(allItems)) & ":" & CStr(UBound(allItems))
-
     Set item = doc.GetFirstItem("TextValue")
     Set copiedItem = doc.CopyItem(item, "CopiedTextValue")
     Call copiedItem.Recycle()
     Call item.Recycle()
-
     Set other = db.CreateDocument()
     Call doc.CopyAllItems(other)
     Call doc.CopyAllItems(other, True)
     If other.GetString("TextValue") <> "hello" Then failures = failures + 1
-
     Set copiedDoc = doc.CopyToDatabase(db)
     If copiedDoc Is Nothing Then
         failures = failures + 1
@@ -340,7 +320,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
         Call copiedDoc.Remove(True)
         Call copiedDoc.Recycle()
     End If
-
     Set child = db.CreateDocument()
     Call child.ReplaceItemValue("Form", "XPScriptTest")
     Call child.MakeResponse(doc)
@@ -349,7 +328,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     Set responses = doc.Responses
     If responses.Count < 1 Then failures = failures + 1
     Call responses.Recycle()
-
     Call doc.PutInFolder("XPScript Runtime Folder", True)
     Call doc.RemoveFromFolder("XPScript Runtime Folder")
     Call doc.MarkUnread()
@@ -359,7 +337,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     attachmentSaved = doc.SaveAttachment("missing-runtime-attachment.bin", "missing-runtime-attachment.out")
     Print "SaveAttachmentMissing=" & CStr(attachmentSaved)
     Call doc.RemoveItem("GenericValue")
-
     Call child.Remove(True)
     Call child.Recycle()
     Call other.Recycle()
@@ -378,7 +355,6 @@ Function TestDocumentCollection(ByVal db As Variant) As Integer
     Dim parentDb As NotesDatabase
     Dim noteId As String
     failures = 0
-
     Print "SECTION=NotesDocumentCollection"
     Set docs = db.Search("Form=\"XPScriptTest\"")
     Set parentDb = docs.Parent
@@ -396,13 +372,11 @@ Function TestDocumentCollection(ByVal db As Variant) As Integer
         Set byId = docs.GetDocument(noteId)
         If byId Is Nothing Then failures = failures + 1 Else Call byId.Recycle()
     End If
-
     Set work = db.CreateDocumentCollection()
     If doc Is Not Nothing Then Call work.AddDocument(doc)
     Call work.AddDocument(docs)
     If doc Is Not Nothing Then Call work.RemoveDocument(doc)
     Call work.RemoveDocument(docs)
-
     If doc Is Not Nothing Then Call doc.Recycle()
     Call work.Recycle()
     Call docs.Recycle()
@@ -422,7 +396,6 @@ Function TestItemAndRichText(ByVal session As Variant, ByVal db As Variant, ByVa
     Dim view As NotesView
     Dim saved As Boolean
     failures = 0
-
     Print "SECTION=NotesItem/NotesRichTextItem"
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
@@ -448,14 +421,12 @@ Function TestItemAndRichText(ByVal session As Variant, ByVal db As Variant, ByVa
     item.IsSummary = True
     values = item.Values
     item.Values = Array("one", "two")
-
     Set other = db.CreateDocument()
     Set copied = item.CopyToDocument(other)
     Call copied.Recycle()
     Set copied = item.CopyToDocument(other, "RenamedItemSurface")
     Call copied.Recycle()
     Call item.Recycle()
-
     Set dt = session.CreateDateTime("2026-08-29 10:11:12")
     Call doc.SetDateTime("DateItem", dt)
     Call dt.Recycle()
@@ -464,11 +435,9 @@ Function TestItemAndRichText(ByVal session As Variant, ByVal db As Variant, ByVa
     If dt Is Nothing Then failures = failures + 1 Else item.DateTimeValue = dt
     If Not dt Is Nothing Then Call dt.Recycle()
     Call item.Recycle()
-
     Set item = doc.CreateNotesItem("EmptyItem")
     Call item.Remove()
     Call item.Recycle()
-
     Set view = db.GetView(viewName)
     Set fixtureDoc = view.GetFirstDocument()
     If fixtureDoc Is Nothing Then
@@ -500,7 +469,6 @@ Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
     Dim result As NotesAgentResult
     Dim doc As NotesDocument
     failures = 0
-
     Print "SECTION=NotesAgentResult"
     Set result = db.RunAgent(agentName)
     If result Is Nothing Then
@@ -511,7 +479,6 @@ Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
         Print "Output=" & result.Output
         Call result.Recycle()
     End If
-
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
     Set result = db.RunAgent(agentName, doc)
@@ -529,7 +496,6 @@ Function TestView(ByVal db As Variant, ByVal viewName As String) As Integer
     Dim names As Variant
     Dim errCode As Integer
     failures = 0
-
     Print "SECTION=NotesView"
     Set view = db.GetView(viewName)
     If view Is Nothing Then
@@ -541,7 +507,6 @@ Function TestView(ByVal db As Variant, ByVal viewName As String) As Integer
     Print "ColumnCount=" & CStr(UBound(names) - LBound(names) + 1)
     view.AutoUpdate = False
     view.AutoUpdate = True
-
     Set doc = view.GetFirstDocument()
     If doc Is Nothing Then
         failures = failures + 1
@@ -560,7 +525,6 @@ Function TestView(ByVal db As Variant, ByVal viewName As String) As Integer
     Set docs = view.GetAllDocumentsByKey("Al", False)
     If docs.Count < 1 Then failures = failures + 1
     Call docs.Recycle()
-
     errCode = 0
     On Error Resume Next
     Set docs = view.FTSearch("Alpha", 10)
@@ -588,7 +552,6 @@ Function TestViewNavigationV1(ByVal db As Variant, ByVal viewName As String) As 
     Dim doc As NotesDocument
     Dim values As Variant
     failures = 0
-
     Print "SECTION=NotesViewEntry/Collection/Navigator V1"
     Set view = db.GetView(viewName)
     entries = view.AllEntries
@@ -614,7 +577,6 @@ Function TestViewNavigationV1(ByVal db As Variant, ByVal viewName As String) As 
         If Not entries.Contains(doc) Then failures = failures + 1
         Call entry.Recycle()
     End If
-
     nav = view.CreateViewNav()
     If nav.Count < entries.Count Then failures = failures + 1
     entry = nav.GetFirst()
@@ -631,12 +593,10 @@ Function TestViewNavigationV1(ByVal db As Variant, ByVal viewName As String) As 
         If nextEntry Is Not Nothing Then Call nextEntry.Recycle()
         Call entry.Recycle()
     End If
-
     entry = view.GetEntryByKey("Alpha")
     If entry Is Nothing Then failures = failures + 1 Else Call entry.Recycle()
     keyEntries = view.GetAllEntriesByKey("Alpha")
     If keyEntries.Count < 1 Then failures = failures + 1
-
     If Not doc Is Nothing Then Call doc.Recycle()
     Call keyEntries.Recycle()
     Call entries.Recycle()
@@ -657,7 +617,6 @@ Function TestViewNavigationV2(ByVal db As Variant, ByVal viewName As String) As 
     Dim subset As Variant
     Dim posEntry As Variant
     failures = 0
-
     Print "SECTION=NotesViewNavigator V2 hierarchy/cache"
     Set view = db.GetView(viewName)
     If view Is Nothing Then
@@ -668,7 +627,6 @@ Function TestViewNavigationV2(ByVal db As Variant, ByVal viewName As String) As 
     defaultNav = view.CreateViewNav()
     If defaultNav.CacheSize <> 64 Then failures = failures + 1
     Call defaultNav.Recycle()
-
     nav = view.CreateViewNav(2)
     If nav.CacheSize <> 2 Then failures = failures + 1
     category = nav.GetFirst()
@@ -701,7 +659,6 @@ Function TestViewNavigationV2(ByVal db As Variant, ByVal viewName As String) As 
         Call subset.Recycle()
         Call category.Recycle()
     End If
-
     nav.CacheSize = 512
     If nav.CacheSize <> 512 Then failures = failures + 1
     nav.CacheSize = 999
@@ -728,7 +685,6 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
     Dim nav As Variant
     Dim entry As Variant
     failures = 0
-
     Print "SECTION=NotesViewEntryCollection/Navigator V3"
     Set view = db.GetView(viewName)
     entries = view.AllEntries
@@ -742,7 +698,6 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
     cloneEntries = entries.Clone()
     cloneEntries.FTSearch("Alpha", 10)
     If cloneEntries.Query <> "Alpha" Then failures = failures + 1
-
     entry = entries.GetFirstEntry()
     If entry Is Nothing Then
         failures = failures + 1
@@ -752,7 +707,6 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
         Print "IsConflict=" & CStr(entry.IsConflict)
         Call entry.Recycle()
     End If
-
     entries.MarkAllUnread()
     otherEntries = view.GetAllUnreadEntries()
     Call otherEntries.Recycle()
@@ -761,14 +715,12 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
     Call nav.Recycle()
     otherEntries = view.GetAllReadEntries()
     Call otherEntries.Recycle()
-
     If False Then
         Call entries.PutAllInFolder("XPScriptV3", True)
         Call entries.RemoveAllFromFolder("XPScriptV3")
         Call entries.StampAll("XPScriptV3Stamp", "ok")
         Call entries.UpdateAll()
     End If
-
     Call cloneEntries.Recycle()
     Call entries.Recycle()
     Call view.Recycle()
@@ -782,7 +734,6 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     Dim ok As Boolean
     Dim errCode As Integer
     failures = 0
-
     Print "SECTION=NotesDocument.ComputeWithForm"
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", validForm)
@@ -790,7 +741,6 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     If Not ok Then failures = failures + 1
     If doc.GetString("CWFDefault") <> "DEFAULT-VALUE" Then failures = failures + 1
     Call doc.Recycle()
-
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", errorForm)
     failedFields = "SENTINEL"
@@ -798,7 +748,6 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     If ok Then failures = failures + 1
     If failedFields Is Not Nothing Then failures = failures + 1
     Call doc.Recycle()
-
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", errorForm)
     failedFields = "SENTINEL"
@@ -810,28 +759,29 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     If errCode = 0 Then failures = failures + 1
     If failedFields Is Nothing Then failures = failures + 1
     Call doc.Recycle()
-
     TestComputeWithForm = failures
 End Function
 
 Function TestDatabaseLifecycle(ByVal session As Variant) As Integer
     Const TEMP_DATABASE = "xpscript-full-runtime-lifecycle-test.nsf"
     Dim failures As Integer
-    Dim db As New NotesDatabase("", "")
+    Dim db As NotesDatabase
     Dim reopened As NotesDatabase
     failures = 0
-
     Print "SECTION=NotesDatabase lifecycle"
-    Set reopened = session.OpenDatabase("", TEMP_DATABASE)
-    If reopened.IsOpen Then Call reopened.Remove()
-    Call reopened.Recycle()
-
-    Call db.Create("", TEMP_DATABASE, True)
-    If Not db.IsOpen Then failures = failures + 1
-    If db.FilePath <> TEMP_DATABASE Then failures = failures + 1
-    Call db.Remove()
+    Set db = session.OpenDatabase("", TEMP_DATABASE)
+    If db.IsOpen Then Call db.Remove()
     Call db.Recycle()
-
+    Set db = session.OpenDatabase("", TEMP_DATABASE)
+    If db.IsOpen Then
+        failures = failures + 1
+    Else
+        Call db.Create("", "", True)
+        If Not db.IsOpen Then failures = failures + 1
+        If db.FilePath <> TEMP_DATABASE Then failures = failures + 1
+        Call db.Remove()
+    End If
+    Call db.Recycle()
     Set reopened = session.OpenDatabase("", TEMP_DATABASE)
     If reopened.IsOpen Then failures = failures + 1
     Call reopened.Recycle()
