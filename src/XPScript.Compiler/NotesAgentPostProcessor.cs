@@ -7,8 +7,8 @@ internal static class NotesAgentPostProcessor
         ArgumentNullException.ThrowIfNull(source);
 
         source = ReplaceRequired(source,
-            "    public XPScriptNotesAgentResult RunAgent(object? nameValue)",
-            "    public XPScriptNotesAgent? GetAgent(object? nameValue)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Agent name cannot be empty.\");\n        var noteId = Session.Api.FindAgentNoteId(_handle, name);\n        return noteId == 0 ? null : new XPScriptNotesAgent(Session, this, noteId, name);\n    }\n\n    public XPScriptNotesAgentResult RunAgent(object? nameValue)",
+            "    public XPScriptNotesAgentResult? RunAgent(object? nameValue)",
+            "    public XPScriptNotesAgent? GetAgent(object? nameValue)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Agent name cannot be empty.\");\n        var noteId = Session.Api.FindAgentNoteId(_handle, name);\n        return noteId == 0 ? null : new XPScriptNotesAgent(Session, this, noteId, name);\n    }\n\n    public XPScriptNotesAgentResult? RunAgent(object? nameValue)",
             "database-get-agent");
 
         source = ReplaceRequired(source,
@@ -65,7 +65,6 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
     public int Run(object? noteIdValue)
     {
         EnsureAlive();
-        var noteId = XPScriptNotesConvert.NoteId(noteIdValue);
         var doc = _database.GetDocumentByID(noteIdValue);
         if (doc is null) throw new XPScriptRuntimeException(91, "NotesAgent.Run document was not found.");
         try { Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle); }
