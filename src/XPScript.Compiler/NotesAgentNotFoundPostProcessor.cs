@@ -12,10 +12,25 @@ internal static class NotesAgentNotFoundPostProcessor
             "    internal string? RunAgent(uint db, string name, uint documentContext)",
             "native-runagent-nullable");
 
+        const string oldFindAgent = """
+        var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
+        var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
+        if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
+            status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);
+        Check(status, "NIFFindDesignNote(agent)");
+""";
+        const string newFindAgent = """
+        var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
+        var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
+        if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
+            status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);
+        if ((status & 0x3FFF) == 0x0404) return null;
+        Check(status, "NIFFindDesignNote(agent)");
+""";
         source = ReplaceRequired(
             source,
-            "        Check(status, \"NIFFindDesignNote(agent)\");",
-            "        if ((status & 0x3FFF) == 0x0404) return null;\n        Check(status, \"NIFFindDesignNote(agent)\");",
+            oldFindAgent,
+            newFindAgent,
             "native-runagent-not-found");
 
         source = ReplaceRequired(
