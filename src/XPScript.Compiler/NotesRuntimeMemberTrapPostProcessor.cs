@@ -14,6 +14,44 @@ internal static class NotesRuntimeMemberTrapPostProcessor
 
         source = ReplaceRequired(
             source,
+            "    public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>\n        new(XPScriptRuntime.CStr(runtimeDirectory), null, null);",
+            """
+    public static object CreateSession()
+    {
+        var runtimeDirectory = TryResolveDefaultRuntimeDirectory();
+        return runtimeDirectory is null
+            ? NothingValue
+            : new XPScriptNotesSession(runtimeDirectory, null, null);
+    }
+
+    private static string? TryResolveDefaultRuntimeDirectory()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
+            var raw = key?.GetValue("PROGDIR") as string;
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+
+            var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('"'));
+            var path = Path.GetFullPath(expanded);
+            if (!Directory.Exists(path)) return null;
+            if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
+            return path;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>
+        new(XPScriptRuntime.CStr(runtimeDirectory), null, null);
+""",
+            "parameterless-session-autodetect");
+
+        source = ReplaceRequired(
+            source,
             "internal abstract class XPScriptNotesObject : IDisposable",
             "internal abstract class XPScriptNotesObject : System.Dynamic.DynamicObject, IDisposable",
             "notes-object-dynamic-base");
