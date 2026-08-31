@@ -39,7 +39,7 @@ jobs:
           $cli = './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
           $ext = if ($IsWindows) { '.exe' } else { '' }
           $compiled = "./out/banner-smoke$ext"
-          $expectedBanner = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2} XPageDeveloper\.com \(c\)$'
+          $expectedBanner = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2} - XPageDeveloper\.com ©$'
 
           $compileOutput = @(dotnet $cli compile ./samples/unified-cli-smoke.xps --framework-dependent -o $compiled 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "compile failed.`n$compileOutput" }
