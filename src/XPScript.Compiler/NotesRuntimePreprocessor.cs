@@ -75,10 +75,6 @@ internal sealed class NotesRuntimePreprocessor
                 ".GetFirstDocumentByKey(",
                 RegexOptions.IgnoreCase);
 
-            var unsupportedNew = Regex.Match(rewritten, @"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter)\b", RegexOptions.IgnoreCase);
-            if (unsupportedNew.Success)
-                throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
-
             var recycle = Regex.Match(rewritten, @"^(?:Call\s+)?([A-Za-z_]\w*)\.Recycle\s*\(\s*\)\s*$", RegexOptions.IgnoreCase);
             if (recycle.Success && notesVariables.Contains(recycle.Groups[1].Value))
             {
