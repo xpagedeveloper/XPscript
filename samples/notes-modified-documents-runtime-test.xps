@@ -1,0 +1,68 @@
+' Runtime/compile regression for NotesDatabase.GetModifiedDocuments.
+' Requires an open local xpscript.nsf for runtime execution.
+Option Declare
+
+Sub Main()
+    Const DBMOD_DOC_DATA = 1
+    Const DBMOD_DOC_ALL = 32767
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim since As NotesDateTime
+    Dim changed As NotesDocumentCollection
+    Dim documents As NotesDocumentCollection
+    Dim design As NotesDocumentCollection
+    Dim doc As NotesDocument
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES-MODIFIED=SKIP xpscript.nsf is not open"
+        Exit Sub
+    End If
+
+    ' Query one hour back using the native Domino modified-note table.
+    Set since = session.CreateDateTimeNow()
+    Call since.AdjustHour(-1)
+    Set changed = db.GetModifiedDocuments(since, DBMOD_DOC_ALL)
+
+    Set documents = changed.Documents
+    Set design = changed.DesignElements
+
+    Print "MODIFIED-ALL=" & CStr(changed.Count)
+    Print "MODIFIED-DOCUMENTS=" & CStr(documents.Count)
+    Print "MODIFIED-DESIGN=" & CStr(design.Count)
+    Print "UNTIL=" & changed.UntilTime.LocalTime
+
+    If documents.Count + design.Count > changed.Count Then
+        Error 9960, "Filtered modified collections exceed the complete collection"
+    End If
+
+    ' The filtered data collection must contain only non-design NotesDocument objects.
+    Set doc = documents.GetFirstDocument()
+    If Not doc Is Nothing Then
+        If doc.IsDesign Then Error 9961, "Documents filter returned a design note"
+        Print "FIRST-DOCUMENT=" & doc.NoteID
+        Call doc.Recycle()
+    End If
+
+    ' DesignElements must contain only design NotesDocument objects.
+    Set doc = design.GetFirstDocument()
+    If Not doc Is Nothing Then
+        If Not doc.IsDesign Then Error 9962, "DesignElements filter returned a data note"
+        Print "FIRST-DESIGN=" & doc.DesignType & " " & doc.DesignTitle
+        Call doc.Recycle()
+    End If
+
+    ' HCL-compatible default remains data documents only.
+    Set documents = db.GetModifiedDocuments(since, DBMOD_DOC_DATA)
+    Print "MODIFIED-DATA-ONLY=" & CStr(documents.Count)
+
+    Call design.Recycle()
+    Call documents.Recycle()
+    Call changed.Recycle()
+    Call since.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NOTES-MODIFIED=PASS"
+End Sub
