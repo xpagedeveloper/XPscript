@@ -120,7 +120,7 @@ public static class XPScriptCompilerCommandLine
         catch (Exception ex)
         {
             CompleteProgress("Compilation failed");
-            var result = CompileResult.Error([new CompileDiagnostic { Description = ex.Message }]);
+            var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]);
             WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
             return 1;
         }
@@ -137,6 +137,7 @@ public static class XPScriptCompilerCommandLine
 
         var resultFormat = "text";
         string? tempRoot = null;
+        var debug = false;
 
         try
         {
@@ -146,7 +147,6 @@ public static class XPScriptCompilerCommandLine
             var parseRunOptions = true;
             var restricted = false;
             var info = false;
-            var debug = false;
             var sourceRoots = new List<string>();
             var sourcePreprocessors = new List<string>();
 
@@ -168,6 +168,7 @@ public static class XPScriptCompilerCommandLine
                 if (parseRunOptions && value == "--debug")
                 {
                     debug = true;
+                    info = true;
                     continue;
                 }
 
@@ -248,8 +249,9 @@ public static class XPScriptCompilerCommandLine
             var runCache = await RunArtifactCache.CreateAsync(sourcePath, currentRuntimeIdentifier, sourcePreprocessors).ConfigureAwait(false);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
+            var executablePath = string.Empty;
 
-            var cacheHit = runCache.TryGetRunnable(out var executablePath);
+            var cacheHit = !debug && runCache.TryGetRunnable(out executablePath);
             if (!cacheHit)
             {
                 var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
@@ -308,6 +310,7 @@ public static class XPScriptCompilerCommandLine
             if (File.Exists(managedAssemblyPath))
                 startInfo.ArgumentList.Add(managedAssemblyPath);
             startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
+            if (debug) startInfo.Environment["XPSCRIPT_RUNTIME_DEBUG"] = "1";
             foreach (var argument in scriptArgs)
                 startInfo.ArgumentList.Add(argument);
 
@@ -378,7 +381,7 @@ public static class XPScriptCompilerCommandLine
         catch (Exception ex)
         {
             if (progressLineWidth > 0) CompleteProgress("Run failed");
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = ex.Message }]), resultFormat);
+            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]), resultFormat);
             return 1;
         }
         finally
@@ -468,10 +471,10 @@ For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle depe
 --source-root may be repeated and automatically enables restricted Include processing.
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports live progress on one console line while preserving structured result output on stdout.
-The run command stays quiet by default. Use --info to show the same live compilation status and runtime lifecycle information.
+The run command stays quiet by default. Use --info to show live compilation status and runtime lifecycle information.
 Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
-Use --debug to include generated C# compiler diagnostics and physical Program.cs locations when available.
-The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache.
+Use --debug as a strict superset of --info: it forces a fresh run compilation, shows the compile timer, includes generated C# diagnostics and physical Program.cs locations, and enables detailed runtime exception tracing for errors that may be handled by On Error.
+The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache. Debug runs bypass an existing run-cache artifact so diagnostics always reflect the current compiler.
 Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }
