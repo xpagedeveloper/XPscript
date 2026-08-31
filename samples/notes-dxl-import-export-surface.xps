@@ -31,6 +31,7 @@ Sub Main()
 
     Set exporter = session.CreateDXLExporter()
     exporter.CleanedDXL = True
+    exporter.ExportDesignToFolders = True
     exporter.RichTextOption = 0
     exporter.ValidationStyle = 1
     exporter.MIMEOption = 0
@@ -43,12 +44,15 @@ Sub Main()
     exporter.OmitMiscFileObjects = False
     exporter.OmitRichtextPictures = False
     Print exporter.CleanedDXL
+    Print exporter.ExportDesignToFolders
     Print exporter.RichTextOption
     Print exporter.MIMEOption
     Print exporter.ForceNoteFormat
     Print exporter.OutputDOCTYPE
-    Call exporter.ExportDatabaseDesign(db, "out/notes-dxl/database-design.dxl")
+    Call exporter.ExportDatabaseDesign(db, "out/notes-dxl/design")
     Print exporter.Log
+
+    exporter.ExportDesignToFolders = False
     Call exporter.ExportDesignElement(db, "XPScriptTest", "Form", "out/notes-dxl/form.dxl")
     Print exporter.Log
 
