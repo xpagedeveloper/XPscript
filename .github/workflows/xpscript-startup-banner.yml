@@ -1,0 +1,54 @@
+name: XPScript Startup Banner
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+      - '.github/workflows/xpscript-startup-banner.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build unified CLI
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+      - name: Verify compile and run banners
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $cli = './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
+          $ext = if ($IsWindows) { '.exe' } else { '' }
+          $compiled = "./out/banner-smoke$ext"
+          $expectedVersion = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2}$'
+          $expectedCopyright = '^XPageDeveloper\.com \(c\)$'
+
+          $compileOutput = @(dotnet $cli compile ./samples/unified-cli-smoke.xps --framework-dependent -o $compiled 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "compile failed.`n$compileOutput" }
+          if ($compileOutput.Count -lt 2 -or $compileOutput[0] -notmatch $expectedVersion -or $compileOutput[1] -notmatch $expectedCopyright) {
+            throw "Compile startup banner missing or not first.`n$compileOutput"
+          }
+
+          $runOutput = @(dotnet $cli run ./samples/unified-cli-smoke.xps 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "run failed.`n$runOutput" }
+          if ($runOutput.Count -lt 2 -or $runOutput[0] -notmatch $expectedVersion -or $runOutput[1] -notmatch $expectedCopyright) {
+            throw "Run startup banner missing or not first.`n$runOutput"
+          }
