@@ -1,0 +1,87 @@
+' NotesDocument metadata and design-element regression sample.
+' Requires an open local xpscript.nsf, such as the database created by
+' samples/notes-full-domino-runtime-test.xps.
+Option Declare
+
+Sub Main()
+    Dim session As New NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim profile As NotesDocument
+    Dim notes As NotesNoteCollection
+    Dim noteId As String
+    Dim count As Integer
+    Dim itemCount As Integer
+
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES-DOCUMENT-METADATA=SKIP xpscript.nsf is not open"
+        Exit Sub
+    End If
+
+    ' A newly-created data note is valid, is not a profile/design note,
+    ' and design-only string properties must be empty.
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptMetadataTest")
+    Call doc.ReplaceItemValue("Subject", "NotesDocument metadata")
+
+    If Not doc.IsValid Then Error 9901, "New NotesDocument should be valid"
+    If Not doc.IsNewNote Then Error 9902, "New NotesDocument should report IsNewNote"
+    If doc.IsProfile Then Error 9903, "Normal NotesDocument reported IsProfile"
+    If doc.IsResponse Then Error 9904, "Normal NotesDocument reported IsResponse"
+    If doc.IsDesign Then Error 9905, "Normal NotesDocument reported IsDesign"
+    If doc.DesignType <> "" Then Error 9906, "DesignType must be empty for a data note"
+    If doc.DesignTitle <> "" Then Error 9907, "DesignTitle must be empty for a data note"
+    If doc.DesignAlias <> "" Then Error 9908, "DesignAlias must be empty for a data note"
+
+    itemCount = 0
+    ForAll item In doc.Items
+        itemCount = itemCount + 1
+        Print "ITEM=" & item.Name
+    End ForAll
+    If itemCount < 2 Then Error 9909, "Items did not return NotesItem objects"
+    Call doc.Recycle()
+
+    ' NSFProfileOpen creates/opens a profile note and stamps the profile $Name.
+    Set profile = db.GetProfileDocument("XPScriptMetadataProfile", "RuntimeTest")
+    If profile Is Nothing Then Error 9910, "GetProfileDocument returned Nothing"
+    If Not profile.IsValid Then Error 9911, "Profile NotesDocument should be valid"
+    If Not profile.IsProfile Then Error 9912, "Profile NotesDocument did not report IsProfile"
+    If profile.IsDesign Then Error 9913, "Profile NotesDocument reported IsDesign"
+    Print "PROFILE IsProfile=" & CStr(profile.IsProfile)
+    Call profile.Recycle()
+
+    ' Enumerate design notes through NotesNoteCollection, reopen each as a
+    ' NotesDocument and verify the XPscript design metadata properties.
+    Set notes = db.CreateNoteCollection(False)
+    Call notes.SelectAllDesignElements(True)
+    Call notes.BuildCollection()
+
+    count = 0
+    noteId = notes.GetFirstNoteID()
+    Do While noteId <> "" And count < 25
+        Set doc = db.GetDocumentByID(noteId)
+        If Not doc Is Nothing Then
+            If Not doc.IsValid Then Error 9914, "Design NotesDocument should be valid"
+            If Not doc.IsDesign Then Error 9915, "Design note did not report IsDesign"
+            If doc.DesignType = "" Then Error 9916, "Design note has empty DesignType"
+
+            Print "DESIGN NoteID=" & noteId & _
+                " Type=" & doc.DesignType & _
+                " Title=" & doc.DesignTitle & _
+                " Alias=" & doc.DesignAlias
+
+            count = count + 1
+            Call doc.Recycle()
+        End If
+        noteId = notes.GetNextNoteID(noteId)
+    Loop
+
+    If count = 0 Then Error 9917, "No design notes were enumerated"
+
+    Call notes.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+
+    Print "NOTES-DOCUMENT-METADATA=PASS COUNT=" & CStr(count)
+End Sub
