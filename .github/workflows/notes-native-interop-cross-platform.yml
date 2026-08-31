@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesView*.cs'
       - 'samples/notes-view-*.xps'
+      - 'samples/notes-full-domino-runtime-test.xps'
       - 'scripts/*notes-view-cache*.ps1'
       - 'scripts/validate-notes-view-navigator-cache-policy.ps1'
       - 'tests/NativeInteropSmoke/**'
@@ -38,6 +39,11 @@ jobs:
           ./scripts/test-notes-view-cache-history-model.ps1
       - name: Build compiler
         run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --nologo
+      - name: Compile Notes full Domino runtime regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-full-domino-runtime
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-full-domino-runtime-test.xps --framework-dependent -o artifacts/notes-full-domino-runtime/notes-full-domino-runtime
       - name: Compile Notes C API surface
         shell: bash
         run: |
