@@ -30,6 +30,7 @@ Sub Main()
     Print importer.Log
 
     Set exporter = session.CreateDXLExporter()
+    exporter.CleanedDXL = True
     exporter.RichTextOption = 0
     exporter.ValidationStyle = 1
     exporter.MIMEOption = 0
@@ -41,6 +42,7 @@ Sub Main()
     exporter.OmitOLEObjects = False
     exporter.OmitMiscFileObjects = False
     exporter.OmitRichtextPictures = False
+    Print exporter.CleanedDXL
     Print exporter.RichTextOption
     Print exporter.MIMEOption
     Print exporter.ForceNoteFormat
