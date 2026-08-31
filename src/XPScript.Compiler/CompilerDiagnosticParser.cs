@@ -9,6 +9,7 @@ internal static class CompilerDiagnosticParser
 
     public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug)
     {
+        debug = debug || CompilerDiagnosticMode.Debug;
         var result = new List<CompileDiagnostic>();
         var escapedSource = Regex.Escape(sourcePath).Replace("\\\\", @"[\\/]");
         var sourcePattern = new Regex(
