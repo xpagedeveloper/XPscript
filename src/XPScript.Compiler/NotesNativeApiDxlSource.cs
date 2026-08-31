@@ -44,7 +44,7 @@ internal sealed partial class XPScriptNotesNativeApi
         if (handle != 0) Resolve<DXLDeleteImporterDelegate>("DXLDeleteImporter")(handle);
     }
 
-    internal void ImportDxlFile(uint importer, string filePath, nint database)
+    internal void ImportDxlFile(uint importer, string filePath, uint database)
     {
         EnsureInitialized();
         if (database == 0) throw new XPScriptRuntimeException(91, "NotesDXLImporter requires an open NotesDatabase.");
@@ -59,7 +59,7 @@ internal sealed partial class XPScriptNotesNativeApi
             if (read > 0) System.Runtime.InteropServices.Marshal.Copy(managed, 0, buffer, read);
             return checked((uint)read);
         };
-        Check(Resolve<DXLImportDelegate>("DXLImport")(reader, 0, importer, unchecked((uint)database)), "DXLImport");
+        Check(Resolve<DXLImportDelegate>("DXLImport")(reader, 0, importer, database), "DXLImport");
         GC.KeepAlive(reader);
     }
 
@@ -75,28 +75,28 @@ internal sealed partial class XPScriptNotesNativeApi
         if (handle != 0) Resolve<DXLDeleteExporterDelegate>("DXLDeleteExporter")(handle);
     }
 
-    internal void ExportDxlDocument(uint exporter, nint note, string filePath)
+    internal void ExportDxlDocument(uint exporter, uint note, string filePath)
     {
         if (note == 0) throw new XPScriptRuntimeException(91, "NotesDXLExporter requires an open NotesDocument.");
-        WriteDxlFile(filePath, writer => Check(Resolve<DXLExportNoteDelegate>("DXLExportNote")(exporter, writer, unchecked((uint)note), 0), "DXLExportNote"));
+        WriteDxlFile(filePath, writer => Check(Resolve<DXLExportNoteDelegate>("DXLExportNote")(exporter, writer, note, 0), "DXLExportNote"));
     }
 
-    internal void ExportDxlDocumentCollection(uint exporter, nint database, IReadOnlyList<uint> noteIds, string filePath)
+    internal void ExportDxlDocumentCollection(uint exporter, uint database, IReadOnlyList<uint> noteIds, string filePath)
     {
         if (database == 0) throw new XPScriptRuntimeException(91, "NotesDXLExporter requires an open NotesDatabase.");
         WithDxlIdTable(noteIds, table =>
-            WriteDxlFile(filePath, writer => Check(Resolve<DXLExportIDTableDelegate>("DXLExportIDTable")(exporter, writer, unchecked((uint)database), table, 0), "DXLExportIDTable")));
+            WriteDxlFile(filePath, writer => Check(Resolve<DXLExportIDTableDelegate>("DXLExportIDTable")(exporter, writer, database, table, 0), "DXLExportIDTable")));
     }
 
-    internal void ExportDxlDesign(uint exporter, nint database, string filePath)
+    internal void ExportDxlDesign(uint exporter, uint database, string filePath)
     {
         if (database == 0) throw new XPScriptRuntimeException(91, "NotesDXLExporter requires an open NotesDatabase.");
-        var noteIds = SearchDxlDesignNoteIds(unchecked((uint)database));
+        var noteIds = SearchDxlDesignNoteIds(database);
         WithDxlIdTable(noteIds, table =>
-            WriteDxlFile(filePath, writer => Check(Resolve<DXLExportIDTableDelegate>("DXLExportIDTable")(exporter, writer, unchecked((uint)database), table, 0), "DXLExportIDTable(design)")));
+            WriteDxlFile(filePath, writer => Check(Resolve<DXLExportIDTableDelegate>("DXLExportIDTable")(exporter, writer, database, table, 0), "DXLExportIDTable(design)")));
     }
 
-    internal void ExportDxlDesignElement(uint exporter, nint database, string name, string designType, string filePath)
+    internal void ExportDxlDesignElement(uint exporter, uint database, string name, string designType, string filePath)
     {
         if (database == 0) throw new XPScriptRuntimeException(91, "NotesDXLExporter requires an open NotesDatabase.");
         name = name.Trim();
