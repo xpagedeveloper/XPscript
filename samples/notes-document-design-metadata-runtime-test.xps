@@ -4,7 +4,7 @@
 Option Declare
 
 Sub Main()
-    Dim session As New NotesSession
+    Dim session As NotesSession
     Dim db As NotesDatabase
     Dim doc As NotesDocument
     Dim profile As NotesDocument
@@ -13,6 +13,7 @@ Sub Main()
     Dim count As Integer
     Dim itemCount As Integer
 
+    Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
     If db Is Nothing Or Not db.IsOpen Then
         Print "NOTES-DOCUMENT-METADATA=SKIP xpscript.nsf is not open"
