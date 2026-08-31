@@ -1,12 +1,13 @@
 ' Consolidated HCL Notes/Domino runtime regression for XPscript.
 '
 ' Target database: xpscript.nsf
-' Prerequisite: import samples/xpscript-notes-runtime-fixture.dxl into xpscript.nsf.
+' If the database is missing, this test creates it and imports the repository DXL fixture.
 '
 ' This master sample exercises the currently exposed Notes runtime surface across:
 ' NotesSession, NotesName, NotesDateTime, NotesDatabase, NotesDocument,
 ' NotesDocumentCollection, NotesItem, NotesRichTextItem, NotesAgentResult,
-' NotesView, NotesViewEntry, NotesViewEntryCollection and NotesViewNavigator.
+' NotesView, NotesViewEntry, NotesViewEntryCollection, NotesViewNavigator,
+' NotesDXLImporter and NotesDXLExporter.
 '
 ' The database lifecycle section creates and removes only a temporary NSF.
 ' Temporary documents created by this script are removed before exit.
@@ -18,6 +19,7 @@ Sub Main()
     Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
     Const NOTES_INI = ""
     Const DATABASE_PATH = "xpscript.nsf"
+    Const FIXTURE_DXL = "samples/xpscript-notes-runtime-fixture.dxl"
     Const TEST_VIEW = "XPScriptTestView"
     Const HIERARCHY_VIEW = "XPScriptHierarchyView"
     Const TEST_AGENT = "XPScriptTestAgent"
@@ -26,7 +28,9 @@ Sub Main()
 
     Dim session As NotesSession
     Dim db As NotesDatabase
+    Dim importer As NotesDXLImporter
     Dim failures As Integer
+    Dim bootstrapErr As Integer
 
     failures = 0
     If NOTES_INI = "" Then
@@ -35,39 +39,76 @@ Sub Main()
         Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
     End If
 
+    Print "STEP=00/15 Bootstrap xpscript.nsf"
     Set db = session.OpenDatabase("", DATABASE_PATH)
-    If db Is Nothing Or Not db.IsOpen Then
-        Print "NOTES-FULL-DOMINO=FAIL database xpscript.nsf is not open"
-        If Not db Is Nothing Then Call db.Recycle()
+    If db Is Nothing Then
         Call session.Recycle()
+        Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
         Exit Sub
     End If
 
+    If Not db.IsOpen Then
+        bootstrapErr = 0
+        On Error Resume Next
+        Call db.Create("", "", True)
+        bootstrapErr = Err
+        If bootstrapErr = 0 Then
+            Set importer = session.CreateDXLImporter()
+            Call importer.Import(FIXTURE_DXL, db)
+            bootstrapErr = Err
+            If Not importer Is Nothing Then Call importer.Recycle()
+        End If
+        On Error GoTo 0
+        If bootstrapErr <> 0 Or Not db.IsOpen Then
+            Print "BOOTSTRAP-ERROR=" & CStr(bootstrapErr)
+            Call db.Recycle()
+            Call session.Recycle()
+            Print "NOTES-FULL-DOMINO=FAIL COUNT=1"
+            Exit Sub
+        End If
+    End If
+
     Print "NOTES-FULL-DOMINO-BEGIN"
+    Print "STEP=01/15 NotesSession"
     failures = failures + TestSession(session, db)
+    Print "STEP=02/15 NotesName"
     failures = failures + TestName(session)
+    Print "STEP=03/15 NotesDateTime"
     failures = failures + TestDateTime(session)
+    Print "STEP=04/15 NotesDatabase"
     failures = failures + TestDatabase(session, db, TEST_VIEW, TEST_AGENT)
+    Print "STEP=05/15 NotesDocument"
     failures = failures + TestDocument(session, db)
+    Print "STEP=06/15 NotesDocumentCollection"
     failures = failures + TestDocumentCollection(db)
+    Print "STEP=07/15 NotesItem NotesRichTextItem"
     failures = failures + TestItemAndRichText(session, db, TEST_VIEW)
+    Print "STEP=08/15 NotesAgentResult"
     failures = failures + TestAgent(db, TEST_AGENT)
+    Print "STEP=09/15 NotesView"
     failures = failures + TestView(db, TEST_VIEW)
+    Print "STEP=10/15 NotesViewEntry Collection Navigator V1"
     failures = failures + TestViewNavigationV1(db, TEST_VIEW)
+    Print "STEP=11/15 NotesViewNavigator V2"
     failures = failures + TestViewNavigationV2(db, HIERARCHY_VIEW)
+    Print "STEP=12/15 NotesView V3"
     failures = failures + TestViewNavigationV3(db, TEST_VIEW)
+    Print "STEP=13/15 NotesDXLImporter NotesDXLExporter"
+    failures = failures + TestDXL(session, db)
+    Print "STEP=14/15 NotesDocument ComputeWithForm"
     failures = failures + TestComputeWithForm(db, VALID_FORM, ERROR_FORM)
+    Print "STEP=15/15 NotesDatabase lifecycle"
     failures = failures + TestDatabaseLifecycle(session)
+
+    Print "NOTES-FULL-DOMINO-END"
+    Call db.Recycle()
+    Call session.Recycle()
 
     If failures = 0 Then
         Print "NOTES-FULL-DOMINO=PASS"
     Else
         Print "NOTES-FULL-DOMINO=FAIL COUNT=" & CStr(failures)
     End If
-
-    Call db.Recycle()
-    Call session.Recycle()
-    Print "NOTES-FULL-DOMINO-END"
 End Sub
 
 Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
@@ -625,9 +666,11 @@ Function TestViewNavigationV2(ByVal db As Variant, ByVal viewName As String) As 
     End If
     view.AutoUpdate = False
     defaultNav = view.CreateViewNav()
+    If defaultNav.BufferMaxEntries <> 64 Then failures = failures + 1
     If defaultNav.CacheSize <> 64 Then failures = failures + 1
     Call defaultNav.Recycle()
     nav = view.CreateViewNav(2)
+    If nav.BufferMaxEntries <> 2 Then failures = failures + 1
     If nav.CacheSize <> 2 Then failures = failures + 1
     category = nav.GetFirst()
     If category Is Nothing Then
@@ -659,10 +702,12 @@ Function TestViewNavigationV2(ByVal db As Variant, ByVal viewName As String) As 
         Call subset.Recycle()
         Call category.Recycle()
     End If
-    nav.CacheSize = 512
-    If nav.CacheSize <> 512 Then failures = failures + 1
-    nav.CacheSize = 999
-    If nav.CacheSize <> 512 Then failures = failures + 1
+    nav.BufferMaxEntries = 512
+    If nav.BufferMaxEntries <> 512 Then failures = failures + 1
+    nav.BufferMaxEntries = 999
+    If nav.BufferMaxEntries <> 512 Then failures = failures + 1
+    nav.CacheSize = 2
+    If nav.BufferMaxEntries <> 2 Then failures = failures + 1
     nav.MaxLevel = 0
     posEntry = nav.GetNth(1)
     If posEntry Is Not Nothing Then
@@ -725,6 +770,68 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
     Call entries.Recycle()
     Call view.Recycle()
     TestViewNavigationV3 = failures
+End Function
+
+Function TestDXL(ByVal session As Variant, ByVal db As Variant) As Integer
+    Dim failures As Integer
+    Dim importer As NotesDXLImporter
+    Dim exporter As NotesDXLExporter
+    Dim docs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim errCode As Integer
+    failures = 0
+    Print "SECTION=NotesDXLImporter/NotesDXLExporter"
+
+    Set importer = session.CreateDXLImporter()
+    If importer Is Nothing Then failures = failures + 1 Else Call importer.Recycle()
+
+    Set exporter = session.CreateDXLExporter()
+    If exporter Is Nothing Then
+        TestDXL = failures + 1
+        Exit Function
+    End If
+
+    errCode = 0
+    On Error Resume Next
+    Call exporter.ExportDatabaseDesign(db, "out/notes-dxl-runtime/database-design.dxl")
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then failures = failures + 1
+
+    errCode = 0
+    On Error Resume Next
+    Call exporter.ExportDesignElement(db, "XPScriptTest", "Form", "out/notes-dxl-runtime/form-XPScriptTest.dxl")
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then failures = failures + 1
+
+    Set docs = db.Search("Form=\"XPScriptTest\"", 2)
+    If docs Is Nothing Or docs.Count = 0 Then
+        failures = failures + 1
+    Else
+        Set doc = docs.GetFirstDocument()
+        If doc Is Nothing Then
+            failures = failures + 1
+        Else
+            errCode = 0
+            On Error Resume Next
+            Call exporter.ExportDocument(doc, "out/notes-dxl-runtime/document.dxl")
+            errCode = Err
+            On Error GoTo 0
+            If errCode <> 0 Then failures = failures + 1
+            Call doc.Recycle()
+        End If
+
+        errCode = 0
+        On Error Resume Next
+        Call exporter.ExportDocumentCollection(docs, "out/notes-dxl-runtime/document-collection.dxl")
+        errCode = Err
+        On Error GoTo 0
+        If errCode <> 0 Then failures = failures + 1
+    End If
+    If Not docs Is Nothing Then Call docs.Recycle()
+    Call exporter.Recycle()
+    TestDXL = failures
 End Function
 
 Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByVal errorForm As String) As Integer
