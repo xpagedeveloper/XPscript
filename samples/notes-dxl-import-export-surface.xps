@@ -26,6 +26,8 @@ Sub Main()
     Print importer.DocumentImportOption
     Print importer.ReplicaRequiredForReplaceOrUpdate
     Call importer.Import("samples/xpscript-notes-runtime-fixture.dxl", db)
+    Print importer.ImportedNoteCount
+    Print importer.Log
 
     Set exporter = session.CreateDXLExporter()
     exporter.RichTextOption = 0
