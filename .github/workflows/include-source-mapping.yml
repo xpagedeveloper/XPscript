@@ -10,6 +10,7 @@ on:
       - compiler-source-line-mapping
     paths:
       - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/ExpandedSourceContext.cs'
       - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
       - 'src/XPScript.Compiler/SourceLineMarkerPreprocessor.cs'
       - 'src/XPScript.Compiler/SourceLineRuntimeSource.cs'
@@ -24,6 +25,7 @@ on:
       - main
     paths:
       - 'src/XPScript.Compiler/Include*.cs'
+      - 'src/XPScript.Compiler/ExpandedSourceContext.cs'
       - 'src/XPScript.Compiler/SourcePreprocessor*.cs'
       - 'src/XPScript.Compiler/SourceLineMarkerPreprocessor.cs'
       - 'src/XPScript.Compiler/SourceLineRuntimeSource.cs'
