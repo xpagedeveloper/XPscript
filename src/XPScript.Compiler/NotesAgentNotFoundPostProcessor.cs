@@ -12,22 +12,14 @@ internal static class NotesAgentNotFoundPostProcessor
             "    internal string? RunAgent(uint db, string name, uint documentContext)",
             "native-runagent-nullable");
 
-        const string oldRunAgentStart = """
-    internal string? RunAgent(uint db, string name, uint documentContext)
-    {
-        EnsureInitialized();
-        using var agentName = ToLmbcs(name);
+        const string oldFindAgent = """
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
         var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
         if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
             status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);
         Check(status, "NIFFindDesignNote(agent)");
 """;
-        const string newRunAgentStart = """
-    internal string? RunAgent(uint db, string name, uint documentContext)
-    {
-        EnsureInitialized();
-        using var agentName = ToLmbcs(name);
+        const string newFindAgent = """
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
         var status = find(db, agentName.Pointer, NoteClassFilter, out var noteId);
         if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>("NIFFindPrivateDesignNote", out var findPrivate) && findPrivate is not null)
@@ -35,10 +27,11 @@ internal static class NotesAgentNotFoundPostProcessor
         if ((status & 0x3FFF) == 0x0404) return null;
         Check(status, "NIFFindDesignNote(agent)");
 """;
-        source = ReplaceRequired(
+        source = ReplaceRequiredAfter(
             source,
-            oldRunAgentStart,
-            newRunAgentStart,
+            "    internal string? RunAgent(uint db, string name, uint documentContext)",
+            oldFindAgent,
+            newFindAgent,
             "native-runagent-not-found");
 
         source = ReplaceRequired(
@@ -54,6 +47,19 @@ internal static class NotesAgentNotFoundPostProcessor
             "database-runagent-nothing");
 
         return source;
+    }
+
+    private static string ReplaceRequiredAfter(string source, string anchor, string oldValue, string newValue, string stage)
+    {
+        var anchorIndex = source.IndexOf(anchor, StringComparison.Ordinal);
+        if (anchorIndex < 0)
+            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + "-anchor).");
+
+        var matchIndex = source.IndexOf(oldValue, anchorIndex + anchor.Length, StringComparison.Ordinal);
+        if (matchIndex < 0)
+            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + ").");
+
+        return source[..matchIndex] + newValue + source[(matchIndex + oldValue.Length)..];
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
