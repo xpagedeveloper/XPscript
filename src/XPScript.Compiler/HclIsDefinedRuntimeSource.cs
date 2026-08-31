@@ -27,14 +27,15 @@ internal static class LSHclPlatformConstantRuntime
     }
 }
 """ + "\n\n" + NotesNothingPostProcessor.Apply(
-        NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
-            NotesSessionPathPostProcessor.ApplyBuiltSurface(
-                NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
-                    NotesDatabaseReplicaPostProcessor.Apply(
-                        NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
-                            NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
-                                NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                                    NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                        NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                            NotesRuntimeSourceBuilder.Build()))))))))));
+        NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
+            NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
+                NotesSessionPathPostProcessor.ApplyBuiltSurface(
+                    NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
+                        NotesDatabaseReplicaPostProcessor.Apply(
+                            NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
+                                NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
+                                    NotesViewNavigationPostProcessor.ApplyBuiltSurface(
+                                        NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                            NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                NotesRuntimeSourceBuilder.Build())))))))))));
 }

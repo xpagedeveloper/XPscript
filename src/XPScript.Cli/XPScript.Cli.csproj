@@ -9,10 +9,14 @@
     <RootNamespace>XPScript.Cli</RootNamespace>
     <AssemblyTitle>XPScript</AssemblyTitle>
     <Product>XPScript</Product>
-    <Copyright>(c) xpagedeveloper.com 2026</Copyright>
+    <Version>0.9.0-beta</Version>
+    <Copyright>(c) XPageDeveloper.com 2026</Copyright>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <UnifiedPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../publish/xpscript'))</UnifiedPublishDirectory>
   </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="XPScriptBuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd'))" />
+  </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../XPScript.Compiler/XPScript.Compiler.csproj" />
