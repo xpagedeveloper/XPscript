@@ -11,6 +11,9 @@ on:
       - 'src/XPScript.Compiler/RunRoslynCompiler.cs'
       - 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
       - 'src/XPScript.Compiler/CompilerSourceLineDirectivePostProcessor.cs'
+      - 'src/XPScript.Compiler/RuntimeDebugTraceSource.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
+      - 'samples/debug-on-error-runtime.xps'
       - 'samples/include-source-map/**'
       - 'docs/compiler-diagnostics.md'
       - '.github/workflows/compiler-diagnostics-debug.yml'
@@ -81,8 +84,32 @@ jobs:
             if ($stdout -notmatch '(?m)^\s*file:\s*generated-csharp-error\.xps\s*$') { throw "Debug output lost the source-mapped XPScript diagnostic.`n$stdout" }
             if ($stdout -notmatch '(?m)^\s*file:\s*Program\.cs\s*$') { throw "Debug output did not include generated Program.cs.`n$stdout" }
             if ($stdout -notmatch 'CS\d{4}') { throw "Debug output did not include a C# diagnostic identifier.`n$stdout" }
-            if ($stderr -notmatch 'Started to compile|Compiling .* transient|Run cache hit') { throw "--debug did not include --info progress output.`n$stderr" }
+            if ($stderr -notmatch 'Started to compile') { throw "--debug did not include --info compile start.`n$stderr" }
+            if ($stderr -notmatch 'Compiling .* transient.*\d+s') { throw "--debug did not include the live compile timer.`n$stderr" }
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
           }
           exit 0
+
+      - name: Verify debug bypasses cache and traces handled runtime errors
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $project = './src/XPScript.Compiler/XPScript.Compiler.csproj'
+          $sample = './samples/debug-on-error-runtime.xps'
+
+          $warm = @(& dotnet run --no-build --project $project -c Release -- run $sample --info 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Warm run failed.`n$warm" }
+
+          $debug = @(& dotnet run --no-build --project $project -c Release -- run $sample --debug 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Debug handled-error run failed.`n$debug" }
+          $text = $debug -join "`n"
+
+          if ($text -notmatch 'Started to compile debug-on-error-runtime\.xps') { throw "Debug reused cache instead of compiling.`n$text" }
+          if ($text -match 'Run cache hit for debug-on-error-runtime\.xps') { throw "Debug unexpectedly reported a cache hit.`n$text" }
+          if ($text -notmatch 'Compiling debug-on-error-runtime\.xps .*\d+s') { throw "Debug compile timer missing.`n$text" }
+          if ($text -notmatch 'Compiled debug-on-error-runtime\.xps in \d+\.\d+s') { throw "Debug compile completion time missing.`n$text" }
+          if ($text -notmatch 'DEBUG runtime exception trapped') { throw "Handled runtime exception detail missing in debug mode.`n$text" }
+          if ($text -notmatch 'DEBUG-ON-ERROR=CONTINUED') { throw "On Error Resume Next did not continue after the trapped exception.`n$text" }

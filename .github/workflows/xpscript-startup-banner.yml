@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Cli/**'
+      - 'src/XPScript.Compiler/Program.cs'
       - 'src/XPScript.Compiler/XPScript.Compiler.csproj'
       - '.github/workflows/xpscript-startup-banner.yml'
   workflow_dispatch:
@@ -38,17 +39,16 @@ jobs:
           $cli = './src/XPScript.Cli/bin/Release/net10.0/xpscript.dll'
           $ext = if ($IsWindows) { '.exe' } else { '' }
           $compiled = "./out/banner-smoke$ext"
-          $expectedVersion = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2}$'
-          $expectedCopyright = '^XPageDeveloper\.com \(c\)$'
+          $expectedBanner = '^XPScript version 0\.9 Beta - build \d{4}-\d{2}-\d{2} - XPageDeveloper\.com ©$'
 
           $compileOutput = @(dotnet $cli compile ./samples/unified-cli-smoke.xps --framework-dependent -o $compiled 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "compile failed.`n$compileOutput" }
-          if ($compileOutput.Count -lt 2 -or $compileOutput[0] -notmatch $expectedVersion -or $compileOutput[1] -notmatch $expectedCopyright) {
+          if ($compileOutput.Count -lt 1 -or $compileOutput[0] -notmatch $expectedBanner) {
             throw "Compile startup banner missing or not first.`n$compileOutput"
           }
 
           $runOutput = @(dotnet $cli run ./samples/unified-cli-smoke.xps 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "run failed.`n$runOutput" }
-          if ($runOutput.Count -lt 2 -or $runOutput[0] -notmatch $expectedVersion -or $runOutput[1] -notmatch $expectedCopyright) {
+          if ($runOutput.Count -lt 1 -or $runOutput[0] -notmatch $expectedBanner) {
             throw "Run startup banner missing or not first.`n$runOutput"
           }
