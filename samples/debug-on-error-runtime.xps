@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Dim zero As Integer
+    Dim value As Integer
+    Dim trapped As Integer
+
+    zero = 0
+    trapped = 0
+    On Error Resume Next
+    value = 10 / zero
+    trapped = Err
+    On Error GoTo 0
+
+    Print "TRAPPED-ERR=" & CStr(trapped)
+    Print "DEBUG-ON-ERROR=CONTINUED"
+End Sub
