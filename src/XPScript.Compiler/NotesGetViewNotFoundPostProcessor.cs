@@ -16,7 +16,7 @@ internal static class NotesGetViewNotFoundPostProcessor
             source,
             "    internal void UpdateCollection(ushort collection)",
             """
-    internal ushort TryOpenView(nint db, string name)
+    internal ushort TryOpenView(uint db, string name)
     {
         EnsureInitialized();
         using var viewName = ToLmbcs(name);
