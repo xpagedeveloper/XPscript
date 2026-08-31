@@ -13,9 +13,36 @@ Sub Main()
     Set db = session.OpenDatabase("", "xpscript.nsf")
 
     Set importer = session.CreateDXLImporter()
+    importer.ACLImportOption = 2
+    importer.DesignImportOption = 6
+    importer.DocumentImportOption = 6
+    importer.CreateFTIndex = False
+    importer.ReplaceDbProperties = False
+    importer.InputValidationOption = 2
+    importer.ReplicaRequiredForReplaceOrUpdate = False
+    importer.ExitOnFirstFatalError = True
+    importer.UnknownTokenLogOption = 1
+    Print importer.DesignImportOption
+    Print importer.DocumentImportOption
+    Print importer.ReplicaRequiredForReplaceOrUpdate
     Call importer.Import("samples/xpscript-notes-runtime-fixture.dxl", db)
 
     Set exporter = session.CreateDXLExporter()
+    exporter.RichTextOption = 0
+    exporter.ValidationStyle = 1
+    exporter.MIMEOption = 0
+    exporter.ForceNoteFormat = False
+    exporter.ExitOnFirstFatalError = True
+    exporter.OutputDOCTYPE = True
+    exporter.ConvertNotesBitmapsToGIF = False
+    exporter.OmitRichtextAttachments = False
+    exporter.OmitOLEObjects = False
+    exporter.OmitMiscFileObjects = False
+    exporter.OmitRichtextPictures = False
+    Print exporter.RichTextOption
+    Print exporter.MIMEOption
+    Print exporter.ForceNoteFormat
+    Print exporter.OutputDOCTYPE
     Call exporter.ExportDatabaseDesign(db, "out/notes-dxl/database-design.dxl")
     Call exporter.ExportDesignElement(db, "XPScriptTest", "Form", "out/notes-dxl/form.dxl")
 
