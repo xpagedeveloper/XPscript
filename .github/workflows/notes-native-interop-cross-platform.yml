@@ -6,13 +6,10 @@ on:
       - 'src/XPScript.Compiler/NotesRuntimeCoreSource.cs'
       - 'src/XPScript.Compiler/NotesNativeApi*.cs'
       - 'src/XPScript.Compiler/NotesRuntime*.cs'
-      - 'src/XPScript.Compiler/NotesGetViewNotFoundPostProcessor.cs'
-      - 'src/XPScript.Compiler/NotesDxlPostProcessor.cs'
+      - 'src/XPScript.Compiler/Notes*PostProcessor.cs'
       - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/NotesView*.cs'
-      - 'samples/notes-view-*.xps'
-      - 'samples/notes-dxl-*.xps'
-      - 'samples/notes-full-domino-runtime-test.xps'
+      - 'samples/notes-*.xps'
       - 'scripts/*notes-view-cache*.ps1'
       - 'scripts/validate-notes-view-navigator-cache-policy.ps1'
       - 'tests/NativeInteropSmoke/**'
@@ -52,6 +49,16 @@ jobs:
         run: |
           mkdir -p artifacts/notes-dxl
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-dxl-import-export-surface.xps --framework-dependent -o artifacts/notes-dxl/notes-dxl
+      - name: Compile Notes extended object surface
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-extended
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-extended-surface.xps --framework-dependent -o artifacts/notes-extended/notes-extended
+      - name: Compile NotesDocument design metadata regression
+        shell: bash
+        run: |
+          mkdir -p artifacts/notes-document-metadata
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-document-design-metadata-runtime-test.xps --framework-dependent -o artifacts/notes-document-metadata/notes-document-metadata
       - name: Compile Notes C API surface
         shell: bash
         run: |
