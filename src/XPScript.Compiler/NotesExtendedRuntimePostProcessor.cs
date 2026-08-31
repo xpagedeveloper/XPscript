@@ -7,6 +7,7 @@ internal static class NotesExtendedRuntimePostProcessor
         ArgumentNullException.ThrowIfNull(source);
         source = NotesStreamPostProcessor.ApplyBuiltSurface(source);
         source = NotesAgentPostProcessor.ApplyBuiltSurface(source);
+        source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
         return source;
     }
 }
