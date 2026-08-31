@@ -68,8 +68,8 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
 
     public int InputValidationOption
     {
-        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 6); }
-        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 6, value); }
+        get { EnsureAlive(); return Session.Api.GetDxlImporterInt(_handle, 6); }
+        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 6, value); }
     }
 
     public bool ReplicaRequiredForReplaceOrUpdate
@@ -115,20 +115,20 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 
     public int RichTextOption
     {
-        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 6); }
-        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 6, value); }
+        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 6); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 6, value); }
     }
 
     public int ValidationStyle
     {
-        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 8); }
-        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 8, value); }
+        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 8); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 8, value); }
     }
 
     public int MIMEOption
     {
-        get { EnsureAlive(); return Session.Api.GetDxlExporterWord(_handle, 11); }
-        set { EnsureAlive(); Session.Api.SetDxlExporterWordProperty(_handle, 11, value); }
+        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 11); }
+        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 11, value); }
     }
 
     public bool ForceNoteFormat
