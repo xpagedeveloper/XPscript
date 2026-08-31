@@ -6,8 +6,10 @@ internal static class NotesViewNavigatorCachePolicyRegression
     {
         ArgumentNullException.ThrowIfNull(source);
         Require(source, "CreateViewNav() => CreateViewNav(64)", "default cache size");
-        Require(source, "Math.Clamp(XPScriptRuntime.CInt(cacheSizeValue), 0, 512)", "factory cache range");
-        Require(source, "Math.Clamp(value, 0, 512)", "property cache range");
+        Require(source, "var cacheSize = XPScriptRuntime.CInt(cacheSizeValue)", "factory BufferMaxEntries value");
+        Require(source, "public int BufferMaxEntries", "BufferMaxEntries property");
+        Require(source, "EffectiveBufferMaxEntries => Math.Clamp(_bufferMaxEntries, 0, 512)", "effective BufferMaxEntries range");
+        Require(source, "_cacheSize = Math.Clamp(value, 0, 512)", "compatibility cache range");
         Require(source, "if (_view.AutoUpdate)", "AutoUpdate cache guard");
         Require(source, "_viewGeneration = _view.NavigationGeneration", "Refresh generation tracking");
         Require(source, "MaxRetainedHistory = 2048", "bounded retained history");

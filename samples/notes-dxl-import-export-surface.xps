@@ -1,0 +1,62 @@
+' Compile-time surface regression for NotesDXLImporter and NotesDXLExporter.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim importer As NotesDXLImporter
+    Dim exporter As NotesDXLExporter
+    Dim doc As NotesDocument
+    Dim docs As NotesDocumentCollection
+
+    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+
+    Set importer = session.CreateDXLImporter()
+    importer.ACLImportOption = 2
+    importer.DesignImportOption = 6
+    importer.DocumentImportOption = 6
+    importer.CreateFTIndex = False
+    importer.ReplaceDbProperties = False
+    importer.InputValidationOption = 2
+    importer.ReplicaRequiredForReplaceOrUpdate = False
+    importer.ExitOnFirstFatalError = True
+    importer.UnknownTokenLogOption = 1
+    Print importer.DesignImportOption
+    Print importer.DocumentImportOption
+    Print importer.ReplicaRequiredForReplaceOrUpdate
+    Call importer.Import("samples/xpscript-notes-runtime-fixture.dxl", db)
+
+    Set exporter = session.CreateDXLExporter()
+    exporter.RichTextOption = 0
+    exporter.ValidationStyle = 1
+    exporter.MIMEOption = 0
+    exporter.ForceNoteFormat = False
+    exporter.ExitOnFirstFatalError = True
+    exporter.OutputDOCTYPE = True
+    exporter.ConvertNotesBitmapsToGIF = False
+    exporter.OmitRichtextAttachments = False
+    exporter.OmitOLEObjects = False
+    exporter.OmitMiscFileObjects = False
+    exporter.OmitRichtextPictures = False
+    Print exporter.RichTextOption
+    Print exporter.MIMEOption
+    Print exporter.ForceNoteFormat
+    Print exporter.OutputDOCTYPE
+    Call exporter.ExportDatabaseDesign(db, "out/notes-dxl/database-design.dxl")
+    Call exporter.ExportDesignElement(db, "XPScriptTest", "Form", "out/notes-dxl/form.dxl")
+
+    Set docs = db.Search("Form=\"XPScriptTest\"", 1)
+    If docs.Count > 0 Then
+        Set doc = docs.GetDocument(0)
+        Call exporter.ExportDocument(doc, "out/notes-dxl/document.dxl")
+        Call doc.Recycle()
+    End If
+    Call exporter.ExportDocumentCollection(docs, "out/notes-dxl/documents.dxl")
+
+    Call docs.Recycle()
+    Call exporter.Recycle()
+    Call importer.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub

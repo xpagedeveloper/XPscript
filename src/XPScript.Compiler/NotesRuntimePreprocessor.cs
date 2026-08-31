@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult";
+    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult|NotesDXLImporter|NotesDXLExporter";
 
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -75,7 +75,7 @@ internal sealed class NotesRuntimePreprocessor
                 ".GetFirstDocumentByKey(",
                 RegexOptions.IgnoreCase);
 
-            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult)\b", RegexOptions.IgnoreCase);
+            var unsupportedNew = Regex.Match(rewritten, $@"\bNew\s+(NotesDatabase|NotesView|NotesDocumentCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesName|NotesDateTime|NotesAgentResult|NotesDXLImporter|NotesDXLExporter)\b", RegexOptions.IgnoreCase);
             if (unsupportedNew.Success)
                 throw new CompilerException($"{unsupportedNew.Groups[1].Value} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
 
