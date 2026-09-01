@@ -26,7 +26,7 @@ Primary references:
 
 ## NotesEmbeddedObject and attachments
 
-- [ ] Add `NotesEmbeddedObject` to the Notes compiler type model.
+- [x] Add `NotesEmbeddedObject` to the Notes compiler type model with `Set`, `Nothing`, replacement, and `Recycle()` semantics.
 - [x] Implement attachment-backed `NotesEmbeddedObject` properties: `Class`, `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`, `Verbs`.
 - [x] Implement attachment `ExtractFile`.
 - [x] Implement XPScript extension `ToByteArray()` without a temporary file.
