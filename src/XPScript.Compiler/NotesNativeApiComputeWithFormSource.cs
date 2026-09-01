@@ -34,12 +34,6 @@ internal sealed partial class XPScriptNotesNativeApi
             null,
             0);
 
-        if (XPScriptRuntimeDebugTrace.Enabled)
-            Console.Error.WriteLine(
-                "DEBUG ComputeWithForm direct result: note=0x" + note.ToString("X8", System.Globalization.CultureInfo.InvariantCulture) +
-                " status=0x" + status.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) +
-                " callback=none");
-
         if (status == 0) return true;
         if (status == ComputeWithFormValidationFailedStatus) return false;
 
@@ -50,21 +44,12 @@ internal sealed partial class XPScriptNotesNativeApi
     internal XPScriptComputeWithFormResult ComputeDocumentWithFormAndCollectErrors(uint note)
     {
         var validationFailed = false;
-        var callbackCount = 0;
-        ushort firstValidationError = 0;
-        ushort firstValidationPhase = 0;
         var failedFields = new List<string>();
         var seenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         ComputeWithFormErrorProcDelegate callback = (field, phase, error, errorText, errorTextSize, context) =>
         {
             validationFailed = true;
-            callbackCount++;
-            if (callbackCount == 1)
-            {
-                firstValidationError = error;
-                firstValidationPhase = phase;
-            }
 
             var fieldName = GetComputeWithFormFieldName(field);
             if (fieldName.Length > 0 && seenFields.Add(fieldName)) failedFields.Add(fieldName);
@@ -79,15 +64,6 @@ internal sealed partial class XPScriptNotesNativeApi
             callback,
             0);
         GC.KeepAlive(callback);
-
-        if (XPScriptRuntimeDebugTrace.Enabled)
-            Console.Error.WriteLine(
-                "DEBUG ComputeWithForm callback result: note=0x" + note.ToString("X8", System.Globalization.CultureInfo.InvariantCulture) +
-                " status=0x" + status.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) +
-                " callbackCount=" + callbackCount.ToString(System.Globalization.CultureInfo.InvariantCulture) +
-                " firstCallbackStatus=0x" + firstValidationError.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) +
-                " firstPhase=" + firstValidationPhase.ToString(System.Globalization.CultureInfo.InvariantCulture) +
-                " failedFields=[" + string.Join(",", failedFields) + "]");
 
         // Some Domino runtimes return ERR_VALIDATION (0x038D) even after the
         // validation callback has already reported the field-level failure.
