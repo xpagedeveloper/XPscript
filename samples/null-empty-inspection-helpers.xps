@@ -3,10 +3,29 @@ Sub Main()
     Dim nullValue As Variant
     Dim emptyCopy As Variant
     Dim nullCopy As Variant
+    Dim fixedValues(1) As String
+    Dim managedValues As Variant
 
     nullValue = Null
     emptyCopy = CVar(emptyValue)
     nullCopy = CVar(nullValue)
+    fixedValues(0) = "A"
+    fixedValues(1) = "B"
+    managedValues = Split("A,B", ",")
+
+    If Not IsArray(fixedValues) Then Error 5
+    If IsObject(fixedValues) Then Error 5
+    If TypeName(fixedValues) <> "ARRAY" Then Error 5
+    If DataType(fixedValues) <> 8192 Then Error 5
+    If LBound(fixedValues) <> 0 Or UBound(fixedValues) <> 1 Then Error 5
+    If fixedValues(0) <> "A" Then Error 5
+
+    If Not IsArray(managedValues) Then Error 5
+    If IsObject(managedValues) Then Error 5
+    If TypeName(managedValues) <> "ARRAY" Then Error 5
+    If DataType(managedValues) <> 8192 Then Error 5
+    If LBound(managedValues) <> 0 Or UBound(managedValues) <> 1 Then Error 5
+    If managedValues(0) <> "A" Then Error 5
 
     Print "EMPTY_ISNUMERIC=" & CStr(IsNumeric(emptyValue))
     Print "EMPTY_ISSCALAR=" & CStr(IsScalar(emptyValue))
@@ -27,4 +46,18 @@ Sub Main()
     Print "NULL_CVAR_ISEMPTY=" & CStr(IsEmpty(nullCopy))
     Print "NULL_CVAR_ISNULL=" & CStr(IsNull(nullCopy))
     Print "NULL_CSTR_LEN=" & CStr(Len(CStr(nullValue)))
+
+    Print "LSARRAY_ISARRAY=" & CStr(IsArray(fixedValues))
+    Print "LSARRAY_ISOBJECT=" & CStr(IsObject(fixedValues))
+    Print "LSARRAY_TYPE=" & TypeName(fixedValues)
+    Print "LSARRAY_DATATYPE=" & CStr(DataType(fixedValues))
+    Print "LSARRAY_BOUNDS=" & CStr(LBound(fixedValues)) & ":" & CStr(UBound(fixedValues))
+    Print "LSARRAY_FIRST=" & CStr(fixedValues(0))
+
+    Print "MANAGED_ISARRAY=" & CStr(IsArray(managedValues))
+    Print "MANAGED_ISOBJECT=" & CStr(IsObject(managedValues))
+    Print "MANAGED_TYPE=" & TypeName(managedValues)
+    Print "MANAGED_DATATYPE=" & CStr(DataType(managedValues))
+    Print "MANAGED_BOUNDS=" & CStr(LBound(managedValues)) & ":" & CStr(UBound(managedValues))
+    Print "MANAGED_FIRST=" & CStr(managedValues(0))
 End Sub

@@ -27,7 +27,15 @@ internal sealed class ModuleObjectGlobalsPreprocessor
         if (_objects.Count == 0) return source;
 
         RewriteUses(lines);
-        return string.Join(Environment.NewLine, lines);
+        var result = string.Join(Environment.NewLine, lines);
+        foreach (var name in _objects.Keys)
+        {
+            if (Regex.IsMatch(result,
+                    $@"\bLSObjectIdentityRuntime\.Is(?:Not)?Nothing\s*\(\s*{Regex.Escape(name)}\s*\)",
+                    RegexOptions.IgnoreCase))
+                throw new CompilerException($"Module object Nothing check for '{name}' was not lowered.");
+        }
+        return result;
     }
 
     private HashSet<string> CollectClasses(IEnumerable<string> lines)
@@ -120,6 +128,17 @@ internal sealed class ModuleObjectGlobalsPreprocessor
                     lines[i] = indent + $"Call XPModuleObjectRuntime.Delete(\"{EscapeString(name)}\")" + comment;
                     goto NextLine;
                 }
+
+                // GeneralSyntaxPreprocessor runs before module-object lowering and normalizes
+                // `value Is [Not] Nothing` to LSObjectIdentityRuntime calls. Translate those
+                // normalized calls before looking for the original source form so module-level
+                // class references never leak as unresolved CLR identifiers.
+                code = ReplaceOutsideStrings(code,
+                    $@"\bLSObjectIdentityRuntime\.IsNotNothing\s*\(\s*{escaped}\s*\)",
+                    $"Not XPModuleObjectRuntime.IsNothing(\"{EscapeString(name)}\")");
+                code = ReplaceOutsideStrings(code,
+                    $@"\bLSObjectIdentityRuntime\.IsNothing\s*\(\s*{escaped}\s*\)",
+                    $"XPModuleObjectRuntime.IsNothing(\"{EscapeString(name)}\")");
 
                 code = ReplaceOutsideStrings(code,
                     $@"\b{escaped}\s+Is\s+Not\s+Nothing\b",
