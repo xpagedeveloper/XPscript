@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/Notes*.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'samples/notes-full-domino-runtime-test.xps'
+      - 'samples/xpscript-notes-runtime-fixture.dxl'
       - '.github/workflows/notes-compiler-windows-linux.yml'
   workflow_dispatch:
 
