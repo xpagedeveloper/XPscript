@@ -28,6 +28,11 @@ Sub Main()
     End If
 
     names = view.ColumnNames
+    If Not IsArray(names) Then
+        Print "NOTES-VIEW-COLUMNNAMES=FAIL not-array"
+        Exit Sub
+    End If
+
     count = UBound(names) - LBound(names) + 1
     For i = LBound(names) To UBound(names)
         Print "ColumnNames(" & CStr(i) & ")=" & CStr(names(i))
