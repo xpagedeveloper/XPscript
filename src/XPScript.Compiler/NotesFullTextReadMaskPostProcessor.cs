@@ -31,16 +31,16 @@ internal static class NotesFullTextReadMaskPostProcessor
             "    public int FileFormat\n    {\n        get { EnsureAlive(); return Session.Api.GetDatabaseFileFormat(_handle); }\n    }\n\n    public bool IsFTIndexed\n    {\n        get\n        {\n            EnsureAlive();\n            return IsOpen && Session.Api.IsDatabaseFullTextIndexed(_handle);\n        }\n    }\n\n    public XPScriptNotesDateTime? LastFTIndexed\n    {\n        get\n        {\n            EnsureAlive();\n            if (!IsOpen) return null;\n            var value = Session.Api.GetDatabaseLastFullTextIndexed(_handle);\n            return value.HasValue ? XPScriptNotesDateTime.FromNative(Session, value.Value) : null;\n        }\n    }",
             "database-ft-properties");
 
-        source = ReplaceRequired(
+        source = InsertBeforeRequired(
             source,
-            "    internal void DeleteFullTextIndex(uint db)\n    {\n        EnsureInitialized();\n        Check(Resolve<FTDeleteIndexDelegate>(\"FTDeleteIndex\")(db), \"FTDeleteIndex\");\n    }",
-            "    internal XPScriptNotesTimeDate? GetDatabaseLastFullTextIndexed(uint db)\n    {\n        EnsureInitialized();\n        var status = Resolve<FTGetLastIndexTimeDelegate>(\"FTGetLastIndexTime\")(db, out var indexed);\n        if ((status & 0x3FFF) == 0x0F02) return null;\n        Check(status, \"FTGetLastIndexTime\");\n        return indexed;\n    }\n\n    internal bool IsDatabaseFullTextIndexed(uint db)\n        => GetDatabaseLastFullTextIndexed(db).HasValue;\n\n    internal void DeleteFullTextIndex(uint db)\n    {\n        EnsureInitialized();\n        Check(Resolve<FTDeleteIndexDelegate>(\"FTDeleteIndex\")(db), \"FTDeleteIndex\");\n    }",
+            "    internal void DeleteFullTextIndex(",
+            "    internal XPScriptNotesTimeDate? GetDatabaseLastFullTextIndexed(uint db)\n    {\n        EnsureInitialized();\n        var status = Resolve<FTGetLastIndexTimeDelegate>(\"FTGetLastIndexTime\")(db, out var indexed);\n        if ((status & 0x3FFF) == 0x0F02) return null;\n        Check(status, \"FTGetLastIndexTime\");\n        return indexed;\n    }\n\n    internal bool IsDatabaseFullTextIndexed(uint db)\n        => GetDatabaseLastFullTextIndexed(db).HasValue;\n\n",
             "native-ft-index-metadata");
 
-        source = ReplaceRequired(
+        source = InsertBeforeRequired(
             source,
-            "    internal delegate ushort FTDeleteIndexDelegate(uint db);",
-            "    internal delegate ushort FTGetLastIndexTimeDelegate(uint db, out XPScriptNotesTimeDate indexed);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\n    internal delegate ushort FTDeleteIndexDelegate(uint db);",
+            "    internal delegate ushort FTDeleteIndexDelegate(",
+            "    internal delegate ushort FTGetLastIndexTimeDelegate(uint db, out XPScriptNotesTimeDate indexed);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\n",
             "native-ft-index-delegate");
 
         source = ReplaceRequired(
@@ -62,6 +62,14 @@ internal static class NotesFullTextReadMaskPostProcessor
             "ft-search-temporary-table-cleanup");
 
         return source;
+    }
+
+    private static string InsertBeforeRequired(string source, string marker, string value, string stage)
+    {
+        var index = source.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0)
+            throw new CompilerException("Unable to apply Notes full-text/read-mask patch (" + stage + ").");
+        return source.Insert(index, value);
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
