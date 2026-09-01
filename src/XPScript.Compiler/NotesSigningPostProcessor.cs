@@ -41,9 +41,7 @@ internal static class NotesSigningPostProcessor
 """,
             "document-sign");
 
-        source = ReplaceRequired(source,
-            "    internal void SaveAgent(nint db, uint noteId)",
-            """
+        const string nativeSigning = """
     internal void SignNote(nint note)
     {
         EnsureInitialized();
@@ -62,9 +60,8 @@ internal static class NotesSigningPostProcessor
         finally { CloseNote(note); }
     }
 
-    internal void SaveAgent(nint db, uint noteId)
-""",
-            "native-sign");
+""";
+        source = InsertBeforeRequired(source, "    internal string RunAgent(", nativeSigning, "native-sign");
 
         return source;
     }
@@ -74,5 +71,13 @@ internal static class NotesSigningPostProcessor
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException("Unable to apply Notes signing surface (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+    }
+
+    private static string InsertBeforeRequired(string source, string marker, string insertion, string stage)
+    {
+        var index = source.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0)
+            throw new CompilerException("Unable to apply Notes signing surface (" + stage + ").");
+        return source.Insert(index, insertion);
     }
 }
