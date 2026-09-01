@@ -1,0 +1,123 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim rt As NotesRichTextItem
+    Dim nav As NotesRichTextNavigator
+    Dim range As NotesRichTextRange
+    Dim style As NotesRichTextStyle
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+    Dim table As NotesRichTextTable
+    Dim section As NotesRichTextSection
+    Dim docLink As NotesRichTextDocLink
+    Dim color As NotesColorObject
+    Dim labels(1) As String
+
+    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set db = session.OpenDatabase("", "names.nsf")
+    Set doc = db.CreateDocument()
+    Set rt = doc.CreateRichTextItem("Body")
+
+    Set style = session.CreateRichTextStyle()
+    style.Bold = True
+    style.Italic = False
+    style.FontSize = 12
+    style.NotesColor = 4
+    style.NotesFont = FONT_HELV
+    style.Underline = False
+    style.Strikethrough = False
+    style.Effects = EFFECTS_NONE
+    style.PassThruHTML = False
+    Print CStr(style.IsDefault)
+    Call rt.AppendStyle(style)
+    Call rt.AppendText("Styled XPscript rich text")
+
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    paragraphStyle.Alignment = PARA_ALIGN_LEFT
+    paragraphStyle.LeftMargin = RULER_ONE_INCH
+    paragraphStyle.RightMargin = RULER_ONE_INCH * 5
+    paragraphStyle.FirstLineLeftMargin = RULER_ONE_INCH
+    paragraphStyle.InterLineSpacing = 0
+    paragraphStyle.SpacingAbove = 0
+    paragraphStyle.SpacingBelow = 0
+    paragraphStyle.Pagination = PAGINATE_DEFAULT
+    Call paragraphStyle.SetTab(RULER_ONE_INCH, TAB_LEFT)
+    Set tab = paragraphStyle.Tabs(0)
+    Print CStr(tab.Position) & ":" & CStr(tab.Type)
+    Call rt.AppendParagraphStyle(paragraphStyle)
+
+    labels(0) = "First"
+    labels(1) = "Second"
+    Call rt.AppendTable(2, 2, labels, RULER_ONE_INCH)
+
+    Set color = session.CreateColorObject()
+    Call color.SetRGB(0, 128, 255)
+    Print CStr(color.Red) & "," & CStr(color.Green) & "," & CStr(color.Blue)
+
+    Set nav = rt.CreateNavigator()
+    If nav.FindFirstElement(RTELEM_TYPE_TABLE) Then
+        Set table = nav.GetElement()
+        If Not table Is Nothing Then
+            table.RightToLeft = False
+            table.Style = TABLESTYLE_ALTERNATINGROWS
+            Call table.SetColor(color)
+            Call table.SetAlternateColor(color)
+            Print CStr(table.RowCount) & "x" & CStr(table.ColumnCount)
+            Call table.AddRow(1)
+            Call table.RemoveRow(1, table.RowCount)
+            table.RowLabels = labels
+        End If
+    End If
+
+    Call rt.BeginSection("XPscript section", style, color, True)
+    Call rt.AppendText("Section content")
+    Call rt.EndSection()
+
+    If nav.FindFirstElement(RTELEM_TYPE_SECTION) Then
+        Set section = nav.GetElement()
+        If Not section Is Nothing Then
+            section.IsExpanded = True
+            Call section.SetTitleStyle(style)
+            Call section.SetBarColor(color)
+            Print section.Title
+        End If
+    End If
+
+    Call rt.AppendDocLink(db, "XPscript database link")
+    If nav.FindFirstElement(RTELEM_TYPE_DOCLINK) Then
+        Set docLink = nav.GetElement()
+        If Not docLink Is Nothing Then
+            docLink.DisplayComment = "Updated comment"
+            docLink.ServerHint = db.Server
+            Print docLink.DbReplicaID
+            Print docLink.ViewUNID
+            Print docLink.DocUNID
+            Set style = docLink.HotSpotTextStyle
+            Call docLink.SetHotSpotTextStyle(style)
+        End If
+    End If
+
+    Set range = rt.CreateRange()
+    If nav.FindFirstString("XPscript", RT_FIND_CASEINSENSITIVE) Then
+        Call range.SetBegin(nav)
+        Call range.SetEnd(nav)
+        Print range.TextRun
+        Set style = range.Style
+        Call range.SetStyle(style)
+        Print CStr(range.FindAndReplace("XPscript", "XPScript", RT_FIND_CASEINSENSITIVE Or RT_REPL_ALL))
+        Call range.Reset()
+    End If
+
+    Call nav.Recycle()
+    Call range.Recycle()
+    Call paragraphStyle.Recycle()
+    Call style.Recycle()
+    Call color.Recycle()
+    Call rt.Recycle()
+    Call doc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
