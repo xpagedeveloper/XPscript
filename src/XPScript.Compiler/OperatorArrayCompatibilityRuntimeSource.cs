@@ -151,6 +151,7 @@ internal static class LSOperatorArrayRuntime
         var first = RequireOneDimensional(sourceArray);
         var values = Values(first).ToList();
         if (source2 is LSArray second) values.AddRange(Values(RequireOneDimensional(second)));
+        else if (LSArrayRuntime.IsNothing(source2)) values.Add("");
         else values.Add(source2);
         return FromValues(values, "Variant", first.LBound());
     }
@@ -240,6 +241,11 @@ internal static class LSOperatorArrayRuntime
 
     private static IEnumerable<object?> Values(object? source)
     {
+        if (LSArrayRuntime.IsNothing(source))
+        {
+            yield return "";
+            yield break;
+        }
         if (source is LSArray array)
         {
             if (!array.IsAllocated) yield break;
@@ -257,7 +263,9 @@ internal static class LSOperatorArrayRuntime
 
     private static LSArray RequireOneDimensional(object? source)
     {
-        var array = source as LSArray ?? throw new InvalidOperationException("Value is not an XPScript array.");
+        var array = LSArrayRuntime.IsNothing(source)
+            ? LSArrayRuntime.NothingArray()
+            : source as LSArray ?? throw new InvalidOperationException("Value is not an XPScript array.");
         if (!array.IsAllocated) throw new InvalidOperationException("Array has not been initialized.");
         if (array.Rank != 1) throw new InvalidOperationException("Array function requires a one-dimensional array.");
         return array;

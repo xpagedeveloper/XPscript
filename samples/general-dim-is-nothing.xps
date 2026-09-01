@@ -5,7 +5,7 @@ End Class
 
 Sub Main()
     Dim a As String, b As String, c As Integer, d As Long, rate As Double, enabled As Boolean, obj As TestObject, doc As NotesDocument
-    Dim emptyValue As Variant
+    Dim emptyValue As Variant, normalizedNothing As Variant
 
     a = "alpha"
     b = "beta"
@@ -44,6 +44,32 @@ Sub Main()
         Error 5, "New object reference should initially be Nothing"
     End If
 
+    Print obj
+    Print obj; Spc(1); "FORMATTED_NOTHING=OK"
+
+    If CStr(obj) <> "" Then
+        Error 5, "Object Nothing must behave as an empty string in string operations"
+    End If
+    Print "CLASS_NOTHING_STRING=EMPTY"
+
+    If IsArray(obj) Then
+        Error 5, "Object Nothing must not be reported as an array"
+    End If
+    Print "CLASS_NOTHING_ISARRAY=FALSE"
+
+    If LBound(obj) <> 0 Or UBound(obj) <> 0 Then
+        Error 5, "Array bounds must treat Nothing as one empty entry"
+    End If
+
+    normalizedNothing = ArrayUnique(obj)
+    If LBound(normalizedNothing) <> 0 Or UBound(normalizedNothing) <> 0 Then
+        Error 5, "Array operations must normalize Nothing to one array entry"
+    End If
+    If normalizedNothing(0) <> "" Then
+        Error 5, "The array entry normalized from Nothing must be empty"
+    End If
+    Print "CLASS_NOTHING_ARRAY_ENTRY=EMPTY"
+
     If IsNull(obj) Then
         Print "CLASS_NOTHING_ISNULL=OK"
     Else
@@ -73,6 +99,8 @@ Sub Main()
     Else
         Error 5, "External object reference should initially be Nothing"
     End If
+
+    Print doc
 
     If IsNull(doc) Then
         Print "NOTES_NOTHING_ISNULL=OK"

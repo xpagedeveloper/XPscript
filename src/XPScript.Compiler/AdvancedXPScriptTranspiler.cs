@@ -619,7 +619,7 @@ internal static class LSForAllRuntime
         var ret = Regex.Match(line, @"^Return(?:\s+(.+))?$", RegexOptions.IgnoreCase);
         if (ret.Success) { Write(sb, string.IsNullOrWhiteSpace(ret.Groups[1].Value) ? "return;" : $"return {TransformExpression(ret.Groups[1].Value)};"); return; }
         var print = Regex.Match(line, @"^Print\s+(.+)$", RegexOptions.IgnoreCase);
-        if (print.Success) { Write(sb, $"Console.WriteLine({TransformExpression(print.Groups[1].Value)});"); return; }
+        if (print.Success) { Write(sb, $"Console.WriteLine(XPScriptRuntime.PrintText({TransformExpression(print.Groups[1].Value)}));"); return; }
 
         var call = Regex.Match(line, @"^Call\s+(.+?)\s*\((.*)\)$", RegexOptions.IgnoreCase);
         if (call.Success) { Write(sb, $"{TransformCallableTarget(call.Groups[1].Value.Trim())}({TransformArgumentList(call.Groups[2].Value)});"); return; }

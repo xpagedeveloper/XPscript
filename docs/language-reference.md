@@ -87,6 +87,8 @@ Every row has a command title, syntax, parameter description, short behavior des
 
 ## Arrays and lists
 
+Array-consuming operations normalize an object reference whose value is `Nothing` to a one-element String array containing `""`. `IsArray(Nothing)` remains `False` because the original value is still `Nothing`, not an allocated array.
+
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `ReDim` | `ReDim array(bounds)` | dynamic array and bounds. | Allocates/resizes array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
@@ -109,7 +111,7 @@ Every row has a command title, syntax, parameter description, short behavior des
 
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `CStr` | `CStr(value)` | value. | Converts to String. | [coercion.xps](../samples/coercion.xps) |
+| `CStr` | `CStr(value)` | value. | Converts to String. An object reference whose value is `Nothing` converts to `""`. | [general-dim-is-nothing.xps](../samples/general-dim-is-nothing.xps) |
 | `CByte` | `CByte(value)` | value. | Converts to Byte. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `CInt` | `CInt(value)` | value. | Converts to Integer. | [coercion.xps](../samples/coercion.xps) |
 | `CLng` | `CLng(value)` | value. | Converts to Long. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
@@ -244,7 +246,7 @@ See [Date and time](date-time.md) for Date object extensions.
 
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `Print` | `Print value` | value. | Writes standard output. | [hello.xps](../demo/console/hello.xps) |
+| `Print` | `Print value` | value. | Writes standard output. A variable whose object reference is `Nothing` is written as `Variable is Nothing`. | [general-dim-is-nothing.xps](../samples/general-dim-is-nothing.xps) |
 | `Input` | `Input [prompt,] variable` | optional prompt and target variable. | Reads interactive console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `InputBox` | `InputBox(prompt [, title [, default]])` | prompt and optional UI text/default. | Reads interactive text input. | [hello.xps](../samples/hello.xps) |
 | `Pause` | `Pause [prompt]` | optional prompt. | Waits for console input. | [textio-console.xps](../samples/textio-console.xps) |
