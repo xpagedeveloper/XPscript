@@ -22,7 +22,7 @@ internal static class NotesDocumentComputeWithFormPostProcessor
         return result.Success;
     }
 
-    public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue, object? __xps_byref_failedFields)
+    public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue, ref object? __xps_byref_failedFields)
     {
         EnsureAlive();
         _ = XPScriptRuntime.CBool(doDataTypesValue);

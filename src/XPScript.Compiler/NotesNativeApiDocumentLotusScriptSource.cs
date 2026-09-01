@@ -59,23 +59,46 @@ internal sealed partial class XPScriptNotesNativeApi
 
     internal uint[] GetResponseIds(uint note)
     {
-        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
+        var dbPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
+        var idPointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
         try
         {
-            Zero(pointer, 4);
-            Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, NoteMemberResponses, pointer);
-            var table = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(pointer));
-            if (table == 0) return [];
-            var ids = new List<uint>();
-            var first = true;
-            while (Resolve<NotesDocumentIDScanDelegate>("IDScan")(table, first ? 1 : 0, out var id) != 0)
+            Zero(dbPointer, 4);
+            Zero(idPointer, 4);
+            Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, 0, dbPointer);
+            Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, NoteMemberId, idPointer);
+            var db = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(dbPointer));
+            var noteId = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(idPointer));
+            if (db == 0 || noteId == 0) return [];
+
+            Check(Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(db, noteId, 0x1000, out var responseNote), "NSFNoteOpen(responses)");
+            try
             {
-                ids.Add(id);
-                first = false;
+                var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4);
+                try
+                {
+                    Zero(pointer, 4);
+                    Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(responseNote, NoteMemberResponses, pointer);
+                    var table = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(pointer));
+                    if (table == 0) return [];
+                    var ids = new List<uint>();
+                    var first = true;
+                    while (Resolve<NotesDocumentIDScanDelegate>("IDScan")(table, first ? 1 : 0, out var id) != 0)
+                    {
+                        ids.Add(id);
+                        first = false;
+                    }
+                    return ids.ToArray();
+                }
+                finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
             }
-            return ids.ToArray();
+            finally { CloseNote(responseNote); }
         }
-        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(idPointer);
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(dbPointer);
+        }
     }
 
     internal string[] GetAllItemNames(uint note)

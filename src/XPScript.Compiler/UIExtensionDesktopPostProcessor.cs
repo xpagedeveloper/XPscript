@@ -82,6 +82,9 @@ internal sealed class UIExtensionDesktopPostProcessor
             !generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
             generated += "\n" + NotesRuntimeSourceBuilder.Build() + "\n";
 
+        if (generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
+            generated = NotesComputeWithFormByRefCallPostProcessor.Transform(generated);
+
         if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
             return generated;
 
@@ -164,7 +167,6 @@ internal sealed class UIExtensionDesktopPostProcessor
                     RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
                 return true;
         }
-
         return false;
     }
 
