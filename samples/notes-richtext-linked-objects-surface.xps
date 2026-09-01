@@ -80,6 +80,14 @@ Sub Main()
         Call embedded.Recycle()
     End If
 
+    Set embedded = navigator.GetFirstElement(8)
+    If Not embedded Is Nothing Then
+        Set embedded = navigator.GetElement()
+        Set embedded = navigator.GetLastElement(8)
+        Set embedded = navigator.GetNthElement(8, 1)
+        Set embedded = navigator.GetNextElement(8)
+    End If
+
     Set navigator = navigator.Clone()
 
     Set section = Nothing
