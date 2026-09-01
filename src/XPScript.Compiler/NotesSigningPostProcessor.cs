@@ -48,7 +48,7 @@ internal static class NotesSigningPostProcessor
         Check(Resolve<NSFNoteSignDelegate>("NSFNoteSign")(note), "NSFNoteSign");
     }
 
-    internal void SignNoteById(nint db, uint noteId)
+    internal void SignNoteById(uint db, uint noteId)
     {
         EnsureInitialized();
         Check(Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(db, noteId, 0, out var note), "NSFNoteOpen(sign)");
