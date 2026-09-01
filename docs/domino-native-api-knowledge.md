@@ -34,7 +34,8 @@ Semantics:
 - If the third argument is omitted, XPscript creates no output slot and performs no output write.
 - If `raiseError` is `False`, a supplied third argument is set to `Nothing` even if native validation reports errors.
 - If `raiseError` is `True` and no field errors are reported, the third argument is `Nothing`.
-- If `raiseError` is `True` and field errors are reported, the third argument is a Variant array containing the unique failing field names.
+- If `raiseError` is `True` and field errors are reported, the third argument is a Variant array containing the unique nonempty failing field names. Duplicate names are removed case-insensitively.
+- If validation fails but Domino reports no usable field names, the third argument remains `Nothing`.
 - The array is assigned before the validation error is raised so LotusScript-style error handling can inspect it.
 - Validation failures raised by `ComputeWithForm` use XPscript runtime error 5. Native callback statuses such as `ERR_VALIDATION` are not exposed as the XPscript `Err` value.
 

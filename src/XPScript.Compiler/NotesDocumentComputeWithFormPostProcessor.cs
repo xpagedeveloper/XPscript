@@ -32,8 +32,9 @@ internal static class NotesDocumentComputeWithFormPostProcessor
         var result = Session.Api.ComputeDocumentWithFormAndCollectErrors(_handle);
         if (!result.Success && raiseError)
         {
-            __xps_byref_failedFields = LSOperatorArrayRuntime.CreateArray(
-                result.FailedFields.Cast<object?>().ToArray());
+            if (result.FailedFields.Length > 0)
+                __xps_byref_failedFields = LSOperatorArrayRuntime.CreateArray(
+                    result.FailedFields.Cast<object?>().ToArray());
             Session.Api.ThrowComputeWithFormValidationError();
         }
 
