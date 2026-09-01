@@ -208,8 +208,10 @@ internal static class NotesSessionPathPostProcessor
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply NotesSession path patch (" + stage + ").");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        if (source.Contains(oldValue, StringComparison.Ordinal))
+            return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        if (source.Contains(newValue, StringComparison.Ordinal))
+            return source;
+        throw new CompilerException("Unable to apply NotesSession path patch (" + stage + ").");
     }
 }
