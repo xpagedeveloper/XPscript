@@ -46,7 +46,8 @@ Primary references:
 - [x] Add an internal XPScript binary-array construction path for attachment data.
 - [x] Keep normal LotusScript array declaration/ReDim bounds compatible with LotusScript.
 - [x] Allow API-produced binary arrays to represent attachments larger than the normal LotusScript subscript limit.
-- [ ] Replace the current boxed/reflection-backed binary array construction with byte-backed storage in the core runtime.
+- [x] Use byte-backed `XPScriptBinaryArray` storage instead of boxing attachment bytes into `LSArray`.
+- [x] Route Variant indexing plus `LBound` and `UBound` through `LSDynamicIndexRuntime`.
 - [ ] Add regression coverage for empty, small, >32 KiB, multi-megabyte, compressed, and incompressible attachments.
 
 ## NotesRichTextNavigator
