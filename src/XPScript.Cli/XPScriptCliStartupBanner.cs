@@ -20,7 +20,7 @@ internal static class XPScriptCliStartupBanner
             Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG", "1");
 
         if (ShouldWriteBanner(commandArguments))
-            Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com ©");
+            Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com (c)");
 
         if (commandArguments.Length == 1 && commandArguments[0] is "--version" or "--info" or "--debug")
             Environment.Exit(0);
