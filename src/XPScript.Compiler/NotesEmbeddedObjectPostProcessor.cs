@@ -75,7 +75,6 @@ internal sealed class XPScriptNotesEmbeddedObject : XPScriptNotesObject
         _metadata = metadata;
     }
 
-    public string Class { get { EnsureEmbeddedAlive(); return ""; } }
     public XPScriptNotesDateTime FileCreated { get { EnsureEmbeddedAlive(); return XPScriptNotesDateTime.FromNative(Session, _metadata.FileCreated); } }
     public int FileEncoding { get { EnsureEmbeddedAlive(); return _metadata.CompressionType; } }
     public XPScriptNotesDateTime FileModified { get { EnsureEmbeddedAlive(); return XPScriptNotesDateTime.FromNative(Session, _metadata.FileModified); } }
@@ -84,7 +83,6 @@ internal sealed class XPScriptNotesEmbeddedObject : XPScriptNotesObject
     public XPScriptNotesRichTextItem Parent { get { EnsureEmbeddedAlive(); return _parent; } }
     public string Source { get { EnsureEmbeddedAlive(); return _metadata.Source; } }
     public int Type { get { EnsureEmbeddedAlive(); return EmbedAttachment; } }
-    public object Verbs { get { EnsureEmbeddedAlive(); return LSOperatorArrayRuntime.CreateArray(); } }
 
     public void ExtractFile(object? pathValue)
     {
