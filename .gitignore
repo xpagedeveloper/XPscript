@@ -7,3 +7,4 @@ obj/
 *.nupkg
 publish/
 out/
+graphify-out/

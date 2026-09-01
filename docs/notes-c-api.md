@@ -84,6 +84,9 @@ Set serverDb = session.OpenDatabase("CN=Domino01/O=Example", "apps\customers.nsf
 | `PercentUsed` | Double | read-only | Percentage of allocated database space currently used. |
 | `CurrentAccessLevel` | Integer | read-only | Current user's numeric Notes database access level. |
 | `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
+| `Agents` | NotesAgent array | read-only | All agent design elements in the database. Agent wrappers retain their Note IDs and open native agent handles only when needed. |
+| `Forms` | NotesForm array | read-only | All form design elements in the database. Form wrappers retain their Note IDs and open design documents only when needed. |
+| `Views` | NotesView array | read-only | All view and folder design elements in the database. |
 
 ### Functions and methods
 

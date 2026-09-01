@@ -28,7 +28,7 @@ Sub Main()
     failures = 0
 
     If NOTES_INI = "" Then
-        Set session = New NotesSession(NOTES_RUNTIME)
+        Set session = New NotesSession()
     Else
         Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
     End If
@@ -702,6 +702,7 @@ Function TestNoErrorsRaiseErrorTrue(ByVal db As Variant, ByVal formName As Strin
     If errCode <> 0 Then failures = failures + 1
     If Not ok Then failures = failures + 1
     If failedFields Is Not Nothing Then failures = failures + 1
+	print failedFields
     Call doc.Recycle()
     TestNoErrorsRaiseErrorTrue = failures
 End Function

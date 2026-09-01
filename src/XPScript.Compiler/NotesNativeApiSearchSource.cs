@@ -247,15 +247,8 @@ internal sealed partial class XPScriptNotesNativeApi
             Check(Resolve<AgentCreateRunContextDelegate>("AgentCreateRunContext")(agent, 0, 0, out context), "AgentCreateRunContext");
             if (documentContext != 0)
                 Check(Resolve<AgentSetDocumentContextDelegate>("AgentSetDocumentContext")(context, documentContext), "AgentSetDocumentContext");
-            Check(Resolve<AgentRedirectStdoutDelegate>("AgentRedirectStdout")(context, AgentRedirectMemory), "AgentRedirectStdout");
             Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0), "AgentRun");
-
-            Resolve<AgentQueryStdoutBufferDelegate>("AgentQueryStdoutBuffer")(context, out var outputHandle, out var outputLength);
-            if (outputHandle == 0 || outputLength == 0) return "";
-            var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(outputHandle);
-            if (pointer == 0) return "";
-            try { return FromLmbcs(pointer, checked((int)outputLength)); }
-            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(outputHandle); }
+            return "";
         }
         finally
         {
@@ -281,6 +274,7 @@ internal sealed partial class XPScriptNotesNativeApi
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(nint db, uint noteId, out nint agent);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void AgentCloseDelegate(nint agent);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentCreateRunContextDelegate(nint agent, nint reserved, uint flags, out nint context);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentCreateRunContextExtDelegate(nint agent, nint reserved, uint flags, uint contextFlags, out nint context);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void AgentDestroyRunContextDelegate(nint context);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentSetDocumentContextDelegate(nint context, nint note);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentRedirectStdoutDelegate(nint context, ushort redirectType);
