@@ -27,7 +27,15 @@ internal sealed class ModuleObjectGlobalsPreprocessor
         if (_objects.Count == 0) return source;
 
         RewriteUses(lines);
-        return string.Join(Environment.NewLine, lines);
+        var result = string.Join(Environment.NewLine, lines);
+        foreach (var name in _objects.Keys)
+        {
+            if (Regex.IsMatch(result,
+                    $@"\bLSObjectIdentityRuntime\.Is(?:Not)?Nothing\s*\(\s*{Regex.Escape(name)}\s*\)",
+                    RegexOptions.IgnoreCase))
+                throw new CompilerException($"Module object Nothing check for '{name}' was not lowered.");
+        }
+        return result;
     }
 
     private HashSet<string> CollectClasses(IEnumerable<string> lines)
