@@ -1,18 +1,26 @@
-name: Notes Rich Text and MIME Compatibility
+name: Notes Rich Text Compatibility
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/NotesRichTextMimePostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesRichTextObjectsPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesRichTextObjectsPreprocessor.cs'
+      - 'src/XPScript.Compiler/NotesRuntimeRichTextObjectsSource.cs'
+      - 'src/XPScript.Compiler/NotesNativeApiRichTextObjectsSource.cs'
+      - 'src/XPScript.Compiler/NotesNativeApiRichTextCreateSource.cs'
+      - 'src/XPScript.Compiler/NotesNativeApiSource.cs'
       - 'src/XPScript.Compiler/NotesRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
       - 'samples/notes-richtext-mime-surface.xps'
+      - 'samples/notes-richtext-objects-surface.xps'
       - 'docs/notes-richtext-item.md'
       - '.github/workflows/notes-richtext-mime-build.yml'
   workflow_dispatch:
 
 jobs:
-  notes-richtext-mime:
+  notes-richtext:
     strategy:
       fail-fast: false
       matrix:
@@ -34,3 +42,9 @@ jobs:
           $exe = if ($IsWindows) { './out/notes-richtext-mime-surface.exe' } else { './out/notes-richtext-mime-surface' }
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-mime-surface.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Notes rich text/MIME surface compilation failed.' }
+      - name: Compile Notes rich text object surface
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/notes-richtext-objects-surface.exe' } else { './out/notes-richtext-objects-surface' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-objects-surface.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Notes rich text object surface compilation failed.' }
