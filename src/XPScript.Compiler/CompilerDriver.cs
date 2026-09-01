@@ -47,7 +47,7 @@ public sealed class CompilerDriver
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
 
             source = await File.ReadAllTextAsync(sourcePath);
-            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
+            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, source);
             return CompileResult.Ok(outputPath);
         }
         catch (CompilerException ex)
@@ -72,7 +72,7 @@ public sealed class CompilerDriver
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
 
             source = await File.ReadAllTextAsync(sourcePath);
-            var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier);
+            var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier, source);
             return CompileResult.Ok(executablePath);
         }
         catch (CompilerException ex)
@@ -90,8 +90,13 @@ public sealed class CompilerDriver
 
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
+        var source = await File.ReadAllTextAsync(sourcePath);
+        await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, source);
+    }
+
+    private async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier, string originalSource)
+    {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
-        var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
@@ -164,10 +169,9 @@ public sealed class CompilerDriver
         }
     }
 
-    private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
+    private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier, string originalSource)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
-        var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
