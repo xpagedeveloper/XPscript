@@ -27,19 +27,17 @@ Primary references:
 ## NotesEmbeddedObject and attachments
 
 - [x] Add `NotesEmbeddedObject` to the Notes compiler type model with `Set`, `Nothing`, replacement, and `Recycle()` semantics.
-- [x] Implement attachment-backed `NotesEmbeddedObject` properties: `Class`, `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`, `Verbs`.
+- [x] Implement attachment-backed `NotesEmbeddedObject` properties: `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`.
 - [x] Implement attachment `ExtractFile`.
 - [x] Implement XPScript extension `ToByteArray()` without a temporary file.
 - [x] Use `NSFNoteCipherExtractWithCallback` for normal attachment reads so compressed attachments are streamed/decompressed by Notes.
 - [x] Implement `NotesRichTextItem.GetEmbeddedObject(name)`.
 - [x] Implement `NotesRichTextItem.EmbeddedObjects`.
-- [ ] Materialize attachment elements from `NotesRichTextNavigator.GetElement()` as `NotesEmbeddedObject`.
+- [x] Materialize attachment elements from `NotesRichTextNavigator.GetElement()` as `NotesEmbeddedObject`.
 - [ ] Implement `NotesRichTextItem.EmbedObject(EMBED_ATTACHMENT, "", source [, name])`.
 - [ ] Attach physical file data with `NSFNoteAttachFile` and add the corresponding `HOTSPOTREC_TYPE_FILE` CD hotspot to the rich-text item.
 - [ ] Roll back the `$FILE` object if adding the rich-text hotspot fails.
 - [ ] Implement attachment `Remove()` atomically: remove the rich-text hotspot and then detach/deallocate the `$FILE` object.
-- [ ] Add OLE/object support for `EMBED_OBJECT` and `EMBED_OBJECTLINK` where supported by the Notes C API/runtime.
-- [ ] Implement OLE-only `Activate`, `DoVerb`, `FitBelowFields`, `FitToWindow`, `Object`, `RunReadOnly`, and `Verbs` behavior. Do not fake these for file attachments.
 
 ## Binary array support
 
@@ -52,16 +50,16 @@ Primary references:
 
 ## NotesRichTextNavigator
 
-- [ ] `GetElement`.
-- [ ] `GetFirstElement`.
-- [ ] `GetLastElement`.
-- [ ] `GetNextElement`.
-- [ ] `GetNthElement`.
+- [x] `GetElement` for attachment elements.
+- [x] `GetFirstElement` for materializable element types.
+- [x] `GetLastElement` for materializable element types.
+- [x] `GetNextElement` for materializable element types.
+- [x] `GetNthElement` for materializable element types.
 - [ ] `SetPosition`.
 - [ ] `SetPositionAtEnd`.
 - [ ] Correct logical grouping of all element types instead of treating every matching CD record as a separate LotusScript element.
 - [ ] Correct text-run and text-paragraph boundaries across CD records and physical composite item segments.
-- [ ] Attachment and OLE materialization through `NotesEmbeddedObject`.
+- [x] Attachment materialization through `NotesEmbeddedObject`.
 
 ## NotesRichTextRange
 
