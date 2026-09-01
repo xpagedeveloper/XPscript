@@ -19,7 +19,7 @@
     <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true"><columnheader title="Subject"/><code event="value"><formula>Subject</formula></code></column>
   </view>
 
-  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5"><trigger type="agentlist"/><code event="action"><formula>@True</formula></code></agent>
+  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5" formulatype="modifydocs"><trigger type="agentlist"/><documentset type="all"/><code event="action"><formula>@True</formula></code></agent>
 
   <document form="XPScriptTest"><item name="Form"><text>XPScriptTest</text></item><item name="Subject"><text>Alpha</text></item><item name="XPScriptMarker"><text>fixture-alpha</text></item><item name="XPScriptGroup"><text>Group A</text></item><item name="TextList"><textlist><text>one</text><text>two</text><text>three</text></textlist></item><item name="NumberValue"><number>12.5</number></item><item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Alpha</par></richtext></item></document>
   <document form="XPScriptTest"><item name="Form"><text>XPScriptTest</text></item><item name="Subject"><text>Beta</text></item><item name="XPScriptMarker"><text>fixture-beta</text></item><item name="XPScriptGroup"><text>Group A</text></item><item name="TextList"><textlist><text>red</text><text>green</text><text>blue</text></textlist></item><item name="NumberValue"><number>99</number></item><item name="Body"><richtext><pardef id="1"/><par def="1">XPscript rich text fixture Beta</par></richtext></item></document>
