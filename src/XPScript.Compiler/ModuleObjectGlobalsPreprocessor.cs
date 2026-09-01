@@ -121,6 +121,17 @@ internal sealed class ModuleObjectGlobalsPreprocessor
                     goto NextLine;
                 }
 
+                // GeneralSyntaxPreprocessor runs before module-object lowering and normalizes
+                // `value Is [Not] Nothing` to LSObjectIdentityRuntime calls. Translate those
+                // normalized calls before looking for the original source form so module-level
+                // class references never leak as unresolved CLR identifiers.
+                code = ReplaceOutsideStrings(code,
+                    $@"\bLSObjectIdentityRuntime\.IsNotNothing\s*\(\s*{escaped}\s*\)",
+                    $"Not XPModuleObjectRuntime.IsNothing(\"{EscapeString(name)}\")");
+                code = ReplaceOutsideStrings(code,
+                    $@"\bLSObjectIdentityRuntime\.IsNothing\s*\(\s*{escaped}\s*\)",
+                    $"XPModuleObjectRuntime.IsNothing(\"{EscapeString(name)}\")");
+
                 code = ReplaceOutsideStrings(code,
                     $@"\b{escaped}\s+Is\s+Not\s+Nothing\b",
                     $"Not XPModuleObjectRuntime.IsNothing(\"{EscapeString(name)}\")");
