@@ -9,6 +9,9 @@ on:
       - 'samples/**'
       - 'tools/validate_docs.py'
       - '.github/workflows/documentation-reference.yml'
+      - '!docs/notes-*.md'
+      - '!samples/notes-*.xps'
+      - '!samples/xpscript-notes-runtime-fixture.dxl'
 
 permissions:
   contents: read

@@ -19,9 +19,11 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+
+          workflows = Path('.github/workflows')
           allowed = {'required-pr-gate.yml', 'pr-workflow-scope.yml'}
           offenders = []
-          for path in Path('.github/workflows').glob('*.yml'):
+          for path in workflows.glob('*.yml'):
               if path.name in allowed:
                   continue
               text = path.read_text(encoding='utf-8')
@@ -29,4 +31,37 @@ jobs:
                   offenders.append(path.name)
           if offenders:
               raise SystemExit('Broad compiler PR path filters are not allowed: ' + ', '.join(sorted(offenders)))
+
+          notes_ignore = "- 'src/XPScript.Compiler/Notes*.cs'"
+          notes_fixture_ignore = "- 'samples/xpscript-notes-runtime-fixture.dxl'"
+          broad = [
+              'required-pr-gate.yml',
+              'webiis-package.yml',
+              'webiis-iis-e2e.yml',
+              'application-ui-metadata.yml',
+          ]
+          missing = []
+          for name in broad:
+              text = (workflows / name).read_text(encoding='utf-8')
+              if 'paths-ignore:' not in text or notes_ignore not in text or notes_fixture_ignore not in text:
+                  missing.append(name)
+          if missing:
+              raise SystemExit('Notes-only changes must be excluded from broad PR workflows: ' + ', '.join(sorted(missing)))
+
+          native = (workflows / 'notes-native-interop-cross-platform.yml').read_text(encoding='utf-8')
+          if '  pull_request:' in native:
+              raise SystemExit('Notes Native Interop must remain manual-only for Notes Object changes.')
+
+          documentation = (workflows / 'documentation-reference.yml').read_text(encoding='utf-8')
+          terminology = (workflows / 'evaluate-legacy-terminology.yml').read_text(encoding='utf-8')
+          for name, text in [('documentation-reference.yml', documentation), ('evaluate-legacy-terminology.yml', terminology)]:
+              if "- '!samples/notes-*.xps'" not in text or "- '!samples/xpscript-notes-runtime-fixture.dxl'" not in text:
+                  raise SystemExit(name + ' must exclude Notes-only samples from automatic PR scope.')
+
+          compiler = (workflows / 'notes-compiler-windows-linux.yml').read_text(encoding='utf-8')
+          if 'os: [windows-latest, ubuntu-latest]' not in compiler:
+              raise SystemExit('Notes compiler workflow must remain Windows/Linux only.')
+          if notes_ignore not in compiler or notes_fixture_ignore not in compiler:
+              raise SystemExit('Notes compiler workflow must own Notes Object source and fixture paths.')
+
           print('PR-WORKFLOW-SCOPE=OK')
