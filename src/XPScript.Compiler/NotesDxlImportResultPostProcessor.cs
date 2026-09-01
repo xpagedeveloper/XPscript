@@ -7,9 +7,34 @@ internal static class NotesDxlImportResultPostProcessor
         ArgumentNullException.ThrowIfNull(source);
 
         source = ReplaceRequired(source,
+            "    public int ACLImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 1); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 1, value); }\n    }",
+            "    public int ACLImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterInt(_handle, 1); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 1, ValidateAclImportOption(value)); }\n    }",
+            "acl-import-option");
+
+        source = ReplaceRequired(source,
+            "    public int DesignImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 2); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 2, value); }\n    }",
+            "    public int DesignImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterInt(_handle, 2); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 2, ValidateDesignImportOption(value)); }\n    }",
+            "design-import-option");
+
+        source = ReplaceRequired(source,
+            "    public int DocumentImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 3); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 3, value); }\n    }",
+            "    public int DocumentImportOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterInt(_handle, 3); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 3, ValidateDocumentImportOption(value)); }\n    }",
+            "document-import-option");
+
+        source = ReplaceRequired(source,
+            "        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 6, value); }",
+            "        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 6, ValidateInputValidationOption(value)); }",
+            "input-validation-option");
+
+        source = ReplaceRequired(source,
             "    public int UnknownTokenLogOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 9); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 9, value); }\n    }",
-            "    public int UnknownTokenLogOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterWord(_handle, 9); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 9, value); }\n    }\n\n    public string Log { get { EnsureAlive(); return Session.Api.GetDxlImporterLog(_handle); } }\n    public int ImportedNoteCount { get { EnsureAlive(); return Session.Api.GetDxlImporterNoteCount(_handle); } }",
+            "    public int UnknownTokenLogOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlImporterInt(_handle, 9); }\n        set { EnsureAlive(); Session.Api.SetDxlImporterIntProperty(_handle, 9, ValidateUnknownTokenLogOption(value)); }\n    }\n\n    public string Log { get { EnsureAlive(); return Session.Api.GetDxlImporterLog(_handle); } }\n    public int ImportedNoteCount { get { EnsureAlive(); return Session.Api.GetDxlImporterNoteCount(_handle); } }",
             "importer-result-properties");
+
+        source = ReplaceRequired(source,
+            "    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
+            ImportOptionValidation + "\n\n    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
+            "importer-option-validation");
 
         source = ReplaceRequired(source,
             "    internal uint CreateDxlExporter()",
@@ -23,6 +48,38 @@ internal static class NotesDxlImportResultPostProcessor
 
         return source;
     }
+
+    private const string ImportOptionValidation = """
+    private static int ValidateAclImportOption(int value)
+    {
+        if (value is 1 or 5 or 9 or 10) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLImporter.ACLImportOption must be 1, 5, 9 or 10.");
+    }
+
+    private static int ValidateDesignImportOption(int value)
+    {
+        if (value is 1 or 2 or 5 or 6) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLImporter.DesignImportOption must be 1, 2, 5 or 6.");
+    }
+
+    private static int ValidateDocumentImportOption(int value)
+    {
+        if (value is 1 or 2 or 5 or 6 or 9 or 10) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLImporter.DocumentImportOption must be 1, 2, 5, 6, 9 or 10.");
+    }
+
+    private static int ValidateInputValidationOption(int value)
+    {
+        if (value is 0 or 1 or 2) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLImporter.InputValidationOption must be 0, 1 or 2.");
+    }
+
+    private static int ValidateUnknownTokenLogOption(int value)
+    {
+        if (value is 1 or 2 or 3 or 4) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLImporter.UnknownTokenLogOption must be 1, 2, 3 or 4.");
+    }
+""";
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
