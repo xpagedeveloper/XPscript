@@ -1,0 +1,12 @@
+Public Sub Main()
+    Call Outer()
+End Sub
+
+Sub Outer()
+    Call Inner()
+End Sub
+
+Sub Inner()
+    Dim value As Integer
+    value = CInt("not-a-number")
+End Sub
