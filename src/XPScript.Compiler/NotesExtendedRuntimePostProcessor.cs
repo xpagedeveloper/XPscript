@@ -8,6 +8,7 @@ internal static class NotesExtendedRuntimePostProcessor
         source = NotesStreamPostProcessor.ApplyBuiltSurface(source);
         source = NotesAgentPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
+        source = NotesSigningPostProcessor.ApplyBuiltSurface(source);
         return source;
     }
 }
