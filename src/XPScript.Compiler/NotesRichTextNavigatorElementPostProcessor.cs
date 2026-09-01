@@ -264,13 +264,13 @@ internal sealed class XPScriptNotesRichTextRecordData
             """
     private static int ValidateElementType(int type)
     {
-        if (type is 1 or 3 or 4 or 5 or 6 or 7 or 8 or 9) return type;
+        if (type is 1 or 3 or 4 or 5 or 6 or 7 or 8) return type;
         throw new XPScriptRuntimeException(5, "Unsupported rich text element type " + type.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
     }
 
     private static int ValidateGetElementType(int type)
     {
-        if (type is 1 or 5 or 6 or 8 or 9) return type;
+        if (type is 1 or 5 or 6 or 8) return type;
         if (type is 3 or 4 or 7)
             throw new XPScriptRuntimeException(5, "Text runs, text paragraphs, and table cells must be accessed through NotesRichTextRange.");
         throw new XPScriptRuntimeException(5, "Unsupported rich text element type " + type.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
@@ -279,6 +279,18 @@ internal sealed class XPScriptNotesRichTextRecordData
     private static int ValidateOccurrence(object? value)
 """,
             "navigator-get-element-validation");
+
+        source = ReplaceRequired(
+            source,
+            "    private const ushort SigCdOleBeginForObjects = unchecked((ushort)-89);\n",
+            "",
+            "remove-ole-signature");
+
+        source = ReplaceRequired(
+            source,
+            "        if (signature == SigCdOleBeginForObjects) return 9;\n",
+            "",
+            "remove-ole-element-mapping");
 
         return source;
     }
