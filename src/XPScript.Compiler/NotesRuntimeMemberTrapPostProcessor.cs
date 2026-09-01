@@ -7,8 +7,7 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         ArgumentNullException.ThrowIfNull(source);
 
         // LotusScript exposes NotesDocument.UniversalID with this exact spelling.
-        // Keep the CLR dynamic surface exact so misspellings/casing differences fall through
-        // to the Notes-specific runtime member trap below instead of leaking RuntimeBinderException.
+        // Preserve that CLR spelling while keeping XPScript member lookup case-insensitive.
         source = source.Replace("public string UniversalId", "public string UniversalID", StringComparison.Ordinal);
         source = source.Replace(".UniversalId", ".UniversalID", StringComparison.Ordinal);
 
@@ -34,7 +33,7 @@ internal static class NotesRuntimeMemberTrapPostProcessor
                 var raw = key?.GetValue("PROGDIR") as string;
                 if (string.IsNullOrWhiteSpace(raw)) return null;
 
-                var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('"'));
+                var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
                 var path = Path.GetFullPath(expanded);
                 if (!Directory.Exists(path)) return null;
                 if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
@@ -80,6 +79,14 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             result = null;
             return false;
         }
+
+        var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: false);
+        if (property is not null)
+        {
+            result = property.GetValue(this);
+            return true;
+        }
+
         result = null;
         throw UnknownMember(binder.Name);
     }
@@ -87,6 +94,14 @@ internal static class NotesRuntimeMemberTrapPostProcessor
     public override bool TrySetMember(System.Dynamic.SetMemberBinder binder, object? value)
     {
         if (HasExactPublicProperty(binder.Name, requireSetter: true)) return false;
+
+        var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: true);
+        if (property is not null)
+        {
+            property.SetValue(this, value);
+            return true;
+        }
+
         throw UnknownMember(binder.Name);
     }
 
@@ -97,6 +112,39 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             result = null;
             return false;
         }
+
+        var values = args ?? Array.Empty<object?>();
+        if (values.Length == 0)
+        {
+            var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: false);
+            if (property is not null)
+            {
+                result = property.GetValue(this);
+                return true;
+            }
+        }
+
+        if (HasPublicMethodIgnoreCase(binder.Name))
+        {
+            try
+            {
+                result = GetType().InvokeMember(
+                    binder.Name,
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.IgnoreCase |
+                    System.Reflection.BindingFlags.InvokeMethod,
+                    null,
+                    this,
+                    values);
+                return true;
+            }
+            catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw exception.InnerException;
+            }
+        }
+
         result = null;
         throw UnknownMember(binder.Name);
     }
@@ -107,9 +155,19 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         return property is not null && (!requireSetter || property.SetMethod is not null);
     }
 
+    private System.Reflection.PropertyInfo? FindPublicPropertyIgnoreCase(string name, bool requireSetter) =>
+        GetType().GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .FirstOrDefault(property =>
+                string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase) &&
+                (!requireSetter || property.SetMethod is not null));
+
     private bool HasExactPublicMethod(string name) =>
         GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
             .Any(method => string.Equals(method.Name, name, StringComparison.Ordinal));
+
+    private bool HasPublicMethodIgnoreCase(string name) =>
+        GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .Any(method => string.Equals(method.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private XPScriptRuntimeException UnknownMember(string name) =>
         new(438, "Unknown property or method '" + name + "' of " +
@@ -136,6 +194,14 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             result = null;
             return false;
         }
+
+        var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: false);
+        if (property is not null)
+        {
+            result = property.GetValue(this);
+            return true;
+        }
+
         result = null;
         throw UnknownMember(binder.Name);
     }
@@ -143,6 +209,14 @@ internal static class NotesRuntimeMemberTrapPostProcessor
     public override bool TrySetMember(System.Dynamic.SetMemberBinder binder, object? value)
     {
         if (HasExactPublicProperty(binder.Name, requireSetter: true)) return false;
+
+        var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: true);
+        if (property is not null)
+        {
+            property.SetValue(this, value);
+            return true;
+        }
+
         throw UnknownMember(binder.Name);
     }
 
@@ -153,6 +227,39 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             result = null;
             return false;
         }
+
+        var values = args ?? Array.Empty<object?>();
+        if (values.Length == 0)
+        {
+            var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: false);
+            if (property is not null)
+            {
+                result = property.GetValue(this);
+                return true;
+            }
+        }
+
+        if (HasPublicMethodIgnoreCase(binder.Name))
+        {
+            try
+            {
+                result = GetType().InvokeMember(
+                    binder.Name,
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.IgnoreCase |
+                    System.Reflection.BindingFlags.InvokeMethod,
+                    null,
+                    this,
+                    values);
+                return true;
+            }
+            catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw exception.InnerException;
+            }
+        }
+
         result = null;
         throw UnknownMember(binder.Name);
     }
@@ -163,9 +270,19 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         return property is not null && (!requireSetter || property.SetMethod is not null);
     }
 
+    private System.Reflection.PropertyInfo? FindPublicPropertyIgnoreCase(string name, bool requireSetter) =>
+        GetType().GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .FirstOrDefault(property =>
+                string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase) &&
+                (!requireSetter || property.SetMethod is not null));
+
     private bool HasExactPublicMethod(string name) =>
         GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
             .Any(method => string.Equals(method.Name, name, StringComparison.Ordinal));
+
+    private bool HasPublicMethodIgnoreCase(string name) =>
+        GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .Any(method => string.Equals(method.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private XPScriptRuntimeException UnknownMember(string name) =>
         new(438, "Unknown property or method '" + name + "' of NotesSession.");
