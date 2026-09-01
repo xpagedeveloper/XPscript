@@ -16,10 +16,10 @@ internal static class NotesDocumentComputeWithFormPostProcessor
         EnsureAlive();
         _ = XPScriptRuntime.CBool(doDataTypesValue);
         var raiseError = XPScriptRuntime.CBool(raiseErrorValue);
-        var result = Session.Api.ComputeDocumentWithForm(_handle, false);
-        if (!result.Success && raiseError)
-            Session.Api.ThrowComputeWithFormValidationError(result.ValidationError);
-        return result.Success;
+        var success = Session.Api.ComputeDocumentWithForm(_handle);
+        if (!success && raiseError)
+            Session.Api.ThrowComputeWithFormValidationError();
+        return success;
     }
 
     public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue, ref object? __xps_byref_failedFields)
@@ -29,12 +29,12 @@ internal static class NotesDocumentComputeWithFormPostProcessor
         var raiseError = XPScriptRuntime.CBool(raiseErrorValue);
         __xps_byref_failedFields = null;
 
-        var result = Session.Api.ComputeDocumentWithForm(_handle, raiseError);
+        var result = Session.Api.ComputeDocumentWithFormAndCollectErrors(_handle);
         if (!result.Success && raiseError)
         {
             __xps_byref_failedFields = LSOperatorArrayRuntime.CreateArray(
                 result.FailedFields.Cast<object?>().ToArray());
-            Session.Api.ThrowComputeWithFormValidationError(result.ValidationError);
+            Session.Api.ThrowComputeWithFormValidationError();
         }
 
         return result.Success;
