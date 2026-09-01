@@ -27,20 +27,21 @@ internal static class LSHclPlatformConstantRuntime
     }
 }
 """ + "\n\n" + RuntimeDebugTraceSource.Code + "\n\n" + NotesNothingPostProcessor.Apply(
-        NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
-            NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
-                NotesSessionPathPostProcessor.ApplyBuiltSurface(
-                    NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
-                        NotesModifiedDocumentsPostProcessor.ApplyBuiltSurface(
-                            NotesExtendedRuntimePostProcessor.ApplyBuiltSurface(
-                                NotesNoteCollectionPostProcessor.ApplyBuiltSurface(
-                                    NotesDxlExportResultPostProcessor.ApplyBuiltSurface(
-                                        NotesDxlImportResultPostProcessor.ApplyBuiltSurface(
-                                            NotesDatabaseReplicaPostProcessor.Apply(
-                                                NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
-                                                    NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
-                                                        NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                                                            NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                    NotesRuntimeSourceBuilder.Build()))))))))))))))));
+        NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(
+            NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
+                NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
+                    NotesSessionPathPostProcessor.ApplyBuiltSurface(
+                        NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
+                            NotesModifiedDocumentsPostProcessor.ApplyBuiltSurface(
+                                NotesExtendedRuntimePostProcessor.ApplyBuiltSurface(
+                                    NotesNoteCollectionPostProcessor.ApplyBuiltSurface(
+                                        NotesDxlExportResultPostProcessor.ApplyBuiltSurface(
+                                            NotesDxlImportResultPostProcessor.ApplyBuiltSurface(
+                                                NotesDatabaseReplicaPostProcessor.Apply(
+                                                    NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
+                                                        NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
+                                                            NotesViewNavigationPostProcessor.ApplyBuiltSurface(
+                                                                NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                                    NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                                        NotesRuntimeSourceBuilder.Build())))))))))))))))));
 }
