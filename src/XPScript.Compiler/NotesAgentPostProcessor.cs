@@ -17,6 +17,11 @@ internal static class NotesAgentPostProcessor
             "native-find-agent");
 
         source = ReplaceRequired(source,
+            "        Check(Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out var agent), \"AgentOpen\");",
+            "        var agentOpenStatus = Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out var agent);\n        if (agentOpenStatus == 0x0259)\n        {\n            SaveAgent(db, noteId);\n            agentOpenStatus = Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out agent);\n        }\n        Check(agentOpenStatus, \"AgentOpen\");",
+            "native-agent-open-sign-retry");
+
+        source = ReplaceRequired(source,
             "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(uint db, uint noteId, out uint agent);",
             "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteSignDelegate(uint note);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(uint db, uint noteId, out uint agent);",
             "native-agent-sign-delegate");
