@@ -19,11 +19,7 @@
     <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true"><columnheader title="Subject"/><code event="value"><formula>Subject</formula></code></column>
   </view>
 
-  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="8.5.3">
-    <trigger type="actionsmenu"/>
-    <documentset type="all"/>
-    <code event="action"><simpleaction action="runformula"><formula>@True</formula></simpleaction></code>
-  </agent>
+  <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5" formulatype="modifydocs"><trigger type="agentlist"/><documentset type="all"/><code event="action"><formula>@True</formula></code></agent>
 
   <agent name="XPScriptFormulaAgent" publicaccess="false" designerversion="8.5.3">
     <trigger type="actionsmenu"/>
