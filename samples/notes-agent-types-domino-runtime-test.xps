@@ -1,0 +1,228 @@
+' HCL Notes/Domino runtime regression for Formula, LotusScript and Java agents.
+Option Declare
+
+Sub Main()
+    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    Const NOTES_INI = ""
+    Const DATABASE_PATH = "xpscript.nsf"
+    Const FIXTURE_DXL = "xpscript-notes-runtime-fixture.dxl"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim importer As NotesDXLImporter
+    Dim bootstrapErr As Integer
+    Dim failures As Integer
+
+    If NOTES_INI = "" Then
+        Set session = New NotesSession()
+    Else
+        Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    End If
+
+    If session Is Nothing Then
+        Print "NOTES-AGENT-TYPES=FAIL BOOTSTRAP NotesSession"
+        Exit Sub
+    End If
+
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+    If db Is Nothing Then
+        Print "NOTES-AGENT-TYPES=FAIL BOOTSTRAP OpenDatabase"
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    If db.IsOpen Then Call db.Remove()
+
+    bootstrapErr = 0
+    On Error Resume Next
+    Call db.Create("", "", True)
+    bootstrapErr = Err
+    If bootstrapErr = 0 Then
+        Set importer = session.CreateDXLImporter()
+        If importer Is Nothing Then
+            bootstrapErr = 91
+        Else
+            importer.ExitOnFirstFatalError = True
+            Call importer.Import(FIXTURE_DXL, db)
+            bootstrapErr = Err
+            If bootstrapErr <> 0 Then
+                Print "BOOTSTRAP-DXL-IMPORT-ERROR=" & CStr(bootstrapErr)
+                Print importer.Log
+            Else
+                Print "BOOTSTRAP-DXL-IMPORTED-NOTE-COUNT=" & CStr(importer.ImportedNoteCount)
+            End If
+            Call importer.Recycle()
+        End If
+    End If
+
+    If bootstrapErr = 0 Then
+        Print "BOOTSTRAP-SIGN-DESIGN-BEGIN User=" & session.UserName
+        Call db.Sign()
+        bootstrapErr = Err
+        If bootstrapErr <> 0 Then
+            Print "BOOTSTRAP-SIGN-DESIGN-ERROR=" & CStr(bootstrapErr)
+        Else
+            Print "BOOTSTRAP-SIGN-DESIGN=OK"
+        End If
+    End If
+    On Error GoTo 0
+
+    If bootstrapErr <> 0 Or Not db.IsOpen Then
+        Print "NOTES-AGENT-TYPES=FAIL BOOTSTRAP Err=" & CStr(bootstrapErr)
+        Call db.Recycle()
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    Print "NOTES-AGENT-TYPES-BEGIN"
+    failures = failures + TestDocumentSign(db)
+    failures = failures + TestAgentType(db, "Formula", "XPScriptFormulaAgent")
+    failures = failures + TestAgentType(db, "LotusScript", "XPScriptLotusScriptAgent")
+    failures = failures + TestAgentType(db, "Java", "XPScriptJavaAgent")
+    Print "NOTES-AGENT-TYPES-END"
+
+    Call db.Recycle()
+    Call session.Recycle()
+
+    If failures = 0 Then
+        Print "NOTES-AGENT-TYPES=PASS"
+    Else
+        Print "NOTES-AGENT-TYPES=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub
+
+Function TestDocumentSign(ByVal db As Variant) As Integer
+    Dim notes As NotesNoteCollection
+    Dim design As NotesDocument
+    Dim noteId As String
+    Dim errCode As Integer
+
+    Print "DESIGN-DOCUMENT-SIGN-BEGIN"
+    Set notes = db.CreateNoteCollection(False)
+    Call notes.SelectAllDesignElements(True)
+    Call notes.BuildCollection()
+    noteId = notes.GetFirstNoteID()
+
+    If noteId = "" Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL No design note"
+        Call notes.Recycle()
+        TestDocumentSign = 1
+        Exit Function
+    End If
+
+    Set design = db.GetDocumentByID(noteId)
+    If design Is Nothing Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL Open design note"
+        Call notes.Recycle()
+        TestDocumentSign = 1
+        Exit Function
+    End If
+
+    errCode = 0
+    On Error Resume Next
+    Call design.Sign()
+    Call design.Save()
+    errCode = Err
+    On Error GoTo 0
+
+    If errCode <> 0 Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL Err=" & CStr(errCode)
+        TestDocumentSign = 1
+    Else
+        Print "DESIGN-DOCUMENT-SIGN=OK NoteID=" & design.NoteID
+        TestDocumentSign = 0
+    End If
+
+    Call design.Recycle()
+    Call notes.Recycle()
+End Function
+
+Function TestAgentType(ByVal db As Variant, ByVal agentType As String, ByVal agentName As String) As Integer
+    Dim failures As Integer
+    Dim agent As NotesAgent
+    Dim result As NotesAgentResult
+    Dim doc As NotesDocument
+    Dim runResult As Variant
+    Dim errCode As Integer
+
+    failures = 0
+    Print "AGENT-BEGIN Type=" & agentType & " Name=" & agentName
+
+    Set agent = db.GetAgent(agentName)
+    If agent Is Nothing Then
+        Print "AGENT-FAIL Type=" & agentType & " Stage=GetAgent"
+        TestAgentType = 1
+        Exit Function
+    End If
+
+    Print "AgentName=" & agent.Name
+    Print "AgentOwner=" & agent.Owner
+    Print "AgentTrigger=" & CStr(agent.Trigger)
+    Print "AgentTarget=" & CStr(agent.Target)
+
+    errCode = 0
+    On Error Resume Next
+    runResult = agent.Run()
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then
+        failures = failures + 1
+        Print "AGENT-FAIL Type=" & agentType & " Stage=NotesAgent.Run Err=" & CStr(errCode)
+    Else
+        Print "AGENT-RUN Type=" & agentType & " Result=" & CStr(runResult)
+    End If
+    Call agent.Recycle()
+
+    errCode = 0
+    Set result = Nothing
+    On Error Resume Next
+    Set result = db.RunAgent(agentName)
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then
+        failures = failures + 1
+        Print "AGENT-FAIL Type=" & agentType & " Stage=NotesDatabase.RunAgent Err=" & CStr(errCode)
+    ElseIf result Is Nothing Then
+        failures = failures + 1
+        Print "AGENT-FAIL Type=" & agentType & " Stage=NotesDatabase.RunAgent Result=Nothing"
+    Else
+        Print "AGENT-RESULT Type=" & agentType & " Success=" & CStr(result.Success) & " Status=" & CStr(result.Status)
+        Print "AGENT-OUTPUT Type=" & agentType & " Value=" & result.Output
+        Call result.Recycle()
+    End If
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptTest")
+    Call doc.ReplaceItemValue("Subject", "Agent document context " & agentType)
+    Call doc.Save()
+
+    errCode = 0
+    Set result = Nothing
+    On Error Resume Next
+    Set result = db.RunAgent(agentName, doc)
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then
+        failures = failures + 1
+        Print "AGENT-FAIL Type=" & agentType & " Stage=RunAgentDocumentContext Err=" & CStr(errCode)
+    ElseIf result Is Nothing Then
+        failures = failures + 1
+        Print "AGENT-FAIL Type=" & agentType & " Stage=RunAgentDocumentContext Result=Nothing"
+    Else
+        Print "AGENT-DOC-RESULT Type=" & agentType & " Success=" & CStr(result.Success) & " Status=" & CStr(result.Status)
+        Print "AGENT-DOC-OUTPUT Type=" & agentType & " Value=" & result.Output
+        Call result.Recycle()
+    End If
+
+    Call doc.Remove(True)
+    Call doc.Recycle()
+
+    If failures = 0 Then
+        Print "AGENT-PASS Type=" & agentType
+    Else
+        Print "AGENT-FAILURES Type=" & agentType & " Count=" & CStr(failures)
+    End If
+    Print "AGENT-END Type=" & agentType
+
+    TestAgentType = failures
+End Function
