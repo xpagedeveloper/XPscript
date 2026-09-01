@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler/NotesRichTextMimePostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesRuntimeSource.cs'
       - 'samples/notes-richtext-mime-surface.xps'
-      - 'docs/notes-c-api.md'
-      - 'todo/HCLNotes.md'
+      - 'docs/notes-richtext-item.md'
       - '.github/workflows/notes-richtext-mime-build.yml'
   workflow_dispatch:
 
