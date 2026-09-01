@@ -203,12 +203,75 @@ internal static class LSArrayRuntime
         return array;
     }
 
-    public static object? Get(object? value, params object?[] indices) => Require(value).Get(indices);
-    public static void Set(object? value, object? newValue, params object?[] indices) => Require(value).Set(newValue, indices);
-    public static int LBound(object? value, int dimension = 1) => Require(value).LBound(dimension);
-    public static int UBound(object? value, int dimension = 1) => Require(value).UBound(dimension);
-    public static void Erase(object? value) => Require(value).Erase();
-    private static LSArray Require(object? value) => value as LSArray ?? throw new InvalidOperationException("Value is not an XPScript array.");
+    public static object? Get(object? value, params object?[] indices)
+    {
+        if (value is LSArray array) return array.Get(indices);
+        if (value is Array managed) return managed.GetValue(ToManagedIndices(managed, indices));
+        throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    public static void Set(object? value, object? newValue, params object?[] indices)
+    {
+        if (value is LSArray array)
+        {
+            array.Set(newValue, indices);
+            return;
+        }
+        if (value is Array managed)
+        {
+            managed.SetValue(newValue, ToManagedIndices(managed, indices));
+            return;
+        }
+        throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    public static int LBound(object? value, int dimension = 1)
+    {
+        if (value is LSArray array) return array.LBound(dimension);
+        if (value is Array managed)
+        {
+            ValidateManagedDimension(managed, dimension);
+            return managed.GetLowerBound(dimension - 1);
+        }
+        throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    public static int UBound(object? value, int dimension = 1)
+    {
+        if (value is LSArray array) return array.UBound(dimension);
+        if (value is Array managed)
+        {
+            ValidateManagedDimension(managed, dimension);
+            return managed.GetUpperBound(dimension - 1);
+        }
+        throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    public static void Erase(object? value)
+    {
+        if (value is LSArray array)
+        {
+            array.Erase();
+            return;
+        }
+        if (value is Array managed)
+        {
+            Array.Clear(managed, 0, managed.Length);
+            return;
+        }
+        throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    private static int[] ToManagedIndices(Array array, object?[] indices)
+    {
+        if (indices.Length != array.Rank) throw new IndexOutOfRangeException("Wrong number of array subscripts.");
+        return indices.Select(XPScriptRuntime.CInt).ToArray();
+    }
+
+    private static void ValidateManagedDimension(Array array, int dimension)
+    {
+        if (dimension < 1 || dimension > array.Rank) throw new IndexOutOfRangeException("Invalid array dimension.");
+    }
 }
 
 internal sealed class LSByRefValue
