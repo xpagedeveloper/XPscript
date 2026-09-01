@@ -3,7 +3,7 @@ namespace XPScript.Compiler;
 internal static class MySqlDbRuntimeSource
 {
     public const string Code = """
-internal sealed class XPScriptDbMySql : IDisposable
+internal sealed class XPScriptDbMySql : XPScriptCaseInsensitiveDynamicObject, IDisposable
 {
     private const int MaxSqlBytes = 1024 * 1024;
     private const int MaxConnectionStringBytes = 16 * 1024;

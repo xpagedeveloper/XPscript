@@ -1,0 +1,46 @@
+' Opens the local testdb database and runs XPScriptFormulaAgent.
+Option Declare
+
+Sub Main()
+    Const DATABASE_PATH = "testdb.nsf"
+    Const AGENT_NAME = "XPScriptFormulaAgent"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim result As NotesAgentResult
+
+    Set session = Nothing
+    Set db = Nothing
+    Set result = Nothing
+    On Error GoTo Handler
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+
+    If Not db.IsOpen Then
+        Error 53, "Unable to open " & DATABASE_PATH
+    End If
+	dim a as NotesAgent
+    Set a = db.GetAgent(AGENT_NAME)
+	if not a is Nothing then
+		print "agent found"
+		print a.Name
+		a.Run()
+	end if
+    If result Is Nothing Then
+        Print "Agent did not return a result: " & AGENT_NAME
+    Else
+        Print "Agent: " & AGENT_NAME
+        Print "Success: " & CStr(result.Success)
+        Print "Status: " & CStr(result.Status)
+        Print "Output: " & result.Output
+        Call result.Recycle()
+    End If
+
+    Call db.Recycle()
+    Call session.Recycle()
+    Exit Sub
+
+Handler:
+    Print "Agent execution failed. Error=" & CStr(Err) & " Description=" & Error$
+End Sub

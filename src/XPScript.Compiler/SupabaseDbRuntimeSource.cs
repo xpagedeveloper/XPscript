@@ -3,7 +3,7 @@ namespace XPScript.Compiler;
 internal static class SupabaseDbRuntimeSource
 {
     public const string Code = """
-internal sealed class XPScriptDbSupabase : IDisposable
+internal sealed class XPScriptDbSupabase : XPScriptCaseInsensitiveDynamicObject, IDisposable
 {
     private readonly XPScriptHttpDbSupabase? _rest;
     private readonly string _connectionString = "";
