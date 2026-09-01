@@ -33,17 +33,26 @@ internal static class NotesRichTextMimePostProcessor
 """,
             "document-open-convert-mime");
 
+        // Keep the GetFirstItem -> HasItem adjacency intact. NotesRuntimeSourceBuilder
+        // uses that exact sequence as an ABI-normalization anchor before adding the
+        // wider LotusScript item surface.
         source = ReplaceRequired(
             source,
             """
-    public XPScriptNotesItem? GetFirstItem(object? nameValue)
-        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);
-
     public bool HasItem(object? nameValue)
+    {
+        EnsureAlive();
+        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));
+    }
+
+    public object? GetValue(object? nameValue)
 """,
             """
-    public XPScriptNotesItem? GetFirstItem(object? nameValue)
-        => XPScriptNotesItemApi.GetFirstItem(this, nameValue);
+    public bool HasItem(object? nameValue)
+    {
+        EnsureAlive();
+        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));
+    }
 
     public XPScriptNotesRichTextItem CreateRichTextItem(object? nameValue)
     {
@@ -55,7 +64,7 @@ internal static class NotesRichTextMimePostProcessor
         return new XPScriptNotesRichTextItem(Session, this, name);
     }
 
-    public bool HasItem(object? nameValue)
+    public object? GetValue(object? nameValue)
 """,
             "document-create-richtext");
 
