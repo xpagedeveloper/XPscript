@@ -698,7 +698,7 @@ internal sealed class XPScriptNotesRichTextNavigator : XPScriptNotesObject
 
     private static int ValidateElementType(int type)
     {
-        if (type is 1 or 3 or 4 or 5 or 6 or 7 or 8 or 9) return type;
+        if (type is 1 or 3 or 4 or 5 or 6 or 7 or 8) return type;
         throw new XPScriptRuntimeException(5, "Unsupported rich text element type " + type.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
     }
 
@@ -748,7 +748,6 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort SigCdLinkExport2ForObjects = unchecked((ushort)-110);
     private const ushort SigCdTableBeginForObjects = 163;
     private const ushort SigCdTableCellForObjects = 164;
-    private const ushort SigCdOleBeginForObjects = unchecked((ushort)-89);
     private const ushort SigCdBarForObjects = unchecked((ushort)-84);
 
     internal XPScriptNotesCompoundStyleState GetDefaultRichTextParagraphStyle()
@@ -836,7 +835,6 @@ internal sealed partial class XPScriptNotesNativeApi
         if (signature == SigCdLink2ForObjects || signature == SigCdLinkExport2ForObjects) return 5;
         if (signature == SigCdBarForObjects) return 6;
         if (signature == SigCdTableCellForObjects) return 7;
-        if (signature == SigCdOleBeginForObjects) return 9;
         if (recordLength >= 12 && IsHotspotBeginSignature(signature))
         {
             var hotspotType = unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(record, 4));
