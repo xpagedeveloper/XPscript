@@ -57,9 +57,9 @@ if ($subjectColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptTestVi
 $groupColumn = Require-SingleNode -XPath "/dxl:database/dxl:view[@name='XPScriptHierarchyView']/dxl:column[@itemname='XPScriptGroup']" -Label 'XPScriptHierarchyView group column'
 if ($groupColumn.GetAttribute('categorized') -ne 'true' -or $groupColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptHierarchyView group column must remain categorized and ascending.' }
 
-$agentScript = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:code[@event='action']/dxl:lotusscript" -Label 'XPScriptTestAgent LotusScript body'
-if ($agentScript.InnerText -notmatch 'XPSCRIPT-AGENT=OK') { throw 'XPScriptTestAgent is missing the no-context success marker.' }
-if ($agentScript.InnerText -notmatch 'XPSCRIPT-AGENT-DOC=') { throw 'XPScriptTestAgent is missing the document-context marker.' }
+$agentTrigger = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:trigger[@type='agentlist']" -Label 'XPScriptTestAgent agent-list trigger'
+$agentFormula = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:code[@event='action']/dxl:formula" -Label 'XPScriptTestAgent formula action'
+if ($agentFormula.InnerText.Trim() -ne '@True') { throw "XPScriptTestAgent formula action changed unexpectedly: $($agentFormula.InnerText.Trim())" }
 
 $expectedDocuments = @(
     @{ Subject = 'Alpha'; Marker = 'fixture-alpha'; Group = 'Group A'; TextList = @('one', 'two', 'three'); Number = '12.5' },
