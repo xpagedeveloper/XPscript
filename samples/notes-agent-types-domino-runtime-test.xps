@@ -1,4 +1,5 @@
 ' HCL Notes/Domino runtime regression for Formula, LotusScript and Java agents.
+' Workflow-scope probe only. This branch will not be merged.
 Option Declare
 
 Sub Main()
