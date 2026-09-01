@@ -75,6 +75,7 @@ Sub Main()
     End If
 
     Print "NOTES-AGENT-TYPES-BEGIN"
+    failures = failures + TestDocumentSign(db)
     failures = failures + TestAgentType(db, "Formula", "XPScriptFormulaAgent")
     failures = failures + TestAgentType(db, "LotusScript", "XPScriptLotusScriptAgent")
     failures = failures + TestAgentType(db, "Java", "XPScriptJavaAgent")
@@ -89,6 +90,52 @@ Sub Main()
         Print "NOTES-AGENT-TYPES=FAIL COUNT=" & CStr(failures)
     End If
 End Sub
+
+Function TestDocumentSign(ByVal db As Variant) As Integer
+    Dim notes As NotesNoteCollection
+    Dim design As NotesDocument
+    Dim noteId As String
+    Dim errCode As Integer
+
+    Print "DESIGN-DOCUMENT-SIGN-BEGIN"
+    Set notes = db.CreateNoteCollection(False)
+    Call notes.SelectAllDesignElements(True)
+    Call notes.BuildCollection()
+    noteId = notes.GetFirstNoteID()
+
+    If noteId = "" Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL No design note"
+        Call notes.Recycle()
+        TestDocumentSign = 1
+        Exit Function
+    End If
+
+    Set design = db.GetDocumentByID(noteId)
+    If design Is Nothing Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL Open design note"
+        Call notes.Recycle()
+        TestDocumentSign = 1
+        Exit Function
+    End If
+
+    errCode = 0
+    On Error Resume Next
+    Call design.Sign()
+    Call design.Save()
+    errCode = Err
+    On Error GoTo 0
+
+    If errCode <> 0 Then
+        Print "DESIGN-DOCUMENT-SIGN-FAIL Err=" & CStr(errCode)
+        TestDocumentSign = 1
+    Else
+        Print "DESIGN-DOCUMENT-SIGN=OK NoteID=" & design.NoteID
+        TestDocumentSign = 0
+    End If
+
+    Call design.Recycle()
+    Call notes.Recycle()
+End Function
 
 Function TestAgentType(ByVal db As Variant, ByVal agentType As String, ByVal agentName As String) As Integer
     Dim failures As Integer
