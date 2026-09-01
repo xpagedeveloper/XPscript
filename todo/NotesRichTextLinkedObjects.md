@@ -27,12 +27,12 @@ Primary references:
 ## NotesEmbeddedObject and attachments
 
 - [ ] Add `NotesEmbeddedObject` to the Notes compiler type model.
-- [ ] Implement attachment-backed `NotesEmbeddedObject` properties: `Class`, `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`, `Verbs`.
-- [ ] Implement attachment `ExtractFile`.
-- [ ] Implement XPScript extension `ToByteArray()` without a temporary file.
-- [ ] Use `NSFNoteCipherExtractWithCallback` for normal attachment reads so compressed attachments are streamed/decompressed by Notes.
-- [ ] Implement `NotesRichTextItem.GetEmbeddedObject(name)`.
-- [ ] Implement `NotesRichTextItem.EmbeddedObjects`.
+- [x] Implement attachment-backed `NotesEmbeddedObject` properties: `Class`, `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`, `Verbs`.
+- [x] Implement attachment `ExtractFile`.
+- [x] Implement XPScript extension `ToByteArray()` without a temporary file.
+- [x] Use `NSFNoteCipherExtractWithCallback` for normal attachment reads so compressed attachments are streamed/decompressed by Notes.
+- [x] Implement `NotesRichTextItem.GetEmbeddedObject(name)`.
+- [x] Implement `NotesRichTextItem.EmbeddedObjects`.
 - [ ] Materialize attachment elements from `NotesRichTextNavigator.GetElement()` as `NotesEmbeddedObject`.
 - [ ] Implement `NotesRichTextItem.EmbedObject(EMBED_ATTACHMENT, "", source [, name])`.
 - [ ] Attach physical file data with `NSFNoteAttachFile` and add the corresponding `HOTSPOTREC_TYPE_FILE` CD hotspot to the rich-text item.
@@ -43,10 +43,10 @@ Primary references:
 
 ## Binary array support
 
-- [ ] Add an internal XPScript binary-array construction path for attachment data.
-- [ ] Keep normal LotusScript array declaration/ReDim bounds compatible with LotusScript.
-- [ ] Allow API-produced binary arrays to represent attachments larger than the normal LotusScript subscript limit.
-- [ ] Avoid boxing every byte for large attachments if practical. Prefer byte-backed storage in the runtime.
+- [x] Add an internal XPScript binary-array construction path for attachment data.
+- [x] Keep normal LotusScript array declaration/ReDim bounds compatible with LotusScript.
+- [x] Allow API-produced binary arrays to represent attachments larger than the normal LotusScript subscript limit.
+- [ ] Replace the current boxed/reflection-backed binary array construction with byte-backed storage in the core runtime.
 - [ ] Add regression coverage for empty, small, >32 KiB, multi-megabyte, compressed, and incompressible attachments.
 
 ## NotesRichTextNavigator
@@ -147,7 +147,9 @@ Primary references:
 
 ## Verification
 
-- [ ] Cross-platform compiler CI for every public surface added here.
+- [x] Cross-platform compiler CI for Navigator/Style/ParagraphStyle/Tab/Range surface.
+- [ ] Cross-platform compiler CI for `NotesEmbeddedObject` surface.
+- [ ] Windows Notes client/runtime integration tests for attachment metadata, `ExtractFile`, and `ToByteArray`.
 - [ ] Windows Notes client/runtime integration tests for rich-text reads and mutations.
 - [ ] Domino server integration tests where server-only behavior differs.
 - [ ] Round-trip tests that compare unaffected CD records before and after mutation.
