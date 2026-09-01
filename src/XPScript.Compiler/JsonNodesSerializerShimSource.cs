@@ -10,5 +10,5 @@ namespace System.Text.Json.Nodes
         public static JsonNode? SerializeToNode(object value) => global::System.Text.Json.JsonSerializer.SerializeToNode(value);
     }
 }
-""" + "\n\n" + NativeXmlRuntimeSource.Code;
+""" + "\n\n" + NativeXmlRuntimeSource.Code + "\n\n" + NativeCsvRuntimeSource.Code;
 }
