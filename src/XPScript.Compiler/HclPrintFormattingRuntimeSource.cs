@@ -34,7 +34,7 @@ internal static class LSHclPrintRuntime
             var part = raw as Part ?? Text(raw);
             if (part.Kind == "text")
             {
-                var text = XPScriptRuntime.CStr(part.Value);
+                var text = XPScriptRuntime.PrintText(part.Value);
                 output.Append(text);
                 var lastBreak = text.LastIndexOf('\n');
                 column = lastBreak >= 0 ? text.Length - lastBreak : column + text.Length;

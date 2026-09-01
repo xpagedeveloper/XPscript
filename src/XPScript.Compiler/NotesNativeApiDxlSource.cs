@@ -319,11 +319,11 @@ internal sealed partial class XPScriptNotesNativeApi
         GC.KeepAlive(writer);
     }
 
-    private static string ResolveDxlFilePath(string filePath, bool output)
+    private string ResolveDxlFilePath(string filePath, bool output)
     {
         filePath = filePath.Trim();
         if (filePath.Length == 0) throw new XPScriptRuntimeException(5, "DXL file path cannot be empty.");
-        var fullPath = Path.GetFullPath(filePath);
+        var fullPath = Path.GetFullPath(filePath, _applicationDirectory);
         if (!output && !File.Exists(fullPath)) throw new XPScriptRuntimeException(53, "DXL file not found: " + fullPath);
         return fullPath;
     }

@@ -1258,6 +1258,8 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     Dim failedFields As Variant
     Dim ok As Boolean
     Dim errCode As Integer
+    Dim i As Integer
+    Dim failedFieldCount As Integer
     failures = 0
 
     Print "SECTION=NotesDocument.ComputeWithForm"
@@ -1302,10 +1304,41 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
         Print "FAIL CWF error form raiseError=True did not raise"
     Else
         Print "CWF expected validation Err=" & CStr(errCode)
+        If errCode <> 5 Then
+            failures = failures + 1
+            Print "FAIL CWF error form raiseError=True Err=" & CStr(errCode) & " expected=5"
+        End If
     End If
     If failedFields Is Nothing Then
         failures = failures + 1
         Print "FAIL CWF error form raiseError=True did not populate failedFields"
+    Else
+        failedFieldCount = 0
+        For i = LBound(failedFields) To UBound(failedFields)
+            Print "CWF failedFields(" & CStr(i) & ")=" & CStr(failedFields(i))
+            failedFieldCount = failedFieldCount + 1
+            If CStr(failedFields(i)) = "" Then
+                failures = failures + 1
+                Print "FAIL CWF failedFields contains an empty field name"
+            End If
+        Next
+        If failedFieldCount = 0 Then
+            failures = failures + 1
+            Print "FAIL CWF failedFields array is empty"
+        End If
+    End If
+    Call doc.Recycle()
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", errorForm)
+    errCode = 0
+    On Error Resume Next
+    Call doc.ComputeWithForm(False, True)
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 5 Then
+        failures = failures + 1
+        Print "FAIL CWF ordinary two-argument Err=" & CStr(errCode) & " expected=5"
     End If
     Call doc.Recycle()
 

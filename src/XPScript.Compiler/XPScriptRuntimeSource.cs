@@ -60,8 +60,14 @@ internal static class XPScriptRuntime
     public static string StrReverse(object? value) => new(CStr(value).Reverse().ToArray());
 
     public static string CStr(object? value) =>
+        value is ILSObjectReference reference && reference.IsNothing ? "" :
         value is DateTime dt ? dt.ToString(CultureInfo.CurrentCulture) :
         Convert.ToString(value, CultureInfo.CurrentCulture) ?? "";
+
+    public static string PrintText(object? value) =>
+        XPScriptNullRuntime.IsNull(value) ? "Variable is null" :
+        value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" :
+        CStr(value);
     public static byte CByte(object? value) => Convert.ToByte(value, CultureInfo.CurrentCulture);
     public static int CInt(object? value) => Convert.ToInt32(value, CultureInfo.CurrentCulture);
     public static long CLng(object? value) => Convert.ToInt64(value, CultureInfo.CurrentCulture);
@@ -422,7 +428,7 @@ internal static class XPScriptRuntime
     public static void PrintFile(int number, params object?[] values)
     {
         var writer = GetFile(number).Writer ?? throw new IOException("File is not open for output.");
-        writer.WriteLine(string.Concat(values.Select(CStr)));
+        writer.WriteLine(string.Concat(values.Select(PrintText)));
     }
 
     public static void WriteFile(int number, params object?[] values)

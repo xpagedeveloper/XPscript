@@ -6,6 +6,13 @@ internal static class FileSystemPortabilityRuntimeSource
 internal static class XPScriptFileSystemRuntime
 {
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
+    private static string _scriptDirectory = Environment.CurrentDirectory;
+
+    public static void SetScriptDirectory(string directory)
+    {
+        if (!string.IsNullOrWhiteSpace(directory))
+            _scriptDirectory = Path.GetFullPath(directory);
+    }
 
     private const int DarwinOpenReadWrite = 0x0002;
     private const int DarwinOpenReadOnly = 0x0000;
@@ -64,7 +71,7 @@ internal static class XPScriptFileSystemRuntime
         var path = XPScriptRuntime.CStr(value);
         if (string.IsNullOrWhiteSpace(path))
             throw new XPScriptRuntimeException(5, "File path must not be empty.");
-        try { return Path.GetFullPath(path); }
+        try { return Path.GetFullPath(path, _scriptDirectory); }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             throw new XPScriptRuntimeException(5, "Invalid file path.");
@@ -336,7 +343,7 @@ internal static class XPScriptFileSystemRuntime
         var raw = XPScriptRuntime.CStr(patternValue);
         if (string.IsNullOrWhiteSpace(raw)) raw = "*";
         var directoryPart = Path.GetDirectoryName(raw);
-        var directory = string.IsNullOrEmpty(directoryPart) ? Environment.CurrentDirectory : ResolvePath(directoryPart);
+        var directory = string.IsNullOrEmpty(directoryPart) ? _scriptDirectory : ResolvePath(directoryPart);
         var mask = Path.GetFileName(raw);
         if (string.IsNullOrEmpty(mask)) mask = "*";
         if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("Directory does not exist.");

@@ -157,7 +157,7 @@ public sealed class XPScriptTranspiler
 
         generated = generated.Replace(
             "XPScriptRuntime.SetArgs(args);",
-            $"XPScriptRuntime.SetArgs(args);\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
+            $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
             StringComparison.Ordinal);
 
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);
@@ -175,6 +175,14 @@ public sealed class XPScriptTranspiler
             "\"isobject\" when args.Count == 1 => XPScriptNullRuntime.IsObject(Arg(0)),", StringComparison.Ordinal)
         .Replace("\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptRuntime.IsScalar(Arg(0)),",
             "\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptNullRuntime.IsScalar(Arg(0)),", StringComparison.Ordinal);
+
+    private static string GetSourceDirectory(string sourceName)
+    {
+        var fullSourcePath = Path.GetFullPath(sourceName);
+        return Path.GetDirectoryName(fullSourcePath) ?? Environment.CurrentDirectory;
+    }
+
+    private static string EscapeCSharpString(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
     public string Transpile(string source) => Transpile(source, "input.xps");
 

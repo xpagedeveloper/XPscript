@@ -166,7 +166,7 @@ internal static class XPScriptTextIO
     {
         var writer = GetFile(XPScriptRuntime.CInt(fileNumberValue)).Writer
             ?? throw new IOException("File is not open for output.");
-        writer.WriteLine(string.Concat((values ?? []).Select(XPScriptRuntime.CStr)));
+        writer.WriteLine(string.Concat((values ?? []).Select(XPScriptRuntime.PrintText)));
         writer.Flush();
     }
 
