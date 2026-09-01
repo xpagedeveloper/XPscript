@@ -31,7 +31,9 @@ foreach ($formName in @('XPScriptTest', 'XPScriptCWFValid', 'XPScriptCWFErrors')
 
 [void](Require-SingleNode -XPath "/dxl:database/dxl:view[@name='XPScriptTestView']" -Label 'View XPScriptTestView')
 [void](Require-SingleNode -XPath "/dxl:database/dxl:view[@name='XPScriptHierarchyView']" -Label 'View XPScriptHierarchyView')
-[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']" -Label 'Agent XPScriptTestAgent')
+foreach ($agentName in @('XPScriptFormulaAgent', 'XPScriptLotusScriptAgent', 'XPScriptJavaAgent')) {
+    [void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='$agentName']" -Label "Agent $agentName")
+}
 
 [void](Require-SingleNode -XPath "/dxl:database/dxl:form[@name='XPScriptTest']//dxl:field[@name='Subject']" -Label 'XPScriptTest.Subject field')
 [void](Require-SingleNode -XPath "/dxl:database/dxl:form[@name='XPScriptTest']//dxl:field[@name='XPScriptMarker']" -Label 'XPScriptTest.XPScriptMarker field')
@@ -57,13 +59,24 @@ if ($subjectColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptTestVi
 $groupColumn = Require-SingleNode -XPath "/dxl:database/dxl:view[@name='XPScriptHierarchyView']/dxl:column[@itemname='XPScriptGroup']" -Label 'XPScriptHierarchyView group column'
 if ($groupColumn.GetAttribute('categorized') -ne 'true' -or $groupColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptHierarchyView group column must remain categorized and ascending.' }
 
-$agentTrigger = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:trigger[@type='actionsmenu']" -Label 'XPScriptTestAgent actions-menu trigger'
-$agentDocumentSet = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:documentset[@type='all']" -Label 'XPScriptTestAgent all-documents target'
-$agentFormula = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:code[@event='action']/dxl:simpleaction[@action='runformula']/dxl:formula" -Label 'XPScriptTestAgent Designer-style formula action'
-$expectedAgentFormula = '@SetField("XPScriptAgentType"; "Formula");' + [Environment]::NewLine + 'SELECT @All'
-if ($agentFormula.InnerText.Trim().Replace("`r`n", "`n") -ne $expectedAgentFormula.Replace("`r`n", "`n")) {
-    throw "XPScriptTestAgent formula action changed unexpectedly: $($agentFormula.InnerText.Trim())"
-}
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptFormulaAgent']/dxl:trigger[@type='actionsmenu']" -Label 'Formula agent actions-menu trigger')
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptFormulaAgent']/dxl:documentset[@type='all']" -Label 'Formula agent all-documents target')
+$formulaAgentCode = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptFormulaAgent']/dxl:code[@event='action']/dxl:simpleaction[@action='runformula']/dxl:formula" -Label 'Formula agent Designer-style action'
+if (-not $formulaAgentCode.InnerText.Contains('@SetField("XPScriptAgentType"; "Formula")')) { throw 'Formula agent does not contain the expected XPScriptAgentType marker.' }
+if (-not $formulaAgentCode.InnerText.Contains('SELECT @All')) { throw 'Formula agent does not contain SELECT @All.' }
+
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptLotusScriptAgent']/dxl:trigger[@type='actionsmenu']" -Label 'LotusScript agent actions-menu trigger')
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptLotusScriptAgent']/dxl:documentset[@type='selected']" -Label 'LotusScript agent selected-documents target')
+$lotusScriptAgent = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptLotusScriptAgent']/dxl:code[@event='initialize']/dxl:lotusscript" -Label 'LotusScript agent Initialize code'
+if (-not $lotusScriptAgent.InnerText.Contains('Print "XPScriptLotusScriptAgent"')) { throw 'LotusScript agent output marker changed unexpectedly.' }
+
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptJavaAgent']/dxl:trigger[@type='actionsmenu']" -Label 'Java agent actions-menu trigger')
+[void](Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptJavaAgent']/dxl:documentset[@type='selected']" -Label 'Java agent selected-documents target')
+$javaAgent = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptJavaAgent']/dxl:code[@event='action']/dxl:javaproject/dxl:java[@name='JavaAgent.java']" -Label 'Java agent source'
+if (-not $javaAgent.InnerText.Contains('System.out.println("XPScriptJavaAgent")')) { throw 'Java agent output marker changed unexpectedly.' }
+$javaSource = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptJavaAgent']/dxl:item[@name='$JavaCompilerSource']/dxl:text" -Label 'Java compiler source level'
+$javaTarget = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptJavaAgent']/dxl:item[@name='$JavaCompilerTarget']/dxl:text" -Label 'Java compiler target level'
+if ($javaSource.InnerText -ne '1.8' -or $javaTarget.InnerText -ne '1.8') { throw 'Java agent compiler source/target must remain 1.8.' }
 
 $expectedDocuments = @(
     @{ Subject = 'Alpha'; Marker = 'fixture-alpha'; Group = 'Group A'; TextList = @('one', 'two', 'three'); Number = '12.5' },
