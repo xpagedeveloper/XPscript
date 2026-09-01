@@ -1,0 +1,81 @@
+Option Declare
+
+Sub Main()
+    Dim csv As String
+    Dim doc As CsvDocument
+    Dim row As CsvRow
+    Dim built As New CsvDocument
+    Dim builtRow As CsvRow
+    Dim headerCount As Integer
+    Dim rowCount As Integer
+    Dim columnCount As Integer
+    Dim errCode As Integer
+    Dim errText As String
+    Dim encoded As Variant
+
+    csv = "id;name;note" & Chr(10) & _
+          "1;Fredrik;""Hello; world""" & Chr(10) & _
+          "2;Anna;""Line one" & Chr(10) & "Line two"""
+
+    Set doc = CsvParse(csv, ";")
+    Print "ROWS=" & CStr(doc.RowCount)
+    Print "COLUMNS=" & CStr(doc.ColumnCount)
+    Print "HEADER0=" & doc.Headers[0]
+    Print "HEADER1=" & doc.Headers.Get(1)
+
+    headerCount = 0
+    ForAll header In doc.Headers
+        headerCount = headerCount + 1
+    End ForAll
+    Print "HEADER_FORALL=" & CStr(headerCount)
+
+    Set row = doc.Rows[0]
+    Print "ROW0_NAME=" & row.Get("name")
+    Print "ROW0_INDEX=" & row[1]
+    Print "ROW0_NOTE=" & row.Get("note")
+
+    rowCount = 0
+    ForAll iterRow In doc.Rows
+        rowCount = rowCount + 1
+    End ForAll
+    Print "ROW_FORALL=" & CStr(rowCount)
+
+    columnCount = 0
+    ForAll column In row.Columns
+        columnCount = columnCount + 1
+        If column.Index = 1 Then
+            Print "COLUMN=" & column.Name & ":" & column.Value
+        End If
+    End ForAll
+    Print "COLUMN_FORALL=" & CStr(columnCount)
+    Print "COLUMN_INDEX=" & row.Columns[1].Value
+
+    Call row.Set("name", "FNO")
+    Print "STRICT_SET=" & row.Get("name")
+
+    On Error Resume Next
+    Print row.Get("missing")
+    errCode = Err
+    errText = Error$
+    On Error GoTo 0
+    Print "MISSING_ERR=" & CStr(errCode)
+    Print "MISSING_TEXT=" & errText
+
+    built.Delimiter = ";"
+    Call built.AddHeader("id")
+    Call built.AddHeader("name")
+    Call built.AddHeader("city")
+    Set builtRow = built.AddRow()
+    Call builtRow.Set("id", "00123")
+    Call builtRow.Set("name", "Åsa")
+    Call builtRow.Set("city", "Malmö; Sweden")
+    Print "BUILT=" & CsvStringify(built)
+    Print "ESCAPE=" & CsvEscape("Malmö; Sweden", ";")
+
+    built.Encoding = "windows-1252"
+    encoded = built.ToBytes()
+    Set doc = CsvParseBytes(encoded, "windows-1252", ";")
+    Print "ENCODING=" & doc.Encoding
+    Print "ROUNDTRIP=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
+    Print "LEADING_ZERO=" & doc.Rows[0].Get("id")
+End Sub
