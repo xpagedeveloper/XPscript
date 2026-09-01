@@ -13,7 +13,7 @@ Sub Main()
     Set db = session.OpenDatabase("", "xpscript.nsf")
 
     Set importer = session.CreateDXLImporter()
-    importer.ACLImportOption = 2
+    importer.ACLImportOption = 1
     importer.DesignImportOption = 6
     importer.DocumentImportOption = 6
     importer.CreateFTIndex = False
