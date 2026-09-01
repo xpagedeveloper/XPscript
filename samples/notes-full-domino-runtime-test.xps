@@ -19,7 +19,7 @@ Sub Main()
     Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
     Const NOTES_INI = ""
     Const DATABASE_PATH = "xpscript.nsf"
-    Const FIXTURE_DXL = "samples/xpscript-notes-runtime-fixture.dxl"
+    Const FIXTURE_DXL = "xpscript-notes-runtime-fixture.dxl"
     Const TEST_VIEW = "XPScriptTestView"
     Const HIERARCHY_VIEW = "XPScriptHierarchyView"
     Const TEST_AGENT = "XPScriptTestAgent"
