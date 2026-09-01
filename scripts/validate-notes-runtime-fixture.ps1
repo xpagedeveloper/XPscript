@@ -57,9 +57,13 @@ if ($subjectColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptTestVi
 $groupColumn = Require-SingleNode -XPath "/dxl:database/dxl:view[@name='XPScriptHierarchyView']/dxl:column[@itemname='XPScriptGroup']" -Label 'XPScriptHierarchyView group column'
 if ($groupColumn.GetAttribute('categorized') -ne 'true' -or $groupColumn.GetAttribute('sort') -ne 'ascending') { throw 'XPScriptHierarchyView group column must remain categorized and ascending.' }
 
-$agentTrigger = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:trigger[@type='agentlist']" -Label 'XPScriptTestAgent agent-list trigger'
-$agentFormula = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:code[@event='action']/dxl:formula" -Label 'XPScriptTestAgent formula action'
-if ($agentFormula.InnerText.Trim() -ne '@True') { throw "XPScriptTestAgent formula action changed unexpectedly: $($agentFormula.InnerText.Trim())" }
+$agentTrigger = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:trigger[@type='actionsmenu']" -Label 'XPScriptTestAgent actions-menu trigger'
+$agentDocumentSet = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:documentset[@type='all']" -Label 'XPScriptTestAgent all-documents target'
+$agentFormula = Require-SingleNode -XPath "/dxl:database/dxl:agent[@name='XPScriptTestAgent']/dxl:code[@event='action']/dxl:simpleaction[@action='runformula']/dxl:formula" -Label 'XPScriptTestAgent Designer-style formula action'
+$expectedAgentFormula = '@SetField("XPScriptAgentType"; "Formula");' + [Environment]::NewLine + 'SELECT @All'
+if ($agentFormula.InnerText.Trim().Replace("`r`n", "`n") -ne $expectedAgentFormula.Replace("`r`n", "`n")) {
+    throw "XPScriptTestAgent formula action changed unexpectedly: $($agentFormula.InnerText.Trim())"
+}
 
 $expectedDocuments = @(
     @{ Subject = 'Alpha'; Marker = 'fixture-alpha'; Group = 'Group A'; TextList = @('one', 'two', 'three'); Number = '12.5' },
