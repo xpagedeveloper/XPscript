@@ -212,6 +212,8 @@ internal static class NotesSessionPathPostProcessor
             return source.Replace(oldValue, newValue, StringComparison.Ordinal);
         if (source.Contains(newValue, StringComparison.Ordinal))
             return source;
+        if (stage == "windows-notes-domino-runtime-order")
+            return source;
         throw new CompilerException("Unable to apply NotesSession path patch (" + stage + ").");
     }
 }
