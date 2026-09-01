@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/notes-full-domino-runtime
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-full-domino-runtime-test.xps --framework-dependent -o artifacts/notes-full-domino-runtime/notes-full-domino-runtime
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- samples/notes-full-domino-runtime-test.xps --debug --framework-dependent -o artifacts/notes-full-domino-runtime/notes-full-domino-runtime
       - name: Compile Notes DXL importer exporter surface
         shell: bash
         run: |
