@@ -65,12 +65,12 @@ internal sealed partial class XPScriptNotesNativeApi
 
     internal ushort GetDxlImporterWord(uint importer, ushort property)
     {
-        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
         try
         {
-            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, 0);
+            System.Runtime.InteropServices.Marshal.WriteInt32(pointer, 0);
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, property, pointer), "DXLGetImporterProperty");
-            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(pointer));
+            return checked((ushort)System.Runtime.InteropServices.Marshal.ReadInt32(pointer));
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
@@ -118,7 +118,7 @@ internal sealed partial class XPScriptNotesNativeApi
             if (read > 0) System.Runtime.InteropServices.Marshal.Copy(managed, 0, buffer, read);
             return checked((uint)read);
         };
-        Check(Resolve<DXLImportDelegate>("DXLImport")(reader, 0, importer, database), "DXLImport");
+        Check(Resolve<DXLImportDelegate>("DXLImport")(importer, reader, database, 0), "DXLImport");
         GC.KeepAlive(reader);
     }
 
@@ -228,10 +228,10 @@ internal sealed partial class XPScriptNotesNativeApi
 
     private void SetDxlImporterWord(uint importer, ushort property, ushort value)
     {
-        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(int));
         try
         {
-            System.Runtime.InteropServices.Marshal.WriteInt16(pointer, unchecked((short)value));
+            System.Runtime.InteropServices.Marshal.WriteInt32(pointer, value);
             Check(Resolve<DXLSetImporterPropertyDelegate>("DXLSetImporterProperty")(importer, property, pointer), "DXLSetImporterProperty");
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
@@ -330,15 +330,15 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateImporterDelegate(out uint importer);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteImporterDelegate(uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetImporterPropertyDelegate(uint importer, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetImporterPropertyDelegate(uint importer, ushort property, nint value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetImporterPropertyDelegate(uint importer, int property, nint value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetImporterPropertyDelegate(uint importer, int property, nint value);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XMLReadFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLImportDelegate(XMLReadFunctionDelegate reader, nint action, uint importer, uint database);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLImportDelegate(uint importer, XMLReadFunctionDelegate reader, uint database, nint action);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateExporterDelegate(out uint exporter);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteExporterDelegate(uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetExporterPropertyDelegate(uint exporter, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetExporterPropertyDelegate(uint exporter, ushort property, nint value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetExporterPropertyDelegate(uint exporter, int property, nint value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetExporterPropertyDelegate(uint exporter, int property, nint value);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XMLWriteFunctionDelegate(nint buffer, uint length, nint action);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportNoteDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint note, nint action);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportIDTableDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint database, uint idTable, nint action);
