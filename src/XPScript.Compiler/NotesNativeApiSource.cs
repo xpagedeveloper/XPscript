@@ -15,6 +15,7 @@ internal static class NotesNativeApiSource
         NotesNativeApiItemSource.Code + "\n\n" +
         NotesNativeApiAttachmentSource.Code + "\n\n" +
         NotesNativeApiRichTextObjectsSource.Code + "\n\n" +
+        NotesNativeApiRichTextCreateSource.Code + "\n\n" +
         NotesNativeApiSearchSource.Code + "\n\n" +
         NotesNativeApiDxlSource.Code + "\n\n" +
         NotesNativeApiThreadSource.Code;
