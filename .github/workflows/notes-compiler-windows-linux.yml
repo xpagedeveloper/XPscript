@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/Notes*.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'samples/notes-full-domino-runtime-test.xps'
+      - 'samples/notes-agent-types-domino-runtime-test.xps'
       - 'samples/xpscript-notes-runtime-fixture.dxl'
       - '.github/workflows/notes-compiler-windows-linux.yml'
   workflow_dispatch:
@@ -44,3 +45,10 @@ jobs:
           New-Item -ItemType Directory -Force ./out/notes-full-domino-runtime | Out-Null
           dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./samples/notes-full-domino-runtime-test.xps --framework-dependent -o ./out/notes-full-domino-runtime/notes-full-domino-runtime
           if ($LASTEXITCODE -ne 0) { throw 'Notes full Domino runtime sample compilation failed.' }
+
+      - name: Compile Notes agent type runtime regression
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/notes-agent-types-domino-runtime | Out-Null
+          dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./samples/notes-agent-types-domino-runtime-test.xps --framework-dependent -o ./out/notes-agent-types-domino-runtime/notes-agent-types-domino-runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Notes agent type runtime sample compilation failed.' }
