@@ -75,7 +75,7 @@ internal sealed class XPScriptNotesRichTextRecordData
     private string ReadCompositeTextForObjects(nint record, ushort signature, int recordLength)
     {
         if (signature != SigCdTextForObjects || recordLength <= 8) return "";
-        return FromLmbcs(nint.Add(record, 8), recordLength - 8).Replace('\\0', '\\n');
+        return FromLmbcs(nint.Add(record, 8), recordLength - 8).Replace('\0', '\n');
     }
 
     private int MapRichTextElementTypeForObjects(nint record, ushort signature, int recordLength)
@@ -84,7 +84,7 @@ internal sealed class XPScriptNotesRichTextRecordData
     private string ReadCompositeTextForObjects(nint record, ushort signature, int recordLength)
     {
         if (signature != SigCdTextForObjects || recordLength <= 8) return "";
-        return FromLmbcs(nint.Add(record, 8), recordLength - 8).Replace('\\0', '\\n');
+        return FromLmbcs(nint.Add(record, 8), recordLength - 8).Replace('\0', '\n');
     }
 
     private string ReadLinkedObjectNameForObjects(nint record, int elementType, int recordLength)
