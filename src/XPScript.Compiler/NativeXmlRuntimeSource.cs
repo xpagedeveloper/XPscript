@@ -156,8 +156,8 @@ internal class XPScriptXmlNode
     public string NodeType => Node switch
     {
         System.Xml.Linq.XElement => "Element",
-        System.Xml.Linq.XText => "Text",
         System.Xml.Linq.XCData => "CData",
+        System.Xml.Linq.XText => "Text",
         System.Xml.Linq.XComment => "Comment",
         System.Xml.Linq.XProcessingInstruction => "ProcessingInstruction",
         System.Xml.Linq.XDocumentType => "DocumentType",
@@ -171,6 +171,7 @@ internal class XPScriptXmlNode
         get => Node switch
         {
             System.Xml.Linq.XElement element => element.Value,
+            System.Xml.Linq.XCData cdata => cdata.Value,
             System.Xml.Linq.XText text => text.Value,
             System.Xml.Linq.XComment comment => comment.Value,
             _ => ""
@@ -181,6 +182,9 @@ internal class XPScriptXmlNode
             {
                 case System.Xml.Linq.XElement element:
                     element.Value = XPScriptNativeXml.ScalarText(value);
+                    break;
+                case System.Xml.Linq.XCData cdata:
+                    cdata.Value = XPScriptNativeXml.ScalarText(value);
                     break;
                 case System.Xml.Linq.XText text:
                     text.Value = XPScriptNativeXml.ScalarText(value);
@@ -294,8 +298,8 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
     private static System.Xml.Linq.XNode CloneNode(System.Xml.Linq.XNode node) => node switch
     {
         System.Xml.Linq.XElement element => new System.Xml.Linq.XElement(element),
-        System.Xml.Linq.XText text => new System.Xml.Linq.XText(text.Value),
         System.Xml.Linq.XCData cdata => new System.Xml.Linq.XCData(cdata.Value),
+        System.Xml.Linq.XText text => new System.Xml.Linq.XText(text.Value),
         System.Xml.Linq.XComment comment => new System.Xml.Linq.XComment(comment.Value),
         System.Xml.Linq.XProcessingInstruction instruction => new System.Xml.Linq.XProcessingInstruction(instruction.Target, instruction.Data),
         _ => throw new XPScriptRuntimeException(5, "Unsupported XML node type.")
@@ -364,9 +368,9 @@ internal sealed class XPScriptXmlDocument
             NewLineHandling = System.Xml.NewLineHandling.Replace,
             Encoding = new System.Text.UTF8Encoding(false)
         };
-        var builder = new System.Text.StringBuilder();
-        using (var writer = System.Xml.XmlWriter.Create(builder, settings)) Document.Save(writer);
-        return builder.ToString();
+        using var stream = new System.IO.MemoryStream();
+        using (var writer = System.Xml.XmlWriter.Create(stream, settings)) Document.Save(writer);
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray());
     }
 }
 
