@@ -29,6 +29,18 @@ internal sealed class XPScriptBinaryArray : System.Collections.Generic.IEnumerab
         _data[index] = XPScriptRuntime.CByte(value);
     }
 
+    internal int LBound(int dimension = 1)
+    {
+        if (dimension != 1) throw new IndexOutOfRangeException("Invalid array dimension.");
+        return 0;
+    }
+
+    internal int UBound(int dimension = 1)
+    {
+        if (dimension != 1) throw new IndexOutOfRangeException("Invalid array dimension.");
+        return _data.Length - 1;
+    }
+
     internal byte[] ToArray() => (byte[])_data.Clone();
 
     public System.Collections.Generic.IEnumerator<byte> GetEnumerator() =>
@@ -78,6 +90,18 @@ internal static class LSDynamicIndexRuntime
 
         LSArrayRuntime.Set(value, newValue, indices);
     }
+
+    public static int LBound(object? value, int dimension = 1) => value switch
+    {
+        XPScriptBinaryArray binary => binary.LBound(dimension),
+        _ => LSArrayRuntime.LBound(value, dimension)
+    };
+
+    public static int UBound(object? value, int dimension = 1) => value switch
+    {
+        XPScriptBinaryArray binary => binary.UBound(dimension),
+        _ => LSArrayRuntime.UBound(value, dimension)
+    };
 }
 """;
 }
