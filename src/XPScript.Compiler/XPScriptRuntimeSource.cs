@@ -99,7 +99,7 @@ internal static class XPScriptRuntime
         DateTime => 7,
         string => 8,
         bool => 11,
-        Array => 8192,
+        LSArray or Array => 8192,
         _ => 9
     };
 
@@ -115,11 +115,11 @@ internal static class XPScriptRuntime
         DateTime => "DATE",
         string => "STRING",
         bool => "BOOLEAN",
-        Array => "ARRAY",
+        LSArray or Array => "ARRAY",
         _ => value.GetType().Name.ToUpperInvariant()
     };
 
-    public static bool IsArray(object? value) => value is Array;
+    public static bool IsArray(object? value) => value is LSArray or Array;
     public static bool IsDate(object? value)
     {
         if (value is DateTime) return true;
@@ -127,7 +127,7 @@ internal static class XPScriptRuntime
     }
     public static bool IsEmpty(object? value) => value is null;
     public static bool IsNull(object? value) => value is null;
-    public static bool IsObject(object? value) => value is not null && value is not string && !value.GetType().IsValueType;
+    public static bool IsObject(object? value) => value is not null && value is not string && value is not LSArray && value is not Array && !value.GetType().IsValueType;
     public static bool IsScalar(object? value) => value is null || value is string || value.GetType().IsValueType;
     public static bool IsNumeric(object? value) =>
         double.TryParse(CStr(value), NumberStyles.Any, CultureInfo.CurrentCulture, out _);
