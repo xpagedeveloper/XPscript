@@ -42,7 +42,7 @@ internal static class NotesSigningPostProcessor
             "document-sign");
 
         const string nativeSigning = """
-    internal void SignNote(nint note)
+    internal void SignNote(uint note)
     {
         EnsureInitialized();
         Check(Resolve<NSFNoteSignDelegate>("NSFNoteSign")(note), "NSFNoteSign");
