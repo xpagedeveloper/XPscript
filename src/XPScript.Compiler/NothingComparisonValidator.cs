@@ -13,6 +13,10 @@ internal sealed class NothingComparisonValidator
         @"(?ix)\bSet\b[^:=\r\n]*=\s*Nothing\b",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex DirectNothingAssignment = new(
+        @"(?ix)^\s*(?:Let\s+)?[A-Z_]\w*(?:\s*(?:\([^\r\n]*\)|\.[A-Z_]\w*))*\s*=\s*Nothing\b",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public void Validate(string source, string sourceName)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -26,6 +30,7 @@ internal sealed class NothingComparisonValidator
                 continue;
 
             masked = SetNothingAssignment.Replace(masked, match => new string(' ', match.Length));
+            masked = DirectNothingAssignment.Replace(masked, match => new string(' ', match.Length));
             var match = InvalidComparison.Match(masked);
             if (!match.Success)
                 continue;
