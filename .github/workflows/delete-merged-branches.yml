@@ -71,6 +71,8 @@ jobs:
             todo-ui-form-select-password-v2
             todo-ui-form-validation-v1
             todo-ui-list-view-v1
+            feature/notes-note-collection
+            feature/notes-richtext-objects
           )
 
           is_explicitly_superseded_branch() {
