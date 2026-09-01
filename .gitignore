@@ -8,3 +8,4 @@ obj/
 publish/
 out/
 graphify-out/
+.codex/
