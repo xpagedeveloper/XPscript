@@ -246,7 +246,7 @@ See [Date and time](date-time.md) for Date object extensions.
 
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `Print` | `Print value` | value. | Writes standard output. A variable whose object reference is `Nothing` is written as `Variable is Nothing`. | [general-dim-is-nothing.xps](../samples/general-dim-is-nothing.xps) |
+| `Print` | `Print value` | value. | Writes standard output. An object reference whose value is `Nothing` is written as `Variable is Nothing`; `Null` is written as `Variable is null`. | [general-dim-is-nothing.xps](../samples/general-dim-is-nothing.xps), [null-empty-inspection-helpers.xps](../samples/null-empty-inspection-helpers.xps) |
 | `Input` | `Input [prompt,] variable` | optional prompt and target variable. | Reads interactive console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `InputBox` | `InputBox(prompt [, title [, default]])` | prompt and optional UI text/default. | Reads interactive text input. | [hello.xps](../samples/hello.xps) |
 | `Pause` | `Pause [prompt]` | optional prompt. | Waits for console input. | [textio-console.xps](../samples/textio-console.xps) |

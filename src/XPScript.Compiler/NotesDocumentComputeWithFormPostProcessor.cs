@@ -27,7 +27,7 @@ internal static class NotesDocumentComputeWithFormPostProcessor
         EnsureAlive();
         _ = XPScriptRuntime.CBool(doDataTypesValue);
         var raiseError = XPScriptRuntime.CBool(raiseErrorValue);
-        __xps_byref_failedFields = null;
+        __xps_byref_failedFields = XPScriptNotes.NothingValue;
 
         var result = Session.Api.ComputeDocumentWithFormAndCollectErrors(_handle);
         if (!result.Success && raiseError)
