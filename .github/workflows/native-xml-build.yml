@@ -1,0 +1,66 @@
+name: Native XML Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/NativeXmlRuntimeSource.cs'
+      - 'src/XPScript.Compiler/NativeXmlPreprocessor.cs'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
+      - 'src/XPScript.Compiler/JsonNodesSerializerShimSource.cs'
+      - 'samples/native-xml-regression.xps'
+      - 'docs/native-xml.md'
+      - '.github/workflows/native-xml-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-xml:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile Native XML API sample
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($IsWindows) { './out/native-xml-regression.exe' } else { './out/native-xml-regression' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-regression.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Native XML sample compilation failed.' }
+      - name: Run and verify Native XML API sample
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/native-xml-regression.exe' } else { './out/native-xml-regression' }
+          if (-not $IsWindows) { chmod +x $exe }
+          $output = @(& $exe 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Native XML regression failed.`n$output" }
+          $output | ForEach-Object { Write-Host $_ }
+          $required = @(
+            'ROOT=person',
+            'ID=42',
+            'NAME=Fredrik',
+            'XPATH=fredrik@example.com',
+            'MATCHES=1',
+            'VALID=True',
+            'ERRORS=0',
+            'ISVALID=True',
+            'INVALID=False',
+            'ERRORSEVERITY=Error',
+            'BUILT=<?xml version="1.0" encoding="utf-8"?><person id="7"><name>Anna</name><active>true</active><!--generated--><![CDATA[5 < 10 & 20 > 10]]></person>',
+            'ESCAPE=5 &lt; 10 &amp; 20 &gt; 10'
+          )
+          foreach ($value in $required) {
+            if ($output -notcontains $value) { throw "Native XML output missing: $value`n$output" }
+          }
