@@ -8,8 +8,23 @@ internal static class NotesDxlExportResultPostProcessor
 
         source = ReplaceRequired(source,
             "    public int RichTextOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 6); }\n        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 6, value); }\n    }",
-            "    public string Log { get { EnsureAlive(); return Session.Api.GetDxlExporterLog(_handle); } }\n\n    public int RichTextOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 6); }\n        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 6, value); }\n    }",
+            "    public string Log { get { EnsureAlive(); return Session.Api.GetDxlExporterLog(_handle); } }\n\n    public int RichTextOption\n    {\n        get { EnsureAlive(); return Session.Api.GetDxlExporterInt(_handle, 6); }\n        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 6, ValidateRichTextOption(value)); }\n    }",
             "exporter-log-property");
+
+        source = ReplaceRequired(source,
+            "        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 8, value); }",
+            "        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 8, ValidateValidationStyle(value)); }",
+            "validation-style");
+
+        source = ReplaceRequired(source,
+            "        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 11, value); }",
+            "        set { EnsureAlive(); Session.Api.SetDxlExporterIntProperty(_handle, 11, ValidateMimeOption(value)); }",
+            "mime-option");
+
+        source = ReplaceRequired(source,
+            "    public void ExportDatabaseDesign(XPScriptNotesDatabase database, object? filePathValue)",
+            ExportOptionValidation + "\n\n    public void ExportDatabaseDesign(XPScriptNotesDatabase database, object? filePathValue)",
+            "exporter-option-validation");
 
         source = ReplaceRequired(source,
             "    internal int GetDxlExporterInt(uint exporter, ushort property)",
@@ -18,6 +33,26 @@ internal static class NotesDxlExportResultPostProcessor
 
         return source;
     }
+
+    private const string ExportOptionValidation = """
+    private static int ValidateRichTextOption(int value)
+    {
+        if (value is 0 or 1) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLExporter.RichTextOption must be 0 or 1.");
+    }
+
+    private static int ValidateValidationStyle(int value)
+    {
+        if (value is 0 or 1 or 2) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLExporter.ValidationStyle must be 0, 1 or 2.");
+    }
+
+    private static int ValidateMimeOption(int value)
+    {
+        if (value is 0 or 1) return value;
+        throw new XPScriptRuntimeException(5, "NotesDXLExporter.MIMEOption must be 0 or 1.");
+    }
+""";
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
