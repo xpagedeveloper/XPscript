@@ -54,6 +54,17 @@ Sub Main()
             Call importer.Recycle()
         End If
     End If
+
+    If bootstrapErr = 0 Then
+        Print "BOOTSTRAP-SIGN-DESIGN-BEGIN User=" & session.UserName
+        Call db.Sign()
+        bootstrapErr = Err
+        If bootstrapErr <> 0 Then
+            Print "BOOTSTRAP-SIGN-DESIGN-ERROR=" & CStr(bootstrapErr)
+        Else
+            Print "BOOTSTRAP-SIGN-DESIGN=OK"
+        End If
+    End If
     On Error GoTo 0
 
     If bootstrapErr <> 0 Or Not db.IsOpen Then
