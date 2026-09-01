@@ -62,7 +62,6 @@ Sub Main()
     embeddedObjects = richText.EmbeddedObjects
     Set embedded = richText.GetEmbeddedObject("missing.bin")
     If Not embedded Is Nothing Then
-        Print embedded.Class
         Print embedded.FileCreated
         Print embedded.FileEncoding
         Print embedded.FileModified
@@ -71,7 +70,6 @@ Sub Main()
         Print embedded.Parent.Name
         Print embedded.Source
         Print embedded.Type
-        Print embedded.Verbs
         attachmentBytes = embedded.ToByteArray()
         Print LBound(attachmentBytes)
         Print UBound(attachmentBytes)
