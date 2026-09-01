@@ -13,6 +13,20 @@ Sub Main()
     fixedValues(1) = "B"
     managedValues = Split("A,B", ",")
 
+    If Not IsArray(fixedValues) Then Error 5
+    If IsObject(fixedValues) Then Error 5
+    If TypeName(fixedValues) <> "ARRAY" Then Error 5
+    If DataType(fixedValues) <> 8192 Then Error 5
+    If LBound(fixedValues) <> 0 Or UBound(fixedValues) <> 1 Then Error 5
+    If fixedValues(0) <> "A" Then Error 5
+
+    If Not IsArray(managedValues) Then Error 5
+    If IsObject(managedValues) Then Error 5
+    If TypeName(managedValues) <> "ARRAY" Then Error 5
+    If DataType(managedValues) <> 8192 Then Error 5
+    If LBound(managedValues) <> 0 Or UBound(managedValues) <> 1 Then Error 5
+    If managedValues(0) <> "A" Then Error 5
+
     Print "EMPTY_ISNUMERIC=" & CStr(IsNumeric(emptyValue))
     Print "EMPTY_ISSCALAR=" & CStr(IsScalar(emptyValue))
     Print "EMPTY_ISOBJECT=" & CStr(IsObject(emptyValue))
