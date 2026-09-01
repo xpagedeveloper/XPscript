@@ -15,7 +15,12 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public bool Remove(object? forceValue)
     {
         EnsureAlive();
-        return Session.Api.DeleteNote(_handle, XPScriptRuntime.CBool(forceValue));
+        if (NoteId == 0) throw new XPScriptRuntimeException(5, "Cannot remove an unsaved NotesDocument.");
+        var databaseHandle = Database.Handle;
+        var noteId = NoteId;
+        var api = Session.Api;
+        Recycle();
+        return api.DeleteNote(databaseHandle, noteId, XPScriptRuntime.CBool(forceValue));
     }
 """;
 
@@ -23,7 +28,12 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public bool Remove(object? forceValue)
     {
         EnsureAlive();
-        return Session.Api.DeleteNote(_handle, XPScriptRuntime.CBool(forceValue));
+        if (NoteId == 0) throw new XPScriptRuntimeException(5, "Cannot remove an unsaved NotesDocument.");
+        var databaseHandle = Database.Handle;
+        var noteId = NoteId;
+        var api = Session.Api;
+        Recycle();
+        return api.DeleteNote(databaseHandle, noteId, XPScriptRuntime.CBool(forceValue));
     }
 
     public long Size { get { EnsureAlive(); return Session.Api.GetDocumentSize(_handle); } }
