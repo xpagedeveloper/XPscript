@@ -59,18 +59,18 @@ internal sealed partial class XPScriptNotesNativeApi
         // validation callback has already reported the field-level failure.
         // Treat that status as the validation result, not as a native API failure.
         // Any other non-zero status still represents an unexpected lower-level error.
-        if (status != 0 && !(validationFailed && status == ComputeWithFormValidationFailedStatus))
+        if (status != 0 && status != ComputeWithFormValidationFailedStatus)
             Check(status, "NSFNoteComputeWithForm");
 
         return new XPScriptComputeWithFormResult(
             !validationFailed,
-            firstValidationError,
+            firstValidationError != 0 ? firstValidationError : status == ComputeWithFormValidationFailedStatus ? status : 0,
             failedFields?.ToArray() ?? []);
     }
 
     internal void ThrowComputeWithFormValidationError(ushort status)
     {
-        if (status != 0)
+        if (status != 0 && status != ComputeWithFormValidationFailedStatus)
         {
             Check(status, "NSFNoteComputeWithForm(validation)");
             return;
