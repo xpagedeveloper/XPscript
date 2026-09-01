@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 public static class JsonNodesSerializerShimSource
 {
-    public const string Code = """
+    public static readonly string Code = """
 namespace System.Text.Json.Nodes
 {
     internal static class JsonSerializer
@@ -10,5 +10,5 @@ namespace System.Text.Json.Nodes
         public static JsonNode? SerializeToNode(object value) => global::System.Text.Json.JsonSerializer.SerializeToNode(value);
     }
 }
-""";
+""" + "\n\n" + NativeXmlRuntimeSource.Code;
 }
