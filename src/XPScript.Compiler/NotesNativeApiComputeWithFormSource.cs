@@ -19,6 +19,7 @@ internal readonly struct XPScriptComputeWithFormResult
 
 internal sealed partial class XPScriptNotesNativeApi
 {
+    private const ushort ComputeWithFormValidationFailedStatus = 0x038d;
     private const int ComputeWithFormCdFieldFixedLength = 36;
     private const int ComputeWithFormDvLengthOffset = 22;
     private const int ComputeWithFormItLengthOffset = 24;
@@ -53,7 +54,13 @@ internal sealed partial class XPScriptNotesNativeApi
             callback,
             0);
         GC.KeepAlive(callback);
-        Check(status, "NSFNoteComputeWithForm");
+
+        // Some Domino runtimes return ERR_VALIDATION (0x038D) even after the
+        // validation callback has already reported the field-level failure.
+        // Treat that status as the validation result, not as a native API failure.
+        // Any other non-zero status still represents an unexpected lower-level error.
+        if (status != 0 && !(validationFailed && status == ComputeWithFormValidationFailedStatus))
+            Check(status, "NSFNoteComputeWithForm");
 
         return new XPScriptComputeWithFormResult(
             !validationFailed,
