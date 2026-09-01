@@ -22,8 +22,8 @@ internal static class NotesAgentPostProcessor
             "native-agent-open-sign-retry");
 
         source = ReplaceRequired(source,
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(uint db, uint noteId, out uint agent);",
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteSignDelegate(uint note);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(uint db, uint noteId, out uint agent);",
+            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(nint db, uint noteId, out nint agent);",
+            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteSignDelegate(nint note);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(nint db, uint noteId, out nint agent);",
             "native-agent-sign-delegate");
 
         source += "\n\n" + AgentRuntime;
