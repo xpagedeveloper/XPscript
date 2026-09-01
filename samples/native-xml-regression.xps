@@ -1,0 +1,58 @@
+Option Declare
+
+Sub Main()
+    Dim xml As String
+    Dim dtd As String
+    Dim doc As XmlDocument
+    Dim root As XmlElement
+    Dim selected As XmlNode
+    Dim matches As XmlNodeCollection
+    Dim result As XmlValidationResult
+    Dim err As XmlValidationError
+    Dim built As New XmlDocument
+    Dim person As XmlElement
+
+    xml = "<person id=""42""><name>Fredrik</name><email>fredrik@example.com</email></person>"
+    dtd = "<!ELEMENT person (name,email)>" & Chr(10) & _
+          "<!ATTLIST person id CDATA #REQUIRED>" & Chr(10) & _
+          "<!ELEMENT name (#PCDATA)>" & Chr(10) & _
+          "<!ELEMENT email (#PCDATA)>"
+
+    Set doc = XmlDocument.Parse(xml)
+    Set root = doc.Root
+    Print "ROOT=" & root.Name
+    Print "ID=" & root.GetAttribute("id")
+    Print "NAME=" & root.GetElement("name").Value
+
+    Set selected = doc.SelectSingleNode("/person/email")
+    Print "XPATH=" & selected.Value
+
+    Set matches = root.GetElements("name")
+    Print "MATCHES=" & CStr(matches.Count)
+
+    Set result = doc.ValidateDTD(dtd)
+    Print "VALID=" & CStr(result.Valid)
+    Print "ERRORS=" & CStr(result.Errors.Count)
+    Print "ISVALID=" & CStr(doc.IsValidDTD(dtd))
+
+    Set doc = XmlParse("<person id=""42""><name>Fredrik</name></person>")
+    Set result = doc.ValidateDTD(dtd)
+    Print "INVALID=" & CStr(result.Valid)
+    If result.Errors.Count > 0 Then
+        Set err = result.Errors.Get(0)
+        Print "ERRORSEVERITY=" & err.Severity
+    End If
+
+    Set person = built.CreateElement("person")
+    Call person.SetAttribute("id", 7)
+    Call person.AddElement("name", "Anna")
+    Call person.AddElement("active", True)
+    Call person.AddComment("generated")
+    Call person.AddCData("5 < 10 & 20 > 10")
+    Call built.SetRoot(person)
+
+    built.Indent = False
+    built.OmitXmlDeclaration = False
+    Print "BUILT=" & XmlStringify(built)
+    Print "ESCAPE=" & XmlEscape("5 < 10 & 20 > 10")
+End Sub
