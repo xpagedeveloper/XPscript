@@ -13,18 +13,8 @@ internal static class NotesAgentPostProcessor
 
         source = ReplaceRequired(source,
             "    internal string RunAgent(uint db, string name, uint documentContext)",
-            "    internal uint FindAgentNoteId(uint db, string name)\n    {\n        EnsureInitialized();\n        using var agentName = ToLmbcs(name);\n        var status = Resolve<NIFFindDesignNoteDelegate>(\"NIFFindDesignNote\")(db, agentName.Pointer, NoteClassFilter, out var noteId);\n        if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>(\"NIFFindPrivateDesignNote\", out var findPrivate) && findPrivate is not null)\n            status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);\n        if (status != 0)\n        {\n            var text = LoadStatusText(status);\n            if (text.Contains(\"not found\", StringComparison.OrdinalIgnoreCase)) return 0;\n            Check(status, \"NIFFindDesignNote(agent)\");\n        }\n        return noteId;\n    }\n\n    internal void SaveAgent(uint db, uint noteId)\n    {\n        EnsureInitialized();\n        Check(Resolve<NSFNoteOpenDelegate>(\"NSFNoteOpen\")(db, noteId, 0, out var note), \"NSFNoteOpen(agent)\");\n        try\n        {\n            Check(Resolve<NSFNoteSignDelegate>(\"NSFNoteSign\")(note), \"NSFNoteSign(agent)\");\n            Check(Resolve<NSFNoteUpdateDelegate>(\"NSFNoteUpdate\")(note, 0), \"NSFNoteUpdate(agent)\");\n        }\n        finally { CloseNote(note); }\n    }\n\n    internal string RunAgent(uint db, string name, uint documentContext)",
+            "    internal uint FindAgentNoteId(uint db, string name)\n    {\n        EnsureInitialized();\n        using var agentName = ToLmbcs(name);\n        var status = Resolve<NIFFindDesignNoteDelegate>(\"NIFFindDesignNote\")(db, agentName.Pointer, NoteClassFilter, out var noteId);\n        if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>(\"NIFFindPrivateDesignNote\", out var findPrivate) && findPrivate is not null)\n            status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);\n        if (status != 0)\n        {\n            var text = LoadStatusText(status);\n            if (text.Contains(\"not found\", StringComparison.OrdinalIgnoreCase)) return 0;\n            Check(status, \"NIFFindDesignNote(agent)\");\n        }\n        return noteId;\n    }\n\n    internal string RunAgent(uint db, string name, uint documentContext)",
             "native-find-agent");
-
-        source = ReplaceRequired(source,
-            "        Check(Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out var agent), \"AgentOpen\");",
-            "        var agentOpenStatus = Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out var agent);\n        if (agentOpenStatus == 0x0259)\n        {\n            SaveAgent(db, noteId);\n            agentOpenStatus = Resolve<AgentOpenDelegate>(\"AgentOpen\")(db, noteId, out agent);\n        }\n        Check(agentOpenStatus, \"AgentOpen\");",
-            "native-agent-open-sign-retry");
-
-        source = ReplaceRequired(source,
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void AgentQueryStdoutBufferDelegate(nint context, out nint outputHandle, out uint outputLength);",
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteSignDelegate(nint note);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void AgentQueryStdoutBufferDelegate(nint context, out nint outputHandle, out uint outputLength);",
-            "native-agent-sign-delegate");
 
         source += "\n\n" + AgentRuntime;
         return source;
