@@ -57,7 +57,8 @@ internal sealed class UIExtensionPreprocessor
         }
 
         var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(string.Join(Environment.NewLine, output));
-        var transformed = new NotesRuntimePreprocessor().Transform(notesPrepared);
+        var notes = new NotesRuntimePreprocessor().Transform(notesPrepared);
+        var transformed = new NotesEmbeddedObjectPreprocessor().Transform(notes);
         return new AttachmentCollectionPreprocessor().Transform(transformed);
     }
 

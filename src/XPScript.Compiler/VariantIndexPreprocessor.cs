@@ -54,6 +54,7 @@ internal sealed class VariantIndexPreprocessor
             var rewritten = original;
             foreach (var name in activeNames.OrderByDescending(name => name.Length))
             {
+                rewritten = RewriteBounds(rewritten, name);
                 rewritten = RewriteWrite(rewritten, name);
                 rewritten = RewriteReads(rewritten, name);
             }
@@ -67,6 +68,22 @@ internal sealed class VariantIndexPreprocessor
     {
         foreach (Match match in VariantDeclaration.Matches(code))
             names.Add(match.Groups["name"].Value);
+    }
+
+    private static string RewriteBounds(string line, string name)
+    {
+        foreach (var function in new[] { "LBound", "UBound" })
+        {
+            var pattern = new Regex(
+                $@"(?<![\w.]){function}\s*\(\s*{Regex.Escape(name)}\s*(?:,\s*([^()]+))?\)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            line = pattern.Replace(line, match =>
+            {
+                var dimension = match.Groups[1].Success ? ", " + match.Groups[1].Value.Trim() : "";
+                return $"LSDynamicIndexRuntime.{function}({name}{dimension})";
+            });
+        }
+        return line;
     }
 
     private static string RewriteWrite(string line, string name)

@@ -1,0 +1,106 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim richText As NotesRichTextItem
+    Dim navigator As NotesRichTextNavigator
+    Dim rangeNavigator As NotesRichTextNavigator
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+    Dim style As NotesRichTextStyle
+    Dim richRange As NotesRichTextRange
+    Dim rangeClone As NotesRichTextRange
+    Dim section As NotesRichTextSection
+    Dim table As NotesRichTextTable
+    Dim docLink As NotesRichTextDocLink
+    Dim embedded As NotesEmbeddedObject
+    Dim attachmentBytes As Variant
+    Dim embeddedObjects As Variant
+
+    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+
+    Set style = session.CreateRichTextStyle()
+    style.Bold = True
+    style.Italic = False
+    style.Underline = True
+    style.FontSize = 12
+    style.NotesColor = 0
+    style.NotesFont = 1
+
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    paragraphStyle.Alignment = 0
+    paragraphStyle.LeftMargin = 1440
+    paragraphStyle.RightMargin = 1440
+    paragraphStyle.FirstLineLeftMargin = 0
+    paragraphStyle.Pagination = 0
+
+    Set tab = paragraphStyle.SetTab(1440, 0)
+    Call paragraphStyle.SetTabs(3, 1440, 720, 0)
+
+    Set db = session.OpenDatabase("", "names.nsf")
+    Set doc = db.CreateDocument()
+    Set richText = doc.CreateRichTextItem("Body")
+    Call richText.AppendText("Navigator test")
+
+    Set navigator = richText.CreateNavigator()
+    Set richRange = richText.CreateRange()
+    If navigator.FindFirstElement(3) Then
+        Call navigator.SetCharOffset(0)
+        Call richRange.SetBegin(navigator)
+        Call richRange.SetEnd(navigator)
+        Print richRange.Type
+        Print richRange.TextRun
+        Print richRange.TextParagraph
+        Set rangeNavigator = richRange.Navigator
+        Set rangeClone = richRange.Clone()
+        Call rangeClone.Reset()
+    End If
+    If navigator.FindFirstString("Navigator", 1) Then Print "Found"
+
+    embeddedObjects = richText.EmbeddedObjects
+    Set embedded = richText.GetEmbeddedObject("missing.bin")
+    If Not embedded Is Nothing Then
+        Print embedded.FileCreated
+        Print embedded.FileEncoding
+        Print embedded.FileModified
+        Print embedded.FileSize
+        Print embedded.Name
+        Print embedded.Parent.Name
+        Print embedded.Source
+        Print embedded.Type
+        attachmentBytes = embedded.ToByteArray()
+        Print LBound(attachmentBytes)
+        Print UBound(attachmentBytes)
+        If UBound(attachmentBytes) >= 0 Then Print attachmentBytes(0)
+        Call embedded.ExtractFile("missing.bin")
+        Call embedded.Recycle()
+    End If
+
+    Set embedded = navigator.GetFirstElement(8)
+    If Not embedded Is Nothing Then
+        Set embedded = navigator.GetElement()
+        Set embedded = navigator.GetLastElement(8)
+        Set embedded = navigator.GetNthElement(8, 1)
+        Set embedded = navigator.GetNextElement(8)
+    End If
+
+    Set navigator = navigator.Clone()
+
+    Set section = Nothing
+    Set table = Nothing
+    Set docLink = Nothing
+
+    If Not rangeNavigator Is Nothing Then Call rangeNavigator.Recycle()
+    If Not rangeClone Is Nothing Then Call rangeClone.Recycle()
+    Call richRange.Recycle()
+    Call navigator.Recycle()
+    Call tab.Recycle()
+    Call paragraphStyle.Recycle()
+    Call style.Recycle()
+    Call richText.Recycle()
+    Call doc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
