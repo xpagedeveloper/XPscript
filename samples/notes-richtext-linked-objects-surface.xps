@@ -73,6 +73,9 @@ Sub Main()
         Print embedded.Type
         Print embedded.Verbs
         attachmentBytes = embedded.ToByteArray()
+        Print LBound(attachmentBytes)
+        Print UBound(attachmentBytes)
+        If UBound(attachmentBytes) >= 0 Then Print attachmentBytes(0)
         Call embedded.ExtractFile("missing.bin")
         Call embedded.Recycle()
     End If
