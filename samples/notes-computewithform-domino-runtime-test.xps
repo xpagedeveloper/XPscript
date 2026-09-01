@@ -725,7 +725,7 @@ Function TestMultipleErrorsAndDedup(ByVal db As Variant, ByVal formName As Strin
     Call doc.ComputeWithForm(False, True, failedFields)
     errCode = Err
     On Error GoTo 0
-    If errCode = 0 Then failures = failures + 1
+    If errCode <> 5 Then failures = failures + 1
     If failedFields Is Nothing Then
         failures = failures + 1
     Else
@@ -755,7 +755,7 @@ Function TestArrayAssignedBeforeRaise(ByVal db As Variant, ByVal formName As Str
     Call doc.ComputeWithForm(False, True, failedFields)
     errCode = Err
     On Error GoTo 0
-    If errCode = 0 Then failures = failures + 1
+    If errCode <> 5 Then failures = failures + 1
     If failedFields Is Nothing Then failures = failures + 1
     Call doc.Recycle()
     TestArrayAssignedBeforeRaise = failures

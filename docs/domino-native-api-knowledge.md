@@ -36,8 +36,9 @@ Semantics:
 - If `raiseError` is `True` and no field errors are reported, the third argument is `Nothing`.
 - If `raiseError` is `True` and field errors are reported, the third argument is a Variant array containing the unique failing field names.
 - The array is assigned before the validation error is raised so LotusScript-style error handling can inspect it.
+- Validation failures raised by `ComputeWithForm` use XPscript runtime error 5. Native callback statuses such as `ERR_VALIDATION` are not exposed as the XPscript `Err` value.
 
-The native implementation uses `NSFNoteComputeWithForm` with a `CWF_ERROR_PROC` callback. Do not pass `CWF_CONTINUE_ON_ERROR` when field-name collection is required because HCL documents that this flag suppresses callback processing.
+The ordinary two-argument overload calls `NSFNoteComputeWithForm` without a callback. The XPscript-specific third-argument overload installs a `CWF_ERROR_PROC` callback to collect failed field names. Do not pass `CWF_CONTINUE_ON_ERROR` when field-name collection is required because HCL documents that this flag suppresses callback processing. The callback returns `CWF_NEXT_FIELD` after recording an error so validation continues and all failing field names can be collected.
 
 ### CDFIELD field-name layout verification
 
