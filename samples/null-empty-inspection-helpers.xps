@@ -3,10 +3,15 @@ Sub Main()
     Dim nullValue As Variant
     Dim emptyCopy As Variant
     Dim nullCopy As Variant
+    Dim fixedValues(1) As String
+    Dim managedValues As Variant
 
     nullValue = Null
     emptyCopy = CVar(emptyValue)
     nullCopy = CVar(nullValue)
+    fixedValues(0) = "A"
+    fixedValues(1) = "B"
+    managedValues = Split("A,B", ",")
 
     Print "EMPTY_ISNUMERIC=" & CStr(IsNumeric(emptyValue))
     Print "EMPTY_ISSCALAR=" & CStr(IsScalar(emptyValue))
@@ -27,4 +32,18 @@ Sub Main()
     Print "NULL_CVAR_ISEMPTY=" & CStr(IsEmpty(nullCopy))
     Print "NULL_CVAR_ISNULL=" & CStr(IsNull(nullCopy))
     Print "NULL_CSTR_LEN=" & CStr(Len(CStr(nullValue)))
+
+    Print "LSARRAY_ISARRAY=" & CStr(IsArray(fixedValues))
+    Print "LSARRAY_ISOBJECT=" & CStr(IsObject(fixedValues))
+    Print "LSARRAY_TYPE=" & TypeName(fixedValues)
+    Print "LSARRAY_DATATYPE=" & CStr(DataType(fixedValues))
+    Print "LSARRAY_BOUNDS=" & CStr(LBound(fixedValues)) & ":" & CStr(UBound(fixedValues))
+    Print "LSARRAY_FIRST=" & CStr(fixedValues(0))
+
+    Print "MANAGED_ISARRAY=" & CStr(IsArray(managedValues))
+    Print "MANAGED_ISOBJECT=" & CStr(IsObject(managedValues))
+    Print "MANAGED_TYPE=" & TypeName(managedValues)
+    Print "MANAGED_DATATYPE=" & CStr(DataType(managedValues))
+    Print "MANAGED_BOUNDS=" & CStr(LBound(managedValues)) & ":" & CStr(UBound(managedValues))
+    Print "MANAGED_FIRST=" & CStr(managedValues(0))
 End Sub
