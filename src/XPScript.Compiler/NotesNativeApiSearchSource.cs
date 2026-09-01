@@ -55,6 +55,7 @@ internal sealed partial class XPScriptNotesNativeApi
     private const uint FtSearchSetCollection = 0x00000001;
     private const uint FtSearchReturnIdTable = 0x00000010;
     private const ushort AgentRedirectMemory = 2;
+    private const ushort AgentUnsignedStatus = 0x0259;
 
     internal IReadOnlyList<uint> FindViewByTextKey(nint collection, string key, int maximum, bool exactMatch)
     {
@@ -211,6 +212,18 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    internal void SaveAgent(nint db, uint noteId)
+    {
+        EnsureInitialized();
+        Check(Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(db, noteId, 0, out var note), "NSFNoteOpen(agent)");
+        try
+        {
+            Check(Resolve<NSFNoteSignDelegate>("NSFNoteSign")(note), "NSFNoteSign(agent)");
+            Check(Resolve<NSFNoteUpdateDelegate>("NSFNoteUpdate")(note, 0), "NSFNoteUpdate(agent)");
+        }
+        finally { CloseNote(note); }
+    }
+
     internal string RunAgent(nint db, string name, nint documentContext)
     {
         EnsureInitialized();
@@ -221,7 +234,13 @@ internal sealed partial class XPScriptNotesNativeApi
             status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);
         Check(status, "NIFFindDesignNote(agent)");
 
-        Check(Resolve<AgentOpenDelegate>("AgentOpen")(db, noteId, out var agent), "AgentOpen");
+        var agentOpenStatus = Resolve<AgentOpenDelegate>("AgentOpen")(db, noteId, out var agent);
+        if (agentOpenStatus == AgentUnsignedStatus)
+        {
+            SaveAgent(db, noteId);
+            agentOpenStatus = Resolve<AgentOpenDelegate>("AgentOpen")(db, noteId, out agent);
+        }
+        Check(agentOpenStatus, "AgentOpen");
         nint context = 0;
         try
         {
@@ -258,6 +277,7 @@ internal sealed partial class XPScriptNotesNativeApi
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort FTCloseSearchDelegate(nint search);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate int IDScanDelegate(nint table, int first, ref uint noteId);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindPrivateDesignNoteDelegate(nint db, nint name, ushort noteClass, out uint noteId);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NSFNoteSignDelegate(nint note);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentOpenDelegate(nint db, uint noteId, out nint agent);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void AgentCloseDelegate(nint agent);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort AgentCreateRunContextDelegate(nint agent, nint reserved, uint flags, out nint context);
