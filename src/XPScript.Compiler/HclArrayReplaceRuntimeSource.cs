@@ -10,6 +10,8 @@ internal static class LSHclArrayRuntime
         var compare = ToValues(compareArray);
         var replace = ToValues(replaceArray);
 
+        if (LSArrayRuntime.IsNothing(sourceArray)) sourceArray = LSArrayRuntime.NothingArray();
+
         if (sourceArray is LSArray source)
         {
             if (!source.IsAllocated) throw new XPScriptRuntimeException(9, "ArrayReplace source array is not allocated.");
@@ -86,6 +88,7 @@ internal static class LSHclArrayRuntime
 
     private static List<object?> ToValues(object? value)
     {
+        if (LSArrayRuntime.IsNothing(value)) return [""];
         if (value is LSArray ls)
         {
             if (!ls.IsAllocated) throw new XPScriptRuntimeException(9, "ArrayReplace compare/replace array is not allocated.");

@@ -205,6 +205,7 @@ internal static class LSArrayRuntime
 
     public static object? Get(object? value, params object?[] indices)
     {
+        if (IsNothing(value)) return NothingArray().Get(indices);
         if (value is LSArray array) return array.Get(indices);
         if (value is Array managed) return managed.GetValue(ToManagedIndices(managed, indices));
         throw new InvalidOperationException("Value is not an XPScript array.");
@@ -212,6 +213,11 @@ internal static class LSArrayRuntime
 
     public static void Set(object? value, object? newValue, params object?[] indices)
     {
+        if (IsNothing(value))
+        {
+            NothingArray().Set(newValue, indices);
+            return;
+        }
         if (value is LSArray array)
         {
             array.Set(newValue, indices);
@@ -227,6 +233,7 @@ internal static class LSArrayRuntime
 
     public static int LBound(object? value, int dimension = 1)
     {
+        if (IsNothing(value)) return NothingArray().LBound(dimension);
         if (value is LSArray array) return array.LBound(dimension);
         if (value is Array managed)
         {
@@ -238,6 +245,7 @@ internal static class LSArrayRuntime
 
     public static int UBound(object? value, int dimension = 1)
     {
+        if (IsNothing(value)) return NothingArray().UBound(dimension);
         if (value is LSArray array) return array.UBound(dimension);
         if (value is Array managed)
         {
@@ -249,6 +257,7 @@ internal static class LSArrayRuntime
 
     public static void Erase(object? value)
     {
+        if (IsNothing(value)) return;
         if (value is LSArray array)
         {
             array.Erase();
@@ -260,6 +269,16 @@ internal static class LSArrayRuntime
             return;
         }
         throw new InvalidOperationException("Value is not an XPScript array.");
+    }
+
+    public static bool IsNothing(object? value) =>
+        value is ILSObjectReference reference && reference.IsNothing;
+
+    public static LSArray NothingArray()
+    {
+        var array = new LSArray("String", true, [0], [0]);
+        array.Set("", 0);
+        return array;
     }
 
     private static int[] ToManagedIndices(Array array, object?[] indices)
