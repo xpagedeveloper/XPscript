@@ -29,7 +29,7 @@ internal static class NotesRichTextMimePostProcessor
         _handle = handle;
         NoteId = noteId;
         if (handle != 0 && session.ConvertMIME)
-            Session.Api.ConvertMimePartsToComposite(nint.CreateChecked(handle));
+            Session.Api.ConvertMimePartsToComposite(checked((uint)handle));
 """,
             "document-open-convert-mime");
 
@@ -60,7 +60,7 @@ internal static class NotesRichTextMimePostProcessor
         var name = XPScriptRuntime.CStr(nameValue).Trim();
         if (name.Length == 0) throw new XPScriptRuntimeException(5, "Rich text item name cannot be empty.");
         if (TryGetItemInfo(name, out _)) throw new XPScriptRuntimeException(5, "Notes item '" + name + "' already exists.");
-        Session.Api.CreateRichTextItem(nint.CreateChecked(_handle), name);
+        Session.Api.CreateRichTextItem(checked((uint)_handle), name);
         return new XPScriptNotesRichTextItem(Session, this, name);
     }
 
@@ -112,7 +112,7 @@ internal static class NotesRichTextMimePostProcessor
     public void AppendText(object? value)
     {
         EnsureItemAlive();
-        Session.Api.AppendRichText(nint.CreateChecked(Document.NativeHandle), ItemName, XPScriptRuntime.CStr(value));
+        Session.Api.AppendRichText(checked((uint)Document.NativeHandle), ItemName, XPScriptRuntime.CStr(value));
     }
 """,
             "richtext-append-text");
@@ -123,7 +123,7 @@ internal static class NotesRichTextMimePostProcessor
     private const string NativeRuntime = """
 internal sealed partial class XPScriptNotesNativeApi
 {
-    internal void CreateRichTextItem(nint note, string name)
+    internal void CreateRichTextItem(uint note, string name)
     {
         EnsureInitialized();
         using var itemName = ToLmbcs(name);
@@ -136,7 +136,7 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void AppendRichText(nint note, string name, string value)
+    internal void AppendRichText(uint note, string name, string value)
     {
         EnsureInitialized();
         using var itemName = ToLmbcs(name);
@@ -170,14 +170,14 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void ConvertMimePartsToComposite(nint note)
+    internal void ConvertMimePartsToComposite(uint note)
     {
         EnsureInitialized();
         if (!HasMimePart(note)) return;
         Check(Resolve<MIMEConvertMIMEPartsCCDelegate>("MIMEConvertMIMEPartsCC")(note, 0, 0), "MIMEConvertMIMEPartsCC");
     }
 
-    private bool HasMimePart(nint note)
+    private bool HasMimePart(uint note)
     {
         foreach (var name in GetItemNames(note))
         {
@@ -188,19 +188,19 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextCreateDelegate(nint note, nint itemName, out nint compound);
+    private delegate ushort CompoundTextCreateDelegate(uint note, nint itemName, out uint compound);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextCloseDelegate(nint compound, nint returnBuffer, nint returnBufferSize, nint returnFile, ushort returnFileNameSize);
+    private delegate ushort CompoundTextCloseDelegate(uint compound, nint returnBuffer, nint returnBufferSize, nint returnFile, ushort returnFileNameSize);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate void CompoundTextDiscardDelegate(nint compound);
+    private delegate void CompoundTextDiscardDelegate(uint compound);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextAddTextExtDelegate(nint compound, uint styleId, uint fontId, nint text, uint textLength, nint lineDelimiter, uint flags, nint nlsInfo);
+    private delegate ushort CompoundTextAddTextExtDelegate(uint compound, uint styleId, uint fontId, nint text, uint textLength, nint lineDelimiter, uint flags, nint nlsInfo);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEConvertMIMEPartsCCDelegate(nint note, int canonical, nint conversionControls);
+    private delegate ushort MIMEConvertMIMEPartsCCDelegate(uint note, int canonical, nint conversionControls);
 }
 """;
 
