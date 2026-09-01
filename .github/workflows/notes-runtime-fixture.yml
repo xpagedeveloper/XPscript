@@ -1,20 +1,13 @@
 name: Notes Runtime Fixture
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'samples/xpscript-notes-runtime-fixture.dxl'
-      - 'samples/notes-computewithform-domino-runtime-test.xps'
-      - 'scripts/validate-notes-runtime-fixture.ps1'
-      - '.github/workflows/notes-runtime-fixture.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: notes-runtime-fixture-${{ github.event.pull_request.number || github.ref }}
+  group: notes-runtime-fixture-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
