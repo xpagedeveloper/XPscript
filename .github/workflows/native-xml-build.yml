@@ -32,13 +32,17 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Compile and verify Native XML API
+      - name: Compile Native XML API sample
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ./out | Out-Null
           $exe = if ($IsWindows) { './out/native-xml-regression.exe' } else { './out/native-xml-regression' }
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-regression.xps -o $exe --framework-dependent
           if ($LASTEXITCODE -ne 0) { throw 'Native XML sample compilation failed.' }
+      - name: Run and verify Native XML API sample
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/native-xml-regression.exe' } else { './out/native-xml-regression' }
           if (-not $IsWindows) { chmod +x $exe }
           $output = @(& $exe 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Native XML regression failed.`n$output" }
