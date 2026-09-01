@@ -1,0 +1,157 @@
+# Notes rich-text linked objects
+
+Status for LotusScript-compatible rich-text linked objects in XPScript.
+
+Primary references:
+
+- HCL Domino Designer LotusScript classes
+- HCL Domino C API
+- HCL Domino JNX rich-text and attachment implementations
+
+## Implemented foundation
+
+- [x] `NotesRichTextItem` is the owner/hub for linked rich-text objects.
+- [x] Managed CD-record snapshots. Native pointers from `EnumCompositeBuffer` are never retained.
+- [x] Record positions use logical record indexes instead of native addresses.
+- [x] Rich-text revision tracking on `NotesRichTextItem`.
+- [x] Unknown CD records are retained as raw bytes in the record model.
+- [x] `NotesRichTextStyle` managed state object.
+- [x] `NotesRichTextParagraphStyle` initialized through `CompoundTextInitStyle`.
+- [x] `NotesRichTextTab`.
+- [x] `NotesRichTextItem.CreateNavigator()`.
+- [x] Navigator core search for elements and strings.
+- [x] `NotesRichTextItem.CreateRange()`.
+- [x] Range position model, `Navigator`, `Style`, `TextParagraph`, `TextRun`, `Type`, `Clone`, `Reset`, `SetBegin`, `SetEnd`.
+- [x] Compiler type recognition for the initial eight rich-text linked object types.
+
+## NotesEmbeddedObject and attachments
+
+- [ ] Add `NotesEmbeddedObject` to the Notes compiler type model.
+- [ ] Implement attachment-backed `NotesEmbeddedObject` properties: `Class`, `FileCreated`, `FileEncoding`, `FileModified`, `FileSize`, `Name`, `Parent`, `Source`, `Type`, `Verbs`.
+- [ ] Implement attachment `ExtractFile`.
+- [ ] Implement XPScript extension `ToByteArray()` without a temporary file.
+- [ ] Use `NSFNoteCipherExtractWithCallback` for normal attachment reads so compressed attachments are streamed/decompressed by Notes.
+- [ ] Implement `NotesRichTextItem.GetEmbeddedObject(name)`.
+- [ ] Implement `NotesRichTextItem.EmbeddedObjects`.
+- [ ] Materialize attachment elements from `NotesRichTextNavigator.GetElement()` as `NotesEmbeddedObject`.
+- [ ] Implement `NotesRichTextItem.EmbedObject(EMBED_ATTACHMENT, "", source [, name])`.
+- [ ] Attach physical file data with `NSFNoteAttachFile` and add the corresponding `HOTSPOTREC_TYPE_FILE` CD hotspot to the rich-text item.
+- [ ] Roll back the `$FILE` object if adding the rich-text hotspot fails.
+- [ ] Implement attachment `Remove()` atomically: remove the rich-text hotspot and then detach/deallocate the `$FILE` object.
+- [ ] Add OLE/object support for `EMBED_OBJECT` and `EMBED_OBJECTLINK` where supported by the Notes C API/runtime.
+- [ ] Implement OLE-only `Activate`, `DoVerb`, `FitBelowFields`, `FitToWindow`, `Object`, `RunReadOnly`, and `Verbs` behavior. Do not fake these for file attachments.
+
+## Binary array support
+
+- [ ] Add an internal XPScript binary-array construction path for attachment data.
+- [ ] Keep normal LotusScript array declaration/ReDim bounds compatible with LotusScript.
+- [ ] Allow API-produced binary arrays to represent attachments larger than the normal LotusScript subscript limit.
+- [ ] Avoid boxing every byte for large attachments if practical. Prefer byte-backed storage in the runtime.
+- [ ] Add regression coverage for empty, small, >32 KiB, multi-megabyte, compressed, and incompressible attachments.
+
+## NotesRichTextNavigator
+
+- [ ] `GetElement`.
+- [ ] `GetFirstElement`.
+- [ ] `GetLastElement`.
+- [ ] `GetNextElement`.
+- [ ] `GetNthElement`.
+- [ ] `SetPosition`.
+- [ ] `SetPositionAtEnd`.
+- [ ] Correct logical grouping of all element types instead of treating every matching CD record as a separate LotusScript element.
+- [ ] Correct text-run and text-paragraph boundaries across CD records and physical composite item segments.
+- [ ] Attachment and OLE materialization through `NotesEmbeddedObject`.
+
+## NotesRichTextRange
+
+- [ ] Parse actual text style from CD records for `Style` instead of returning a default style object.
+- [ ] Match LotusScript `Type` semantics for mixed and homogeneous ranges.
+- [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
+- [ ] `Remove`.
+- [ ] `SetStyle`.
+- [ ] Preserve unaffected and unknown CD records byte-for-byte during range mutations.
+
+## Rich-text editor/rewrite layer
+
+- [ ] Build a shared CD transformation pipeline used by Range, Table, Section, DocLink, attachment removal, and insertion.
+- [ ] Write transformed records with `CompoundTextAddCDRecords` rather than holding native CD pointers.
+- [ ] Preserve all unknown records and unknown flag bits.
+- [ ] Handle rich-text split across multiple physical items with the same item name.
+- [ ] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
+- [ ] Add rollback/error handling so failed writes do not leave partially modified rich text.
+
+## NotesRichTextSection
+
+- [ ] Materialize sections from the correct CD span.
+- [ ] `BarColor`.
+- [ ] `IsExpanded`.
+- [ ] `Title`.
+- [ ] `TitleStyle`.
+- [ ] `Remove`.
+- [ ] `SetBarColor`.
+- [ ] `SetTitleStyle`.
+- [ ] `NotesRichTextItem.BeginSection` / `EndSection`.
+
+## NotesRichTextTable
+
+- [ ] Parse complete table spans including `CDPRETABLEBEGIN`, `CDTABLEDATAEXTENSION`, `CDTABLEBEGIN`, `CDTABLECELL`, `CDTABLEEND`, rows, cells, and nested tables.
+- [ ] `AlternateColor`.
+- [ ] `Color`.
+- [ ] `ColumnCount`.
+- [ ] `RightToLeft` after validating current Notes C API record mapping.
+- [ ] `RowCount`.
+- [ ] `RowLabels`.
+- [ ] `Style`.
+- [ ] `AddRow`.
+- [ ] `Remove`.
+- [ ] `RemoveRow`.
+- [ ] `SetAlternateColor`.
+- [ ] `SetColor`.
+- [ ] `NotesRichTextItem.AppendTable`.
+
+## NotesRichTextDocLink
+
+- [ ] Materialize both `CDLINKEXPORT2` and normal Notes `CDLINK2` links.
+- [ ] Resolve `CDLINK2` linkage against `$Links`.
+- [ ] `DbReplicaID`.
+- [ ] `DisplayComment`.
+- [ ] `DocUNID`.
+- [ ] `HotSpotText`.
+- [ ] `HotSpotTextStyle`.
+- [ ] `ServerHint`.
+- [ ] `ViewUNID`.
+- [ ] `Remove`.
+- [ ] `RemoveLinkage`.
+- [ ] `SetHotSpotTextStyle`.
+- [ ] Keep `CDLINK2` and `$Links` synchronized when mutating links.
+- [ ] `NotesRichTextItem.AppendDocLink` overloads.
+
+## NotesRichTextItem remaining surface
+
+- [ ] `AppendStyle`.
+- [ ] `AppendParagraphStyle`.
+- [ ] `AppendTable`.
+- [ ] `AppendDocLink` overloads.
+- [ ] `BeginInsert`.
+- [ ] `EndInsert`.
+- [ ] `BeginSection`.
+- [ ] `EndSection`.
+- [ ] `GetNotesFont`.
+- [ ] Correct insertion point semantics across subsequent append operations.
+
+## Supporting Notes types
+
+- [ ] Minimal `NotesColorObject` required by Section and Table.
+- [ ] Color conversion and custom RGB behavior matching Notes.
+- [ ] Custom font support and `$FONT` / `CDFONTTABLE` / `CDFACE` maintenance.
+
+## Verification
+
+- [ ] Cross-platform compiler CI for every public surface added here.
+- [ ] Windows Notes client/runtime integration tests for rich-text reads and mutations.
+- [ ] Domino server integration tests where server-only behavior differs.
+- [ ] Round-trip tests that compare unaffected CD records before and after mutation.
+- [ ] Documents with multiple physical composite segments.
+- [ ] Nested tables, sections containing tables, doclinks, images, attachments, and unknown CD records.
+- [ ] Multiple attachments with the same original filename.
+- [ ] Encrypted/sealed notes where supported.
