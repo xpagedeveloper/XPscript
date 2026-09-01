@@ -25,7 +25,7 @@ Sub Main()
     Print importer.DesignImportOption
     Print importer.DocumentImportOption
     Print importer.ReplicaRequiredForReplaceOrUpdate
-    Call importer.Import("samples/xpscript-notes-runtime-fixture.dxl", db)
+    Call importer.Import("xpscript-notes-runtime-fixture.dxl", db)
     Print importer.ImportedNoteCount
     Print importer.Log
 
