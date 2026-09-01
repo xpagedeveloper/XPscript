@@ -7,7 +7,7 @@ var buildDate = Assembly.GetExecutingAssembly()
     ?.Value ?? "unknown";
 
 if (ShouldWriteBanner(args))
-    Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com ©");
+    Console.WriteLine($"XPScript version 0.9 Beta - build {buildDate} - XPageDeveloper.com (c)");
 
 return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
 
