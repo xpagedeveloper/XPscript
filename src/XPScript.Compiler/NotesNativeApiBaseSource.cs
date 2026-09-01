@@ -9,12 +9,14 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
     private const ushort TranslateUtf8ToLmbcs = 24;
     private readonly nint _library;
     private readonly string _runtimeDirectory;
+    private readonly string _applicationDirectory;
     private bool _initialized;
     private bool _disposed;
 
     internal XPScriptNotesNativeApi(string runtimeDirectory)
     {
         _runtimeDirectory = Path.GetFullPath(runtimeDirectory);
+        _applicationDirectory = Environment.CurrentDirectory;
         if (!Directory.Exists(_runtimeDirectory))
             throw new XPScriptRuntimeException(76, "Notes/Domino runtime directory does not exist: " + _runtimeDirectory);
 
@@ -33,12 +35,24 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
         if (path is null)
             throw new XPScriptRuntimeException(53, "No Notes/Domino C API library was found in " + _runtimeDirectory + ".");
 
+        if (OperatingSystem.IsWindows())
+        {
+            SetDllDirectory(_runtimeDirectory);
+            SetCurrentDirectory(_runtimeDirectory);
+        }
+
         try { _library = System.Runtime.InteropServices.NativeLibrary.Load(path); }
         catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
         {
             throw new XPScriptRuntimeException(53, "Unable to load Notes/Domino C API library: " + path);
         }
     }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern bool SetDllDirectory(string? path);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern bool SetCurrentDirectory(string path);
 
     internal void Initialize(string? notesIni)
     {
