@@ -15,6 +15,9 @@ Sub Main()
     Dim section As NotesRichTextSection
     Dim table As NotesRichTextTable
     Dim docLink As NotesRichTextDocLink
+    Dim embedded As NotesEmbeddedObject
+    Dim attachmentBytes As Variant
+    Dim embeddedObjects As Variant
 
     Set session = New NotesSession("C:\Program Files\HCL\Notes")
 
@@ -55,6 +58,24 @@ Sub Main()
         Call rangeClone.Reset()
     End If
     If navigator.FindFirstString("Navigator", 1) Then Print "Found"
+
+    embeddedObjects = richText.EmbeddedObjects
+    Set embedded = richText.GetEmbeddedObject("missing.bin")
+    If Not embedded Is Nothing Then
+        Print embedded.Class
+        Print embedded.FileCreated
+        Print embedded.FileEncoding
+        Print embedded.FileModified
+        Print embedded.FileSize
+        Print embedded.Name
+        Print embedded.Parent.Name
+        Print embedded.Source
+        Print embedded.Type
+        Print embedded.Verbs
+        attachmentBytes = embedded.ToByteArray()
+        Call embedded.ExtractFile("missing.bin")
+        Call embedded.Recycle()
+    End If
 
     Set navigator = navigator.Clone()
 
