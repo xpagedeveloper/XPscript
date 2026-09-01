@@ -269,7 +269,7 @@ public static class XPScriptCompilerCommandLine
                     ? await WaitWithProgressAsync(
                         compileTask,
                         timer,
-                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, transient]").ConfigureAwait(false)
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false)
                     : await compileTask.ConfigureAwait(false);
 
                 if (!compileResult.Success)
