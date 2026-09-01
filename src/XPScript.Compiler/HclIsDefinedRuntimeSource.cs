@@ -26,7 +26,7 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""" + "\n\n" + RuntimeDebugTraceSource.Code + "\n\n" + NotesDxlCompatibilityPostProcessor.Apply(NotesNothingPostProcessor.Apply(
+""" + "\n\n" + RuntimeDebugTraceSource.Code + "\n\n" + NotesNothingPostProcessor.Apply(
         NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(
             NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
                 NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
@@ -43,5 +43,5 @@ internal static class LSHclPlatformConstantRuntime
                                                             NotesViewNavigationPostProcessor.ApplyBuiltSurface(
                                                                 NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
                                                                     NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                        NotesRuntimeSourceBuilder.Build()))))))))))))))))));
+                                                                        NotesRuntimeSourceBuilder.Build())))))))))))))))));
 }
