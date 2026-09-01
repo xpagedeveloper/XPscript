@@ -9,16 +9,24 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         @"XPSourceLineRuntime\.__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-F]+)\(\)",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex ScriptProcedurePattern = new(
+        @"^\s*(?:public|private)\s+(?:static\s+)?(?:override\s+)?(?:[A-Za-z_]\w*(?:<[^>]+>)?(?:\[\])?\??\s+)?[A-Za-z_]\w*\s*\(",
+        RegexOptions.CultureInvariant);
+
     private const string RuntimeBoundary = "internal static class LSControlRuntime";
+    private const string ScriptBoundary = "internal static class Script";
+    private const string NoInliningAttribute = "[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]";
 
     public string Transform(string generated)
     {
         if (string.IsNullOrEmpty(generated)) return generated;
 
         var lines = generated.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var output = new List<string>(lines.Length + 32);
+        var output = new List<string>(lines.Length + 64);
         var foundMarker = false;
         var runtimeBoundaryInserted = false;
+        var scriptDeclarationSeen = false;
+        var inScript = false;
 
         foreach (var rawLine in lines)
         {
@@ -28,21 +36,43 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                 runtimeBoundaryInserted = true;
             }
 
+            if (!scriptDeclarationSeen && rawLine.Trim().Equals(ScriptBoundary, StringComparison.Ordinal))
+            {
+                scriptDeclarationSeen = true;
+                output.Add(rawLine);
+                continue;
+            }
+
+            if (scriptDeclarationSeen && !inScript && rawLine.Trim().Equals("{", StringComparison.Ordinal))
+            {
+                inScript = true;
+                output.Add(rawLine);
+                continue;
+            }
+
+            if (inScript && rawLine.Equals("}", StringComparison.Ordinal))
+                inScript = false;
+
             var match = MarkerPattern.Match(rawLine);
             if (!match.Success)
             {
+                if (inScript && ScriptProcedurePattern.IsMatch(rawLine))
+                {
+                    var indent = Regex.Match(rawLine, @"^\s*").Value;
+                    output.Add(indent + NoInliningAttribute);
+                }
                 output.Add(rawLine);
                 continue;
             }
 
             foundMarker = true;
-            var indent = Regex.Match(rawLine, @"^\s*").Value;
+            var markerIndent = Regex.Match(rawLine, @"^\s*").Value;
             var sourceLine = match.Groups["line"].Value;
             var sourceId = DecodeSourceId(match.Groups["source"].Value);
             var directiveSource = EscapeDirectiveString(sourceId);
 
-            output.Add(indent + "// XPSOURCE|" + sourceId + "|" + sourceLine);
-            output.Add(indent + "#line " + sourceLine + " \"" + directiveSource + "\"");
+            output.Add(markerIndent + "// XPSOURCE|" + sourceId + "|" + sourceLine);
+            output.Add(markerIndent + "#line " + sourceLine + " \"" + directiveSource + "\"");
             output.Add(MarkerPattern.Replace(rawLine, "XPSourceLineRuntime.Set(" + sourceLine + ")", 1));
         }
 
