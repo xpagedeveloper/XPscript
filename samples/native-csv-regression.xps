@@ -14,12 +14,11 @@ Sub Main()
     Dim columnCount As Integer
     Dim errCode As Integer
     Dim errText As String
-    Dim bytes As Variant
     Dim encoded As Variant
 
     csv = "id;name;note" & Chr(10) & _
           "1;Fredrik;""Hello; world""" & Chr(10) & _
-          "2;Anna;""Line one"" & Chr(10) & """Line two"""
+          "2;Anna;""Line one" & Chr(10) & "Line two"""
 
     Set doc = CsvParse(csv, ";")
     Print "ROWS=" & CStr(doc.RowCount)
