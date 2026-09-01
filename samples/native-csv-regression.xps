@@ -4,9 +4,6 @@ Sub Main()
     Dim csv As String
     Dim doc As CsvDocument
     Dim row As CsvRow
-    Dim iterRow As CsvRow
-    Dim column As CsvColumn
-    Dim header As Variant
     Dim built As New CsvDocument
     Dim builtRow As CsvRow
     Dim headerCount As Integer
