@@ -10,6 +10,12 @@ on:
       - 'todo/HCLNotes.md'
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'src/XPScript.Compiler/Notes*.cs'
+      - 'samples/notes-*.xps'
+      - 'samples/xpscript-notes-runtime-fixture.dxl'
+      - 'docs/notes-*.md'
+      - 'todo/HCLNotes.md'
 
 jobs:
   verify:
