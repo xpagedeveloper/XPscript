@@ -9,9 +9,10 @@ internal sealed class NativeCsvPreprocessor
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var output = new List<string>(lines.Length + 8);
+        var output = new List<string>(lines.Length + 16);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rowVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var iteratorId = 0;
 
         foreach (var raw in lines)
         {
@@ -61,6 +62,22 @@ internal sealed class NativeCsvPreprocessor
                     $@"\b{Regex.Escape(rowVariable)}\s*\[([^\]]+)\]",
                     rowVariable + ".Get($1)",
                     RegexOptions.IgnoreCase);
+            }
+
+            // The core ForAll grammar currently accepts an identifier after In. Preserve the
+            // public CSV surface `ForAll x In doc.Headers/Rows/row.Columns` by lowering the
+            // member expression to a temporary Variant before the core transpiler sees it.
+            var csvForAll = Regex.Match(
+                rewritten,
+                @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+(.+\.(?:Headers|Rows|Columns))$",
+                RegexOptions.IgnoreCase);
+            if (csvForAll.Success)
+            {
+                var temp = "__xpsCsvIterator" + (++iteratorId).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                output.Add(indent + $"Dim {temp} As Variant");
+                output.Add(indent + $"{temp} = {csvForAll.Groups[2].Value}");
+                output.Add(indent + $"ForAll {csvForAll.Groups[1].Value} In {temp}");
+                continue;
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
