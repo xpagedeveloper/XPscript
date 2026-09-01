@@ -1,0 +1,36 @@
+name: Notes Rich Text Linked Objects
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/NotesRichTextObjectsPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesRuntimePreprocessor.cs'
+      - 'src/XPScript.Compiler/NotesRuntimeSource.cs'
+      - 'samples/notes-richtext-linked-objects-surface.xps'
+      - '.github/workflows/notes-richtext-linked-objects-build.yml'
+  workflow_dispatch:
+
+jobs:
+  notes-richtext-linked-objects:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile Notes linked rich text surface
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out | Out-Null
+          $exe = if ($IsWindows) { './out/notes-richtext-linked-objects-surface.exe' } else { './out/notes-richtext-linked-objects-surface' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o $exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Notes linked rich text surface compilation failed.' }

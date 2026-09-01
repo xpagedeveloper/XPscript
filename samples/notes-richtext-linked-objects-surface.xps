@@ -1,0 +1,76 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim richText As NotesRichTextItem
+    Dim navigator As NotesRichTextNavigator
+    Dim rangeNavigator As NotesRichTextNavigator
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+    Dim style As NotesRichTextStyle
+    Dim richRange As NotesRichTextRange
+    Dim rangeClone As NotesRichTextRange
+    Dim section As NotesRichTextSection
+    Dim table As NotesRichTextTable
+    Dim docLink As NotesRichTextDocLink
+
+    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+
+    Set style = session.CreateRichTextStyle()
+    style.Bold = True
+    style.Italic = False
+    style.Underline = True
+    style.FontSize = 12
+    style.NotesColor = 0
+    style.NotesFont = 1
+
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    paragraphStyle.Alignment = 0
+    paragraphStyle.LeftMargin = 1440
+    paragraphStyle.RightMargin = 1440
+    paragraphStyle.FirstLineLeftMargin = 0
+    paragraphStyle.Pagination = 0
+
+    Set tab = paragraphStyle.SetTab(1440, 0)
+    Call paragraphStyle.SetTabs(3, 1440, 720, 0)
+
+    Set db = session.OpenDatabase("", "names.nsf")
+    Set doc = db.CreateDocument()
+    Set richText = doc.CreateRichTextItem("Body")
+    Call richText.AppendText("Navigator test")
+
+    Set navigator = richText.CreateNavigator()
+    Set richRange = richText.CreateRange()
+    If navigator.FindFirstElement(3) Then
+        Call navigator.SetCharOffset(0)
+        Call richRange.SetBegin(navigator)
+        Call richRange.SetEnd(navigator)
+        Print richRange.Type
+        Print richRange.TextRun
+        Print richRange.TextParagraph
+        Set rangeNavigator = richRange.Navigator
+        Set rangeClone = richRange.Clone()
+        Call rangeClone.Reset()
+    End If
+    If navigator.FindFirstString("Navigator", 1) Then Print "Found"
+
+    Set navigator = navigator.Clone()
+
+    Set section = Nothing
+    Set table = Nothing
+    Set docLink = Nothing
+
+    If Not rangeNavigator Is Nothing Then Call rangeNavigator.Recycle()
+    If Not rangeClone Is Nothing Then Call rangeClone.Recycle()
+    Call richRange.Recycle()
+    Call navigator.Recycle()
+    Call tab.Recycle()
+    Call paragraphStyle.Recycle()
+    Call style.Recycle()
+    Call richText.Recycle()
+    Call doc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
