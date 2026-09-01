@@ -6,34 +6,35 @@ internal static class NotesRuntimeSource
     {
         get
         {
-            var source = NotesRichTextRangePostProcessor.Apply(
-                NotesRichTextObjectsPostProcessor.Apply(
-                    NotesRichTextMimePostProcessor.Apply(
-                        NotesThreadLifecyclePostProcessor.Apply(
-                            NotesDxlPostProcessor.Apply(
-                                NotesDocumentComputeWithFormPostProcessor.Apply(
-                                    NotesDocumentLotusScriptSurfacePostProcessor.Apply(
-                                        NotesDocumentRemovePostProcessor.Apply(
-                                            NotesDatabaseCreateCompatibilityPostProcessor.Apply(
-                                                NotesViewNavigatorHistoryCapPostProcessor.Apply(
-                                                    NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(
-                                                        NotesViewNavigatorCachePostProcessor.Apply(
-                                                            NotesViewNavigatorCachePolicyPostProcessor.Apply(
-                                                                NotesViewNavigationV3FixPostProcessor.Apply(
-                                                                    NotesViewNavigationV3PostProcessor.Apply(
-                                                                        NotesViewNavigationV2FixPostProcessor.Apply(
-                                                                            NotesViewNavigationV2PostProcessor.Apply(
-                                                                                NotesViewNavigationPostProcessor.Apply(
-                                                                                    NotesViewColumnNamesPostProcessor.Apply(
-                                                                                        NotesDatabaseLifecyclePostProcessor.Apply(
-                                                                                            NotesDatabaseLotusScriptSurfacePostProcessor.Apply(
-                                                                                                NotesDocumentCollectionPostProcessor.Apply(
-                                                                                                    NotesRuntimeCoreSource.Code + "\n\n" +
-                                                                                                    NotesRuntimeValueSource.Code + "\n\n" +
-                                                                                                    NotesRuntimeDataSource.Code + "\n\n" +
-                                                                                                    NotesRuntimeItemSource.Code + "\n\n" +
-                                                                                                    NotesRuntimeIndexedValueSource.Code + "\n\n" +
-                                                                                                    NotesNativeApiSource.Code))))))))))))))))))))));
+            var source = NotesEmbeddedObjectPostProcessor.Apply(
+                NotesRichTextRangePostProcessor.Apply(
+                    NotesRichTextObjectsPostProcessor.Apply(
+                        NotesRichTextMimePostProcessor.Apply(
+                            NotesThreadLifecyclePostProcessor.Apply(
+                                NotesDxlPostProcessor.Apply(
+                                    NotesDocumentComputeWithFormPostProcessor.Apply(
+                                        NotesDocumentLotusScriptSurfacePostProcessor.Apply(
+                                            NotesDocumentRemovePostProcessor.Apply(
+                                                NotesDatabaseCreateCompatibilityPostProcessor.Apply(
+                                                    NotesViewNavigatorHistoryCapPostProcessor.Apply(
+                                                        NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(
+                                                            NotesViewNavigatorCachePostProcessor.Apply(
+                                                                NotesViewNavigatorCachePolicyPostProcessor.Apply(
+                                                                    NotesViewNavigationV3FixPostProcessor.Apply(
+                                                                        NotesViewNavigationV3PostProcessor.Apply(
+                                                                            NotesViewNavigationV2FixPostProcessor.Apply(
+                                                                                NotesViewNavigationV2PostProcessor.Apply(
+                                                                                    NotesViewNavigationPostProcessor.Apply(
+                                                                                        NotesViewColumnNamesPostProcessor.Apply(
+                                                                                            NotesDatabaseLifecyclePostProcessor.Apply(
+                                                                                                NotesDatabaseLotusScriptSurfacePostProcessor.Apply(
+                                                                                                    NotesDocumentCollectionPostProcessor.Apply(
+                                                                                                        NotesRuntimeCoreSource.Code + "\n\n" +
+                                                                                                        NotesRuntimeValueSource.Code + "\n\n" +
+                                                                                                        NotesRuntimeDataSource.Code + "\n\n" +
+                                                                                                        NotesRuntimeItemSource.Code + "\n\n" +
+                                                                                                        NotesRuntimeIndexedValueSource.Code + "\n\n" +
+                                                                                                        NotesNativeApiSource.Code)))))))))))))))))))))));
             NotesViewNavigatorCachePolicyRegression.Validate(source);
             return source;
         }
