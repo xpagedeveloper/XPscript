@@ -197,7 +197,6 @@ Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
 
     TestSession = failures
 End Function
-
 Function TestName(ByVal session As Variant) As Integer
     Dim n As NotesName
     Dim internetName As NotesName
@@ -397,7 +396,6 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     Dim designNoteId As String
     Dim i As Integer
     failures = 0
-
     Print "SECTION=NotesDocument"
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
@@ -1131,7 +1129,7 @@ Function TestDXL(ByVal session As Variant, ByVal db As Variant) As Integer
     If importer Is Nothing Then
         failures = failures + 1
     Else
-        importer.ACLImportOption = 2
+        importer.ACLImportOption = 1
         importer.DesignImportOption = 6
         importer.DocumentImportOption = 6
         importer.CreateFTIndex = False
