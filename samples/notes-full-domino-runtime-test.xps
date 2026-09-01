@@ -118,38 +118,55 @@ Sub Main()
     Print "NOTES-FULL-DOMINO-BEGIN"
     Print "STEP=01/17 NotesSession"
     failures = failures + TestSession(session, db)
+    Print "STEP-RESULT=01 TOTAL=" & CStr(failures)
     Print "STEP=02/17 NotesName"
     failures = failures + TestName(session)
+    Print "STEP-RESULT=02 TOTAL=" & CStr(failures)
     Print "STEP=03/17 NotesDateTime"
     failures = failures + TestDateTime(session)
+    Print "STEP-RESULT=03 TOTAL=" & CStr(failures)
     Print "STEP=04/17 NotesDatabase"
     failures = failures + TestDatabase(session, db, TEST_VIEW, TEST_AGENT)
+    Print "STEP-RESULT=04 TOTAL=" & CStr(failures)
     Print "STEP=05/17 NotesDocument"
     failures = failures + TestDocument(session, db)
+    Print "STEP-RESULT=05 TOTAL=" & CStr(failures)
     Print "STEP=06/17 NotesDocumentCollection"
     failures = failures + TestDocumentCollection(db)
+    Print "STEP-RESULT=06 TOTAL=" & CStr(failures)
     Print "STEP=07/17 NotesNoteCollection"
     failures = failures + TestNoteCollection(db)
+    Print "STEP-RESULT=07 TOTAL=" & CStr(failures)
     Print "STEP=08/17 NotesItem NotesRichTextItem"
     failures = failures + TestItemAndRichText(session, db, TEST_VIEW)
+    Print "STEP-RESULT=08 TOTAL=" & CStr(failures)
     Print "STEP=09/17 NotesAgent NotesAgentResult"
     failures = failures + TestAgent(db, TEST_AGENT)
+    Print "STEP-RESULT=09 TOTAL=" & CStr(failures)
     Print "STEP=10/17 NotesStream"
     failures = failures + TestStream(session)
+    Print "STEP-RESULT=10 TOTAL=" & CStr(failures)
     Print "STEP=11/17 NotesView"
     failures = failures + TestView(db, TEST_VIEW)
+    Print "STEP-RESULT=11 TOTAL=" & CStr(failures)
     Print "STEP=12/17 NotesViewEntry Collection Navigator V1"
     failures = failures + TestViewNavigationV1(db, TEST_VIEW)
+    Print "STEP-RESULT=12 TOTAL=" & CStr(failures)
     Print "STEP=13/17 NotesViewNavigator V2"
     failures = failures + TestViewNavigationV2(db, HIERARCHY_VIEW)
+    Print "STEP-RESULT=13 TOTAL=" & CStr(failures)
     Print "STEP=14/17 NotesView V3"
     failures = failures + TestViewNavigationV3(db, TEST_VIEW)
+    Print "STEP-RESULT=14 TOTAL=" & CStr(failures)
     Print "STEP=15/17 NotesDXLImporter NotesDXLExporter"
     failures = failures + TestDXL(session, db)
+    Print "STEP-RESULT=15 TOTAL=" & CStr(failures)
     Print "STEP=16/17 NotesDocument ComputeWithForm"
     failures = failures + TestComputeWithForm(db, VALID_FORM, ERROR_FORM)
+    Print "STEP-RESULT=16 TOTAL=" & CStr(failures)
     Print "STEP=17/17 NotesDatabase lifecycle"
     failures = failures + TestDatabaseLifecycle(session)
+    Print "STEP-RESULT=17 TOTAL=" & CStr(failures)
 
     Print "NOTES-FULL-DOMINO-END"
     Call db.Recycle()
@@ -1248,16 +1265,28 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", validForm)
     ok = doc.ComputeWithForm(False, False, failedFields)
-    If Not ok Then failures = failures + 1
-    If doc.GetString("CWFDefault") <> "DEFAULT-VALUE" Then failures = failures + 1
+    If Not ok Then
+        failures = failures + 1
+        Print "FAIL CWF valid form returned False"
+    End If
+    If doc.GetString("CWFDefault") <> "DEFAULT-VALUE" Then
+        failures = failures + 1
+        Print "FAIL CWF valid form default value=" & doc.GetString("CWFDefault")
+    End If
     Call doc.Recycle()
 
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", errorForm)
     failedFields = "SENTINEL"
     ok = doc.ComputeWithForm(False, False, failedFields)
-    If ok Then failures = failures + 1
-    If failedFields Is Not Nothing Then failures = failures + 1
+    If ok Then
+        failures = failures + 1
+        Print "FAIL CWF error form raiseError=False returned True"
+    End If
+    If failedFields Is Not Nothing Then
+        failures = failures + 1
+        Print "FAIL CWF error form raiseError=False did not clear failedFields"
+    End If
     Call doc.Recycle()
 
     Set doc = db.CreateDocument()
@@ -1268,8 +1297,16 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     Call doc.ComputeWithForm(False, True, failedFields)
     errCode = Err
     On Error GoTo 0
-    If errCode = 0 Then failures = failures + 1
-    If failedFields Is Nothing Then failures = failures + 1
+    If errCode = 0 Then
+        failures = failures + 1
+        Print "FAIL CWF error form raiseError=True did not raise"
+    Else
+        Print "CWF expected validation Err=" & CStr(errCode)
+    End If
+    If failedFields Is Nothing Then
+        failures = failures + 1
+        Print "FAIL CWF error form raiseError=True did not populate failedFields"
+    End If
     Call doc.Recycle()
 
     TestComputeWithForm = failures
