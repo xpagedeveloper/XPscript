@@ -6,6 +6,7 @@ internal sealed class UIExtensionPreprocessor
 {
     public string Transform(string source)
     {
+        source = new NativeCsvPreprocessor().Transform(source);
         source = new NativeXmlPreprocessor().Transform(source);
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
