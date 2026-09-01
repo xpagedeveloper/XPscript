@@ -6,11 +6,13 @@ on:
     paths:
       - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
       - 'src/XPScript.Compiler/SourceTypeValidator.cs'
+      - 'src/XPScript.Compiler/CompilerSourceLineDirectivePostProcessor.cs'
       - 'samples/if-layouts.xps'
       - 'samples/statement-layout-audit.xps'
       - 'samples/statement-separator-colon.xps'
       - 'samples/erl-physical-source-line.xps'
       - 'samples/nested-resume-targets.xps'
+      - 'samples/runtime-unhandled-stack.xps'
       - '.github/workflows/control-flow-errors-build.yml'
   workflow_dispatch:
 
@@ -83,3 +85,16 @@ jobs:
             if ($output -notcontains $value) { throw "Nested Resume output missing: $value`n$output" }
           }
           if ($output | Where-Object { $_ -like 'outer-handler:*' }) { throw "Outer handler must not catch the inner error.`n$output" }
+      - name: Verify unhandled runtime XPScript call stack
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/runtime-unhandled-stack.xps -o ./out/runtime-unhandled-stack.exe --framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw 'Unhandled stack sample compilation failed.' }
+          $output = (& ./out/runtime-unhandled-stack.exe 2>&1 | Out-String)
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -eq 0) { throw "Unhandled stack sample unexpectedly succeeded.`n$output" }
+          foreach ($line in @(11, 6, 2)) {
+            if ($output -notmatch "runtime-unhandled-stack\.xps:line $line(?:\D|$)") {
+              throw "Expected XPScript runtime stack line $line.`n$output"
+            }
+          }
