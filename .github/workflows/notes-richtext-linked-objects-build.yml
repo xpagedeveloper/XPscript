@@ -5,9 +5,14 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/NotesRichTextObjectsPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesRichTextRangePostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesEmbeddedObjectPostProcessor.cs'
+      - 'src/XPScript.Compiler/NotesEmbeddedObjectPreprocessor.cs'
       - 'src/XPScript.Compiler/NotesRuntimePreprocessor.cs'
       - 'src/XPScript.Compiler/NotesRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionPreprocessor.cs'
       - 'samples/notes-richtext-linked-objects-surface.xps'
+      - 'todo/NotesRichTextLinkedObjects.md'
       - '.github/workflows/notes-richtext-linked-objects-build.yml'
   workflow_dispatch:
 
