@@ -1258,6 +1258,8 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     Dim failedFields As Variant
     Dim ok As Boolean
     Dim errCode As Integer
+    Dim i As Integer
+    Dim failedFieldCount As Integer
     failures = 0
 
     Print "SECTION=NotesDocument.ComputeWithForm"
@@ -1310,6 +1312,20 @@ Function TestComputeWithForm(ByVal db As Variant, ByVal validForm As String, ByV
     If failedFields Is Nothing Then
         failures = failures + 1
         Print "FAIL CWF error form raiseError=True did not populate failedFields"
+    Else
+        failedFieldCount = 0
+        For i = LBound(failedFields) To UBound(failedFields)
+            Print "CWF failedFields(" & CStr(i) & ")=" & CStr(failedFields(i))
+            failedFieldCount = failedFieldCount + 1
+            If CStr(failedFields(i)) = "" Then
+                failures = failures + 1
+                Print "FAIL CWF failedFields contains an empty field name"
+            End If
+        Next
+        If failedFieldCount = 0 Then
+            failures = failures + 1
+            Print "FAIL CWF failedFields array is empty"
+        End If
     End If
     Call doc.Recycle()
 
