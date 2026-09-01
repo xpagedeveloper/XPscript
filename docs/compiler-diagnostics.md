@@ -39,4 +39,4 @@ Example debug-only generated diagnostic:
   description: CS0029: Unable to assign String to Integer.
 ```
 
-`--debug` changes diagnostic visibility only. It does not change XPScript parsing, generated program behavior or runtime behavior.
+`--debug` changes diagnostic visibility only. It does not change XPScript parsing, generated program behavior or error handling. Expected ComputeWithForm validation errors handled by `On Error` are omitted from runtime debug exception traces, while `Err` and the failed-field array retain their normal values.

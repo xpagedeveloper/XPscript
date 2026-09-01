@@ -11,6 +11,7 @@ internal static class XPScriptRuntimeDebugTrace
     public static void TraceHandled(Exception original, Exception normalized, int sourceLine)
     {
         if (!Enabled) return;
+        if (IsExpectedComputeWithFormValidation(normalized)) return;
 
         Console.Error.WriteLine(sourceLine > 0
             ? "DEBUG runtime exception trapped at XPScript line " + sourceLine.ToString(System.Globalization.CultureInfo.InvariantCulture) + " (handled by On Error):"
@@ -23,6 +24,13 @@ internal static class XPScriptRuntimeDebugTrace
             Console.Error.WriteLine(original.ToString());
         }
     }
+
+    private static bool IsExpectedComputeWithFormValidation(Exception exception) =>
+        exception is XPScriptRuntimeException
+        {
+            Number: 5,
+            Message: "ComputeWithForm validation failed."
+        };
 }
 """;
 }
