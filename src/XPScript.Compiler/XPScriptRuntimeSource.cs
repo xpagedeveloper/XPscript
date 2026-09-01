@@ -65,9 +65,9 @@ internal static class XPScriptRuntime
         Convert.ToString(value, CultureInfo.CurrentCulture) ?? "";
 
     public static string PrintText(object? value) =>
-        value is ILSObjectReference reference && reference.IsNothing
-            ? "Variable is Nothing"
-            : CStr(value);
+        XPScriptNullRuntime.IsNull(value) ? "Variable is null" :
+        value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" :
+        CStr(value);
     public static byte CByte(object? value) => Convert.ToByte(value, CultureInfo.CurrentCulture);
     public static int CInt(object? value) => Convert.ToInt32(value, CultureInfo.CurrentCulture);
     public static long CLng(object? value) => Convert.ToInt64(value, CultureInfo.CurrentCulture);

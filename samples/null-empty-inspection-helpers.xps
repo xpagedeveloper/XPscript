@@ -46,6 +46,7 @@ Sub Main()
     Print "NULL_CVAR_ISEMPTY=" & CStr(IsEmpty(nullCopy))
     Print "NULL_CVAR_ISNULL=" & CStr(IsNull(nullCopy))
     Print "NULL_CSTR_LEN=" & CStr(Len(CStr(nullValue)))
+    Print nullCopy
 
     Print "LSARRAY_ISARRAY=" & CStr(IsArray(fixedValues))
     Print "LSARRAY_ISOBJECT=" & CStr(IsObject(fixedValues))
