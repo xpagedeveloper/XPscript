@@ -86,7 +86,7 @@ jobs:
             if ($stdout -notmatch '(?m)^\s*file:\s*Program\.cs\s*$') { throw "Debug output did not include generated Program.cs.`n$stdout" }
             if ($stdout -notmatch 'CS\d{4}') { throw "Debug output did not include a C# diagnostic identifier.`n$stdout" }
             if ($stderr -notmatch 'Started to compile') { throw "--debug did not include --info compile start.`n$stderr" }
-            if ($stderr -notmatch 'Compiling .* transient.*\d+s') { throw "--debug did not include the live compile timer.`n$stderr" }
+            if ($stderr -notmatch 'Compiling .* run.*\d+s') { throw "--debug did not include the live compile timer.`n$stderr" }
           } finally {
             Remove-Item -Force -ErrorAction SilentlyContinue $stdoutPath, $stderrPath
           }
