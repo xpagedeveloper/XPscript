@@ -3,7 +3,7 @@ namespace XPScript.Compiler;
 internal static class SqliteDbRuntimeSource
 {
     public const string Code = """
-internal sealed class XPScriptDbSqlite : IDisposable
+internal sealed class XPScriptDbSqlite : XPScriptCaseInsensitiveDynamicObject, IDisposable
 {
     private const int MaxSqlBytes = 1024 * 1024;
     private const int MaxParameterCount = 999;

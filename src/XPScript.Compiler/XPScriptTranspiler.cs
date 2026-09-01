@@ -131,6 +131,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
         generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n";
         generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
+        generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
         if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";

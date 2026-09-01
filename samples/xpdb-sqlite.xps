@@ -12,15 +12,17 @@ Sub Main()
     Dim readOnlyDb As XPDBSQLite
     Dim count As Variant
 
-    Call db.Execute("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY, name TEXT NOT NULL, active INTEGER NOT NULL)")
-    Call db.Execute("DELETE FROM people")
+    Call db.execute("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY, name TEXT NOT NULL, active INTEGER NOT NULL)")
+    Call db.EXECUTE("DELETE FROM people")
+    Print "CASEOPEN=" & CStr(db.isopen)
+    db.timeout = 30
 
     Call parameters.Set("name", "Ada")
     Call parameters.Set("active", True)
-    Print "INSERTED=" & CStr(db.Execute("INSERT INTO people(name, active) VALUES ($name, $active)", parameters))
+    Print "INSERTED=" & CStr(db.execute("INSERT INTO people(name, active) VALUES ($name, $active)", parameters))
     Print "LASTID=" & CStr(db.LastInsertRowId)
 
-    Set rows = db.Query("SELECT id, name, active FROM people WHERE name = $name", parameters)
+    Set rows = db.QUERY("SELECT id, name, active FROM people WHERE name = $name", parameters)
     Set array = rows.Root.AsArray()
     Set row = array.Get(0)
     Print "QUERYTYPE=" & rows.Root.Type
@@ -28,7 +30,7 @@ Sub Main()
     Print "ROWNAME=" & CStr(row.Get("name"))
     Print "ROWACTIVE=" & CStr(row.Get("active"))
 
-    count = db.Scalar("SELECT COUNT(*) FROM people WHERE name = $name", parameters)
+    count = db.scalar("SELECT COUNT(*) FROM people WHERE name = $name", parameters)
     Print "SCALAR=" & CStr(count)
 
     Call parameters.Set("name", "Grace")
