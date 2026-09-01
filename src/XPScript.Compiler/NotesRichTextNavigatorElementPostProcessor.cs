@@ -146,7 +146,8 @@ internal sealed class XPScriptNotesRichTextRecordData
         EnsureNavigatorAlive();
         RefreshIfChanged();
         var type = ValidateGetElementType(XPScriptRuntime.CInt(typeValue));
-        for (var i = _records.Count - 1; i >= 0; i--)
+        var last = Math.Min(_records.Count - 1, _rangeEnd);
+        for (var i = last; i >= _rangeStart; i--)
         {
             if (_records[i].ElementType != type) continue;
             SetCurrent(i, type, 0);
@@ -202,7 +203,9 @@ internal sealed class XPScriptNotesRichTextRecordData
     private int FindElement(int start, int type, int occurrence)
     {
         var found = 0;
-        for (var i = Math.Max(0, start); i < _records.Count; i++)
+        var firstRecord = Math.Max(_rangeStart, Math.Max(0, start));
+        var lastRecord = Math.Min(_rangeEnd, _records.Count - 1);
+        for (var i = firstRecord; i <= lastRecord; i++)
         {
             if (_records[i].ElementType != type) continue;
             found++;
@@ -217,7 +220,9 @@ internal sealed class XPScriptNotesRichTextRecordData
     private int FindElement(int start, int type, int occurrence)
     {
         var found = 0;
-        for (var i = Math.Max(0, start); i < _records.Count; i++)
+        var firstRecord = Math.Max(_rangeStart, Math.Max(0, start));
+        var lastRecord = Math.Min(_rangeEnd, _records.Count - 1);
+        for (var i = firstRecord; i <= lastRecord; i++)
         {
             if (_records[i].ElementType != type) continue;
             found++;
