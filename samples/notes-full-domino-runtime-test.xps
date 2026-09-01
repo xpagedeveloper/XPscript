@@ -35,7 +35,7 @@ Sub Main()
 
     failures = 0
     If NOTES_INI = "" Then
-        Set session = New NotesSession(NOTES_RUNTIME)
+        Set session = New NotesSession()
     Else
         Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
     End If
