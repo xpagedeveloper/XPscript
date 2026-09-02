@@ -1,0 +1,60 @@
+using System.Diagnostics;
+using XPScript.Compiler;
+
+if (args.Length == 2)
+{
+    var inputPath = Path.GetFullPath(args[0]);
+    var outputPath = Path.GetFullPath(args[1]);
+    var source = File.ReadAllText(inputPath);
+    var generated = new XPScriptTranspiler().Transpile(source, inputPath, "win-x64");
+    File.WriteAllText(outputPath, generated);
+    Console.WriteLine("PREPROCESSOR-SNAPSHOT-CHARS=" + generated.Length);
+    return;
+}
+
+const string plainSource = """
+Option Declare
+
+Sub Main()
+    Dim message As String
+    message = "hello"
+    Print message
+End Sub
+""";
+
+const string notesSource = """
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Set session = New NotesSession()
+    Set db = session.CurrentDatabase
+    Print db.Title
+End Sub
+""";
+
+var transpiler = new XPScriptTranspiler();
+_ = transpiler.Transpile(plainSource, "preprocessor-warmup.xps", "win-x64");
+_ = transpiler.Transpile(notesSource, "preprocessor-notes-warmup.xps", "win-x64");
+
+Measure("PLAIN", plainSource, 10);
+Measure("NOTES", notesSource, 10);
+
+void Measure(string label, string source, int iterations)
+{
+    var samples = new double[iterations];
+    var generatedLength = 0;
+    for (var i = 0; i < iterations; i++)
+    {
+        var started = Stopwatch.GetTimestamp();
+        var generated = transpiler.Transpile(source, "preprocessor-" + label.ToLowerInvariant() + ".xps", "win-x64");
+        samples[i] = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        generatedLength = generated.Length;
+    }
+
+    Array.Sort(samples);
+    Console.WriteLine($"PREPROCESSOR-{label}-MEDIAN-MS={samples[samples.Length / 2]:F3}");
+    Console.WriteLine($"PREPROCESSOR-{label}-MIN-MS={samples[0]:F3}");
+    Console.WriteLine($"PREPROCESSOR-{label}-GENERATED-CHARS={generatedLength}");
+}
