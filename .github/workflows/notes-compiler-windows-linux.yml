@@ -1,0 +1,55 @@
+name: Notes Compiler Windows Linux
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/Notes*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
+      - 'samples/notes-full-domino-runtime-test.xps'
+      - 'samples/notes-agent-types-domino-runtime-test.xps'
+      - 'samples/xpscript-notes-runtime-fixture.dxl'
+      - '.github/workflows/notes-compiler-windows-linux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compiler:
+    name: compiler-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler build failed.' }
+
+      - name: Compile Notes full Domino runtime regression
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/notes-full-domino-runtime | Out-Null
+          dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./samples/notes-full-domino-runtime-test.xps --framework-dependent -o ./out/notes-full-domino-runtime/notes-full-domino-runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Notes full Domino runtime sample compilation failed.' }
+
+      - name: Compile Notes agent type runtime regression
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./out/notes-agent-types-domino-runtime | Out-Null
+          dotnet run --no-build --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./samples/notes-agent-types-domino-runtime-test.xps --framework-dependent -o ./out/notes-agent-types-domino-runtime/notes-agent-types-domino-runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Notes agent type runtime sample compilation failed.' }
