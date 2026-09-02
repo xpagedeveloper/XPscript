@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/XPScript.Compiler/Notes*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
       - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
       - 'samples/notes-full-domino-runtime-test.xps'
       - 'samples/notes-agent-types-domino-runtime-test.xps'

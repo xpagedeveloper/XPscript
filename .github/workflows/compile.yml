@@ -1,0 +1,85 @@
+name: Compile
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'src/XPScript.Compiler/Notes*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
+      - 'samples/notes-*.xps'
+      - 'samples/xpscript-notes-runtime-fixture.dxl'
+      - 'docs/notes-*.md'
+      - 'todo/HCLNotes.md'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'src/XPScript.Compiler/Notes*.cs'
+      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
+      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
+      - 'samples/notes-*.xps'
+      - 'samples/xpscript-notes-runtime-fixture.dxl'
+      - 'docs/notes-*.md'
+      - 'todo/HCLNotes.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-windows:
+    name: Compile Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile ordinary application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --framework-dependent
+      - name: Compile UIForm application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --framework-dependent
+      - name: Compile web application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
+
+  compile-linux:
+    name: Compile Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile ordinary application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+      - name: Compile UIForm application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
+      - name: Compile web application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
+
+  compile-macos:
+    name: Compile macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile ordinary application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+      - name: Compile UIForm application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
+      - name: Compile web application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
