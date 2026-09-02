@@ -203,7 +203,15 @@ Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
     Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)
     If replicaDb Is Nothing Or Not replicaDb.IsOpen Then failures = failures + 1
     If Not replicaDb Is Nothing Then Call replicaDb.Recycle()
-
+	Forall agent in db.agents
+	print agent.name
+	End forall
+	Forall form in db.forms
+	print form.name
+	End forall
+	Forall view in db.views
+	print view.name
+	End forall
     Set n = session.CreateName("CN=Ada Lovelace/OU=Engineering/O=Example/C=SE")
     If n Is Nothing Then failures = failures + 1 Else Call n.Recycle()
 
@@ -448,6 +456,9 @@ Function TestDocument(ByVal session As Variant, ByVal db As Variant) As Integer
     For i = LBound(allItems) To UBound(allItems)
         Print "ITEM[" & CStr(i) & "]=" & allItems(i).Name
     Next
+    ForAll itemInDocument In doc.Items
+        Print "ITEM-FORALL=" & itemInDocument.Name
+    End ForAll
 
     Call doc.Save()
     Print "NoteID=" & doc.NoteID

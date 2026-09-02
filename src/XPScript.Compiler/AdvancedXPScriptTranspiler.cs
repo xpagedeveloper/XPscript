@@ -543,11 +543,11 @@ internal static class LSForAllRuntime
         if (Regex.IsMatch(line, @"^Else$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); Write(sb, "else"); Write(sb, "{"); _indent++; return; }
         if (Regex.IsMatch(line, @"^End\s+If$", RegexOptions.IgnoreCase)) { _indent--; Write(sb, "}"); return; }
 
-        var forAll = Regex.Match(line, @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
+        var forAll = Regex.Match(line, @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+(.+)$", RegexOptions.IgnoreCase);
         if (forAll.Success)
         {
             var alias = forAll.Groups[1].Value;
-            var sourceName = forAll.Groups[2].Value;
+            var sourceName = forAll.Groups[2].Value.Trim();
             var list = ResolveList(sourceName);
             if (list is not null)
             {
@@ -558,10 +558,12 @@ internal static class LSForAllRuntime
                 return;
             }
 
-            if (!_variableTypes.ContainsKey(sourceName) && !_objectVariables.ContainsKey(sourceName))
+            var isDeclaredValue = _variableTypes.ContainsKey(sourceName) || _objectVariables.ContainsKey(sourceName);
+            var isMemberExpression = Regex.IsMatch(sourceName, @"^[A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)+$");
+            if (!isDeclaredValue && !isMemberExpression)
                 throw new CompilerException($"ForAll source '{sourceName}' is not a declared list, array, or enumerable variable.");
 
-            Write(sb, $"foreach (var {alias} in LSForAllRuntime.Enumerate({TransformExpression(sourceName)}))");
+            Write(sb, $"foreach (dynamic {alias} in LSForAllRuntime.Enumerate({TransformExpression(sourceName)}))");
             Write(sb, "{");
             _indent++;
             _forAll.Push(new ForAllContext(alias, "Variant", false));
