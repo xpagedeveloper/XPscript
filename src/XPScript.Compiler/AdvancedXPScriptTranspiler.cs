@@ -5,6 +5,10 @@ namespace XPScript.Compiler;
 
 internal sealed class AdvancedXPScriptTranspiler
 {
+    private static readonly Regex SourceLineMarkerPattern = new(
+        @"__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-F]+)\(\)",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Dictionary<string, string> TypeMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
@@ -87,6 +91,7 @@ internal sealed class AdvancedXPScriptTranspiler
 
         var body = new StringBuilder();
         ResetState();
+        SourceMap.Location? currentSourceLocation = null;
 
         for (var i = 0; i < lines.Length; i++)
         {
@@ -95,14 +100,20 @@ internal sealed class AdvancedXPScriptTranspiler
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
+            var sourceMarker = SourceLineMarkerPattern.Match(line);
+            if (sourceMarker.Success)
+                currentSourceLocation = DecodeSourceLineMarker(sourceMarker);
+
             try
             {
                 EmitLine(body, line);
             }
             catch (CompilerException ex)
             {
+                var diagnosticSource = currentSourceLocation?.SourcePath ?? sourceName;
+                var diagnosticLine = currentSourceLocation?.Line ?? i + 1;
                 throw new CompilerException(
-                    $"{sourceName}({i + 1}): {ex.Message}" +
+                    $"{diagnosticSource}({diagnosticLine}): {ex.Message}" +
                     Environment.NewLine +
                     $"  {original.Trim()}");
             }
@@ -166,6 +177,20 @@ internal static class LSForAllRuntime
 
 {{XPScriptRuntimeSource.Code}}
 """;
+    }
+
+    private static SourceMap.Location DecodeSourceLineMarker(Match marker)
+    {
+        try
+        {
+            var source = System.Text.Encoding.UTF8.GetString(Convert.FromHexString(marker.Groups["source"].Value));
+            var line = int.Parse(marker.Groups["line"].Value, System.Globalization.CultureInfo.InvariantCulture);
+            return new SourceMap.Location(source, line, "");
+        }
+        catch (Exception exception)
+        {
+            throw new CompilerException("Invalid generated XPScript source mapping marker: " + exception.Message);
+        }
     }
 
     private void ResetState()
