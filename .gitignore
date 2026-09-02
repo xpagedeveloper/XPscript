@@ -9,3 +9,4 @@ publish/
 out/
 graphify-out/
 .codex/
+*.exe
