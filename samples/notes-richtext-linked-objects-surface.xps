@@ -18,6 +18,7 @@ Sub Main()
     Dim embedded As NotesEmbeddedObject
     Dim attachmentBytes As Variant
     Dim embeddedObjects As Variant
+    Dim rowLabels As Variant
 
     Set session = New NotesSession("C:\Program Files\HCL\Notes")
 
@@ -42,6 +43,7 @@ Sub Main()
     Set db = session.OpenDatabase("", "names.nsf")
     Set doc = db.CreateDocument()
     Set richText = doc.CreateRichTextItem("Body")
+    Call richText.AppendStyle(style)
     Call richText.AppendText("Navigator test")
 
     Set navigator = richText.CreateNavigator()
@@ -58,6 +60,39 @@ Sub Main()
         Call rangeClone.Reset()
     End If
     If navigator.FindFirstString("Navigator", 1) Then Print "Found"
+
+    Set section = navigator.GetFirstElement(6)
+    If Not section Is Nothing Then
+        Print section.Title
+        Print section.IsExpanded
+        Print section.BarColor.NotesColor
+        Print section.TitleStyle.FontSize
+        Call section.Recycle()
+    End If
+
+    Set table = navigator.GetFirstElement(1)
+    If Not table Is Nothing Then
+        Print table.RowCount
+        Print table.ColumnCount
+        Print table.RightToLeft
+        Print table.Style
+        Print table.Color.NotesColor
+        Print table.AlternateColor.NotesColor
+        rowLabels = table.RowLabels
+        Call table.Recycle()
+    End If
+
+    Set docLink = navigator.GetFirstElement(5)
+    If Not docLink Is Nothing Then
+        Print docLink.DbReplicaID
+        Print docLink.DisplayComment
+        Print docLink.DocUNID
+        Print docLink.HotSpotText
+        Print docLink.HotSpotTextStyle.FontSize
+        Print docLink.ServerHint
+        Print docLink.ViewUNID
+        Call docLink.Recycle()
+    End If
 
     embeddedObjects = richText.EmbeddedObjects
     Set embedded = richText.GetEmbeddedObject("missing.bin")
@@ -87,10 +122,6 @@ Sub Main()
     End If
 
     Set navigator = navigator.Clone()
-
-    Set section = Nothing
-    Set table = Nothing
-    Set docLink = Nothing
 
     If Not rangeNavigator Is Nothing Then Call rangeNavigator.Recycle()
     If Not rangeClone Is Nothing Then Call rangeClone.Recycle()
