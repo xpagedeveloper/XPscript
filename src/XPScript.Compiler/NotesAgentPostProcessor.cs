@@ -59,7 +59,7 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
     public bool IsWebAgent { get { EnsureAlive(); return false; } }
     public bool IsActivatable { get { EnsureAlive(); return true; } }
     public bool HasRunSinceModified { get { EnsureAlive(); return false; } }
-    public bool ProhibitDesignUpdate { get { EnsureAlive(); } set { EnsureAlive(); } }
+    public bool ProhibitDesignUpdate { get { EnsureAlive(); return false; } set { EnsureAlive(); } }
     public bool IsEnabled { get { EnsureAlive(); return true; } set { EnsureAlive(); } }
     public int Trigger { get { EnsureAlive(); return 0; } }
     public int Target { get { EnsureAlive(); return 0; } }
