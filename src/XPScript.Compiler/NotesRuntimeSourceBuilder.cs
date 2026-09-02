@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSourceBuilder
 {
-    public static string Build(bool applyBuiltNotesSurface = false)
+    public static string Build()
     {
         var source = NotesRuntimeSource.Code;
 
@@ -129,16 +129,11 @@ internal static class NotesRuntimeSourceBuilder
 
         source = NormalizeDominoHandles(source);
 
-        // The desktop Notes runtime is injected directly by UIExtensionDesktopPostProcessor.
-        // Apply the same document and database surfaces used by the HCL runtime path so
-        // collection properties such as NotesDatabase.Agents and NotesDocument.Items are
-        // available there as well. The default remains false because the HCL path applies
-        // these postprocessors itself.
-        if (applyBuiltNotesSurface)
-        {
-            source = NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(source);
-            source = NotesAgentPostProcessor.ApplyBuiltSurface(source);
-        }
+        // Keep the shared Notes runtime complete regardless of which compatibility
+        // runtime requested it. This builder is used both by the HCL runtime and by
+        // the desktop runtime injection path.
+        source = NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(source);
+        source = NotesAgentPostProcessor.ApplyBuiltSurface(source);
 
         return source;
     }

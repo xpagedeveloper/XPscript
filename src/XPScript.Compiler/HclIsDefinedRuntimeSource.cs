@@ -41,7 +41,6 @@ internal static class LSHclPlatformConstantRuntime
                                                     NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
                                                         NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
                                                             NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                                                                NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                    NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                        NotesRuntimeSourceBuilder.Build())))))))))))))))));
+                                                                    NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
+                                                                        NotesRuntimeSourceBuilder.Build()))))))))))))))));
 }
