@@ -3,24 +3,8 @@ name: Compile
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'src/XPScript.Compiler/Notes*.cs'
-      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
-      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
-      - 'samples/notes-*.xps'
-      - 'samples/xpscript-notes-runtime-fixture.dxl'
-      - 'docs/notes-*.md'
-      - 'todo/HCLNotes.md'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'src/XPScript.Compiler/Notes*.cs'
-      - 'src/XPScript.Compiler/HclIsDefinedRuntimeSource.cs'
-      - 'src/XPScript.Compiler/UIExtensionDesktopPostProcessor.cs'
-      - 'samples/notes-*.xps'
-      - 'samples/xpscript-notes-runtime-fixture.dxl'
-      - 'docs/notes-*.md'
-      - 'todo/HCLNotes.md'
   workflow_dispatch:
 
 permissions:
