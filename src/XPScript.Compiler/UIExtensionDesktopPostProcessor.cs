@@ -80,7 +80,7 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         if (generated.Contains("XPScriptNotes.CreateSession(", StringComparison.Ordinal) &&
             !generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
-            generated += "\n" + NotesRuntimeSourceBuilder.Build(applyBuiltNotesSurface: true) + "\n";
+            generated += "\n" + NotesRuntimeSourceBuilder.Build() + "\n";
 
         if (generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
             generated = NotesComputeWithFormByRefCallPostProcessor.Transform(generated);

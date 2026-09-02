@@ -6,6 +6,12 @@ internal static class NotesAgentPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        // NotesRuntimeSourceBuilder is shared by multiple runtime assembly paths.
+        // Do not inject the same public surface twice when a later compatibility
+        // postprocessor sees an already-built Notes runtime.
+        if (source.Contains("public XPScriptNotesAgent[] Agents", StringComparison.Ordinal))
+            return source;
+
         source = source.Replace("    public string[] Forms { get { return GetDesignNames(0x0004); } }\\n", "", StringComparison.Ordinal);
 
         source = source.Replace(
