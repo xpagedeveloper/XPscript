@@ -8,6 +8,8 @@ internal sealed class NativeCsvPreprocessor
 
     public string Transform(string source)
     {
+        if (!source.Contains("Csv", StringComparison.OrdinalIgnoreCase)) return source;
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 16);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

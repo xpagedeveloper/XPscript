@@ -2,45 +2,50 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSource
 {
-    public static string Code
+    public static string Code => Build(NotesRuntimeFeatures.Full);
+
+    public static string Build(NotesRuntimeFeatures features)
     {
-        get
+        var source = NotesRuntimeCoreSource.Code + "\n\n" +
+                     NotesRuntimeValueSource.Code + "\n\n" +
+                     NotesRuntimeDataSource.Code + "\n\n" +
+                     NotesRuntimeItemSource.Build(features.RichText) + "\n\n" +
+                     NotesRuntimeIndexedValueSource.Code + "\n\n" +
+                     NotesNativeApiSource.Code;
+
+        source = NotesDocumentCollectionPostProcessor.Apply(source);
+        source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
+        source = NotesDatabaseLifecyclePostProcessor.Apply(source);
+        source = NotesViewColumnNamesPostProcessor.Apply(source);
+        source = NotesViewNavigationPostProcessor.Apply(source);
+        source = NotesViewNavigationV2PostProcessor.Apply(source);
+        source = NotesViewNavigationV2FixPostProcessor.Apply(source);
+        source = NotesViewNavigationV3PostProcessor.Apply(source);
+        source = NotesViewNavigationV3FixPostProcessor.Apply(source);
+        source = NotesViewNavigatorCachePolicyPostProcessor.Apply(source);
+        source = NotesViewNavigatorCachePostProcessor.Apply(source);
+        source = NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(source);
+        source = NotesViewNavigatorHistoryCapPostProcessor.Apply(source);
+        source = NotesDatabaseCreateCompatibilityPostProcessor.Apply(source);
+        source = NotesDocumentRemovePostProcessor.Apply(source);
+        source = NotesDocumentLotusScriptSurfacePostProcessor.Apply(source);
+        source = NotesDocumentComputeWithFormPostProcessor.Apply(source);
+        source = NotesDxlPostProcessor.Apply(source);
+        source = NotesThreadLifecyclePostProcessor.Apply(source);
+
+        if (features.RichText)
         {
-            var source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(
-                NotesRichTextLinkedObjectsPostProcessor.Apply(
-                    NotesRichTextNavigatorElementPostProcessor.Apply(
-                        NotesRichTextAttachmentInsertPostProcessor.Apply(
-                            NotesEmbeddedObjectPostProcessor.Apply(
-                                NotesRichTextRangePostProcessor.Apply(
-                                    NotesRichTextObjectsPostProcessor.Apply(
-                                        NotesRichTextMimePostProcessor.Apply(
-                                            NotesThreadLifecyclePostProcessor.Apply(
-                                                NotesDxlPostProcessor.Apply(
-                                                    NotesDocumentComputeWithFormPostProcessor.Apply(
-                                                        NotesDocumentLotusScriptSurfacePostProcessor.Apply(
-                                                            NotesDocumentRemovePostProcessor.Apply(
-                                                                NotesDatabaseCreateCompatibilityPostProcessor.Apply(
-                                                                    NotesViewNavigatorHistoryCapPostProcessor.Apply(
-                                                                        NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(
-                                                                            NotesViewNavigatorCachePostProcessor.Apply(
-                                                                                NotesViewNavigatorCachePolicyPostProcessor.Apply(
-                                                                                    NotesViewNavigationV3FixPostProcessor.Apply(
-                                                                                        NotesViewNavigationV3PostProcessor.Apply(
-                                                                                            NotesViewNavigationV2FixPostProcessor.Apply(
-                                                                                                NotesViewNavigationV2PostProcessor.Apply(
-                                                                                                    NotesViewNavigationPostProcessor.Apply(
-                                                                                                        NotesViewColumnNamesPostProcessor.Apply(
-                                                                                                            NotesDatabaseLifecyclePostProcessor.Apply(
-                                                                                                                NotesDatabaseLotusScriptSurfacePostProcessor.Apply(
-                                                                                                                    NotesDocumentCollectionPostProcessor.Apply(
-                                                                                                                        NotesRuntimeCoreSource.Code + "\n\n" +
-                                                                                                                        NotesRuntimeValueSource.Code + "\n\n" +
-                                                                                                                        NotesRuntimeDataSource.Code + "\n\n" +
-                                                                                                                        NotesRuntimeItemSource.Code + "\n\n" +
-                                                                                                                        NotesRuntimeIndexedValueSource.Code + "\n\n" +
-                                                                                                                        NotesNativeApiSource.Code)))))))))))))))))))))))))));
-            NotesViewNavigatorCachePolicyRegression.Validate(source);
-            return source;
+            source = NotesRichTextMimePostProcessor.Apply(source);
+            source = NotesRichTextObjectsPostProcessor.Apply(source);
+            source = NotesRichTextRangePostProcessor.Apply(source);
+            source = NotesEmbeddedObjectPostProcessor.Apply(source);
+            source = NotesRichTextAttachmentInsertPostProcessor.Apply(source);
+            source = NotesRichTextNavigatorElementPostProcessor.Apply(source);
+            source = NotesRichTextLinkedObjectsPostProcessor.Apply(source);
+            source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
         }
+
+        NotesViewNavigatorCachePolicyRegression.Validate(source);
+        return source;
     }
 }

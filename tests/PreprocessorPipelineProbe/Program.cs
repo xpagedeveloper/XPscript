@@ -40,6 +40,8 @@ _ = transpiler.Transpile(notesSource, "preprocessor-notes-warmup.xps", "win-x64"
 
 Measure("PLAIN", plainSource, 10);
 Measure("NOTES", notesSource, 10);
+VerifyVariableNamesDoNotEnableRuntimes();
+VerifyFeatureProfiles();
 
 void Measure(string label, string source, int iterations)
 {
@@ -57,4 +59,93 @@ void Measure(string label, string source, int iterations)
     Console.WriteLine($"PREPROCESSOR-{label}-MEDIAN-MS={samples[samples.Length / 2]:F3}");
     Console.WriteLine($"PREPROCESSOR-{label}-MIN-MS={samples[0]:F3}");
     Console.WriteLine($"PREPROCESSOR-{label}-GENERATED-CHARS={generatedLength}");
+}
+
+void VerifyVariableNamesDoNotEnableRuntimes()
+{
+    const string source = """
+Option Declare
+
+Sub Main()
+    Dim Notesdb As String
+    Dim XPDBSupabase As String
+    Dim JsonDocument As String
+    Dim XmlDocument As String
+    Dim CsvDocument As String
+    Dim HttpClient As String
+    Notesdb = "NotesDatabase XPDB JSON XML CSV HTTP"
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-variable-name-probe.xps", "win-x64");
+    var forbidden = new[]
+    {
+        "internal static class XPScriptNotes",
+        "internal static class XPScriptNativeJson",
+        "internal static class XPScriptNativeXml",
+        "internal static class XPScriptNativeCsv",
+        "internal static class XPScriptNativeHttp",
+        "internal sealed class XPScriptDbSupabase"
+    };
+    foreach (var marker in forbidden)
+        if (generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Variable-name feature detection incorrectly enabled " + marker + ".");
+
+    Console.WriteLine("PREPROCESSOR-VARIABLE-NAMES=OK");
+}
+
+void VerifyFeatureProfiles()
+{
+    VerifyProfile("JSON", "Dim value As JsonDocument", ["internal static class XPScriptNativeJson"]);
+    VerifyProfile("XML", "Dim value As XmlDocument", ["internal static class XPScriptNativeXml"]);
+    VerifyProfile("CSV", "Dim value As CsvDocument", ["internal static class XPScriptNativeCsv"]);
+    VerifyProfile(
+        "HTTP",
+        "Dim value As HttpClient",
+        ["internal static class XPScriptNativeHttp"],
+        ["internal sealed class XPScriptUIForm"]);
+    VerifyProfile(
+        "UI",
+        "Dim value As UIForm",
+        [
+            "internal sealed class XPScriptUIForm",
+            "internal static class XPScriptNativeHttp",
+            "internal static class XPScriptNativeJson"
+        ],
+        ["public string XPScriptUIDialogRuntime.ShowDialog()"]);
+    VerifyProfile(
+        "XPDB",
+        "Dim value As XPDBSQLite",
+        ["internal sealed class XPScriptDbSqlite"],
+        ["internal sealed class XPScriptHttpDbSupabase"]);
+    VerifyProfile(
+        "HTTPDB",
+        "Dim value As HTTPDBSupabase",
+        ["internal sealed class XPScriptHttpDbSupabase"]);
+    VerifyProfile(
+        "NOTES",
+        "Dim value As NotesDatabase",
+        ["internal static class XPScriptNotes"],
+        ["internal sealed class XPScriptNotesRichTextItem"]);
+    VerifyProfile(
+        "NOTES-RICH-TEXT",
+        "Dim value As NotesRichTextItem",
+        ["internal sealed class XPScriptNotesRichTextItem"]);
+    Console.WriteLine("PREPROCESSOR-FEATURE-PROFILES=OK");
+}
+
+void VerifyProfile(
+    string label,
+    string declaration,
+    IReadOnlyList<string> expectedMarkers,
+    IReadOnlyList<string>? forbiddenMarkers = null)
+{
+    var source = "Option Declare\nSub Main()\n    " + declaration + "\nEnd Sub\n";
+    var generated = transpiler.Transpile(source, "preprocessor-" + label.ToLowerInvariant() + "-profile.xps", "win-x64");
+    foreach (var marker in expectedMarkers)
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception(label + " feature profile did not include " + marker + ".");
+    foreach (var marker in forbiddenMarkers ?? [])
+        if (generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception(label + " feature profile unexpectedly included " + marker + ".");
 }

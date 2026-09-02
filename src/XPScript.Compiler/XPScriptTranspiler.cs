@@ -67,14 +67,16 @@ public sealed class XPScriptTranspiler
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
+        var runtimeFeatures = RuntimeFeatures.Detect(source);
+        var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForDomino(", "XPScriptDatabaseAttachmentApi.ForDomino(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(", "XPScriptDatabaseAttachmentApi.SetSupabaseBucket(", StringComparison.Ordinal);
-        var usesSqlite = source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
-        var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesSqlite = runtimeFeatures.Sqlite || source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
+        var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
@@ -123,22 +125,40 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
-        generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
-        generated += "\n\n" + JsonNodesSerializerShimSource.Code + "\n";
+        if (runtimeFeatures.RequiresJson)
+        {
+            generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
+            generated += "\n\n" + JsonNodesSerializerShimSource.ShimCode + "\n";
+            generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
+        }
+        if (runtimeFeatures.Xml) generated += "\n\n" + NativeXmlRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Csv) generated += "\n\n" + NativeCsvRuntimeSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
-        generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
-        generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n";
-        generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n";
-        generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp)
+        {
+            generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
+            generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n";
+        }
+        if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui)
+            generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
         if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";
-        generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
-        generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.Build(usesSqlite, usesMsSql) + "\n";
-        generated += "\n\n" + DatabaseAttachmentRuntimeV2Source.Build(usesSqlite, usesMsSql) + "\n";
-        generated += "\n\n" + DatabaseAttachmentRuntimeV3Source.Code + "\n";
+        if (runtimeFeatures.RequiresHttpDatabaseTypes) generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Database)
+            generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.Build(
+                usesSqlite,
+                usesMsSql,
+                runtimeFeatures.RequiresHttpDatabaseTypes) + "\n";
+        if (runtimeFeatures.Attachments)
+        {
+            generated += "\n\n" + DatabaseAttachmentRuntimeV2Source.Build(usesSqlite, usesMsSql) + "\n";
+            generated += "\n\n" + DatabaseAttachmentRuntimeV3Source.Code + "\n";
+        }
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
@@ -152,7 +172,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
 
         if (usesAi) generated = new AiSessionRuntimePostProcessor().Transform(generated);
-        generated = new UIExtensionDesktopPostProcessor().Transform(generated);
+        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
 

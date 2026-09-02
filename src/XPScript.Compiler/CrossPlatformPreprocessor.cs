@@ -4,8 +4,18 @@ namespace XPScript.Compiler;
 
 internal sealed class CrossPlatformPreprocessor
 {
+    private static readonly string[] FeatureMarkers =
+    [
+        "Platform", "FileExists", "DirExists", "IsFile", "IsDir", "FileInfo", "FileHash",
+        "FileEquals", "Files", "Directories", "CopyFile", "MoveFile", "ReadFile", "ReadLines",
+        "ReadBytes", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "Path", "Dir",
+        "StrTemplate", "ShellArgs", "Shell"
+    ];
+
     public string Transform(string source)
     {
+        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
+
         source = Regex.Replace(
             source,
             @"(?<![\w.])Platform\s*\(\s*\)",

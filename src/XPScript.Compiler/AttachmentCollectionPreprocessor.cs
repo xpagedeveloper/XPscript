@@ -11,6 +11,9 @@ internal sealed class AttachmentCollectionPreprocessor
 
     public string Transform(string source)
     {
+        if (!PreprocessorFeatureGate.ContainsAny(source, ".Attachments", "XPScriptDatabaseAttachmentRuntime"))
+            return source;
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
         var attachmentVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -6,10 +6,14 @@ internal static class NotesStreamPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(source,
-            "    public XPScriptNotesDXLImporter CreateDXLImporter()",
-            "    public XPScriptNotesStream CreateStream()\n    {\n        EnsureAlive();\n        return new XPScriptNotesStream(this);\n    }\n\n    public XPScriptNotesDXLImporter CreateDXLImporter()",
-            "session-create-stream");
+        const string streamFactory = "    public XPScriptNotesStream CreateStream()\n    {\n        EnsureAlive();\n        return new XPScriptNotesStream(this);\n    }";
+        const string dxlMarker = "    public XPScriptNotesDXLImporter CreateDXLImporter()";
+        const string dateTimeMarker = "    public XPScriptNotesDateTime CreateDateTimeNow()\n    {\n        EnsureAlive();\n        return XPScriptNotesDateTime.CreateNow(this);\n    }";
+
+        if (source.Contains(dxlMarker, StringComparison.Ordinal))
+            source = source.Replace(dxlMarker, streamFactory + "\n\n" + dxlMarker, StringComparison.Ordinal);
+        else
+            source = ReplaceRequired(source, dateTimeMarker, dateTimeMarker + "\n\n" + streamFactory, "session-create-stream");
 
         source += "\n\n" + StreamRuntime;
         return source;

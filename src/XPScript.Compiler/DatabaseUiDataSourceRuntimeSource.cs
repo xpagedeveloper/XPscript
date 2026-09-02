@@ -2,13 +2,13 @@ namespace XPScript.Compiler;
 
 internal static class DatabaseUiDataSourceRuntimeSource
 {
-    public static string Build(bool usesSqlite, bool usesMsSql)
+    public static string Build(bool usesSqlite, bool usesMsSql, bool usesHttpDatabase)
     {
         var code = new System.Text.StringBuilder();
         code.AppendLine(CommonCode);
         if (usesSqlite) code.AppendLine(SqliteCode);
         if (usesMsSql) code.AppendLine(MsSqlCode);
-        code.AppendLine(HttpDatabaseCode);
+        if (usesHttpDatabase) code.AppendLine(HttpDatabaseCode);
         return code.ToString();
     }
 
