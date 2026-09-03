@@ -2,6 +2,7 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
+var reimportFixture = Path.Combine(AppContext.BaseDirectory, "petstore-reimport.yaml");
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
 
@@ -76,13 +77,73 @@ try
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
     var compiler = new XpsWebCompiler();
-    await using var unit = await compiler.CompileAsync(sourcePath, root);
-    if (!unit.Routes.ContainsKey("EndpointGetPet") || !unit.Routes.ContainsKey("EndpointCreatePet"))
-        throw new Exception("Generated XPScript did not compile into the expected REST routes.");
+    await using (var unit = await compiler.CompileAsync(sourcePath, root))
+    {
+        if (!unit.Routes.ContainsKey("EndpointGetPet") || !unit.Routes.ContainsKey("EndpointCreatePet"))
+            throw new Exception("Generated XPScript did not compile into the expected REST routes.");
+    }
+
+    const string originalHandlerTail = "    result.StatusCode = 501\n    HandleGetPet = result";
+    const string editedHandlerTail = "    ' USER HANDLER CODE MUST SURVIVE REIMPORT\n    result.StatusCode = 200\n    result.Data = \"custom\"\n    HandleGetPet = result";
+    var userEdited = result.Source.Replace(originalHandlerTail, editedHandlerTail, StringComparison.Ordinal);
+
+    if (!userEdited.Contains("USER HANDLER CODE MUST SURVIVE REIMPORT", StringComparison.Ordinal))
+        throw new Exception("Smoke setup failed to create user-owned handler edit.");
+
+    var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
+
+    foreach (var preserved in new[]
+    {
+        "' USER HANDLER CODE MUST SURVIVE REIMPORT",
+        "result.Data = \"custom\"",
+        "Public name As String",
+        "Sub EndpointGetPet([FromRoute:\"petId\"] pPetId As Long, [FromQuery:\"includeHistory\"] pIncludeHistory As Boolean, [FromHeader:\"X-Request-Id\"] pXRequestId As String)"
+    })
+    {
+        if (!importResult.Source.Contains(preserved, StringComparison.Ordinal))
+            throw new Exception("Additive import changed or removed existing source: " + preserved);
+    }
+
+    foreach (var added in new[]
+    {
+        "Public microchip As String",
+        "Public source As String",
+        "Public traceId As String",
+        "Public Expand As String",
+        "Public Class UpdatePet",
+        "Public Class UpdatePetRequest",
+        "Public Class UpdatePetResponse",
+        "Function HandleUpdatePet(request As UpdatePetRequest) As UpdatePetResponse",
+        "Sub EndpointUpdatePet(",
+        "Sub WriteUpdatePetResponse(result As UpdatePetResponse)"
+    })
+    {
+        if (!importResult.Source.Contains(added, StringComparison.Ordinal))
+            throw new Exception("Additive import did not add expected declaration: " + added);
+    }
+
+    if (importResult.Source.Contains("pExpand As String", StringComparison.Ordinal))
+        throw new Exception("Additive import rewrote the existing GetPet endpoint signature.");
+    if (!importResult.Warnings.Any(warning => warning.Contains("Pet.name", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception("Expected changed existing property type to produce a drift warning.");
+    if (!importResult.Warnings.Any(warning => warning.Contains("EndpointGetPet", StringComparison.Ordinal)))
+        throw new Exception("Expected changed existing endpoint signature to produce a drift warning.");
+
+    var importedPath = Path.Combine(root, "petstore-imported.xps");
+    await File.WriteAllTextAsync(importedPath, importResult.Source);
+    await using (var importedUnit = await compiler.CompileAsync(importedPath, root))
+    {
+        if (!importedUnit.Routes.ContainsKey("EndpointGetPet") ||
+            !importedUnit.Routes.ContainsKey("EndpointCreatePet") ||
+            !importedUnit.Routes.ContainsKey("EndpointUpdatePet"))
+            throw new Exception("Additively imported XPScript did not compile into all expected REST routes.");
+    }
 
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-PRESERVE=OK");
+    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-COMPILE=OK");
 }
 finally
 {
