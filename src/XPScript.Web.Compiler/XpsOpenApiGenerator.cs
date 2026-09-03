@@ -320,6 +320,7 @@ public sealed class XpsOpenApiGenerator
     {
         var requestClass = operation.Name + "Request";
         var responseClass = operation.Name + "Response";
+        var endpointName = "Endpoint" + operation.Name;
         var fields = BuildRequestFields(operation);
 
         builder.AppendLine($"Public Class {requestClass}");
@@ -350,7 +351,7 @@ public sealed class XpsOpenApiGenerator
         builder.AppendLine($"[{ToHttpAttribute(operation.Method)}]");
         builder.AppendLine($"[Route:{operation.Path}]");
         var parameters = BuildWrapperParameters(operation);
-        builder.AppendLine($"Sub {operation.Name}({string.Join(", ", parameters.Select(parameter => parameter.Declaration))})");
+        builder.AppendLine($"Sub {endpointName}({string.Join(", ", parameters.Select(parameter => parameter.Declaration))})");
         builder.AppendLine($"    Dim request As {requestClass}");
         builder.AppendLine($"    Set request = New {requestClass}");
         builder.AppendLine($"    Dim result As {responseClass}");
