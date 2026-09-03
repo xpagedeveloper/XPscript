@@ -33,6 +33,7 @@ Sub Main()
 
     Set contextDoc = db.CreateDocument()
     Call contextDoc.ReplaceItemValue("Form", "XPScriptTest")
+    Call contextDoc.Save()
     result = agent.RunWithDocumentContext(contextDoc)
     Print "AGENT-RUN-WITH-DOCUMENT-CONTEXT=" & CStr(result)
     result = agent.RunOnServer(contextDoc.NoteID)
