@@ -338,7 +338,8 @@ public sealed class XpsOpenApiGenerator
 
         builder.AppendLine($"' OpenAPI responses: {string.Join(", ", operation.Responses.Select(FormatResponseDescription))}");
         builder.AppendLine($"Function Handle{operation.Name}(request As {requestClass}) As {responseClass}");
-        builder.AppendLine($"    Dim result As New {responseClass}");
+        builder.AppendLine($"    Dim result As {responseClass}");
+        builder.AppendLine($"    Set result = New {responseClass}");
         builder.AppendLine("    ' TODO: implement this operation and set result.StatusCode/result.Data.");
         builder.AppendLine("    result.StatusCode = 501");
         builder.AppendLine($"    Set Handle{operation.Name} = result");
@@ -350,7 +351,8 @@ public sealed class XpsOpenApiGenerator
         builder.AppendLine($"[Route:{operation.Path}]");
         var parameters = BuildWrapperParameters(operation);
         builder.AppendLine($"Sub {operation.Name}({string.Join(", ", parameters.Select(parameter => parameter.Declaration))})");
-        builder.AppendLine($"    Dim request As New {requestClass}");
+        builder.AppendLine($"    Dim request As {requestClass}");
+        builder.AppendLine($"    Set request = New {requestClass}");
         builder.AppendLine($"    Dim result As {responseClass}");
         foreach (var parameter in parameters)
             builder.AppendLine($"    {(parameter.IsObject ? "Set " : string.Empty)}request.{parameter.FieldName} = {parameter.VariableName}");
