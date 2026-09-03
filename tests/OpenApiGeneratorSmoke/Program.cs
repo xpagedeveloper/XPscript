@@ -21,6 +21,10 @@ foreach (var marker in new[]
     "Public Class GetPetRequest",
     "Public Class GetPetResponse",
     "Function HandleGetPet(request As GetPetRequest) As GetPetResponse",
+    "Dim request As GetPetRequest",
+    "Set request = New GetPetRequest",
+    "Dim result As GetPetResponse",
+    "Set result = New GetPetResponse",
     "[Route:/pets/{petId}]",
     "[FromRoute:\"petId\"] pPetId As Long",
     "[FromQuery:\"includeHistory\"] pIncludeHistory As Boolean",
@@ -32,6 +36,26 @@ foreach (var marker in new[]
     if (!result.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Generated XPScript is missing expected marker: " + marker);
 }
+
+var openApi30 = generator.Generate("""
+openapi: 3.0.3
+info:
+  title: Compatibility Smoke
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: string
+""", "openapi30.yaml");
+if (openApi30.OpenApiVersion != "3.0.3" || !openApi30.Operations.Contains("Health"))
+    throw new Exception("OpenAPI 3.0 compatibility generation failed.");
 
 var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -53,7 +77,8 @@ try
     if (!unit.Routes.ContainsKey("GetPet") || !unit.Routes.ContainsKey("CreatePet"))
         throw new Exception("Generated XPScript did not compile into the expected REST routes.");
 
-    Console.WriteLine("OPENAPI-YAML-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
 }
 finally
