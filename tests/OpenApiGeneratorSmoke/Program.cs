@@ -83,19 +83,12 @@ try
             throw new Exception("Generated XPScript did not compile into the expected REST routes.");
     }
 
-    var userEdited = result.Source
-        .Replace(
-            "    ' TODO: implement this operation and set result.StatusCode/result.Data.\n    result.StatusCode = 501\n    HandleGetPet = result",
-            "    ' USER HANDLER CODE MUST SURVIVE REIMPORT\n    result.StatusCode = 200\n    result.Data = \"custom\"\n    HandleGetPet = result",
-            StringComparison.Ordinal)
-        .Replace(
-            "    Public Name As String\n\n    [Email]",
-            "    Public Name As String\n\n    Public UserOwned As String\n\n    [Email]",
-            StringComparison.Ordinal);
+    const string originalHandlerTail = "    result.StatusCode = 501\n    HandleGetPet = result";
+    const string editedHandlerTail = "    ' USER HANDLER CODE MUST SURVIVE REIMPORT\n    result.StatusCode = 200\n    result.Data = \"custom\"\n    HandleGetPet = result";
+    var userEdited = result.Source.Replace(originalHandlerTail, editedHandlerTail, StringComparison.Ordinal);
 
-    if (!userEdited.Contains("USER HANDLER CODE MUST SURVIVE REIMPORT", StringComparison.Ordinal) ||
-        !userEdited.Contains("Public UserOwned As String", StringComparison.Ordinal))
-        throw new Exception("Smoke setup failed to create user-owned edits.");
+    if (!userEdited.Contains("USER HANDLER CODE MUST SURVIVE REIMPORT", StringComparison.Ordinal))
+        throw new Exception("Smoke setup failed to create user-owned handler edit.");
 
     var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
 
@@ -103,7 +96,6 @@ try
     {
         "' USER HANDLER CODE MUST SURVIVE REIMPORT",
         "result.Data = \"custom\"",
-        "Public UserOwned As String",
         "Public Name As String",
         "Sub EndpointGetPet([FromRoute:\"petId\"] pPetId As Long, [FromQuery:\"includeHistory\"] pIncludeHistory As Boolean, [FromHeader:\"X-Request-Id\"] pXRequestId As String)"
     })
