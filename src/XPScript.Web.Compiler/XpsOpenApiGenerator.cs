@@ -342,7 +342,7 @@ public sealed class XpsOpenApiGenerator
         builder.AppendLine($"    Set result = New {responseClass}");
         builder.AppendLine("    ' TODO: implement this operation and set result.StatusCode/result.Data.");
         builder.AppendLine("    result.StatusCode = 501");
-        builder.AppendLine($"    Set Handle{operation.Name} = result");
+        builder.AppendLine($"    Handle{operation.Name} = result");
         builder.AppendLine("End Function");
         builder.AppendLine();
 
