@@ -5,6 +5,18 @@ namespace XPScript.Compiler;
 
 internal sealed class UIExtensionDesktopPostProcessor
 {
+    private readonly NotesRuntimeFeatures _notesRuntimeFeatures;
+
+    public UIExtensionDesktopPostProcessor()
+        : this(NotesRuntimeFeatures.Full)
+    {
+    }
+
+    internal UIExtensionDesktopPostProcessor(NotesRuntimeFeatures notesRuntimeFeatures)
+    {
+        _notesRuntimeFeatures = notesRuntimeFeatures;
+    }
+
     private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
     private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
     private const string RuntimeMsgBoxCall = "XPScriptRuntime.MsgBox(";
@@ -76,19 +88,30 @@ internal sealed class UIExtensionDesktopPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        generated = NormalizeLineEndings(generated);
 
-        if (generated.Contains("XPScriptNotes.CreateSession(", StringComparison.Ordinal) &&
-            !generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
-            generated += "\n" + NotesRuntimeSourceBuilder.Build() + "\n";
+        var hasNotesRuntime = generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal);
+        var needsNotesRuntime = !hasNotesRuntime &&
+                                generated.Contains("XPScriptNotes.", StringComparison.Ordinal);
+        var hasDesktopRuntime = generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal);
+        var needsUiExtensions = !hasDesktopRuntime && NeedsUiExtensions(generated);
 
-        if (generated.Contains("internal static class XPScriptNotes", StringComparison.Ordinal))
-            generated = NotesComputeWithFormByRefCallPostProcessor.Transform(generated);
-
-        if (generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal))
+        // Most programs use neither Notes nor desktop UI. Avoid copying and scanning the
+        // complete generated runtime when this postprocessor has no work to perform.
+        if (!needsNotesRuntime && !hasNotesRuntime && !needsUiExtensions)
             return generated;
 
-        if (!NeedsUiExtensions(generated))
+        generated = NormalizeLineEndings(generated);
+
+        if (needsNotesRuntime)
+            generated += "\n" + NotesRuntimeSourceBuilder.Build(_notesRuntimeFeatures) + "\n";
+
+        if (hasNotesRuntime || needsNotesRuntime)
+            generated = NotesComputeWithFormByRefCallPostProcessor.Transform(generated);
+
+        if (hasDesktopRuntime)
+            return generated;
+
+        if (!needsUiExtensions)
             return generated;
 
         var needsListView = NeedsListView(generated);
@@ -255,7 +278,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         var prefix = source[(lineStart + 1)..nameIndex].Trim();
         return Regex.IsMatch(
             prefix,
-            @"^(?:(?:public|private|protected|internal|static|virtual|override|sealed|async)\s+)*(?:void|string|object|dynamic|bool|byte|short|int|long|float|double|decimal|DateTime|Task(?:<[^>]+>)?)\s+$",
+            @"^(?:(?:public|private|protected|internal|static|virtual|override|sealed|async)\s+)*(?:void|string|object|dynamic|bool|byte|short|int|long|float|double|decimal|DateTime|Task(?:<[^>]+>)?)$",
             RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }
 }

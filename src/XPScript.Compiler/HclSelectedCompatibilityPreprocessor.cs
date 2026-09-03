@@ -4,8 +4,18 @@ namespace XPScript.Compiler;
 
 internal sealed class HclSelectedCompatibilityPreprocessor
 {
+    private static readonly string[] FeatureMarkers =
+    [
+        "ArrayReplace", "CreateObject", "GetObject", "InputBox", "Implode", "IsDefined",
+        "FullTrim", "Len", "UString", "Rnd", "InputBP", "InStrBP", "InStrC", "LeftBP",
+        "LeftC", "LenBP", "LenC", "MidBP", "MidC", "RightBP", "RightC", "CurDrive",
+        "Execute", "Randomize", "MD5", "SHA1", "SHA256", "SHA384", "SHA512"
+    ];
+
     public string Transform(string source)
     {
+        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
+
         source = ReplaceCall(source, "ArrayReplace", "LSHclArrayRuntime.ArrayReplace");
         source = ReplaceCall(source, "CreateObject", "LSHclSelectedRuntime.CreateObject");
         source = ReplaceCall(source, "GetObject", "LSHclSelectedRuntime.GetObject");

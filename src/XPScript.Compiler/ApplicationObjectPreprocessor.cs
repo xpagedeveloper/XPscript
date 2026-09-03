@@ -9,9 +9,16 @@ internal sealed class ApplicationObjectPreprocessor
     private const string WidthStateKey = "__xps_application_width";
     private const string HeightStateKey = "__xps_application_height";
     internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
+    private static readonly string[] FeatureMarkers =
+    [
+        "Application.", "Process.State", "Session.State", "Request.State",
+        "__XpsCompiledNavigationDispatch"
+    ];
 
     public string Transform(string source)
     {
+        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
+
         RejectWrites(source);
 
         source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey, false);

@@ -4,9 +4,20 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSourceBuilder
 {
-    public static string Build()
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<NotesRuntimeFeatures, Lazy<string>> BuiltSources = new();
+
+    public static string Build() => Build(NotesRuntimeFeatures.Full);
+
+    public static string Build(NotesRuntimeFeatures features) =>
+        BuiltSources.GetOrAdd(
+            features,
+            static key => new Lazy<string>(
+                () => BuildCore(key),
+                LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+
+    private static string BuildCore(NotesRuntimeFeatures features)
     {
-        var source = NotesRuntimeSource.Code;
+        var source = NotesRuntimeSource.Build(features);
 
         // HCOLLECTION is a WORD-sized handle in the Notes C API.
         source = ReplaceRequired(source,
@@ -134,6 +145,22 @@ internal static class NotesRuntimeSourceBuilder
         // the desktop runtime injection path.
         source = NotesDocumentLotusScriptSurfacePostProcessor.ApplyBuiltSurface(source);
         source = NotesAgentPostProcessor.ApplyBuiltSurface(source);
+        source = NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(source);
+        source = NotesViewNavigationPostProcessor.ApplyBuiltSurface(source);
+        source = NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(source);
+        source = NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(source);
+        source = NotesDatabaseReplicaPostProcessor.Apply(source);
+        source = NotesDxlImportResultPostProcessor.ApplyBuiltSurface(source);
+        source = NotesDxlExportResultPostProcessor.ApplyBuiltSurface(source);
+        source = NotesNoteCollectionPostProcessor.ApplyBuiltSurface(source);
+        source = NotesExtendedRuntimePostProcessor.ApplyBuiltSurface(source);
+        source = NotesModifiedDocumentsPostProcessor.ApplyBuiltSurface(source);
+        source = NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(source);
+        source = NotesSessionPathPostProcessor.ApplyBuiltSurface(source);
+        source = NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(source);
+        source = NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(source);
+        source = NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(source);
+        source = NotesNothingPostProcessor.Apply(source);
 
         return source;
     }

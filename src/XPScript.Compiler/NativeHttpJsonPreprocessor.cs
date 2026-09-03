@@ -5,9 +5,18 @@ namespace XPScript.Compiler;
 internal sealed class NativeHttpJsonPreprocessor
 {
     private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|XPDbSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
+    private static readonly string[] FeatureMarkers =
+    [
+        "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement",
+        "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "HTTPDBSupabase", "XPDbSupabase",
+        "HTTPDBDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"
+    ];
 
     public string Transform(string source)
     {
+        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers))
+            return new UIExtensionPreprocessor().Transform(source);
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

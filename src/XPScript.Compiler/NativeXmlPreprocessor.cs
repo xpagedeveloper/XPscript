@@ -8,6 +8,8 @@ internal sealed class NativeXmlPreprocessor
 
     public string Transform(string source)
     {
+        if (!source.Contains("Xml", StringComparison.OrdinalIgnoreCase)) return source;
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

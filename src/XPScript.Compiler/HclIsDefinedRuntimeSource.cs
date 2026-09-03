@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class HclIsDefinedRuntimeSource
 {
-    public static string Code => """
+    public static string Code { get; } = """
 internal static class LSHclPlatformConstantRuntime
 {
     public static bool IsDefined(object? value)
@@ -26,21 +26,5 @@ internal static class LSHclPlatformConstantRuntime
         };
     }
 }
-""" + "\n\n" + RuntimeDebugTraceSource.Code + "\n\n" + NotesNothingPostProcessor.Apply(
-        NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(
-            NotesAgentNotFoundPostProcessor.ApplyBuiltSurface(
-                NotesGetViewNotFoundPostProcessor.ApplyBuiltSurface(
-                    NotesSessionPathPostProcessor.ApplyBuiltSurface(
-                        NotesRuntimeMemberTrapPostProcessor.ApplyBuiltSurface(
-                            NotesModifiedDocumentsPostProcessor.ApplyBuiltSurface(
-                                NotesExtendedRuntimePostProcessor.ApplyBuiltSurface(
-                                    NotesNoteCollectionPostProcessor.ApplyBuiltSurface(
-                                        NotesDxlExportResultPostProcessor.ApplyBuiltSurface(
-                                            NotesDxlImportResultPostProcessor.ApplyBuiltSurface(
-                                                NotesDatabaseReplicaPostProcessor.Apply(
-                                                    NotesDatabaseCreateCompatibilityPostProcessor.ApplyBuiltSurface(
-                                                        NotesViewNavigatorCachePostProcessor.ApplyBuiltSurface(
-                                                            NotesViewNavigationPostProcessor.ApplyBuiltSurface(
-                                                                    NotesDatabaseLotusScriptSurfacePostProcessor.ApplyBuiltSurface(
-                                                                        NotesRuntimeSourceBuilder.Build()))))))))))))))));
+""" + "\n\n" + RuntimeDebugTraceSource.Code;
 }

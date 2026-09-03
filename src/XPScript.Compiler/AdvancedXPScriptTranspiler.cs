@@ -988,6 +988,10 @@ internal static class LSForAllRuntime
     private string TransformNonStringExpression(string text)
     {
         text = text.Replace("<>", "!=", StringComparison.Ordinal);
+        // An equals sign inside an expression is always a comparison. Assignments are
+        // removed by the statement parser before expressions reach this method, so this
+        // also safely handles comparisons nested inside function-call arguments.
+        text = Regex.Replace(text, @"(?<![<>=!])=(?![=>])", "==");
         text = Regex.Replace(text, @"\bMe\b", "this", RegexOptions.IgnoreCase);
 
         foreach (var objectVariable in _objectVariables)

@@ -8,6 +8,10 @@ internal sealed class UIExtensionPreprocessor
     {
         source = new NativeCsvPreprocessor().Transform(source);
         source = new NativeXmlPreprocessor().Transform(source);
+
+        if (!PreprocessorFeatureGate.ContainsAny(source, "UIForm", "UIListView"))
+            return TransformNotesAndAttachments(source);
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var uiVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -56,7 +60,12 @@ internal sealed class UIExtensionPreprocessor
             output.Add(indent + rewritten);
         }
 
-        var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(string.Join(Environment.NewLine, output));
+        return TransformNotesAndAttachments(string.Join(Environment.NewLine, output));
+    }
+
+    private static string TransformNotesAndAttachments(string source)
+    {
+        var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(source);
         var notes = new NotesRuntimePreprocessor().Transform(notesPrepared);
         var transformed = new NotesEmbeddedObjectPreprocessor().Transform(notes);
         return new AttachmentCollectionPreprocessor().Transform(transformed);

@@ -9,7 +9,7 @@
     <RootNamespace>XPScript.Compiler</RootNamespace>
     <AssemblyTitle>XPScript Compiler</AssemblyTitle>
     <Product>XPScript</Product>
-    <Version>0.9.0-beta</Version>
+    <Version>0.9.1-beta</Version>
     <Copyright>(c) XPageDeveloper.com 2026</Copyright>
   </PropertyGroup>
   <ItemGroup>

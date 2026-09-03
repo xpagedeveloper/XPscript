@@ -126,14 +126,16 @@ internal sealed class UIFormWebPartialRefreshPostProcessor
     private static string ReplaceWebPostDispatch(string source)
     {
         const string methodToken = "    public string ShowDialog()\n    {";
-        const string startToken = "        if (XPScriptUIWebAdapter.Method.Equals(\"POST\", StringComparison.OrdinalIgnoreCase))";
-        const string writeToken = "        XPScriptUIWebAdapter.WriteHtml(RenderWebForm());";
-        const string endToken = "        return \"Pending\";";
+        const string startToken = "if (XPScriptUIWebAdapter.Method.Equals(\"POST\", StringComparison.OrdinalIgnoreCase))";
+        const string writeToken = "XPScriptUIWebAdapter.WriteHtml(RenderWebForm());";
+        const string endToken = "return \"Pending\";";
 
         var method = source.IndexOf(methodToken, StringComparison.Ordinal);
         if (method < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:method).");
-        var start = source.IndexOf(startToken, method, StringComparison.Ordinal);
-        if (start < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:start).");
+        var startStatement = source.IndexOf(startToken, method, StringComparison.Ordinal);
+        if (startStatement < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:start).");
+        var start = source.LastIndexOf('\n', startStatement);
+        start = start < method ? startStatement : start + 1;
         var write = source.IndexOf(writeToken, start, StringComparison.Ordinal);
         if (write < 0) throw new CompilerException("Unable to install UIForm web partial refresh runtime (web-post-dispatch:write).");
         var end = source.IndexOf(endToken, write + writeToken.Length, StringComparison.Ordinal);

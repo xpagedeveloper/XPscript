@@ -7,6 +7,8 @@ internal sealed class NotesEmbeddedObjectPreprocessor
     public string Transform(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
+        if (!source.Contains("NotesEmbeddedObject", StringComparison.OrdinalIgnoreCase)) return source;
+
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

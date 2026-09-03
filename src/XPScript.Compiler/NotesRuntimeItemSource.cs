@@ -2,6 +2,45 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeItemSource
 {
+    public static string Build(bool includeRichText)
+    {
+        if (includeRichText) return Code;
+
+        var source = Code.Replace(RichTextFactory, PlainItemFactory, StringComparison.Ordinal);
+        source = source.Replace(RichTextItemClass, string.Empty, StringComparison.Ordinal);
+        return source;
+    }
+
+    private const string RichTextFactory = """
+    internal static XPScriptNotesItem Create(XPScriptNotesSession session, XPScriptNotesDocument document, XPScriptNotesItemInfo info) =>
+        info.DataType == XPScriptNotesNativeApi.NotesTypeComposite
+            ? new XPScriptNotesRichTextItem(session, document, info.Name)
+            : new XPScriptNotesItem(session, document, info.Name);
+""";
+
+    private const string PlainItemFactory = """
+    internal static XPScriptNotesItem Create(XPScriptNotesSession session, XPScriptNotesDocument document, XPScriptNotesItemInfo info) =>
+        new XPScriptNotesItem(session, document, info.Name);
+""";
+
+    private const string RichTextItemClass = """
+internal sealed class XPScriptNotesRichTextItem : XPScriptNotesItem
+{
+    internal XPScriptNotesRichTextItem(XPScriptNotesSession session, XPScriptNotesDocument document, string name)
+        : base(session, document, name) { }
+
+    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)
+    {
+        EnsureItemAlive();
+        return Session.Api.SaveRichTextAttachment(
+            Document.NativeHandle,
+            ItemName,
+            XPScriptRuntime.CStr(attachmentNameValue),
+            XPScriptRuntime.CStr(pathValue));
+    }
+}
+""";
+
     public const string Code = """
 internal static class XPScriptNotesItemApi
 {
