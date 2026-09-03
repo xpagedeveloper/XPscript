@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="petstore.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="petstore-reimport.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
