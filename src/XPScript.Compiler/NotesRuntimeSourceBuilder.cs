@@ -170,7 +170,7 @@ internal static class NotesRuntimeSourceBuilder
         return source;
     }
 
-    private static string NormalizeDominoHandles(string source)
+    internal static string NormalizeDominoHandles(string source)
     {
         source = source.Replace(
             "private nint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",

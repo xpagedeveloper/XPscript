@@ -46,6 +46,6 @@ internal static class NotesRuntimeSource
         }
 
         NotesViewNavigatorCachePolicyRegression.Validate(source);
-        return source;
+        return NotesRuntimeSourceBuilder.NormalizeDominoHandles(source);
     }
 }
