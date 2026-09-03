@@ -25,11 +25,14 @@ foreach (var marker in new[]
     "Set request = New GetPetRequest",
     "Dim result As GetPetResponse",
     "Set result = New GetPetResponse",
+    "Sub EndpointGetPet(",
+    "Sub EndpointCreatePet(",
     "[Route:/pets/{petId}]",
     "[FromRoute:\"petId\"] pPetId As Long",
     "[FromQuery:\"includeHistory\"] pIncludeHistory As Boolean",
     "[FromHeader:\"X-Request-Id\"] pXRequestId As String",
     "[FromBody] payload As CreatePet",
+    "Set result = HandleGetPet(request)",
     "Response.Json(result.StatusCode, result.Data)"
 })
 {
@@ -65,16 +68,16 @@ try
     await File.WriteAllTextAsync(sourcePath, result.Source);
 
     var parsed = new XpsWebRouteMetadataParser().Parse(result.Source);
-    if (parsed.Routes["GetPet"].RouteTemplate != "/pets/{petId}")
+    if (parsed.Routes["EndpointGetPet"].RouteTemplate != "/pets/{petId}")
         throw new Exception("Generated GET route metadata did not match the OpenAPI path.");
-    if (parsed.Routes["GetPet"].ParameterBindings?.Count != 3)
+    if (parsed.Routes["EndpointGetPet"].ParameterBindings?.Count != 3)
         throw new Exception("Generated GET parameter bindings did not match the OpenAPI parameters.");
-    if (parsed.Routes["CreatePet"].ParameterBindings?.Count != 1)
+    if (parsed.Routes["EndpointCreatePet"].ParameterBindings?.Count != 1)
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
     var compiler = new XpsWebCompiler();
     await using var unit = await compiler.CompileAsync(sourcePath, root);
-    if (!unit.Routes.ContainsKey("GetPet") || !unit.Routes.ContainsKey("CreatePet"))
+    if (!unit.Routes.ContainsKey("EndpointGetPet") || !unit.Routes.ContainsKey("EndpointCreatePet"))
         throw new Exception("Generated XPScript did not compile into the expected REST routes.");
 
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
