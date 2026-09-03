@@ -162,6 +162,11 @@ internal static class NotesRuntimeSourceBuilder
         source = NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(source);
         source = NotesNothingPostProcessor.Apply(source);
 
+        // Several compatibility postprocessors inject native Notes code after
+        // the initial handle normalization. Normalize once more so injected
+        // code uses the same uint handle ABI on Windows as the base runtime.
+        source = NormalizeDominoHandles(source);
+
         return source;
     }
 
