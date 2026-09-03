@@ -138,8 +138,6 @@ internal static class NotesRuntimeSourceBuilder
             "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
             "session-build-version");
 
-        source = NormalizeDominoHandles(source);
-
         // Keep the shared Notes runtime complete regardless of which compatibility
         // runtime requested it. This builder is used both by the HCL runtime and by
         // the desktop runtime injection path.
