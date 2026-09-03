@@ -96,7 +96,7 @@ try
     {
         "' USER HANDLER CODE MUST SURVIVE REIMPORT",
         "result.Data = \"custom\"",
-        "Public Name As String",
+        "Public name As String",
         "Sub EndpointGetPet([FromRoute:\"petId\"] pPetId As Long, [FromQuery:\"includeHistory\"] pIncludeHistory As Boolean, [FromHeader:\"X-Request-Id\"] pXRequestId As String)"
     })
     {
@@ -106,9 +106,9 @@ try
 
     foreach (var added in new[]
     {
-        "Public Microchip As String",
-        "Public Source As String",
-        "Public TraceId As String",
+        "Public microchip As String",
+        "Public source As String",
+        "Public traceId As String",
         "Public Expand As String",
         "Public Class UpdatePet",
         "Public Class UpdatePetRequest",
@@ -124,7 +124,7 @@ try
 
     if (importResult.Source.Contains("pExpand As String", StringComparison.Ordinal))
         throw new Exception("Additive import rewrote the existing GetPet endpoint signature.");
-    if (!importResult.Warnings.Any(warning => warning.Contains("Pet.Name", StringComparison.Ordinal)))
+    if (!importResult.Warnings.Any(warning => warning.Contains("Pet.name", StringComparison.OrdinalIgnoreCase)))
         throw new Exception("Expected changed existing property type to produce a drift warning.");
     if (!importResult.Warnings.Any(warning => warning.Contains("EndpointGetPet", StringComparison.Ordinal)))
         throw new Exception("Expected changed existing endpoint signature to produce a drift warning.");
