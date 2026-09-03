@@ -138,6 +138,8 @@ internal static class NotesRuntimeSourceBuilder
             "NotesBuildVersion = Api.GetRuntimeBuildVersion(ResolveNotesBuildVersion(RuntimeDirectory));",
             "session-build-version");
 
+        source = NormalizeDominoHandles(source);
+
         // Keep the shared Notes runtime complete regardless of which compatibility
         // runtime requested it. This builder is used both by the HCL runtime and by
         // the desktop runtime injection path.
@@ -170,12 +172,6 @@ internal static class NotesRuntimeSourceBuilder
 
     internal static string NormalizeDominoHandles(string source)
     {
-        // Runtime assembly paths may share this helper. Once the base view
-        // handle has been converted, all required ABI replacements have
-        // already been applied.
-        if (!source.Contains("internal nint OpenView(nint db, string name)", StringComparison.Ordinal))
-            return source;
-
         source = source.Replace(
             "private nint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",
             "private uint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, uint handle, string server, string filePath)",
