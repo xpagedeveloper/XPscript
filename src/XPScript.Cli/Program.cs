@@ -23,6 +23,7 @@ try
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
         "new" => XpsScaffolder.Run(args[1..]),
+        "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
@@ -420,6 +421,7 @@ Usage:
   xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
   xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
   xpscript new <rest|web|desktop> <directory>
+  xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
@@ -436,6 +438,7 @@ Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture.
   new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
+  openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
   web      Run the standalone Kestrel web runtime.
   fastcgi  Run the FastCGI web runtime.
@@ -458,6 +461,8 @@ Examples:
   xpscript new web ./mysite
   xpscript new desktop ./myapp
   xpscript new rest .
+  xpscript openapi generate ./openapi.yaml
+  xpscript openapi generate ./petstore.yaml -o ./generated/petstore.xps
   xpscript compile hello.xps
   xpscript compile hello.xps --runtime linux-x64 -o hello
   xpscript run hello.xps
