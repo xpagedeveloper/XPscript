@@ -107,6 +107,35 @@ foreach (var expected in new[]
 if (!generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
     throw new InvalidOperationException("UIForm.ShowDialog method declaration was incorrectly rewritten.");
 
+var multiWindowSource = """
+Sub Main()
+    Dim first As New UIForm("First", 480, 320, True)
+    Dim second As New UIForm("Second", 480, 320, True)
+    Call first.Show(False)
+    Call second.Show(False)
+End Sub
+""";
+var generatedMultiWindow = new XPScriptTranspiler().Transpile(multiWindowSource, "uiform-multiwindow-smoke.xps", "win-x64");
+foreach (var expected in new[]
+{
+    "public void Show() => Show(false);",
+    "public void Show(object? modalValue)",
+    "public void Close()",
+    "private readonly string _instanceId = Guid.NewGuid().ToString(\"N\")",
+    "XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);",
+    "XPScriptUIDesktopAdapter.Close(_instanceId);"
+})
+{
+    if (!generatedMultiWindow.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated modeless UIForm lifecycle is missing: " + expected);
+}
+
+var applicationHostType = typeof(DesktopFormHost).Assembly.GetType("XPScript.UI.Desktop.DesktopApplicationHost", throwOnError: false);
+if (applicationHostType is null ||
+    applicationHostType.GetMethod("EnsureStarted", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) is null ||
+    applicationHostType.GetMethod("SetProcessKeepAlive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) is null)
+    throw new InvalidOperationException("Desktop modeless UI dispatcher host is missing its lifecycle API.");
+
 var listSource = """
 Sub Main()
     Dim rows As New JsonArray
@@ -134,4 +163,5 @@ foreach (var expected in new[]
 
 Console.WriteLine("DESKTOP_UIFORM_BRIDGE_OK");
 Console.WriteLine("DESKTOP_DIALOG_TRANSPILE_OK");
+Console.WriteLine("DESKTOP_UIFORM_MULTIWINDOW_TRANSPILE_OK");
 Console.WriteLine("DESKTOP_UILISTVIEW_TRANSPILE_OK");
