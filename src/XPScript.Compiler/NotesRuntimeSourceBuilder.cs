@@ -172,6 +172,12 @@ internal static class NotesRuntimeSourceBuilder
 
     internal static string NormalizeDominoHandles(string source)
     {
+        // Runtime assembly paths may share this helper. Once the base view
+        // handle has been converted, all required ABI replacements have
+        // already been applied.
+        if (!source.Contains("internal nint OpenView(nint db, string name)", StringComparison.Ordinal))
+            return source;
+
         source = source.Replace(
             "private nint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",
             "private uint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, uint handle, string server, string filePath)",
