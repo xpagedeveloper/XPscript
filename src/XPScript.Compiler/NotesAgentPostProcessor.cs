@@ -87,7 +87,12 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
     public int RunOnServer() => Run();
     public int RunOnServer(object? noteIdValue) => Run(noteIdValue);
     public void Save() { EnsureAlive(); Session.Api.SaveAgent(_database.Handle, _noteId); }
-    public void Remove() { EnsureAlive(); throw new XPScriptRuntimeException(445, "NotesAgent.Remove is not supported by this runtime surface yet."); }
+    public void Remove()
+    {
+        EnsureAlive();
+        if (!Session.Api.DeleteNote(_database.Handle, _noteId, false))
+            throw new XPScriptRuntimeException(445, "Unable to remove NotesAgent.");
+    }
     public void UnLock() { EnsureAlive(); }
 
     private string ReadText(string itemName)

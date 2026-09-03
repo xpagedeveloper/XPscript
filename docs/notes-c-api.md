@@ -398,6 +398,22 @@ Print value.LocalTime
 | `AdjustYear(amount)` | Void | Adds or subtracts years. |
 | `Recycle()` | Void | Invalidates the wrapper. |
 
+## NotesAgent
+
+Represents an agent design element returned by `NotesDatabase.GetAgent` or `NotesDatabase.Agents`.
+
+### Properties
+
+`Parent`, `Name`, `Owner`, `CommonOwner`, `Comment`, `Query`, `ServerName`,
+`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `IsWebAgent`, `IsActivatable`,
+`HasRunSinceModified`, `ProhibitDesignUpdate`, `IsEnabled`, `Trigger`, `Target`,
+`NotesURL`, `HttpURL`, and `OnBehalfOf` are exposed.
+
+### Methods
+
+`Run`, `RunOnServer`, `Save`, `Remove`, and `UnLock` are exposed. `Remove`
+permanently deletes the agent design note when the caller has permission.
+
 ## NotesAgentResult
 
 Returned by `NotesDatabase.RunAgent`.

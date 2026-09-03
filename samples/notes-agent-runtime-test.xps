@@ -24,6 +24,8 @@ Sub Main()
     Print "AGENT-ENABLED=" & CStr(agent.IsEnabled)
     Print "AGENT-TRIGGER=" & CStr(agent.Trigger)
     Print "AGENT-TARGET=" & CStr(agent.Target)
+    Print "AGENT-HTTP-URL=" & agent.HttpURL
+    Print "AGENT-ON-BEHALF-OF=" & agent.OnBehalfOf
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
