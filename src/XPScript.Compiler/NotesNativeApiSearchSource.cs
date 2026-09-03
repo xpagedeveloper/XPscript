@@ -258,7 +258,7 @@ internal sealed partial class XPScriptNotesNativeApi
             var output = Resolve<OSLockObjectDelegate>("OSLockObject")(outputHandle);
             if (output == 0)
                 return "";
-            try { return FromLmbcs(output, checked((int)outputLength)); }
+            try { return CleanAgentOutput(FromLmbcs(output, checked((int)outputLength))); }
             finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(outputHandle); }
         }
         finally
@@ -266,6 +266,14 @@ internal sealed partial class XPScriptNotesNativeApi
             if (context != 0) Resolve<AgentDestroyRunContextDelegate>("AgentDestroyRunContext")(context);
             Resolve<AgentCloseDelegate>("AgentClose")(agent);
         }
+    }
+
+    private static string CleanAgentOutput(string output)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(
+            output ?? "",
+            @"(?m)^\[[^\]\r\n]+\]\s+[^\r\n]*\bAgent printing:\s*(?:\r?\n|$)",
+            "");
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);
