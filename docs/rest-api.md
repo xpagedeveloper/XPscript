@@ -60,7 +60,7 @@ components:
 
 The generator creates compilable XPScript REST code. Component schemas become XPScript classes. OpenAPI path, query and header parameters become `[FromRoute]`, `[FromQuery]` and `[FromHeader]` bindings. JSON request bodies become `[FromBody]` parameters.
 
-Each OpenAPI operation gets two contract classes and a handler function. For an operation with `operationId: getPet`, the generated code contains `GetPetRequest`, `GetPetResponse` and `HandleGetPet`.
+Each OpenAPI operation gets two contract classes and a handler function. For an operation with `operationId: getPet`, the generated code contains `GetPetRequest`, `GetPetResponse` and `HandleGetPet`. The HTTP route wrapper is named `EndpointGetPet`. The `Endpoint` prefix prevents an operationId from colliding with a component schema that has the same name while leaving the OpenAPI operation name unchanged in the generated handler and contracts.
 
 ```xpscript
 Public Class GetPetRequest
@@ -83,7 +83,7 @@ End Function
 [Anonymous]
 [Get]
 [Route:/pets/{petId}]
-Sub GetPet([FromRoute:"petId"] pPetId As Long)
+Sub EndpointGetPet([FromRoute:"petId"] pPetId As Long)
     Dim request As GetPetRequest
     Set request = New GetPetRequest
     Dim result As GetPetResponse
