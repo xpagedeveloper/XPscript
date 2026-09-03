@@ -86,12 +86,22 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
 
     public int RunWithDocumentContext(object? documentValue)
     {
-        return Run(documentValue);
+        EnsureAlive();
+        if (documentValue is not XPScriptNotesDocument doc)
+            throw new XPScriptRuntimeException(13, "NotesAgent.RunWithDocumentContext requires a NotesDocument.");
+        EnsureDocumentContext(doc);
+        return 0;
     }
 
     public int RunWithDocumentContext(object? documentValue, object? noteIdValue)
     {
-        return Run(documentValue);
+        return RunWithDocumentContext(documentValue);
+    }
+
+    private void EnsureDocumentContext(XPScriptNotesDocument doc)
+    {
+        if (doc.IsRecycled) throw new XPScriptRuntimeException(91, "NotesAgent document context has been recycled.");
+        Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle);
     }
 
     public int RunOnServer() => Run();
