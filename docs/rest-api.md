@@ -73,17 +73,19 @@ Public Class GetPetResponse
 End Class
 
 Function HandleGetPet(request As GetPetRequest) As GetPetResponse
-    Dim result As New GetPetResponse
+    Dim result As GetPetResponse
+    Set result = New GetPetResponse
     ' TODO: implement this operation and set result.StatusCode/result.Data.
     result.StatusCode = 501
-    Set HandleGetPet = result
+    HandleGetPet = result
 End Function
 
 [Anonymous]
 [Get]
 [Route:/pets/{petId}]
 Sub GetPet([FromRoute:"petId"] pPetId As Long)
-    Dim request As New GetPetRequest
+    Dim request As GetPetRequest
+    Set request = New GetPetRequest
     Dim result As GetPetResponse
     request.PetId = pPetId
     Set result = HandleGetPet(request)
