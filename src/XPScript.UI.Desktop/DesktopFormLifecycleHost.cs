@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
@@ -21,16 +20,18 @@ public static class DesktopFormLifecycleHost
         var instanceId = root.TryGetProperty("instanceId", out var id) ? id.GetString() ?? string.Empty : string.Empty;
         if (instanceId.Length == 0) throw new ArgumentException("UIForm instance id is required.", nameof(requestJson));
 
-        Dispatcher.UIThread.Post(() => ShowCore(instanceId, root.Clone(), eventCallback));
+        DesktopApplicationHost.EnsureStarted();
+        Dispatcher.UIThread.Invoke(() => ShowCore(instanceId, root.Clone(), eventCallback));
         return "{\"result\":\"Pending\",\"values\":{}}";
     }
 
     public static void Close(string instanceId)
     {
         if (string.IsNullOrWhiteSpace(instanceId)) return;
-        Dispatcher.UIThread.Post(() =>
+        DesktopApplicationHost.EnsureStarted();
+        Dispatcher.UIThread.Invoke(() =>
         {
-            if (Windows.TryRemove(instanceId, out var window)) window.Close();
+            if (Windows.TryGetValue(instanceId, out var window)) window.Close();
         });
     }
 
@@ -51,7 +52,7 @@ public static class DesktopFormLifecycleHost
             return;
         }
 
-        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        var panel = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(16) };
         var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
         var fields = root.TryGetProperty("fields", out var fieldArray) && fieldArray.ValueKind == JsonValueKind.Array
             ? fieldArray.EnumerateArray().Select(x => x.Clone()).ToArray()
@@ -83,7 +84,11 @@ public static class DesktopFormLifecycleHost
         };
         Windows[instanceId] = window;
         close.Click += (_, _) => window.Close();
-        window.Closed += (_, _) => Windows.TryRemove(instanceId, out _);
+        window.Closed += (_, _) =>
+        {
+            Windows.TryRemove(instanceId, out _);
+            if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);
+        };
 
         if (eventCallback is not null)
         {
@@ -103,6 +108,7 @@ public static class DesktopFormLifecycleHost
         }
 
         window.Show();
+        DesktopApplicationHost.SetProcessKeepAlive(true);
     }
 
     private static Control CreateEditor(JsonElement field, string type, string name, string label)

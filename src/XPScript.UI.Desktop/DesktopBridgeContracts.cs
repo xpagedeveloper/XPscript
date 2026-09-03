@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Avalonia;
 using Avalonia.Styling;
+using Avalonia.Threading;
 
 namespace XPScript.UI.Desktop;
 
@@ -126,15 +127,12 @@ public static class XpsUIDesktopRuntimeBridge
             _ => throw new InvalidOperationException("Desktop UIForm theme must be System, Light, or Dark.")
         };
 
-        if (Application.Current is null)
+        DesktopApplicationHost.EnsureStarted();
+        Dispatcher.UIThread.Invoke(() =>
         {
-            AppBuilder.Configure<XpsDesktopApplication>()
-                .UsePlatformDetect()
-                .SetupWithoutStarting();
-        }
-
-        if (Application.Current is not null)
-            Application.Current.RequestedThemeVariant = variant;
+            if (Application.Current is not null)
+                Application.Current.RequestedThemeVariant = variant;
+        });
     }
 
     public static string SerializeResult(DesktopFormResult result)
