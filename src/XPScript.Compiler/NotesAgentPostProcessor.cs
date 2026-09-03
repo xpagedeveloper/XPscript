@@ -38,6 +38,7 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
     private readonly XPScriptNotesDatabase _database;
     private readonly uint _noteId;
     private readonly string _name;
+    private string _returnMessage = "";
 
     internal XPScriptNotesAgent(XPScriptNotesSession session, XPScriptNotesDatabase database, uint noteId, string name) : base(session)
     {
@@ -66,11 +67,12 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
     public string NotesURL { get { EnsureAlive(); return "notes://" + _database.Server + "/" + _database.FilePath + "/0/" + _noteId.ToString("X8", System.Globalization.CultureInfo.InvariantCulture); } }
     public string HttpURL { get { EnsureAlive(); return ""; } }
     public string OnBehalfOf { get { EnsureAlive(); return ""; } }
+    public string ReturnMessage { get { EnsureAlive(); return _returnMessage; } }
 
     public int Run()
     {
         EnsureAlive();
-        Session.Api.RunAgent(_database.Handle, _name, 0);
+        _returnMessage = Session.Api.RunAgent(_database.Handle, _name, 0);
         return 0;
     }
 
@@ -79,7 +81,7 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
         EnsureAlive();
         var doc = _database.GetDocumentByID(noteIdValue);
         if (doc is null) throw new XPScriptRuntimeException(91, "NotesAgent.Run document was not found.");
-        try { Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle); }
+        try { _returnMessage = Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle); }
         finally { doc.Recycle(); }
         return 0;
     }

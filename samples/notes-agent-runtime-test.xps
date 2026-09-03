@@ -27,6 +27,7 @@ Sub Main()
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
+    Print "AGENT-RETURN-MESSAGE=" & agent.ReturnMessage
 
     Call agent.Recycle()
     Call db.Recycle()

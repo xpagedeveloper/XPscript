@@ -247,8 +247,17 @@ internal sealed partial class XPScriptNotesNativeApi
             Check(Resolve<AgentCreateRunContextDelegate>("AgentCreateRunContext")(agent, 0, 0, out context), "AgentCreateRunContext");
             if (documentContext != 0)
                 Check(Resolve<AgentSetDocumentContextDelegate>("AgentSetDocumentContext")(context, documentContext), "AgentSetDocumentContext");
+            Check(Resolve<AgentRedirectStdoutDelegate>("AgentRedirectStdout")(context, 2), "AgentRedirectStdout(memory)");
             Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0), "AgentRun");
-            return "";
+            Resolve<AgentQueryStdoutBufferDelegate>("AgentQueryStdoutBuffer")(context, out var outputHandle, out var outputLength);
+            if (outputHandle == 0 || outputLength == 0)
+                return "";
+
+            var output = Resolve<OSLockObjectDelegate>("OSLockObject")(outputHandle);
+            if (output == 0)
+                return "";
+            try { return FromLmbcs(output, checked((int)outputLength)); }
+            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(outputHandle); }
         }
         finally
         {
