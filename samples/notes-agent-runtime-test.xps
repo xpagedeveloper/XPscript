@@ -48,14 +48,14 @@ Sub Main()
     Print "AGENT-SERVER-BEGIN Server=" & AGENT_SERVER & " ReplicaID=" & db.ReplicaID
     Set serverDb = session.OpenDatabase(AGENT_SERVER, db.FilePath)
     If serverDb Is Nothing Or Not serverDb.IsOpen Then
-        Print "AGENT-SERVER-DIRECT=NOT-OPEN Path=" & db.FilePath
+        Print "AGENT-SERVER-DIRECT=NOT-OPEN Path=" & db.FilePath & " Error=" & serverDb.OpenError
     Else
         Print "AGENT-SERVER-DIRECT=OPEN Path=" & serverDb.FilePath
         Call serverDb.Recycle()
     End If
     Set serverDb = session.OpenByReplicaID(AGENT_SERVER, db.ReplicaID)
     If serverDb Is Nothing Or Not serverDb.IsOpen()=true Then
-        Print "AGENT-SERVER=NOT-OPEN"
+        Print "AGENT-SERVER=NOT-OPEN Error=" & serverDb.OpenError
     Else
         Set serverAgent = serverDb.GetAgent(AGENT_NAME)
         If serverAgent Is Nothing Then
