@@ -105,8 +105,16 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
                 Check(Resolve<OSPathNetConstructDelegate>("OSPathNetConstruct")(0, serverText.Pointer, fileText.Pointer, networkPath), "OSPathNetConstruct");
                 path = networkPath;
             }
-            Check(Resolve<NSFDbOpenDelegate>("NSFDbOpen")(path, out var db), "NSFDbOpen");
-            return db;
+            try
+            {
+                Check(Resolve<NSFDbOpenDelegate>("NSFDbOpen")(path, out var db), "NSFDbOpen");
+                return db;
+            }
+            catch (XPScriptRuntimeException ex)
+            {
+                Console.Error.WriteLine("DEBUG NSFDbOpen failed server=" + server + " file=" + file + " networkPath=" + (path == 0 ? "<local>" : FromLmbcsZeroTerminated(path, 4095)) + " error=" + ex.Message);
+                throw;
+            }
         }
         finally
         {

@@ -75,6 +75,7 @@ Set serverDb = session.OpenDatabase("CN=Domino01/O=Example", "apps\customers.nsf
 | `FilePath` | String | read-only | NSF path supplied or resolved when opening the database. |
 | `FileName` | String | read-only | Final path component of `FilePath`. |
 | `IsOpen` | Boolean | read-only | `True` when the native database handle is open. |
+| `OpenError` | String | read-only | Error text from the most recent failed database open, or an empty string when no error was recorded. |
 | `Title` | String | read/write | Database title. Setting the property updates the NSF title when the database is open. |
 | `Categories` | String | read/write | Database categories. |
 | `TemplateName` | String | read-only | Template name stored by the database. |
@@ -397,6 +398,25 @@ Print value.LocalTime
 | `AdjustMonth(amount)` | Void | Adds or subtracts months. |
 | `AdjustYear(amount)` | Void | Adds or subtracts years. |
 | `Recycle()` | Void | Invalidates the wrapper. |
+
+## NotesAgent
+
+Represents an agent design element returned by `NotesDatabase.GetAgent` or `NotesDatabase.Agents`.
+
+### Properties
+
+`Parent`, `Name`, `Owner`, `CommonOwner`, `Comment`, `Query`, `ServerName`,
+`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `IsWebAgent`, `IsActivatable`,
+`HasRunSinceModified`, `ProhibitDesignUpdate`, `IsEnabled`, `Trigger`, `Target`,
+`NotesURL`, `HttpURL`, and `OnBehalfOf` are exposed.
+
+### Methods
+
+`Run`, `RunWithDocumentContext`, `RunOnServer`, `Save`, `Remove`, and `UnLock` are exposed. `RunWithDocumentContext`
+passes an open `NotesDocument` as the agent document context. `RunOnServer`
+accepts an optional document Note ID and passes that document as context.
+`Remove`
+permanently deletes the agent design note when the caller has permission.
 
 ## NotesAgentResult
 
