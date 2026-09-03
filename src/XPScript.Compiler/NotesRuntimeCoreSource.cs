@@ -293,6 +293,7 @@ internal sealed class XPScriptNotesSession : IDisposable
         }
         catch (XPScriptRuntimeException)
         {
+            Console.Error.WriteLine("DEBUG OpenByReplicaID failed server=" + server + " replicaId=" + replicaId + " file=" + file);
             return new XPScriptNotesDatabase(this, 0, server, file);
         }
     }
