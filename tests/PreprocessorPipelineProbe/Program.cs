@@ -42,6 +42,7 @@ Measure("PLAIN", plainSource, 10);
 Measure("NOTES", notesSource, 10);
 VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
+VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
 {
@@ -148,4 +149,19 @@ void VerifyProfile(
     foreach (var marker in forbiddenMarkers ?? [])
         if (generated.Contains(marker, StringComparison.Ordinal))
             throw new Exception(label + " feature profile unexpectedly included " + marker + ".");
+}
+
+void VerifyNestedArgumentComparison()
+{
+    const string source = """
+Sub Main()
+    Print CStr(FileLen("missing.txt") = 1)
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-nested-comparison.xps", "win-x64");
+    const string expected = "XPScriptRuntime.FileLen(\"missing.txt\") == 1";
+    if (!generated.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Nested function-call comparison was not emitted as C# equality.");
+    Console.WriteLine("PREPROCESSOR-NESTED-COMPARISON=OK");
 }
