@@ -248,7 +248,9 @@ internal sealed partial class XPScriptNotesNativeApi
             if (documentContext != 0)
                 Check(Resolve<AgentSetDocumentContextDelegate>("AgentSetDocumentContext")(context, documentContext), "AgentSetDocumentContext");
             Check(Resolve<AgentRedirectStdoutDelegate>("AgentRedirectStdout")(context, 2), "AgentRedirectStdout(memory)");
-            Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0), "AgentRun");
+            // Reopen the database for the agent run. Without this flag Domino
+            // rejects embedded/background agents with status 0x2E78.
+            Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0x10), "AgentRun");
             Resolve<AgentQueryStdoutBufferDelegate>("AgentQueryStdoutBuffer")(context, out var outputHandle, out var outputLength);
             if (outputHandle == 0 || outputLength == 0)
                 return "";
