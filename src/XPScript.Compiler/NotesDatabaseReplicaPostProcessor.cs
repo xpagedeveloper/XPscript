@@ -19,6 +19,13 @@ internal static class NotesDatabaseReplicaPostProcessor
     private const string ExtraCode = """
 internal sealed partial class XPScriptNotesDatabase
 {
+    // Convenience alias for callers that already have a NotesDatabase object.
+    public XPScriptNotesDatabase OpenByReplicaID(object? replicaIdValue)
+        => Session.OpenByReplicaID(Server, replicaIdValue);
+
+    public XPScriptNotesDatabase OpenByReplicaID(object? serverValue, object? replicaIdValue)
+        => Session.OpenByReplicaID(serverValue, replicaIdValue);
+
     public XPScriptNotesDatabase CreateCopy(object? serverValue, object? filePathValue)
         => CreateCopy(serverValue, filePathValue, 0, false);
 
