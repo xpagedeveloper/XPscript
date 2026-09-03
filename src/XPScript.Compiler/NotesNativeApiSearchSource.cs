@@ -272,7 +272,7 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         return System.Text.RegularExpressions.Regex.Replace(
             output ?? "",
-            @"(?m)^\[[^\]\r\n]+\]\s+[^\r\n]*\bAgent printing:\s*(?:\r?\n|$)",
+            @"\[[^\]\r\n]+\]\s+[^\r\n]*?\bAgent printing:\s*",
             "");
     }
 
