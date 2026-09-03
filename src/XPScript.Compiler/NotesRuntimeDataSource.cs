@@ -344,7 +344,11 @@ internal sealed class XPScriptNotesDocument : XPScriptNotesOwnedObject
 
 internal sealed class XPScriptNotesAgentResult : XPScriptNotesOwnedObject
 {
-    internal XPScriptNotesAgentResult(XPScriptNotesSession session, XPScriptNotesDatabase database, string output) : base(session, database) => Output = output;
+    internal XPScriptNotesAgentResult(XPScriptNotesSession session, XPScriptNotesDatabase database, string output) : base(session, database)
+        => Output = System.Text.RegularExpressions.Regex.Replace(
+            output ?? "",
+            @"(?m)^\[[^\]\r\n]+\]\s+[^\r\n]*\bAgent printing:\s*(?:\r?\n|$)",
+            "");
     public bool Success => true;
     public int Status => 0;
     public string Output { get; }
