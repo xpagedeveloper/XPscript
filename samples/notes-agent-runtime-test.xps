@@ -7,6 +7,7 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim agent As NotesAgent
+    Dim contextDoc As NotesDocument
     Dim result As Variant
 
     Set session = New NotesSession()
@@ -29,6 +30,14 @@ Sub Main()
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
+
+    Set contextDoc = db.CreateDocument()
+    Call contextDoc.ReplaceItemValue("Form", "XPScriptTest")
+    result = agent.RunWithDocumentContext(contextDoc)
+    Print "AGENT-RUN-WITH-DOCUMENT-CONTEXT=" & CStr(result)
+    result = agent.RunOnServer(contextDoc.NoteID)
+    Print "AGENT-RUN-ON-SERVER=" & CStr(result)
+    Call contextDoc.Recycle()
 
     Call agent.Recycle()
     Call db.Recycle()

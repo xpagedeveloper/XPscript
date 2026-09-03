@@ -84,8 +84,26 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
         return 0;
     }
 
+    public int RunWithDocumentContext(object? documentValue)
+    {
+        return Run(documentValue);
+    }
+
+    public int RunWithDocumentContext(object? documentValue, object? noteIdValue)
+    {
+        return Run(documentValue);
+    }
+
     public int RunOnServer() => Run();
-    public int RunOnServer(object? noteIdValue) => Run(noteIdValue);
+    public int RunOnServer(object? noteIdValue)
+    {
+        EnsureAlive();
+        var doc = _database.GetDocumentByID(noteIdValue);
+        if (doc is null) throw new XPScriptRuntimeException(91, "NotesAgent.RunOnServer document was not found.");
+        try { Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle); }
+        finally { doc.Recycle(); }
+        return 0;
+    }
     public void Save() { EnsureAlive(); Session.Api.SaveAgent(_database.Handle, _noteId); }
     public void Remove()
     {

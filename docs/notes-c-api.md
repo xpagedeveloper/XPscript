@@ -411,7 +411,10 @@ Represents an agent design element returned by `NotesDatabase.GetAgent` or `Note
 
 ### Methods
 
-`Run`, `RunOnServer`, `Save`, `Remove`, and `UnLock` are exposed. `Remove`
+`Run`, `RunWithDocumentContext`, `RunOnServer`, `Save`, `Remove`, and `UnLock` are exposed. `RunWithDocumentContext`
+passes an open `NotesDocument` as the agent document context. `RunOnServer`
+accepts an optional document Note ID and passes that document as context.
+`Remove`
 permanently deletes the agent design note when the caller has permission.
 
 ## NotesAgentResult
