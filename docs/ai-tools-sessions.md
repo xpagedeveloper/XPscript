@@ -84,7 +84,7 @@ End Function
 - `ToolName`: owning tool name.
 - `FunctionName`: AI-visible function name.
 - `CallId`: provider tool-call identifier.
-- `Arguments`: validated `JsonObject` arguments.
+- `Arguments`: validated `XPJsonObject` arguments.
 - `SessionId`: current XPAi session identifier, when available.
 
 ## `AITool.AddParameter(functionName, name, type, description, required)`
@@ -184,7 +184,7 @@ Call weather.ClearRequestProperties()
 
 ### `AITool.GetRequestContext()`
 
-Returns a defensive `JsonObject` copy.
+Returns a defensive `XPJsonObject` copy.
 
 ```xpscript
 Dim context As Variant

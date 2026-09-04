@@ -3,8 +3,8 @@
 
 Sub Main()
     Dim form As New UIForm("List choices")
-    Dim data As New JsonObject
-    Dim selected As New JsonArray
+    Dim data As New XPJsonObject
+    Dim selected As New XPJsonArray
     Dim values As Variant
 
     Call selected.Add("SE")

@@ -127,7 +127,7 @@ Status:
 - [x] response bodies are limited to 64 MiB and read with `ResponseHeadersRead`; oversized declared or streamed bodies are rejected
 - [x] default timeout is 30 seconds and Timeout rejects zero, negative, NaN and Infinity values
 - [x] timeout is enforced per request and may be changed between requests
-- [x] HttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
+- [x] XPHttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
 - [x] raw response bytes can be saved without text conversion
 - [x] multipart responses expose all parts through `Parts`, including per-part content type, text body, file metadata and binary-safe save support
 - [x] `Files` exposes a filtered file-only multipart view and UTF-8 `filename*=` metadata is decoded
@@ -142,7 +142,7 @@ Status:
 - [x] JSON graph size is limited to 100000 nodes
 - [x] estimated JSON payload is limited to 16 MiB
 - [x] serialized JSON output is limited to 16 MiB UTF-8
-- [x] `JsonObject.Set`, `JsonArray.Add` and `JsonArray.Set` validate resulting graph budgets and roll back failed mutations
+- [x] `XPJsonObject.Set`, `XPJsonArray.Add` and `XPJsonArray.Set` validate resulting graph budgets and roll back failed mutations
 - [x] budget arithmetic overflow is normalized to a bounded XPScript error; verified by `JSON Security Closeout` on Windows, Ubuntu and macOS
 - [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
 - [x] parsed numeric conversion refuses non-finite Double results; verified by the `1e400` regression in `JSON Security Closeout` on Windows, Ubuntu and macOS

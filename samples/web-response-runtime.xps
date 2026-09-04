@@ -4,7 +4,7 @@ Option Declare
 [Get]
 [Route:/response-demo]
 Sub ResponseDemo()
-    Dim cookieOptions As New JsonObject
+    Dim cookieOptions As New XPJsonObject
     Dim bytes As Variant
 
     Response.StatusCode = 200

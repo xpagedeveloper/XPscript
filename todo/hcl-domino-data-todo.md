@@ -22,7 +22,7 @@ Rationale to preserve in the final design: Domino REST API is HCL's HTTP(S)-base
 - [ ] Add a `DominoDocument` abstraction backed by JSON.
 - [ ] Add a `DominoView` / list-result abstraction.
 - [ ] Add a `DominoQueryResult` abstraction for DQL/OData queries where appropriate.
-- [ ] Reuse `JsonObject` / `JsonArray` for document/item data whenever this produces a clear XPScript API.
+- [ ] Reuse `XPJsonObject` / `XPJsonArray` for document/item data whenever this produces a clear XPScript API.
 - [ ] Preserve Domino UNID, note ID and other stable identifiers returned by the API.
 
 ## Connection and authentication
@@ -55,7 +55,7 @@ Rationale to preserve in the final design: Domino REST API is HCL's HTTP(S)-base
 - [ ] Read/write only fields exposed by the configured Domino REST API schema/mode.
 - [ ] Map Domino/JSON String, Number, Boolean, Date/DateTime, Names, Readers, Authors and multivalue data to suitable XPScript values.
 - [ ] Preserve empty, missing and NULL-like states explicitly where Domino and JSON semantics differ.
-- [ ] Support document data conversion to and from `JsonObject`.
+- [ ] Support document data conversion to and from `XPJsonObject`.
 - [ ] Investigate rich-text access separately and define a bounded/safe representation before exposing it.
 - [ ] Treat attachments and embedded objects as untrusted binary data and apply size limits.
 

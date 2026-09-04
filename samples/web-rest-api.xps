@@ -13,7 +13,7 @@ End Class
 [Get]
 [Route:/api/users/{id}]
 Function GetUser(ByVal id As Integer) As Variant
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Call data.Set("id", id)
     Call data.Set("name", "Ada")
     Set GetUser = Response.OK(data)

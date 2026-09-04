@@ -41,40 +41,40 @@ See [HTTP client](http-client.md) for request limits, UIForm helpers and securit
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HttpClient` | `Dim http As New HttpClient` | none | Creates an outgoing HTTP client. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpClient.Get` | `http.Get(url)` | `url`: absolute HTTP/HTTPS URL. | Sends a GET request and returns `HttpResponse`. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpClient.Post` | `http.Post(url, body [, contentType])` | `url`, request `body`, optional MIME `contentType`. | Sends a POST request. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `HttpClient.Put` | `http.Put(url, body [, contentType])` | `url`, `body`, optional `contentType`. | Sends a PUT request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpClient.Patch` | `http.Patch(url, body [, contentType])` | `url`, `body`, optional `contentType`. | Sends a PATCH request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpClient.Delete` | `http.Delete(url)` | `url`: absolute URL. | Sends a DELETE request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpClient.GetJson` | `http.GetJson(url)` | `url`: absolute URL. | Sends GET, requires success and returns `JsonDocument`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.PostJson` | `http.PostJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with POST. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.PutJson` | `http.PutJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with PUT. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.PatchJson` | `http.PatchJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with PATCH. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.AddQuery` | `http.AddQuery(url, name, value)` | base `url`, query `name`, query `value`. | URL-encodes and appends one query parameter. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.PostForm` | `http.PostForm(url, data)` | `url`, scalar `JsonObject` form `data`. | Sends `application/x-www-form-urlencoded`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.LoadForm` | `http.LoadForm(form, url)` | `form`: `UIForm`; `url`: JSON-object endpoint. | GETs JSON and binds it to a form. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.SaveForm` | `http.SaveForm(form, url)` | `form`, destination `url`. | POSTs `form.Data` as JSON. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.PutForm` | `http.PutForm(form, url)` | `form`, destination `url`. | PUTs `form.Data` as JSON. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpClient.SetHeader` | `http.SetHeader(name, value)` | header `name`, header `value`. | Adds or replaces a validated request header. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpClient.RemoveHeader` | `http.RemoveHeader(name)` | header `name`. | Removes one caller-defined header. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpClient.ClearHeaders` | `http.ClearHeaders()` | none | Clears caller-defined headers. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpClient.Timeout` | `http.Timeout = seconds` | `seconds`: request timeout. | Gets or sets total request timeout. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpClient.Dispose` | `http.Dispose()` | none | Cancels/releases client resources. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpClient` | `Dim http As New XPHttpClient` | none | Creates an outgoing HTTP client. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpClient.Get` | `http.Get(url)` | `url`: absolute HTTP/HTTPS URL. | Sends a GET request and returns `XPHttpResponse`. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpClient.Post` | `http.Post(url, body [, contentType])` | `url`, request `body`, optional MIME `contentType`. | Sends a POST request. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPHttpClient.Put` | `http.Put(url, body [, contentType])` | `url`, `body`, optional `contentType`. | Sends a PUT request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpClient.Patch` | `http.Patch(url, body [, contentType])` | `url`, `body`, optional `contentType`. | Sends a PATCH request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpClient.Delete` | `http.Delete(url)` | `url`: absolute URL. | Sends a DELETE request. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpClient.GetJson` | `http.GetJson(url)` | `url`: absolute URL. | Sends GET, requires success and returns `XPJsonDocument`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.PostJson` | `http.PostJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with POST. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.PutJson` | `http.PutJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with PUT. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.PatchJson` | `http.PatchJson(url, data)` | `url`, JSON-compatible `data`. | Sends JSON with PATCH. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.AddQuery` | `http.AddQuery(url, name, value)` | base `url`, query `name`, query `value`. | URL-encodes and appends one query parameter. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.PostForm` | `http.PostForm(url, data)` | `url`, scalar `XPJsonObject` form `data`. | Sends `application/x-www-form-urlencoded`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.LoadForm` | `http.LoadForm(form, url)` | `form`: `UIForm`; `url`: JSON-object endpoint. | GETs JSON and binds it to a form. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.SaveForm` | `http.SaveForm(form, url)` | `form`, destination `url`. | POSTs `form.Data` as JSON. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.PutForm` | `http.PutForm(form, url)` | `form`, destination `url`. | PUTs `form.Data` as JSON. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpClient.SetHeader` | `http.SetHeader(name, value)` | header `name`, header `value`. | Adds or replaces a validated request header. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpClient.RemoveHeader` | `http.RemoveHeader(name)` | header `name`. | Removes one caller-defined header. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpClient.ClearHeaders` | `http.ClearHeaders()` | none | Clears caller-defined headers. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpClient.Timeout` | `http.Timeout = seconds` | `seconds`: request timeout. | Gets or sets total request timeout. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpClient.Dispose` | `http.Dispose()` | none | Cancels/releases client resources. | [http-client.xps](../demo/http/http-client.xps) |
 
 ## HTTP response
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HttpResponse.StatusCode` | `response.StatusCode` | none | HTTP status code. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpResponse.StatusText` | `response.StatusText` | none | HTTP reason/status text. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `HttpResponse.Body` | `response.Body` | none | Response body as text. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpResponse.BodyLength` | `response.BodyLength` | none | Response-body byte length. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpResponse.ContentType` | `response.ContentType` | none | Response content type. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpResponse.Headers` | `response.Headers` | none | Response headers as the runtime header object. | [native-http-regression.xps](../samples/native-http-regression.xps) |
-| `HttpResponse.IsSuccess` | `response.IsSuccess` | none | `True` for an HTTP success status. | [http-client.xps](../demo/http/http-client.xps) |
-| `HttpResponse.Json` | `response.Json()` | none | Parses the body and returns `JsonDocument`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
-| `HttpResponse.SaveBodyToFile` | `response.SaveBodyToFile(path)` | destination `path`. | Saves the response body using runtime file-boundary rules. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpResponse.StatusCode` | `response.StatusCode` | none | HTTP status code. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpResponse.StatusText` | `response.StatusText` | none | HTTP reason/status text. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPHttpResponse.Body` | `response.Body` | none | Response body as text. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpResponse.BodyLength` | `response.BodyLength` | none | Response-body byte length. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpResponse.ContentType` | `response.ContentType` | none | Response content type. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpResponse.Headers` | `response.Headers` | none | Response headers as the runtime header object. | [native-http-regression.xps](../samples/native-http-regression.xps) |
+| `XPHttpResponse.IsSuccess` | `response.IsSuccess` | none | `True` for an HTTP success status. | [http-client.xps](../demo/http/http-client.xps) |
+| `XPHttpResponse.Json` | `response.Json()` | none | Parses the body and returns `XPJsonDocument`. | [native-http-uiform-data.xps](../samples/native-http-uiform-data.xps) |
+| `XPHttpResponse.SaveBodyToFile` | `response.SaveBodyToFile(path)` | destination `path`. | Saves the response body using runtime file-boundary rules. | [native-http-regression.xps](../samples/native-http-regression.xps) |
 
 ## Native JSON
 
@@ -82,24 +82,24 @@ See the runnable [native HTTP/JSON sample](../samples/native-http-json.xps).
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `JsonDocument.Parse` | `JsonDocument.Parse(text)` | JSON `text`. | Parses JSON into a `JsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonDocument.Stringify` | `document.Stringify()` | none | Serializes the document. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonObject.Get` | `obj.Get(name)` | property `name`. | Returns a property value or runtime null. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonObject.Set` | `obj.Set(name, value)` | property `name`, JSON-compatible `value`. | Adds or replaces a property. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonObject.Remove` | `obj.Remove(name)` | property `name`. | Removes a property. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonObject.Contains` | `obj.Contains(name)` | property `name`. | Tests whether the property exists. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonObject.Count` | `obj.Count` | none | Number of properties. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonArray.Add` | `arr.Add(value)` | JSON-compatible `value`. | Appends a value. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonArray.Get` | `arr.Get(index)` | zero-based `index`. | Returns one array value. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonArray.Set` | `arr.Set(index, value)` | `index`, replacement `value`. | Replaces one array element. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonArray.RemoveAt` | `arr.RemoveAt(index)` | zero-based `index`. | Removes one array element. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonArray.Count` | `arr.Count` | none | Number of array elements. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonElement.Type` | `element.Type` | none | Returns the JSON element type name. | [native-json-regression.xps](../samples/native-json-regression.xps) |
-| `JsonElement.Value` | `element.Value` | none | Returns the scalar runtime value where applicable. | [native-json-regression.xps](../samples/native-json-regression.xps) |
+| `XPJsonDocument.Parse` | `XPJsonDocument.Parse(text)` | JSON `text`. | Parses JSON into a `XPJsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonDocument.Stringify` | `document.Stringify()` | none | Serializes the document. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonObject.Get` | `obj.Get(name)` | property `name`. | Returns a property value or runtime null. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonObject.Set` | `obj.Set(name, value)` | property `name`, JSON-compatible `value`. | Adds or replaces a property. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonObject.Remove` | `obj.Remove(name)` | property `name`. | Removes a property. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonObject.Contains` | `obj.Contains(name)` | property `name`. | Tests whether the property exists. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonObject.Count` | `obj.Count` | none | Number of properties. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonArray.Add` | `arr.Add(value)` | JSON-compatible `value`. | Appends a value. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonArray.Get` | `arr.Get(index)` | zero-based `index`. | Returns one array value. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonArray.Set` | `arr.Set(index, value)` | `index`, replacement `value`. | Replaces one array element. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonArray.RemoveAt` | `arr.RemoveAt(index)` | zero-based `index`. | Removes one array element. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonArray.Count` | `arr.Count` | none | Number of array elements. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonElement.Type` | `element.Type` | none | Returns the JSON element type name. | [native-json-regression.xps](../samples/native-json-regression.xps) |
+| `XPJsonElement.Value` | `element.Value` | none | Returns the scalar runtime value where applicable. | [native-json-regression.xps](../samples/native-json-regression.xps) |
 | `JsonParse` | `JsonParse(text)` | JSON `text`. | Parses JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonStringify` | `JsonStringify(value)` | JSON-compatible `value`. | Serializes a value as JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonEncode` | `JsonEncode(value)` | JSON-compatible `value`. | Serializes with native JSON conversion rules. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `JsonDecode` | `JsonDecode(text)` | JSON `text`. | Parses JSON and returns `JsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `JsonDecode` | `JsonDecode(text)` | JSON `text`. | Parses JSON and returns `XPJsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
 
 ## SQLite
 
@@ -110,7 +110,7 @@ See [SQLite database](sqlite.md) for path/security rules.
 | `XPDBSQLite` | `New XPDBSQLite(path [, readOnly])` | relative database `path`; optional `readOnly`. | Opens SQLite immediately. | [sqlite-demo.xps](../demo/sqlite/sqlite-demo.xps) |
 | `XPDBSQLite.Open` | `db.Open()` | none | Reopens a closed connection. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Close` | `db.Close()` | none | Rolls back an active transaction and closes. | [sqlite-demo.xps](../demo/sqlite/sqlite-demo.xps) |
-| `XPDBSQLite.Execute` | `db.Execute(sql [, parameters])` | SQL text; optional `JsonObject` parameters. | Executes non-query SQL and returns affected rows. | [sqlite-demo.xps](../demo/sqlite/sqlite-demo.xps) |
+| `XPDBSQLite.Execute` | `db.Execute(sql [, parameters])` | SQL text; optional `XPJsonObject` parameters. | Executes non-query SQL and returns affected rows. | [sqlite-demo.xps](../demo/sqlite/sqlite-demo.xps) |
 | `XPDBSQLite.Query` | `db.Query(sql [, parameters])` | SQL text; optional parameters. | Returns rows as JSON array document. | [sqlite-demo.xps](../demo/sqlite/sqlite-demo.xps) |
 | `XPDBSQLite.Scalar` | `db.Scalar(sql [, parameters])` | SQL text; optional parameters. | Returns the first value or null. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
@@ -133,7 +133,7 @@ See [SQL Server database](mssql.md).
 | `XPDbMsSql` | `New XPDbMsSql(connectionString)` | SQL Server `connectionString`. | Validates and opens the connection. | [mssql-demo.xps](../demo/mssql/mssql-demo.xps) |
 | `XPDbMsSql.Open` | `db.Open()` | none | Reopens a closed connection. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Close` | `db.Close()` | none | Rolls back active transaction and closes. | [mssql-demo.xps](../demo/mssql/mssql-demo.xps) |
-| `XPDbMsSql.Execute` | `db.Execute(sql [, parameters])` | SQL; optional `JsonObject` parameters. | Executes non-query SQL. | [mssql-demo.xps](../demo/mssql/mssql-demo.xps) |
+| `XPDbMsSql.Execute` | `db.Execute(sql [, parameters])` | SQL; optional `XPJsonObject` parameters. | Executes non-query SQL. | [mssql-demo.xps](../demo/mssql/mssql-demo.xps) |
 | `XPDbMsSql.Query` | `db.Query(sql [, parameters])` | SQL; optional parameters. | Returns rows as JSON array document. | [mssql-demo.xps](../demo/mssql/mssql-demo.xps) |
 | `XPDbMsSql.Scalar` | `db.Scalar(sql [, parameters])` | SQL; optional parameters. | Returns first value or null. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
@@ -152,7 +152,7 @@ See [HTTP database clients](httpdb.md).
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HTTPDBSupabase` | `New HTTPDBSupabase(baseUrl, apiKey)` | Supabase `baseUrl`, API `apiKey`. | Creates a Cloud or self-hosted PostgREST client. | [httpdb-supabase.xps](../samples/httpdb-supabase.xps) |
+| `XPHttpDbSupabase` | `New XPHttpDbSupabase(baseUrl, apiKey)` | Supabase `baseUrl`, API `apiKey`. | Creates a Cloud or self-hosted PostgREST client. | [httpdb-supabase.xps](../samples/httpdb-supabase.xps) |
 | `SetBearerToken` | `db.SetBearerToken(token)` | user/service bearer `token`. | Sets Authorization bearer context. | [httpdb-supabase.xps](../samples/httpdb-supabase.xps) |
 | `SetSchema` | `db.SetSchema(schema)` | PostgREST `schema`. | Selects Accept/Content profile schema. | [httpdb-supabase.xps](../samples/httpdb-supabase.xps) |
 | `Select` | `db.Select(table [, query])` | table; optional PostgREST query. | Reads table rows. | [httpdb-supabase.xps](../samples/httpdb-supabase.xps) |
@@ -174,11 +174,11 @@ See [HTTP database clients](httpdb.md).
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HTTPDBDominoRest` | `New HTTPDBDominoRest(baseUrl, bearerToken, dataSource)` | server URL, optional retained bearer token, REST API data source. | Creates an HCL Domino REST API client. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
+| `XPHttpDbDominoRest` | `New XPHttpDbDominoRest(baseUrl, bearerToken, dataSource)` | server URL, optional retained bearer token, REST API data source. | Creates an HCL Domino REST API client. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `Login` | `domino.Login(user, password)` | Domino user name and password. | Authenticates and retains returned bearer token. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `SetBearerToken` | `domino.SetBearerToken(token)` | bearer token. | Replaces retained token. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `SetDataSource` | `domino.SetDataSource(name)` | configured REST API data source. | Changes active data source. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
-| `CreateDocument` | `domino.CreateDocument(data)` | document `JsonObject`. | Creates a Domino document. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
+| `CreateDocument` | `domino.CreateDocument(data)` | document `XPJsonObject`. | Creates a Domino document. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `GetDocument` | `domino.GetDocument(unid)` | 32-hex-character UNID. | Retrieves one document. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `UpdateDocument` | `domino.UpdateDocument(unid, data)` | UNID and full document data. | Replaces/updates a document with PUT. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
 | `PatchDocument` | `domino.PatchDocument(unid, changes)` | UNID and partial JSON changes. | Partially updates a document. | [httpdb-domino.xps](../samples/httpdb-domino.xps) |
@@ -249,7 +249,7 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `RemoveRequestProperty` | `tool.RemoveRequestProperty(name)` | context property name. | Removes context property. | [xpai.xps](../samples/xpai.xps) |
 | `ClearRequestProperties` | `tool.ClearRequestProperties()` | none | Clears context properties. | [xpai.xps](../samples/xpai.xps) |
 | `GetRequestContext` | `tool.GetRequestContext()` | none | Returns defensive JSON context copy. | [xpai.xps](../samples/xpai.xps) |
-| `ToJsonObject` | `tool.ToJsonObject()` | none | Returns tool metadata as `JsonObject`. | [xpai.xps](../samples/xpai.xps) |
+| `ToJsonObject` | `tool.ToJsonObject()` | none | Returns tool metadata as `XPJsonObject`. | [xpai.xps](../samples/xpai.xps) |
 | `ToJson` | `tool.ToJson()` | none | Serializes tool metadata. | [xpai.xps](../samples/xpai.xps) |
 | `AIToolFunction.AddParameter` | `fn.AddParameter(name, type, description, required)` | parameter schema fields. | Adds parameter directly to function object. | [xpai.xps](../samples/xpai.xps) |
 | `AIToolFunction.RemoveParameter` | `fn.RemoveParameter(name)` | parameter name. | Removes parameter. | [xpai.xps](../samples/xpai.xps) |
@@ -265,7 +265,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `UIForm` | `New UIForm(title)` | form title. | Creates shared desktop/web/browser form. | [customer-form.xps](../demo/desktop-ui/customer-form.xps) |
-| `BindData` | `form.BindData(data)` | `JsonObject` or object-root `JsonDocument`. | Binds form values to JSON data. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `BindData` | `form.BindData(data)` | `XPJsonObject` or object-root `XPJsonDocument`. | Binds form values to JSON data. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddTextField` | `form.AddTextField(name, label)` | binding name and display label. | Adds text input. | [customer-form.xps](../demo/desktop-ui/customer-form.xps) |
 | `AddTextArea` | `form.AddTextArea(name, label)` | name and label. | Adds multiline text input. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddNumberField` | `form.AddNumberField(name, label)` | name and label. | Adds numeric field. | [ui-form-core.xps](../samples/ui-form-core.xps) |
@@ -277,7 +277,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | `AddMultiListBox` | `form.AddMultiListBox(name, label)` | name and label. | Adds multi-selection list box. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
 | `AddOption` | `form.AddOption(field, value [, label])` | field name, option value, optional label. | Adds option to selectable control. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
 | `ClearOptions` | `form.ClearOptions(field)` | field name. | Removes configured options. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
-| `GetFieldValues` | `form.GetFieldValues(field)` | field name. | Returns selected values as `JsonArray`. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
+| `GetFieldValues` | `form.GetFieldValues(field)` | field name. | Returns selected values as `XPJsonArray`. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
 | `SetRequired` | `form.SetRequired(field, required)` | field name and Boolean. | Sets required validation. | [customer-form.xps](../demo/desktop-ui/customer-form.xps) |
 | `SetFieldPlaceholder` | `form.SetFieldPlaceholder(field, text)` | field and hint text. | Sets/clears placeholder. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `SetFieldTooltip` | `form.SetFieldTooltip(field, text)` | field and tooltip text. | Sets/clears tooltip. | [ui-form-core.xps](../samples/ui-form-core.xps) |
@@ -313,7 +313,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `UIListView` | `New UIListView(title)` | list title. | Creates list/table UI model. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |
-| `BindData` | `list.BindData(rows)` | `JsonArray` rows. | Binds list data. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |
+| `BindData` | `list.BindData(rows)` | `XPJsonArray` rows. | Binds list data. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |
 | `AddColumn` | `list.AddColumn(name, label)` | row property name and display label. | Adds visible column. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |
 | `SetColumnWidth` | `list.SetColumnWidth(name, width)` | column name and pixel width. | Configures column width. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |
 | `SetColumnLabel` | `list.SetColumnLabel(name, label)` | column name and new label. | Changes label, including from callbacks. | [ui-list-view-web.xps](../samples/ui-list-view-web.xps) |

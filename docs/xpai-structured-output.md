@@ -74,8 +74,8 @@ The supported automatic mappings include:
 | Enum | string enum |
 | CLR arrays | `array` with recursively derived `items` |
 | XPscript dynamic array (`LSArray`) | `array` with unconstrained items |
-| `JsonObject`, `JsonDocument`, `Variant/Object` | object |
-| `JsonArray` | array |
+| `XPJsonObject`, `XPJsonDocument`, `Variant/Object` | object |
+| `XPJsonArray` | array |
 | XPscript class | object with public fields/properties |
 
 The overloads are:
@@ -98,7 +98,7 @@ Call ai.SetJsonSchema(schema, "result_name")
 Call ai.SetJsonSchema(schema, "result_name", True)
 ```
 
-`schema` must be a `JsonObject` or `JsonDocument` with an object root.
+`schema` must be a `XPJsonObject` or `XPJsonDocument` with an object root.
 
 Related properties:
 
@@ -138,13 +138,13 @@ For structured output, `XPAiResponse` also exposes:
 | Member | Description |
 |---|---|
 | `HasJsonResult` | Returns `True` when `Text` parses as valid JSON within XPscript JSON limits. |
-| `ResultJson` | Parses `Text` and returns it as `JsonDocument`; raises an XPscript error when the response text is not valid JSON. |
+| `ResultJson` | Parses `Text` and returns it as `XPJsonDocument`; raises an XPscript error when the response text is not valid JSON. |
 
 Example:
 
 ```xpscript
 Dim response As XPAiResponse
-Dim result As JsonDocument
+Dim result As XPJsonDocument
 
 Set response = ai.Complete()
 If response.HasJsonResult Then

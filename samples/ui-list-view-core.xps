@@ -18,9 +18,9 @@ Sub OnListDoubleClick(evt As Variant, context As String, mode As Integer)
 End Sub
 
 Sub Main()
-    Dim rows As New JsonArray
-    Dim first As New JsonObject
-    Dim second As New JsonObject
+    Dim rows As New XPJsonArray
+    Dim first As New XPJsonObject
+    Dim second As New XPJsonObject
     Dim list As New UIListView("Customers")
 
     Call first.Set("id", "1001")

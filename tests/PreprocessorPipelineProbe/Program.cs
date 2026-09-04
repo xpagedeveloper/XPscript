@@ -70,10 +70,10 @@ Option Declare
 Sub Main()
     Dim Notesdb As String
     Dim XPDBSupabase As String
-    Dim JsonDocument As String
-    Dim XmlDocument As String
-    Dim CsvDocument As String
-    Dim HttpClient As String
+    Dim XPJsonDocument As String
+    Dim XPXmlDocument As String
+    Dim XPCsvDocument As String
+    Dim XPHttpClient As String
     Notesdb = "NotesDatabase XPDB JSON XML CSV HTTP"
 End Sub
 """;
@@ -97,12 +97,12 @@ End Sub
 
 void VerifyFeatureProfiles()
 {
-    VerifyProfile("JSON", "Dim value As JsonDocument", ["internal static class XPScriptNativeJson"]);
-    VerifyProfile("XML", "Dim value As XmlDocument", ["internal static class XPScriptNativeXml"]);
-    VerifyProfile("CSV", "Dim value As CsvDocument", ["internal static class XPScriptNativeCsv"]);
+    VerifyProfile("JSON", "Dim value As XPJsonDocument", ["internal static class XPScriptNativeJson"]);
+    VerifyProfile("XML", "Dim value As XPXmlDocument", ["internal static class XPScriptNativeXml"]);
+    VerifyProfile("CSV", "Dim value As XPCsvDocument", ["internal static class XPScriptNativeCsv"]);
     VerifyProfile(
         "HTTP",
-        "Dim value As HttpClient",
+        "Dim value As XPHttpClient",
         ["internal static class XPScriptNativeHttp"],
         ["internal sealed class XPScriptUIForm"]);
     VerifyProfile(
@@ -121,7 +121,7 @@ void VerifyFeatureProfiles()
         ["internal sealed class XPScriptHttpDbSupabase"]);
     VerifyProfile(
         "HTTPDB",
-        "Dim value As HTTPDBSupabase",
+        "Dim value As XPHttpDbSupabase",
         ["internal sealed class XPScriptHttpDbSupabase"]);
     VerifyProfile(
         "NOTES",

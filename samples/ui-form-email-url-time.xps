@@ -3,7 +3,7 @@
 
 Sub Main()
     Dim form As New UIForm("Contact")
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
 
     Call data.Set("email", "test@example.com")
     Call data.Set("website", "https://example.com")

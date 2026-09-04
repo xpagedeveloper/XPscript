@@ -94,44 +94,44 @@ For XPAi structured output, prefer defining the desired result shape as an XPscr
 
 ## Native XML
 
-Use the native XML classes documented in `docs/native-xml.md`; do not infer MSXML, browser DOM, or .NET `XmlDocument` members that XPscript does not expose.
+Use the native XML classes documented in `docs/native-xml.md`; do not infer MSXML, browser DOM, or .NET `XPXmlDocument` members that XPscript does not expose.
 
-Create documents with `New XmlDocument`, parse with `XmlDocument.Parse`, `XmlParse`, or a constructor string, and replace an existing document with `LoadXml`:
+Create documents with `New XPXmlDocument`, parse with `XPXmlDocument.Parse`, `XmlParse`, or a constructor string, and replace an existing document with `LoadXml`:
 
 ```xpscript
-Dim doc As New XmlDocument
-Dim root As XmlElement
+Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
 
 Set root = doc.AddRoot("people")
 Call root.SetAttribute("version", 1)
 Call root.AddElement("person", "Alice")
 ```
 
-Use `XmlNode` navigation for `Parent`, `OwnerDocument`, `FirstChild`, `LastChild`, `PreviousSibling`, `NextSibling`, `ChildNodes`, `Clone`, `InsertBefore`, `InsertAfter`, `ReplaceWith`, `Remove` and `Delete`.
+Use `XPXmlNode` navigation for `Parent`, `OwnerDocument`, `FirstChild`, `LastChild`, `PreviousSibling`, `NextSibling`, `ChildNodes`, `Clone`, `InsertBefore`, `InsertAfter`, `ReplaceWith`, `Remove` and `Delete`.
 
-Use `XmlElement` for element-specific operations such as `AddElement`, `PrependElement`, `AppendChild`, `PrependChild`, `GetElement`, `GetElements`, `GetDescendants`, `RemoveElement`, `RemoveElements`, `RemoveChildren`, `RemoveAll`, `SetAttribute`, `GetAttributeNode`, `RemoveAttribute` and `RemoveAllAttributes`.
+Use `XPXmlElement` for element-specific operations such as `AddElement`, `PrependElement`, `AppendChild`, `PrependChild`, `GetElement`, `GetElements`, `GetDescendants`, `RemoveElement`, `RemoveElements`, `RemoveChildren`, `RemoveAll`, `SetAttribute`, `GetAttributeNode`, `RemoveAttribute` and `RemoveAllAttributes`.
 
 Attributes are first-class objects:
 
 ```xpscript
-Dim attr As XmlAttribute
+Dim attr As XPXmlAttribute
 Set attr = root.GetAttributeNode("version")
 attr.Value = "2"
 Call attr.Delete()
 ```
 
-`XmlNodeCollection`, `XmlAttributeCollection` and `XmlValidationErrorCollection` support `ForAll`. XML collection indexes are zero-based.
+`XPXmlNodeCollection`, `XPXmlAttributeCollection` and `XPXmlValidationErrorCollection` support `ForAll`. XML collection indexes are zero-based.
 
 Normal XML parsing prohibits DTD processing and external entity resolution. Do not weaken that boundary. Internal DTD validation is available through `ValidateDTD`/`IsValidDTD`, but external `SYSTEM` and `PUBLIC` identifiers remain unsupported.
 
 ## HTTP client security
 
-`HttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
+`XPHttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
 
 For a trusted application-controlled intranet or local endpoint, opt in on that client instance:
 
 ```xpscript
-Dim http As New HttpClient
+Dim http As New XPHttpClient
 http.AllowPrivateNetwork = True
 Set response = http.Get("http://127.0.0.1:8080/health")
 ```

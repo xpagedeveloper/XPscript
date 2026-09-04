@@ -127,8 +127,8 @@ $databaseUi = Get-Content -LiteralPath (Join-Path $root 'docs/database-ui-dataso
 $requiredDatabaseUi = @(
     'XPDBSQLite.QueryArray', 'XPDBSQLite.GetRow', 'XPDBSQLite.SaveRow', 'XPDBSQLite.Attachments',
     'XPDbMsSql.QueryArray', 'XPDbMsSql.GetRow', 'XPDbMsSql.SaveRow', 'XPDbMsSql.Attachments',
-    'HTTPDBSupabase.QueryArray', 'HTTPDBSupabase.GetRow', 'HTTPDBSupabase.SaveRow', 'HTTPDBSupabase.SetAttachmentBucket', 'HTTPDBSupabase.Attachments',
-    'HTTPDBDominoRest.GetViewArray', 'HTTPDBDominoRest.QueryArray', 'HTTPDBDominoRest.GetRow', 'HTTPDBDominoRest.SaveRow', 'HTTPDBDominoRest.Attachments',
+    'XPHttpDbSupabase.QueryArray', 'XPHttpDbSupabase.GetRow', 'XPHttpDbSupabase.SaveRow', 'XPHttpDbSupabase.SetAttachmentBucket', 'XPHttpDbSupabase.Attachments',
+    'XPHttpDbDominoRest.GetViewArray', 'XPHttpDbDominoRest.QueryArray', 'XPHttpDbDominoRest.GetRow', 'XPHttpDbDominoRest.SaveRow', 'XPHttpDbDominoRest.Attachments',
     'AttachmentCollection.List', 'AttachmentCollection.GetMetadata', 'AttachmentCollection.FindByName',
     'AttachmentCollection.Save', 'AttachmentCollection.SaveAs', 'AttachmentCollection.Get', 'AttachmentCollection.SaveToDisk',
     'AttachmentCollection.GetAll', 'AttachmentCollection.SendToBrowser', 'AttachmentCollection.Delete',
@@ -149,9 +149,9 @@ foreach ($forbidden in @('AttachmentCollection.SetActor', 'AttachmentCollection.
 
 $api = Get-Content -LiteralPath (Join-Path $root 'docs/api-reference.md') -Raw
 $requiredApi = @(
-    'HttpClient.Get', 'HttpClient.Put', 'HttpClient.Patch', 'HttpClient.Delete',
-    'JsonObject.Set', 'JsonArray.Add', 'XPDBSQLite.Execute', 'XPDbMsSql.Query',
-    'HTTPDBSupabase', 'HTTPDBDominoRest',
+    'XPHttpClient.Get', 'XPHttpClient.Put', 'XPHttpClient.Patch', 'XPHttpClient.Delete',
+    'XPJsonObject.Set', 'XPJsonArray.Add', 'XPDBSQLite.Execute', 'XPDbMsSql.Query',
+    'XPHttpDbSupabase', 'XPHttpDbDominoRest',
     '`Complete`', 'AutoExecuteTools', 'MaxToolIterations', 'NewRequest',
     '`AddFunction`', '`AddParameter`', 'AIToolCall',
     'UIForm', 'AddLookupField', 'UIListView', 'AddRowButton',

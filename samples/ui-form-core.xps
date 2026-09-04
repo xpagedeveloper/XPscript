@@ -4,7 +4,7 @@
 Sub Main()
     Dim first As New UIForm("First", 640, 480, True)
     Dim second As New UIForm("Second")
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
 
     Print "FIRST_TITLE=" & first.Title
     Print "FIRST_WIDTH=" & CStr(first.Width)

@@ -5,10 +5,10 @@ Option Declare
 Sub Main()
     Dim connectionString As String
     Dim db As XPDbMsSql
-    Dim insertValues As New JsonObject
-    Dim listRows As JsonArray
-    Dim customer As JsonObject
-    Dim saved As JsonObject
+    Dim insertValues As New XPJsonObject
+    Dim listRows As XPJsonArray
+    Dim customer As XPJsonObject
+    Dim saved As XPJsonObject
     Dim generalForm As New UIForm("General")
     Dim addressForm As New UIForm("Address")
     Dim affected As Integer

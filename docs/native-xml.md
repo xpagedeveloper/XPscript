@@ -9,14 +9,14 @@ The XML runtime is cross-platform and is only included when an application uses 
 Create an empty document with either form:
 
 ```xpscript
-Dim doc As New XmlDocument
+Dim doc As New XPXmlDocument
 ```
 
 or:
 
 ```xpscript
-Dim doc As XmlDocument
-Set doc = New XmlDocument
+Dim doc As XPXmlDocument
+Set doc = New XPXmlDocument
 ```
 
 A new document has no root element:
@@ -30,7 +30,7 @@ End If
 Create the root directly:
 
 ```xpscript
-Dim root As XmlElement
+Dim root As XPXmlElement
 Set root = doc.AddRoot("person")
 ```
 
@@ -48,8 +48,8 @@ Call doc.SetRoot(root)
 ## Parse XML
 
 ```xpscript
-Dim doc As XmlDocument
-Set doc = XmlDocument.Parse("<person id=""42""><name>Fredrik</name></person>")
+Dim doc As XPXmlDocument
+Set doc = XPXmlDocument.Parse("<person id=""42""><name>Fredrik</name></person>")
 ```
 
 `XmlParse(xml)` is the shorthand equivalent:
@@ -61,10 +61,10 @@ Set doc = XmlParse(xmlText)
 A constructor argument also parses XML:
 
 ```xpscript
-Dim doc As New XmlDocument("<root><child /></root>")
+Dim doc As New XPXmlDocument("<root><child /></root>")
 ```
 
-`LoadXml(xml)` replaces the contents of an existing `XmlDocument`:
+`LoadXml(xml)` replaces the contents of an existing `XPXmlDocument`:
 
 ```xpscript
 Call doc.LoadXml("<newroot><item>1</item></newroot>")
@@ -75,9 +75,9 @@ Normal parsing requires well-formed XML. DTD processing is prohibited, `XmlResol
 ## Build XML
 
 ```xpscript
-Dim doc As New XmlDocument
-Dim root As XmlElement
-Dim person As XmlElement
+Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
+Dim person As XPXmlElement
 
 Set root = doc.AddRoot("people")
 Set person = root.AddElement("person")
@@ -93,8 +93,8 @@ Scalar values are converted using invariant formatting. Text and attribute value
 A document can also create detached nodes:
 
 ```xpscript
-Dim element As XmlElement
-Dim node As XmlNode
+Dim element As XPXmlElement
+Dim node As XPXmlNode
 
 Set element = doc.CreateElement("item", "value")
 Set node = doc.CreateTextNode("plain text")
@@ -105,14 +105,14 @@ Set node = doc.CreateProcessingInstruction("target", "value=1")
 
 Detached nodes can later be inserted into an element. Insertions clone the supplied node, so the original remains independent.
 
-## XmlDocument reference
+## XPXmlDocument reference
 
 | Member | Behavior |
 |---|---|
-| `Root` | Returns the root `XmlElement`, or `Nothing` when empty. |
+| `Root` | Returns the root `XPXmlElement`, or `Nothing` when empty. |
 | `DocumentElement` | Alias for `Root`. |
 | `HasRoot` | `True` when the document has a root element. |
-| `ChildNodes` | Top-level XML nodes as `XmlNodeCollection`. |
+| `ChildNodes` | Top-level XML nodes as `XPXmlNodeCollection`. |
 | `Indent` | Controls formatted serialization. Default `True`. |
 | `OmitXmlDeclaration` | Omits the XML declaration when `True`. Default `True`. |
 | `CreateElement(name)` | Creates a detached element. |
@@ -127,17 +127,17 @@ Detached nodes can later be inserted into an element. Insertions clone the suppl
 | `Clear()` | Removes all nodes and the XML declaration. |
 | `LoadXml(xml)` | Replaces document contents by securely parsing XML text. |
 | `SelectSingleNode(xpath)` | Returns the first matching element or `Nothing`. |
-| `SelectNodes(xpath)` | Returns matching elements as `XmlNodeCollection`. |
+| `SelectNodes(xpath)` | Returns matching elements as `XPXmlNodeCollection`. |
 | `ValidateDTD(dtd)` | Validates against internal DTD declarations. |
 | `IsValidDTD(dtd)` | Boolean DTD validation helper. |
 | `Stringify()` | Serializes the document. |
 
-## XmlNode navigation
+## XPXmlNode navigation
 
-All element objects are also `XmlNode` objects.
+All element objects are also `XPXmlNode` objects.
 
 ```xpscript
-Dim node As XmlNode
+Dim node As XPXmlNode
 Set node = doc.SelectSingleNode("/people/person[1]")
 
 Print node.NodeType
@@ -146,7 +146,7 @@ Print node.Parent.Name
 Print node.NextSibling.Name
 ```
 
-`XmlNode` exposes:
+`XPXmlNode` exposes:
 
 | Member | Behavior |
 |---|---|
@@ -155,12 +155,12 @@ Print node.NextSibling.Name
 | `Value` | Gets or sets element/text/CDATA/comment/processing-instruction content where applicable. |
 | `InnerText` | Alias for `Value`. |
 | `OuterXml` | Serialized node XML. |
-| `Parent` | Parent `XmlElement`, or `Nothing`. |
-| `OwnerDocument` | Owning `XmlDocument`, or `Nothing` for a detached node. |
+| `Parent` | Parent `XPXmlElement`, or `Nothing`. |
+| `OwnerDocument` | Owning `XPXmlDocument`, or `Nothing` for a detached node. |
 | `HasParent` | `True` when attached to an element or document. |
 | `HasChildNodes` | Whether the node contains child nodes. |
 | `ChildCount` | Number of child nodes, including text/comments. |
-| `ChildNodes` | Child nodes as `XmlNodeCollection`. |
+| `ChildNodes` | Child nodes as `XPXmlNodeCollection`. |
 | `FirstChild` | First child or `Nothing`. |
 | `LastChild` | Last child or `Nothing`. |
 | `PreviousSibling` | Previous sibling or `Nothing`. |
@@ -175,13 +175,13 @@ Print node.NextSibling.Name
 
 Sibling insertion follows XML document rules. For example, inserting a second root element beside the document root is invalid.
 
-## XmlElement elements and children
+## XPXmlElement elements and children
 
-`XmlElement` adds element-specific navigation and mutation:
+`XPXmlElement` adds element-specific navigation and mutation:
 
 ```xpscript
-Dim root As XmlElement
-Dim item As XmlElement
+Dim root As XPXmlElement
+Dim item As XPXmlElement
 
 Set root = doc.AddRoot("items")
 Set item = root.AddElement("item", "first")
@@ -194,7 +194,7 @@ Set item = root.PrependElement("item", "zero")
 | `Rename(name)` | Renames the element. |
 | `Count` | Number of direct child elements. |
 | `ElementCount` | Alias for `Count`. |
-| `Elements` | All direct child elements as `XmlNodeCollection`. |
+| `Elements` | All direct child elements as `XPXmlNodeCollection`. |
 | `AddElement(name [, value])` | Appends and returns a child element. |
 | `PrependElement(name [, value])` | Prepends and returns a child element. |
 | `Add(node)` | Appends a clone of a node. |
@@ -231,8 +231,8 @@ Call root.RemoveAttribute("id")
 For object-level attribute navigation:
 
 ```xpscript
-Dim attr As XmlAttribute
-Dim attrs As XmlAttributeCollection
+Dim attr As XPXmlAttribute
+Dim attrs As XPXmlAttributeCollection
 
 Set attrs = root.Attributes
 Set attr = root.GetAttributeNode("id")
@@ -243,20 +243,20 @@ attr.Value = "43"
 Call attr.Delete()
 ```
 
-`XmlElement` attribute members:
+`XPXmlElement` attribute members:
 
 | Member | Behavior |
 |---|---|
 | `AttributeCount` | Number of attributes. |
-| `Attributes` | `XmlAttributeCollection`. |
+| `Attributes` | `XPXmlAttributeCollection`. |
 | `SetAttribute(name, value)` | Adds or replaces an attribute. |
 | `GetAttribute(name)` | Returns attribute text or an empty string when missing. |
-| `GetAttributeNode(name)` | Returns the `XmlAttribute` object or `Nothing`. |
+| `GetAttributeNode(name)` | Returns the `XPXmlAttribute` object or `Nothing`. |
 | `HasAttribute(name)` | Tests for an attribute. |
 | `RemoveAttribute(name)` | Removes an attribute and returns Boolean. |
 | `RemoveAllAttributes()` | Removes all attributes. |
 
-`XmlAttribute` exposes:
+`XPXmlAttribute` exposes:
 
 | Member | Behavior |
 |---|---|
@@ -269,16 +269,16 @@ Call attr.Delete()
 | `Delete()` | Alias for `Remove()`. |
 | `Stringify()` | Serializes the attribute. |
 
-`XmlAttributeCollection` exposes `Count`, `First`, `Last`, `Get(index)`, `Get(name)` and `Has(name)`.
+`XPXmlAttributeCollection` exposes `Count`, `First`, `Last`, `Get(index)`, `Get(name)` and `Has(name)`.
 
 Indexes are zero-based.
 
 ## Collections and ForAll
 
-`XmlNodeCollection`, `XmlAttributeCollection` and `XmlValidationErrorCollection` are enumerable with `ForAll`.
+`XPXmlNodeCollection`, `XPXmlAttributeCollection` and `XPXmlValidationErrorCollection` are enumerable with `ForAll`.
 
 ```xpscript
-Dim nodes As XmlNodeCollection
+Dim nodes As XPXmlNodeCollection
 Set nodes = doc.SelectNodes("/people/person")
 
 ForAll node In nodes
@@ -286,7 +286,7 @@ ForAll node In nodes
 End ForAll
 ```
 
-`XmlNodeCollection` exposes:
+`XPXmlNodeCollection` exposes:
 
 - `Count`
 - `First`
@@ -296,14 +296,14 @@ End ForAll
 ## XPath
 
 ```xpscript
-Dim node As XmlNode
-Dim nodes As XmlNodeCollection
+Dim node As XPXmlNode
+Dim nodes As XPXmlNodeCollection
 
 Set node = doc.SelectSingleNode("/people/person[@id='42']")
 Set nodes = doc.SelectNodes("/people/person")
 ```
 
-`SelectSingleNode` and `SelectNodes` are available on both `XmlDocument` and `XmlElement`.
+`SelectSingleNode` and `SelectNodes` are available on both `XPXmlDocument` and `XPXmlElement`.
 
 The current XPath API returns element nodes and does not expose a namespace-manager abstraction. Use the direct attribute API for attributes.
 
@@ -312,7 +312,7 @@ The current XPath API returns element nodes and does not expose a namespace-mana
 Delete a selected node:
 
 ```xpscript
-Dim node As XmlNode
+Dim node As XPXmlNode
 Set node = doc.SelectSingleNode("/people/person[@id='42']")
 If Not node Is Nothing Then
     Call node.Delete()
@@ -322,7 +322,7 @@ End If
 Replace a node:
 
 ```xpscript
-Dim replacement As XmlElement
+Dim replacement As XPXmlElement
 Set replacement = doc.CreateElement("person")
 Call replacement.SetAttribute("id", "99")
 Call node.ReplaceWith(replacement)
@@ -349,7 +349,7 @@ Print XmlStringify(doc)
 Print XmlStringify(root)
 ```
 
-`XmlDocument.Stringify()` is equivalent for documents.
+`XPXmlDocument.Stringify()` is equivalent for documents.
 
 Formatting properties:
 
@@ -376,7 +376,7 @@ DTD validation accepts internal DTD declarations as a string. XPscript does not 
 
 ```xpscript
 Dim dtd As String
-Dim result As XmlValidationResult
+Dim result As XPXmlValidationResult
 
 dtd = _
     "<!ELEMENT person (name,email)>" & Chr(10) & _
@@ -404,14 +404,14 @@ End If
 
 Validation objects expose:
 
-- `XmlValidationResult.Valid`
-- `XmlValidationResult.Errors`
-- `XmlValidationErrorCollection.Count`
-- `XmlValidationErrorCollection.Get(index)`
-- `XmlValidationError.Message`
-- `XmlValidationError.Line`
-- `XmlValidationError.Column`
-- `XmlValidationError.Severity`
+- `XPXmlValidationResult.Valid`
+- `XPXmlValidationResult.Errors`
+- `XPXmlValidationErrorCollection.Count`
+- `XPXmlValidationErrorCollection.Get(index)`
+- `XPXmlValidationError.Message`
+- `XPXmlValidationError.Line`
+- `XPXmlValidationError.Column`
+- `XPXmlValidationError.Severity`
 
 ## Resource and security limits
 

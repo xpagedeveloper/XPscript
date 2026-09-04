@@ -5,8 +5,8 @@ Class HttpBoundaryObject
 End Class
 
 Sub Main()
-    Dim http As New HttpClient
-    Dim response As HttpResponse
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
     Dim emptyValue As Variant
     Dim nullValue As Variant
     Dim objectValue As HttpBoundaryObject

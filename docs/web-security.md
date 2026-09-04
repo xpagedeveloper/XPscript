@@ -28,7 +28,7 @@ Bearer-only API calls without browser cookies are not forced through CSRF valida
 
 ### Browser WebAssembly
 
-The browser-wasm HttpClient has automatic CSRF challenge handling. On the first unsafe same-origin request without a token, the server returns HTTP 403 with a fresh `X-XPS-CSRF-Token` response header. The generated browser-wasm HttpClient retries the request once with that token.
+The browser-wasm XPHttpClient has automatic CSRF challenge handling. On the first unsafe same-origin request without a token, the server returns HTTP 403 with a fresh `X-XPS-CSRF-Token` response header. The generated browser-wasm XPHttpClient retries the request once with that token.
 
 The session cookie remains HttpOnly. WebAssembly code never reads the session cookie.
 

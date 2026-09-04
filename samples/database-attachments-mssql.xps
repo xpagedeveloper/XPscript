@@ -6,12 +6,12 @@ Sub Main()
     Dim connectionString As String
     Dim db As XPDbMsSql
     Dim files As Variant
-    Dim list As JsonArray
-    Dim matches As JsonArray
-    Dim created1 As JsonObject
-    Dim created2 As JsonObject
-    Dim replacement As JsonObject
-    Dim metadata As JsonObject
+    Dim list As XPJsonArray
+    Dim matches As XPJsonArray
+    Dim created1 As XPJsonObject
+    Dim created2 As XPJsonObject
+    Dim replacement As XPJsonObject
+    Dim metadata As XPJsonObject
     Dim sourcePath As String
     Dim targetPath As String
     Dim id1 As String

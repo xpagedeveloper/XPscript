@@ -90,7 +90,7 @@ End Sub
 
 Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic `xpscript:form-error` event rather than exposing runtime exception details.
 
-Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `HttpClient` to call an explicit server API for that work.
+Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `XPHttpClient` to call an explicit server API for that work.
 
 UI event objects provide `ToJson()` and `ToJsonObject()` for this boundary. These methods create a snapshot that deliberately excludes live runtime references. `UIFormEvent` serializes only `eventType`, `controlName`, `value` and `values`. `UIListViewEvent` serializes only `eventType`, `rowIndex`, `key` and `row`.
 
@@ -98,9 +98,9 @@ For example, a browser callback can explicitly post its event snapshot to an app
 
 ```xpscript
 Sub NameChanged(evt As Variant, context As String)
-    Dim http As New HttpClient
+    Dim http As New XPHttpClient
     Dim payload As Variant
-    Dim response As HttpResponse
+    Dim response As XPHttpResponse
 
     Set payload = evt.ToJsonObject()
     Call payload.Set("context", context)
@@ -120,12 +120,12 @@ This split is intentional: local UI events stay low latency, while privileged wo
 
 Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.
 
-The browser-WASM `HttpClient` handles the CSRF challenge automatically for `POST`, `PUT`, `PATCH` and `DELETE`. Application code uses the normal HTTP methods:
+The browser-WASM `XPHttpClient` handles the CSRF challenge automatically for `POST`, `PUT`, `PATCH` and `DELETE`. Application code uses the normal HTTP methods:
 
 ```xpscript
-Dim http As New HttpClient
-Dim payload As New JsonObject
-Dim result As HttpResponse
+Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
 
 Call payload.Set("name", "Example")
 Set result = http.PatchJson("/api/customer/42", payload)

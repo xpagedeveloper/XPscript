@@ -20,11 +20,11 @@ For a server deployment, create the data directory during deployment and grant t
 
 ## Execute parameterized SQL
 
-Use a `JsonObject` for named parameters. A bare key such as `name` is bound as `$name`. Keys that already start with `$`, `@` or `:` keep their prefix.
+Use a `XPJsonObject` for named parameters. A bare key such as `name` is bound as `$name`. Keys that already start with `$`, `@` or `:` keep their prefix.
 
 ```xpscript
 Dim db As New XPDBSQLite("customers.db")
-Dim parameters As New JsonObject
+Dim parameters As New XPJsonObject
 
 Call db.Execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
 Call parameters.Set("name", "Ada")
@@ -36,12 +36,12 @@ Parameter values must be JSON scalar values or null. Never concatenate untrusted
 
 ## Query rows
 
-`Query` returns a `JsonDocument` whose root is an array. Each row is a JSON object keyed by column name. Duplicate column names receive numeric suffixes. SQLite `NULL` becomes JSON null and BLOB values become Base64 text.
+`Query` returns a `XPJsonDocument` whose root is an array. Each row is a JSON object keyed by column name. Duplicate column names receive numeric suffixes. SQLite `NULL` becomes JSON null and BLOB values become Base64 text.
 
 ```xpscript
-Dim rows As JsonDocument
-Dim array As JsonArray
-Dim row As JsonObject
+Dim rows As XPJsonDocument
+Dim array As XPJsonArray
+Dim row As XPJsonObject
 
 Set rows = db.Query("SELECT id, name FROM customers WHERE name = $name", parameters)
 Set array = rows.Root.AsArray()

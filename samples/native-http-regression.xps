@@ -1,8 +1,8 @@
 Option Declare
 
 Sub Main()
-    Dim http As New HttpClient
-    Dim response As HttpResponse
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
 
     http.Timeout = 5
     http.AllowPrivateNetwork = True

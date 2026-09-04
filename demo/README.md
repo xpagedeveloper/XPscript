@@ -171,7 +171,7 @@ xpscriptc .\demo\httpdb\httpdb-demo.xps -o .\out\demo-httpdb.exe --framework-dep
 .\out\demo-httpdb.exe
 ```
 
-This offline-safe configuration demo creates Supabase and Domino REST clients without sending a network request. It demonstrates `HTTPDBSupabase.SetSchema`, `HTTPDBSupabase.Eq` and `HTTPDBDominoRest.SetDataSource`. See `docs/httpdb.md` for real CRUD/login examples and credential guidance.
+This offline-safe configuration demo creates Supabase and Domino REST clients without sending a network request. It demonstrates `XPHttpDbSupabase.SetSchema`, `XPHttpDbSupabase.Eq` and `XPHttpDbDominoRest.SetDataSource`. See `docs/httpdb.md` for real CRUD/login examples and credential guidance.
 
 ## HTTP client
 
@@ -185,7 +185,7 @@ xpscriptc .\demo\http\http-client.xps -o .\out\demo-http.exe --framework-depende
 .\out\demo-http.exe
 ```
 
-Demonstrates `HttpClient`, headers, timeout and `HttpResponse`.
+Demonstrates `XPHttpClient`, headers, timeout and `XPHttpResponse`.
 
 ## XPAi and AITool callbacks
 

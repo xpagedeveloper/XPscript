@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeCsvPreprocessor
 {
-    private const string NativeCsvTypePattern = "CsvDocument|CsvHeaderCollection|CsvRowCollection|CsvRow|CsvColumnCollection|CsvColumn";
+    private const string NativeCsvTypePattern = "XPCsvDocument|XPCsvHeaderCollection|XPCsvRowCollection|XPCsvRow|XPCsvColumnCollection|XPCsvColumn";
 
     public string Transform(string source)
     {
@@ -28,8 +28,8 @@ internal sealed class NativeCsvPreprocessor
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
                 nativeVariables.Add(name);
-                if (type.Equals("CsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
-                if (type.Equals("CsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
+                if (type.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
+                if (type.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
                 continue;
@@ -41,8 +41,8 @@ internal sealed class NativeCsvPreprocessor
                 var name = dim.Groups[1].Value;
                 var type = dim.Groups[2].Value;
                 nativeVariables.Add(name);
-                if (type.Equals("CsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
-                if (type.Equals("CsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
+                if (type.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
+                if (type.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 continue;
             }
@@ -60,7 +60,7 @@ internal sealed class NativeCsvPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bCsvParse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bCsvStringify\s*\(", "XPScriptNativeCsv.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bCsvEscape\s*\(", "XPScriptNativeCsv.Escape(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+CsvDocument\s*(?:\(\s*\))?", "XPScriptNativeCsv.CreateDocument()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPCsvDocument\s*(?:\(\s*\))?", "XPScriptNativeCsv.CreateDocument()", RegexOptions.IgnoreCase);
 
             foreach (var documentVariable in documentVariables)
             {
@@ -133,7 +133,7 @@ internal sealed class NativeCsvPreprocessor
 
             var args = SplitTopLevelArguments(method.Groups[2].Value);
             if (args.Count is < 1 or > 2)
-                throw new CompilerException("CsvDocument.Save requires path and optional encoding arguments.");
+                throw new CompilerException("XPCsvDocument.Save requires path and optional encoding arguments.");
             var bytes = args.Count == 1
                 ? documentVariable + ".ToBytes()"
                 : documentVariable + ".ToBytes(" + args[1] + ")";
@@ -204,8 +204,8 @@ internal sealed class NativeCsvPreprocessor
     private static string CreateExpression(string type, string rawArguments)
     {
         var args = rawArguments.Trim();
-        if (type.Equals("CsvDocument", StringComparison.OrdinalIgnoreCase))
+        if (type.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeCsv.CreateDocument()" : $"XPScriptNativeCsv.Parse({args})";
-        throw new CompilerException("Only CsvDocument can be created with New.");
+        throw new CompilerException("Only XPCsvDocument can be created with New.");
     }
 }

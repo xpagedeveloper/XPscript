@@ -1,12 +1,12 @@
 # HTTP client
 
-XPScript includes a native `HttpClient` for outgoing HTTP and REST calls.
+XPScript includes a native `XPHttpClient` for outgoing HTTP and REST calls.
 
 ## Basic requests
 
 ```xpscript
-Dim http As New HttpClient
-Dim response As HttpResponse
+Dim http As New XPHttpClient
+Dim response As XPHttpResponse
 
 Set response = http.Get("https://api.example.com/customers/42")
 Set response = http.Post("https://api.example.com/customers", "body")
@@ -15,16 +15,16 @@ Set response = http.Patch("https://api.example.com/customers/42", "body")
 Set response = http.Delete("https://api.example.com/customers/42")
 ```
 
-`HttpResponse` exposes `StatusCode`, `StatusText`, `Body`, `BodyLength`, `ContentType`, `Headers`, `IsSuccess`, multipart/file helpers and `SaveBodyToFile`.
+`XPHttpResponse` exposes `StatusCode`, `StatusText`, `Body`, `BodyLength`, `ContentType`, `Headers`, `IsSuccess`, multipart/file helpers and `SaveBodyToFile`.
 
 ## JSON requests
 
 Use the JSON helpers when calling REST services.
 
 ```xpscript
-Dim http As New HttpClient
-Dim response As HttpResponse
-Dim data As New JsonObject
+Dim http As New XPHttpClient
+Dim response As XPHttpResponse
+Dim data As New XPJsonObject
 
 Call data.Set("name", "Fredrik")
 Call data.Set("enabled", True)
@@ -34,11 +34,11 @@ Set response = http.PostJson("https://api.example.com/customers", data)
 
 Available helpers:
 
-- `http.GetJson(url)` returns a `JsonDocument` and requires a successful HTTP status.
-- `http.PostJson(url, data)` sends JSON and returns `HttpResponse`.
+- `http.GetJson(url)` returns a `XPJsonDocument` and requires a successful HTTP status.
+- `http.PostJson(url, data)` sends JSON and returns `XPHttpResponse`.
 - `http.PutJson(url, data)` sends JSON with PUT.
 - `http.PatchJson(url, data)` sends JSON with PATCH.
-- `response.Json()` parses the response body and returns a `JsonDocument`.
+- `response.Json()` parses the response body and returns a `XPJsonDocument`.
 
 The JSON write helpers set `Content-Type` to `application/json; charset=utf-8`.
 
@@ -58,8 +58,8 @@ The parameter name and value are URL encoded.
 `PostForm` sends a JSON object as `application/x-www-form-urlencoded`.
 
 ```xpscript
-Dim data As New JsonObject
-Dim response As HttpResponse
+Dim data As New XPJsonObject
+Dim response As XPHttpResponse
 
 Call data.Set("name", "Fredrik")
 Call data.Set("country", "SE")
@@ -74,7 +74,7 @@ Set response = http.PostForm("https://api.example.com/form", data)
 `UIForm` data is already stored as a JSON object. `LoadForm` combines an HTTP GET, JSON parse and `UIForm.BindData` operation.
 
 ```xpscript
-Dim http As New HttpClient
+Dim http As New XPHttpClient
 Dim form As New UIForm("Customer")
 
 Call http.LoadForm(form, "https://api.example.com/customers/42")
@@ -90,7 +90,7 @@ The endpoint must return a successful HTTP status and a JSON object.
 `SaveForm` posts `form.Data` as JSON.
 
 ```xpscript
-Dim response As HttpResponse
+Dim response As XPHttpResponse
 Set response = http.SaveForm(form, "https://api.example.com/customers/42")
 
 If Not response.IsSuccess Then
@@ -107,9 +107,9 @@ Set response = http.PutForm(form, "https://api.example.com/customers/42")
 This makes the normal load/edit/save flow:
 
 ```xpscript
-Dim http As New HttpClient
+Dim http As New XPHttpClient
 Dim form As New UIForm("Customer")
-Dim response As HttpResponse
+Dim response As XPHttpResponse
 
 Call http.LoadForm(form, "https://api.example.com/customers/42")
 
@@ -136,7 +136,7 @@ Headers can be removed with `RemoveHeader(name)` or all cleared with `ClearHeade
 Private, loopback, link-local and other non-public network destinations are blocked by default. If an application intentionally calls a trusted local service or intranet API, opt in on that client instance:
 
 ```xpscript
-Dim http As New HttpClient
+Dim http As New XPHttpClient
 http.AllowPrivateNetwork = True
 Set response = http.Get("http://127.0.0.1:8080/health")
 ```

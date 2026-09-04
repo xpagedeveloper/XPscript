@@ -30,10 +30,10 @@ Server=.\SQLEXPRESS;Database=application;Integrated Security=True;Encrypt=True;T
 
 ## Execute parameterized SQL
 
-Use a `JsonObject` for named parameters. Bare keys and keys beginning with `$`, `@` or `:` are normalized to SQL Server `@name` parameters.
+Use a `XPJsonObject` for named parameters. Bare keys and keys beginning with `$`, `@` or `:` are normalized to SQL Server `@name` parameters.
 
 ```xpscript
-Dim parameters As New JsonObject
+Dim parameters As New XPJsonObject
 Call parameters.Set("name", "Ada")
 Call parameters.Set("active", True)
 
@@ -51,12 +51,12 @@ id = db.Scalar("INSERT INTO customers(name) OUTPUT INSERTED.id VALUES (@name)", 
 
 ## Query rows
 
-`Query` returns a `JsonDocument` whose root is an array. Each row is a JSON object keyed by column name. Duplicate names receive numeric suffixes. SQL `NULL` becomes JSON null, binary values become Base64 text, and date, time, GUID and time-span values become invariant text.
+`Query` returns a `XPJsonDocument` whose root is an array. Each row is a JSON object keyed by column name. Duplicate names receive numeric suffixes. SQL `NULL` becomes JSON null, binary values become Base64 text, and date, time, GUID and time-span values become invariant text.
 
 ```xpscript
-Dim rows As JsonDocument
-Dim array As JsonArray
-Dim row As JsonObject
+Dim rows As XPJsonDocument
+Dim array As XPJsonArray
+Dim row As XPJsonObject
 
 Set rows = db.Query("SELECT id, name FROM customers WHERE name = @name", parameters)
 Set array = rows.Root.AsArray()

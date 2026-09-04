@@ -6,9 +6,9 @@ The same provider-neutral model applies to record attachments. An attachment col
 
 ## Data ownership rules
 
-- A list/query/view is exposed as `JsonArray` and can be passed directly to `UIListView.BindData`.
-- A complete row/document is exposed as `JsonObject` and can be passed directly to `UIForm.BindData`.
-- `UIForm.BindData` keeps the same `JsonObject` instance, so multiple forms can share one record object.
+- A list/query/view is exposed as `XPJsonArray` and can be passed directly to `UIListView.BindData`.
+- A complete row/document is exposed as `XPJsonObject` and can be passed directly to `UIForm.BindData`.
+- `UIForm.BindData` keeps the same `XPJsonObject` instance, so multiple forms can share one record object.
 - A form only changes fields it edits; hidden/unbound properties remain in the shared object.
 - `SaveRow` writes native database columns/items, never one opaque JSON record blob.
 - SQLite generated/hidden columns and SQL Server identity/computed columns remain readable but are excluded from `SaveRow` assignments.
@@ -26,39 +26,39 @@ The executable SQLite regressions [database-uiform-datasource.xps](../samples/da
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `XPDBSQLite.QueryArray` | `db.QueryArray(sql [, parameters])` | `sql`: query text; `parameters`: optional scalar `JsonObject`. | Executes the query and returns its array root directly as `JsonArray`. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
-| `XPDBSQLite.GetRow` | `db.GetRow(table, keyColumn, keyValue)` | Native table, validated key column and lookup value. | Loads exactly one complete row with `SELECT *` as `JsonObject`. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
-| `XPDBSQLite.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Native table, key column and complete `JsonObject`. | Updates native writable columns using parameters. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
+| `XPDBSQLite.QueryArray` | `db.QueryArray(sql [, parameters])` | `sql`: query text; `parameters`: optional scalar `XPJsonObject`. | Executes the query and returns its array root directly as `XPJsonArray`. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
+| `XPDBSQLite.GetRow` | `db.GetRow(table, keyColumn, keyValue)` | Native table, validated key column and lookup value. | Loads exactly one complete row with `SELECT *` as `XPJsonObject`. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
+| `XPDBSQLite.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Native table, key column and complete `XPJsonObject`. | Updates native writable columns using parameters. | [database-uiform-datasource.xps](../samples/database-uiform-datasource.xps) |
 | `XPDBSQLite.Attachments` | `db.Attachments(table, keyColumn, keyValue)` | Parent table, key column and unique key value. | Returns an attachment collection scoped to exactly one row. Binary data and metadata are stored in the managed native SQLite BLOB side table. | [database-attachments.xps](../samples/database-attachments.xps) |
 
 ## SQL Server
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `XPDbMsSql.QueryArray` | `db.QueryArray(sql [, parameters])` | Query and optional scalar parameters. | Returns query rows directly as `JsonArray`. | [database-uiform-datasource-mssql.xps](../samples/database-uiform-datasource-mssql.xps) |
+| `XPDbMsSql.QueryArray` | `db.QueryArray(sql [, parameters])` | Query and optional scalar parameters. | Returns query rows directly as `XPJsonArray`. | [database-uiform-datasource-mssql.xps](../samples/database-uiform-datasource-mssql.xps) |
 | `XPDbMsSql.GetRow` | `db.GetRow(table, keyColumn, keyValue)` | `table` or `schema.table`, validated key column and lookup value. | Loads exactly one complete row. | [database-uiform-datasource-mssql.xps](../samples/database-uiform-datasource-mssql.xps) |
-| `XPDbMsSql.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Native table, key column and complete `JsonObject`. | Updates native writable columns; identity/computed columns are not assigned. | [database-uiform-datasource-mssql.xps](../samples/database-uiform-datasource-mssql.xps) |
+| `XPDbMsSql.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Native table, key column and complete `XPJsonObject`. | Updates native writable columns; identity/computed columns are not assigned. | [database-uiform-datasource-mssql.xps](../samples/database-uiform-datasource-mssql.xps) |
 | `XPDbMsSql.Attachments` | `db.Attachments(table, keyColumn, keyValue)` | Parent table, key column and unique key value. | Returns one parent-scoped collection. Default storage uses `varbinary(max)` plus indexed owner metadata, without requiring FILESTREAM. | [database-attachments-mssql.xps](../samples/database-attachments-mssql.xps) |
 
 ## Supabase / PostgREST
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HTTPDBSupabase.QueryArray` | `db.QueryArray(table [, query])` | PostgREST table/view and optional query. | Returns rows as `JsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBSupabase.GetRow` | `db.GetRow(table, keyColumn, keyValue)` | Table, key column and value. | Loads exactly one complete row. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBSupabase.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Table, key and complete row object. | PATCHes native PostgreSQL/PostgREST fields. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBSupabase.SetAttachmentBucket` | `db.SetAttachmentBucket(bucket)` | Existing Storage bucket name. | Selects the Supabase Storage bucket used by `Attachments`; default is `attachments`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBSupabase.Attachments` | `db.Attachments(table, keyColumn, keyValue)` | Parent table, key column and value. | Verifies the row exists and returns a parent-scoped collection backed by Supabase Storage. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbSupabase.QueryArray` | `db.QueryArray(table [, query])` | PostgREST table/view and optional query. | Returns rows as `XPJsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbSupabase.GetRow` | `db.GetRow(table, keyColumn, keyValue)` | Table, key column and value. | Loads exactly one complete row. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbSupabase.SaveRow` | `db.SaveRow(table, keyColumn, data)` | Table, key and complete row object. | PATCHes native PostgreSQL/PostgREST fields. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbSupabase.SetAttachmentBucket` | `db.SetAttachmentBucket(bucket)` | Existing Storage bucket name. | Selects the Supabase Storage bucket used by `Attachments`; default is `attachments`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbSupabase.Attachments` | `db.Attachments(table, keyColumn, keyValue)` | Parent table, key column and value. | Verifies the row exists and returns a parent-scoped collection backed by Supabase Storage. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 
 ## Domino REST
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `HTTPDBDominoRest.GetViewArray` | `db.GetViewArray(viewName [, query])` | Domino view/list and optional query. | Returns view entries as `JsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.QueryArray` | `db.QueryArray(queryPayload)` | Domino query string/payload. | Returns query documents as `JsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.GetRow` | `db.GetRow(unid)` | 32-character document UNID. | Loads the complete Notes document as one shared `JsonObject`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.SaveRow` | `db.SaveRow(unid, data)` | UNID and complete shared object. | Updates native document items while excluding top-level `@...` provider metadata. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
-| `HTTPDBDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document. `fieldName` targets the native rich-text item. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbDominoRest.GetViewArray` | `db.GetViewArray(viewName [, query])` | Domino view/list and optional query. | Returns view entries as `XPJsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbDominoRest.QueryArray` | `db.QueryArray(queryPayload)` | Domino query string/payload. | Returns query documents as `XPJsonArray`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbDominoRest.GetRow` | `db.GetRow(unid)` | 32-character document UNID. | Loads the complete Notes document as one shared `XPJsonObject`. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbDominoRest.SaveRow` | `db.SaveRow(unid, data)` | UNID and complete shared object. | Updates native document items while excluding top-level `@...` provider metadata. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
+| `XPHttpDbDominoRest.Attachments` | `db.Attachments(unid [, fieldName])` | Notes UNID and optional rich-text item such as `Body`. | Returns attachments scoped to the same Notes document. `fieldName` targets the native rich-text item. | [httpdb-supabase-domino.xps](../samples/httpdb-supabase-domino.xps) |
 
 ## Attachment identity and metadata
 
@@ -85,7 +85,7 @@ Two or more attachments on the same parent may all have `originalName = "contrac
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `AttachmentCollection.List` | `files.List()` | none | Alias for `GetMetadata()` returning metadata for all attachments belonging to the current parent. | [database-attachments.xps](../samples/database-attachments.xps) |
-| `AttachmentCollection.GetMetadata` | `files.GetMetadata()` or `files.GetMetadata(attachmentId)` | Optional attachment GUID. | Returns all metadata as `JsonArray`, or one metadata `JsonObject` by ID. Does not download binary content. | [database-attachments.xps](../samples/database-attachments.xps) |
+| `AttachmentCollection.GetMetadata` | `files.GetMetadata()` or `files.GetMetadata(attachmentId)` | Optional attachment GUID. | Returns all metadata as `XPJsonArray`, or one metadata `XPJsonObject` by ID. Does not download binary content. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.FindByName` | `files.FindByName(originalName)` | Original display/file name. | Returns every matching metadata object. Multiple matches are valid and expected. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.Save` | `files.Save(sourcePath, createdBy)` | Existing local source file and creator identity. | Creates a new immutable attachment with a new GUID and returns its metadata. | [database-attachments.xps](../samples/database-attachments.xps) |
 | `AttachmentCollection.SaveAs` | `files.SaveAs(sourcePath, originalName, createdBy)` | Existing file, display/original name and creator identity. | Creates a new immutable attachment even if the same name already exists. | [database-attachments.xps](../samples/database-attachments.xps) |
@@ -99,9 +99,9 @@ Two or more attachments on the same parent may all have `originalName = "contrac
 
 ```xpscript
 Dim files As Variant
-Dim first As JsonObject
-Dim second As JsonObject
-Dim matches As JsonArray
+Dim first As XPJsonObject
+Dim second As XPJsonObject
+Dim matches As XPJsonArray
 
 Set files = db.Attachments("customers", "id", 42)
 Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf", "user@example")
@@ -157,7 +157,7 @@ In browser-WASM no server filesystem is used. XPScript converts the retrieved by
 
 ```xpscript
 Dim files As Variant
-Dim downloaded As JsonArray
+Dim downloaded As XPJsonArray
 
 Set files = db.Attachments("customers", "id", 23)
 Set downloaded = files.GetAll("customer-23")
@@ -179,7 +179,7 @@ Option Declare
 
 Sub Main()
     Dim db As New XPDBSQLite("customers.db")
-    Dim customer As JsonObject
+    Dim customer As XPJsonObject
     Dim generalForm As New UIForm("General")
     Dim addressForm As New UIForm("Address")
 
@@ -204,7 +204,7 @@ xpscriptc samples/database-uiform-datasource.xps -o database-uiform-datasource -
 ## UIListView example
 
 ```xpscript
-Dim rows As JsonArray
+Dim rows As XPJsonArray
 Dim list As New UIListView("Customers")
 
 Set rows = db.QueryArray("SELECT id, name, city FROM customers ORDER BY name")
