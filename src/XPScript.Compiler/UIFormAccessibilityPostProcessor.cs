@@ -3,13 +3,26 @@ namespace XPScript.Compiler;
 internal sealed class UIFormAccessibilityPostProcessor
 {
     private const string Sentinel = "public string AccessibleName { get; set; }";
+    private const string BaseUiRuntimeSentinel = "internal static class XPScriptUI";
+
+    private static readonly string[] FeatureTokens =
+    [
+        ".AccessibleName", ".AccessibleDescription", ".AccessibleHelpText", ".AccessibleLive",
+        ".AccessibilityHidden", ".Focusable", ".IsTabStop", ".TabIndex", ".HasFocus",
+        ".AccessKey", ".HotKey", ".InitialFocus", ".FocusedField", ".Focus(",
+        ".FocusFirst(", ".FocusFirstInvalid(", ".FocusNext(", ".FocusPrevious(",
+        ".ValidationErrors", ".HasValidationErrors", ".SetValidationError(",
+        ".ClearValidationError(", ".GetValidationErrors(", ".ValidationSummary",
+        ".FocusFirstError", ".AnnounceValidationErrors", ".Announce("
+    ];
 
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
+        if (!NeedsAccessibilityRuntime(generated)) return generated;
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "        Type = type;\n    }",
             Block(
@@ -19,7 +32,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "        IsTabStop = interactive;",
                 "    }"));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "    public List<string> Options { get; } = [];\n",
             Block(
@@ -41,7 +54,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    public void Focus() => AccessibilityFocusHandler?.Invoke(Name);",
                 string.Empty));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "    private readonly List<XPScriptUIField> _fields = [];\n",
             Block(
@@ -51,7 +64,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    private string _announcementPriority = \"Polite\";",
                 string.Empty));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "    public int FieldCount => _fields.Count;\n",
             Block(
@@ -162,7 +175,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    }",
                 string.Empty));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);\n        _fields.Add(field);",
             Block(
@@ -171,19 +184,27 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "        field.AccessibilityFocusQuery = fieldToQuery => FocusedField.Equals(fieldToQuery, StringComparison.OrdinalIgnoreCase);",
                 "        _fields.Add(field);"));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
-            "                name = field.Name, label = field.Label, type = field.Type, required = field.Required,",
+            "                required = field.Required,\n",
             Block(
-                "                name = field.Name, label = field.Label, type = field.Type, required = field.Required,",
-                "                accessibleName = field.AccessibleName, accessibleDescription = field.AccessibleDescription, accessibleHelpText = field.AccessibleHelpText,",
-                "                accessibleLive = field.AccessibleLive, accessibilityHidden = field.AccessibilityHidden, focusable = field.Focusable,",
-                "                isTabStop = field.IsTabStop, tabIndex = field.TabIndex, accessKey = field.AccessKey, hotKey = field.HotKey,",
-                "                validationError = field.ValidationError,"));
+                "                required = field.Required,",
+                "                accessibleName = field.AccessibleName,",
+                "                accessibleDescription = field.AccessibleDescription,",
+                "                accessibleHelpText = field.AccessibleHelpText,",
+                "                accessibleLive = field.AccessibleLive,",
+                "                accessibilityHidden = field.AccessibilityHidden,",
+                "                focusable = field.Focusable,",
+                "                isTabStop = field.IsTabStop,",
+                "                tabIndex = field.TabIndex,",
+                "                accessKey = field.AccessKey,",
+                "                hotKey = field.HotKey,",
+                "                validationError = field.ValidationError,",
+                string.Empty));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
-            "            resizable = form.Resizable,\n            fields = fields.Select(field => new",
+            "            resizable = form.Resizable,\n",
             Block(
                 "            resizable = form.Resizable,",
                 "            initialFocus = form.InitialFocus,",
@@ -192,9 +213,9 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "            announceValidationErrors = form.AnnounceValidationErrors,",
                 "            announcement = form.AccessibilityAnnouncement,",
                 "            announcementPriority = form.AccessibilityAnnouncementPriority,",
-                "            fields = fields.Select(field => new"));
+                string.Empty));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "    public static bool TryIsVisible(string instanceId, bool fallback)\n    {",
             Block(
@@ -222,30 +243,17 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    public static bool TryIsVisible(string instanceId, bool fallback)",
                 "    {"));
 
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "            var required = field.Required ? \" required\" : string.Empty;",
             Block(
                 "            var required = field.Required ? \" required aria-required=\\\"true\\\"\" : string.Empty;",
                 "            var accessibility = BuildAccessibilityAttributes(field, name);"));
 
-        generated = generated.Replace(".Append(required)", ".Append(required).Append(accessibility)", StringComparison.Ordinal);
+        generated = AddAccessibilityAttributesToRenderer(generated);
+        generated = AddFieldMessagesAndAnnouncement(generated);
 
-        generated = ReplaceRequired(
-            generated,
-            "            html.Append(\"</div>\");\n        }\n        html.Append(\"<button type=\\\"submit\\\"",
-            Block(
-                "            if (field.AccessibleDescription.Length > 0 || field.AccessibleHelpText.Length > 0)",
-                "                html.Append(\"<div class=\\\"xpscript-uiform-help\\\" id=\\\"xps_\").Append(name).Append(\"_help\\\">\").Append(System.Net.WebUtility.HtmlEncode(string.Join(\" \", new[] { field.AccessibleDescription, field.AccessibleHelpText }.Where(text => text.Length > 0)))).Append(\"</div>\");",
-                "            if (field.ValidationError.Length > 0)",
-                "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(field.ValidationError)).Append(\"</div>\");",
-                "            html.Append(\"</div>\");",
-                "        }",
-                "        if (_announcement.Length > 0)",
-                "            html.Append(\"<div class=\\\"xpscript-uiform-live\\\" aria-live=\\\"\").Append(_announcementPriority.Equals(\"Assertive\", StringComparison.OrdinalIgnoreCase) ? \"assertive\" : \"polite\").Append(\"\\\">\").Append(System.Net.WebUtility.HtmlEncode(_announcement)).Append(\"</div>\");",
-                "        html.Append(\"<button type=\\\"submit\\\""));
-
-        generated = ReplaceRequired(
+        generated = ReplaceOnceRequired(
             generated,
             "    private static string NormalizeFieldName(object? value)\n    {",
             Block(
@@ -274,12 +282,74 @@ internal sealed class UIFormAccessibilityPostProcessor
         return generated;
     }
 
+    private static bool NeedsAccessibilityRuntime(string generated)
+    {
+        var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
+        var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
+        foreach (var token in FeatureTokens)
+        {
+            if (scriptPart.Contains(token, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
+    private static string AddAccessibilityAttributesToRenderer(string generated)
+    {
+        var start = FindRendererStart(generated);
+        var end = generated.IndexOf("        return html.ToString();", start, StringComparison.Ordinal);
+        if (end < 0) throw new CompilerException("Unable to install UIForm accessibility runtime support (renderer return).");
+        var segment = generated[start..end];
+        var replaced = segment.Replace(".Append(required)", ".Append(required).Append(accessibility)", StringComparison.Ordinal);
+        if (string.Equals(segment, replaced, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install UIForm accessibility runtime support (renderer attributes).");
+        return generated[..start] + replaced + generated[end..];
+    }
+
+    private static string AddFieldMessagesAndAnnouncement(string generated)
+    {
+        var start = FindRendererStart(generated);
+        var submitIndex = generated.IndexOf("html.Append(\"<button type=\\\"submit\\\"", start, StringComparison.Ordinal);
+        if (submitIndex < 0) throw new CompilerException("Unable to install UIForm accessibility runtime support (submit button).");
+
+        const string closeMarker = "            html.Append(\"</div>\");";
+        var fieldClose = generated.LastIndexOf(closeMarker, submitIndex, StringComparison.Ordinal);
+        if (fieldClose < start) throw new CompilerException("Unable to install UIForm accessibility runtime support (field wrapper).");
+
+        var fieldMessages = Block(
+            "            if (field.AccessibleDescription.Length > 0 || field.AccessibleHelpText.Length > 0)",
+            "                html.Append(\"<div class=\\\"xpscript-uiform-help\\\" id=\\\"xps_\").Append(name).Append(\"_help\\\">\").Append(System.Net.WebUtility.HtmlEncode(string.Join(\" \", new[] { field.AccessibleDescription, field.AccessibleHelpText }.Where(text => text.Length > 0)))).Append(\"</div>\");",
+            "            if (field.ValidationError.Length > 0)",
+            "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(field.ValidationError)).Append(\"</div>\");",
+            string.Empty);
+        generated = generated.Insert(fieldClose, fieldMessages);
+
+        start = FindRendererStart(generated);
+        submitIndex = generated.IndexOf("html.Append(\"<button type=\\\"submit\\\"", start, StringComparison.Ordinal);
+        var submitLineStart = generated.LastIndexOf('\n', Math.Max(start, submitIndex - 1));
+        submitLineStart = submitLineStart < 0 ? submitIndex : submitLineStart + 1;
+        var announcement = Block(
+            "        if (_announcement.Length > 0)",
+            "            html.Append(\"<div class=\\\"xpscript-uiform-live\\\" aria-live=\\\"\").Append(_announcementPriority.Equals(\"Assertive\", StringComparison.OrdinalIgnoreCase) ? \"assertive\" : \"polite\").Append(\"\\\">\").Append(System.Net.WebUtility.HtmlEncode(_announcement)).Append(\"</div>\");",
+            string.Empty);
+        return generated.Insert(submitLineStart, announcement);
+    }
+
+    private static int FindRendererStart(string generated)
+    {
+        var start = generated.IndexOf("    private string RenderWebForm(bool modal)\n    {", StringComparison.Ordinal);
+        if (start >= 0) return start;
+        start = generated.IndexOf("    private string RenderWebForm()\n    {", StringComparison.Ordinal);
+        if (start >= 0) return start;
+        throw new CompilerException("Unable to install UIForm accessibility runtime support (renderer signature).");
+    }
+
     private static string Block(params string[] lines) => string.Join('\n', lines);
 
-    private static string ReplaceRequired(string source, string oldValue, string newValue)
+    private static string ReplaceOnceRequired(string source, string oldValue, string newValue)
     {
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm accessibility runtime support.");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+        if (index < 0)
+            throw new CompilerException("Unable to install UIForm accessibility runtime support (marker: " + oldValue.Trim() + ").");
+        return source[..index] + newValue + source[(index + oldValue.Length)..];
     }
 }
