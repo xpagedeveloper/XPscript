@@ -57,6 +57,7 @@ public static partial class BrowserFormLifecycleHost
         try
         {
             _ = BrowserFormHost.ShowDialog(requestJson);
+            BrowserRichMediaHost.Apply(body, requestJson);
             body.SetProperty("id", "xps_uiform_body_" + instanceId);
             baseRoot.SetProperty("id", "xpscript-app");
             FocusFirst(body);
