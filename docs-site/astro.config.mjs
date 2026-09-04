@@ -1,5 +1,6 @@
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { unified } from "@astrojs/markdown-remark";
 import { defineConfig } from "astro/config";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -40,7 +41,13 @@ export default defineConfig({
   base: "/XPscript",
   trailingSlash: "always",
   markdown: {
-    remarkPlugins: [rewriteDocsMarkdownLinks],
+    processor: unified({
+      remarkPlugins: [rewriteDocsMarkdownLinks]
+    }),
+    syntaxHighlight: {
+      type: "shiki",
+      excludeLangs: ["math", "xpscript"]
+    },
     shikiConfig: {
       theme: "github-dark"
     }
