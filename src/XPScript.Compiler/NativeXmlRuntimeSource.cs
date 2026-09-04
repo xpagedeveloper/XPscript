@@ -49,9 +49,11 @@ internal static class XPScriptNativeXml
         {
             XPScriptXmlDocument document => document.Stringify(),
             XPScriptXmlNode node => node.Stringify(),
+            XPScriptXmlAttribute attribute => attribute.Stringify(),
             System.Xml.Linq.XDocument document => document.ToString(System.Xml.Linq.SaveOptions.DisableFormatting),
             System.Xml.Linq.XNode node => node.ToString(System.Xml.Linq.SaveOptions.DisableFormatting),
-            _ => throw new XPScriptRuntimeException(13, "XmlStringify requires XmlDocument or XmlNode.")
+            System.Xml.Linq.XAttribute attribute => attribute.ToString(),
+            _ => throw new XPScriptRuntimeException(13, "XmlStringify requires XmlDocument, XmlNode or XmlAttribute.")
         };
     }
 
@@ -165,6 +167,7 @@ internal class XPScriptXmlNode
     };
 
     public XPScriptXmlElement? Parent => Node.Parent is null ? null : new XPScriptXmlElement(Node.Parent);
+    public XPScriptXmlDocument? OwnerDocument => Node.Document is null ? null : new XPScriptXmlDocument(Node.Document);
     public virtual string Name => Node is System.Xml.Linq.XElement element ? element.Name.LocalName : "";
     public virtual string Value
     {
@@ -174,6 +177,7 @@ internal class XPScriptXmlNode
             System.Xml.Linq.XCData cdata => cdata.Value,
             System.Xml.Linq.XText text => text.Value,
             System.Xml.Linq.XComment comment => comment.Value,
+            System.Xml.Linq.XProcessingInstruction instruction => instruction.Data,
             _ => ""
         };
         set
@@ -192,13 +196,103 @@ internal class XPScriptXmlNode
                 case System.Xml.Linq.XComment comment:
                     comment.Value = XPScriptNativeXml.ScalarText(value);
                     break;
+                case System.Xml.Linq.XProcessingInstruction instruction:
+                    instruction.Data = XPScriptNativeXml.ScalarText(value);
+                    break;
                 default:
                     throw new XPScriptRuntimeException(5, "XML node value cannot be changed for this node type.");
             }
         }
     }
 
+    public string InnerText
+    {
+        get => Value;
+        set => Value = value;
+    }
+    public string OuterXml => Stringify();
+    public bool HasParent => Node.Parent is not null || Node.Document is not null;
+    public bool HasChildNodes => ChildSequence().Any();
+    public int ChildCount => ChildSequence().Count();
+    public XPScriptXmlNodeCollection ChildNodes => new(ChildSequence().Select(WrapNode));
+    public XPScriptXmlNode? FirstChild => ChildSequence().FirstOrDefault() is { } node ? WrapNode(node) : null;
+    public XPScriptXmlNode? LastChild => ChildSequence().LastOrDefault() is { } node ? WrapNode(node) : null;
+    public XPScriptXmlNode? PreviousSibling => Node.PreviousNode is { } previous ? WrapNode(previous) : null;
+    public XPScriptXmlNode? NextSibling => Node.NextNode is { } next ? WrapNode(next) : null;
+
+    public bool Remove()
+    {
+        if (Node.Parent is null && Node.Document is null) return false;
+        Node.Remove();
+        return true;
+    }
+
+    public bool Delete() => Remove();
+    public XPScriptXmlNode Clone() => WrapNode(CloneNode(Node));
+
+    public XPScriptXmlNode InsertBefore(object? value)
+    {
+        var clone = RequireNodeClone(value, "InsertBefore");
+        EnsureAttached("insert a sibling");
+        try { Node.AddBeforeSelf(clone); }
+        catch (InvalidOperationException) { throw new XPScriptRuntimeException(5, "XML node cannot be inserted at this location."); }
+        return WrapNode(clone);
+    }
+
+    public XPScriptXmlNode InsertAfter(object? value)
+    {
+        var clone = RequireNodeClone(value, "InsertAfter");
+        EnsureAttached("insert a sibling");
+        try { Node.AddAfterSelf(clone); }
+        catch (InvalidOperationException) { throw new XPScriptRuntimeException(5, "XML node cannot be inserted at this location."); }
+        return WrapNode(clone);
+    }
+
+    public XPScriptXmlNode ReplaceWith(object? value)
+    {
+        var clone = RequireNodeClone(value, "ReplaceWith");
+        EnsureAttached("replace it");
+        try { Node.ReplaceWith(clone); }
+        catch (InvalidOperationException) { throw new XPScriptRuntimeException(5, "XML node cannot be replaced at this location."); }
+        return WrapNode(clone);
+    }
+
     public string Stringify() => Node.ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+
+    private System.Collections.Generic.IEnumerable<System.Xml.Linq.XNode> ChildSequence()
+        => Node is System.Xml.Linq.XContainer container
+            ? container.Nodes()
+            : System.Linq.Enumerable.Empty<System.Xml.Linq.XNode>();
+
+    private void EnsureAttached(string operation)
+    {
+        if (Node.Parent is null && Node.Document is null)
+            throw new XPScriptRuntimeException(5, $"XML node must be attached before attempting to {operation}.");
+    }
+
+    internal static XPScriptXmlNode WrapNode(System.Xml.Linq.XNode node) => node switch
+    {
+        System.Xml.Linq.XElement element => new XPScriptXmlElement(element),
+        _ => new XPScriptXmlNode(node)
+    };
+
+    internal static System.Xml.Linq.XNode CloneNode(System.Xml.Linq.XNode node) => node switch
+    {
+        System.Xml.Linq.XElement element => new System.Xml.Linq.XElement(element),
+        System.Xml.Linq.XCData cdata => new System.Xml.Linq.XCData(cdata.Value),
+        System.Xml.Linq.XText text => new System.Xml.Linq.XText(text.Value),
+        System.Xml.Linq.XComment comment => new System.Xml.Linq.XComment(comment.Value),
+        System.Xml.Linq.XProcessingInstruction instruction => new System.Xml.Linq.XProcessingInstruction(instruction.Target, instruction.Data),
+        System.Xml.Linq.XDocumentType documentType => new System.Xml.Linq.XDocumentType(documentType.Name, documentType.PublicId, documentType.SystemId, documentType.InternalSubset),
+        _ => throw new XPScriptRuntimeException(5, "Unsupported XML node type.")
+    };
+
+    private static System.Xml.Linq.XNode RequireNodeClone(object? value, string operation)
+    {
+        if (value is not XPScriptXmlNode node)
+            throw new XPScriptRuntimeException(13, $"XmlNode.{operation} requires XmlNode.");
+        return CloneNode(node.Node);
+    }
 }
 
 internal sealed class XPScriptXmlElement : XPScriptXmlNode
@@ -208,6 +302,12 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
 
     public override string Name => Element.Name.LocalName;
     public int Count => Element.Elements().Count();
+    public int ElementCount => Count;
+    public int AttributeCount => Element.Attributes().Count();
+    public XPScriptXmlNodeCollection Elements => new(Element.Elements().Select(item => (XPScriptXmlNode)new XPScriptXmlElement(item)));
+    public XPScriptXmlAttributeCollection Attributes => new(Element.Attributes());
+
+    public void Rename(object? nameValue) => Element.Name = XPScriptNativeXml.RequireName(nameValue);
 
     public void SetAttribute(object? nameValue, object? value)
     {
@@ -221,17 +321,29 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
         return Element.Attribute(name)?.Value ?? "";
     }
 
+    public XPScriptXmlAttribute? GetAttributeNode(object? nameValue)
+    {
+        var name = XPScriptNativeXml.RequireName(nameValue);
+        var attribute = Element.Attribute(name);
+        return attribute is null ? null : new XPScriptXmlAttribute(attribute);
+    }
+
     public bool HasAttribute(object? nameValue)
     {
         var name = XPScriptNativeXml.RequireName(nameValue);
         return Element.Attribute(name) is not null;
     }
 
-    public void RemoveAttribute(object? nameValue)
+    public bool RemoveAttribute(object? nameValue)
     {
         var name = XPScriptNativeXml.RequireName(nameValue);
-        Element.Attribute(name)?.Remove();
+        var attribute = Element.Attribute(name);
+        if (attribute is null) return false;
+        attribute.Remove();
+        return true;
     }
+
+    public void RemoveAllAttributes() => Element.RemoveAttributes();
 
     public XPScriptXmlElement AddElement(object? nameValue, object? value = null)
     {
@@ -241,11 +353,32 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
         return new XPScriptXmlElement(child);
     }
 
-    public void Add(object? value)
+    public XPScriptXmlElement PrependElement(object? nameValue, object? value = null)
+    {
+        var child = new System.Xml.Linq.XElement(XPScriptNativeXml.RequireName(nameValue));
+        if (value is not null && !XPScriptNullRuntime.IsNull(value)) child.Value = XPScriptNativeXml.ScalarText(value);
+        Element.AddFirst(child);
+        return new XPScriptXmlElement(child);
+    }
+
+    public void Add(object? value) => AppendChild(value);
+
+    public XPScriptXmlNode AppendChild(object? value)
     {
         if (value is not XPScriptXmlNode node)
-            throw new XPScriptRuntimeException(13, "XmlElement.Add requires XmlNode.");
-        Element.Add(CloneNode(node.Node));
+            throw new XPScriptRuntimeException(13, "XmlElement.AppendChild requires XmlNode.");
+        var clone = XPScriptXmlNode.CloneNode(node.Node);
+        Element.Add(clone);
+        return XPScriptXmlNode.WrapNode(clone);
+    }
+
+    public XPScriptXmlNode PrependChild(object? value)
+    {
+        if (value is not XPScriptXmlNode node)
+            throw new XPScriptRuntimeException(13, "XmlElement.PrependChild requires XmlNode.");
+        var clone = XPScriptXmlNode.CloneNode(node.Node);
+        Element.AddFirst(clone);
+        return XPScriptXmlNode.WrapNode(clone);
     }
 
     public void AddText(object? value) => Element.Add(new System.Xml.Linq.XText(XPScriptNativeXml.ScalarText(value)));
@@ -265,6 +398,39 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
         return new XPScriptXmlNodeCollection(Element.Elements()
             .Where(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal))
             .Select(item => (XPScriptXmlNode)new XPScriptXmlElement(item)));
+    }
+
+    public XPScriptXmlNodeCollection GetDescendants(object? nameValue)
+    {
+        var name = XPScriptNativeXml.RequireName(nameValue);
+        return new XPScriptXmlNodeCollection(Element.Descendants()
+            .Where(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal))
+            .Select(item => (XPScriptXmlNode)new XPScriptXmlElement(item)));
+    }
+
+    public bool RemoveElement(object? nameValue)
+    {
+        var name = XPScriptNativeXml.RequireName(nameValue);
+        var child = Element.Elements().FirstOrDefault(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal));
+        if (child is null) return false;
+        child.Remove();
+        return true;
+    }
+
+    public int RemoveElements(object? nameValue)
+    {
+        var name = XPScriptNativeXml.RequireName(nameValue);
+        var matches = Element.Elements().Where(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal)).ToList();
+        foreach (var child in matches) child.Remove();
+        return matches.Count;
+    }
+
+    public void RemoveChildren() => Element.RemoveNodes();
+
+    public void RemoveAll()
+    {
+        Element.RemoveAttributes();
+        Element.RemoveNodes();
     }
 
     public XPScriptXmlNode? SelectSingleNode(object? xpathValue)
@@ -294,16 +460,66 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
             throw new XPScriptRuntimeException(5, "Invalid XPath expression.");
         }
     }
+}
 
-    private static System.Xml.Linq.XNode CloneNode(System.Xml.Linq.XNode node) => node switch
+internal sealed class XPScriptXmlAttribute
+{
+    internal XPScriptXmlAttribute(System.Xml.Linq.XAttribute attribute) => Attribute = attribute;
+    internal System.Xml.Linq.XAttribute Attribute { get; }
+
+    public string Name => Attribute.Name.LocalName;
+    public string Value
     {
-        System.Xml.Linq.XElement element => new System.Xml.Linq.XElement(element),
-        System.Xml.Linq.XCData cdata => new System.Xml.Linq.XCData(cdata.Value),
-        System.Xml.Linq.XText text => new System.Xml.Linq.XText(text.Value),
-        System.Xml.Linq.XComment comment => new System.Xml.Linq.XComment(comment.Value),
-        System.Xml.Linq.XProcessingInstruction instruction => new System.Xml.Linq.XProcessingInstruction(instruction.Target, instruction.Data),
-        _ => throw new XPScriptRuntimeException(5, "Unsupported XML node type.")
-    };
+        get => Attribute.Value;
+        set => Attribute.Value = XPScriptNativeXml.ScalarText(value);
+    }
+    public XPScriptXmlElement? Parent => Attribute.Parent is null ? null : new XPScriptXmlElement(Attribute.Parent);
+    public XPScriptXmlElement? OwnerElement => Parent;
+    public bool IsNamespaceDeclaration => Attribute.IsNamespaceDeclaration;
+    public string Stringify() => Attribute.ToString();
+
+    public bool Remove()
+    {
+        if (Attribute.Parent is null) return false;
+        Attribute.Remove();
+        return true;
+    }
+
+    public bool Delete() => Remove();
+}
+
+internal sealed class XPScriptXmlAttributeCollection : System.Collections.IEnumerable
+{
+    private readonly System.Collections.Generic.List<System.Xml.Linq.XAttribute> _items;
+    internal XPScriptXmlAttributeCollection(System.Collections.Generic.IEnumerable<System.Xml.Linq.XAttribute> items) => _items = items.ToList();
+
+    public int Count => _items.Count;
+    public XPScriptXmlAttribute? First => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[0]);
+    public XPScriptXmlAttribute? Last => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[^1]);
+
+    public XPScriptXmlAttribute Get(object? indexOrName)
+    {
+        if (indexOrName is string nameValue)
+        {
+            var name = XPScriptNativeXml.RequireName(nameValue);
+            var match = _items.FirstOrDefault(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal));
+            if (match is null) throw new XPScriptRuntimeException(9, "XML attribute was not found.");
+            return new XPScriptXmlAttribute(match);
+        }
+
+        var index = XPScriptRuntime.CInt(indexOrName);
+        if (index < 0 || index >= _items.Count) throw new XPScriptRuntimeException(9, "XML attribute index out of range.");
+        return new XPScriptXmlAttribute(_items[index]);
+    }
+
+    public bool Has(object? nameValue)
+    {
+        var name = XPScriptNativeXml.RequireName(nameValue);
+        return _items.Any(item => item.Name.LocalName.Equals(name, StringComparison.Ordinal));
+    }
+
+    public System.Collections.IEnumerator GetEnumerator()
+        => _items.Select(item => (object)new XPScriptXmlAttribute(item)).GetEnumerator();
 }
 
 internal sealed class XPScriptXmlDocument
@@ -314,8 +530,49 @@ internal sealed class XPScriptXmlDocument
     public bool Indent { get; set; } = true;
     public bool OmitXmlDeclaration { get; set; } = true;
     public XPScriptXmlElement? Root => Document.Root is null ? null : new XPScriptXmlElement(Document.Root);
+    public XPScriptXmlElement? DocumentElement => Root;
+    public bool HasRoot => Document.Root is not null;
+    public XPScriptXmlNodeCollection ChildNodes => new(Document.Nodes().Select(XPScriptXmlNode.WrapNode));
 
     public XPScriptXmlElement CreateElement(object? name) => XPScriptNativeXml.CreateElement(name);
+
+    public XPScriptXmlElement CreateElement(object? name, object? value)
+    {
+        var element = XPScriptNativeXml.CreateElement(name);
+        element.Value = XPScriptNativeXml.ScalarText(value);
+        return element;
+    }
+
+    public XPScriptXmlNode CreateTextNode(object? value)
+        => new XPScriptXmlNode(new System.Xml.Linq.XText(XPScriptNativeXml.ScalarText(value)));
+
+    public XPScriptXmlNode CreateCData(object? value)
+        => new XPScriptXmlNode(new System.Xml.Linq.XCData(XPScriptNativeXml.ScalarText(value)));
+
+    public XPScriptXmlNode CreateComment(object? value)
+        => new XPScriptXmlNode(new System.Xml.Linq.XComment(XPScriptNativeXml.ScalarText(value)));
+
+    public XPScriptXmlNode CreateProcessingInstruction(object? target, object? data)
+    {
+        try
+        {
+            return new XPScriptXmlNode(new System.Xml.Linq.XProcessingInstruction(
+                XPScriptNativeXml.RequireName(target), XPScriptRuntime.CStr(data)));
+        }
+        catch (ArgumentException)
+        {
+            throw new XPScriptRuntimeException(5, "Invalid XML processing instruction.");
+        }
+    }
+
+    public XPScriptXmlElement AddRoot(object? name, object? value = null)
+    {
+        if (Document.Root is not null) throw new XPScriptRuntimeException(5, "XML document already has a root element.");
+        var root = new System.Xml.Linq.XElement(XPScriptNativeXml.RequireName(name));
+        if (value is not null && !XPScriptNullRuntime.IsNull(value)) root.Value = XPScriptNativeXml.ScalarText(value);
+        Document.Add(root);
+        return new XPScriptXmlElement(root);
+    }
 
     public void SetRoot(object? value)
     {
@@ -324,6 +581,29 @@ internal sealed class XPScriptXmlDocument
         var replacement = new System.Xml.Linq.XElement(element.Element);
         if (Document.Root is null) Document.Add(replacement);
         else Document.Root.ReplaceWith(replacement);
+    }
+
+    public bool RemoveRoot()
+    {
+        if (Document.Root is null) return false;
+        Document.Root.Remove();
+        return true;
+    }
+
+    public void Clear()
+    {
+        Document.RemoveNodes();
+        Document.Declaration = null;
+    }
+
+    public void LoadXml(object? value)
+    {
+        var parsed = XPScriptNativeXml.Parse(value);
+        Document.RemoveNodes();
+        Document.Declaration = parsed.Document.Declaration is null
+            ? null
+            : new System.Xml.Linq.XDeclaration(parsed.Document.Declaration);
+        foreach (var node in parsed.Document.Nodes()) Document.Add(XPScriptXmlNode.CloneNode(node));
     }
 
     public XPScriptXmlNode? SelectSingleNode(object? xpathValue)
@@ -374,17 +654,23 @@ internal sealed class XPScriptXmlDocument
     }
 }
 
-internal sealed class XPScriptXmlNodeCollection
+internal sealed class XPScriptXmlNodeCollection : System.Collections.IEnumerable
 {
     private readonly System.Collections.Generic.List<XPScriptXmlNode> _items;
     internal XPScriptXmlNodeCollection(System.Collections.Generic.IEnumerable<XPScriptXmlNode> items) => _items = items.ToList();
+
     public int Count => _items.Count;
+    public XPScriptXmlNode? First => _items.Count == 0 ? null : _items[0];
+    public XPScriptXmlNode? Last => _items.Count == 0 ? null : _items[^1];
+
     public XPScriptXmlNode? Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
         if (index < 0 || index >= _items.Count) throw new XPScriptRuntimeException(9, "XML node index out of range.");
         return _items[index];
     }
+
+    public System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
 }
 
 internal sealed class XPScriptXmlValidationResult
@@ -400,7 +686,7 @@ internal sealed class XPScriptXmlValidationResult
         => new(new[] { new XPScriptXmlValidationError(message, line, column, severity) });
 }
 
-internal sealed class XPScriptXmlValidationErrorCollection
+internal sealed class XPScriptXmlValidationErrorCollection : System.Collections.IEnumerable
 {
     private readonly System.Collections.Generic.List<XPScriptXmlValidationError> _items;
     internal XPScriptXmlValidationErrorCollection(System.Collections.Generic.IEnumerable<XPScriptXmlValidationError> items) => _items = items.ToList();
@@ -411,6 +697,7 @@ internal sealed class XPScriptXmlValidationErrorCollection
         if (index < 0 || index >= _items.Count) throw new XPScriptRuntimeException(9, "XML validation error index out of range.");
         return _items[index];
     }
+    public System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
 }
 
 internal sealed class XPScriptXmlValidationError
