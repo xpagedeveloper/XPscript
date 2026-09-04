@@ -1,6 +1,6 @@
 ---
 import type { DocEntry } from "../lib/docs";
-import { isStructuredEntry, titleForEntry } from "../lib/docs";
+import { isStructuredEntry, relativeRouteHref, routeForEntry, titleForEntry } from "../lib/docs";
 import "../styles/global.css";
 
 interface Props {
@@ -10,8 +10,8 @@ interface Props {
 const { entry } = Astro.props;
 const pageTitle = titleForEntry(entry);
 const structured = isStructuredEntry(entry);
-const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const href = (path: string) => path === "/" ? `${base}/` : `${base}${path}`;
+const currentRoute = routeForEntry(entry);
+const href = (route: string) => relativeRouteHref(currentRoute, route);
 ---
 <!doctype html>
 <html lang="en">
