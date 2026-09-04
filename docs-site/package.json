@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "docs:audit": "node ./scripts/audit-docs.mjs"
+    "docs:audit": "node ./scripts/audit-docs.mjs",
+    "docs:links": "node ./scripts/verify-links.mjs"
   },
   "dependencies": {
     "astro": "^6.0.0"
