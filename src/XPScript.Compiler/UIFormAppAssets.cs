@@ -33,6 +33,15 @@ internal static class UIFormAppAssets
     public const string DirectoryName = "assets";
     private const long MaximumEmbeddedBytes = 64L * 1024 * 1024;
 
+    public static bool UsesUIForm(string sourcePath)
+    {
+        if (!File.Exists(sourcePath)) return false;
+        var source = File.ReadAllText(sourcePath);
+        return source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) ||
+               source.Contains("AddImage", StringComparison.OrdinalIgnoreCase) ||
+               source.Contains("AddWebView", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string EnsureAssetsDirectory(string sourcePath)
     {
         var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
