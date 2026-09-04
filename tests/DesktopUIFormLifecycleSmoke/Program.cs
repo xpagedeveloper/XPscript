@@ -61,7 +61,7 @@ Option Declare
 
 Sub Main()
     Dim form As New UIForm("WebView", 960, 720, True)
-    Dim browser As Variant
+    Dim browser As Object
     Set browser = form.AddWebView("browser", "Browser")
     browser.Source = "https://example.com/"
     browser.UserAgent = "XPscript-WebView-Smoke"
