@@ -45,7 +45,7 @@ Sub Main()
     dates(1) = CDate("2025-01-02")
     dates(2) = CDate("2025-11-15")
     sortedDates = ArraySort(dates)
-    If CStr(sortedDates(0)) > CStr(sortedDates(1)) Or CStr(sortedDates(1)) > CStr(sortedDates(2)) Then Error 5, "Date ArraySort failed"
+    If StrComp(CStr(sortedDates(0)), CStr(sortedDates(1)), 1) > 0 Or StrComp(CStr(sortedDates(1)), CStr(sortedDates(2)), 1) > 0 Then Error 5, "Date ArraySort failed"
 
     Print "ARRAY_SORT_OK"
 End Sub
