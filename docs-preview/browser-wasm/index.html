@@ -60,13 +60,13 @@ Sub Main()
 End Sub
 </code></pre>
 <p>Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic <code>xpscript:form-error</code> event rather than exposing runtime exception details.</p>
-<p>Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm <code>HttpClient</code> to call an explicit server API for that work.</p>
+<p>Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm <code>XPHttpClient</code> to call an explicit server API for that work.</p>
 <p>UI event objects provide <code>ToJson()</code> and <code>ToJsonObject()</code> for this boundary. These methods create a snapshot that deliberately excludes live runtime references. <code>UIFormEvent</code> serializes only <code>eventType</code>, <code>controlName</code>, <code>value</code> and <code>values</code>. <code>UIListViewEvent</code> serializes only <code>eventType</code>, <code>rowIndex</code>, <code>key</code> and <code>row</code>.</p>
 <p>For example, a browser callback can explicitly post its event snapshot to an application API route:</p>
 <pre><code class="language-xpscript">Sub NameChanged(evt As Variant, context As String)
-    Dim http As New HttpClient
+    Dim http As New XPHttpClient
     Dim payload As Variant
-    Dim response As HttpResponse
+    Dim response As XPHttpResponse
 
     Set payload = evt.ToJsonObject()
     Call payload.Set("context", context)
@@ -79,10 +79,10 @@ End Sub
 <p>This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.</p>
 <h2 id="csrf-protection">CSRF protection</h2>
 <p>Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.</p>
-<p>The browser-WASM <code>HttpClient</code> handles the CSRF challenge automatically for <code>POST</code>, <code>PUT</code>, <code>PATCH</code> and <code>DELETE</code>. Application code uses the normal HTTP methods:</p>
-<pre><code class="language-xpscript">Dim http As New HttpClient
-Dim payload As New JsonObject
-Dim result As HttpResponse
+<p>The browser-WASM <code>XPHttpClient</code> handles the CSRF challenge automatically for <code>POST</code>, <code>PUT</code>, <code>PATCH</code> and <code>DELETE</code>. Application code uses the normal HTTP methods:</p>
+<pre><code class="language-xpscript">Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
 
 Call payload.Set("name", "Example")
 Set result = http.PatchJson("/api/customer/42", payload)

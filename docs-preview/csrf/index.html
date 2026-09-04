@@ -57,12 +57,12 @@ Response.Write("&#x3C;meta name=\"xps-csrf-token\" content=\"" &#x26; Server.Htm
 <span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
 <p>The header name is <code>X-XPS-CSRF-Token</code>. The hidden form field name is <code>__xps_csrf</code>.</p>
 <h2 id="browser-webassembly">Browser WebAssembly</h2>
-<p>The XPScript browser-WASM <code>HttpClient</code> handles the CSRF token flow automatically for unsafe same-origin requests.</p>
+<p>The XPScript browser-WASM <code>XPHttpClient</code> handles the CSRF token flow automatically for unsafe same-origin requests.</p>
 <p>The first unsafe request can receive HTTP 403 together with a fresh <code>X-XPS-CSRF-Token</code> response header. The browser-WASM client retains that token for the request flow and retries the request once with the token header. The Session cookie remains HttpOnly and is not read by WebAssembly code.</p>
 <p>Normal browser-WASM code therefore uses the ordinary HTTP API:</p>
-<pre><code class="language-xpscript">Dim http As New HttpClient
-Dim payload As New JsonObject
-Dim result As HttpResponse
+<pre><code class="language-xpscript">Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
 
 Call payload.Set("name", "Example")
 Set result = http.PatchJson("/api/customer/42", payload)
@@ -89,7 +89,7 @@ Set result = http.PatchJson("/api/customer/42", payload)
 <li>Use UIForm normally. Its CSRF field is automatic.</li>
 <li>For manually rendered HTML forms, include <code>Server.CsrfToken()</code> as <code>__xps_csrf</code>.</li>
 <li>For custom same-origin JavaScript using Session cookies, send <code>X-XPS-CSRF-Token</code>.</li>
-<li>For XPScript browser-WASM <code>HttpClient</code>, use the normal methods. Challenge/retry is automatic.</li>
+<li>For XPScript browser-WASM <code>XPHttpClient</code>, use the normal methods. Challenge/retry is automatic.</li>
 <li>Bearer-only requests without cookies do not need CSRF.</li>
 <li>Never disable authorization, role checks or input validation because CSRF protection is enabled.</li>
 </ol>  </article> </main> </div> <script>

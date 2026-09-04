@@ -14,8 +14,8 @@
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Server=.\SQLEXPRESS;Database=application;Integrated Security=True;Encrypt=True;TrustServerCertificate=True</span></span></code></pre>
 <p><code>TrustServerCertificate=True</code> is suitable only when the server certificate cannot be validated, such as a local development instance. Production servers should use a trusted certificate and <code>TrustServerCertificate=False</code>. A named Express instance can require SQL Server Browser or an explicitly configured TCP port.</p>
 <h2 id="execute-parameterized-sql">Execute parameterized SQL</h2>
-<p>Use a <code>JsonObject</code> for named parameters. Bare keys and keys beginning with <code>$</code>, <code>@</code> or <code>:</code> are normalized to SQL Server <code>@name</code> parameters.</p>
-<pre><code class="language-xpscript">Dim parameters As New JsonObject
+<p>Use a <code>XPJsonObject</code> for named parameters. Bare keys and keys beginning with <code>$</code>, <code>@</code> or <code>:</code> are normalized to SQL Server <code>@name</code> parameters.</p>
+<pre><code class="language-xpscript">Dim parameters As New XPJsonObject
 Call parameters.Set("name", "Ada")
 Call parameters.Set("active", True)
 
@@ -27,10 +27,10 @@ Call db.Execute("INSERT INTO customers(name, active) VALUES (@name, @active)", p
 id = db.Scalar("INSERT INTO customers(name) OUTPUT INSERTED.id VALUES (@name)", parameters)
 </code></pre>
 <h2 id="query-rows">Query rows</h2>
-<p><code>Query</code> returns a <code>JsonDocument</code> whose root is an array. Each row is a JSON object keyed by column name. Duplicate names receive numeric suffixes. SQL <code>NULL</code> becomes JSON null, binary values become Base64 text, and date, time, GUID and time-span values become invariant text.</p>
-<pre><code class="language-xpscript">Dim rows As JsonDocument
-Dim array As JsonArray
-Dim row As JsonObject
+<p><code>Query</code> returns a <code>XPJsonDocument</code> whose root is an array. Each row is a JSON object keyed by column name. Duplicate names receive numeric suffixes. SQL <code>NULL</code> becomes JSON null, binary values become Base64 text, and date, time, GUID and time-span values become invariant text.</p>
+<pre><code class="language-xpscript">Dim rows As XPJsonDocument
+Dim array As XPJsonArray
+Dim row As XPJsonObject
 
 Set rows = db.Query("SELECT id, name FROM customers WHERE name = @name", parameters)
 Set array = rows.Root.AsArray()

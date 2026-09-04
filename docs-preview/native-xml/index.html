@@ -3,21 +3,21 @@
 </style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="native-xml">Native XML</h1>
 <p>XPscript provides a native XML surface parallel to the native JSON API. The runtime uses .NET <code>System.Xml.Linq</code> for the document and node model.</p>
 <h2 id="parse-and-navigate">Parse and navigate</h2>
-<pre><code class="language-xpscript">Dim doc As XmlDocument
-Dim root As XmlElement
+<pre><code class="language-xpscript">Dim doc As XPXmlDocument
+Dim root As XPXmlElement
 
-Set doc = XmlDocument.Parse("&#x3C;person id=""42"">&#x3C;name>Fredrik&#x3C;/name>&#x3C;/person>")
+Set doc = XPXmlDocument.Parse("&#x3C;person id=""42"">&#x3C;name>Fredrik&#x3C;/name>&#x3C;/person>")
 Set root = doc.Root
 
 Print root.Name
 Print root.GetAttribute("id")
 Print root.GetElement("name").Value
 </code></pre>
-<p><code>XmlParse(xml)</code> is the shorthand equivalent of <code>XmlDocument.Parse(xml)</code>.</p>
+<p><code>XmlParse(xml)</code> is the shorthand equivalent of <code>XPXmlDocument.Parse(xml)</code>.</p>
 <p>Normal XML parsing requires well-formed XML and does not process DTD declarations. Embedded <code>DOCTYPE</code> declarations are rejected by the parser.</p>
 <h2 id="build-xml">Build XML</h2>
-<pre><code class="language-xpscript">Dim doc As New XmlDocument
-Dim root As XmlElement
+<pre><code class="language-xpscript">Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
 
 Set root = doc.CreateElement("person")
 Call root.SetAttribute("id", 42)
@@ -32,18 +32,18 @@ Print XmlStringify(doc)
 </code></pre>
 <p>returns:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>5 &#x26;lt; 10 &#x26;amp; 20 &#x26;gt; 10</span></span></code></pre>
-<p><code>XmlElement</code> also supports <code>Add</code>, <code>AddText</code>, <code>AddCData</code>, <code>AddComment</code>, <code>GetElement</code>, <code>GetElements</code>, <code>SetAttribute</code>, <code>GetAttribute</code>, <code>HasAttribute</code>, and <code>RemoveAttribute</code>.</p>
+<p><code>XPXmlElement</code> also supports <code>Add</code>, <code>AddText</code>, <code>AddCData</code>, <code>AddComment</code>, <code>GetElement</code>, <code>GetElements</code>, <code>SetAttribute</code>, <code>GetAttribute</code>, <code>HasAttribute</code>, and <code>RemoveAttribute</code>.</p>
 <h2 id="xpath">XPath</h2>
-<pre><code class="language-xpscript">Dim node As XmlNode
-Dim nodes As XmlNodeCollection
+<pre><code class="language-xpscript">Dim node As XPXmlNode
+Dim nodes As XPXmlNodeCollection
 
 Set node = doc.SelectSingleNode("/people/person[@id='42']")
 Set nodes = doc.SelectNodes("/people/person")
 </code></pre>
-<p><code>SelectSingleNode</code> and <code>SelectNodes</code> are available on both <code>XmlDocument</code> and <code>XmlElement</code>. The initial API uses ordinary XPath expressions without a namespace-manager abstraction.</p>
+<p><code>SelectSingleNode</code> and <code>SelectNodes</code> are available on both <code>XPXmlDocument</code> and <code>XPXmlElement</code>. The initial API uses ordinary XPath expressions without a namespace-manager abstraction.</p>
 <h2 id="serialization">Serialization</h2>
-<p><code>XmlStringify(documentOrNode)</code> serializes an XML document or node. <code>XmlDocument.Stringify()</code> is equivalent for documents.</p>
-<p><code>XmlDocument</code> has these formatting properties:</p>
+<p><code>XmlStringify(documentOrNode)</code> serializes an XML document or node. <code>XPXmlDocument.Stringify()</code> is equivalent for documents.</p>
+<p><code>XPXmlDocument</code> has these formatting properties:</p>
 <ul>
 <li><code>Indent</code>, default <code>True</code></li>
 <li><code>OmitXmlDeclaration</code>, default <code>True</code></li>
@@ -52,7 +52,7 @@ Set nodes = doc.SelectNodes("/people/person")
 <h2 id="internal-dtd-validation">Internal DTD validation</h2>
 <p>DTD validation intentionally accepts the DTD as a string. XPscript does not resolve external DTDs or external entities.</p>
 <pre><code class="language-xpscript">Dim dtd As String
-Dim result As XmlValidationResult
+Dim result As XPXmlValidationResult
 
 dtd = _
     "&#x3C;!ELEMENT person (name,email)>" &#x26; Chr(10) &#x26; _
@@ -75,14 +75,14 @@ End If
 </code></pre>
 <p>Validation results expose:</p>
 <ul>
-<li><code>XmlValidationResult.Valid</code></li>
-<li><code>XmlValidationResult.Errors</code></li>
-<li><code>XmlValidationErrorCollection.Count</code></li>
-<li><code>XmlValidationErrorCollection.Get(index)</code></li>
-<li><code>XmlValidationError.Message</code></li>
-<li><code>XmlValidationError.Line</code></li>
-<li><code>XmlValidationError.Column</code></li>
-<li><code>XmlValidationError.Severity</code></li>
+<li><code>XPXmlValidationResult.Valid</code></li>
+<li><code>XPXmlValidationResult.Errors</code></li>
+<li><code>XPXmlValidationErrorCollection.Count</code></li>
+<li><code>XPXmlValidationErrorCollection.Get(index)</code></li>
+<li><code>XPXmlValidationError.Message</code></li>
+<li><code>XPXmlValidationError.Line</code></li>
+<li><code>XPXmlValidationError.Column</code></li>
+<li><code>XPXmlValidationError.Severity</code></li>
 </ul>
 <p>Indexes in XML collections are zero-based.</p>
 <h2 id="resource-limits">Resource limits</h2>

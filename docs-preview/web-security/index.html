@@ -13,7 +13,7 @@
 <p>A missing or invalid token returns HTTP 403 and the route does not execute.</p>
 <p>Bearer-only API calls without browser cookies are not forced through CSRF validation. CSRF protects browser cookie/session authentication, not Authorization bearer tokens.</p>
 <h3 id="browser-webassembly">Browser WebAssembly</h3>
-<p>The browser-wasm HttpClient has automatic CSRF challenge handling. On the first unsafe same-origin request without a token, the server returns HTTP 403 with a fresh <code>X-XPS-CSRF-Token</code> response header. The generated browser-wasm HttpClient retries the request once with that token.</p>
+<p>The browser-wasm XPHttpClient has automatic CSRF challenge handling. On the first unsafe same-origin request without a token, the server returns HTTP 403 with a fresh <code>X-XPS-CSRF-Token</code> response header. The generated browser-wasm XPHttpClient retries the request once with that token.</p>
 <p>The session cookie remains HttpOnly. WebAssembly code never reads the session cookie.</p>
 <p>Applications can still explicitly set <code>X-XPS-CSRF-Token</code> when needed. Explicit headers are not overwritten.</p>
 <p>CSRF tokens are bound to the server site instance and session id. Session id rotation invalidates previously issued tokens.</p>

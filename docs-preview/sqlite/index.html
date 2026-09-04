@@ -12,9 +12,9 @@ Dim memoryDb As New XPDBSQLite(":memory:")
 <p>A file path must be relative to the compiled application or host executable directory. Rooted paths, paths that escape with <code>..</code>, symbolic links and reparse points are rejected. The parent directory must already exist. Use <code>:memory:</code> for a private in-memory database.</p>
 <p>For a server deployment, create the data directory during deployment and grant the host process only the filesystem permissions it needs. Do not place a writable database under a directory served as static content.</p>
 <h2 id="execute-parameterized-sql">Execute parameterized SQL</h2>
-<p>Use a <code>JsonObject</code> for named parameters. A bare key such as <code>name</code> is bound as <code>$name</code>. Keys that already start with <code>$</code>, <code>@</code> or <code>:</code> keep their prefix.</p>
+<p>Use a <code>XPJsonObject</code> for named parameters. A bare key such as <code>name</code> is bound as <code>$name</code>. Keys that already start with <code>$</code>, <code>@</code> or <code>:</code> keep their prefix.</p>
 <pre><code class="language-xpscript">Dim db As New XPDBSQLite("customers.db")
-Dim parameters As New JsonObject
+Dim parameters As New XPJsonObject
 
 Call db.Execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
 Call parameters.Set("name", "Ada")
@@ -23,10 +23,10 @@ Call db.Close()
 </code></pre>
 <p>Parameter values must be JSON scalar values or null. Never concatenate untrusted values into SQL text. SQL identifiers such as table and column names cannot be parameterized and must come from trusted application code or an explicit allowlist.</p>
 <h2 id="query-rows">Query rows</h2>
-<p><code>Query</code> returns a <code>JsonDocument</code> whose root is an array. Each row is a JSON object keyed by column name. Duplicate column names receive numeric suffixes. SQLite <code>NULL</code> becomes JSON null and BLOB values become Base64 text.</p>
-<pre><code class="language-xpscript">Dim rows As JsonDocument
-Dim array As JsonArray
-Dim row As JsonObject
+<p><code>Query</code> returns a <code>XPJsonDocument</code> whose root is an array. Each row is a JSON object keyed by column name. Duplicate column names receive numeric suffixes. SQLite <code>NULL</code> becomes JSON null and BLOB values become Base64 text.</p>
+<pre><code class="language-xpscript">Dim rows As XPJsonDocument
+Dim array As XPJsonArray
+Dim row As XPJsonObject
 
 Set rows = db.Query("SELECT id, name FROM customers WHERE name = $name", parameters)
 Set array = rows.Root.AsArray()

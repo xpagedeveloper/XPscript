@@ -3,17 +3,17 @@
 </style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="http-database-clients">HTTP database clients</h1>
 <p>XPScript provides two native HTTP database clients for common server-side data access scenarios:</p>
 <ul>
-<li><code>HTTPDBSupabase</code> for Supabase Cloud or self-hosted Supabase.</li>
-<li><code>HTTPDBDominoRest</code> for self-hosted HCL Domino REST API servers.</li>
+<li><code>XPHttpDbSupabase</code> for Supabase Cloud or self-hosted Supabase.</li>
+<li><code>XPHttpDbDominoRest</code> for self-hosted HCL Domino REST API servers.</li>
 </ul>
-<p>Both clients use the native XPScript HTTP and JSON runtimes. They support configurable timeouts and return <code>JsonDocument</code> objects for JSON responses.</p>
-<h2 id="httpdbsupabase">HTTPDBSupabase</h2>
+<p>Both clients use the native XPScript HTTP and JSON runtimes. They support configurable timeouts and return <code>XPJsonDocument</code> objects for JSON responses.</p>
+<h2 id="xphttpdbsupabase">XPHttpDbSupabase</h2>
 <h3 id="create-a-client">Create a client</h3>
 <p>Cloud-hosted Supabase:</p>
-<pre><code class="language-xpscript">Dim db As New HTTPDBSupabase("https://project-ref.supabase.co", apiKey)
+<pre><code class="language-xpscript">Dim db As New XPHttpDbSupabase("https://project-ref.supabase.co", apiKey)
 </code></pre>
 <p>Self-hosted Supabase:</p>
-<pre><code class="language-xpscript">Dim db As New HTTPDBSupabase("https://supabase.example.com", apiKey)
+<pre><code class="language-xpscript">Dim db As New XPHttpDbSupabase("https://supabase.example.com", apiKey)
 </code></pre>
 <p>The base URL is not restricted to <code>supabase.co</code>. The client appends <code>/rest/v1</code> unless the supplied URL already ends with <code>/rest/v1</code>.</p>
 <p>The supplied API key is sent in the <code>apikey</code> header.</p>
@@ -28,7 +28,7 @@
 </code></pre>
 <p>The client uses <code>Accept-Profile</code> and, for write operations, <code>Content-Profile</code>.</p>
 <h3 id="select">Select</h3>
-<pre><code class="language-xpscript">Dim result As JsonDocument
+<pre><code class="language-xpscript">Dim result As XPJsonDocument
 
 Set result = db.Select("customers")
 </code></pre>
@@ -49,7 +49,7 @@ Set result = db.Select("customers", "select=*&#x26;" &#x26; filter)
 </code></pre>
 <p>For advanced PostgREST filtering, pass the filter/query string directly.</p>
 <h3 id="insert">Insert</h3>
-<pre><code class="language-xpscript">Dim customer As New JsonObject
+<pre><code class="language-xpscript">Dim customer As New XPJsonObject
 Call customer.Set("name", "Ada")
 Call customer.Set("email", "ada@example.com")
 
@@ -78,7 +78,7 @@ Set result = db.Update(
 </code></pre>
 <p>A filter is mandatory.</p>
 <h3 id="postgresql-rpc">PostgreSQL RPC</h3>
-<pre><code class="language-xpscript">Dim args As New JsonObject
+<pre><code class="language-xpscript">Dim args As New XPJsonObject
 Call args.Set("customer_id", 42)
 
 Set result = db.Rpc("get_customer_summary", args)
@@ -128,10 +128,10 @@ Set result = db.AlterView(
 <p>and must return JSON. The token is sent as a bearer token.</p>
 <p>This design keeps normal PostgREST access portable between Supabase Cloud and self-hosted installations while allowing each self-hosted deployment to choose how administrative SQL is exposed.</p>
 <p>Do not expose an unrestricted SQL endpoint to browsers or untrusted clients. Treat <code>ExecuteSql</code> and all database design helpers as privileged server-side operations.</p>
-<h2 id="httpdbdominorest">HTTPDBDominoRest</h2>
-<p><code>HTTPDBDominoRest</code> targets a self-hosted HCL Domino REST API server.</p>
+<h2 id="xphttpdbdominorest">XPHttpDbDominoRest</h2>
+<p><code>XPHttpDbDominoRest</code> targets a self-hosted HCL Domino REST API server.</p>
 <h3 id="create-a-client-1">Create a client</h3>
-<pre><code class="language-xpscript">Dim domino As New HTTPDBDominoRest(
+<pre><code class="language-xpscript">Dim domino As New XPHttpDbDominoRest(
     "https://domino.example.com:8880",
     bearerToken,
     "customers"
@@ -161,12 +161,12 @@ token = domino.Login(
 <pre><code class="language-xpscript">Call domino.SetDataSource("sales")
 </code></pre>
 <h3 id="create-document">Create document</h3>
-<pre><code class="language-xpscript">Dim data As New JsonObject
+<pre><code class="language-xpscript">Dim data As New XPJsonObject
 Call data.Set("Form", "Customer")
 Call data.Set("Name", "Ada")
 Call data.Set("Email", "ada@example.com")
 
-Dim created As JsonDocument
+Dim created As XPJsonDocument
 Set created = domino.CreateDocument(data)
 </code></pre>
 <p>This uses:</p>
@@ -219,7 +219,7 @@ End If
 <p>XPScript creates the request object with <code>query</code>, <code>viewRefresh</code>, and <code>noViews</code>, and posts it to:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>POST /api/v1/query?dataSource=&#x3C;scope>&#x26;action=execute</span></span></code></pre>
 <p>A custom JSON query payload can also be supplied:</p>
-<pre><code class="language-xpscript">Dim query As New JsonObject
+<pre><code class="language-xpscript">Dim query As New XPJsonObject
 Call query.Set("query", "Form = 'Customer'")
 Call query.Set("viewRefresh", True)
 Call query.Set("noViews", False)

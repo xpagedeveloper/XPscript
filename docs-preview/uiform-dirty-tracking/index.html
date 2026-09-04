@@ -5,7 +5,7 @@
 <h2 id="isdirty">IsDirty</h2>
 <p>Use <code>IsDirty</code> to test whether the form data differs from the baseline.</p>
 <pre><code class="language-xpscript">Dim form As New UIForm("Customer")
-Dim data As New JsonObject
+Dim data As New XPJsonObject
 
 Call data.Set("name", "Alice")
 Call form.AddTextField("name", "Name")
@@ -20,7 +20,7 @@ Print CStr(form.IsDirty)
 </code></pre>
 <p>Setting a field to its existing value does not make the form dirty. If a changed value is changed back to its baseline value, the field becomes clean again.</p>
 <h2 id="dirtyfields">DirtyFields</h2>
-<p><code>DirtyFields</code> returns a <code>JsonArray</code> containing the names of form fields whose current values differ from the baseline.</p>
+<p><code>DirtyFields</code> returns a <code>XPJsonArray</code> containing the names of form fields whose current values differ from the baseline.</p>
 <pre><code class="language-xpscript">Call form.SetFieldValue("name", "Bob")
 
 Print CStr(form.DirtyFields.Count)
@@ -38,10 +38,10 @@ Print CStr(form.IsDirty)
 </code></pre>
 <p><code>BindData()</code> also establishes a new clean baseline.</p>
 <h2 id="http-load-and-save">HTTP load and save</h2>
-<p><code>HttpClient.LoadForm()</code> binds the loaded JSON object and therefore leaves the form clean.</p>
-<p>A successful <code>HttpClient.SaveForm()</code> or <code>HttpClient.PutForm()</code> automatically calls <code>MarkClean()</code> after the server returns a successful HTTP status. A failed HTTP response does not clear dirty state.</p>
-<pre><code class="language-xpscript">Dim http As New HttpClient
-Dim response As HttpResponse
+<p><code>XPHttpClient.LoadForm()</code> binds the loaded JSON object and therefore leaves the form clean.</p>
+<p>A successful <code>XPHttpClient.SaveForm()</code> or <code>XPHttpClient.PutForm()</code> automatically calls <code>MarkClean()</code> after the server returns a successful HTTP status. A failed HTTP response does not clear dirty state.</p>
+<pre><code class="language-xpscript">Dim http As New XPHttpClient
+Dim response As XPHttpResponse
 Dim form As New UIForm("Customer")
 
 Call form.AddTextField("name", "Name")

@@ -61,7 +61,7 @@ End Function
 <li><code>ToolName</code>: owning tool name.</li>
 <li><code>FunctionName</code>: AI-visible function name.</li>
 <li><code>CallId</code>: provider tool-call identifier.</li>
-<li><code>Arguments</code>: validated <code>JsonObject</code> arguments.</li>
+<li><code>Arguments</code>: validated <code>XPJsonObject</code> arguments.</li>
 <li><code>SessionId</code>: current XPAi session identifier, when available.</li>
 </ul>
 <h2 id="aitooladdparameterfunctionname-name-type-description-required"><code>AITool.AddParameter(functionName, name, type, description, required)</code></h2>
@@ -119,7 +119,7 @@ Print CStr(names.Get(0))
 <pre><code class="language-xpscript">Call weather.ClearRequestProperties()
 </code></pre>
 <h3 id="aitoolgetrequestcontext"><code>AITool.GetRequestContext()</code></h3>
-<p>Returns a defensive <code>JsonObject</code> copy.</p>
+<p>Returns a defensive <code>XPJsonObject</code> copy.</p>
 <pre><code class="language-xpscript">Dim context As Variant
 Set context = weather.GetRequestContext()
 Print CStr(context.Get("tenant"))

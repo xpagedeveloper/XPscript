@@ -19,13 +19,13 @@ Call form.SetFileOptions("attachment", ".pdf,image/*", 8388608, True)
 Call form.AddOption("roles", "admin")
 Call form.AddOption("roles", "editor")
 </code></pre>
-<p>The stored value is a <code>JsonArray</code>.</p>
+<p>The stored value is a <code>XPJsonArray</code>.</p>
 <h2 id="checkboxgroup">CheckBoxGroup</h2>
 <pre><code class="language-xpscript">Call form.AddCheckBoxGroup("features", "Features")
 Call form.AddOption("features", "api")
 Call form.AddOption("features", "reports")
 </code></pre>
-<p>The web renderer uses a checkbox for each option. The stored value is a <code>JsonArray</code>.</p>
+<p>The web renderer uses a checkbox for each option. The stored value is a <code>XPJsonArray</code>.</p>
 <h2 id="telfield">TelField</h2>
 <pre><code class="language-xpscript">Call form.AddTelField("phone", "Phone")
 Call form.SetLength("phone", 0, 64)
@@ -141,7 +141,7 @@ Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">[</span></span>
 <span class="line"><span style="color:#E1E4E8">  { </span><span style="color:#79B8FF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"c1"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Customer One"</span><span style="color:#E1E4E8"> }</span></span>
 <span class="line"><span style="color:#E1E4E8">]</span></span></code></pre>
-<p>The implementation can use <code>HTTPDBSupabase</code>, <code>HTTPDBDominoRest</code> or <code>HttpClient</code>. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.</p>
+<p>The implementation can use <code>XPHttpDbSupabase</code>, <code>XPHttpDbDominoRest</code> or <code>XPHttpClient</code>. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.</p>
 <h2 id="dirty-tracking">Dirty tracking</h2>
 <p>All stored field values participate in normal UIForm dirty tracking. Changes appear through:</p>
 <pre><code class="language-xpscript">form.IsDirty
