@@ -139,6 +139,7 @@ let internalLinksChecked = 0;
 let fragmentsChecked = 0;
 let repoLinksChecked = 0;
 let externalLinksSkipped = 0;
+let absoluteInternalLinks = 0;
 
 async function htmlFor(file) {
   if (!htmlCache.has(file)) htmlCache.set(file, await fs.readFile(file, "utf8"));
@@ -161,11 +162,23 @@ for (const sourceFile of htmlFiles) {
 
     if (/^(?:mailto|tel|javascript|data|blob):/i.test(raw)) continue;
 
+    if (raw.startsWith("/") && !raw.startsWith("//")) {
+      absoluteInternalLinks += 1;
+      errors.push(`${relativeDisplay(sourceFile)}: internal ${reference.attribute} must be relative from the current page: ${raw}`);
+      continue;
+    }
+
     let url;
     try {
       url = new URL(raw, sourceUrl);
     } catch {
       errors.push(`${relativeDisplay(sourceFile)}: malformed ${reference.attribute}="${raw}"`);
+      continue;
+    }
+
+    if (url.hostname === "xpagedeveloper.github.io" && stripBase(url.pathname, base) !== null) {
+      absoluteInternalLinks += 1;
+      errors.push(`${relativeDisplay(sourceFile)}: documentation URL must be relative from the current page: ${raw}`);
       continue;
     }
 
@@ -233,6 +246,7 @@ console.log(`Internal targets checked:  ${internalLinksChecked}`);
 console.log(`Fragments checked:         ${fragmentsChecked}`);
 console.log(`Repository links checked:  ${repoLinksChecked}`);
 console.log(`External URLs skipped:     ${externalLinksSkipped}`);
+console.log(`Absolute internal links:   ${absoluteInternalLinks}`);
 console.log(`Broken links:              ${errors.length}`);
 
 if (errors.length > 0) {
@@ -241,4 +255,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("\nAll generated internal links, fragments, and repository-local example links are valid.");
+console.log("\nAll generated internal links are relative and all internal targets, fragments, and repository-local example links are valid.");
