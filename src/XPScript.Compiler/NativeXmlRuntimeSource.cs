@@ -53,7 +53,7 @@ internal static class XPScriptNativeXml
             System.Xml.Linq.XDocument document => document.ToString(System.Xml.Linq.SaveOptions.DisableFormatting),
             System.Xml.Linq.XNode node => node.ToString(System.Xml.Linq.SaveOptions.DisableFormatting),
             System.Xml.Linq.XAttribute attribute => attribute.ToString(),
-            _ => throw new XPScriptRuntimeException(13, "XmlStringify requires XmlDocument, XmlNode or XmlAttribute.")
+            _ => throw new XPScriptRuntimeException(13, "XmlStringify requires XPXmlDocument, XPXmlNode or XPXmlAttribute.")
         };
     }
 
@@ -290,7 +290,7 @@ internal class XPScriptXmlNode
     private static System.Xml.Linq.XNode RequireNodeClone(object? value, string operation)
     {
         if (value is not XPScriptXmlNode node)
-            throw new XPScriptRuntimeException(13, $"XmlNode.{operation} requires XmlNode.");
+            throw new XPScriptRuntimeException(13, $"XPXmlNode.{operation} requires XPXmlNode.");
         return CloneNode(node.Node);
     }
 }
@@ -366,7 +366,7 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
     public XPScriptXmlNode AppendChild(object? value)
     {
         if (value is not XPScriptXmlNode node)
-            throw new XPScriptRuntimeException(13, "XmlElement.AppendChild requires XmlNode.");
+            throw new XPScriptRuntimeException(13, "XPXmlElement.AppendChild requires XPXmlNode.");
         var clone = XPScriptXmlNode.CloneNode(node.Node);
         Element.Add(clone);
         return XPScriptXmlNode.WrapNode(clone);
@@ -375,7 +375,7 @@ internal sealed class XPScriptXmlElement : XPScriptXmlNode
     public XPScriptXmlNode PrependChild(object? value)
     {
         if (value is not XPScriptXmlNode node)
-            throw new XPScriptRuntimeException(13, "XmlElement.PrependChild requires XmlNode.");
+            throw new XPScriptRuntimeException(13, "XPXmlElement.PrependChild requires XPXmlNode.");
         var clone = XPScriptXmlNode.CloneNode(node.Node);
         Element.AddFirst(clone);
         return XPScriptXmlNode.WrapNode(clone);
@@ -577,7 +577,7 @@ internal sealed class XPScriptXmlDocument
     public void SetRoot(object? value)
     {
         if (value is not XPScriptXmlElement element)
-            throw new XPScriptRuntimeException(13, "XmlDocument.SetRoot requires XmlElement.");
+            throw new XPScriptRuntimeException(13, "XPXmlDocument.SetRoot requires XPXmlElement.");
         var replacement = new System.Xml.Linq.XElement(element.Element);
         if (Document.Root is null) Document.Add(replacement);
         else Document.Root.ReplaceWith(replacement);

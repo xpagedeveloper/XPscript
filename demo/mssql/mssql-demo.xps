@@ -3,8 +3,8 @@ Option Declare
 Sub Main()
     Dim connectionString As String
     Dim db As XPDbMsSql
-    Dim parameters As New JsonObject
-    Dim rows As JsonDocument
+    Dim parameters As New XPJsonObject
+    Dim rows As XPJsonDocument
 
     connectionString = Environ("XPSCRIPT_MSSQL_CONNECTION")
     If connectionString = "" Then

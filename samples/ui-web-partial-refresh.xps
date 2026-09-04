@@ -7,7 +7,7 @@
 [Get]
 [Post]
 Sub Index()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("Dependent fields")
     Dim country As String
     Dim city As String

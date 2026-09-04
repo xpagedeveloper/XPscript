@@ -2,9 +2,9 @@
 Option Declare
 
 Sub Main()
-    Dim db As New HTTPDBDominoRest("http://127.0.0.1:18082", "", "demo")
-    Dim data As New JsonObject
-    Dim doc As JsonDocument
+    Dim db As New XPHttpDbDominoRest("http://127.0.0.1:18082", "", "demo")
+    Dim data As New XPJsonObject
+    Dim doc As XPJsonDocument
     Dim token As String
     Dim unid As String
 

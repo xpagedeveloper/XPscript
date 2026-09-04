@@ -1,8 +1,8 @@
 Option Declare
 
 Sub Main()
-    Dim client As New HttpClient
-    Dim response As HttpResponse
+    Dim client As New XPHttpClient
+    Dim response As XPHttpResponse
     Dim metadata As Variant
     Dim firstFile As Variant
     Dim secondFile As Variant

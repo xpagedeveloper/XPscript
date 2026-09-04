@@ -2,8 +2,8 @@ Option Declare
 
 Sub Main()
     Dim baseUrl As String
-    Dim http As New HttpClient
-    Dim response As HttpResponse
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
 
     baseUrl = Environ("XPSCRIPT_DEMO_HTTP_URL")
     If baseUrl = "" Then

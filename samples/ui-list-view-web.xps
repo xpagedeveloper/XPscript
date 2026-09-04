@@ -5,10 +5,10 @@
 [Get]
 [Post]
 Sub Main()
-    Dim rows As New JsonArray
-    Dim row1 As New JsonObject
-    Dim row2 As New JsonObject
-    Dim row3 As New JsonObject
+    Dim rows As New XPJsonArray
+    Dim row1 As New XPJsonObject
+    Dim row2 As New XPJsonObject
+    Dim row3 As New XPJsonObject
     Dim list As New UIListView("Customers")
     Dim result As String
 

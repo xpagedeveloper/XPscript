@@ -42,6 +42,7 @@ Measure("PLAIN", plainSource, 10);
 Measure("NOTES", notesSource, 10);
 VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
+VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
@@ -70,10 +71,10 @@ Option Declare
 Sub Main()
     Dim Notesdb As String
     Dim XPDBSupabase As String
-    Dim JsonDocument As String
-    Dim XmlDocument As String
-    Dim CsvDocument As String
-    Dim HttpClient As String
+    Dim XPJsonDocument As String
+    Dim XPXmlDocument As String
+    Dim XPCsvDocument As String
+    Dim XPHttpClient As String
     Notesdb = "NotesDatabase XPDB JSON XML CSV HTTP"
 End Sub
 """;
@@ -97,12 +98,12 @@ End Sub
 
 void VerifyFeatureProfiles()
 {
-    VerifyProfile("JSON", "Dim value As JsonDocument", ["internal static class XPScriptNativeJson"]);
-    VerifyProfile("XML", "Dim value As XmlDocument", ["internal static class XPScriptNativeXml"]);
-    VerifyProfile("CSV", "Dim value As CsvDocument", ["internal static class XPScriptNativeCsv"]);
+    VerifyProfile("JSON", "Dim value As XPJsonDocument", ["internal static class XPScriptNativeJson"]);
+    VerifyProfile("XML", "Dim value As XPXmlDocument", ["internal static class XPScriptNativeXml"]);
+    VerifyProfile("CSV", "Dim value As XPCsvDocument", ["internal static class XPScriptNativeCsv"]);
     VerifyProfile(
         "HTTP",
-        "Dim value As HttpClient",
+        "Dim value As XPHttpClient",
         ["internal static class XPScriptNativeHttp"],
         ["internal sealed class XPScriptUIForm"]);
     VerifyProfile(
@@ -121,7 +122,7 @@ void VerifyFeatureProfiles()
         ["internal sealed class XPScriptHttpDbSupabase"]);
     VerifyProfile(
         "HTTPDB",
-        "Dim value As HTTPDBSupabase",
+        "Dim value As XPHttpDbSupabase",
         ["internal sealed class XPScriptHttpDbSupabase"]);
     VerifyProfile(
         "NOTES",
@@ -133,6 +134,28 @@ void VerifyFeatureProfiles()
         "Dim value As NotesRichTextItem",
         ["internal sealed class XPScriptNotesRichTextItem"]);
     Console.WriteLine("PREPROCESSOR-FEATURE-PROFILES=OK");
+}
+
+void VerifyLegacyNativeNamesDoNotEnableRuntimes()
+{
+    var probes = new (string Label, string Declaration, string Marker)[]
+    {
+        ("HTTP", "Dim value As HttpClient", "internal static class XPScriptNativeHttp"),
+        ("JSON", "Dim value As JsonDocument", "internal static class XPScriptNativeJson"),
+        ("CSV", "Dim value As CsvDocument", "internal static class XPScriptNativeCsv"),
+        ("XML", "Dim value As XmlDocument", "internal static class XPScriptNativeXml"),
+        ("HTTPDB", "Dim value As HTTPDBSupabase", "internal sealed class XPScriptHttpDbSupabase")
+    };
+
+    foreach (var probe in probes)
+    {
+        var source = "Option Declare\nSub Main()\n    " + probe.Declaration + "\nEnd Sub\n";
+        var generated = transpiler.Transpile(source, "preprocessor-legacy-" + probe.Label.ToLowerInvariant() + ".xps", "win-x64");
+        if (generated.Contains(probe.Marker, StringComparison.Ordinal))
+            throw new Exception("Legacy " + probe.Label + " type unexpectedly enabled its native runtime.");
+    }
+
+    Console.WriteLine("PREPROCESSOR-LEGACY-NATIVE-NAMES=INACTIVE");
 }
 
 void VerifyProfile(

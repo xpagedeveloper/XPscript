@@ -5,10 +5,10 @@ Option Declare
 
 Sub Main()
     Dim db As New XPDBSQLite("xpdb-sqlite-regression.db")
-    Dim parameters As New JsonObject
-    Dim rows As JsonDocument
-    Dim array As JsonArray
-    Dim row As JsonObject
+    Dim parameters As New XPJsonObject
+    Dim rows As XPJsonDocument
+    Dim array As XPJsonArray
+    Dim row As XPJsonObject
     Dim readOnlyDb As XPDBSQLite
     Dim count As Variant
 

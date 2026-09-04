@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeXmlPreprocessor
 {
-    private const string NativeXmlTypePattern = "XmlDocument|XmlElement|XmlNode|XmlNodeCollection|XmlAttribute|XmlAttributeCollection|XmlValidationResult|XmlValidationError|XmlValidationErrorCollection";
+    private const string NativeXmlTypePattern = "XPXmlDocument|XPXmlElement|XPXmlNode|XPXmlNodeCollection|XPXmlAttribute|XPXmlAttributeCollection|XPXmlValidationResult|XPXmlValidationError|XPXmlValidationErrorCollection";
 
     public string Transform(string source)
     {
@@ -39,12 +39,12 @@ internal sealed class NativeXmlPreprocessor
             }
 
             var rewritten = line;
-            rewritten = Regex.Replace(rewritten, @"\bXmlDocument\.Parse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPXmlDocument\.Parse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlParse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlStringify\s*\(", "XPScriptNativeXml.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlEscape\s*\(", "XPScriptNativeXml.Escape(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+XmlDocument\s*(?:\(\s*\))?", "XPScriptNativeXml.CreateDocument()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+XmlElement\s*\((.*)\)", "XPScriptNativeXml.CreateElement($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPXmlDocument\s*(?:\(\s*\))?", "XPScriptNativeXml.CreateDocument()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPXmlElement\s*\((.*)\)", "XPScriptNativeXml.CreateElement($1)", RegexOptions.IgnoreCase);
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNativeXml", StringComparison.Ordinal)))
@@ -59,13 +59,13 @@ internal sealed class NativeXmlPreprocessor
     private static string CreateExpression(string type, string rawArguments)
     {
         var args = rawArguments.Trim();
-        if (type.Equals("XmlDocument", StringComparison.OrdinalIgnoreCase))
+        if (type.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeXml.CreateDocument()" : $"XPScriptNativeXml.Parse({args})";
-        if (type.Equals("XmlElement", StringComparison.OrdinalIgnoreCase))
+        if (type.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XmlElement requires an element name argument.");
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPXmlElement requires an element name argument.");
             return $"XPScriptNativeXml.CreateElement({args})";
         }
-        throw new CompilerException("Only XmlDocument and XmlElement can be created with New.");
+        throw new CompilerException("Only XPXmlDocument and XPXmlElement can be created with New.");
     }
 }

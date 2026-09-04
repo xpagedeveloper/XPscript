@@ -3,7 +3,7 @@
 
 Sub Main()
     Dim form As New UIForm("DateTime and Range")
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
 
     Call data.Set("meeting", "2026-08-18T18:30")
     Call data.Set("volume", 50)

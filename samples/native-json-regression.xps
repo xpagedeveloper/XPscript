@@ -19,21 +19,21 @@ Class JsonBoundaryPerson
 End Class
 
 Sub Main()
-    Dim document As JsonDocument
-    Dim parsed As JsonDocument
-    Dim decoded As JsonDocument
-    Dim obj As JsonObject
-    Dim arr As JsonArray
-    Dim element As JsonElement
+    Dim document As XPJsonDocument
+    Dim parsed As XPJsonDocument
+    Dim decoded As XPJsonDocument
+    Dim obj As XPJsonObject
+    Dim arr As XPJsonArray
+    Dim element As XPJsonElement
     Dim emptyValue As Variant
     Dim nullValue As Variant
     Dim missingPerson As JsonBoundaryPerson
     Dim person As JsonBoundaryPerson
 
-    Set document = JsonDocument.Parse("{""name"":""Alice"",""active"":true}")
+    Set document = XPJsonDocument.Parse("{""name"":""Alice"",""active"":true}")
     Print "DOCUMENT=" & document.Stringify()
 
-    Set obj = New JsonObject
+    Set obj = New XPJsonObject
     Call obj.Set("name", "Fredrik")
     Call obj.Set("enabled", True)
     Print "OBJCOUNT=" & CStr(obj.Count)
@@ -42,7 +42,7 @@ Sub Main()
     Call obj.Remove("enabled")
     Print "OBJCOUNT2=" & CStr(obj.Count)
 
-    Set arr = New JsonArray
+    Set arr = New XPJsonArray
     Call arr.Add("one")
     Call arr.Add("two")
     Call arr.Set(1, "TWO")

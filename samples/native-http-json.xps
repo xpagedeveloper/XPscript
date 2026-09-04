@@ -1,11 +1,11 @@
 Option Declare
 
 Sub Main()
-    Dim http As New HttpClient
-    Dim response As HttpResponse
-    Dim document As JsonDocument
-    Dim obj As JsonObject
-    Dim arr As JsonArray
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
+    Dim document As XPJsonDocument
+    Dim obj As XPJsonObject
+    Dim arr As XPJsonArray
     Dim text As String
 
     http.Timeout = 30
@@ -20,11 +20,11 @@ Sub Main()
     ' Print response.ContentType
     ' Print response.IsSuccess
 
-    Set document = JsonDocument.Parse("{""name"":""Alice"",""roles"":[""admin""]}")
+    Set document = XPJsonDocument.Parse("{""name"":""Alice"",""roles"":[""admin""]}")
     text = document.Stringify()
     Print "DOCUMENT=" & text
 
-    Set obj = New JsonObject
+    Set obj = New XPJsonObject
     Call obj.Set("name", "Fredrik")
     Call obj.Set("enabled", True)
     Print "OBJCOUNT=" & CStr(obj.Count)
@@ -32,7 +32,7 @@ Sub Main()
     Print "OBJHAS=" & CStr(obj.Contains("enabled"))
     Call obj.Remove("enabled")
 
-    Set arr = New JsonArray
+    Set arr = New XPJsonArray
     Call arr.Add("one")
     Call arr.Add("two")
     Call arr.Set(1, "TWO")

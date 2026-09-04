@@ -11,7 +11,13 @@ internal sealed class ReservedIdentifierPreprocessor
         "XPScriptEvaluateRuntime", "XPScriptEvaluateCollectionRuntime", "XPScriptEvaluateSemanticsRuntime", "XPScriptEvaluateFunctionArityRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
         "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker", "LSObjectIdentityRuntime",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
-        "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement", "XPAi", "XPAiResponse",
+        "XPHttpClient", "XPHttpResponse",
+        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement",
+        "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn",
+        "XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
+        "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection",
+        "XPHttpDbSupabase", "XPHttpDbDominoRest",
+        "XPAi", "XPAiResponse",
         "UIForm", "UIData", "UIItem", "UIFieldValue"
     };
 

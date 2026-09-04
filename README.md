@@ -193,11 +193,11 @@ See `docs/platform-native.md`, `docs/console-process-formatting.md` and `docs/se
 
 ## HTTP
 
-The XPScript-native HTTP API uses `HttpClient` and `HttpResponse`:
+The XPScript-native HTTP API uses `XPHttpClient` and `XPHttpResponse`:
 
 ```xpscript
-Dim http As New HttpClient
-Dim response As HttpResponse
+Dim http As New XPHttpClient
+Dim response As XPHttpResponse
 
 Call http.SetHeader("Accept", "application/json")
 Set response = http.Get("https://api.example.com/users")
@@ -235,7 +235,7 @@ See `docs/ai.md` and `samples/xpai.xps`.
 XPScript provides native JSON classes and helper functions:
 
 ```xpscript
-Dim obj As New JsonObject
+Dim obj As New XPJsonObject
 Call obj.Set("name", "Alice")
 Call obj.Set("active", True)
 
@@ -244,10 +244,10 @@ Print JsonStringify(obj)
 
 Available APIs include:
 
-- `JsonDocument.Parse` / `Stringify`
-- `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
-- `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
-- `JsonElement.Type`, `Value`
+- `XPJsonDocument.Parse` / `Stringify`
+- `XPJsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
+- `XPJsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
+- `XPJsonElement.Type`, `Value`
 - `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
 
 See `docs/native-http-json.md` for the preferred standalone API.

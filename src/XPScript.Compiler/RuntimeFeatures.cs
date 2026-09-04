@@ -21,7 +21,7 @@ internal readonly record struct RuntimeFeatures(
         ArgumentNullException.ThrowIfNull(source);
         var code = PreprocessorFeatureGate.CodeOnly(source);
 
-        var httpDatabase = PreprocessorFeatureGate.ContainsTypePrefixReference(code, "HTTPDB") ||
+        var httpDatabase = PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPHttpDb") ||
                            PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbSupabase");
         // XPDB is the common, case-insensitive prefix for every database backend.
         // Keep detection open-ended so new backends do not silently miss the shared
@@ -30,17 +30,17 @@ internal readonly record struct RuntimeFeatures(
         var attachments = database && PreprocessorFeatureGate.ContainsCall(code, "Attachments");
 
         return new RuntimeFeatures(
-            Http: PreprocessorFeatureGate.ContainsTypeReference(code, "HttpClient", "HttpResponse", "NotesHTTPRequest"),
+            Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest"),
             Json: PreprocessorFeatureGate.ContainsTypeReference(
-                  code, "JsonDocument", "JsonObject", "JsonArray", "JsonElement", "NotesJSONNavigator",
+                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesJSONNavigator",
                       "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
                   PreprocessorFeatureGate.ContainsCall(
-                      code, "JsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
-            Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "Xml") ||
-                 PreprocessorFeatureGate.ContainsCall(code, "XmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
-            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "Csv") ||
+                      code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
+            Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
+                 PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
+            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
                  PreprocessorFeatureGate.ContainsCall(
-                     code, "CsvDocument.Parse", "CsvDocument.ParseBytes", "CsvParse", "CsvParseBytes",
+                     code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "CsvParse", "CsvParseBytes",
                      "CsvStringify", "CsvEscape", "CsvSave", "CsvWriteFile"),
             Database: database,
             HttpDatabase: httpDatabase,

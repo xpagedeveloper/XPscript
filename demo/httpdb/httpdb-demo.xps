@@ -1,8 +1,8 @@
 Option Declare
 
 Sub Main()
-    Dim supabase As New HTTPDBSupabase("https://supabase.example.com", "demo-key")
-    Dim domino As New HTTPDBDominoRest("https://domino.example.com:8880", "", "customers")
+    Dim supabase As New XPHttpDbSupabase("https://supabase.example.com", "demo-key")
+    Dim domino As New XPHttpDbDominoRest("https://domino.example.com:8880", "", "customers")
 
     Call supabase.SetSchema("public")
     Print "SUPABASE-FILTER=" & supabase.Eq("id", 42)

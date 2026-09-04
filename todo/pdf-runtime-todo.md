@@ -65,7 +65,7 @@ Implement after `todo/ai-client-todo.md` is complete and merged.
 ## JSON binding for PDF forms
 
 - [ ] Reuse the same document-style JSON binding principles as UIForm where practical.
-- [ ] Allow a PDF form to load values from a `JsonObject`/`JsonDocument` by matching PDF field name to JSON property name.
+- [ ] Allow a PDF form to load values from a `XPJsonObject`/`XPJsonDocument` by matching PDF field name to JSON property name.
 - [ ] If a PDF form field does not exist in JSON, expose it as empty without modifying the JSON document.
 - [ ] Create a missing JSON property only when a value is actually supplied or extracted for that field.
 - [ ] Allow existing PDF form values to be exported to JSON.
@@ -109,7 +109,7 @@ Implement after `todo/ai-client-todo.md` is complete and merged.
 - [ ] Extract read-only/required flags where present.
 - [ ] Extract available choices for combo/list fields.
 - [ ] Extract selected values for list fields.
-- [ ] Return all form data as a `JsonObject`/`JsonDocument` convenience API.
+- [ ] Return all form data as a `XPJsonObject`/`XPJsonDocument` convenience API.
 - [ ] Preserve fields with empty values in the PDF form result when explicitly requested.
 
 ## Scanned PDFs and OCR boundary
@@ -151,7 +151,7 @@ Implement after `todo/ai-client-todo.md` is complete and merged.
 - [ ] `Dim pdf As PDFDocument = PDFDocument.Load("input.pdf")` or equivalent valid XPScript assignment form.
 - [ ] `Print pdf.PageCount`
 - [ ] `Print pdf.ExtractText()`
-- [ ] `Dim data As JsonObject = pdf.GetFormData()` or equivalent object assignment form.
+- [ ] `Dim data As XPJsonObject = pdf.GetFormData()` or equivalent object assignment form.
 - [ ] `Call pdf.SetFormData(data)`
 - [ ] `Call pdf.FlattenForm()`
 - [ ] Validate exact XPScript syntax against the compiler before finalizing the public API.

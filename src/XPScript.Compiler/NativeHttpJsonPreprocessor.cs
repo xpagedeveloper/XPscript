@@ -4,12 +4,12 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "HttpClient|HttpResponse|JsonDocument|JsonObject|JsonArray|JsonElement|HTTPDBSupabase|XPDbSupabase|HTTPDBDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
+    private const string NativeTypePattern = "XPHttpClient|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
     private static readonly string[] FeatureMarkers =
     [
-        "HttpClient", "HttpResponse", "JsonDocument", "JsonObject", "JsonArray", "JsonElement",
-        "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "HTTPDBSupabase", "XPDbSupabase",
-        "HTTPDBDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"
+        "XPHttpClient", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement",
+        "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase",
+        "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"
     ];
 
     public string Transform(string source)
@@ -51,19 +51,19 @@ internal sealed class NativeHttpJsonPreprocessor
             }
 
             var rewritten = line;
-            rewritten = Regex.Replace(rewritten, @"\bJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonParse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonStringify\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonEncode\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonDecode\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+HttpClient\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateClient()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonDocument\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateDocument()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+JsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBSupabase\s*\((.*)\)", "new XPScriptHttpDbSupabase($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpClient\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateClient()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonDocument\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateDocument()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonElement\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateElement()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpDbSupabase\s*\((.*)\)", "new XPScriptHttpDbSupabase($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbSupabase\s*\((.*)\)", "new XPScriptDbSupabase($1)", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+HTTPDBDominoRest\s*\((.*)\)", "new XPScriptHttpDbDominoRest($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpDbDominoRest\s*\((.*)\)", "new XPScriptHttpDbDominoRest($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDBSQLite\s*\((.*)\)", "new XPScriptDbSqlite($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMsSql\s*\((.*)\)", "new XPScriptDbMsSql($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMySql\s*\((.*)\)", "new XPScriptDbMySql($1)", RegexOptions.IgnoreCase);
@@ -73,7 +73,7 @@ internal sealed class NativeHttpJsonPreprocessor
             foreach (var pair in nativeTypes)
             {
                 var escapedName = Regex.Escape(pair.Key);
-                if (pair.Value.Equals("HttpClient", StringComparison.OrdinalIgnoreCase))
+                if (pair.Value.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var method in new[] { "GetJson", "PostJson", "PutJson", "PatchJson", "PostForm", "AddQuery", "LoadForm", "SaveForm", "PutForm" })
                     {
@@ -93,7 +93,7 @@ internal sealed class NativeHttpJsonPreprocessor
                             RegexOptions.IgnoreCase);
                     }
                 }
-                else if (pair.Value.Equals("HttpResponse", StringComparison.OrdinalIgnoreCase))
+                else if (pair.Value.Equals("XPHttpResponse", StringComparison.OrdinalIgnoreCase))
                 {
                     rewritten = Regex.Replace(
                         rewritten,
@@ -133,7 +133,7 @@ internal sealed class NativeHttpJsonPreprocessor
                         $"XPScriptDatabaseAttachmentRuntime.ForMsSql({pair.Key}, ",
                         RegexOptions.IgnoreCase);
                 }
-                else if (pair.Value.Equals("HTTPDBSupabase", StringComparison.OrdinalIgnoreCase))
+                else if (pair.Value.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var method in new[] { "QueryArray", "GetRow", "SaveRow" })
                     {
@@ -154,7 +154,7 @@ internal sealed class NativeHttpJsonPreprocessor
                         $"XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket({pair.Key}, ",
                         RegexOptions.IgnoreCase);
                 }
-                else if (pair.Value.Equals("HTTPDBDominoRest", StringComparison.OrdinalIgnoreCase))
+                else if (pair.Value.Equals("XPHttpDbDominoRest", StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var method in new[] { "GetViewArray", "QueryArray", "GetRow", "SaveRow" })
                     {
@@ -200,14 +200,14 @@ internal sealed class NativeHttpJsonPreprocessor
     private static string CreateExpression(string type, string rawArguments)
     {
         var args = rawArguments.Trim();
-        if (type.Equals("HttpClient", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateClient()";
-        if (type.Equals("JsonDocument", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeJson.CreateDocument()" : $"XPScriptNativeJson.Parse({args})";
-        if (type.Equals("JsonObject", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateObject()";
-        if (type.Equals("JsonArray", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateArray()";
-        if (type.Equals("JsonElement", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateElement()";
-        if (type.Equals("HTTPDBSupabase", StringComparison.OrdinalIgnoreCase))
+        if (type.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateClient()";
+        if (type.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeJson.CreateDocument()" : $"XPScriptNativeJson.Parse({args})";
+        if (type.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateObject()";
+        if (type.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateArray()";
+        if (type.Equals("XPJsonElement", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateElement()";
+        if (type.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("HTTPDBSupabase requires baseUrl and apiKey arguments.");
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPHttpDbSupabase requires baseUrl and apiKey arguments.");
             return $"new XPScriptHttpDbSupabase({args})";
         }
         if (type.Equals("XPDbSupabase", StringComparison.OrdinalIgnoreCase))
@@ -215,9 +215,9 @@ internal sealed class NativeHttpJsonPreprocessor
             if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPDbSupabase requires either a PostgreSQL connection string or REST baseUrl and apiKey arguments.");
             return $"new XPScriptDbSupabase({args})";
         }
-        if (type.Equals("HTTPDBDominoRest", StringComparison.OrdinalIgnoreCase))
+        if (type.Equals("XPHttpDbDominoRest", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("HTTPDBDominoRest requires baseUrl, bearerToken and dataSource arguments.");
+            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPHttpDbDominoRest requires baseUrl, bearerToken and dataSource arguments.");
             return $"new XPScriptHttpDbDominoRest({args})";
         }
         if (type.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase))

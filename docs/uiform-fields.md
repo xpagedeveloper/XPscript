@@ -30,7 +30,7 @@ Call form.AddOption("roles", "admin")
 Call form.AddOption("roles", "editor")
 ```
 
-The stored value is a `JsonArray`.
+The stored value is a `XPJsonArray`.
 
 ## CheckBoxGroup
 
@@ -40,7 +40,7 @@ Call form.AddOption("features", "api")
 Call form.AddOption("features", "reports")
 ```
 
-The web renderer uses a checkbox for each option. The stored value is a `JsonArray`.
+The web renderer uses a checkbox for each option. The stored value is a `XPJsonArray`.
 
 ## TelField
 
@@ -241,7 +241,7 @@ It should then return the same JSON array:
 ]
 ```
 
-The implementation can use `HTTPDBSupabase`, `HTTPDBDominoRest` or `HttpClient`. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.
+The implementation can use `XPHttpDbSupabase`, `XPHttpDbDominoRest` or `XPHttpClient`. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.
 
 ## Dirty tracking
 

@@ -44,7 +44,7 @@ internal static class XPScriptNativeCsv
     public static string Stringify(object? value)
         => value is XPScriptCsvDocument document
             ? document.Stringify()
-            : throw new XPScriptRuntimeException(13, "CsvStringify requires CsvDocument.");
+            : throw new XPScriptRuntimeException(13, "CsvStringify requires XPCsvDocument.");
 
     public static string Escape(object? value) => Escape(value, ",");
 
@@ -296,7 +296,7 @@ internal sealed class XPScriptCsvDocument
     public XPScriptCsvRow AddRow(object? values)
     {
         if (values is not System.Collections.IEnumerable enumerable || values is string)
-            throw new XPScriptRuntimeException(13, "CsvDocument.AddRow requires an enumerable value.");
+            throw new XPScriptRuntimeException(13, "XPCsvDocument.AddRow requires an enumerable value.");
         var items = new System.Collections.Generic.List<string>();
         foreach (var value in enumerable) items.Add(XPScriptNativeCsv.ScalarText(value));
         if (ColumnCount != 0 && items.Count != ColumnCount)

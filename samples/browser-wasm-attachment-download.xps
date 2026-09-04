@@ -1,7 +1,7 @@
 [Platform:browser-wasm]
 
 Sub Main()
-    Dim db As New HTTPDBSupabase("https://example.invalid", "anon-key")
+    Dim db As New XPHttpDbSupabase("https://example.invalid", "anon-key")
     Dim files As Variant
     Dim attachmentId As String
 

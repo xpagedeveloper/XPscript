@@ -4,20 +4,20 @@
 Option Declare
 
 Sub Main()
-    Dim doc As New XmlDocument
-    Dim parsedDoc As New XmlDocument("<catalog><item id=""a"">one</item><item id=""b"">two</item></catalog>")
-    Dim ownerDoc As XmlDocument
-    Dim root As XmlElement
-    Dim first As XmlElement
-    Dim second As XmlElement
-    Dim replacement As XmlElement
-    Dim node As XmlNode
-    Dim nodes As XmlNodeCollection
-    Dim attrs As XmlAttributeCollection
-    Dim attr As XmlAttribute
+    Dim doc As New XPXmlDocument
+    Dim parsedDoc As New XPXmlDocument("<catalog><item id=""a"">one</item><item id=""b"">two</item></catalog>")
+    Dim ownerDoc As XPXmlDocument
+    Dim root As XPXmlElement
+    Dim first As XPXmlElement
+    Dim second As XPXmlElement
+    Dim replacement As XPXmlElement
+    Dim node As XPXmlNode
+    Dim nodes As XPXmlNodeCollection
+    Dim attrs As XPXmlAttributeCollection
+    Dim attr As XPXmlAttribute
     Dim count As Integer
 
-    If doc.HasRoot Then Error 9801, "New XmlDocument should be empty"
+    If doc.HasRoot Then Error 9801, "New XPXmlDocument should be empty"
 
     Set root = doc.AddRoot("people")
     If Not doc.HasRoot Then Error 9802, "AddRoot did not create root"
@@ -59,15 +59,15 @@ Sub Main()
     Set nodes = doc.SelectNodes("/people/person")
     If nodes.Count <> 2 Then Error 9815, "XPath SelectNodes failed"
     Set node = nodes.First
-    If node.GetAttribute("id") <> "1" Then Error 9816, "XmlNodeCollection.First failed"
+    If node.GetAttribute("id") <> "1" Then Error 9816, "XPXmlNodeCollection.First failed"
     Set node = nodes.Last
-    If node.GetAttribute("id") <> "2" Then Error 9817, "XmlNodeCollection.Last failed"
+    If node.GetAttribute("id") <> "2" Then Error 9817, "XPXmlNodeCollection.Last failed"
 
     count = 0
     ForAll xmlItem In nodes
         count = count + 1
     End ForAll
-    If count <> 2 Then Error 9818, "XmlNodeCollection ForAll failed"
+    If count <> 2 Then Error 9818, "XPXmlNodeCollection ForAll failed"
 
     Set replacement = doc.CreateElement("person")
     Call replacement.SetAttribute("id", "3")
@@ -118,11 +118,11 @@ Sub Main()
 
     Call root.SetAttribute("delete-me", "yes")
     Set attr = root.GetAttributeNode("delete-me")
-    If Not attr.Delete() Then Error 9831, "XmlAttribute.Delete failed"
+    If Not attr.Delete() Then Error 9831, "XPXmlAttribute.Delete failed"
     If root.HasAttribute("delete-me") Then Error 9832, "Deleted attribute remains"
 
     Set root = parsedDoc.DocumentElement
-    If root.Name <> "catalog" Then Error 9833, "XmlDocument constructor parse failed"
+    If root.Name <> "catalog" Then Error 9833, "XPXmlDocument constructor parse failed"
     Set nodes = parsedDoc.SelectNodes("/catalog/item")
     If nodes.Count <> 2 Then Error 9834, "Parsed navigation failed"
 

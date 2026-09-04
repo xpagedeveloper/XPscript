@@ -2,8 +2,8 @@ Option Declare
 
 Sub Main()
     Dim db As New XPDBSQLite("demo.db")
-    Dim parameters As New JsonObject
-    Dim rows As JsonDocument
+    Dim parameters As New XPJsonObject
+    Dim rows As XPJsonDocument
 
     Call db.Execute("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
     Call db.Execute("DELETE FROM people")
