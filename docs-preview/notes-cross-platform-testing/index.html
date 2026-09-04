@@ -21,7 +21,7 @@
 <li>unloading the native library.</li>
 </ul>
 <p>On Linux the smoke test uses <code>libc.so.6</code>. On macOS it uses <code>/usr/lib/libSystem.B.dylib</code>.</p>
-<p>The workflow also builds the compiler and compiles <a href="../samples/notes-c-api-surface.xps">samples/notes-c-api-surface.xps</a>, which validates that the generated Notes runtime including the thread-lifecycle code compiles on both Ubuntu and macOS.</p>
+<p>The workflow also builds the compiler and compiles <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-surface.xps">samples/notes-c-api-surface.xps</a>, which validates that the generated Notes runtime including the thread-lifecycle code compiles on both Ubuntu and macOS.</p>
 <h2 id="manual-notesdomino-tests">Manual Notes/Domino tests</h2>
 <p>Actual Notes C API integration remains a manual test because CI does not contain a licensed/configured HCL Notes or Domino runtime, Notes ID, <code>notes.ini</code>, or NSF test environment.</p>
 <p>Before declaring a Notes/Domino release verified on an operating system, manually test at least:</p>

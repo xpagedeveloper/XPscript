@@ -89,7 +89,7 @@ Set result = http.PatchJson("/api/customer/42", payload)
 </code></pre>
 <p>If the server requires a token, it can answer the first unsafe request with HTTP 403 and a fresh <code>X-XPS-CSRF-Token</code> response header. The browser-WASM client retries the request once with that token. The Session cookie remains HttpOnly and is never read by the WebAssembly application.</p>
 <p>This automatic behavior applies to the built-in browser-WASM HTTP transport. If application code bypasses it and uses custom JavaScript <code>fetch</code>, the request must send <code>X-XPS-CSRF-Token</code> explicitly when Session cookies are used.</p>
-<p>See <a href="csrf/">CSRF protection</a> for UIForm, manual HTML forms, custom browser REST requests and bearer-token behavior.</p>
+<p>See <a href="/XPscript/csrf/">CSRF protection</a> for UIForm, manual HTML forms, custom browser REST requests and bearer-token behavior.</p>
 <h2 id="build-requirement">Build requirement</h2>
 <p>The web-server machine needs the .NET WebAssembly build tools because the first request may need to publish a new browser application:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet workload install wasm-tools</span></span></code></pre>

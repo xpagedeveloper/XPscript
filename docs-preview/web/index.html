@@ -2,7 +2,7 @@
 .structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
 </style></head> <body> <header class="site-header"> <a class="brand" href="/XPscript/">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="/XPscript/">Overview</a> <a href="/XPscript/getting-started/">Getting Started</a> <a href="/XPscript/language/">Language</a> <a href="/XPscript/functions/">Functions</a> <a href="/XPscript/language-reference/">Language Reference</a> <a href="/XPscript/api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="web-programming">Web programming</h1>
 <p>XPScript web applications use the same <code>.xps</code> language and a shared dispatcher across Kestrel, FastCGI and CGI.</p>
-<p>For the complete verified REST API, Response, Session, Application and RequestScope reference, see <a href="rest-api/">REST API development</a>.</p>
+<p>For the complete verified REST API, Response, Session, Application and RequestScope reference, see <a href="/XPscript/rest-api/">REST API development</a>.</p>
 <h2 id="route-files">Route files</h2>
 <p>A site is a directory of <code>.xps</code> files:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>site/</span></span>
@@ -52,7 +52,7 @@ End Sub
 </code></pre>
 <p>Supported parameter bindings are <code>[FromRoute]</code>, <code>[FromQuery]</code>, <code>[FromHeader]</code>, <code>[FromHeader:"Header-Name"]</code> and <code>[FromBody]</code>. Route, query and header values are converted to the declared parameter type. Without an explicit binding, the runtime first checks a matching route parameter, then query string, then JSON body for a complex type.</p>
 <p>Explicit REST routes are indexed across the web root. Duplicate route/method combinations are rejected. Parameter names in templates do not make otherwise identical templates unique, so <code>/api/users/{id}</code> and <code>/api/users/{name}</code> conflict when they use the same HTTP method.</p>
-<p>See <a href="rest-api/">REST API development</a> for the complete route, validation, CORS, rate-limit and response-helper reference.</p>
+<p>See <a href="/XPscript/rest-api/">REST API development</a> for the complete route, validation, CORS, rate-limit and response-helper reference.</p>
 <h2 id="json-request-body-and-models">JSON request body and models</h2>
 <p><code>Body</code> is a reserved XPScript runtime identifier for web request content. It cannot be used as a variable, parameter, procedure or class name. It gives direct access to request content:</p>
 <pre><code class="language-xpscript">Response.OK(Body.Text())
@@ -94,7 +94,7 @@ Response.Conflict("Already exists")
 Response.problem(400, "Invalid request", "Email is required")
 </code></pre>
 <p><code>Response.OK(data)</code> returns HTTP 200 and JSON. <code>Response.Created(location, data)</code> returns HTTP 201 and a <code>Location</code> header. <code>Response.NoContent()</code> returns HTTP 204. Problem helpers use the RFC Problem Details shape with <code>type</code>, <code>title</code>, <code>status</code> and <code>detail</code>.</p>
-<p>The complete Response member list is maintained in <a href="rest-api/#response-object">REST API development</a>.</p>
+<p>The complete Response member list is maintained in <a href="/XPscript/rest-api/#response-object">REST API development</a>.</p>
 <h2 id="cors-route-rule">CORS route rule</h2>
 <p>CORS is opt-in per route. <code>[Cors]</code> and <code>[Cors:*]</code> allow any origin. Use one or more explicit origins separated by semicolons when the route should be restricted.</p>
 <pre><code class="language-xpscript">[Anonymous]
@@ -267,7 +267,7 @@ Response.SetCookie("session", token)
 Response.DeleteCookie("session")
 </code></pre>
 <p><code>SetHeader</code> replaces the values for a header. <code>AppendHeader</code> adds another value. <code>RemoveHeader</code> removes a header. Cookie values and options are validated by the runtime before a <code>Set-Cookie</code> header is emitted.</p>
-<p>See <a href="rest-api/#response-object">Response object</a> for the verified complete member list.</p>
+<p>See <a href="/XPscript/rest-api/#response-object">Response object</a> for the verified complete member list.</p>
 <h2 id="session">Session</h2>
 <p>Sessions are host-controlled. Kestrel sessions must be enabled with <code>--sessions</code>. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.</p>
 <p>Session state supports <code>Add</code>, <code>Set</code>, <code>Get</code>, <code>Exists</code>, <code>Remove</code>, <code>Unset</code> and <code>Clear</code>. <code>Add</code> overwrites an existing value. <code>Get</code> returns <code>Null</code> when the key does not exist. <code>Remove</code> returns false without throwing when a key does not exist.</p>
@@ -277,7 +277,7 @@ Session.SetRole("admin")
 Session.SetRole("editor")
 </code></pre>
 <p>Session state is thread-safe inside one runtime process. Concurrent requests using the same session serialize session state mutations through the session record lock.</p>
-<p>See <a href="rest-api/#session-object">Session object</a> for all implemented Session members.</p>
+<p>See <a href="/XPscript/rest-api/#session-object">Session object</a> for all implemented Session members.</p>
 <h2 id="application-and-request-scopes">Application and Request scopes</h2>
 <p>Application scope is shared by requests in one application runtime instance. RequestScope exists only for one request.</p>
 <pre><code class="language-xpscript">Application.Add("site", "example")
@@ -286,7 +286,7 @@ RequestScope.Add("temporary", "value")
 </code></pre>
 <p>For all three scopes, <code>Add(name, value)</code> overwrites an existing key, <code>Get(name)</code> returns <code>Null</code> for a missing key, and <code>Remove(name)</code> is safe for missing keys and returns false.</p>
 <p>Application scope is thread-safe inside one runtime process. RequestScope is also internally synchronized. In-memory Application state is not a distributed store across multiple processes or servers.</p>
-<p>See <a href="rest-api/#application-scope">Application scope</a> and <a href="rest-api/#request-scope">Request scope</a> for the complete API and lifetime rules.</p>
+<p>See <a href="/XPscript/rest-api/#application-scope">Application scope</a> and <a href="/XPscript/rest-api/#request-scope">Request scope</a> for the complete API and lifetime rules.</p>
 <h2 id="http-methods">HTTP methods</h2>
 <p>A route can declare the methods it accepts. Do not assume a UIForm route is GET-only. A form commonly accepts both GET and POST:</p>
 <pre><code class="language-xpscript">[Anonymous]
@@ -302,12 +302,12 @@ End Sub
 <p>The normalized base set includes <code>REQUEST_METHOD</code>, <code>REQUEST_URI</code>, <code>QUERY_STRING</code>, <code>PATH_INFO</code>, <code>SCRIPT_NAME</code>, <code>SERVER_NAME</code>, <code>SERVER_PORT</code>, <code>SERVER_PROTOCOL</code>, <code>REMOTE_ADDR</code>, <code>CONTENT_TYPE</code>, <code>CONTENT_LENGTH</code> and <code>HTTPS</code>. Incoming headers are also exposed using CGI-style <code>HTTP_*</code> names. CGI and FastCGI retain transport-provided environment variables in addition to the normalized values.</p>
 <h2 id="iis-hosting">IIS hosting</h2>
 <p>On Windows Server, the recommended IIS topology is IIS as the public TLS endpoint and reverse proxy to an XPScript Kestrel process on loopback. Direct IIS CGI hosting is also supported for simpler deployments.</p>
-<p>See <a href="iis-hosting/">Hosting XPScript on IIS</a> for the full configuration, including ARR, URL Rewrite, <code>web.config</code>, CGI mappings, application pool settings, filesystem permissions and troubleshooting.</p>
+<p>See <a href="/XPscript/iis-hosting/">Hosting XPScript on IIS</a> for the full configuration, including ARR, URL Rewrite, <code>web.config</code>, CGI mappings, application pool settings, filesystem permissions and troubleshooting.</p>
 <h2 id="security-boundaries">Security boundaries</h2>
 <p>The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose <code>.xps</code> source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.</p>
 <p>The persistent compiler cache contains executable .NET assemblies generated from trusted <code>.xps</code> source. Keep its directory writable only by the XPScript service identity or an equally trusted administrator.</p>
 <p>REST endpoints should use explicit CORS origins when browser callers are known. Do not use <code>[Cors:*]</code> for credentialed or sensitive APIs. Rate limits complement authentication and authorization but do not replace them.</p>
-<p>See <a href="getting-started/">Getting started</a> for host setup and parameters and <a href="uiform/">UIForm</a> for forms.</p>  </article> </main> </div> <script>
+<p>See <a href="/XPscript/getting-started/">Getting started</a> for host setup and parameters and <a href="/XPscript/uiform/">UIForm</a> for forms.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);

@@ -25,7 +25,7 @@ Sub ServiceStop()
     Print "SERVICE-STOP"
 End Sub
 </code></pre>
-<p>See <a href="../samples/service-interval.xps">service-interval.xps</a> for a complete source file.</p>
+<p>See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/service-interval.xps">service-interval.xps</a> for a complete source file.</p>
 <p><code>ServiceStart()</code> and <code>ServiceStop()</code> are optional parameterless lifecycle hooks. <code>ServiceStart()</code> runs once when the service starts. <code>ServiceStop()</code> runs once after a graceful stop has stopped scheduling new work and all running interval jobs have completed within the stop timeout.</p>
 <h2 id="interval-jobs">Interval jobs</h2>
 <p><code>[Interval:value]</code> applies to the parameterless Sub immediately following the rule. Supported units are seconds (<code>s</code>), minutes (<code>m</code>), hours (<code>h</code>) and days (<code>d</code>). Examples are <code>30s</code>, <code>4m</code>, <code>1h</code> and <code>1d</code>.</p>

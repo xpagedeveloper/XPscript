@@ -161,7 +161,7 @@ secret = Application.Secrets.Get("MyApplication", "ApiUser")
 <h2 id="security-and-permissions">Security and permissions</h2>
 <p><code>Application.Registry.System.Set</code> can require administrator/root permissions. XPscript does not elevate the process automatically.</p>
 <p><code>Application.Secrets</code> uses the access-control behavior of the operating system credential store. macOS Keychain can prompt the user depending on Keychain access policy. Windows Credential Manager and Linux Secret Service likewise use the current user’s credential-store context.</p>
-<p>The runnable registry sample and compile-time secrets surface are in <a href="../samples/application-registry-secrets.xps">samples/application-registry-secrets.xps</a>.</p>  </article> </main> </div> <script>
+<p>The runnable registry sample and compile-time secrets surface are in <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">samples/application-registry-secrets.xps</a>.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);
