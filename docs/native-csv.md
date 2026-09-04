@@ -1,6 +1,6 @@
 # Native CSV
 
-XPscript provides a native CSV API for parsing, building, iterating, serializing and saving CSV data without external runtime dependencies.
+XPscript provides a native CSV API for parsing, building, iterating, sorting, serializing and saving CSV data without external runtime dependencies.
 
 CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as `00123` are preserved exactly.
 
@@ -147,6 +147,42 @@ returns:
 "Malmö; Sweden"
 ```
 
+## Sort rows
+
+`XPCsvDocument.Sort(column)` sorts all data rows in place in ascending alphanumeric order. The header row is never moved.
+
+The column selector can be a header name:
+
+```xpscript
+Call csv.Sort("name")
+```
+
+or a zero-based numeric column index:
+
+```xpscript
+Call csv.Sort(0)
+```
+
+Header-name lookup is case-insensitive and requires `HasHeaders = True`. A numeric selector works with or without headers and must be between `0` and `ColumnCount - 1`.
+
+Sorting is case-insensitive and uses natural alphanumeric ordering. Numeric runs are compared numerically, so values such as `item2` sort before `item10`. Rows whose selected values compare equal keep their original relative order.
+
+Example:
+
+```xpscript
+Dim csv As XPCsvDocument
+Set csv = CsvParse("id;name" & Chr(10) & _
+                   "2;item10" & Chr(10) & _
+                   "1;item2" & Chr(10) & _
+                   "3;Item1", ";")
+
+Call csv.Sort("name")
+' Item1, item2, item10
+
+Call csv.Sort(0)
+' 1, 2, 3
+```
+
 ## Save CSV files
 
 File output belongs to the `XPCsvDocument` that contains the CSV data.
@@ -254,6 +290,7 @@ Characters that cannot be represented in Windows-1252 cause a trap-able runtime 
 - `FileEncoding`
 - `AddHeader(name)`
 - `AddRow()`
+- `Sort(column)`
 - `Stringify()`
 - `ToBytes([encoding])`
 - `Save(path [, encoding])`
