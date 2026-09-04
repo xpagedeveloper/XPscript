@@ -8,15 +8,15 @@ Sub Main()
     Dim apiKey As String
     Dim tableName As String
     Dim supa As XPDbSupabase
-    Dim doc As JsonDocument
-    Dim rows As JsonArray
-    Dim payload As New JsonObject
-    Dim created As JsonDocument
-    Dim createdRows As JsonArray
-    Dim createdRow As JsonObject
+    Dim doc As XPJsonDocument
+    Dim rows As XPJsonArray
+    Dim payload As New XPJsonObject
+    Dim created As XPJsonDocument
+    Dim createdRows As XPJsonArray
+    Dim createdRow As XPJsonObject
     Dim rowId As Variant
     Dim filter As String
-    Dim deleted As JsonDocument
+    Dim deleted As XPJsonDocument
 
     url = Environ("SUPABASE_URL")
     apiKey = Environ("SUPABASE_KEY")

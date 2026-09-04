@@ -169,23 +169,23 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `WindowsX64Lib` | `WindowsX64Lib "library"` | library | Selects a Windows x64 native library. | [native-architecture-assets.xps](../samples/native-architecture-assets.xps) |
 | `LinuxArm64Lib` | `LinuxArm64Lib "library"` | library | Selects a Linux ARM64 native library. | [native-architecture-assets.xps](../samples/native-architecture-assets.xps) |
 | `MacOSArm64Lib` | `MacOSArm64Lib "library"` | library | Selects a macOS ARM64 native library. | [native-architecture-assets.xps](../samples/native-architecture-assets.xps) |
-| `HttpClient` | `Dim client As New HttpClient` | none | Creates the native HTTP client. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `HttpClient.Get` | `client.Get(url)` | URL | Sends HTTP GET. | [native-http-json.xps](../samples/native-http-json.xps) |
-| `HttpClient.Post` | `client.Post(url, body [, contentType])` | URL, body, content type | Sends HTTP POST. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPHttpClient` | `Dim client As New XPHttpClient` | none | Creates the native HTTP client. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPHttpClient.Get` | `client.Get(url)` | URL | Sends HTTP GET. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPHttpClient.Post` | `client.Post(url, body [, contentType])` | URL, body, content type | Sends HTTP POST. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonParse` | `JsonParse(text)` | JSON text | Parses JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonStringify` | `JsonStringify(value)` | value | Serializes JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPDBSQLite` | `Dim db As New XPDBSQLite(path [, readOnly])` | relative path, optional read-only flag | Opens a local SQLite database. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
-| `XPDBSQLite.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `JsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
-| `XPDBSQLite.Query` | `db.Query(sql [, parameters])` | SQL, optional `JsonObject` | Returns rows in a `JsonDocument` array. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
-| `XPDBSQLite.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `JsonObject` | Returns the first value or null. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `XPJsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Query` | `db.Query(sql [, parameters])` | SQL, optional `XPJsonObject` | Returns rows in a `XPJsonDocument` array. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `XPJsonObject` | Returns the first value or null. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction on the connection. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Close` | `db.Close()` | none | Rolls back an active transaction and closes the database. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDbMsSql` | `Dim db As New XPDbMsSql(connectionString)` | SQL Server connection string | Opens SQL Server or SQL Server Express. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
-| `XPDbMsSql.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `JsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
-| `XPDbMsSql.Query` | `db.Query(sql [, parameters])` | SQL, optional `JsonObject` | Returns rows in a `JsonDocument` array. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
-| `XPDbMsSql.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `JsonObject` | Returns the first value or null. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Execute` | `db.Execute(sql [, parameters])` | SQL, optional `XPJsonObject` | Executes parameterized non-query SQL and returns affected rows. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Query` | `db.Query(sql [, parameters])` | SQL, optional `XPJsonObject` | Returns rows in a `XPJsonDocument` array. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Scalar` | `db.Scalar(sql [, parameters])` | SQL, optional `XPJsonObject` | Returns the first value or null. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction on the connection. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Commit` | `db.Commit()` | none | Commits the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Rollback` | `db.Rollback()` | none | Rolls back the active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |

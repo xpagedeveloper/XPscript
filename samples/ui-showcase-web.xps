@@ -7,7 +7,7 @@
 [Get]
 [Post]
 Sub Index()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("XPscript web UI showcase")
     Dim result As String
 

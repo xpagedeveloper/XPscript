@@ -2,7 +2,7 @@
 ' (c) xpagedeveloper.com 2026
 
 Sub Main()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("Customer", 820, 620, True)
     Dim result As String
 

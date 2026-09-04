@@ -1,11 +1,11 @@
 # UIForm
 
-`UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `JsonObject` or object-root `JsonDocument`. The same form definition is rendered by the active UI backend.
+`UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `XPJsonObject` or object-root `XPJsonDocument`. The same form definition is rendered by the active UI backend.
 
 ## Basic form
 
 ```xpscript
-Dim data As New JsonObject
+Dim data As New XPJsonObject
 Dim form As New UIForm("Customer")
 Dim result As String
 
@@ -37,11 +37,11 @@ Call form.AddOption("country", "NO")
 Call form.AddOption("country", "DK")
 ```
 
-`MultiListBox` allows several selected options. Its bound value is a `JsonArray` of strings. Use `GetFieldValues(name)` when you want the selected values as a `JsonArray` regardless of the current backing value.
+`MultiListBox` allows several selected options. Its bound value is a `XPJsonArray` of strings. Use `GetFieldValues(name)` when you want the selected values as a `XPJsonArray` regardless of the current backing value.
 
 ```xpscript
-Dim data As New JsonObject
-Dim selected As New JsonArray
+Dim data As New XPJsonObject
+Dim selected As New XPJsonArray
 Dim values As Variant
 
 Call selected.Add("SE")
@@ -64,7 +64,7 @@ The same ListBox APIs are used on desktop, server-rendered web and browser-wasm.
 
 ## Separator and Spacer
 
-`AddSeparator(name)` adds a visual separator to the form. `AddSpacer(name)` adds vertical spacing. They are structural elements, not data-entry fields, and are never written to bound `JsonObject` data.
+`AddSeparator(name)` adds a visual separator to the form. `AddSpacer(name)` adds vertical spacing. They are structural elements, not data-entry fields, and are never written to bound `XPJsonObject` data.
 
 ```xpscript
 Call form.AddTextField("name", "Name")
@@ -158,7 +158,7 @@ The email field starts a new row even though eight columns remained on the previ
 [Get]
 [Post]
 Sub Index()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("Customer")
     Dim grid As Variant
     Dim result As String

@@ -88,7 +88,7 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 - [ ] Map numeric types without silent precision loss where possible.
 - [ ] Map Date/DateTime values consistently.
 - [ ] Support binary/blob values as XPScript Byte arrays.
-- [ ] Convert rows/results to `JsonObject` / `JsonArray`.
+- [ ] Convert rows/results to `XPJsonObject` / `XPJsonArray`.
 - [ ] Define duplicate-column-name behavior.
 - [ ] Preserve provider-specific values through a documented fallback representation when no native XPScript type exists.
 

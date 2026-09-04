@@ -5,10 +5,10 @@ XPscript provides a native XML surface parallel to the native JSON API. The runt
 ## Parse and navigate
 
 ```xpscript
-Dim doc As XmlDocument
-Dim root As XmlElement
+Dim doc As XPXmlDocument
+Dim root As XPXmlElement
 
-Set doc = XmlDocument.Parse("<person id=""42""><name>Fredrik</name></person>")
+Set doc = XPXmlDocument.Parse("<person id=""42""><name>Fredrik</name></person>")
 Set root = doc.Root
 
 Print root.Name
@@ -16,15 +16,15 @@ Print root.GetAttribute("id")
 Print root.GetElement("name").Value
 ```
 
-`XmlParse(xml)` is the shorthand equivalent of `XmlDocument.Parse(xml)`.
+`XmlParse(xml)` is the shorthand equivalent of `XPXmlDocument.Parse(xml)`.
 
 Normal XML parsing requires well-formed XML and does not process DTD declarations. Embedded `DOCTYPE` declarations are rejected by the parser.
 
 ## Build XML
 
 ```xpscript
-Dim doc As New XmlDocument
-Dim root As XmlElement
+Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
 
 Set root = doc.CreateElement("person")
 Call root.SetAttribute("id", 42)
@@ -47,25 +47,25 @@ returns:
 5 &lt; 10 &amp; 20 &gt; 10
 ```
 
-`XmlElement` also supports `Add`, `AddText`, `AddCData`, `AddComment`, `GetElement`, `GetElements`, `SetAttribute`, `GetAttribute`, `HasAttribute`, and `RemoveAttribute`.
+`XPXmlElement` also supports `Add`, `AddText`, `AddCData`, `AddComment`, `GetElement`, `GetElements`, `SetAttribute`, `GetAttribute`, `HasAttribute`, and `RemoveAttribute`.
 
 ## XPath
 
 ```xpscript
-Dim node As XmlNode
-Dim nodes As XmlNodeCollection
+Dim node As XPXmlNode
+Dim nodes As XPXmlNodeCollection
 
 Set node = doc.SelectSingleNode("/people/person[@id='42']")
 Set nodes = doc.SelectNodes("/people/person")
 ```
 
-`SelectSingleNode` and `SelectNodes` are available on both `XmlDocument` and `XmlElement`. The initial API uses ordinary XPath expressions without a namespace-manager abstraction.
+`SelectSingleNode` and `SelectNodes` are available on both `XPXmlDocument` and `XPXmlElement`. The initial API uses ordinary XPath expressions without a namespace-manager abstraction.
 
 ## Serialization
 
-`XmlStringify(documentOrNode)` serializes an XML document or node. `XmlDocument.Stringify()` is equivalent for documents.
+`XmlStringify(documentOrNode)` serializes an XML document or node. `XPXmlDocument.Stringify()` is equivalent for documents.
 
-`XmlDocument` has these formatting properties:
+`XPXmlDocument` has these formatting properties:
 
 - `Indent`, default `True`
 - `OmitXmlDeclaration`, default `True`
@@ -78,7 +78,7 @@ DTD validation intentionally accepts the DTD as a string. XPscript does not reso
 
 ```xpscript
 Dim dtd As String
-Dim result As XmlValidationResult
+Dim result As XPXmlValidationResult
 
 dtd = _
     "<!ELEMENT person (name,email)>" & Chr(10) & _
@@ -106,14 +106,14 @@ End If
 
 Validation results expose:
 
-- `XmlValidationResult.Valid`
-- `XmlValidationResult.Errors`
-- `XmlValidationErrorCollection.Count`
-- `XmlValidationErrorCollection.Get(index)`
-- `XmlValidationError.Message`
-- `XmlValidationError.Line`
-- `XmlValidationError.Column`
-- `XmlValidationError.Severity`
+- `XPXmlValidationResult.Valid`
+- `XPXmlValidationResult.Errors`
+- `XPXmlValidationErrorCollection.Count`
+- `XPXmlValidationErrorCollection.Get(index)`
+- `XPXmlValidationError.Message`
+- `XPXmlValidationError.Line`
+- `XPXmlValidationError.Column`
+- `XPXmlValidationError.Severity`
 
 Indexes in XML collections are zero-based.
 

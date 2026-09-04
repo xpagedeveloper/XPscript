@@ -4,12 +4,12 @@
 Option Declare
 
 Sub Main()
-    Dim http As New HttpClient
-    Dim response As HttpResponse
-    Dim document As JsonDocument
-    Dim obj As JsonObject
-    Dim nested As JsonObject
-    Dim formData As JsonObject
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
+    Dim document As XPJsonDocument
+    Dim obj As XPJsonObject
+    Dim nested As XPJsonObject
+    Dim formData As XPJsonObject
     Dim form As New UIForm("Customer")
     Dim url As String
 
@@ -59,7 +59,7 @@ Sub Main()
     Print "MANUAL_AFTER_DIRTY=" & CStr(form.IsDirty)
     Print "MANUAL_AFTER_DIRTY_COUNT=" & CStr(form.DirtyFields.Count)
 
-    Set formData = New JsonObject
+    Set formData = New XPJsonObject
     Call formData.Set("name", "JSON helper")
     Call formData.Set("age", 51)
     Set response = http.PostJson("http://127.0.0.1:18081/json", formData)

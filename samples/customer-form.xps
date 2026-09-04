@@ -5,7 +5,7 @@
 [Get]
 [Post]
 Sub Main()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("Customer", 720, 420, True)
     Dim grid As Variant
     Dim customerId As String

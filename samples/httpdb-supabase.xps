@@ -2,11 +2,11 @@
 Option Declare
 
 Sub Main()
-    Dim db As New HTTPDBSupabase("http://127.0.0.1:18082", "test-key")
-    Dim data As New JsonObject
-    Dim args As New JsonObject
+    Dim db As New XPHttpDbSupabase("http://127.0.0.1:18082", "test-key")
+    Dim data As New XPJsonObject
+    Dim args As New XPJsonObject
     Dim filter As String
-    Dim doc As JsonDocument
+    Dim doc As XPJsonDocument
 
     Call db.SetBearerToken("user-token")
     Call db.SetSchema("public")

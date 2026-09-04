@@ -18,7 +18,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [ ] Support column names and optional inferred/declared column types.
 - [ ] Support indexed row access and named-column access.
 - [ ] Support String, Boolean, Integer, Long, Double, Currency, Date, Empty and Null values where representable.
-- [ ] Support conversion to and from `JsonArray` / `JsonObject` for common row-object shapes.
+- [ ] Support conversion to and from `XPJsonArray` / `XPJsonObject` for common row-object shapes.
 - [ ] Support streaming/enumeration APIs for large files so the whole dataset does not need to be materialized.
 
 ## CSV read support
@@ -95,8 +95,8 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## JSON integration
 
-- [ ] Convert CSV rows to `JsonArray` of row objects using headers as property names.
-- [ ] Create CSV from `JsonArray` / row-object JSON.
+- [ ] Convert CSV rows to `XPJsonArray` of row objects using headers as property names.
+- [ ] Create CSV from `XPJsonArray` / row-object JSON.
 - [ ] Convert worksheet ranges to JSON.
 - [ ] Populate worksheet ranges from JSON.
 - [ ] Preserve missing versus empty values where possible and document unavoidable format differences.

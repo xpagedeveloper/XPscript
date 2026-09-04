@@ -107,11 +107,11 @@ Set response = ai.Complete()
 Call ai.ClearMessages()
 ```
 
-`GetMessages()` returns a cloned `JsonDocument`. A request can instead receive a `JsonArray` or a `JsonDocument` with an array root:
+`GetMessages()` returns a cloned `XPJsonDocument`. A request can instead receive a `XPJsonArray` or a `XPJsonDocument` with an array root:
 
 ```xpscript
-Dim messages As New JsonArray
-Dim message As New JsonObject
+Dim messages As New XPJsonArray
+Dim message As New XPJsonObject
 
 Call message.Set("role", "user")
 Call message.Set("content", "Hello")
@@ -162,8 +162,8 @@ Header names and values are validated. CR, LF and null characters are rejected. 
 | `Model` | Model returned by the provider. |
 | `Text` | Assistant text extracted from the response. |
 | `Content` | Alias for `Text`. |
-| `RawJson` | Complete provider JSON as a `JsonDocument`. Unknown properties are preserved. |
-| `Usage` | Provider usage object as a `JsonDocument`. |
+| `RawJson` | Complete provider JSON as a `XPJsonDocument`. Unknown properties are preserved. |
+| `Usage` | Provider usage object as a `XPJsonDocument`. |
 
 `ThrowOnHttpError` defaults to `True`. A non-success response then raises an error containing only the HTTP status code. Set it to `False` when the application needs to inspect a failed response object.
 
@@ -257,7 +257,7 @@ Provider endpoint references: [OpenAI Chat API](https://developers.openai.com/ap
 | `CollectStreamedResponse` | Controls whether streaming also builds `XPAiResponse.Text`. |
 | `ThrowOnHttpError` | Controls whether non-success HTTP responses raise an XPScript error. |
 | `AddMessage(role, content)` | Adds a system, user or assistant message. |
-| `GetMessages()` | Returns a cloned message array as `JsonDocument`. |
+| `GetMessages()` | Returns a cloned message array as `XPJsonDocument`. |
 | `ClearMessages()` | Removes all stored messages. |
 | `SetOption(name, value)` | Adds or replaces an extra request JSON property. |
 | `RemoveOption(name)` | Removes one extra request property. |

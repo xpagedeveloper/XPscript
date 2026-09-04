@@ -92,12 +92,12 @@ When using XPDB or XPAI, follow the exact constructor/member names shown by the 
 
 ## HTTP client security
 
-`HttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
+`XPHttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
 
 For a trusted application-controlled intranet or local endpoint, opt in on that client instance:
 
 ```xpscript
-Dim http As New HttpClient
+Dim http As New XPHttpClient
 http.AllowPrivateNetwork = True
 Set response = http.Get("http://127.0.0.1:8080/health")
 ```

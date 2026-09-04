@@ -7,8 +7,8 @@ CSV values are text. Parsing does not infer Integer, Boolean or Date values, so 
 ## Parse CSV
 
 ```xpscript
-Dim doc As CsvDocument
-Dim row As CsvRow
+Dim doc As XPCsvDocument
+Dim row As XPCsvRow
 
 Set doc = CsvParse(csvText, ";")
 Set row = doc.Rows[0]
@@ -18,10 +18,10 @@ Print doc.ColumnCount
 Print row.Get("name")
 ```
 
-`CsvDocument.Parse(text)` and `CsvParse(text)` use comma as the default delimiter. Pass `","` or `";"` explicitly when required:
+`XPCsvDocument.Parse(text)` and `CsvParse(text)` use comma as the default delimiter. Pass `","` or `";"` explicitly when required:
 
 ```xpscript
-Set doc = CsvDocument.Parse(csvText, ";")
+Set doc = XPCsvDocument.Parse(csvText, ";")
 ```
 
 Only comma and semicolon are accepted as delimiters.
@@ -45,7 +45,7 @@ End ForAll
 Rows are also indexed and iterable:
 
 ```xpscript
-Dim row As CsvRow
+Dim row As XPCsvRow
 
 Set row = doc.Rows[0]
 
@@ -57,7 +57,7 @@ End ForAll
 Each row exposes individual columns as an indexed and iterable collection:
 
 ```xpscript
-Dim column As CsvColumn
+Dim column As XPCsvColumn
 
 ForAll column In row.Columns
     Print CStr(column.Index) & " " & column.Name & " = " & column.Value
@@ -66,7 +66,7 @@ End ForAll
 Print row.Columns[0].Value
 ```
 
-`CsvColumn` exposes `Index`, `Name` and `Value`. `Name` is empty when `HasHeaders = False`.
+`XPCsvColumn` exposes `Index`, `Name` and `Value`. `Name` is empty when `HasHeaders = False`.
 
 The document exposes:
 
@@ -114,8 +114,8 @@ Call row.Set("name", "Anna")
 ## Build CSV
 
 ```xpscript
-Dim doc As New CsvDocument
-Dim row As CsvRow
+Dim doc As New XPCsvDocument
+Dim row As XPCsvRow
 
 doc.Delimiter = ";"
 
@@ -170,7 +170,7 @@ Set doc = CsvParseBytes(data, "windows-1252", ";")
 or:
 
 ```xpscript
-Set doc = CsvDocument.ParseBytes(data, "utf-8", ",")
+Set doc = XPCsvDocument.ParseBytes(data, "utf-8", ",")
 ```
 
 Supported encoding names are:
@@ -199,7 +199,7 @@ Characters that cannot be represented in Windows-1252 cause a trap-able runtime 
 
 ## API summary
 
-`CsvDocument`:
+`XPCsvDocument`:
 
 - `Headers`
 - `Rows`
@@ -222,11 +222,11 @@ Functions:
 
 Collections:
 
-- `CsvHeaderCollection`: `Count`, `Get(index)`, `ForAll`
-- `CsvRowCollection`: `Count`, `Get(index)`, `ForAll`
-- `CsvColumnCollection`: `Count`, `Get(index)`, `ForAll`
+- `XPCsvHeaderCollection`: `Count`, `Get(index)`, `ForAll`
+- `XPCsvRowCollection`: `Count`, `Get(index)`, `ForAll`
+- `XPCsvColumnCollection`: `Count`, `Get(index)`, `ForAll`
 
-`CsvRow`:
+`XPCsvRow`:
 
 - `Count`
 - `Columns`

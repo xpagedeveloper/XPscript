@@ -46,7 +46,7 @@ value = form.GetFieldValue("name")
 valueText = form.GetFieldValueString("name")
 ```
 
-`GetData()` returns the live bound JsonObject. `SetData()` replaces/rebinds the current form data using the same type rules as `BindData`.
+`GetData()` returns the live bound XPJsonObject. `SetData()` replaces/rebinds the current form data using the same type rules as `BindData`.
 
 ## Mutable field properties
 

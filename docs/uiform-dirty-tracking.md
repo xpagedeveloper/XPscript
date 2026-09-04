@@ -8,7 +8,7 @@ Use `IsDirty` to test whether the form data differs from the baseline.
 
 ```xpscript
 Dim form As New UIForm("Customer")
-Dim data As New JsonObject
+Dim data As New XPJsonObject
 
 Call data.Set("name", "Alice")
 Call form.AddTextField("name", "Name")
@@ -26,7 +26,7 @@ Setting a field to its existing value does not make the form dirty. If a changed
 
 ## DirtyFields
 
-`DirtyFields` returns a `JsonArray` containing the names of form fields whose current values differ from the baseline.
+`DirtyFields` returns a `XPJsonArray` containing the names of form fields whose current values differ from the baseline.
 
 ```xpscript
 Call form.SetFieldValue("name", "Bob")
@@ -54,13 +54,13 @@ Print CStr(form.IsDirty)
 
 ## HTTP load and save
 
-`HttpClient.LoadForm()` binds the loaded JSON object and therefore leaves the form clean.
+`XPHttpClient.LoadForm()` binds the loaded JSON object and therefore leaves the form clean.
 
-A successful `HttpClient.SaveForm()` or `HttpClient.PutForm()` automatically calls `MarkClean()` after the server returns a successful HTTP status. A failed HTTP response does not clear dirty state.
+A successful `XPHttpClient.SaveForm()` or `XPHttpClient.PutForm()` automatically calls `MarkClean()` after the server returns a successful HTTP status. A failed HTTP response does not clear dirty state.
 
 ```xpscript
-Dim http As New HttpClient
-Dim response As HttpResponse
+Dim http As New XPHttpClient
+Dim response As XPHttpResponse
 Dim form As New UIForm("Customer")
 
 Call form.AddTextField("name", "Name")

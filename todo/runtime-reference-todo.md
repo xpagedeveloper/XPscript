@@ -148,18 +148,18 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 
 ## 12. Native HTTP API
 
-- [x] `HttpClient`
+- [x] `XPHttpClient`
 - [x] `Get`, `Post`, `Put`, `Patch`, `Delete`
 - [x] `SetHeader`, `RemoveHeader`, `ClearHeaders`, `Timeout`
-- [x] `HttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
+- [x] `XPHttpResponse.StatusCode`, `StatusText`, `Body`, `ContentType`, `Headers`, `IsSuccess`
 - [x] end-to-end loopback regression: `samples/native-http-regression.xps`, `tests/native_http_server.py`; manual gate: `Native HTTP Compatibility`
 
 ## 13. Native JSON API
 
-- [x] `JsonDocument.Parse`, `JsonDocument.Stringify`
-- [x] `JsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
-- [x] `JsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
-- [x] `JsonElement.Type`, `JsonElement.Value`
+- [x] `XPJsonDocument.Parse`, `XPJsonDocument.Stringify`
+- [x] `XPJsonObject.Get`, `Set`, `Remove`, `Contains`, `Count`
+- [x] `XPJsonArray.Add`, `Get`, `Set`, `RemoveAt`, `Count`
+- [x] `XPJsonElement.Type`, `XPJsonElement.Value`
 - [x] `JsonParse`, `JsonStringify`, `JsonEncode`, `JsonDecode`
 - [x] end-to-end regression: `samples/native-json-regression.xps`; manual gate: `Native JSON Compatibility`; implementation uses .NET `System.Text.Json`
 

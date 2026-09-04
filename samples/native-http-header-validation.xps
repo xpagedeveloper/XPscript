@@ -1,8 +1,8 @@
 Option Declare
 
 Sub Main()
-    Dim http As New HttpClient
-    Dim response As HttpResponse
+    Dim http As New XPHttpClient
+    Dim response As XPHttpResponse
     Dim errCode As Integer
 
     On Error Resume Next

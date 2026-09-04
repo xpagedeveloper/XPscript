@@ -4,8 +4,8 @@
 Option Declare
 
 Sub Main()
-    Dim data As New JsonObject
-    Dim selected As New JsonArray
+    Dim data As New XPJsonObject
+    Dim selected As New XPJsonArray
     Dim form As New UIForm("Extended fields")
 
     Call selected.Add("admin")

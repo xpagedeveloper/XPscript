@@ -80,16 +80,16 @@ The header name is `X-XPS-CSRF-Token`. The hidden form field name is `__xps_csrf
 
 ## Browser WebAssembly
 
-The XPScript browser-WASM `HttpClient` handles the CSRF token flow automatically for unsafe same-origin requests.
+The XPScript browser-WASM `XPHttpClient` handles the CSRF token flow automatically for unsafe same-origin requests.
 
 The first unsafe request can receive HTTP 403 together with a fresh `X-XPS-CSRF-Token` response header. The browser-WASM client retains that token for the request flow and retries the request once with the token header. The Session cookie remains HttpOnly and is not read by WebAssembly code.
 
 Normal browser-WASM code therefore uses the ordinary HTTP API:
 
 ```xpscript
-Dim http As New HttpClient
-Dim payload As New JsonObject
-Dim result As HttpResponse
+Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
 
 Call payload.Set("name", "Example")
 Set result = http.PatchJson("/api/customer/42", payload)
@@ -136,6 +136,6 @@ XPScript also emits web security headers including `X-Content-Type-Options`, `X-
 1. Use UIForm normally. Its CSRF field is automatic.
 2. For manually rendered HTML forms, include `Server.CsrfToken()` as `__xps_csrf`.
 3. For custom same-origin JavaScript using Session cookies, send `X-XPS-CSRF-Token`.
-4. For XPScript browser-WASM `HttpClient`, use the normal methods. Challenge/retry is automatic.
+4. For XPScript browser-WASM `XPHttpClient`, use the normal methods. Challenge/retry is automatic.
 5. Bearer-only requests without cookies do not need CSRF.
 6. Never disable authorization, role checks or input validation because CSRF protection is enabled.

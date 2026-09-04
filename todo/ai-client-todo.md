@@ -31,7 +31,7 @@ Implement after the current UIForm work is complete and merged.
 ## Request model
 
 - [x] Support system, user and assistant messages.
-- [x] Add a reusable message collection object or JsonArray-backed message model.
+- [x] Add a reusable message collection object or XPJsonArray-backed message model.
 - [x] Support common optional parameters such as temperature and max output tokens.
 - [x] Allow additional provider-compatible JSON properties without requiring compiler changes.
 - [x] Reuse the existing native JSON API for structured request bodies where useful.

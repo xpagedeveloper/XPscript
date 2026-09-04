@@ -3,7 +3,7 @@
 
 Sub Main()
     Dim form As New UIForm("Color and Month")
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
 
     Call data.Set("color", "#336699")
     Call data.Set("month", "2026-08")

@@ -2,10 +2,10 @@ Option Declare
 
 Sub Main()
     Dim csv As String
-    Dim doc As CsvDocument
-    Dim row As CsvRow
-    Dim built As New CsvDocument
-    Dim builtRow As CsvRow
+    Dim doc As XPCsvDocument
+    Dim row As XPCsvRow
+    Dim built As New XPCsvDocument
+    Dim builtRow As XPCsvRow
     Dim headerCount As Integer
     Dim rowCount As Integer
     Dim columnCount As Integer

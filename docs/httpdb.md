@@ -2,25 +2,25 @@
 
 XPScript provides two native HTTP database clients for common server-side data access scenarios:
 
-- `HTTPDBSupabase` for Supabase Cloud or self-hosted Supabase.
-- `HTTPDBDominoRest` for self-hosted HCL Domino REST API servers.
+- `XPHttpDbSupabase` for Supabase Cloud or self-hosted Supabase.
+- `XPHttpDbDominoRest` for self-hosted HCL Domino REST API servers.
 
-Both clients use the native XPScript HTTP and JSON runtimes. They support configurable timeouts and return `JsonDocument` objects for JSON responses.
+Both clients use the native XPScript HTTP and JSON runtimes. They support configurable timeouts and return `XPJsonDocument` objects for JSON responses.
 
-## HTTPDBSupabase
+## XPHttpDbSupabase
 
 ### Create a client
 
 Cloud-hosted Supabase:
 
 ```xpscript
-Dim db As New HTTPDBSupabase("https://project-ref.supabase.co", apiKey)
+Dim db As New XPHttpDbSupabase("https://project-ref.supabase.co", apiKey)
 ```
 
 Self-hosted Supabase:
 
 ```xpscript
-Dim db As New HTTPDBSupabase("https://supabase.example.com", apiKey)
+Dim db As New XPHttpDbSupabase("https://supabase.example.com", apiKey)
 ```
 
 The base URL is not restricted to `supabase.co`. The client appends `/rest/v1` unless the supplied URL already ends with `/rest/v1`.
@@ -52,7 +52,7 @@ The client uses `Accept-Profile` and, for write operations, `Content-Profile`.
 ### Select
 
 ```xpscript
-Dim result As JsonDocument
+Dim result As XPJsonDocument
 
 Set result = db.Select("customers")
 ```
@@ -88,7 +88,7 @@ For advanced PostgREST filtering, pass the filter/query string directly.
 ### Insert
 
 ```xpscript
-Dim customer As New JsonObject
+Dim customer As New XPJsonObject
 Call customer.Set("name", "Ada")
 Call customer.Set("email", "ada@example.com")
 
@@ -133,7 +133,7 @@ A filter is mandatory.
 ### PostgreSQL RPC
 
 ```xpscript
-Dim args As New JsonObject
+Dim args As New XPJsonObject
 Call args.Set("customer_id", 42)
 
 Set result = db.Rpc("get_customer_summary", args)
@@ -209,14 +209,14 @@ This design keeps normal PostgREST access portable between Supabase Cloud and se
 
 Do not expose an unrestricted SQL endpoint to browsers or untrusted clients. Treat `ExecuteSql` and all database design helpers as privileged server-side operations.
 
-## HTTPDBDominoRest
+## XPHttpDbDominoRest
 
-`HTTPDBDominoRest` targets a self-hosted HCL Domino REST API server.
+`XPHttpDbDominoRest` targets a self-hosted HCL Domino REST API server.
 
 ### Create a client
 
 ```xpscript
-Dim domino As New HTTPDBDominoRest(
+Dim domino As New XPHttpDbDominoRest(
     "https://domino.example.com:8880",
     bearerToken,
     "customers"
@@ -261,12 +261,12 @@ Call domino.SetDataSource("sales")
 ### Create document
 
 ```xpscript
-Dim data As New JsonObject
+Dim data As New XPJsonObject
 Call data.Set("Form", "Customer")
 Call data.Set("Name", "Ada")
 Call data.Set("Email", "ada@example.com")
 
-Dim created As JsonDocument
+Dim created As XPJsonDocument
 Set created = domino.CreateDocument(data)
 ```
 
@@ -374,7 +374,7 @@ POST /api/v1/query?dataSource=<scope>&action=execute
 A custom JSON query payload can also be supplied:
 
 ```xpscript
-Dim query As New JsonObject
+Dim query As New XPJsonObject
 Call query.Set("query", "Form = 'Customer'")
 Call query.Set("viewRefresh", True)
 Call query.Set("noViews", False)

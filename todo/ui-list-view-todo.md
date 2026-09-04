@@ -26,7 +26,7 @@ Current capabilities include:
 ## Core API
 
 ```xps
-Dim rows As JsonArray
+Dim rows As XPJsonArray
 Dim list As New UIListView("Customers")
 
 Call list.BindData(rows)

@@ -33,8 +33,8 @@ Sub Main()
     Dim compatBase As String
     Dim ai As XPAi
     Dim response As XPAiResponse
-    Dim providerExtra As JsonObject
-    Dim http As New HttpClient
+    Dim providerExtra As XPJsonObject
+    Dim http As New XPHttpClient
     Dim httpRequest As Variant
     Dim retrievalTool As New AITool("retrieval")
     Dim mcpTool As New AITool("mcp")

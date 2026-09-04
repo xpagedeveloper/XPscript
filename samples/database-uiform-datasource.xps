@@ -1,15 +1,15 @@
 ' XPScript database/UI shared data-source regression
 ' Verifies that QueryArray binds directly to UIListView, multiple UIForms share
-' the same JsonObject, and fields not shown by either form survive SaveRow unchanged.
+' the same XPJsonObject, and fields not shown by either form survive SaveRow unchanged.
 
 Option Declare
 
 Sub Main()
     Dim db As New XPDBSQLite("database-uiform-datasource.db")
-    Dim insertValues As New JsonObject
-    Dim listRows As JsonArray
-    Dim customer As JsonObject
-    Dim saved As JsonObject
+    Dim insertValues As New XPJsonObject
+    Dim listRows As XPJsonArray
+    Dim customer As XPJsonObject
+    Dim saved As XPJsonObject
     Dim list As New UIListView("Customers")
     Dim generalForm As New UIForm("General")
     Dim addressForm As New UIForm("Address")
