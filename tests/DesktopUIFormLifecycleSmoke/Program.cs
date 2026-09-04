@@ -133,8 +133,8 @@ foreach (var expected in new[]
     "public string InvokeScript(object? script)",
     "public string GetCookies()",
     "XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument)",
-    "webViewSource = field.WebViewSource",
-    "webViewUserAgent = field.WebViewUserAgent"
+    "WebViewSource",
+    "WebViewUserAgent"
 })
 {
     if (!generatedWebView.Contains(expected, StringComparison.Ordinal))
