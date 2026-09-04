@@ -1,0 +1,38 @@
+name: Apply XP native prefixes
+
+on:
+  push:
+    branches:
+      - refactor/xp-native-prefixes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: refactor/xp-native-prefixes
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Apply public API renames
+        run: python scripts/apply-xp-native-prefixes.py
+      - name: Commit migration
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git reset -- .github/workflows/apply-xp-native-prefixes.yml scripts/apply-xp-native-prefixes.py
+          if git diff --cached --quiet; then
+            echo "No migration changes"
+            exit 0
+          fi
+          git commit -m "Prefix native XPscript objects with XP"
+          git push origin HEAD:refactor/xp-native-prefixes
