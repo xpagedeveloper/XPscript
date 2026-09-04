@@ -308,7 +308,7 @@ internal sealed class UIFormAccessibilityPostProcessor
     private static string AddFieldMessagesAndAnnouncement(string generated)
     {
         var start = FindRendererStart(generated);
-        var submitIndex = generated.IndexOf("html.Append(\"<button type=\\\"submit\\\"", start, StringComparison.Ordinal);
+        var submitIndex = FindSubmitIndex(generated, start);
         if (submitIndex < 0) throw new CompilerException("Unable to install UIForm accessibility runtime support (submit button).");
 
         const string closeMarker = "            html.Append(\"</div>\");";
@@ -324,7 +324,8 @@ internal sealed class UIFormAccessibilityPostProcessor
         generated = generated.Insert(fieldClose, fieldMessages);
 
         start = FindRendererStart(generated);
-        submitIndex = generated.IndexOf("html.Append(\"<button type=\\\"submit\\\"", start, StringComparison.Ordinal);
+        submitIndex = FindSubmitIndex(generated, start);
+        if (submitIndex < 0) throw new CompilerException("Unable to install UIForm accessibility runtime support (submit button after field messages).");
         var submitLineStart = generated.LastIndexOf('\n', Math.Max(start, submitIndex - 1));
         submitLineStart = submitLineStart < 0 ? submitIndex : submitLineStart + 1;
         var announcement = Block(
@@ -332,6 +333,18 @@ internal sealed class UIFormAccessibilityPostProcessor
             "            html.Append(\"<div class=\\\"xpscript-uiform-live\\\" aria-live=\\\"\").Append(_announcementPriority.Equals(\"Assertive\", StringComparison.OrdinalIgnoreCase) ? \"assertive\" : \"polite\").Append(\"\\\">\").Append(System.Net.WebUtility.HtmlEncode(_announcement)).Append(\"</div>\");",
             string.Empty);
         return generated.Insert(submitLineStart, announcement);
+    }
+
+    private static int FindSubmitIndex(string generated, int rendererStart)
+    {
+        var rendererEnd = generated.IndexOf("        return html.ToString();", rendererStart, StringComparison.Ordinal);
+        if (rendererEnd < 0) rendererEnd = generated.Length;
+        var markerIndex = generated.IndexOf("__xps_uiform_submit", rendererStart, StringComparison.Ordinal);
+        if (markerIndex < 0 || markerIndex >= rendererEnd) return -1;
+        var lineStart = generated.LastIndexOf('\n', Math.Max(rendererStart, markerIndex - 1));
+        lineStart = lineStart < rendererStart ? rendererStart : lineStart + 1;
+        var appendIndex = generated.IndexOf("html.Append(", lineStart, StringComparison.Ordinal);
+        return appendIndex >= lineStart && appendIndex < markerIndex ? appendIndex : markerIndex;
     }
 
     private static int FindRendererStart(string generated)
