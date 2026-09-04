@@ -1,6 +1,6 @@
 ---
 import type { DocEntry } from "../lib/docs";
-import { routeForEntry, titleForEntry } from "../lib/docs";
+import { relativeHrefForEntry, titleForEntry } from "../lib/docs";
 
 interface Props {
   entry: DocEntry;
@@ -8,8 +8,7 @@ interface Props {
 }
 
 const { entry, entries } = Astro.props;
-const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const hrefForEntry = (candidate: DocEntry) => `${base}${routeForEntry(candidate)}`;
+const hrefForEntry = (candidate: DocEntry) => relativeHrefForEntry(entry, candidate);
 
 const items = entry.data.type === "function-category"
   ? entries.filter((candidate) =>
