@@ -1,0 +1,67 @@
+name: Cleanup merged branches
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: cleanup-merged-branches
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Delete branches from merged pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          default_branch="${{ github.event.repository.default_branch }}"
+          page=1
+          branches_file="$(mktemp)"
+
+          while true; do
+            response="$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=${default_branch}&per_page=100&page=${page}")"
+            count="$(jq 'length' <<<"$response")"
+            if [ "$count" -eq 0 ]; then
+              break
+            fi
+
+            jq -r --arg default_branch "$default_branch" '
+              .[]
+              | select(.merged_at != null)
+              | select(.head.repo.full_name == .base.repo.full_name)
+              | .head.ref
+              | select(. != $default_branch)
+            ' <<<"$response" >> "$branches_file"
+
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+            page=$((page + 1))
+          done
+
+          sort -u "$branches_file" | while IFS= read -r branch; do
+            [ -z "$branch" ] && continue
+
+            if git ls-remote --exit-code --heads origin "refs/heads/${branch}" >/dev/null 2>&1; then
+              echo "Deleting merged branch: ${branch}"
+              git push origin --delete "$branch"
+            else
+              echo "Already gone: ${branch}"
+            fi
+          done
