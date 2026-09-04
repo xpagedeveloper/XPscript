@@ -183,6 +183,7 @@ internal sealed partial class XPScriptNotesNativeApi
         {
             var options = FtSearchReturnIdTable | (collection != 0 ? FtSearchSetCollection : 0);
             var limit = maximum <= 0 ? (ushort)0 : checked((ushort)Math.Min(maximum, ushort.MaxValue));
+            using var nativeStandardError = XPScriptRuntimeDebugTrace.SuppressNativeStandardErrorUnlessDetailed();
             var status = Resolve<FTSearchDelegate>("FTSearch")(db, ref searchHandle, collection, queryText.Pointer, options, limit, 0, out var count, 0, out results);
             if (status != 0)
             {

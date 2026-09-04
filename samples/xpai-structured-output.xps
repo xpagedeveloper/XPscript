@@ -1,0 +1,34 @@
+' XPAi prompt parts and structured result contract regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Class PrivacyAnswer
+    Public Answer As String
+    Public Confidence As Double
+End Class
+
+Sub Main()
+    Dim ai As XPAi
+    Dim contract As PrivacyAnswer
+
+    Set ai = New XPAi("https://api.example.com/v1/chat/completions", "test-key")
+    ai.Model = "example-model"
+    ai.SystemPrompt = "Return a concise structured answer."
+    ai.UserPrompt = "Explain privacy by design."
+
+    Set contract = New PrivacyAnswer()
+    ai.JsonSchemaName = "privacy_answer"
+    ai.JsonSchemaStrict = True
+    Call ai.SetResultClass(contract)
+
+    Print "SYSTEM=" & ai.SystemPrompt
+    Print "USER=" & ai.UserPrompt
+    Print "SCHEMA=" & CStr(ai.HasJsonSchema)
+
+    Call ai.ClearPrompt()
+    Call ai.ClearJsonSchema()
+    Call ai.Dispose()
+
+    Print "XPAI-STRUCTURED-COMPILE=OK"
+End Sub

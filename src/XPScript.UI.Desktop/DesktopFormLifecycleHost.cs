@@ -72,7 +72,8 @@ public static class DesktopFormLifecycleHost
             var label = Read(field, "label", name);
             var wrap = new StackPanel { Spacing = 4 };
             if (label.Length > 0 && !type.Equals("CheckBox", StringComparison.OrdinalIgnoreCase)) wrap.Children.Add(new TextBlock { Text = label });
-            var editor = CreateEditor(field, type, name, label);
+            var editor = CreateEditor(instanceId, field, type, name, label);
+            DesktopAccessibilityHost.ApplyField(field, editor, label);
             editors[name] = editor;
             wrap.Children.Add(editor);
             panel.Children.Add(wrap);
@@ -93,6 +94,8 @@ public static class DesktopFormLifecycleHost
         window.Closed += (_, _) =>
         {
             Windows.TryRemove(instanceId, out _);
+            DesktopWebViewHost.RemoveInstance(instanceId);
+            DesktopAccessibilityHost.Unregister(instanceId);
             if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);
         };
 
@@ -113,14 +116,25 @@ public static class DesktopFormLifecycleHost
             }
         }
 
+        window.Opened += (_, _) =>
+        {
+            DesktopAccessibilityHost.Register(instanceId, window, editors);
+            var initialFocus = Read(root, "initialFocus", string.Empty);
+            if (initialFocus.Length > 0 && editors.TryGetValue(initialFocus, out var initial)) initial.Focus();
+            else editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
+            var announcement = Read(root, "announcement", string.Empty);
+            if (announcement.Length > 0) DesktopAccessibilityHost.Announce(window, announcement, Read(root, "announcementPriority", "Polite"));
+        };
+
         window.Show();
         DesktopApplicationHost.SetProcessKeepAlive(true);
     }
 
-    private static Control CreateEditor(JsonElement field, string type, string name, string label)
+    private static Control CreateEditor(string instanceId, JsonElement field, string type, string name, string label)
     {
         var value = Read(field, "value", string.Empty);
         var enabled = ReadBool(field, "enabled", true);
+        if (type.Equals("WebView", StringComparison.OrdinalIgnoreCase)) return DesktopWebViewHost.Create(instanceId, name, Read(field, "webViewSource", "about:blank"), Read(field, "webViewHtml", string.Empty), Read(field, "webViewUserAgent", string.Empty), Read(field, "webViewBackground", string.Empty));
         if (type.Equals("CheckBox", StringComparison.OrdinalIgnoreCase))
             return new CheckBox { Content = label, IsChecked = value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1", IsEnabled = enabled };
         if (type is "Select" or "ListBox" or "MultiListBox")
@@ -135,6 +149,8 @@ public static class DesktopFormLifecycleHost
         }
         return new TextBox { Text = value, IsEnabled = enabled, IsReadOnly = ReadBool(field, "readOnly", false), AcceptsReturn = type.Equals("TextArea", StringComparison.OrdinalIgnoreCase) };
     }
+
+    public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);
 
     private static string ReadEditor(Control editor) => editor switch
     {

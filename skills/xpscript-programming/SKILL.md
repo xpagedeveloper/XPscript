@@ -14,7 +14,7 @@ When syntax or behavior is uncertain, consult these files in this order:
 2. `docs/api-reference.md` — runtime objects and higher-level APIs.
 3. `docs/forall-iteration.md` — the common `ForAll` iterable contract.
 4. `docs/file-io-reference.md` — filesystem and file I/O.
-5. Database-specific docs such as `docs/sqlite.md` and `docs/mssql.md`.
+5. Feature references such as `docs/native-xml.md`, `docs/sqlite.md` and `docs/mssql.md`.
 6. `samples/*.xps` and `demo/**/*.xps` — executable examples.
 7. Compiler/runtime implementation only when documentation is ambiguous.
 
@@ -90,6 +90,40 @@ Each instance must keep its own state.
 
 When using XPDB or XPAI, follow the exact constructor/member names shown by the current database/AI docs and samples. Never infer those signatures from older examples or another language.
 
+For XPAi structured output, prefer defining the desired result shape as an XPscript class and passing an instance to `SetResultClass` rather than hand-building JSON Schema. Public fields and public readable properties form the schema; private backing state is excluded. Use `SystemPrompt` and `UserPrompt` for the common two-part prompt shape, and use `SetJsonSchema` only when a raw provider-specific schema is required. See `docs/xpai-structured-output.md` and `samples/xpai-structured-output.xps`.
+
+## Native XML
+
+Use the native XML classes documented in `docs/native-xml.md`; do not infer MSXML, browser DOM, or .NET `XPXmlDocument` members that XPscript does not expose.
+
+Create documents with `New XPXmlDocument`, parse with `XPXmlDocument.Parse`, `XmlParse`, or a constructor string, and replace an existing document with `LoadXml`:
+
+```xpscript
+Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
+
+Set root = doc.AddRoot("people")
+Call root.SetAttribute("version", 1)
+Call root.AddElement("person", "Alice")
+```
+
+Use `XPXmlNode` navigation for `Parent`, `OwnerDocument`, `FirstChild`, `LastChild`, `PreviousSibling`, `NextSibling`, `ChildNodes`, `Clone`, `InsertBefore`, `InsertAfter`, `ReplaceWith`, `Remove` and `Delete`.
+
+Use `XPXmlElement` for element-specific operations such as `AddElement`, `PrependElement`, `AppendChild`, `PrependChild`, `GetElement`, `GetElements`, `GetDescendants`, `RemoveElement`, `RemoveElements`, `RemoveChildren`, `RemoveAll`, `SetAttribute`, `GetAttributeNode`, `RemoveAttribute` and `RemoveAllAttributes`.
+
+Attributes are first-class objects:
+
+```xpscript
+Dim attr As XPXmlAttribute
+Set attr = root.GetAttributeNode("version")
+attr.Value = "2"
+Call attr.Delete()
+```
+
+`XPXmlNodeCollection`, `XPXmlAttributeCollection` and `XPXmlValidationErrorCollection` support `ForAll`. XML collection indexes are zero-based.
+
+Normal XML parsing prohibits DTD processing and external entity resolution. Do not weaken that boundary. Internal DTD validation is available through `ValidateDTD`/`IsValidDTD`, but external `SYSTEM` and `PUBLIC` identifiers remain unsupported.
+
 ## HTTP client security
 
 `XPHttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
@@ -108,7 +142,7 @@ Do not enable `AllowPrivateNetwork` merely to make a user-supplied URL work. Req
 
 XPscript arrays use XPscript array semantics and support helpers such as `Array`, `ReDim`, `LBound`, `UBound`, `Join`, `Explode`, and array helper functions documented in the language reference.
 
-`ForAll` is the single first-class iteration model for supported iterable values. Use the same syntax for one-dimensional arrays, Lists, JSON arrays/enumerables, database row/result collections, filesystem arrays, other runtime enumerable values, and XPscript classes that expose an iterator.
+`ForAll` is the single first-class iteration model for supported iterable values. Use the same syntax for one-dimensional arrays, Lists, JSON arrays/enumerables, XML collections, database row/result collections, filesystem arrays, other runtime enumerable values, and XPscript classes that expose an iterator.
 
 ```xpscript
 files = Files("src", "*.xps", True)
@@ -340,7 +374,7 @@ XPscript targets Windows, Linux, and macOS. When writing portable programs:
 
 When asked to write an XPscript program:
 
-1. Identify whether the request needs plain language syntax, a runtime class, filesystem I/O, database access, AI, UI, web APIs, or native interop.
+1. Identify whether the request needs plain language syntax, a runtime class, filesystem I/O, database access, AI, UI, web APIs, XML, or native interop.
 2. Read the relevant current reference/sample if any API name or signature is uncertain.
 3. Prefer `Option Declare` and explicit types where practical.
 4. Instantiate every class with `New`; preserve independent per-instance state.
@@ -365,11 +399,13 @@ Before presenting code as valid XPscript, check:
 - File/directory recursion is bounded where appropriate.
 - Path behavior is portable where the program claims to be portable.
 - Charset names are explicit when encoding matters.
+- XML code uses the documented native DOM API rather than assumed MSXML/browser/.NET members.
+- XML parsing keeps DTD/external-entity resolution disabled outside the bounded internal-DTD validation API.
 - The code does not confuse legacy `FileCopy` with Boolean `CopyFile`.
 - The code does not use static `Path.*` calls for the instance-based `Path` class.
 
 ## Maintenance rule
 
-This file is a living LLM contract for XPscript. Any PR that changes user-visible language syntax, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, database/AI APIs, iteration behavior, or recommended idioms should review and update this file in the same PR when the change affects code generation guidance.
+This file is a living LLM contract for XPscript. Any PR that changes user-visible language syntax, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, database/AI/XML APIs, iteration behavior, or recommended idioms should review and update this file in the same PR when the change affects code generation guidance.
 
 Keep this skill concise and operational. Link to authoritative docs for exhaustive reference instead of duplicating the entire language manual.

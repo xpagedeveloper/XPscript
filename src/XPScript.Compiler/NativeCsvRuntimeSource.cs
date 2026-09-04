@@ -44,7 +44,7 @@ internal static class XPScriptNativeCsv
     public static string Stringify(object? value)
         => value is XPScriptCsvDocument document
             ? document.Stringify()
-            : throw new XPScriptRuntimeException(13, "CsvStringify requires CsvDocument.");
+            : throw new XPScriptRuntimeException(13, "CsvStringify requires XPCsvDocument.");
 
     public static string Escape(object? value) => Escape(value, ",");
 
@@ -296,7 +296,7 @@ internal sealed class XPScriptCsvDocument
     public XPScriptCsvRow AddRow(object? values)
     {
         if (values is not System.Collections.IEnumerable enumerable || values is string)
-            throw new XPScriptRuntimeException(13, "CsvDocument.AddRow requires an enumerable value.");
+            throw new XPScriptRuntimeException(13, "XPCsvDocument.AddRow requires an enumerable value.");
         var items = new System.Collections.Generic.List<string>();
         foreach (var value in enumerable) items.Add(XPScriptNativeCsv.ScalarText(value));
         if (ColumnCount != 0 && items.Count != ColumnCount)
@@ -304,6 +304,23 @@ internal sealed class XPScriptCsvDocument
         var row = new XPScriptCsvRow(this, items);
         _rows.Add(row);
         return row;
+    }
+
+    public void Sort(object? column)
+    {
+        var index = column is string name ? FindColumn(name) : XPScriptRuntime.CInt(column);
+        if (index < 0 || index >= ColumnCount)
+            throw new XPScriptRuntimeException(9, "CSV sort column index out of range.");
+
+        var comparer = System.Collections.Generic.Comparer<string>.Create(CompareAlphaNumeric);
+        var sorted = _rows
+            .Select((row, originalIndex) => new { Row = row, OriginalIndex = originalIndex })
+            .OrderBy(item => item.Row.GetAt(index), comparer)
+            .ThenBy(item => item.OriginalIndex)
+            .Select(item => item.Row)
+            .ToList();
+        _rows.Clear();
+        _rows.AddRange(sorted);
     }
 
     public string Stringify()
@@ -358,6 +375,52 @@ internal sealed class XPScriptCsvDocument
         var seen = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var header in headers)
             if (!seen.Add(header)) throw new XPScriptRuntimeException(5, "CSV header name '" + header + "' is duplicated.");
+    }
+
+    private static int CompareAlphaNumeric(string left, string right)
+    {
+        var leftIndex = 0;
+        var rightIndex = 0;
+        while (leftIndex < left.Length && rightIndex < right.Length)
+        {
+            var leftDigit = left[leftIndex] >= '0' && left[leftIndex] <= '9';
+            var rightDigit = right[rightIndex] >= '0' && right[rightIndex] <= '9';
+            if (leftDigit && rightDigit)
+            {
+                var leftStart = leftIndex;
+                var rightStart = rightIndex;
+                while (leftIndex < left.Length && left[leftIndex] >= '0' && left[leftIndex] <= '9') leftIndex++;
+                while (rightIndex < right.Length && right[rightIndex] >= '0' && right[rightIndex] <= '9') rightIndex++;
+
+                var leftSignificant = leftStart;
+                var rightSignificant = rightStart;
+                while (leftSignificant < leftIndex && left[leftSignificant] == '0') leftSignificant++;
+                while (rightSignificant < rightIndex && right[rightSignificant] == '0') rightSignificant++;
+                var leftLength = leftIndex - leftSignificant;
+                var rightLength = rightIndex - rightSignificant;
+                if (leftLength != rightLength) return leftLength.CompareTo(rightLength);
+
+                for (var i = 0; i < leftLength; i++)
+                {
+                    var result = left[leftSignificant + i].CompareTo(right[rightSignificant + i]);
+                    if (result != 0) return result;
+                }
+
+                var leftRunLength = leftIndex - leftStart;
+                var rightRunLength = rightIndex - rightStart;
+                if (leftRunLength != rightRunLength) return leftRunLength.CompareTo(rightRunLength);
+                continue;
+            }
+
+            var leftChar = char.ToUpperInvariant(left[leftIndex]);
+            var rightChar = char.ToUpperInvariant(right[rightIndex]);
+            if (leftChar != rightChar) return leftChar.CompareTo(rightChar);
+            leftIndex++;
+            rightIndex++;
+        }
+        if (leftIndex < left.Length) return 1;
+        if (rightIndex < right.Length) return -1;
+        return 0;
     }
 
     private static System.Collections.Generic.List<System.Collections.Generic.List<string>> ParseRecords(string text, char delimiter)

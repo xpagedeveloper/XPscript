@@ -4,6 +4,7 @@ using System.Net.Mail;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
@@ -72,9 +73,10 @@ public static class DesktopFormHost
                 fieldLabels[field.Name] = label;
                 fieldPanel.Children.Add(label);
             }
-            var editor = CreateEditor(field);
+            var editor = CreateEditor(request.InstanceId, field);
             ApplyEditorState(field, editor);
             ApplyFieldHints(field, editor);
+            DesktopAccessibilityHost.ApplyField(field, editor);
             editors[field.Name] = editor;
             fieldPanel.Children.Add(editor);
 
@@ -270,6 +272,7 @@ public static class DesktopFormHost
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
         {
+            foreach (var editor in editors.Values) DesktopAccessibilityHost.SetValidationError(editor, null);
             foreach (var errorText in fieldValidationTexts.Values)
             {
                 errorText.Text = string.Empty;
@@ -285,7 +288,7 @@ public static class DesktopFormHost
                     if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
                     if (!editors.TryGetValue(field.Name, out var editor)) continue;
                     optionOverrides.TryGetValue(field.Name, out var allowedOptions);
-                    var validationError = ValidateEditorValue(field, editor, allowedOptions);
+                    var validationError = field.ValidationError.Length > 0 ? field.ValidationError : ValidateEditorValue(field, editor, allowedOptions);
                     if (validationError is null) continue;
 
                     if (fieldValidationTexts.TryGetValue(field.Name, out var errorText))
@@ -293,12 +296,21 @@ public static class DesktopFormHost
                         errorText.Text = validationError;
                         errorText.IsVisible = true;
                     }
+                    DesktopAccessibilityHost.SetValidationError(editor, validationError);
                     firstInvalidEditor ??= editor;
                 }
 
                 if (firstInvalidEditor is not null)
                 {
-                    firstInvalidEditor.Focus();
+                    if (request.ValidationSummary)
+                    {
+                        var count = editors.Count(pair => DataValidationErrors.GetHasErrors(pair.Value));
+                        validationText.Text = count == 1 ? "There is 1 validation error." : $"There are {count} validation errors.";
+                        validationText.IsVisible = true;
+                        if (request.AnnounceValidationErrors)
+                            AutomationProperties.SetLiveSetting(validationText, AutomationLiveSetting.Assertive);
+                    }
+                    if (request.FocusFirstError) firstInvalidEditor.Focus();
                     return;
                 }
             }
@@ -320,7 +332,14 @@ public static class DesktopFormHost
             window.Close();
         };
         cancel.Click += (_, _) => { result = EmptyResult("Cancel"); window.Close(); };
-        window.Closed += (_, _) => loop.Continue = false;
+        window.Closed += (_, _) => { DesktopWebViewHost.RemoveInstance(request.InstanceId); DesktopAccessibilityHost.Unregister(request.InstanceId); loop.Continue = false; };
+        window.Opened += (_, _) =>
+        {
+            DesktopAccessibilityHost.Register(request.InstanceId, window, editors);
+            if (request.Announcement.Length > 0) DesktopAccessibilityHost.Announce(window, request.Announcement, request.AnnouncementPriority);
+            if (request.InitialFocus.Length > 0 && editors.TryGetValue(request.InitialFocus, out var initial)) initial.Focus();
+            else editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
+        };
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
         return result ?? EmptyResult("Cancel");
@@ -388,7 +407,7 @@ public static class DesktopFormHost
         }
     }
 
-    private static Control CreateEditor(DesktopFormField field)
+    private static Control CreateEditor(string instanceId, DesktopFormField field)
     {
         var value = field.Value ?? string.Empty;
         return field.Type switch
@@ -400,6 +419,7 @@ public static class DesktopFormHost
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
+            "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
     }
@@ -574,6 +594,8 @@ public static class DesktopFormHost
         }
         return null;
     }
+
+    public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);
 
     private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
     private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;

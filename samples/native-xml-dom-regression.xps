@@ -1,0 +1,154 @@
+' Native XML DOM creation, navigation and mutation regression
+' (c) xpagedeveloper.com 2026
+
+Option Declare
+
+Sub Main()
+    Dim doc As New XPXmlDocument
+    Dim parsedDoc As New XPXmlDocument("<catalog><item id=""a"">one</item><item id=""b"">two</item></catalog>")
+    Dim ownerDoc As XPXmlDocument
+    Dim root As XPXmlElement
+    Dim first As XPXmlElement
+    Dim second As XPXmlElement
+    Dim replacement As XPXmlElement
+    Dim node As XPXmlNode
+    Dim nodes As XPXmlNodeCollection
+    Dim attrs As XPXmlAttributeCollection
+    Dim attr As XPXmlAttribute
+    Dim count As Integer
+
+    If doc.HasRoot Then Error 9801, "New XPXmlDocument should be empty"
+
+    Set root = doc.AddRoot("people")
+    If Not doc.HasRoot Then Error 9802, "AddRoot did not create root"
+    If root.Name <> "people" Then Error 9803, "DocumentElement mismatch"
+
+    Call root.SetAttribute("version", 1)
+    Call root.SetAttribute("mode", "test")
+    If root.AttributeCount <> 2 Then Error 9804, "AttributeCount mismatch"
+    Set attrs = root.Attributes
+    If attrs.Count <> 2 Then Error 9805, "Attributes collection mismatch"
+    If Not attrs.Has("version") Then Error 9806, "Attributes.Has failed"
+    Set attr = attrs.Get("version")
+    If attr.Value <> "1" Then Error 9807, "Attribute value mismatch"
+    attr.Value = "2"
+    If root.GetAttribute("version") <> "2" Then Error 9808, "Attribute mutation failed"
+
+    Set first = root.AddElement("person")
+    Call first.SetAttribute("id", "1")
+    Call first.AddElement("name", "Alice")
+    Call first.AddComment("first")
+
+    Set second = root.AddElement("person")
+    Call second.SetAttribute("id", "2")
+    Call second.AddElement("name", "Bob")
+
+    If root.ElementCount <> 2 Then Error 9809, "ElementCount mismatch"
+    Set node = root.FirstChild
+    If node.Name <> "person" Then Error 9810, "FirstChild navigation failed"
+    Set node = first.NextSibling
+    If node.Name <> "person" Then Error 9811, "NextSibling navigation failed"
+    Set node = second.PreviousSibling
+    If node.Name <> "person" Then Error 9812, "PreviousSibling navigation failed"
+    Set node = first.Parent
+    If node.Name <> "people" Then Error 9813, "Parent navigation failed"
+    Set ownerDoc = first.OwnerDocument
+    Set node = ownerDoc.DocumentElement
+    If node.Name <> "people" Then Error 9814, "OwnerDocument navigation failed"
+
+    Set nodes = doc.SelectNodes("/people/person")
+    If nodes.Count <> 2 Then Error 9815, "XPath SelectNodes failed"
+    Set node = nodes.First
+    If node.GetAttribute("id") <> "1" Then Error 9816, "XPXmlNodeCollection.First failed"
+    Set node = nodes.Last
+    If node.GetAttribute("id") <> "2" Then Error 9817, "XPXmlNodeCollection.Last failed"
+
+    count = 0
+    ForAll xmlItem In nodes
+        count = count + 1
+    End ForAll
+    If count <> 2 Then Error 9818, "XPXmlNodeCollection ForAll failed"
+
+    Set replacement = doc.CreateElement("person")
+    Call replacement.SetAttribute("id", "3")
+    Call replacement.AddElement("name", "Carol")
+    Set node = second.ReplaceWith(replacement)
+    If node.GetAttribute("id") <> "3" Then Error 9819, "ReplaceWith failed"
+
+    Set replacement = doc.CreateElement("person")
+    Call replacement.SetAttribute("id", "0")
+    Set node = first.InsertBefore(replacement)
+    Set nodes = root.Elements
+    Set node = nodes.First
+    If node.GetAttribute("id") <> "0" Then Error 9820, "InsertBefore failed"
+
+    Set replacement = doc.CreateElement("person")
+    Call replacement.SetAttribute("id", "4")
+    Set nodes = root.Elements
+    Set node = nodes.Last
+    Set node = node.InsertAfter(replacement)
+    Set nodes = root.Elements
+    Set node = nodes.Last
+    If node.GetAttribute("id") <> "4" Then Error 9821, "InsertAfter failed"
+
+    If Not root.RemoveElement("person") Then Error 9822, "RemoveElement failed"
+    If root.ElementCount <> 3 Then Error 9823, "RemoveElement count mismatch"
+    If root.RemoveElements("person") <> 3 Then Error 9824, "RemoveElements failed"
+    If root.ElementCount <> 0 Then Error 9825, "RemoveElements did not clear matches"
+
+    Set first = root.PrependElement("first", "value")
+    Set second = root.AddElement("second", "value")
+    Set node = doc.CreateComment("comment")
+    Call root.AppendChild(node)
+    Set node = doc.CreateCData("raw <xml>")
+    Call root.AppendChild(node)
+    Set node = doc.CreateProcessingInstruction("test", "value=1")
+    Call root.PrependChild(node)
+    If Not root.HasChildNodes Then Error 9826, "HasChildNodes failed"
+    If root.ChildCount < 5 Then Error 9827, "ChildCount failed"
+
+    Set node = first.Clone()
+    Call root.AppendChild(node)
+    Set nodes = root.GetElements("first")
+    If nodes.Count <> 2 Then Error 9828, "Clone/AppendChild failed"
+
+    Call root.SetAttribute("temporary", "yes")
+    If Not root.RemoveAttribute("temporary") Then Error 9829, "RemoveAttribute failed"
+    If root.RemoveAttribute("temporary") Then Error 9830, "RemoveAttribute should report missing"
+
+    Call root.SetAttribute("delete-me", "yes")
+    Set attr = root.GetAttributeNode("delete-me")
+    If Not attr.Delete() Then Error 9831, "XPXmlAttribute.Delete failed"
+    If root.HasAttribute("delete-me") Then Error 9832, "Deleted attribute remains"
+
+    Set root = parsedDoc.DocumentElement
+    If root.Name <> "catalog" Then Error 9833, "XPXmlDocument constructor parse failed"
+    Set nodes = parsedDoc.SelectNodes("/catalog/item")
+    If nodes.Count <> 2 Then Error 9834, "Parsed navigation failed"
+
+    Call doc.LoadXml("<loaded><child>ok</child></loaded>")
+    Set root = doc.DocumentElement
+    If root.Name <> "loaded" Then Error 9835, "LoadXml failed"
+    Set first = root.GetElement("child")
+    If first.Value <> "ok" Then Error 9836, "LoadXml content failed"
+    If Not doc.RemoveRoot() Then Error 9837, "RemoveRoot failed"
+    If doc.HasRoot Then Error 9838, "RemoveRoot did not clear root"
+
+    Set root = doc.AddRoot("final")
+    Call root.SetAttribute("a", "1")
+    Call root.AddElement("child", "ok")
+    Call root.RemoveAllAttributes()
+    If root.AttributeCount <> 0 Then Error 9839, "RemoveAllAttributes failed"
+    Call root.RemoveChildren()
+    If root.ChildCount <> 0 Then Error 9840, "RemoveChildren failed"
+
+    Call root.SetAttribute("a", "1")
+    Call root.AddElement("child", "ok")
+    Call root.RemoveAll()
+    If root.AttributeCount <> 0 Or root.ChildCount <> 0 Then Error 9841, "RemoveAll failed"
+
+    Call doc.Clear()
+    If doc.HasRoot Then Error 9842, "Clear failed"
+
+    Print "NATIVE-XML-DOM=OK"
+End Sub

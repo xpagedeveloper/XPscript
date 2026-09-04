@@ -184,6 +184,32 @@ internal static class LSOperatorArrayRuntime
         return FromValues(result, array.ElementType, array.LBound());
     }
 
+    public static LSArray ArraySort(object? sourceArray)
+    {
+        var array = RequireOneDimensional(sourceArray);
+        var values = Values(array).ToList();
+        var comparison = _compareNoCase ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture;
+        switch (array.ElementType.ToLowerInvariant())
+        {
+            case "string":
+            case "date":
+                values.Sort((left, right) => string.Compare(XPScriptRuntime.CStr(left), XPScriptRuntime.CStr(right), comparison));
+                break;
+            case "integer":
+                values.Sort((left, right) => XPScriptRuntime.CInt(left).CompareTo(XPScriptRuntime.CInt(right)));
+                break;
+            case "long":
+                values.Sort((left, right) => XPScriptRuntime.CLng(left).CompareTo(XPScriptRuntime.CLng(right)));
+                break;
+            case "double":
+                values.Sort((left, right) => XPScriptRuntime.CDbl(left).CompareTo(XPScriptRuntime.CDbl(right)));
+                break;
+            default:
+                throw new InvalidOperationException("ArraySort supports one-dimensional String, Date, Integer, Long, and Double arrays.");
+        }
+        return FromValues(values, array.ElementType, array.LBound());
+    }
+
     public static LSArray ArraySplice(object? sourceArray, object? start) => ArraySplice(sourceArray, start, int.MaxValue, Array.Empty<object?>());
     public static LSArray ArraySplice(object? sourceArray, object? start, object? deleteCount) => ArraySplice(sourceArray, start, deleteCount, Array.Empty<object?>());
     public static LSArray ArraySplice(object? sourceArray, object? start, object? deleteCount, params object?[] items)

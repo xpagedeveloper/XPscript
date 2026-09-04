@@ -112,7 +112,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
             }
             catch (XPScriptRuntimeException ex)
             {
-                Console.Error.WriteLine("DEBUG NSFDbOpen failed server=" + server + " file=" + file + " networkPath=" + (path == 0 ? "<local>" : FromLmbcsZeroTerminated(path, 4095)) + " error=" + ex.Message);
+                XPScriptRuntimeDebugTrace.WriteLine("DEBUG NSFDbOpen failed server=" + server + " file=" + file + " networkPath=" + (path == 0 ? "<local>" : FromLmbcsZeroTerminated(path, 4095)) + " error=" + ex.Message);
                 throw;
             }
         }
