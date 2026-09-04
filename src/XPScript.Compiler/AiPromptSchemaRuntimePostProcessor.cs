@@ -176,11 +176,12 @@ internal sealed class AiPromptSchemaRuntimePostProcessor
         if (type == typeof(float) || type == typeof(double) || type == typeof(decimal)) return SchemaType("number");
         if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
             return new System.Text.Json.Nodes.JsonObject { ["type"] = "string", ["format"] = "date-time" };
-        if (type.IsEnum) return new System.Text.Json.Nodes.JsonObject
+        if (type.IsEnum)
         {
-            ["type"] = "string",
-            ["enum"] = new System.Text.Json.Nodes.JsonArray(type.GetNames().Select(name => (System.Text.Json.Nodes.JsonNode?)name).ToArray())
-        };
+            var enumValues = new System.Text.Json.Nodes.JsonArray();
+            foreach (var enumName in Enum.GetNames(type)) enumValues.Add(enumName);
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "string", ["enum"] = enumValues };
+        }
         if (type.IsArray)
             return new System.Text.Json.Nodes.JsonObject
             {
