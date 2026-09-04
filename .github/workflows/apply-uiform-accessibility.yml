@@ -1,0 +1,28 @@
+name: Apply UIForm accessibility implementation
+
+on:
+  push:
+    branches:
+      - feature/uiform-accessibility
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Implement UIForm accessibility API'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feature/uiform-accessibility
+      - name: Apply implementation
+        run: python scripts/apply-uiform-accessibility.py
+      - name: Commit implementation
+        run: |
+          git checkout -- .github/workflows/apply-uiform-accessibility.yml scripts/apply-uiform-accessibility.py
+          git config user.name "xpagedeveloper"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement UIForm accessibility API"
+          git push origin HEAD:feature/uiform-accessibility
