@@ -44,6 +44,8 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify desktop UIForm bridge
+        run: dotnet run --project ./tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
       - name: Verify OpenAPI unified CLI generate
