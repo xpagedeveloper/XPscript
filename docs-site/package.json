@@ -1,0 +1,14 @@
+{
+  "name": "xpscript-docs-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "docs:audit": "node ./scripts/audit-docs.mjs"
+  },
+  "dependencies": {
+    "astro": "^6.0.0"
+  }
+}
