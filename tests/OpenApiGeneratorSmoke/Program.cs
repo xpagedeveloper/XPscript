@@ -22,6 +22,7 @@ foreach (var marker in new[]
     "Public Class GetPetRequest",
     "Public Class GetPetResponse",
     "Function HandleGetPet(request As GetPetRequest) As GetPetResponse",
+    "Function HandleCreatePet(request As CreatePetRequest) As CreatePetResponse",
     "Dim request As GetPetRequest",
     "Set request = New GetPetRequest",
     "Dim result As GetPetResponse",
@@ -83,19 +84,40 @@ try
             throw new Exception("Generated XPScript did not compile into the expected REST routes.");
     }
 
-    const string originalHandlerTail = "    result.StatusCode = 501\n    HandleGetPet = result";
-    const string editedHandlerTail = "    ' USER HANDLER CODE MUST SURVIVE REIMPORT\n    result.StatusCode = 200\n    result.Data = \"custom\"\n    HandleGetPet = result";
-    var userEdited = result.Source.Replace(originalHandlerTail, editedHandlerTail, StringComparison.Ordinal);
+    const string getPetOriginal = "    result.StatusCode = 501\n    HandleGetPet = result";
+    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    HandleGetPet = result";
+    const string createPetOriginal = "    result.StatusCode = 501\n    HandleCreatePet = result";
+    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    HandleCreatePet = result";
 
-    if (!userEdited.Contains("USER HANDLER CODE MUST SURVIVE REIMPORT", StringComparison.Ordinal))
-        throw new Exception("Smoke setup failed to create user-owned handler edit.");
+    var userEdited = result.Source
+        .Replace(getPetOriginal, getPetEdited, StringComparison.Ordinal)
+        .Replace(createPetOriginal, createPetEdited, StringComparison.Ordinal);
+
+    foreach (var printMarker in new[]
+    {
+        "Print \"fråga funktionen GetPet\"",
+        "Print \"fråga funktionen CreatePet\""
+    })
+    {
+        if (!userEdited.Contains(printMarker, StringComparison.Ordinal))
+            throw new Exception("Smoke setup failed to add generated handler print line: " + printMarker);
+    }
+
+    await File.WriteAllTextAsync(sourcePath, userEdited);
+    await using (var editedUnit = await compiler.CompileAsync(sourcePath, root))
+    {
+        if (!editedUnit.Routes.ContainsKey("EndpointGetPet") || !editedUnit.Routes.ContainsKey("EndpointCreatePet"))
+            throw new Exception("Manually edited generated XPScript did not compile before reimport.");
+    }
 
     var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
 
     foreach (var preserved in new[]
     {
-        "' USER HANDLER CODE MUST SURVIVE REIMPORT",
-        "result.Data = \"custom\"",
+        "Print \"fråga funktionen GetPet\"",
+        "Print \"fråga funktionen CreatePet\"",
+        "result.Data = \"custom-get\"",
+        "result.Data = \"custom-create\"",
         "Public name As String",
         "Sub EndpointGetPet([FromRoute:\"petId\"] pPetId As Long, [FromQuery:\"includeHistory\"] pIncludeHistory As Boolean, [FromHeader:\"X-Request-Id\"] pXRequestId As String)"
     })
@@ -107,7 +129,9 @@ try
     foreach (var added in new[]
     {
         "Public microchip As String",
+        "Public status As String",
         "Public source As String",
+        "Public externalId As String",
         "Public traceId As String",
         "Public Expand As String",
         "Public Class UpdatePet",
@@ -115,7 +139,13 @@ try
         "Public Class UpdatePetResponse",
         "Function HandleUpdatePet(request As UpdatePetRequest) As UpdatePetResponse",
         "Sub EndpointUpdatePet(",
-        "Sub WriteUpdatePetResponse(result As UpdatePetResponse)"
+        "Function HandleListPets(request As ListPetsRequest) As ListPetsResponse",
+        "Sub EndpointListPets(",
+        "Function HandleDeletePet(request As DeletePetRequest) As DeletePetResponse",
+        "Sub EndpointDeletePet(",
+        "Sub WriteUpdatePetResponse(result As UpdatePetResponse)",
+        "Sub WriteListPetsResponse(result As ListPetsResponse)",
+        "Sub WriteDeletePetResponse(result As DeletePetResponse)"
     })
     {
         if (!importResult.Source.Contains(added, StringComparison.Ordinal))
@@ -133,16 +163,27 @@ try
     await File.WriteAllTextAsync(importedPath, importResult.Source);
     await using (var importedUnit = await compiler.CompileAsync(importedPath, root))
     {
-        if (!importedUnit.Routes.ContainsKey("EndpointGetPet") ||
-            !importedUnit.Routes.ContainsKey("EndpointCreatePet") ||
-            !importedUnit.Routes.ContainsKey("EndpointUpdatePet"))
-            throw new Exception("Additively imported XPScript did not compile into all expected REST routes.");
+        foreach (var route in new[]
+        {
+            "EndpointGetPet",
+            "EndpointCreatePet",
+            "EndpointUpdatePet",
+            "EndpointListPets",
+            "EndpointDeletePet"
+        })
+        {
+            if (!importedUnit.Routes.ContainsKey(route))
+                throw new Exception("Additively imported XPScript did not compile expected REST route: " + route);
+        }
     }
 
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
     Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-PRESERVE=OK");
+    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-NEW-OPERATIONS=OK");
     Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-COMPILE=OK");
 }
 finally

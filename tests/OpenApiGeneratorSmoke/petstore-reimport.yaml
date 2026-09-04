@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Pet Store Generator Reimport Smoke
-  version: 1.1.0
+  version: 1.2.0
 paths:
   /pets/{petId}:
     get:
@@ -63,7 +63,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
+    delete:
+      operationId: deletePet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Pet deleted
   /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Pets returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
     post:
       operationId: createPet
       requestBody:
@@ -102,6 +132,8 @@ components:
         microchip:
           type: string
           maxLength: 64
+        status:
+          type: string
     CreatePet:
       type: object
       required: [name]
@@ -114,6 +146,8 @@ components:
           format: email
         source:
           type: string
+        externalId:
+          type: string
     UpdatePet:
       type: object
       properties:
@@ -123,6 +157,8 @@ components:
         ownerEmail:
           type: [string, 'null']
           format: email
+        status:
+          type: string
     ApiError:
       type: object
       required: [message]
