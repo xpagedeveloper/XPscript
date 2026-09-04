@@ -79,7 +79,7 @@ public static class DesktopAccessibilityHost
             field.AccessibilityHidden,
             field.Focusable,
             field.IsTabStop,
-            field.TabIndex,
+            field.TabIndex ?? 0,
             field.AccessKey,
             field.HotKey,
             field.Required);
