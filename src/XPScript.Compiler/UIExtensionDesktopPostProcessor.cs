@@ -158,12 +158,20 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
+        replaced = NormalizeAccessibilityRequestMarkers(replaced);
         replaced = new UIFormAccessibilityPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
 
     private static string NormalizeLineEndings(string value)
         => value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private static string NormalizeAccessibilityRequestMarkers(string generated)
+        => Regex.Replace(
+            generated,
+            @"(?m)^[ \t]*resizable\s*=\s*form\.Resizable\s*,[ \t]*$",
+            "            resizable = form.Resizable,",
+            RegexOptions.CultureInvariant);
 
     private static string HardenWebBridgeLookup(string generated)
     {
