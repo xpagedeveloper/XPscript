@@ -2,7 +2,7 @@ name: Documentation site
 
 on:
   push:
-    branches: [main]
+    branches: [main, docs/astro-foundation]
     paths:
       - 'docs/**'
       - 'docs-site/**'
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   docs-site:
@@ -40,3 +40,40 @@ jobs:
 
       - name: Build static documentation
         run: npm run build
+
+      - name: Publish branch preview files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/astro-foundation'
+        working-directory: .
+        run: |
+          rm -rf docs-preview
+          mkdir -p docs-preview
+          cp -R docs-site/dist/. docs-preview/
+          touch docs-preview/.nojekyll
+          cat > docs-preview/README.md <<'EOF'
+          # Generated documentation preview
+
+          This directory is generated from `docs/` by the Astro documentation build on the `docs/astro-foundation` branch.
+
+          Do not edit these files manually. They are temporary review output and should be removed before the documentation-site migration is merged.
+
+          Useful generated pages:
+
+          - `functions/index.html`
+          - `functions/string/index.html`
+          - `functions/string/len/index.html`
+          - `functions/string/mid/index.html`
+          - `functions/string/replace/index.html`
+          - `functions/string/strtoken/index.html`
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f docs-preview
+
+          if git diff --cached --quiet; then
+            echo "Generated preview is already current."
+            exit 0
+          fi
+
+          git commit -m "Update generated documentation preview"
+          git push origin HEAD:docs/astro-foundation
