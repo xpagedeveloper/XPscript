@@ -177,9 +177,9 @@ internal sealed class UIFormAccessibilityPostProcessor
 
         generated = ReplaceOnceRequired(
             generated,
-            "        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);\n        _fields.Add(field);",
+            "        var field = new XPScriptUIField(this, fieldName, XPScriptRuntime.CStr(label), type);\n        _fields.Add(field);",
             Block(
-                "        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);",
+                "        var field = new XPScriptUIField(this, fieldName, XPScriptRuntime.CStr(label), type);",
                 "        field.AccessibilityFocusHandler = fieldToFocus => Focus(fieldToFocus);",
                 "        field.AccessibilityFocusQuery = fieldToQuery => FocusedField.Equals(fieldToQuery, StringComparison.OrdinalIgnoreCase);",
                 "        _fields.Add(field);"));
