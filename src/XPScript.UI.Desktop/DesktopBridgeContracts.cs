@@ -115,6 +115,7 @@ public static class XpsUIDesktopRuntimeBridge
             ?? throw new InvalidOperationException("Desktop UIForm request is empty.");
 
         ApplyTheme(request.Theme);
+        DesktopAccessibilityHost.ConfigureDefaultButtons(request.InstanceId, request.ShowDefaultButtons);
 
         var fields = request.Fields.Select(field => field.Type switch
         {
