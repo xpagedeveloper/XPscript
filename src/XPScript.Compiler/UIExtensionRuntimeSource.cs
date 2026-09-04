@@ -38,8 +38,15 @@ internal static class XPScriptUI
 
 internal sealed class XPScriptUIField
 {
-    internal XPScriptUIField(string name, string label, string type)
+    private readonly XPScriptUIForm _owner;
+    private string _webViewSource = "about:blank";
+    private string _webViewHtml = string.Empty;
+    private string _webViewUserAgent = string.Empty;
+    private string _webViewBackground = string.Empty;
+
+    internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
+        _owner = owner;
         Name = name;
         Label = label;
         Type = type;
@@ -54,6 +61,71 @@ internal sealed class XPScriptUIField
     public decimal? Minimum { get; set; }
     public decimal? Maximum { get; set; }
     public List<string> Options { get; } = [];
+
+    public string Source
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
+        set { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(value); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+    }
+    public string Html
+    {
+        get { EnsureWebView(); return _webViewHtml; }
+        set { EnsureWebView(); _webViewHtml = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("html", _webViewHtml); }
+    }
+    public string UserAgent
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("useragent:get", null) : _webViewUserAgent;
+        set { EnsureWebView(); _webViewUserAgent = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("useragent:set", _webViewUserAgent); }
+    }
+    public string Background
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("background:get", null) : _webViewBackground;
+        set { EnsureWebView(); _webViewBackground = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("background:set", _webViewBackground); }
+    }
+    public bool CanGoBack => Type == "WebView" && _owner.Visible && WebViewCommand("cangoback", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    public bool CanGoForward => Type == "WebView" && _owner.Visible && WebViewCommand("cangoforward", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    public string AdapterInfo => Type == "WebView" && _owner.Visible ? WebViewCommand("adapterinfo", null) : string.Empty;
+    public string PlatformHandle => Type == "WebView" && _owner.Visible ? WebViewCommand("platformhandle", null) : string.Empty;
+
+    public void Navigate(object? url) { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(XPScriptRuntime.CStr(url)); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+    public void NavigateToString(object? html) { EnsureWebView(); _webViewHtml = XPScriptRuntime.CStr(html); if (_owner.Visible) _ = WebViewCommand("html", _webViewHtml); }
+    public string InvokeScript(object? script) { EnsureWebView(); return WebViewCommand("script", XPScriptRuntime.CStr(script)); }
+    public bool GoBack() { EnsureWebView(); return WebViewCommand("back", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool GoForward() { EnsureWebView(); return WebViewCommand("forward", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Refresh() { EnsureWebView(); return WebViewCommand("refresh", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Stop() { EnsureWebView(); return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public void ShowPrintUI() { EnsureWebView(); _ = WebViewCommand("print", null); }
+    public void PrintToPdf(object? path) { EnsureWebView(); _ = WebViewCommand("pdf", XPScriptRuntime.CStr(path)); }
+    public void Copy() { EnsureWebView(); _ = WebViewCommand("copy", null); }
+    public void Cut() { EnsureWebView(); _ = WebViewCommand("cut", null); }
+    public void Paste() { EnsureWebView(); _ = WebViewCommand("paste", null); }
+    public void SelectAll() { EnsureWebView(); _ = WebViewCommand("selectall", null); }
+    public void Undo() { EnsureWebView(); _ = WebViewCommand("undo", null); }
+    public void Redo() { EnsureWebView(); _ = WebViewCommand("redo", null); }
+    public string GetCookies() { EnsureWebView(); return WebViewCommand("cookies:get", null); }
+    public void SetCookie(object? name, object? value, object? domain, object? path) { EnsureWebView(); _ = WebViewCommand("cookies:set", System.Text.Json.JsonSerializer.Serialize(new { name = XPScriptRuntime.CStr(name), value = XPScriptRuntime.CStr(value), domain = XPScriptRuntime.CStr(domain), path = XPScriptRuntime.CStr(path) })); }
+    public void DeleteCookie(object? name, object? domain, object? path) { EnsureWebView(); _ = WebViewCommand("cookies:delete", System.Text.Json.JsonSerializer.Serialize(new { name = XPScriptRuntime.CStr(name), domain = XPScriptRuntime.CStr(domain), path = XPScriptRuntime.CStr(path) })); }
+    public void ClearCookies() { EnsureWebView(); _ = WebViewCommand("cookies:clear", null); }
+
+    internal string WebViewSource => _webViewSource;
+    internal string WebViewHtml => _webViewHtml;
+    internal string WebViewUserAgent => _webViewUserAgent;
+    internal string WebViewBackground => _webViewBackground;
+
+    private string WebViewCommand(string command, string? argument)
+    {
+        if (!_owner.Visible) throw new XPScriptRuntimeException(5, "UIForm WebView live functions require the form to be visible.");
+        return XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument);
+    }
+    private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
+    private static string NormalizeWebViewUrl(string? value)
+    {
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0) return "about:blank";
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source must be an absolute URI.");
+        if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
+        return uri.AbsoluteUri;
+    }
 }
 
 internal sealed class XPScriptUIForm
@@ -127,6 +199,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddRadioGroup(object? name) => AddField(name, name, "RadioGroup");
     public XPScriptUIField AddRadioGroup(object? name, object? label) => AddField(name, label, "RadioGroup");
     public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");
+    public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
+    public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
 
     public void AddOption(object? name, object? value)
     {
@@ -239,7 +313,7 @@ internal sealed class XPScriptUIForm
         var fieldName = NormalizeFieldName(name);
         if (_fields.Any(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase)))
             throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' already exists.");
-        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);
+        var field = new XPScriptUIField(this, fieldName, XPScriptRuntime.CStr(label), type);
         _fields.Add(field);
         return field;
     }

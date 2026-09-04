@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("WebView", 960, 720, True)
+    Dim browser As Variant
+    Dim result As String
+    browser = form.AddWebView("browser", "Documentation")
+    browser.Source = "https://docs.avaloniaui.net/"
+    browser.UserAgent = "XPscript-UIForm-WebView"
+    result = form.ShowDialog()
+End Sub

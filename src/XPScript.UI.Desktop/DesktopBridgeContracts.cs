@@ -41,6 +41,10 @@ public sealed record DesktopFormField(
     public string MonthMinimum { get; init; } = string.Empty;
     public string MonthMaximum { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
+    public string WebViewSource { get; init; } = "about:blank";
+    public string WebViewHtml { get; init; } = string.Empty;
+    public string WebViewUserAgent { get; init; } = string.Empty;
+    public string WebViewBackground { get; init; } = string.Empty;
     public string AccessibleName { get; init; } = string.Empty;
     public string AccessibleDescription { get; init; } = string.Empty;
     public string AccessibleHelpText { get; init; } = string.Empty;
@@ -53,7 +57,6 @@ public sealed record DesktopFormField(
     public string HotKey { get; init; } = string.Empty;
     public string ValidationError { get; init; } = string.Empty;
 }
-
 
 public sealed record DesktopFormButton(
     string Name,
@@ -87,7 +90,6 @@ public sealed record DesktopFormRequest(
     public string Announcement { get; init; } = string.Empty;
     public string AnnouncementPriority { get; init; } = "Polite";
 }
-
 
 public sealed record DesktopFormResult(
     string Result,
