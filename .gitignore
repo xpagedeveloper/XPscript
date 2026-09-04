@@ -10,3 +10,6 @@ out/
 graphify-out/
 .codex/
 *.exe
+docs-site/node_modules/
+docs-site/.astro/
+docs-site/dist/
