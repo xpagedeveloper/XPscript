@@ -12,6 +12,7 @@ Sub Main()
     Dim errCode As Integer
     Dim errText As String
     Dim encoded As Variant
+    Dim fileBytes As Variant
 
     csv = "id;name;note" & Chr(10) & _
           "1;Fredrik;""Hello; world""" & Chr(10) & _
@@ -78,4 +79,18 @@ Sub Main()
     Print "ENCODING=" & doc.Encoding
     Print "ROUNDTRIP=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
     Print "LEADING_ZERO=" & doc.Rows[0].Get("id")
+
+    built.FileEncoding = "utf-8-bom"
+    Call built.Save("native-csv-regression-utf8.csv")
+    fileBytes = ReadBytes("native-csv-regression-utf8.csv")
+    Set doc = CsvParseBytes(fileBytes, "utf-8-bom", ";")
+    Print "FILE_ENCODING=" & built.FileEncoding
+    Print "FILE_SAVE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
+    Kill "native-csv-regression-utf8.csv"
+
+    CsvSave built, "native-csv-regression-1252.csv", "windows-1252"
+    fileBytes = ReadBytes("native-csv-regression-1252.csv")
+    Set doc = CsvParseBytes(fileBytes, "windows-1252", ";")
+    Print "FILE_OVERRIDE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
+    Kill "native-csv-regression-1252.csv"
 End Sub
