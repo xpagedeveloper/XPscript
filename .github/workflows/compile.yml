@@ -25,6 +25,8 @@ jobs:
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --framework-dependent
+      - name: Compile XPAi structured output
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --framework-dependent
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --framework-dependent
       - name: Compile web application
@@ -62,6 +64,8 @@ jobs:
         run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+      - name: Compile XPAi structured output
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --framework-dependent
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
       - name: Compile web application
@@ -83,6 +87,8 @@ jobs:
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+      - name: Compile XPAi structured output
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --framework-dependent
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
       - name: Compile web application
