@@ -1,4 +1,4 @@
-import { resolve, dirname, relative, sep } from "node:path";
+import { resolve, dirname, relative, sep, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
 
@@ -13,7 +13,7 @@ function isInside(parent, child) {
   return path === "" || (!path.startsWith("..") && !path.startsWith(`..${sep}`));
 }
 
-function docsUrlForPath(absoluteTarget, fragment) {
+function docsRouteForPath(absoluteTarget) {
   if (!isInside(docsRoot, absoluteTarget)) return null;
 
   let path = relative(docsRoot, absoluteTarget).split(sep).join("/");
@@ -22,10 +22,20 @@ function docsUrlForPath(absoluteTarget, fragment) {
   path = path
     .replace(/(^|\/)index\.md$/i, "$1")
     .replace(/\.md$/i, "/")
-    .replace(/^\/+/, "");
+    .replace(/^\/+/, "")
+    .toLowerCase();
 
-  const route = path ? `${siteBase}/${path}` : `${siteBase}/`;
-  return fragment ? `${route}#${fragment}` : route;
+  return path ? `/${path}` : "/";
+}
+
+function relativeDocsUrl(sourcePath, absoluteTarget, fragment) {
+  const sourceRoute = docsRouteForPath(sourcePath);
+  const targetRoute = docsRouteForPath(absoluteTarget);
+  if (!sourceRoute || !targetRoute) return null;
+
+  const path = posix.relative(sourceRoute, targetRoute);
+  const url = path ? `${path}/` : "./";
+  return fragment ? `${url}#${fragment}` : url;
 }
 
 function repositoryUrlForPath(absoluteTarget, fragment) {
@@ -59,7 +69,7 @@ function rewriteDocsLinks() {
 
         if (target) {
           const absoluteTarget = resolve(dirname(sourcePath), target);
-          const docsUrl = docsUrlForPath(absoluteTarget, fragment);
+          const docsUrl = relativeDocsUrl(sourcePath, absoluteTarget, fragment);
 
           if (docsUrl) {
             node.url = docsUrl;
