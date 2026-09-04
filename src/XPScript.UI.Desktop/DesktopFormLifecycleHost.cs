@@ -73,6 +73,7 @@ public static class DesktopFormLifecycleHost
             var wrap = new StackPanel { Spacing = 4 };
             if (label.Length > 0 && !type.Equals("CheckBox", StringComparison.OrdinalIgnoreCase)) wrap.Children.Add(new TextBlock { Text = label });
             var editor = CreateEditor(instanceId, field, type, name, label);
+            DesktopAccessibilityHost.ApplyField(field, editor, label);
             editors[name] = editor;
             wrap.Children.Add(editor);
             panel.Children.Add(wrap);
@@ -94,6 +95,7 @@ public static class DesktopFormLifecycleHost
         {
             Windows.TryRemove(instanceId, out _);
             DesktopWebViewHost.RemoveInstance(instanceId);
+            DesktopAccessibilityHost.Unregister(instanceId);
             if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);
         };
 
@@ -113,6 +115,16 @@ public static class DesktopFormLifecycleHost
                 }
             }
         }
+
+        window.Opened += (_, _) =>
+        {
+            DesktopAccessibilityHost.Register(instanceId, window, editors);
+            var initialFocus = Read(root, "initialFocus", string.Empty);
+            if (initialFocus.Length > 0 && editors.TryGetValue(initialFocus, out var initial)) initial.Focus();
+            else editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
+            var announcement = Read(root, "announcement", string.Empty);
+            if (announcement.Length > 0) DesktopAccessibilityHost.Announce(window, announcement, Read(root, "announcementPriority", "Polite"));
+        };
 
         window.Show();
         DesktopApplicationHost.SetProcessKeepAlive(true);
