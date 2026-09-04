@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import type { CollectionEntry } from "astro:content";
 
 export type DocEntry = CollectionEntry<"docs">;
@@ -17,6 +18,23 @@ export function routeForEntry(entry: DocEntry): string {
   if (id.endsWith("/index")) id = id.slice(0, -"/index".length);
 
   return `/${id}/`;
+}
+
+function normalizeRoute(route: string): string {
+  const trimmed = route.replace(/^\/+|\/+$/g, "");
+  return trimmed ? `/${trimmed}/` : "/";
+}
+
+export function relativeRouteHref(fromRoute: string, toRoute: string): string {
+  const from = normalizeRoute(fromRoute);
+  const to = normalizeRoute(toRoute);
+  const relative = posix.relative(from, to);
+
+  return relative ? `${relative}/` : "./";
+}
+
+export function relativeHrefForEntry(fromEntry: DocEntry, toEntry: DocEntry): string {
+  return relativeRouteHref(routeForEntry(fromEntry), routeForEntry(toEntry));
 }
 
 export function routeParamForEntry(entry: DocEntry): string | undefined {
