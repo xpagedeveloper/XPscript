@@ -7,6 +7,9 @@ internal sealed class UIFormMediaButtonsPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+        var sourcePath = ExpandedSourceContext.Current?.SourcePath;
+        if (!string.IsNullOrWhiteSpace(sourcePath))
+            UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
         if (!generated.Contains("public string ImageSource { get; set; } = string.Empty;", StringComparison.Ordinal))
         {
@@ -121,7 +124,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
 
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
-        return generated;
+        return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
     }
 
     private static string ReplacePostHandling(string generated)
