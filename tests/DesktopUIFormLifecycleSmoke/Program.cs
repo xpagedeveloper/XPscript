@@ -77,7 +77,7 @@ Option Declare
 
 Sub Main()
     Dim form As New UIForm("Accessible customer")
-    Dim name As Object
+    Dim name As Variant
     Set name = form.AddTextField("name", "Name")
     name.AccessibleName = "Customer name"
     name.AccessibleDescription = "Enter the full name"
