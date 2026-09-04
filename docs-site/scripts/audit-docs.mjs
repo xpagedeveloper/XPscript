@@ -37,6 +37,21 @@ function splitFrontmatter(content) {
   };
 }
 
+function frontmatterScalar(frontmatter, name) {
+  const match = frontmatter.match(new RegExp(`^${name}:\\s*(.+)$`, "m"));
+  if (!match) return null;
+
+  const value = match[1].trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
 function extractMarkdownLinks(body) {
   const links = [];
   const pattern = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -79,6 +94,10 @@ async function analyzeFile(file) {
   const content = await fs.readFile(file, "utf8");
   const { hasFrontmatter, frontmatter, body } = splitFrontmatter(content);
   const h1Match = body.match(/^#\s+(.+)$/m);
+  const frontmatterTitle = hasFrontmatter ? frontmatterScalar(frontmatter, "title") : null;
+  const pageTitle = frontmatterTitle ?? h1Match?.[1].trim() ?? null;
+  const migration = hasFrontmatter ? frontmatterScalar(frontmatter, "migration") : null;
+  const documentType = hasFrontmatter ? frontmatterScalar(frontmatter, "type") : null;
   const codeLanguages = [...body.matchAll(/^```([^\s`]*)/gm)]
     .map((match) => match[1] || "plain");
   const frontmatterFields = hasFrontmatter
@@ -96,6 +115,9 @@ async function analyzeFile(file) {
     hasFrontmatter,
     frontmatterFields,
     h1: h1Match?.[1].trim() ?? null,
+    pageTitle,
+    migration,
+    documentType,
     codeBlocks: codeLanguages.length,
     codeLanguages,
     links: links.length,
@@ -110,16 +132,16 @@ for (const file of files) {
   results.push(await analyzeFile(file));
 }
 
-const headingCounts = new Map();
+const titleCounts = new Map();
 for (const result of results) {
-  if (!result.h1) continue;
-  const key = result.h1.toLowerCase();
-  headingCounts.set(key, (headingCounts.get(key) ?? 0) + 1);
+  if (!result.pageTitle) continue;
+  const key = result.pageTitle.toLowerCase();
+  titleCounts.set(key, (titleCounts.get(key) ?? 0) + 1);
 }
 
-const duplicateHeadings = results
-  .filter((result) => result.h1 && (headingCounts.get(result.h1.toLowerCase()) ?? 0) > 1)
-  .map((result) => ({ path: result.path, h1: result.h1 }));
+const duplicateTitles = results
+  .filter((result) => result.pageTitle && (titleCounts.get(result.pageTitle.toLowerCase()) ?? 0) > 1)
+  .map((result) => ({ path: result.path, title: result.pageTitle }));
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -127,12 +149,13 @@ const report = {
     markdownFiles: results.length,
     withFrontmatter: results.filter((result) => result.hasFrontmatter).length,
     withoutFrontmatter: results.filter((result) => !result.hasFrontmatter).length,
-    missingH1: results.filter((result) => !result.h1).length,
+    structuredComplete: results.filter((result) => result.migration === "complete").length,
+    missingTitle: results.filter((result) => !result.pageTitle).length,
     codeBlocks: results.reduce((sum, result) => sum + result.codeBlocks, 0),
     brokenLinks: results.reduce((sum, result) => sum + result.brokenLinks.length, 0),
-    duplicateH1: duplicateHeadings.length
+    duplicateTitles: duplicateTitles.length
   },
-  duplicateHeadings,
+  duplicateTitles,
   files: results
 };
 
@@ -144,10 +167,11 @@ if (jsonOutput) {
   console.log(`Markdown files:       ${report.totals.markdownFiles}`);
   console.log(`With frontmatter:     ${report.totals.withFrontmatter}`);
   console.log(`Without frontmatter:  ${report.totals.withoutFrontmatter}`);
-  console.log(`Missing H1:           ${report.totals.missingH1}`);
+  console.log(`Structured complete:  ${report.totals.structuredComplete}`);
+  console.log(`Missing page title:   ${report.totals.missingTitle}`);
   console.log(`Code blocks:          ${report.totals.codeBlocks}`);
   console.log(`Broken local links:   ${report.totals.brokenLinks}`);
-  console.log(`Duplicate H1 entries: ${report.totals.duplicateH1}`);
+  console.log(`Duplicate titles:     ${report.totals.duplicateTitles}`);
 
   const filesWithBrokenLinks = results.filter((result) => result.brokenLinks.length > 0);
   if (filesWithBrokenLinks.length) {
@@ -157,10 +181,10 @@ if (jsonOutput) {
     }
   }
 
-  if (duplicateHeadings.length) {
-    console.log("\nDuplicate H1 headings:");
-    for (const duplicate of duplicateHeadings) console.log(`  ${duplicate.path}: ${duplicate.h1}`);
+  if (duplicateTitles.length) {
+    console.log("\nDuplicate page titles:");
+    for (const duplicate of duplicateTitles) console.log(`  ${duplicate.path}: ${duplicate.title}`);
   }
 
-  console.log("\nThis command is informational during the compatibility migration. Strict schema validation will be enabled section by section.");
+  console.log("\nCompletely migrated documents are schema-validated during the Astro content build.");
 }

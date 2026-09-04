@@ -33,6 +33,7 @@ const href = (path: string) => path === "/" ? `${base}/` : `${base}${path}`;
           <a href={href("/")}>Overview</a>
           <a href={href("/getting-started/")}>Getting Started</a>
           <a href={href("/language/")}>Language</a>
+          <a href={href("/functions/")}>Functions</a>
           <a href={href("/language-reference/")}>Language Reference</a>
           <a href={href("/api-reference/")}>Runtime API</a>
         </nav>
@@ -41,6 +42,7 @@ const href = (path: string) => path === "/" ? `${base}/` : `${base}${path}`;
       <main class="content" data-pagefind-body>
         {structured && (
           <header class="structured-header">
+            <p class="structured-kind">{entry.data.type}</p>
             <h1>{entry.data.title}</h1>
             {entry.data.shortDescription && <p>{entry.data.shortDescription}</p>}
           </header>

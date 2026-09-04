@@ -2,6 +2,8 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
 import DocumentationLayout from "../layouts/DocumentationLayout.astro";
+import ReferenceDetails from "../components/ReferenceDetails.astro";
+import ReferenceIndex from "../components/ReferenceIndex.astro";
 import { routeForEntry, routeParamForEntry } from "../lib/docs";
 
 export async function getStaticPaths() {
@@ -20,8 +22,11 @@ interface Props {
 }
 
 const { entry } = Astro.props;
+const entries = await getCollection("docs");
 const { Content } = await render(entry);
 ---
 <DocumentationLayout entry={entry}>
+  <ReferenceDetails entry={entry} />
+  <ReferenceIndex entry={entry} entries={entries} />
   <Content />
 </DocumentationLayout>
