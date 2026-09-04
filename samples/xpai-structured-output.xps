@@ -1,31 +1,26 @@
-' XPAi prompt parts and JSON schema structured output regression
+' XPAi prompt parts and structured result contract regression
 ' (c) xpagedeveloper.com 2026
 
 Option Declare
 
+Class PrivacyAnswer
+    Public Answer As String
+    Public Confidence As Double
+End Class
+
 Sub Main()
     Dim ai As XPAi
-    Dim schema As New JsonObject
-    Dim properties As New JsonObject
-    Dim answerProperty As New JsonObject
-    Dim required As New JsonArray
+    Dim contract As PrivacyAnswer
 
     Set ai = New XPAi("https://api.example.com/v1/chat/completions", "test-key")
     ai.Model = "example-model"
     ai.SystemPrompt = "Return a concise structured answer."
     ai.UserPrompt = "Explain privacy by design."
 
-    Call answerProperty.Set("type", "string")
-    Call properties.Set("answer", answerProperty)
-    Call required.Add("answer")
-    Call schema.Set("type", "object")
-    Call schema.Set("properties", properties)
-    Call schema.Set("required", required)
-    Call schema.Set("additionalProperties", False)
-
+    Set contract = New PrivacyAnswer()
     ai.JsonSchemaName = "privacy_answer"
     ai.JsonSchemaStrict = True
-    Call ai.SetJsonSchema(schema)
+    Call ai.SetResultClass(contract)
 
     Print "SYSTEM=" & ai.SystemPrompt
     Print "USER=" & ai.UserPrompt
