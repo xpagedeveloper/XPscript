@@ -13,6 +13,7 @@ internal sealed class NativeCsvPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 16);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var documentVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rowVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var iteratorId = 0;
 
@@ -27,6 +28,7 @@ internal sealed class NativeCsvPreprocessor
                 var name = dimNew.Groups[1].Value;
                 var type = dimNew.Groups[2].Value;
                 nativeVariables.Add(name);
+                if (type.Equals("CsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
                 if (type.Equals("CsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
@@ -37,9 +39,17 @@ internal sealed class NativeCsvPreprocessor
             if (dim.Success)
             {
                 var name = dim.Groups[1].Value;
+                var type = dim.Groups[2].Value;
                 nativeVariables.Add(name);
-                if (dim.Groups[2].Value.Equals("CsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
+                if (type.Equals("CsvDocument", StringComparison.OrdinalIgnoreCase)) documentVariables.Add(name);
+                if (type.Equals("CsvRow", StringComparison.OrdinalIgnoreCase)) rowVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
+                continue;
+            }
+
+            if (TryRewriteFileWrite(line, documentVariables, out var fileWrite))
+            {
+                output.Add(indent + fileWrite);
                 continue;
             }
 
@@ -51,6 +61,15 @@ internal sealed class NativeCsvPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bCsvStringify\s*\(", "XPScriptNativeCsv.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bCsvEscape\s*\(", "XPScriptNativeCsv.Escape(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+CsvDocument\s*(?:\(\s*\))?", "XPScriptNativeCsv.CreateDocument()", RegexOptions.IgnoreCase);
+
+            foreach (var documentVariable in documentVariables)
+            {
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\b{Regex.Escape(documentVariable)}\.FileEncoding\b",
+                    documentVariable + ".Encoding",
+                    RegexOptions.IgnoreCase);
+            }
 
             // XPscript does not otherwise use square-bracket member indexing. CSV keeps this
             // convenience surface by lowering collection/member index syntax to strict Get().
@@ -90,6 +109,96 @@ internal sealed class NativeCsvPreprocessor
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static bool TryRewriteFileWrite(string line, HashSet<string> documentVariables, out string rewritten)
+    {
+        rewritten = "";
+
+        var call = Regex.Match(line, @"^Call\s+(CsvSave|CsvWriteFile)\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
+        if (call.Success)
+            return TryBuildGlobalFileWrite(call.Groups[2].Value, out rewritten);
+
+        var statement = Regex.Match(line, @"^(CsvSave|CsvWriteFile)\s+(.+)$", RegexOptions.IgnoreCase);
+        if (statement.Success)
+            return TryBuildGlobalFileWrite(statement.Groups[2].Value, out rewritten);
+
+        foreach (var documentVariable in documentVariables)
+        {
+            var method = Regex.Match(
+                line,
+                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile|WriteFile)\s*\((.*)\)\s*$",
+                RegexOptions.IgnoreCase);
+            if (!method.Success) continue;
+
+            var args = SplitTopLevelArguments(method.Groups[2].Value);
+            if (args.Count is < 1 or > 2)
+                throw new CompilerException("CsvDocument.Save requires path and optional encoding arguments.");
+            var bytes = args.Count == 1
+                ? documentVariable + ".ToBytes()"
+                : documentVariable + ".ToBytes(" + args[1] + ")";
+            rewritten = "Call XPCrossPlatformRuntime.WriteBytes(" + args[0] + ", " + bytes + ")";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryBuildGlobalFileWrite(string rawArguments, out string rewritten)
+    {
+        rewritten = "";
+        var args = SplitTopLevelArguments(rawArguments);
+        if (args.Count is < 2 or > 3)
+            throw new CompilerException("CsvSave requires document, path and optional encoding arguments.");
+        var bytes = args.Count == 2
+            ? args[0] + ".ToBytes()"
+            : args[0] + ".ToBytes(" + args[2] + ")";
+        rewritten = "Call XPCrossPlatformRuntime.WriteBytes(" + args[1] + ", " + bytes + ")";
+        return true;
+    }
+
+    private static List<string> SplitTopLevelArguments(string text)
+    {
+        var result = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var depth = 0;
+        var quoted = false;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch == '"')
+            {
+                current.Append(ch);
+                if (quoted && i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    current.Append(text[++i]);
+                    continue;
+                }
+                quoted = !quoted;
+                continue;
+            }
+
+            if (!quoted)
+            {
+                if (ch == '(') depth++;
+                else if (ch == ')') depth--;
+                else if (ch == ',' && depth == 0)
+                {
+                    result.Add(current.ToString().Trim());
+                    current.Clear();
+                    continue;
+                }
+            }
+            current.Append(ch);
+        }
+
+        if (quoted || depth != 0)
+            throw new CompilerException("Invalid CSV file-write argument list.");
+        result.Add(current.ToString().Trim());
+        if (result.Any(string.IsNullOrWhiteSpace))
+            throw new CompilerException("CSV file-write arguments cannot be empty.");
+        return result;
     }
 
     private static string CreateExpression(string type, string rawArguments)
