@@ -39,7 +39,7 @@ internal sealed class NativeXmlPreprocessor
             }
 
             var rewritten = line;
-            rewritten = Regex.Replace(rewritten, @"\bXmlDocument\.Parse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPXmlDocument\.Parse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlParse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlStringify\s*\(", "XPScriptNativeXml.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXmlEscape\s*\(", "XPScriptNativeXml.Escape(", RegexOptions.IgnoreCase);

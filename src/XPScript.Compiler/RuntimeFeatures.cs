@@ -21,7 +21,7 @@ internal readonly record struct RuntimeFeatures(
         ArgumentNullException.ThrowIfNull(source);
         var code = PreprocessorFeatureGate.CodeOnly(source);
 
-        var httpDatabase = PreprocessorFeatureGate.ContainsTypePrefixReference(code, "HTTPDB") ||
+        var httpDatabase = PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPHttpDb") ||
                            PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbSupabase");
         // XPDB is the common, case-insensitive prefix for every database backend.
         // Keep detection open-ended so new backends do not silently miss the shared
@@ -36,9 +36,9 @@ internal readonly record struct RuntimeFeatures(
                       "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
-            Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "Xml") ||
+            Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
-            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "Csv") ||
+            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
                  PreprocessorFeatureGate.ContainsCall(
                      code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "CsvParse", "CsvParseBytes",
                      "CsvStringify", "CsvEscape", "CsvSave", "CsvWriteFile"),
