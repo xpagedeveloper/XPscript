@@ -27,6 +27,10 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --framework-dependent
       - name: Compile XPAi structured output
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --framework-dependent
+      - name: Compile native XML DOM regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom.exe --framework-dependent
+      - name: Run native XML DOM regression
+        run: ./out/native-xml-dom.exe
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --framework-dependent
       - name: Compile web application
@@ -50,6 +54,10 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-csv-regression.xps -o ./out/native-csv-regression --framework-dependent
       - name: Run CSV regression application
         run: ./out/native-csv-regression
+      - name: Compile native XML DOM regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --framework-dependent
+      - name: Run native XML DOM regression
+        run: ./out/native-xml-dom
       - name: Install browser WASM workload
         run: dotnet workload install wasm-tools
       - name: Verify browser WASM multi-window UIForm
@@ -89,6 +97,10 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
       - name: Compile XPAi structured output
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --framework-dependent
+      - name: Compile native XML DOM regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --framework-dependent
+      - name: Run native XML DOM regression
+        run: ./out/native-xml-dom
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
       - name: Compile web application

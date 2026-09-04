@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeXmlPreprocessor
 {
-    private const string NativeXmlTypePattern = "XmlDocument|XmlElement|XmlNode|XmlNodeCollection|XmlValidationResult|XmlValidationError|XmlValidationErrorCollection";
+    private const string NativeXmlTypePattern = "XmlDocument|XmlElement|XmlNode|XmlNodeCollection|XmlAttribute|XmlAttributeCollection|XmlValidationResult|XmlValidationError|XmlValidationErrorCollection";
 
     public string Transform(string source)
     {
