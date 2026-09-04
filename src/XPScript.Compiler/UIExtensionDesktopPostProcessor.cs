@@ -158,6 +158,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
+        replaced = new UIFormAccessibilityPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
     }
 

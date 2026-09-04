@@ -57,4 +57,45 @@ foreach (var expected in new[]
 }
 
 Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
+var accessibilitySource = """
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Accessible customer")
+    Dim name As Object
+    Set name = form.AddTextField("name", "Name")
+    name.AccessibleName = "Customer name"
+    name.AccessibleDescription = "Enter the full name"
+    name.TabIndex = 10
+    name.IsTabStop = True
+    name.Focusable = True
+    form.InitialFocus = "name"
+    form.ValidationSummary = True
+    form.FocusFirstError = True
+    form.AnnounceValidationErrors = True
+    Call form.SetValidationError("name", "Name is required")
+    Call form.Announce("Validation failed", "Assertive")
+End Sub
+""";
+
+var generatedAccessibility = new XPScriptTranspiler().Transpile(accessibilitySource, "uiform-accessibility-smoke.xps", "linux-x64");
+foreach (var expected in new[]
+{
+    "public string AccessibleName",
+    "public int TabIndex",
+    "public string InitialFocus",
+    "public void FocusFirstInvalid()",
+    "public void SetValidationError(object? name, object? message)",
+    "accessibleName = field.AccessibleName",
+    "validationError = field.ValidationError",
+    "aria-invalid",
+    "aria-describedby",
+    "aria-live"
+})
+{
+    if (!generatedAccessibility.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated UIForm accessibility surface is missing: " + expected);
+}
+
 Console.WriteLine("DESKTOP_UIFORM_MODAL_CHILD_TRANSPILE_OK");
+Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_TRANSPILE_OK");
