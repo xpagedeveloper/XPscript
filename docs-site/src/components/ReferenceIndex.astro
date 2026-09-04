@@ -8,6 +8,8 @@ interface Props {
 }
 
 const { entry, entries } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const hrefForEntry = (candidate: DocEntry) => `${base}${routeForEntry(candidate)}`;
 
 const items = entry.data.type === "function-category"
   ? entries.filter((candidate) =>
@@ -34,7 +36,7 @@ const heading = entry.data.type === "object" ? "Properties" : "Functions";
     <h2>{heading}</h2>
     <div class="reference-grid">
       {items.map((item) => (
-        <a class="reference-card" href={routeForEntry(item)}>
+        <a class="reference-card" href={hrefForEntry(item)}>
           <strong>{titleForEntry(item)}</strong>
           {item.data.shortDescription && <span>{item.data.shortDescription}</span>}
         </a>
