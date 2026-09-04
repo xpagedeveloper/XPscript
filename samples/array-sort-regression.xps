@@ -1,0 +1,51 @@
+Option Declare
+Option Compare NoCase
+
+Sub Main()
+    Dim strings(0 To 3) As String
+    Dim sortedStrings() As String
+    Dim integers(0 To 3) As Integer
+    Dim sortedIntegers() As Integer
+    Dim longs(0 To 3) As Long
+    Dim sortedLongs() As Long
+    Dim doubles(0 To 3) As Double
+    Dim sortedDoubles() As Double
+    Dim dates(0 To 2) As Date
+    Dim sortedDates() As Date
+
+    strings(0) = "Zulu"
+    strings(1) = "alpha"
+    strings(2) = "Bravo"
+    strings(3) = "charlie"
+    sortedStrings = ArraySort(strings)
+    If Join(sortedStrings, "|") <> "alpha|Bravo|charlie|Zulu" Then Error 5, "String ArraySort failed"
+
+    integers(0) = 10
+    integers(1) = -2
+    integers(2) = 3
+    integers(3) = 1
+    sortedIntegers = ArraySort(integers)
+    If sortedIntegers(0) <> -2 Or sortedIntegers(1) <> 1 Or sortedIntegers(2) <> 3 Or sortedIntegers(3) <> 10 Then Error 5, "Integer ArraySort failed"
+
+    longs(0) = 9000000000
+    longs(1) = -5
+    longs(2) = 42
+    longs(3) = 7
+    sortedLongs = ArraySort(longs)
+    If sortedLongs(0) <> -5 Or sortedLongs(1) <> 7 Or sortedLongs(2) <> 42 Or sortedLongs(3) <> 9000000000 Then Error 5, "Long ArraySort failed"
+
+    doubles(0) = 10.5
+    doubles(1) = -2.25
+    doubles(2) = 3.125
+    doubles(3) = 1.5
+    sortedDoubles = ArraySort(doubles)
+    If sortedDoubles(0) <> -2.25 Or sortedDoubles(1) <> 1.5 Or sortedDoubles(2) <> 3.125 Or sortedDoubles(3) <> 10.5 Then Error 5, "Double ArraySort failed"
+
+    dates(0) = CDate("2026-12-31")
+    dates(1) = CDate("2025-01-02")
+    dates(2) = CDate("2025-11-15")
+    sortedDates = ArraySort(dates)
+    If CStr(sortedDates(0)) > CStr(sortedDates(1)) Or CStr(sortedDates(1)) > CStr(sortedDates(2)) Then Error 5, "Date ArraySort failed"
+
+    Print "ARRAY_SORT_OK"
+End Sub
