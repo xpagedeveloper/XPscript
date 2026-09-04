@@ -52,7 +52,8 @@ internal static class WebIisPackageTarget
         var args = new List<string>
         {
             "publish", project, "-c", "Release", "-o", destination,
-            "--self-contained", selfContained ? "true" : "false"
+            "--self-contained", selfContained ? "true" : "false",
+            "-p:SkipUnifiedPublish=true"
         };
         if (selfContained)
         {

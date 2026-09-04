@@ -33,7 +33,7 @@ End Sub
     if (!unit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
         throw new Exception("Browser WASM multi-window compile did not produce the asset route.");
 
-    var cacheRoot = Path.Combine(root, ".xpscript-cache", "wasm-bridge");
+    var cacheRoot = Path.Combine(root, ".xpscript-cache", "wasm");
     var mainJs = Directory.Exists(cacheRoot)
         ? Directory.EnumerateFiles(cacheRoot, "main.js", SearchOption.AllDirectories).FirstOrDefault()
         : null;
@@ -46,15 +46,12 @@ End Sub
     if (!bootstrap.Contains("BrowserFormHost.DispatchEvent", StringComparison.Ordinal))
         throw new Exception("Browser WASM bootstrap did not register the BrowserFormHost event bridge.");
 
-    var generatedProject = Directory.EnumerateFiles(cacheRoot, "BrowserApp.csproj", SearchOption.AllDirectories).FirstOrDefault();
-    if (generatedProject is null)
-        throw new Exception("Browser WASM multi-window compile did not preserve its generated browser project.");
-
-    var projectText = await File.ReadAllTextAsync(generatedProject);
-    if (!projectText.Contains("XPScript.UI.Browser", StringComparison.Ordinal))
-        throw new Exception("Generated browser-WASM project does not reference XPScript.UI.Browser.");
-    if (projectText.Contains("XPScript.UI.Desktop", StringComparison.Ordinal))
-        throw new Exception("Generated browser-WASM project unexpectedly references XPScript.UI.Desktop.");
+    var appRoot = Directory.GetParent(mainJs)?.FullName
+        ?? throw new Exception("Unable to determine the persisted browser-WASM app root.");
+    if (!File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js")))
+        throw new Exception("Browser WASM multi-window publish did not include _framework/dotnet.js.");
+    if (!File.Exists(Path.Combine(appRoot, "xpscript-browser.js")))
+        throw new Exception("Browser WASM multi-window publish did not include xpscript-browser.js.");
 
     Console.WriteLine("browser-wasm multi-window smoke passed");
 }
