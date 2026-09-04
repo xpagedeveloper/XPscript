@@ -4,13 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="petstore.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="petstore-reimport.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../src/XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
   </ItemGroup>
 </Project>

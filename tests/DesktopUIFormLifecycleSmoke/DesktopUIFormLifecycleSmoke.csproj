@@ -7,10 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="petstore.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="petstore-reimport.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />
+    <ProjectReference Include="../../src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
   </ItemGroup>
 </Project>

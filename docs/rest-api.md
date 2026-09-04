@@ -19,6 +19,29 @@ xpscript openapi generate api.json --force
 
 `--force` is required to overwrite an existing generated `.xps` file.
 
+### Additive reimport
+
+Use `openapi import` when an OpenAPI specification has changed and the existing `.xps` file may contain implemented handlers or other edits that must not be overwritten.
+
+```text
+xpscript openapi import petstore.yaml -o ./generated/petstore.xps
+```
+
+Import is deliberately additive. Existing declarations are authoritative and are preserved. The importer only adds declarations that are missing from the existing XPScript source:
+
+- a component or generated contract class that does not yet exist is appended
+- a property that does not yet exist in an existing class is inserted before that class's `End Class`
+- a generated Function or Sub that does not yet exist is appended
+- existing Functions and Subs, including their bodies, signatures and attributes, are never rewritten
+- existing class properties and validation attributes are never rewritten or removed
+- declarations removed from the newer OpenAPI specification are not removed from XPScript
+
+When the newer OpenAPI document describes a different type, validation rule, Function/Sub signature, route method, route path, security attribute or endpoint parameter list for an existing declaration, the importer keeps the existing XPScript declaration and reports a drift warning. For example, adding a query parameter to an already imported operation can add the corresponding request-contract property, but the existing endpoint wrapper is left unchanged and a warning is emitted rather than modifying the wrapper signature.
+
+The merged source is written to a temporary `.xps` file and compiled as a REST web unit first. The destination file is replaced only when that compile succeeds. A failed reimport therefore leaves the existing destination untouched. `openapi import` does not accept `--force`.
+
+If the destination does not exist yet, `openapi import` creates it from the OpenAPI specification and validates it before placing it at the destination.
+
 A minimal OpenAPI source can look like this:
 
 ```yaml
@@ -113,7 +136,7 @@ OpenAPI 3.1 nullable type arrays such as `type: [string, 'null']` are accepted. 
 
 Current generator constraints are deliberate. Only local `$ref` values are resolved. Typed schema references must point to `#/components/schemas/...`. Request bodies currently require `application/json` or a structured `+json` media type. Path, query and header parameters are supported. Cookie parameters, external references, multipart/form-data generation, advanced JSON Schema composition such as `oneOf`/`anyOf`, and lossless generation for OpenAPI property names that are not valid XPScript identifiers are not yet supported. Unsupported input fails generation instead of silently producing a different API contract.
 
-Generated files are intended to be regenerated from the OpenAPI source. Regeneration overwrites generated handler bodies when `--force` is used, so keep durable business logic in separate application functions/modules if the specification will be regenerated frequently.
+Use `openapi generate --force` only when replacing the generated source is intended. Use `openapi import` for non-destructive updates after handlers or other declarations have been implemented.
 
 ## Explicit routes
 

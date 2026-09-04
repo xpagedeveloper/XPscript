@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: Pet Store Generator Reimport Smoke
+  version: 1.2.0
+paths:
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: includeHistory
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pet returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          description: Pet not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      operationId: updatePet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePet'
+      responses:
+        '200':
+          description: Pet updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+    delete:
+      operationId: deletePet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Pet deleted
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Pets returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+    post:
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePet'
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id, name, microchip]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: integer
+          format: int32
+        ownerEmail:
+          type: string
+          format: email
+        age:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 40
+        microchip:
+          type: string
+          maxLength: 64
+        status:
+          type: string
+    CreatePet:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        ownerEmail:
+          type: [string, 'null']
+          format: email
+        source:
+          type: string
+        externalId:
+          type: string
+    UpdatePet:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        ownerEmail:
+          type: [string, 'null']
+          format: email
+        status:
+          type: string
+    ApiError:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        traceId:
+          type: string
