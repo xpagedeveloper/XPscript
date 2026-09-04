@@ -16,6 +16,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
             generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
             generated.Contains("imageSource = field.ImageSource", StringComparison.Ordinal) &&
+            generated.Contains("webViewSource = field.WebViewSource", StringComparison.Ordinal) &&
             generated.Contains("regexPattern = field.RegexPattern", StringComparison.Ordinal))
             return generated;
 
@@ -74,6 +75,10 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 tooltip = field.Tooltip,
                 imageSource = field.ImageSource,
                 imageAltText = field.ImageAltText,
+                webViewSource = field.WebViewSource,
+                webViewHtml = field.WebViewHtml,
+                webViewUserAgent = field.WebViewUserAgent,
+                webViewBackground = field.WebViewBackground,
                 regexPattern = field.RegexPattern
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
