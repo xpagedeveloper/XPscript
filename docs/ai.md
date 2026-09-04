@@ -14,8 +14,8 @@ Sub Main()
     ai.Model = "example-model"
     ai.Temperature = 0.2
     ai.MaxOutputTokens = 500
-    Call ai.AddMessage("system", "Answer clearly and briefly.")
-    Call ai.AddMessage("user", "What is privacy by design?")
+    ai.SystemPrompt = "Answer clearly and briefly."
+    ai.UserPrompt = "What is privacy by design?"
 
     Set response = ai.Complete()
     Print response.Text
@@ -96,6 +96,27 @@ ai.EndpointPath = "/tenant-a/v1/chat/completions"
 
 The path must remain relative to the configured origin. It cannot redirect requests to another host.
 
+## Prompt parts
+
+For the common two-part prompt shape, use `SystemPrompt` and `UserPrompt`:
+
+```xpscript
+ai.SystemPrompt = "Return concise structured data."
+ai.UserPrompt = "Summarize this customer record."
+Set response = ai.Complete()
+```
+
+`SystemPrompt` is inserted as the first `system` message. `UserPrompt` is appended as the final `user` message. Any messages added with `AddMessage` remain between them.
+
+The helper methods are:
+
+```xpscript
+Call ai.SetPrompt("Return concise structured data.", "Summarize this customer record.")
+Call ai.ClearPrompt()
+```
+
+A request can use only prompt properties; `AddMessage` is not required when at least one prompt part is set.
+
 ## Messages
 
 The internal message collection supports `system`, `user` and `assistant` roles:
@@ -125,6 +146,52 @@ Pass a model as the second argument to override the client model for one request
 Set response = ai.Complete(messages, "another-model")
 ```
 
+## Structured JSON results
+
+The preferred API is to define the desired result shape as an XPscript class and pass an instance to `SetResultClass`:
+
+```xpscript
+Class CustomerSummary
+    Public Name As String
+    Public RiskScore As Double
+    Public Active As Boolean
+End Class
+
+Dim contract As CustomerSummary
+Set contract = New CustomerSummary()
+
+ai.JsonSchemaName = "customer_summary"
+ai.JsonSchemaStrict = True
+Call ai.SetResultClass(contract)
+Set response = ai.Complete()
+```
+
+`XPAi` derives OpenAI-compatible JSON Schema from the class using the same visibility model as XPscript JSON serialization. Public fields and public readable properties are included. Private fields/properties and write-only properties are excluded. Nested classes are converted recursively. Recursive class graphs are rejected.
+
+Included members are emitted as required properties. Object schemas disallow additional properties. Scalar mappings include strings, booleans, integer and floating-point numbers, dates (`string` with `date-time` format), enums, arrays and nested classes.
+
+The overloads are:
+
+```xpscript
+Call ai.SetResultClass(contract)
+Call ai.SetResultClass(contract, "customer_summary")
+Call ai.SetResultClass(contract, "customer_summary", True)
+```
+
+For advanced/provider-specific schemas, raw JSON Schema is also supported:
+
+```xpscript
+Call ai.SetJsonSchema(schema)
+Call ai.SetJsonSchema(schema, "result_name")
+Call ai.SetJsonSchema(schema, "result_name", True)
+```
+
+`ResponseJsonSchema` gets a cloned configured schema or sets a raw schema. `HasJsonSchema` reports whether one is configured. `ClearJsonSchema()` removes it. `JsonSchemaName` defaults to `response`, and `JsonSchemaStrict` defaults to `True`.
+
+The generated request uses OpenAI-compatible `response_format.type = "json_schema"`. Provider support depends on the configured endpoint implementing that request shape.
+
+See [XPAi prompts and structured results](xpai-structured-output.md) for the detailed class-to-schema mapping and examples.
+
 ## Request options
 
 `Temperature` accepts `0` through `2`. `MaxOutputTokens` accepts `1` through `1000000` and is sent as `max_tokens`.
@@ -133,12 +200,11 @@ Use `SetOption` for other provider-compatible JSON properties. Values use the na
 
 ```xpscript
 Call ai.SetOption("top_p", 0.9)
-Call ai.SetOption("response_format", responseFormatJsonObject)
 Call ai.RemoveOption("top_p")
 Call ai.ClearOptions()
 ```
 
-`model`, `messages` and `stream` cannot be supplied through `SetOption`. Use their dedicated APIs.
+`model`, `messages`, `stream` and `response_format` cannot be supplied through `SetOption`. Use their dedicated APIs.
 
 ## Provider headers
 
@@ -164,6 +230,10 @@ Header names and values are validated. CR, LF and null characters are rejected. 
 | `Content` | Alias for `Text`. |
 | `RawJson` | Complete provider JSON as a `JsonDocument`. Unknown properties are preserved. |
 | `Usage` | Provider usage object as a `JsonDocument`. |
+| `HasJsonResult` | `True` when `Text` contains valid JSON within XPscript JSON limits. |
+| `ResultJson` | Parses `Text` and returns a `JsonDocument`; raises an XPScript error if the text is not valid JSON. |
+
+`ResultJson` parses the provider result but does not independently validate it against the configured JSON Schema. Schema enforcement is requested from the provider.
 
 `ThrowOnHttpError` defaults to `True`. A non-success response then raises an error containing only the HTTP status code. Set it to `False` when the application needs to inspect a failed response object.
 
@@ -237,7 +307,7 @@ Call ai.Cancel()
 | SSE events | 100000 |
 | Messages | 10000 |
 
-See [xpai.xps](../samples/xpai.xps) for a complete executable example.
+See [xpai.xps](../samples/xpai.xps) for the general executable example and [xpai-structured-output.xps](../samples/xpai-structured-output.xps) for prompt/schema compilation coverage.
 
 Provider endpoint references: [OpenAI Chat API](https://developers.openai.com/api/reference/resources/chat), [Claude OpenAI compatibility](https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk), [OpenRouter quickstart](https://openrouter.ai/docs/quickstart) and [Azure OpenAI v1 API](https://learn.microsoft.com/azure/foundry/openai/api-version-lifecycle).
 
@@ -251,6 +321,17 @@ Provider endpoint references: [OpenAI Chat API](https://developers.openai.com/ap
 | `Provider` | Returns the selected provider name. |
 | `EndpointPath` | Replaces the path while keeping the configured origin. |
 | `Model` | Gets or sets the default model. |
+| `SystemPrompt` | Gets or sets the first system prompt message. |
+| `UserPrompt` | Gets or sets the final user prompt message. |
+| `SetPrompt(system, user)` | Sets both prompt parts. |
+| `ClearPrompt()` | Clears both prompt parts. |
+| `JsonSchemaName` | Gets or sets the structured result schema name. |
+| `JsonSchemaStrict` | Gets or sets strict JSON Schema request mode. |
+| `HasJsonSchema` | Reports whether structured output is configured. |
+| `ResponseJsonSchema` | Gets a cloned configured schema or sets a raw schema. |
+| `SetResultClass(contract [, name [, strict]])` | Derives structured-result JSON Schema from an XPscript class instance. |
+| `SetJsonSchema(schema [, name [, strict]])` | Sets an explicit raw JSON Schema. |
+| `ClearJsonSchema()` | Removes structured-output configuration. |
 | `Temperature` | Gets or sets a value from 0 through 2. |
 | `MaxOutputTokens` | Gets or sets the output token limit. |
 | `Timeout` | Gets or sets the total request timeout in seconds. |
@@ -259,7 +340,7 @@ Provider endpoint references: [OpenAI Chat API](https://developers.openai.com/ap
 | `AddMessage(role, content)` | Adds a system, user or assistant message. |
 | `GetMessages()` | Returns a cloned message array as `JsonDocument`. |
 | `ClearMessages()` | Removes all stored messages. |
-| `SetOption(name, value)` | Adds or replaces an extra request JSON property. |
+| `SetOption(name, value)` | Adds or replaces an extra request JSON property except dedicated properties. |
 | `RemoveOption(name)` | Removes one extra request property. |
 | `ClearOptions()` | Removes all extra request properties. |
 | `SetHeader(name, value)` | Adds or replaces a request header. |

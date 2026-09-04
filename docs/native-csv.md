@@ -1,6 +1,6 @@
 # Native CSV
 
-XPscript provides a native CSV API for parsing, building, iterating and serializing CSV data without external runtime dependencies.
+XPscript provides a native CSV API for parsing, building, iterating, serializing and writing CSV data without external runtime dependencies.
 
 CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as `00123` are preserved exactly.
 
@@ -145,6 +145,44 @@ returns:
 
 `AddHeader` is the explicit schema-changing operation. Existing rows are extended with an empty value when a header is added. Duplicate header names are rejected case-insensitively.
 
+## Write CSV files
+
+`CsvDocument` can write directly to a file:
+
+```xpscript
+Call doc.Save("customers.csv")
+```
+
+`SaveFile` and `WriteFile` are aliases:
+
+```xpscript
+Call doc.SaveFile("customers.csv")
+Call doc.WriteFile("customers.csv")
+```
+
+The function form is also available:
+
+```xpscript
+CsvSave doc, "customers.csv"
+CsvWriteFile doc, "customers-copy.csv"
+```
+
+The document encoding is used by default. `FileEncoding` is an alias for `Encoding` when working with file output:
+
+```xpscript
+doc.FileEncoding = "utf-8-bom"
+Call doc.Save("customers.csv")
+```
+
+You can override the encoding for one write without changing the document setting:
+
+```xpscript
+Call doc.Save("customers-1252.csv", "windows-1252")
+CsvSave doc, "customers-utf16.csv", "utf-16"
+```
+
+File writes replace the target file. Relative paths follow XPscript file-system path handling.
+
 ## Header mode
 
 `HasHeaders` defaults to `True`.
@@ -195,6 +233,8 @@ or choose an encoding for one call:
 data = doc.ToBytes("utf-8")
 ```
 
+`FileEncoding` and `Encoding` refer to the same document encoding for file output.
+
 Characters that cannot be represented in Windows-1252 cause a trap-able runtime error instead of silent replacement.
 
 ## API summary
@@ -208,10 +248,14 @@ Characters that cannot be represented in Windows-1252 cause a trap-able runtime 
 - `HasHeaders`
 - `Delimiter`
 - `Encoding`
+- `FileEncoding`
 - `AddHeader(name)`
 - `AddRow()`
 - `Stringify()`
 - `ToBytes([encoding])`
+- `Save(path [, encoding])`
+- `SaveFile(path [, encoding])`
+- `WriteFile(path [, encoding])`
 
 Functions:
 
@@ -219,6 +263,8 @@ Functions:
 - `CsvParseBytes(bytes, encoding [, delimiter [, hasHeaders]])`
 - `CsvStringify(document)`
 - `CsvEscape(value [, delimiter])`
+- `CsvSave(document, path [, encoding])`
+- `CsvWriteFile(document, path [, encoding])`
 
 Collections:
 
