@@ -5,7 +5,7 @@ Option Declare
 
 Sub Main()
     Dim doc As New XmlDocument
-    Dim parsedDoc As XmlDocument
+    Dim parsedDoc As New XmlDocument("<catalog><item id=""a"">one</item><item id=""b"">two</item></catalog>")
     Dim ownerDoc As XmlDocument
     Dim root As XmlElement
     Dim first As XmlElement
@@ -53,7 +53,7 @@ Sub Main()
     Set node = first.Parent
     If node.Name <> "people" Then Error 9813, "Parent navigation failed"
     Set ownerDoc = first.OwnerDocument
-    Set node = ownerDoc.Root
+    Set node = ownerDoc.DocumentElement
     If node.Name <> "people" Then Error 9814, "OwnerDocument navigation failed"
 
     Set nodes = doc.SelectNodes("/people/person")
@@ -121,14 +121,13 @@ Sub Main()
     If Not attr.Delete() Then Error 9831, "XmlAttribute.Delete failed"
     If root.HasAttribute("delete-me") Then Error 9832, "Deleted attribute remains"
 
-    Set parsedDoc = New XmlDocument("<catalog><item id=""a"">one</item><item id=""b"">two</item></catalog>")
-    Set root = parsedDoc.Root
+    Set root = parsedDoc.DocumentElement
     If root.Name <> "catalog" Then Error 9833, "XmlDocument constructor parse failed"
     Set nodes = parsedDoc.SelectNodes("/catalog/item")
     If nodes.Count <> 2 Then Error 9834, "Parsed navigation failed"
 
     Call doc.LoadXml("<loaded><child>ok</child></loaded>")
-    Set root = doc.Root
+    Set root = doc.DocumentElement
     If root.Name <> "loaded" Then Error 9835, "LoadXml failed"
     Set first = root.GetElement("child")
     If first.Value <> "ok" Then Error 9836, "LoadXml content failed"
