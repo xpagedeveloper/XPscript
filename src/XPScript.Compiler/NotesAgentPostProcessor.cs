@@ -23,8 +23,11 @@ internal static class NotesAgentPostProcessor
             "    public XPScriptNotesAgent[] Agents { get { return GetAgents(); } }\n    public XPScriptNotesForm[] Forms { get { return GetForms(); } }\n    public XPScriptNotesView[] Views { get { return GetViews(); } }\n\n    private XPScriptNotesAgent[] GetAgents()\n    {\n        EnsureAlive();\n        if (!IsOpen) return Array.Empty<XPScriptNotesAgent>();\n        var ids = Session.Api.BuildNoteCollection(_handle, \"@All\", 0x0200);\n        var result = new List<XPScriptNotesAgent>();\n        foreach (var id in ids)\n        {\n            var title = Session.Api.GetDesignNoteText(_handle, id, \"$Title\");\n            if (title is null) continue;\n            var separator = title.IndexOf('|');\n            if (separator >= 0) title = title[..separator];\n            if (title.Length > 0) result.Add(new XPScriptNotesAgent(Session, this, id, title));\n        }\n        return result.ToArray();\n    }\n\n    private XPScriptNotesForm[] GetForms()\n    {\n        EnsureAlive();\n        if (!IsOpen) return Array.Empty<XPScriptNotesForm>();\n        var ids = Session.Api.BuildNoteCollection(_handle, \"@All\", 0x0004);\n        var result = new List<XPScriptNotesForm>();\n        foreach (var id in ids)\n        {\n            var title = Session.Api.GetDesignNoteText(_handle, id, \"$Title\");\n            if (title is null) continue;\n            var separator = title.IndexOf('|');\n            if (separator >= 0) title = title[..separator];\n            if (title.Length > 0) result.Add(new XPScriptNotesForm(Session, this, id, title));\n        }\n        return result.ToArray();\n    }\n\n    private string[] GetDesignNames(uint noteClassMask)\n    {\n        EnsureAlive();\n        if (!IsOpen) return Array.Empty<string>();\n        var ids = Session.Api.BuildNoteCollection(_handle, \"@All\", noteClassMask);\n        var result = new List<string>();\n        foreach (var id in ids)\n        {\n            var title = Session.Api.GetDesignNoteText(_handle, id, \"$Title\");\n            if (title is null) continue;\n            var separator = title.IndexOf('|');\n            if (separator >= 0) title = title[..separator];\n            if (title.Length > 0) result.Add(title);\n        }\n        return result.ToArray();\n    }\n\n    private XPScriptNotesView[] GetViews()\n    {\n        EnsureAlive();\n        if (!IsOpen) return Array.Empty<XPScriptNotesView>();\n        var names = GetDesignNames(0x0008);\n        var result = new List<XPScriptNotesView>();\n        foreach (var name in names)\n        {\n            var view = OpenView(name);\n            if (view is not null) result.Add(view);\n        }\n        return result.ToArray();\n    }\n\n    public XPScriptNotesAgent? GetAgent(object? nameValue)",
             "database-design-collections");
 
+        var runAgentAnchor = source.Contains("    internal string RunAgent(uint db, string name, uint documentContext)", StringComparison.Ordinal)
+            ? "    internal string RunAgent(uint db, string name, uint documentContext)"
+            : "    internal string RunAgent(nint db, string name, nint documentContext)";
         source = ReplaceRequired(source,
-            "    internal string RunAgent(uint db, string name, uint documentContext)",
+            runAgentAnchor,
             "    internal string? GetDesignNoteText(uint db, uint noteId, string itemName)\n    {\n        EnsureInitialized();\n        var status = Resolve<NSFNoteOpenDelegate>(\"NSFNoteOpen\")(db, noteId, 0, out var note);\n        if ((status & 0x3FFF) == 0x0227) return null;\n        Check(status, \"NSFNoteOpen(design note)\");\n        try { return GetItemText(note, itemName); }\n        finally { CloseNote(note); }\n    }\n\n    internal uint FindAgentNoteId(uint db, string name)\n    {\n        EnsureInitialized();\n        using var agentName = ToLmbcs(name);\n        var status = Resolve<NIFFindDesignNoteDelegate>(\"NIFFindDesignNote\")(db, agentName.Pointer, NoteClassFilter, out var noteId);\n        if (status != 0 && TryResolve<NIFFindPrivateDesignNoteDelegate>(\"NIFFindPrivateDesignNote\", out var findPrivate) && findPrivate is not null)\n            status = findPrivate(db, agentName.Pointer, NoteClassFilter, out noteId);\n        if (status != 0)\n        {\n            var text = LoadStatusText(status);\n            if (text.Contains(\"not found\", StringComparison.OrdinalIgnoreCase)) return 0;\n            Check(status, \"NIFFindDesignNote(agent)\");\n        }\n        return noteId;\n    }\n\n    internal string RunAgent(uint db, string name, uint documentContext)",
             "native-design-note-read-and-find-agent");
 
@@ -86,10 +89,43 @@ internal sealed class XPScriptNotesAgent : XPScriptNotesObject
         return 0;
     }
 
+    public int RunWithDocumentContext(object? documentValue)
+    {
+        EnsureAlive();
+        if (documentValue is not XPScriptNotesDocument doc)
+            throw new XPScriptRuntimeException(13, "NotesAgent.RunWithDocumentContext requires a NotesDocument.");
+        EnsureDocumentContext(doc);
+        return 0;
+    }
+
+    public int RunWithDocumentContext(object? documentValue, object? noteIdValue)
+    {
+        return RunWithDocumentContext(documentValue);
+    }
+
+    private void EnsureDocumentContext(XPScriptNotesDocument doc)
+    {
+        if (doc.IsRecycled) throw new XPScriptRuntimeException(91, "NotesAgent document context has been recycled.");
+        Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle);
+    }
+
     public int RunOnServer() => Run();
-    public int RunOnServer(object? noteIdValue) => Run(noteIdValue);
+    public int RunOnServer(object? noteIdValue)
+    {
+        EnsureAlive();
+        var doc = _database.GetDocumentByID(noteIdValue);
+        if (doc is null) throw new XPScriptRuntimeException(91, "NotesAgent.RunOnServer document was not found.");
+        try { Session.Api.RunAgent(_database.Handle, _name, doc.NativeHandle); }
+        finally { doc.Recycle(); }
+        return 0;
+    }
     public void Save() { EnsureAlive(); Session.Api.SaveAgent(_database.Handle, _noteId); }
-    public void Remove() { EnsureAlive(); throw new XPScriptRuntimeException(445, "NotesAgent.Remove is not supported by this runtime surface yet."); }
+    public void Remove()
+    {
+        EnsureAlive();
+        if (!Session.Api.DeleteNote(_database.Handle, _noteId, false))
+            throw new XPScriptRuntimeException(445, "Unable to remove NotesAgent.");
+    }
     public void UnLock() { EnsureAlive(); }
 
     private string ReadText(string itemName)

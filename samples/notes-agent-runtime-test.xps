@@ -4,9 +4,15 @@ Option Declare
 Sub Main()
     Const DATABASE_PATH = "xpscript.nsf"
     Const AGENT_NAME = "XPScriptTestAgent"
+    Const AGENT_SERVER = "QSUTV2"
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim agent As NotesAgent
+    Dim contextDoc As NotesDocument
+    Dim serverDb As NotesDatabase
+    Dim serverAgent As NotesAgent
+    Dim serverDoc As NotesDocument
+    Dim serverErr As Integer
     Dim result As Variant
 
     Set session = New NotesSession()
@@ -24,10 +30,46 @@ Sub Main()
     Print "AGENT-ENABLED=" & CStr(agent.IsEnabled)
     Print "AGENT-TRIGGER=" & CStr(agent.Trigger)
     Print "AGENT-TARGET=" & CStr(agent.Target)
+    Print "AGENT-HTTP-URL=" & agent.HttpURL
+    Print "AGENT-ON-BEHALF-OF=" & agent.OnBehalfOf
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
     Print "AGENT-RETURN-MESSAGE=" & agent.ReturnMessage
+
+    Set contextDoc = db.CreateDocument()
+    Call contextDoc.ReplaceItemValue("Form", "XPScriptTest")
+    Call contextDoc.Save()
+    result = agent.RunWithDocumentContext(contextDoc)
+    Print "AGENT-RUN-WITH-DOCUMENT-CONTEXT=" & CStr(result)
+    result = agent.RunOnServer(contextDoc.NoteID)
+    Print "AGENT-RUN-ON-SERVER=" & CStr(result)
+    Call contextDoc.Recycle()
+
+    Print "AGENT-SERVER-BEGIN Server=" & AGENT_SERVER & " ReplicaID=" & db.ReplicaID
+    Set serverDb = session.OpenByReplicaID(AGENT_SERVER, db.ReplicaID)
+    If serverDb Is Nothing Or Not serverDb.IsOpen Then
+        Print "AGENT-SERVER=NOT-OPEN Error=" & serverDb.OpenError
+    Else
+        Set serverAgent = serverDb.GetAgent(AGENT_NAME)
+        If serverAgent Is Nothing Then
+            Print "AGENT-SERVER=AGENT-NOT-FOUND"
+        Else
+            Set serverDoc = serverDb.CreateDocument()
+            Call serverDoc.ReplaceItemValue("Form", "XPScriptTest")
+            Call serverDoc.Save()
+            serverErr = 0
+            On Error Resume Next
+            result = serverAgent.RunOnServer(serverDoc.NoteID)
+            serverErr = Err
+            On Error GoTo 0
+            Print "AGENT-SERVER-RUN-ON-SERVER=" & CStr(result) & " Err=" & CStr(serverErr)
+            Call serverDoc.Remove(True)
+            Call serverDoc.Recycle()
+            Call serverAgent.Recycle()
+        End If
+        Call serverDb.Recycle()
+    End If
 
     Call agent.Recycle()
     Call db.Recycle()

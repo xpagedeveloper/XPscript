@@ -162,14 +162,24 @@ internal static class NotesRuntimeSourceBuilder
         source = NotesFullTextReadMaskPostProcessor.ApplyBuiltSurface(source);
         source = NotesNothingPostProcessor.Apply(source);
 
+        // Several compatibility postprocessors inject native Notes code after
+        // the initial handle normalization. Normalize once more so injected
+        // code uses the same uint handle ABI on Windows as the base runtime.
+        source = NormalizeDominoHandles(source);
+
         return source;
     }
 
-    private static string NormalizeDominoHandles(string source)
+    internal static string NormalizeDominoHandles(string source)
     {
+        source = Regex.Replace(
+            source,
+            @"(internal sealed(?: partial)? class XPScriptNotesDatabase : XPScriptNotesObject\s*\{(?:(?!internal (?:sealed|abstract) class).)*?private )nint(\s+_handle;)",
+            "$1uint$2",
+            RegexOptions.Singleline);
         source = source.Replace(
-            "private nint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",
-            "private uint _handle;\n\n    internal XPScriptNotesDatabase(XPScriptNotesSession session, uint handle, string server, string filePath)",
+            "internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath)",
+            "internal XPScriptNotesDatabase(XPScriptNotesSession session, uint handle, string server, string filePath)",
             StringComparison.Ordinal);
         source = source.Replace(
             "internal nint Handle { get { EnsureAlive(); return _handle; } }",

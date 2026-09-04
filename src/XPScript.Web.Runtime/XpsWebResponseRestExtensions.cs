@@ -5,6 +5,12 @@ public static class XpsWebResponseRestExtensions
     public static void Json(this XPScript.Web.Runtime.XpsWebResponse response, object? data)
         => WriteJson(response, 200, data, "application/json; charset=utf-8");
 
+    public static void Json(this XPScript.Web.Runtime.XpsWebResponse response, int status, object? data)
+    {
+        if (status is < 100 or > 599) throw new ArgumentOutOfRangeException(nameof(status), "HTTP status must be between 100 and 599.");
+        WriteJson(response, status, data, "application/json; charset=utf-8");
+    }
+
     public static void OK(this XPScript.Web.Runtime.XpsWebResponse response, object? data)
         => WriteJson(response, 200, data, "application/json; charset=utf-8");
 

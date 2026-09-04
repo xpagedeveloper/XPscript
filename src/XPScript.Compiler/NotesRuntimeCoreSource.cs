@@ -272,9 +272,11 @@ internal sealed class XPScriptNotesSession : IDisposable
         {
             return new XPScriptNotesDatabase(this, Api.OpenDatabase(server, file), server, file);
         }
-        catch (XPScriptRuntimeException)
+        catch (XPScriptRuntimeException ex)
         {
-            return new XPScriptNotesDatabase(this, 0, server, file);
+            var result = new XPScriptNotesDatabase(this, 0, server, file);
+            result.SetOpenError(ex.Message);
+            return result;
         }
     }
 
@@ -291,9 +293,12 @@ internal sealed class XPScriptNotesSession : IDisposable
                 return new XPScriptNotesDatabase(this, 0, server, file);
             return new XPScriptNotesDatabase(this, Api.OpenDatabase(server, file), server, file);
         }
-        catch (XPScriptRuntimeException)
+        catch (XPScriptRuntimeException ex)
         {
-            return new XPScriptNotesDatabase(this, 0, server, file);
+            Console.Error.WriteLine("DEBUG OpenByReplicaID failed server=" + server + " replicaId=" + replicaId + " file=" + file);
+            var result = new XPScriptNotesDatabase(this, 0, server, file);
+            result.SetOpenError(ex.Message);
+            return result;
         }
     }
 

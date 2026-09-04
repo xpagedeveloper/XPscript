@@ -75,19 +75,25 @@ internal sealed partial class XPScriptNotesNativeApi
     internal string LocateDatabaseByReplicaId(string server, string replicaId)
     {
         EnsureInitialized();
+        Console.Error.WriteLine("DEBUG OpenByReplicaID begin server=" + server + " replicaId=" + replicaId);
         var id = ParseReplicaId(replicaId);
         nint db = 0;
         try
         {
+            Console.Error.WriteLine("DEBUG OpenByReplicaID opening remote data directory");
             db = OpenDatabase(server, "");
+            Console.Error.WriteLine("DEBUG OpenByReplicaID directory handle=" + db.ToString());
             const int capacity = 4096;
             var output = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
             try
             {
                 Zero(output, capacity);
+                Console.Error.WriteLine("DEBUG OpenByReplicaID calling NSFDbLocateByReplicaID");
                 Check(Resolve<NSFDbLocateByReplicaIDDelegate>("NSFDbLocateByReplicaID")(
                     db, ref id, output, checked((ushort)(capacity - 1))), "NSFDbLocateByReplicaID");
-                return FromLmbcsZeroTerminated(output, capacity - 1);
+                var path = FromLmbcsZeroTerminated(output, capacity - 1);
+                Console.Error.WriteLine("DEBUG OpenByReplicaID located path=" + path);
+                return path;
             }
             finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(output); }
         }

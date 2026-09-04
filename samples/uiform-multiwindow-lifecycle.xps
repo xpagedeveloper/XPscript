@@ -3,22 +3,15 @@ Option Declare
 Sub Main()
     Dim first As New UIForm("First form", 480, 320, True)
     Dim second As New UIForm("Second form", 480, 320, True)
-    Dim result As String
 
     Call first.AddTextField("name", "Name")
     Call second.AddTextField("value", "Value")
 
     Call first.Show(False)
     If first.Modal Then Error 5, "First form should be modeless"
-    Call first.Close()
 
     Call second.Show(False)
     If second.Modal Then Error 5, "Second form should be modeless"
-    Call second.Close()
 
-    If False Then
-        Call first.Show(True)
-        result = second.ShowDialog()
-        Print result
-    End If
+    Print "Both modeless forms are open. Close both windows to exit."
 End Sub

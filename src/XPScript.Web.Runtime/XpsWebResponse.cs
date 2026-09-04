@@ -42,6 +42,10 @@ public sealed class XpsWebResponse
 
     public ReadOnlyMemory<byte> Body => _body.ToArray();
 
+    public void Json(object? data) => global::XpsWebResponseRestExtensions.Json(this, data);
+
+    public void Json(int status, object? data) => global::XpsWebResponseRestExtensions.Json(this, status, data);
+
     public void SetHeader(string name, string value)
     {
         EnsureWritable();

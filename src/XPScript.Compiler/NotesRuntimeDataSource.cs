@@ -8,6 +8,7 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
     private readonly object _childrenGate = new();
     private readonly List<XPScriptNotesOwnedObject> _children = [];
     private nint _handle;
+    private string _openError = "";
 
     internal XPScriptNotesDatabase(XPScriptNotesSession session, nint handle, string server, string filePath) : base(session)
     {
@@ -20,6 +21,8 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
     public string Server { get; }
     public string FilePath { get; }
     public bool IsOpen => !IsRecycled && _handle != 0;
+    public string OpenError { get { EnsureAlive(); return _openError; } }
+    internal void SetOpenError(string value) { _openError = value ?? ""; }
 
     internal void RegisterChild(XPScriptNotesOwnedObject child)
     {

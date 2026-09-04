@@ -2,6 +2,142 @@
 
 This document describes the REST functionality currently implemented in XPScript web runtime.
 
+## Generate REST server code from OpenAPI
+
+XPScript can generate REST server `.xps` source from OpenAPI 3.0.x and 3.1.x specifications in YAML or JSON format.
+
+```text
+xpscript openapi generate openapi.yaml
+```
+
+The default output file uses the same base name as the specification with the `.xps` extension. Use `-o` or `--output` to select another path.
+
+```text
+xpscript openapi generate petstore.yaml -o ./generated/petstore.xps
+xpscript openapi generate api.json --force
+```
+
+`--force` is required to overwrite an existing generated `.xps` file.
+
+### Additive reimport
+
+Use `openapi import` when an OpenAPI specification has changed and the existing `.xps` file may contain implemented handlers or other edits that must not be overwritten.
+
+```text
+xpscript openapi import petstore.yaml -o ./generated/petstore.xps
+```
+
+Import is deliberately additive. Existing declarations are authoritative and are preserved. The importer only adds declarations that are missing from the existing XPScript source:
+
+- a component or generated contract class that does not yet exist is appended
+- a property that does not yet exist in an existing class is inserted before that class's `End Class`
+- a generated Function or Sub that does not yet exist is appended
+- existing Functions and Subs, including their bodies, signatures and attributes, are never rewritten
+- existing class properties and validation attributes are never rewritten or removed
+- declarations removed from the newer OpenAPI specification are not removed from XPScript
+
+When the newer OpenAPI document describes a different type, validation rule, Function/Sub signature, route method, route path, security attribute or endpoint parameter list for an existing declaration, the importer keeps the existing XPScript declaration and reports a drift warning. For example, adding a query parameter to an already imported operation can add the corresponding request-contract property, but the existing endpoint wrapper is left unchanged and a warning is emitted rather than modifying the wrapper signature.
+
+The merged source is written to a temporary `.xps` file and compiled as a REST web unit first. The destination file is replaced only when that compile succeeds. A failed reimport therefore leaves the existing destination untouched. `openapi import` does not accept `--force`.
+
+If the destination does not exist yet, `openapi import` creates it from the OpenAPI specification and validates it before placing it at the destination.
+
+A minimal OpenAPI source can look like this:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Pet API
+  version: 1.0.0
+paths:
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Pet returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 100
+```
+
+The generator creates compilable XPScript REST code. Component schemas become XPScript classes. OpenAPI path, query and header parameters become `[FromRoute]`, `[FromQuery]` and `[FromHeader]` bindings. JSON request bodies become `[FromBody]` parameters.
+
+Each OpenAPI operation gets two contract classes and a handler function. For an operation with `operationId: getPet`, the generated code contains `GetPetRequest`, `GetPetResponse` and `HandleGetPet`. The HTTP route wrapper is named `EndpointGetPet`. The `Endpoint` prefix prevents an operationId from colliding with a component schema that has the same name while leaving the OpenAPI operation name unchanged in the generated handler and contracts.
+
+```xpscript
+Public Class GetPetRequest
+    Public PetId As Long
+End Class
+
+Public Class GetPetResponse
+    Public StatusCode As Integer
+    Public Data As Variant
+End Class
+
+Function HandleGetPet(request As GetPetRequest) As GetPetResponse
+    Dim result As GetPetResponse
+    Set result = New GetPetResponse
+    ' TODO: implement this operation and set result.StatusCode/result.Data.
+    result.StatusCode = 501
+    HandleGetPet = result
+End Function
+
+[Anonymous]
+[Get]
+[Route:/pets/{petId}]
+Sub EndpointGetPet([FromRoute:"petId"] pPetId As Long)
+    Dim request As GetPetRequest
+    Set request = New GetPetRequest
+    Dim result As GetPetResponse
+    request.PetId = pPetId
+    Set result = HandleGetPet(request)
+    Call WriteGetPetResponse(result)
+End Sub
+```
+
+The generated route wrapper owns HTTP parameter binding. Application code belongs in the generated `Handle...` function and returns a generated response contract. Set `StatusCode` to the response status and `Data` to the JSON-compatible value to return. Generated response writers use `Response.Json(status, data)` for JSON responses and `Response.NoContent()` for HTTP 204.
+
+OpenAPI schema mappings currently generated are:
+
+- `integer` with `format: int32` -> `Integer`
+- other `integer` -> `Long`
+- `number` with `format: float` -> `Single`
+- other `number` -> `Double`
+- `boolean` -> `Boolean`
+- `string` -> `String`
+- `string` with `format: date` or `date-time` -> `Date`
+- component schema `$ref` -> generated XPScript class
+- arrays and free-form objects -> `Variant`
+
+The generator maps OpenAPI validation metadata onto REST model validation where XPScript has an equivalent rule. `required` generates `[Required]`, `format: email` generates `[Email]`, `maxLength` generates `[MaxLength:n]`, and schemas containing both `minimum` and `maximum` generate `[Range:min;max]`.
+
+OpenAPI 3.1 nullable type arrays such as `type: [string, 'null']` are accepted. The non-null type is used for the generated XPScript field.
+
+Current generator constraints are deliberate. Only local `$ref` values are resolved. Typed schema references must point to `#/components/schemas/...`. Request bodies currently require `application/json` or a structured `+json` media type. Path, query and header parameters are supported. Cookie parameters, external references, multipart/form-data generation, advanced JSON Schema composition such as `oneOf`/`anyOf`, and lossless generation for OpenAPI property names that are not valid XPScript identifiers are not yet supported. Unsupported input fails generation instead of silently producing a different API contract.
+
+Use `openapi generate --force` only when replacing the generated source is intended. Use `openapi import` for non-destructive updates after handlers or other declarations have been implemented.
+
 ## Explicit routes
 
 Use `[Route:/path]` together with one or more HTTP method rules.
@@ -152,6 +288,7 @@ Base response members currently implemented:
 REST response helpers currently implemented:
 
 - `Response.Json(data)`
+- `Response.Json(status, data)`
 - `Response.OK(data)`
 - `Response.Ok(data)`
 - `Response.Created(location, data)`
@@ -164,7 +301,7 @@ REST response helpers currently implemented:
 - `Response.Problem(status, title, detail)`
 - `Response.problem(status, title, detail)`
 
-`Response.OK` and `Response.Json` return HTTP 200 with JSON. `Created` returns HTTP 201 and sets `Location`. `NoContent` returns HTTP 204. Problem helpers return `application/problem+json` and require a status from 400 through 599.
+`Response.OK` and `Response.Json(data)` return HTTP 200 with JSON. `Response.Json(status, data)` returns JSON with the specified HTTP status from 100 through 599. `Created` returns HTTP 201 and sets `Location`. `NoContent` returns HTTP 204. Problem helpers return `application/problem+json` and require a status from 400 through 599.
 
 ## CORS
 

@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
     <ProjectReference Include="../XPScript.UI.Browser/XPScript.UI.Browser.csproj" />
