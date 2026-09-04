@@ -11,8 +11,8 @@
     ai.Model = "example-model"
     ai.Temperature = 0.2
     ai.MaxOutputTokens = 500
-    Call ai.AddMessage("system", "Answer clearly and briefly.")
-    Call ai.AddMessage("user", "What is privacy by design?")
+    ai.SystemPrompt = "Answer clearly and briefly."
+    ai.UserPrompt = "What is privacy by design?"
 
     Set response = ai.Complete()
     Print response.Text
@@ -92,6 +92,18 @@ ai.Model = "my-deployment-name"
 ai.EndpointPath = "/tenant-a/v1/chat/completions"
 </code></pre>
 <p>The path must remain relative to the configured origin. It cannot redirect requests to another host.</p>
+<h2 id="prompt-parts">Prompt parts</h2>
+<p>For the common two-part prompt shape, use <code>SystemPrompt</code> and <code>UserPrompt</code>:</p>
+<pre><code class="language-xpscript">ai.SystemPrompt = "Return concise structured data."
+ai.UserPrompt = "Summarize this customer record."
+Set response = ai.Complete()
+</code></pre>
+<p><code>SystemPrompt</code> is inserted as the first <code>system</code> message. <code>UserPrompt</code> is appended as the final <code>user</code> message. Any messages added with <code>AddMessage</code> remain between them.</p>
+<p>The helper methods are:</p>
+<pre><code class="language-xpscript">Call ai.SetPrompt("Return concise structured data.", "Summarize this customer record.")
+Call ai.ClearPrompt()
+</code></pre>
+<p>A request can use only prompt properties; <code>AddMessage</code> is not required when at least one prompt part is set.</p>
 <h2 id="messages">Messages</h2>
 <p>The internal message collection supports <code>system</code>, <code>user</code> and <code>assistant</code> roles:</p>
 <pre><code class="language-xpscript">Call ai.AddMessage("system", "Use Swedish.")
@@ -111,15 +123,45 @@ Set response = ai.Complete(messages)
 <p>Pass a model as the second argument to override the client model for one request:</p>
 <pre><code class="language-xpscript">Set response = ai.Complete(messages, "another-model")
 </code></pre>
+<h2 id="structured-json-results">Structured JSON results</h2>
+<p>The preferred API is to define the desired result shape as an XPscript class and pass an instance to <code>SetResultClass</code>:</p>
+<pre><code class="language-xpscript">Class CustomerSummary
+    Public Name As String
+    Public RiskScore As Double
+    Public Active As Boolean
+End Class
+
+Dim contract As CustomerSummary
+Set contract = New CustomerSummary()
+
+ai.JsonSchemaName = "customer_summary"
+ai.JsonSchemaStrict = True
+Call ai.SetResultClass(contract)
+Set response = ai.Complete()
+</code></pre>
+<p><code>XPAi</code> derives OpenAI-compatible JSON Schema from the class using the same visibility model as XPscript JSON serialization. Public fields and public readable properties are included. Private fields/properties and write-only properties are excluded. Nested classes are converted recursively. Recursive class graphs are rejected.</p>
+<p>Included members are emitted as required properties. Object schemas disallow additional properties. Scalar mappings include strings, booleans, integer and floating-point numbers, dates (<code>string</code> with <code>date-time</code> format), enums, arrays and nested classes.</p>
+<p>The overloads are:</p>
+<pre><code class="language-xpscript">Call ai.SetResultClass(contract)
+Call ai.SetResultClass(contract, "customer_summary")
+Call ai.SetResultClass(contract, "customer_summary", True)
+</code></pre>
+<p>For advanced/provider-specific schemas, raw JSON Schema is also supported:</p>
+<pre><code class="language-xpscript">Call ai.SetJsonSchema(schema)
+Call ai.SetJsonSchema(schema, "result_name")
+Call ai.SetJsonSchema(schema, "result_name", True)
+</code></pre>
+<p><code>ResponseJsonSchema</code> gets a cloned configured schema or sets a raw schema. <code>HasJsonSchema</code> reports whether one is configured. <code>ClearJsonSchema()</code> removes it. <code>JsonSchemaName</code> defaults to <code>response</code>, and <code>JsonSchemaStrict</code> defaults to <code>True</code>.</p>
+<p>The generated request uses OpenAI-compatible <code>response_format.type = "json_schema"</code>. Provider support depends on the configured endpoint implementing that request shape.</p>
+<p>See <a href="../xpai-structured-output/">XPAi prompts and structured results</a> for the detailed class-to-schema mapping and examples.</p>
 <h2 id="request-options">Request options</h2>
 <p><code>Temperature</code> accepts <code>0</code> through <code>2</code>. <code>MaxOutputTokens</code> accepts <code>1</code> through <code>1000000</code> and is sent as <code>max_tokens</code>.</p>
 <p>Use <code>SetOption</code> for other provider-compatible JSON properties. Values use the native JSON conversion rules.</p>
 <pre><code class="language-xpscript">Call ai.SetOption("top_p", 0.9)
-Call ai.SetOption("response_format", responseFormatJsonObject)
 Call ai.RemoveOption("top_p")
 Call ai.ClearOptions()
 </code></pre>
-<p><code>model</code>, <code>messages</code> and <code>stream</code> cannot be supplied through <code>SetOption</code>. Use their dedicated APIs.</p>
+<p><code>model</code>, <code>messages</code>, <code>stream</code> and <code>response_format</code> cannot be supplied through <code>SetOption</code>. Use their dedicated APIs.</p>
 <h2 id="provider-headers">Provider headers</h2>
 <pre><code class="language-xpscript">Call ai.SetHeader("api-key", Environ("AZURE_AI_KEY"))
 Call ai.SetHeader("HTTP-Referer", "https://application.example.com")
@@ -166,7 +208,16 @@ Call ai.ClearHeaders()
 
 
 
-<table><thead><tr><th>Property</th><th>Description</th></tr></thead><tbody><tr><td><code>StatusCode</code></td><td>HTTP response status code.</td></tr><tr><td><code>IsSuccess</code></td><td><code>True</code> for an HTTP success status.</td></tr><tr><td><code>Model</code></td><td>Model returned by the provider.</td></tr><tr><td><code>Text</code></td><td>Assistant text extracted from the response.</td></tr><tr><td><code>Content</code></td><td>Alias for <code>Text</code>.</td></tr><tr><td><code>RawJson</code></td><td>Complete provider JSON as a <code>XPJsonDocument</code>. Unknown properties are preserved.</td></tr><tr><td><code>Usage</code></td><td>Provider usage object as a <code>XPJsonDocument</code>.</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Description</th></tr></thead><tbody><tr><td><code>StatusCode</code></td><td>HTTP response status code.</td></tr><tr><td><code>IsSuccess</code></td><td><code>True</code> for an HTTP success status.</td></tr><tr><td><code>Model</code></td><td>Model returned by the provider.</td></tr><tr><td><code>Text</code></td><td>Assistant text extracted from the response.</td></tr><tr><td><code>Content</code></td><td>Alias for <code>Text</code>.</td></tr><tr><td><code>RawJson</code></td><td>Complete provider JSON as a <code>XPJsonDocument</code>. Unknown properties are preserved.</td></tr><tr><td><code>Usage</code></td><td>Provider usage object as a <code>XPJsonDocument</code>.</td></tr><tr><td><code>HasJsonResult</code></td><td><code>True</code> when <code>Text</code> contains valid JSON within XPscript JSON limits.</td></tr><tr><td><code>ResultJson</code></td><td>Parses <code>Text</code> and returns a <code>XPJsonDocument</code>; raises an XPScript error if the text is not valid JSON.</td></tr></tbody></table>
+<p><code>ResultJson</code> parses the provider result but does not independently validate it against the configured JSON Schema. Schema enforcement is requested from the provider.</p>
 <p><code>ThrowOnHttpError</code> defaults to <code>True</code>. A non-success response then raises an error containing only the HTTP status code. Set it to <code>False</code> when the application needs to inspect a failed response object.</p>
 <p>Provider response bodies, API keys and authorization headers are never copied into runtime error messages.</p>
 <h2 id="streaming">Streaming</h2>
@@ -264,7 +315,7 @@ Call ai.Cancel()
 
 
 <table><thead><tr><th>Resource</th><th align="right">Limit</th></tr></thead><tbody><tr><td>Request body</td><td align="right">8 MiB</td></tr><tr><td>Non-streaming response</td><td align="right">16 MiB</td></tr><tr><td>Streaming payload</td><td align="right">16 MiB</td></tr><tr><td>One SSE line</td><td align="right">1 MiB</td></tr><tr><td>SSE events</td><td align="right">100000</td></tr><tr><td>Messages</td><td align="right">10000</td></tr></tbody></table>
-<p>See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/xpai.xps">xpai.xps</a> for a complete executable example.</p>
+<p>See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/xpai.xps">xpai.xps</a> for the general executable example and <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/xpai-structured-output.xps">xpai-structured-output.xps</a> for prompt/schema compilation coverage.</p>
 <p>Provider endpoint references: <a href="https://developers.openai.com/api/reference/resources/chat">OpenAI Chat API</a>, <a href="https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk">Claude OpenAI compatibility</a>, <a href="https://openrouter.ai/docs/quickstart">OpenRouter quickstart</a> and <a href="https://learn.microsoft.com/azure/foundry/openai/api-version-lifecycle">Azure OpenAI v1 API</a>.</p>
 <h2 id="complete-api-reference">Complete API reference</h2>
 
@@ -372,7 +423,51 @@ Call ai.Cancel()
 
 
 
-<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>XPAi(endpoint [, apiKey])</code></td><td>Creates a client for a custom full endpoint. The API key uses bearer authentication.</td></tr><tr><td><code>XPAi(preset, apiKey [, providerConfiguration])</code></td><td>Creates a client from a provider preset. Azure requires its resource name as provider configuration.</td></tr><tr><td><code>Endpoint</code></td><td>Returns the resolved request endpoint.</td></tr><tr><td><code>Provider</code></td><td>Returns the selected provider name.</td></tr><tr><td><code>EndpointPath</code></td><td>Replaces the path while keeping the configured origin.</td></tr><tr><td><code>Model</code></td><td>Gets or sets the default model.</td></tr><tr><td><code>Temperature</code></td><td>Gets or sets a value from 0 through 2.</td></tr><tr><td><code>MaxOutputTokens</code></td><td>Gets or sets the output token limit.</td></tr><tr><td><code>Timeout</code></td><td>Gets or sets the total request timeout in seconds.</td></tr><tr><td><code>CollectStreamedResponse</code></td><td>Controls whether streaming also builds <code>XPAiResponse.Text</code>.</td></tr><tr><td><code>ThrowOnHttpError</code></td><td>Controls whether non-success HTTP responses raise an XPScript error.</td></tr><tr><td><code>AddMessage(role, content)</code></td><td>Adds a system, user or assistant message.</td></tr><tr><td><code>GetMessages()</code></td><td>Returns a cloned message array as <code>XPJsonDocument</code>.</td></tr><tr><td><code>ClearMessages()</code></td><td>Removes all stored messages.</td></tr><tr><td><code>SetOption(name, value)</code></td><td>Adds or replaces an extra request JSON property.</td></tr><tr><td><code>RemoveOption(name)</code></td><td>Removes one extra request property.</td></tr><tr><td><code>ClearOptions()</code></td><td>Removes all extra request properties.</td></tr><tr><td><code>SetHeader(name, value)</code></td><td>Adds or replaces a request header.</td></tr><tr><td><code>RemoveHeader(name)</code></td><td>Removes one request header.</td></tr><tr><td><code>ClearHeaders()</code></td><td>Removes all caller-defined headers.</td></tr><tr><td><code>Complete([messages [, model]])</code></td><td>Sends a non-streaming request.</td></tr><tr><td><code>Stream([messages,] callback [, model])</code></td><td>Sends an SSE request and invokes the callback for each text chunk.</td></tr><tr><td><code>Cancel()</code></td><td>Cancels the active request.</td></tr><tr><td><code>Dispose()</code></td><td>Cancels active work and releases HTTP resources.</td></tr></tbody></table>  </article> </main> </div> <script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>XPAi(endpoint [, apiKey])</code></td><td>Creates a client for a custom full endpoint. The API key uses bearer authentication.</td></tr><tr><td><code>XPAi(preset, apiKey [, providerConfiguration])</code></td><td>Creates a client from a provider preset. Azure requires its resource name as provider configuration.</td></tr><tr><td><code>Endpoint</code></td><td>Returns the resolved request endpoint.</td></tr><tr><td><code>Provider</code></td><td>Returns the selected provider name.</td></tr><tr><td><code>EndpointPath</code></td><td>Replaces the path while keeping the configured origin.</td></tr><tr><td><code>Model</code></td><td>Gets or sets the default model.</td></tr><tr><td><code>SystemPrompt</code></td><td>Gets or sets the first system prompt message.</td></tr><tr><td><code>UserPrompt</code></td><td>Gets or sets the final user prompt message.</td></tr><tr><td><code>SetPrompt(system, user)</code></td><td>Sets both prompt parts.</td></tr><tr><td><code>ClearPrompt()</code></td><td>Clears both prompt parts.</td></tr><tr><td><code>JsonSchemaName</code></td><td>Gets or sets the structured result schema name.</td></tr><tr><td><code>JsonSchemaStrict</code></td><td>Gets or sets strict JSON Schema request mode.</td></tr><tr><td><code>HasJsonSchema</code></td><td>Reports whether structured output is configured.</td></tr><tr><td><code>ResponseJsonSchema</code></td><td>Gets a cloned configured schema or sets a raw schema.</td></tr><tr><td><code>SetResultClass(contract [, name [, strict]])</code></td><td>Derives structured-result JSON Schema from an XPscript class instance.</td></tr><tr><td><code>SetJsonSchema(schema [, name [, strict]])</code></td><td>Sets an explicit raw JSON Schema.</td></tr><tr><td><code>ClearJsonSchema()</code></td><td>Removes structured-output configuration.</td></tr><tr><td><code>Temperature</code></td><td>Gets or sets a value from 0 through 2.</td></tr><tr><td><code>MaxOutputTokens</code></td><td>Gets or sets the output token limit.</td></tr><tr><td><code>Timeout</code></td><td>Gets or sets the total request timeout in seconds.</td></tr><tr><td><code>CollectStreamedResponse</code></td><td>Controls whether streaming also builds <code>XPAiResponse.Text</code>.</td></tr><tr><td><code>ThrowOnHttpError</code></td><td>Controls whether non-success HTTP responses raise an XPScript error.</td></tr><tr><td><code>AddMessage(role, content)</code></td><td>Adds a system, user or assistant message.</td></tr><tr><td><code>GetMessages()</code></td><td>Returns a cloned message array as <code>XPJsonDocument</code>.</td></tr><tr><td><code>ClearMessages()</code></td><td>Removes all stored messages.</td></tr><tr><td><code>SetOption(name, value)</code></td><td>Adds or replaces an extra request JSON property except dedicated properties.</td></tr><tr><td><code>RemoveOption(name)</code></td><td>Removes one extra request property.</td></tr><tr><td><code>ClearOptions()</code></td><td>Removes all extra request properties.</td></tr><tr><td><code>SetHeader(name, value)</code></td><td>Adds or replaces a request header.</td></tr><tr><td><code>RemoveHeader(name)</code></td><td>Removes one request header.</td></tr><tr><td><code>ClearHeaders()</code></td><td>Removes all caller-defined headers.</td></tr><tr><td><code>Complete([messages [, model]])</code></td><td>Sends a non-streaming request.</td></tr><tr><td><code>Stream([messages,] callback [, model])</code></td><td>Sends an SSE request and invokes the callback for each text chunk.</td></tr><tr><td><code>Cancel()</code></td><td>Cancels the active request.</td></tr><tr><td><code>Dispose()</code></td><td>Cancels active work and releases HTTP resources.</td></tr></tbody></table>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);
