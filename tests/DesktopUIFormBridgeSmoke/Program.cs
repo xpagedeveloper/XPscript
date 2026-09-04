@@ -79,6 +79,22 @@ if (root.GetProperty("values").GetProperty("age").ValueKind != JsonValueKind.Num
 if (root.GetProperty("values").GetProperty("enabled").ValueKind != JsonValueKind.True)
     throw new InvalidOperationException("Desktop UIForm Boolean result mismatch.");
 
+var parseDetachedRequest = typeof(DesktopFormLifecycleHost).GetMethod(
+    "ParseDetachedRequest",
+    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+    ?? throw new InvalidOperationException("Desktop modeless UI request detachment helper is missing.");
+var detachedArguments = new object?[]
+{
+    "{\"instanceId\":\"detached-smoke\",\"title\":\"Detached request\",\"fields\":[]}",
+    null
+};
+var detachedRoot = (JsonElement)(parseDetachedRequest.Invoke(null, detachedArguments)
+    ?? throw new InvalidOperationException("Desktop modeless UI request was not parsed."));
+if (!string.Equals(detachedArguments[1] as string, "detached-smoke", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop modeless UI request instance id was not preserved.");
+if (detachedRoot.GetProperty("title").GetString() != "Detached request")
+    throw new InvalidOperationException("Desktop modeless UI request remained tied to a disposed JsonDocument.");
+
 var source = """
 Sub Main()
     Dim answer As String
@@ -130,6 +146,39 @@ foreach (var expected in new[]
         throw new InvalidOperationException("Generated modeless UIForm lifecycle is missing: " + expected);
 }
 
+var modalChildSource = """
+Option Declare
+
+Sub Main()
+    Dim first As New UIForm("First form", 480, 320, True)
+    Call first.AddTextField("name", "Name")
+    Call first.AddButtonCallback("hello", "Klicka här", "OpenSecondForm")
+    Call first.Show(True)
+End Sub
+
+Sub OpenSecondForm(evt As Variant)
+    Dim secondForm As New UIForm("Second form", 480, 320, True)
+    Call secondForm.AddTextField("value", "Value")
+    Call secondForm.AddButtonCallback("close", "Close", "CloseSecondForm")
+    Call secondForm.Show(False)
+End Sub
+
+Sub CloseSecondForm(evt As Variant)
+    Call evt.Form.Close()
+End Sub
+""";
+var generatedModalChild = new XPScriptTranspiler().Transpile(modalChildSource, "uiform-modal-child-smoke.xps", "win-x64");
+foreach (var expected in new[]
+{
+    "XPScriptCallbackRuntime.Invoke(",
+    "XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);",
+    "new XPScriptUIFormEvent(this, \"button\""
+})
+{
+    if (!generatedModalChild.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated modal-parent/modeless-child callback path is missing: " + expected);
+}
+
 var applicationHostType = typeof(DesktopFormHost).Assembly.GetType("XPScript.UI.Desktop.DesktopApplicationHost", throwOnError: false);
 if (applicationHostType is null ||
     applicationHostType.GetMethod("EnsureStarted", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) is null ||
@@ -162,6 +211,8 @@ foreach (var expected in new[]
 }
 
 Console.WriteLine("DESKTOP_UIFORM_BRIDGE_OK");
+Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
 Console.WriteLine("DESKTOP_DIALOG_TRANSPILE_OK");
 Console.WriteLine("DESKTOP_UIFORM_MULTIWINDOW_TRANSPILE_OK");
+Console.WriteLine("DESKTOP_UIFORM_MODAL_CHILD_TRANSPILE_OK");
 Console.WriteLine("DESKTOP_UILISTVIEW_TRANSPILE_OK");
