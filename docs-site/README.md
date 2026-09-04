@@ -11,6 +11,7 @@ npm install
 npm run docs:audit
 npm run dev
 npm run build
+npm run docs:links
 npm run preview
 ```
 
@@ -19,6 +20,17 @@ Use JSON output when a machine-readable inventory is useful:
 ```text
 npm run docs:audit -- --json
 ```
+
+`docs:links` must be run after `npm run build`. It validates the generated HTML instead of only inspecting Markdown source links.
+
+It checks:
+
+- internal documentation targets under `/XPscript/`
+- generated `#fragment` anchors
+- repository-local links rewritten to GitHub, including `samples/` and `demo/` files
+- structured function example links
+
+The command exits with an error if any checked link is broken. Third-party HTTP(S) URLs are counted separately and are not used as a deterministic CI dependency.
 
 ## Migration model
 
@@ -61,3 +73,4 @@ Property access values are stored as `Read` or `ReadWrite`. The UI renders `Read
 5. Use stable documentation IDs for cross references.
 6. Do not invent API metadata when migrating existing reference tables.
 7. Keep the documentation audit informational until a section has been fully migrated and can be validated strictly.
+8. Require the generated-site link verifier to pass before merging documentation changes.
