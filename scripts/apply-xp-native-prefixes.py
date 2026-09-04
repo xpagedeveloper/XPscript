@@ -61,6 +61,24 @@ PROTECTED_PREFIXES = {
     'XmlAttribute': ['System.Xml.', 'System.Xml.Linq.'],
 }
 
+LITERAL_REPLACEMENTS = {
+    'src/XPScript.Compiler/NativeHttpJsonPreprocessor.cs': [
+        (r'\bJsonDocument\.Parse', r'\bXPJsonDocument\.Parse'),
+    ],
+    'src/XPScript.Compiler/NativeCsvPreprocessor.cs': [
+        (r'\bCsvDocument\.ParseBytes', r'\bXPCsvDocument\.ParseBytes'),
+        (r'\bCsvDocument\.Parse', r'\bXPCsvDocument\.Parse'),
+    ],
+    'src/XPScript.Compiler/NativeXmlPreprocessor.cs': [
+        (r'\bXmlDocument\.Parse', r'\bXPXmlDocument\.Parse'),
+    ],
+    'src/XPScript.Compiler/RuntimeFeatures.cs': [
+        ('ContainsTypePrefixReference(code, "HTTPDB")', 'ContainsTypePrefixReference(code, "XPHttpDb")'),
+        ('ContainsTypePrefixReference(code, "Xml")', 'ContainsTypePrefixReference(code, "XPXml")'),
+        ('ContainsTypePrefixReference(code, "Csv")', 'ContainsTypePrefixReference(code, "XPCsv")'),
+    ],
+}
+
 def replace_token(text: str, old: str, new: str) -> str:
     protected = PROTECTED_PREFIXES.get(old, [])
     pattern = rf'\b{re.escape(old)}\b'
@@ -88,6 +106,8 @@ for path in ROOT.rglob('*'):
     updated = original
     for old, new in MAPPINGS:
         updated = replace_token(updated, old, new)
+    for old, new in LITERAL_REPLACEMENTS.get(rel, []):
+        updated = updated.replace(old, new)
     if updated != original:
         path.write_text(updated, encoding='utf-8')
         changed.append(rel)
