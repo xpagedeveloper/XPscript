@@ -63,9 +63,9 @@ Sub Main()
     Print "MISSING_TEXT=" & errText
 
     built.Delimiter = ";"
-    Call built.AddHeader("id")
-    Call built.AddHeader("name")
-    Call built.AddHeader("city")
+    Call built.Headers.Add("id")
+    Call built.Headers.Add("name")
+    Call built.Headers.Add("city")
     Set builtRow = built.AddRow()
     Call builtRow.Set("id", "00123")
     Call builtRow.Set("name", "Åsa")
@@ -88,7 +88,7 @@ Sub Main()
     Print "FILE_SAVE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
     Kill "native-csv-regression-utf8.csv"
 
-    CsvSave built, "native-csv-regression-1252.csv", "windows-1252"
+    Call built.SaveFile("native-csv-regression-1252.csv", "windows-1252")
     fileText = ReadFile("native-csv-regression-1252.csv", "windows-1252")
     Set doc = CsvParse(fileText, ";")
     Print "FILE_OVERRIDE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
