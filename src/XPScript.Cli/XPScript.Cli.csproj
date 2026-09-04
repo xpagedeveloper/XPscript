@@ -30,7 +30,7 @@
   <Target Name="PublishUnifiedToolchainAfterBuild"
           AfterTargets="Build"
           Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipUnifiedPublish)' != 'true'">
-    <Message Importance="high" Text="Publishing unified XPscript toolchain to $(UnifiedPublishDirectory)" />
-    <Exec Command="dotnet publish &quot;$(MSBuildProjectFullPath)&quot; -c &quot;$(Configuration)&quot; --no-build -p:SkipUnifiedPublish=true -o &quot;$(UnifiedPublishDirectory)&quot; --nologo" />
+    <Message Importance="high" Text="Publishing unified XPscript toolchain as a self-contained single file to $(UnifiedPublishDirectory)" />
+    <Exec Command="dotnet publish &quot;$(MSBuildProjectFullPath)&quot; -c &quot;$(Configuration)&quot; -p:SkipUnifiedPublish=true --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o &quot;$(UnifiedPublishDirectory)&quot; --nologo" />
   </Target>
 </Project>
