@@ -41,7 +41,19 @@ public sealed record DesktopFormField(
     public string MonthMinimum { get; init; } = string.Empty;
     public string MonthMaximum { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
+    public string AccessibleName { get; init; } = string.Empty;
+    public string AccessibleDescription { get; init; } = string.Empty;
+    public string AccessibleHelpText { get; init; } = string.Empty;
+    public string AccessibleLive { get; init; } = "Off";
+    public bool AccessibilityHidden { get; init; }
+    public bool Focusable { get; init; } = true;
+    public bool IsTabStop { get; init; } = true;
+    public int? TabIndex { get; init; }
+    public string AccessKey { get; init; } = string.Empty;
+    public string HotKey { get; init; } = string.Empty;
+    public string ValidationError { get; init; } = string.Empty;
 }
+
 
 public sealed record DesktopFormButton(
     string Name,
@@ -67,7 +79,15 @@ public sealed record DesktopFormRequest(
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
+    public string InstanceId { get; init; } = string.Empty;
+    public string InitialFocus { get; init; } = string.Empty;
+    public bool ValidationSummary { get; init; } = true;
+    public bool FocusFirstError { get; init; } = true;
+    public bool AnnounceValidationErrors { get; init; } = true;
+    public string Announcement { get; init; } = string.Empty;
+    public string AnnouncementPriority { get; init; } = "Polite";
 }
+
 
 public sealed record DesktopFormResult(
     string Result,
