@@ -125,7 +125,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
-        if (runtimeFeatures.RequiresJson)
+        if (runtimeFeatures.RequiresJson || usesAi)
         {
             generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
             generated += "\n\n" + JsonNodesSerializerShimSource.ShimCode + "\n";
