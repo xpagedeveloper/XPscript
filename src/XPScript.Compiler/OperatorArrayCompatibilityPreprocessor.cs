@@ -32,6 +32,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             line = Regex.Replace(line, @"(?<![\w.])ArrayAppend\s*\(", "LSOperatorArrayRuntime.ArrayAppend(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayGetIndex\s*\(", "LSOperatorArrayRuntime.ArrayGetIndex(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArrayUnique\s*\(", "LSOperatorArrayRuntime.ArrayUnique(", RegexOptions.IgnoreCase);
+            line = Regex.Replace(line, @"(?<![\w.])ArraySort\s*\(", "LSOperatorArrayRuntime.ArraySort(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArraySplice\s*\(", "LSOperatorArrayRuntime.ArraySplice(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])ArraySlice\s*\(", "LSOperatorArrayRuntime.ArraySlice(", RegexOptions.IgnoreCase);
             line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
@@ -61,10 +62,6 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteLogicalComparisonCondition(string line)
     {
-        // If/ElseIf may keep their first statement (and optional Else) after Then.
-        // Loop constructs carry only a condition. All of them need the same
-        // comparison-aware And/Or lowering so operator precedence does not depend on
-        // statement layout or on which control-flow keyword introduced the condition.
         var ifMatch = Regex.Match(line, @"^(?<prefix>\s*(?:If|ElseIf)\s+)(?<condition>.+?)(?<suffix>\s+Then(?:\s+.*)?)$", RegexOptions.IgnoreCase);
         if (ifMatch.Success)
             return RewriteConditionMatch(ifMatch, line);
