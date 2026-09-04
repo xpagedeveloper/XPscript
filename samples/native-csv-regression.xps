@@ -6,6 +6,7 @@ Sub Main()
     Dim row As XPCsvRow
     Dim built As New XPCsvDocument
     Dim builtRow As XPCsvRow
+    Dim sortable As XPCsvDocument
     Dim headerCount As Integer
     Dim rowCount As Integer
     Dim columnCount As Integer
@@ -63,15 +64,24 @@ Sub Main()
     Print "MISSING_TEXT=" & errText
 
     built.Delimiter = ";"
-    Call built.AddHeader("id")
-    Call built.AddHeader("name")
-    Call built.AddHeader("city")
+    Call built.Headers.Add("id")
+    Call built.Headers.Add("name")
+    Call built.Headers.Add("city")
     Set builtRow = built.AddRow()
     Call builtRow.Set("id", "00123")
     Call builtRow.Set("name", "Åsa")
     Call builtRow.Set("city", "Malmö; Sweden")
     Print "BUILT=" & CsvStringify(built)
     Print "ESCAPE=" & CsvEscape("Malmö; Sweden", ";")
+
+    Set sortable = CsvParse("id;name" & Chr(10) & _
+                            "2;item10" & Chr(10) & _
+                            "1;item2" & Chr(10) & _
+                            "3;Item1", ";")
+    Call sortable.Sort("name")
+    Print "SORT_NAME=" & sortable.Rows[0].Get("name") & ":" & sortable.Rows[1].Get("name") & ":" & sortable.Rows[2].Get("name")
+    Call sortable.Sort(0)
+    Print "SORT_INDEX=" & sortable.Rows[0].Get("id") & ":" & sortable.Rows[1].Get("id") & ":" & sortable.Rows[2].Get("id")
 
     built.Encoding = "windows-1252"
     encoded = built.ToBytes()
@@ -88,7 +98,7 @@ Sub Main()
     Print "FILE_SAVE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")
     Kill "native-csv-regression-utf8.csv"
 
-    CsvSave built, "native-csv-regression-1252.csv", "windows-1252"
+    Call built.SaveFile("native-csv-regression-1252.csv", "windows-1252")
     fileText = ReadFile("native-csv-regression-1252.csv", "windows-1252")
     Set doc = CsvParse(fileText, ";")
     Print "FILE_OVERRIDE=" & doc.Rows[0].Get("name") & ":" & doc.Rows[0].Get("city")

@@ -1,6 +1,6 @@
 # Native CSV
 
-XPscript provides a native CSV API for parsing, building, iterating, serializing and writing CSV data without external runtime dependencies.
+XPscript provides a native CSV API for parsing, building, iterating, sorting, serializing and saving CSV data without external runtime dependencies.
 
 CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as `00123` are preserved exactly.
 
@@ -30,17 +30,21 @@ The parser supports quoted fields, doubled quotes, embedded delimiters and embed
 
 ## Headers, rows and columns
 
-Headers are exposed as an indexed and iterable collection:
+Headers are exposed as an indexed and iterable collection. Headers can also be added through the collection:
 
 ```xpscript
 Print doc.Headers.Count
 Print doc.Headers[0]
 Print doc.Headers.Get(1)
 
+Call doc.Headers.Add("email")
+
 ForAll header In doc.Headers
     Print header
 End ForAll
 ```
+
+`Headers.Add(name)` and `AddHeader(name)` perform the same schema-changing operation. Existing rows are extended with an empty value. Duplicate header names are rejected case-insensitively.
 
 Rows are also indexed and iterable:
 
@@ -114,21 +118,21 @@ Call row.Set("name", "Anna")
 ## Build CSV
 
 ```xpscript
-Dim doc As New XPCsvDocument
+Dim csv As New XPCsvDocument
 Dim row As XPCsvRow
 
-doc.Delimiter = ";"
+csv.Delimiter = ";"
 
-Call doc.AddHeader("id")
-Call doc.AddHeader("name")
-Call doc.AddHeader("city")
+Call csv.Headers.Add("id")
+Call csv.Headers.Add("name")
+Call csv.Headers.Add("city")
 
-Set row = doc.AddRow()
+Set row = csv.AddRow()
 Call row.Set("id", "00123")
 Call row.Set("name", "Åsa")
 Call row.Set("city", "Malmö; Sweden")
 
-Print CsvStringify(doc)
+Print CsvStringify(csv)
 ```
 
 The builder escapes fields automatically. `CsvEscape(value [, delimiter])` is available when an escaped field is needed independently:
@@ -143,45 +147,80 @@ returns:
 "Malmö; Sweden"
 ```
 
-`AddHeader` is the explicit schema-changing operation. Existing rows are extended with an empty value when a header is added. Duplicate header names are rejected case-insensitively.
+## Sort rows
 
-## Write CSV files
+`XPCsvDocument.Sort(column)` sorts all data rows in place in ascending alphanumeric order. The header row is never moved.
 
-`XPCsvDocument` can write directly to a file:
-
-```xpscript
-Call doc.Save("customers.csv")
-```
-
-`SaveFile` and `WriteFile` are aliases:
+The column selector can be a header name:
 
 ```xpscript
-Call doc.SaveFile("customers.csv")
-Call doc.WriteFile("customers.csv")
+Call csv.Sort("name")
 ```
 
-The function form is also available:
+or a zero-based numeric column index:
 
 ```xpscript
-CsvSave doc, "customers.csv"
-CsvWriteFile doc, "customers-copy.csv"
+Call csv.Sort(0)
 ```
+
+Header-name lookup is case-insensitive and requires `HasHeaders = True`. A numeric selector works with or without headers and must be between `0` and `ColumnCount - 1`.
+
+Sorting is case-insensitive and uses natural alphanumeric ordering. Numeric runs are compared numerically, so values such as `item2` sort before `item10`. Rows whose selected values compare equal keep their original relative order.
+
+Example:
+
+```xpscript
+Dim csv As XPCsvDocument
+Set csv = CsvParse("id;name" & Chr(10) & _
+                   "2;item10" & Chr(10) & _
+                   "1;item2" & Chr(10) & _
+                   "3;Item1", ";")
+
+Call csv.Sort("name")
+' Item1, item2, item10
+
+Call csv.Sort(0)
+' 1, 2, 3
+```
+
+## Save CSV files
+
+File output belongs to the `XPCsvDocument` that contains the CSV data.
+
+```xpscript
+Dim csv As New XPCsvDocument
+
+Call csv.Headers.Add("name")
+Call csv.Headers.Add("city")
+Call csv.Save("output.csv")
+```
+
+`Save(path [, encoding])` serializes the current contents of that `XPCsvDocument` and replaces the target file:
+
+```xpscript
+Call csv.Save("customers.csv")
+Call csv.Save("customers-1252.csv", "windows-1252")
+```
+
+`SaveFile(path [, encoding])` is the explicit file-named alias and has identical behavior:
+
+```xpscript
+Call csv.SaveFile("customers.csv")
+Call csv.SaveFile("customers-utf16.csv", "utf-16")
+```
+
+There are no global `CsvSave` or `CsvWriteFile` functions. `XPCsvDocument.WriteFile` is also not part of the API. Use `Save` or `SaveFile` on the document instance.
 
 The document encoding is used by default. `FileEncoding` is an alias for `Encoding` when working with file output:
 
 ```xpscript
-doc.FileEncoding = "utf-8-bom"
-Call doc.Save("customers.csv")
+csv.FileEncoding = "utf-8-bom"
+Call csv.Save("customers.csv")
 ```
 
-You can override the encoding for one write without changing the document setting:
+Passing an encoding to `Save` or `SaveFile` overrides the encoding for that write without changing the document setting.
 
-```xpscript
-Call doc.Save("customers-1252.csv", "windows-1252")
-CsvSave doc, "customers-utf16.csv", "utf-16"
-```
-
-File writes replace the target file. Relative paths follow XPscript file-system path handling.
+Relative paths follow XPscript file-system path handling.
 
 ## Header mode
 
@@ -223,14 +262,14 @@ Supported encoding names are:
 Serialize to bytes using the document encoding:
 
 ```xpscript
-doc.Encoding = "windows-1252"
-data = doc.ToBytes()
+csv.Encoding = "windows-1252"
+data = csv.ToBytes()
 ```
 
 or choose an encoding for one call:
 
 ```xpscript
-data = doc.ToBytes("utf-8")
+data = csv.ToBytes("utf-8")
 ```
 
 `FileEncoding` and `Encoding` refer to the same document encoding for file output.
@@ -251,11 +290,11 @@ Characters that cannot be represented in Windows-1252 cause a trap-able runtime 
 - `FileEncoding`
 - `AddHeader(name)`
 - `AddRow()`
+- `Sort(column)`
 - `Stringify()`
 - `ToBytes([encoding])`
 - `Save(path [, encoding])`
 - `SaveFile(path [, encoding])`
-- `WriteFile(path [, encoding])`
 
 Functions:
 
@@ -263,12 +302,10 @@ Functions:
 - `CsvParseBytes(bytes, encoding [, delimiter [, hasHeaders]])`
 - `CsvStringify(document)`
 - `CsvEscape(value [, delimiter])`
-- `CsvSave(document, path [, encoding])`
-- `CsvWriteFile(document, path [, encoding])`
 
 Collections:
 
-- `XPCsvHeaderCollection`: `Count`, `Get(index)`, `ForAll`
+- `XPCsvHeaderCollection`: `Count`, `Get(index)`, `Add(name)`, `ForAll`
 - `XPCsvRowCollection`: `Count`, `Get(index)`, `ForAll`
 - `XPCsvColumnCollection`: `Count`, `Get(index)`, `ForAll`
 

@@ -47,6 +47,8 @@ internal sealed class NativeCsvPreprocessor
                 continue;
             }
 
+            RejectRemovedFileWriteApis(line, documentVariables);
+
             if (TryRewriteFileWrite(line, documentVariables, out var fileWrite))
             {
                 output.Add(indent + fileWrite);
@@ -68,6 +70,11 @@ internal sealed class NativeCsvPreprocessor
                     rewritten,
                     $@"\b{Regex.Escape(documentVariable)}\.FileEncoding\b",
                     documentVariable + ".Encoding",
+                    RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\b{Regex.Escape(documentVariable)}\.Headers\.Add\s*\(",
+                    documentVariable + ".AddHeader(",
                     RegexOptions.IgnoreCase);
             }
 
@@ -111,23 +118,30 @@ internal sealed class NativeCsvPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
+    private static void RejectRemovedFileWriteApis(string line, HashSet<string> documentVariables)
+    {
+        if (Regex.IsMatch(line, @"^(?:Call\s+)?(?:CsvSave|CsvWriteFile)\b", RegexOptions.IgnoreCase))
+            throw new CompilerException("CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
+
+        foreach (var documentVariable in documentVariables)
+        {
+            if (Regex.IsMatch(
+                    line,
+                    $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.WriteFile\b",
+                    RegexOptions.IgnoreCase))
+                throw new CompilerException("XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
+        }
+    }
+
     private static bool TryRewriteFileWrite(string line, HashSet<string> documentVariables, out string rewritten)
     {
         rewritten = "";
-
-        var call = Regex.Match(line, @"^Call\s+(CsvSave|CsvWriteFile)\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
-        if (call.Success)
-            return TryBuildGlobalFileWrite(call.Groups[2].Value, out rewritten);
-
-        var statement = Regex.Match(line, @"^(CsvSave|CsvWriteFile)\s+(.+)$", RegexOptions.IgnoreCase);
-        if (statement.Success)
-            return TryBuildGlobalFileWrite(statement.Groups[2].Value, out rewritten);
 
         foreach (var documentVariable in documentVariables)
         {
             var method = Regex.Match(
                 line,
-                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile|WriteFile)\s*\((.*)\)\s*$",
+                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile)\s*\((.*)\)\s*$",
                 RegexOptions.IgnoreCase);
             if (!method.Success) continue;
 
@@ -142,19 +156,6 @@ internal sealed class NativeCsvPreprocessor
         }
 
         return false;
-    }
-
-    private static bool TryBuildGlobalFileWrite(string rawArguments, out string rewritten)
-    {
-        rewritten = "";
-        var args = SplitTopLevelArguments(rawArguments);
-        if (args.Count is < 2 or > 3)
-            throw new CompilerException("CsvSave requires document, path and optional encoding arguments.");
-        var bytes = args.Count == 2
-            ? args[0] + ".ToBytes()"
-            : args[0] + ".ToBytes(" + args[2] + ")";
-        rewritten = "Call XPCrossPlatformRuntime.WriteBytes(" + args[1] + ", " + bytes + ")";
-        return true;
     }
 
     private static List<string> SplitTopLevelArguments(string text)
