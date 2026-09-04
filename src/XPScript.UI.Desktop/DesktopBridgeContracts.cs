@@ -41,6 +41,10 @@ public sealed record DesktopFormField(
     public string MonthMinimum { get; init; } = string.Empty;
     public string MonthMaximum { get; init; } = string.Empty;
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
+    public string WebViewSource { get; init; } = "about:blank";
+    public string WebViewHtml { get; init; } = string.Empty;
+    public string WebViewUserAgent { get; init; } = string.Empty;
+    public string WebViewBackground { get; init; } = string.Empty;
 }
 
 public sealed record DesktopFormButton(
@@ -61,6 +65,7 @@ public sealed record DesktopFormRequest(
     bool Resizable,
     IReadOnlyList<DesktopFormField> Fields)
 {
+    public string InstanceId { get; init; } = string.Empty;
     public string Theme { get; init; } = "System";
     public bool ShowValidationErrors { get; init; } = true;
     public int GridColumns { get; init; } = 1;

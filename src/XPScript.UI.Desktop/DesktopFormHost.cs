@@ -72,7 +72,7 @@ public static class DesktopFormHost
                 fieldLabels[field.Name] = label;
                 fieldPanel.Children.Add(label);
             }
-            var editor = CreateEditor(field);
+            var editor = CreateEditor(request.InstanceId, field);
             ApplyEditorState(field, editor);
             ApplyFieldHints(field, editor);
             editors[field.Name] = editor;
@@ -320,7 +320,7 @@ public static class DesktopFormHost
             window.Close();
         };
         cancel.Click += (_, _) => { result = EmptyResult("Cancel"); window.Close(); };
-        window.Closed += (_, _) => loop.Continue = false;
+        window.Closed += (_, _) => { DesktopWebViewHost.RemoveInstance(request.InstanceId); loop.Continue = false; };
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
         return result ?? EmptyResult("Cancel");
@@ -388,7 +388,7 @@ public static class DesktopFormHost
         }
     }
 
-    private static Control CreateEditor(DesktopFormField field)
+    private static Control CreateEditor(string instanceId, DesktopFormField field)
     {
         var value = field.Value ?? string.Empty;
         return field.Type switch
@@ -400,6 +400,7 @@ public static class DesktopFormHost
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
+            "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
     }
@@ -574,6 +575,8 @@ public static class DesktopFormHost
         }
         return null;
     }
+
+    public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);
 
     private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
     private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;

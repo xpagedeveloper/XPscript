@@ -22,6 +22,17 @@ internal static class XPScriptUIDesktopAdapter
         ?? type.GetMethod("Show", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null);
 
     public static bool IsAvailable => HostType is Type type && ResolveShowDialog(type) is not null;
+    public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)
+    {
+        foreach (var type in new[] { HostType, LifecycleHostType }.Where(value => value is not null).Distinct())
+        {
+            var method = type!.GetMethod("WebViewCommand", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string), typeof(string), typeof(string), typeof(string)], null);
+            if (method is null) continue;
+            try { var result = method.Invoke(null, [instanceId, fieldName, command, argument]); if (result is not null) return Convert.ToString(result, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty; }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm WebView command failed: " + ex.InnerException.Message); }
+        }
+        throw new XPScriptRuntimeException(5, "UIForm WebView is not active.");
+    }
 
     public static string ShowDialog(XPScriptUIForm form, IReadOnlyList<XPScriptUIField> fields, XPScriptJsonObject data, Action<XPScriptUIField, string> apply, Action<XPScriptUIField, IReadOnlyList<string>> applyMany)
         => ShowCore(form, fields, data, apply, applyMany, true);
@@ -68,7 +79,8 @@ internal static class XPScriptUIDesktopAdapter
                 name = field.Name, label = field.Label, type = field.Type, required = field.Required,
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options
+                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options,
+                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground
             }).ToArray()
         };
 

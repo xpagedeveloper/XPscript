@@ -1,5 +1,7 @@
 # UIForm
 
+Desktop UIForms also support an embedded native browser control. See [UIForm WebView](uiform-webview.md).
+
 `UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `JsonObject` or object-root `JsonDocument`. The same form definition is rendered by the active UI backend.
 
 ## Basic form

@@ -9,6 +9,7 @@ namespace XPScript.Compiler;
 internal static class CompilerBuildEnvironment
 {
     private const string AvaloniaVersion = "12.0.3";
+    private const string AvaloniaWebViewVersion = "12.0.1";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
     private const string MySqlConnectorVersion = "2.6.2";
@@ -284,6 +285,7 @@ internal static class CompilerBuildEnvironment
     <PackageReference Include="Avalonia" Version="{AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Desktop" Version="{AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="{AvaloniaWebViewVersion}" />
 """;
         if (usesSqlite)
         {
