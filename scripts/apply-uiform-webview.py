@@ -1,0 +1,152 @@
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    p = Path(path)
+    text = p.read_text()
+    if old not in text:
+        raise SystemExit(f"marker not found in {path}: {old[:120]!r}")
+    p.write_text(text.replace(old, new, 1))
+
+
+replace_once("src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj", '    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />\n', '    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />\n    <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />\n')
+replace_once("src/XPScript.Compiler/CompilerBuildEnvironment.cs", '    private const string AvaloniaVersion = "12.0.3";\n', '    private const string AvaloniaVersion = "12.0.3";\n    private const string AvaloniaWebViewVersion = "12.0.1";\n')
+replace_once("src/XPScript.Compiler/CompilerBuildEnvironment.cs", '    <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />\n', '    <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />\n    <PackageReference Include="Avalonia.Controls.WebView" Version="{AvaloniaWebViewVersion}" />\n')
+
+replace_once("src/XPScript.Compiler/UIExtensionRuntimeSource.cs", '''internal sealed class XPScriptUIField
+{
+    internal XPScriptUIField(string name, string label, string type)
+    {
+        Name = name;
+        Label = label;
+        Type = type;
+    }
+''', '''internal sealed class XPScriptUIField
+{
+    private readonly XPScriptUIForm _owner;
+    private string _webViewSource = "about:blank";
+    private string _webViewHtml = string.Empty;
+    private string _webViewUserAgent = string.Empty;
+    private string _webViewBackground = string.Empty;
+
+    internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
+    {
+        _owner = owner;
+        Name = name;
+        Label = label;
+        Type = type;
+    }
+''')
+replace_once("src/XPScript.Compiler/UIExtensionRuntimeSource.cs", '    public List<string> Options { get; } = [];\n', '''    public List<string> Options { get; } = [];
+
+    public string Source
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
+        set { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(value); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+    }
+    public string Html
+    {
+        get { EnsureWebView(); return _webViewHtml; }
+        set { EnsureWebView(); _webViewHtml = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("html", _webViewHtml); }
+    }
+    public string UserAgent
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("useragent:get", null) : _webViewUserAgent;
+        set { EnsureWebView(); _webViewUserAgent = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("useragent:set", _webViewUserAgent); }
+    }
+    public string Background
+    {
+        get => Type == "WebView" && _owner.Visible ? WebViewCommand("background:get", null) : _webViewBackground;
+        set { EnsureWebView(); _webViewBackground = value ?? string.Empty; if (_owner.Visible) _ = WebViewCommand("background:set", _webViewBackground); }
+    }
+    public bool CanGoBack => Type == "WebView" && _owner.Visible && WebViewCommand("cangoback", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    public bool CanGoForward => Type == "WebView" && _owner.Visible && WebViewCommand("cangoforward", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    public string AdapterInfo => Type == "WebView" && _owner.Visible ? WebViewCommand("adapterinfo", null) : string.Empty;
+    public string PlatformHandle => Type == "WebView" && _owner.Visible ? WebViewCommand("platformhandle", null) : string.Empty;
+
+    public void Navigate(object? url) { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(XPScriptRuntime.CStr(url)); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+    public void NavigateToString(object? html) { EnsureWebView(); _webViewHtml = XPScriptRuntime.CStr(html); if (_owner.Visible) _ = WebViewCommand("html", _webViewHtml); }
+    public string InvokeScript(object? script) { EnsureWebView(); return WebViewCommand("script", XPScriptRuntime.CStr(script)); }
+    public bool GoBack() { EnsureWebView(); return WebViewCommand("back", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool GoForward() { EnsureWebView(); return WebViewCommand("forward", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Refresh() { EnsureWebView(); return WebViewCommand("refresh", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Stop() { EnsureWebView(); return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public void ShowPrintUI() { EnsureWebView(); _ = WebViewCommand("print", null); }
+    public void PrintToPdf(object? path) { EnsureWebView(); _ = WebViewCommand("pdf", XPScriptRuntime.CStr(path)); }
+    public void Copy() { EnsureWebView(); _ = WebViewCommand("copy", null); }
+    public void Cut() { EnsureWebView(); _ = WebViewCommand("cut", null); }
+    public void Paste() { EnsureWebView(); _ = WebViewCommand("paste", null); }
+    public void SelectAll() { EnsureWebView(); _ = WebViewCommand("selectall", null); }
+    public void Undo() { EnsureWebView(); _ = WebViewCommand("undo", null); }
+    public void Redo() { EnsureWebView(); _ = WebViewCommand("redo", null); }
+    public string GetCookies() { EnsureWebView(); return WebViewCommand("cookies:get", null); }
+    public void SetCookie(object? name, object? value, object? domain, object? path) { EnsureWebView(); _ = WebViewCommand("cookies:set", System.Text.Json.JsonSerializer.Serialize(new { name = XPScriptRuntime.CStr(name), value = XPScriptRuntime.CStr(value), domain = XPScriptRuntime.CStr(domain), path = XPScriptRuntime.CStr(path) })); }
+    public void DeleteCookie(object? name, object? domain, object? path) { EnsureWebView(); _ = WebViewCommand("cookies:delete", System.Text.Json.JsonSerializer.Serialize(new { name = XPScriptRuntime.CStr(name), domain = XPScriptRuntime.CStr(domain), path = XPScriptRuntime.CStr(path) })); }
+    public void ClearCookies() { EnsureWebView(); _ = WebViewCommand("cookies:clear", null); }
+
+    internal string WebViewSource => _webViewSource;
+    internal string WebViewHtml => _webViewHtml;
+    internal string WebViewUserAgent => _webViewUserAgent;
+    internal string WebViewBackground => _webViewBackground;
+
+    private string WebViewCommand(string command, string? argument)
+    {
+        if (!_owner.Visible) throw new XPScriptRuntimeException(5, "UIForm WebView live functions require the form to be visible.");
+        return XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument);
+    }
+    private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
+    private static string NormalizeWebViewUrl(string? value)
+    {
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0) return "about:blank";
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source must be an absolute URI.");
+        if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
+        return uri.AbsoluteUri;
+    }
+''')
+replace_once("src/XPScript.Compiler/UIExtensionRuntimeSource.cs", '    public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");\n', '    public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");\n    public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");\n    public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");\n')
+replace_once("src/XPScript.Compiler/UIExtensionRuntimeSource.cs", '        var field = new XPScriptUIField(fieldName, XPScriptRuntime.CStr(label), type);\n', '        var field = new XPScriptUIField(this, fieldName, XPScriptRuntime.CStr(label), type);\n')
+
+replace_once("src/XPScript.Compiler/UIExtensionDesktopRuntimeSource.cs", '    public static bool IsAvailable => HostType is Type type && ResolveShowDialog(type) is not null;\n', '''    public static bool IsAvailable => HostType is Type type && ResolveShowDialog(type) is not null;
+    public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)
+    {
+        foreach (var type in new[] { HostType, LifecycleHostType }.Where(value => value is not null).Distinct())
+        {
+            var method = type!.GetMethod("WebViewCommand", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string), typeof(string), typeof(string), typeof(string)], null);
+            if (method is null) continue;
+            try { var result = method.Invoke(null, [instanceId, fieldName, command, argument]); if (result is not null) return Convert.ToString(result, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty; }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm WebView command failed: " + ex.InnerException.Message); }
+        }
+        throw new XPScriptRuntimeException(5, "UIForm WebView is not active.");
+    }
+''')
+replace_once("src/XPScript.Compiler/UIExtensionDesktopRuntimeSource.cs", '                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options\n', '                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options,\n                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground\n')
+
+replace_once("src/XPScript.UI.Desktop/DesktopBridgeContracts.cs", '    public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();\n', '    public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();\n    public string WebViewSource { get; init; } = "about:blank";\n    public string WebViewHtml { get; init; } = string.Empty;\n    public string WebViewUserAgent { get; init; } = string.Empty;\n    public string WebViewBackground { get; init; } = string.Empty;\n')
+replace_once("src/XPScript.UI.Desktop/DesktopBridgeContracts.cs", '    public string Theme { get; init; } = "System";\n', '    public string InstanceId { get; init; } = string.Empty;\n    public string Theme { get; init; } = "System";\n')
+
+replace_once("src/XPScript.UI.Desktop/DesktopFormHost.cs", '            var editor = CreateEditor(field);\n', '            var editor = CreateEditor(request.InstanceId, field);\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormHost.cs", '    private static Control CreateEditor(DesktopFormField field)\n', '    private static Control CreateEditor(string instanceId, DesktopFormField field)\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormHost.cs", '            "RadioGroup" => CreateRadioGroup(field),\n            _ => new TextBox { Text = value }\n', '            "RadioGroup" => CreateRadioGroup(field),\n            "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),\n            _ => new TextBox { Text = value }\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormHost.cs", '        window.Closed += (_, _) => loop.Continue = false;\n', '        window.Closed += (_, _) => { DesktopWebViewHost.RemoveInstance(request.InstanceId); loop.Continue = false; };\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormHost.cs", '    private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));\n', '    public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);\n\n    private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));\n')
+
+replace_once("src/XPScript.UI.Desktop/DesktopFormLifecycleHost.cs", '            var editor = CreateEditor(field, type, name, label);\n', '            var editor = CreateEditor(instanceId, field, type, name, label);\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormLifecycleHost.cs", '    private static Control CreateEditor(JsonElement field, string type, string name, string label)\n', '    private static Control CreateEditor(string instanceId, JsonElement field, string type, string name, string label)\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormLifecycleHost.cs", '        var enabled = ReadBool(field, "enabled", true);\n', '        var enabled = ReadBool(field, "enabled", true);\n        if (type.Equals("WebView", StringComparison.OrdinalIgnoreCase)) return DesktopWebViewHost.Create(instanceId, name, Read(field, "webViewSource", "about:blank"), Read(field, "webViewHtml", string.Empty), Read(field, "webViewUserAgent", string.Empty), Read(field, "webViewBackground", string.Empty));\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormLifecycleHost.cs", '            Windows.TryRemove(instanceId, out _);\n            if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);\n', '            Windows.TryRemove(instanceId, out _);\n            DesktopWebViewHost.RemoveInstance(instanceId);\n            if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);\n')
+replace_once("src/XPScript.UI.Desktop/DesktopFormLifecycleHost.cs", '    private static string ReadEditor(Control editor) => editor switch\n', '    public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);\n\n    private static string ReadEditor(Control editor) => editor switch\n')
+
+Path("src/XPScript.UI.Desktop/DesktopWebViewHost.cs").write_text('''using System.Collections.Concurrent;\nusing System.Net;\nusing System.Text.Json;\nusing Avalonia.Controls;\nusing Avalonia.Media;\nusing Avalonia.Threading;\n\nnamespace XPScript.UI.Desktop;\n\ninternal static class DesktopWebViewHost\n{\n    private static readonly ConcurrentDictionary<string, NativeWebView> Views = new(StringComparer.Ordinal);\n\n    internal static NativeWebView Create(string instanceId, string fieldName, string source, string html, string userAgent, string background)\n    {\n        var view = new NativeWebView { MinHeight = 240, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch };\n        if (!string.IsNullOrWhiteSpace(userAgent)) view.UserAgent = userAgent;\n        if (!string.IsNullOrWhiteSpace(background)) view.Background = new SolidColorBrush(Color.Parse(background));\n        Views[Key(instanceId, fieldName)] = view;\n        if (!string.IsNullOrEmpty(html)) view.AdapterCreated += (_, _) => view.NavigateToString(html);\n        else if (Uri.TryCreate(string.IsNullOrWhiteSpace(source) ? "about:blank" : source, UriKind.Absolute, out var uri)) view.Source = uri;\n        return view;\n    }\n\n    internal static void RemoveInstance(string instanceId)\n    {\n        var prefix = instanceId + "\\u001f";\n        foreach (var key in Views.Keys.Where(value => value.StartsWith(prefix, StringComparison.Ordinal))) Views.TryRemove(key, out _);\n    }\n\n    internal static string? TryCommand(string instanceId, string fieldName, string command, string? argument)\n    {\n        if (!Views.TryGetValue(Key(instanceId, fieldName), out var view)) return null;\n        string result = string.Empty;\n        void Execute()\n        {\n            result = command.ToLowerInvariant() switch\n            {\n                "source" => view.Source?.ToString() ?? string.Empty,\n                "navigate" => Navigate(view, argument),\n                "html" => NavigateHtml(view, argument),\n                "script" => Wait(view.InvokeScript(argument ?? string.Empty)) ?? string.Empty,\n                "back" => Bool(view.GoBack()), "forward" => Bool(view.GoForward()), "refresh" => Bool(view.Refresh()), "stop" => Bool(view.Stop()),\n                "cangoback" => Bool(view.CanGoBack), "cangoforward" => Bool(view.CanGoForward),\n                "useragent:get" => view.UserAgent ?? string.Empty, "useragent:set" => SetUserAgent(view, argument),\n                "background:get" => view.Background?.ToString() ?? string.Empty, "background:set" => SetBackground(view, argument),\n                "adapterinfo" => view.AdapterInfo.ToString() ?? string.Empty,\n                "platformhandle" => view.TryGetPlatformHandle()?.Handle.ToString() ?? string.Empty,\n                "print" => Print(view), "pdf" => PrintPdf(view, argument),\n                "copy" => Edit(view, m => m.Copy()), "cut" => Edit(view, m => m.Cut()), "paste" => Edit(view, m => m.Paste()),\n                "selectall" => Edit(view, m => m.SelectAll()), "undo" => Edit(view, m => m.Undo()), "redo" => Edit(view, m => m.Redo()),\n                "cookies:get" => GetCookies(view), "cookies:set" => SetCookie(view, argument), "cookies:delete" => DeleteCookie(view, argument), "cookies:clear" => ClearCookies(view),\n                _ => throw new InvalidOperationException("Unknown UIForm WebView command: " + command)\n            };\n        }\n        if (Dispatcher.UIThread.CheckAccess()) Execute(); else Dispatcher.UIThread.Invoke(Execute);\n        return result;\n    }\n\n    private static string Navigate(NativeWebView view, string? value) { if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) throw new InvalidOperationException("WebView navigation requires an absolute URI."); view.Navigate(uri); return uri.AbsoluteUri; }\n    private static string NavigateHtml(NativeWebView view, string? html) { view.NavigateToString(html ?? string.Empty); return "true"; }\n    private static string SetUserAgent(NativeWebView view, string? value) { view.UserAgent = value ?? string.Empty; return view.UserAgent ?? string.Empty; }\n    private static string SetBackground(NativeWebView view, string? value) { if (!string.IsNullOrWhiteSpace(value)) view.Background = new SolidColorBrush(Color.Parse(value)); return view.Background?.ToString() ?? string.Empty; }\n    private static string Print(NativeWebView view) { view.ShowPrintUI(); return "true"; }\n    private static string PrintPdf(NativeWebView view, string? path) { if (string.IsNullOrWhiteSpace(path)) throw new InvalidOperationException("WebView PrintToPdf requires a file path."); using var stream = Wait(view.PrintToPdfStreamAsync()) ?? throw new InvalidOperationException("WebView did not return PDF data."); var fullPath = Path.GetFullPath(path); var directory = Path.GetDirectoryName(fullPath); if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory); using var output = File.Create(fullPath); stream.CopyTo(output); return fullPath; }\n    private static string Edit(NativeWebView view, Action<NativeWebViewCommandManager> action) { var manager = view.TryGetCommandManager(); if (manager is null) return "false"; action(manager); return "true"; }\n    private static string GetCookies(NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "[]"; var cookies = Wait(manager.GetCookiesAsync()) ?? []; return JsonSerializer.Serialize(cookies.Select(cookie => new { cookie.Name, cookie.Value, cookie.Domain, cookie.Path, cookie.Secure, cookie.HttpOnly, expires = cookie.Expires == DateTime.MinValue ? null : cookie.Expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture) })); }\n    private static string SetCookie(NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); manager.AddOrUpdateCookie(BuildCookie(document.RootElement, true)); return "true"; }\n    private static string DeleteCookie(NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); manager.DeleteCookie(BuildCookie(document.RootElement, false)); return "true"; }\n    private static string ClearCookies(NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; var cookies = Wait(manager.GetCookiesAsync()) ?? []; foreach (var cookie in cookies) manager.DeleteCookie(cookie); return "true"; }\n    private static Cookie BuildCookie(JsonElement root, bool includeValue) { static string Read(JsonElement value, string name, string fallback = "") => value.TryGetProperty(name, out var property) ? property.GetString() ?? fallback : fallback; var name = Read(root, "name"); var domain = Read(root, "domain"); var path = Read(root, "path", "/"); if (name.Length == 0 || domain.Length == 0) throw new InvalidOperationException("WebView cookies require name and domain."); return new Cookie(name, includeValue ? Read(root, "value") : string.Empty, path.Length == 0 ? "/" : path, domain); }\n    private static T? Wait<T>(Task<T> task) { if (!Dispatcher.UIThread.CheckAccess() || task.IsCompleted) return task.GetAwaiter().GetResult(); var frame = new DispatcherFrame(); task.ContinueWith(_ => Dispatcher.UIThread.Post(() => frame.Continue = false), TaskScheduler.Default); Dispatcher.UIThread.PushFrame(frame); return task.GetAwaiter().GetResult(); }\n    private static string Bool(bool value) => value ? "true" : "false";\n    private static string Key(string instanceId, string fieldName) => instanceId + "\\u001f" + fieldName.ToLowerInvariant();\n}\n''')
+
+Path("samples/uiform-webview.xps").write_text('''Option Declare\n\nSub Main()\n    Dim form As New UIForm("WebView", 960, 720, True)\n    Dim browser As Variant\n    Dim result As String\n    Set browser = form.AddWebView("browser", "Documentation")\n    browser.Source = "https://docs.avaloniaui.net/"\n    browser.UserAgent = "XPscript-UIForm-WebView"\n    result = form.ShowDialog()\nEnd Sub\n''')
+Path("docs/uiform-webview.md").write_text('''# UIForm WebView\n\nDesktop UIForms can embed a native browser control on Windows, Linux and macOS with `AddWebView`.\n\nProperties: `Source`, `Html`, `UserAgent`, `Background`, `CanGoBack`, `CanGoForward`, `AdapterInfo`, `PlatformHandle`.\n\nFunctions: `Navigate`, `NavigateToString`, `InvokeScript`, `GoBack`, `GoForward`, `Refresh`, `Stop`, `ShowPrintUI`, `PrintToPdf`, `Copy`, `Cut`, `Paste`, `SelectAll`, `Undo`, `Redo`, `GetCookies`, `SetCookie`, `DeleteCookie`, `ClearCookies`.\n\nLive functions require the form to be visible. Configure `Source`, `Html`, `UserAgent` and `Background` before `Show` or `ShowDialog`.\n\nWindows uses WebView2. macOS uses WKWebView. Linux uses WPE WebKit or WebKitGTK and requires the corresponding system runtime. Printing/PDF and edit command support depend on the platform adapter. Browser-WASM UIForms do not use NativeWebView.\n''')
+replace_once("docs/uiform.md", '# UIForm\n', '# UIForm\n\nDesktop UIForms also support an embedded native browser control. See [UIForm WebView](uiform-webview.md).\n')
+
+workflow = Path(".github/workflows/compile.yml")
+text = workflow.read_text()
+text = text.replace('      - name: Compile web application\n', '      - name: Compile WebView UIForm application\n        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-webview.xps -o ./out/uiform-webview --framework-dependent\n      - name: Compile web application\n')
+workflow.write_text(text)
+
+Path(".github/workflows/apply-uiform-webview.yml").unlink(missing_ok=True)
+Path("scripts/apply-uiform-webview.py").unlink(missing_ok=True)
