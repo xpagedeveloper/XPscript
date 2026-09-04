@@ -44,6 +44,12 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Install browser WASM workload
+        run: dotnet workload install wasm-tools
+      - name: Verify browser WASM multi-window UIForm
+        run: dotnet run --project ./tests/WebBrowserWasmMultiWindowSmoke/WebBrowserWasmMultiWindowSmoke.csproj -c Release
+      - name: Verify desktop UIForm lifecycle
+        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
       - name: Verify OpenAPI unified CLI generate

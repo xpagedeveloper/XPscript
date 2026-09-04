@@ -247,14 +247,33 @@ internal sealed partial class XPScriptNotesNativeApi
             Check(Resolve<AgentCreateRunContextDelegate>("AgentCreateRunContext")(agent, 0, 0, out context), "AgentCreateRunContext");
             if (documentContext != 0)
                 Check(Resolve<AgentSetDocumentContextDelegate>("AgentSetDocumentContext")(context, documentContext), "AgentSetDocumentContext");
-            Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0), "AgentRun");
-            return "";
+            Check(Resolve<AgentRedirectStdoutDelegate>("AgentRedirectStdout")(context, 2), "AgentRedirectStdout(memory)");
+            // Reopen the database for the agent run. Without this flag Domino
+            // rejects embedded/background agents with status 0x2E78.
+            Check(Resolve<AgentRunDelegate>("AgentRun")(agent, context, 0, 0x10), "AgentRun");
+            Resolve<AgentQueryStdoutBufferDelegate>("AgentQueryStdoutBuffer")(context, out var outputHandle, out var outputLength);
+            if (outputHandle == 0 || outputLength == 0)
+                return "";
+
+            var output = Resolve<OSLockObjectDelegate>("OSLockObject")(outputHandle);
+            if (output == 0)
+                return "";
+            try { return CleanAgentOutput(FromLmbcs(output, checked((int)outputLength))); }
+            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(outputHandle); }
         }
         finally
         {
             if (context != 0) Resolve<AgentDestroyRunContextDelegate>("AgentDestroyRunContext")(context);
             Resolve<AgentCloseDelegate>("AgentClose")(agent);
         }
+    }
+
+    private static string CleanAgentOutput(string output)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(
+            output ?? "",
+            @"\[[^\]\r\n]+\]\s+[^\r\n]*?\bAgent printing:\s*",
+            "");
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);

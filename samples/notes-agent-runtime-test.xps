@@ -35,6 +35,7 @@ Sub Main()
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
+    Print "AGENT-RETURN-MESSAGE=" & agent.ReturnMessage
 
     Set contextDoc = db.CreateDocument()
     Call contextDoc.ReplaceItemValue("Form", "XPScriptTest")
