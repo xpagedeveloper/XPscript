@@ -56,7 +56,22 @@ foreach (var expected in new[]
         throw new InvalidOperationException("Generated modal-parent/modeless-child callback path is missing: " + expected);
 }
 
+foreach (var unusedAccessibilitySymbol in new[]
+{
+    "public string AccessibleName",
+    "public string InitialFocus",
+    "DesktopAccessibilityHost",
+    "BuildAccessibilityAttributes(",
+    "aria-describedby"
+})
+{
+    if (generated.Contains(unusedAccessibilitySymbol, StringComparison.Ordinal))
+        throw new InvalidOperationException("Ordinary UIForm unexpectedly contains unused accessibility runtime: " + unusedAccessibilitySymbol);
+}
+
 Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
+Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_GATE_OK");
+
 var accessibilitySource = """
 Option Declare
 
