@@ -10,16 +10,40 @@ public static class DesktopAccessibilityHost
 {
     private sealed record FormState(Window Window, IReadOnlyDictionary<string, Control> Editors);
     private static readonly ConcurrentDictionary<string, FormState> States = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, bool> DefaultButtons = new(StringComparer.Ordinal);
+
+    public static void ConfigureDefaultButtons(string instanceId, bool showDefaultButtons)
+    {
+        if (!string.IsNullOrWhiteSpace(instanceId)) DefaultButtons[instanceId] = showDefaultButtons;
+    }
 
     public static void Register(string instanceId, Window window, IReadOnlyDictionary<string, Control> editors)
     {
         if (string.IsNullOrWhiteSpace(instanceId)) return;
         States[instanceId] = new FormState(window, editors);
+        if (DefaultButtons.TryGetValue(instanceId, out var showDefaultButtons) && !showDefaultButtons)
+            HideBuiltInButtons(window);
     }
 
     public static void Unregister(string instanceId)
     {
-        if (!string.IsNullOrWhiteSpace(instanceId)) States.TryRemove(instanceId, out _);
+        if (string.IsNullOrWhiteSpace(instanceId)) return;
+        States.TryRemove(instanceId, out _);
+        DefaultButtons.TryRemove(instanceId, out _);
+    }
+
+    private static void HideBuiltInButtons(Window window)
+    {
+        if (window.Content is not ScrollViewer { Content: Panel panel }) return;
+        foreach (var candidate in panel.Children.OfType<StackPanel>().Reverse())
+        {
+            var buttons = candidate.Children.OfType<Button>().ToArray();
+            if (buttons.Length != 2) continue;
+            var labels = buttons.Select(button => Convert.ToString(button.Content, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty).ToArray();
+            if (!labels.Contains("OK", StringComparer.OrdinalIgnoreCase) || !labels.Contains("Cancel", StringComparer.OrdinalIgnoreCase)) continue;
+            candidate.IsVisible = false;
+            return;
+        }
     }
 
     public static void FocusField(string instanceId, string fieldName)
