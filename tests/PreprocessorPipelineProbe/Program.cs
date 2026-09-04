@@ -42,6 +42,7 @@ Measure("PLAIN", plainSource, 10);
 Measure("NOTES", notesSource, 10);
 VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
+VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
@@ -133,6 +134,28 @@ void VerifyFeatureProfiles()
         "Dim value As NotesRichTextItem",
         ["internal sealed class XPScriptNotesRichTextItem"]);
     Console.WriteLine("PREPROCESSOR-FEATURE-PROFILES=OK");
+}
+
+void VerifyLegacyNativeNamesDoNotEnableRuntimes()
+{
+    var probes = new (string Label, string Declaration, string Marker)[]
+    {
+        ("HTTP", "Dim value As HttpClient", "internal static class XPScriptNativeHttp"),
+        ("JSON", "Dim value As JsonDocument", "internal static class XPScriptNativeJson"),
+        ("CSV", "Dim value As CsvDocument", "internal static class XPScriptNativeCsv"),
+        ("XML", "Dim value As XmlDocument", "internal static class XPScriptNativeXml"),
+        ("HTTPDB", "Dim value As HTTPDBSupabase", "internal sealed class XPScriptHttpDbSupabase")
+    };
+
+    foreach (var probe in probes)
+    {
+        var source = "Option Declare\nSub Main()\n    " + probe.Declaration + "\nEnd Sub\n";
+        var generated = transpiler.Transpile(source, "preprocessor-legacy-" + probe.Label.ToLowerInvariant() + ".xps", "win-x64");
+        if (generated.Contains(probe.Marker, StringComparison.Ordinal))
+            throw new Exception("Legacy " + probe.Label + " type unexpectedly enabled its native runtime.");
+    }
+
+    Console.WriteLine("PREPROCESSOR-LEGACY-NATIVE-NAMES=INACTIVE");
 }
 
 void VerifyProfile(
