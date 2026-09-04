@@ -15,7 +15,7 @@ internal static class XPScriptRuntimeDebugTrace
 
     public static void WriteLine(string message)
     {
-        if (!DetailedEnabled) return;
+        if (!Enabled) return;
         Console.Error.WriteLine(message);
     }
 
