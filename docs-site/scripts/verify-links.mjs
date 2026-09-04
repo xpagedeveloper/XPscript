@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const siteRoot = resolve(here, "../dist");
 const repoRoot = resolve(here, "../..");
-const astroConfigPath = resolve(here, "../astro.config.mjs");
 
 async function collectFiles(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -122,9 +121,7 @@ function relativeDisplay(path) {
   return relative(repoRoot, path).split(sep).join("/");
 }
 
-const config = await fs.readFile(astroConfigPath, "utf8");
-const baseMatch = config.match(/\bbase\s*:\s*["']([^"']+)["']/);
-const base = normalizeBase(baseMatch?.[1] ?? "/");
+const base = normalizeBase(process.env.DOCS_BASE ?? "/XPscript");
 
 if (!await exists(siteRoot)) {
   console.error(`Generated site directory does not exist: ${siteRoot}`);
