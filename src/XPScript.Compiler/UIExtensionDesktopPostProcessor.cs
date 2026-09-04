@@ -167,11 +167,17 @@ internal sealed class UIExtensionDesktopPostProcessor
         => value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
     private static string NormalizeAccessibilityRequestMarkers(string generated)
-        => Regex.Replace(
+    {
+        generated = Regex.Replace(
             generated,
             @"(?m)^[ \t]*resizable\s*=\s*form\.Resizable\s*,[ \t]*$",
             "            resizable = form.Resizable,",
             RegexOptions.CultureInvariant);
+        return generated.Replace(
+            "html.Append(\"<button style=\\\"grid-column:1/-1\\\" type=\\\"submit\\\"",
+            "html.Append(\"<button type=\\\"submit\\\" style=\\\"grid-column:1/-1\\\"",
+            StringComparison.Ordinal);
+    }
 
     private static string HardenWebBridgeLookup(string generated)
     {
