@@ -71,6 +71,11 @@ internal sealed class NativeCsvPreprocessor
                     $@"\b{Regex.Escape(documentVariable)}\.FileEncoding\b",
                     documentVariable + ".Encoding",
                     RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(
+                    rewritten,
+                    $@"\b{Regex.Escape(documentVariable)}\.Headers\.Add\s*\(",
+                    documentVariable + ".AddHeader(",
+                    RegexOptions.IgnoreCase);
             }
 
             // XPscript does not otherwise use square-bracket member indexing. CSV keeps this
