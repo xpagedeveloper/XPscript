@@ -93,6 +93,17 @@ internal sealed class AiPromptSchemaRuntimePostProcessor
         }
     }
 
+    public void SetResultClass(object? contract) => SetResultClass(contract, null, null);
+    public void SetResultClass(object? contract, object? name) => SetResultClass(contract, name, null);
+    public void SetResultClass(object? contract, object? name, object? strict)
+    {
+        EnsureNotDisposed();
+        if (contract is null || XPScriptNullRuntime.IsNull(contract))
+            throw new XPScriptRuntimeException(91, "XPAi result contract cannot be Nothing.");
+        var schema = BuildJsonSchemaForType(contract.GetType(), new HashSet<Type>(), 0);
+        SetJsonSchema(schema, name, strict);
+    }
+
     public void SetJsonSchema(object? schema) => SetJsonSchema(schema, null, null);
     public void SetJsonSchema(object? schema, object? name) => SetJsonSchema(schema, name, null);
     public void SetJsonSchema(object? schema, object? name, object? strict)
@@ -103,7 +114,9 @@ internal sealed class AiPromptSchemaRuntimePostProcessor
             ClearJsonSchema();
             return;
         }
-        var node = XPScriptNativeJson.ToNode(schema);
+        var node = schema is System.Text.Json.Nodes.JsonNode jsonNode
+            ? jsonNode.DeepClone()
+            : XPScriptNativeJson.ToNode(schema);
         if (node is not System.Text.Json.Nodes.JsonObject schemaObject)
             throw new XPScriptRuntimeException(13, "XPAi JSON schema must be a JsonObject or JsonDocument with an object root.");
         XPScriptNativeJson.ValidateBudget(schemaObject);
@@ -146,6 +159,96 @@ internal sealed class AiPromptSchemaRuntimePostProcessor
         if (name.Length == 0 || name.Length > 64 || name.Any(ch => !(char.IsLetterOrDigit(ch) || ch is '_' or '-')))
             throw new XPScriptRuntimeException(5, "XPAi JSON schema name must contain 1 to 64 letters, digits, underscores or hyphens.");
         return name;
+    }
+
+    private static System.Text.Json.Nodes.JsonObject BuildJsonSchemaForType(Type type, HashSet<Type> visiting, int depth)
+    {
+        if (depth > 24)
+            throw new XPScriptRuntimeException(5, "XPAi result contract nesting exceeds 24 levels.");
+
+        var nullable = Nullable.GetUnderlyingType(type);
+        if (nullable is not null) return BuildJsonSchemaForType(nullable, visiting, depth + 1);
+        if (type == typeof(string) || type == typeof(char)) return SchemaType("string");
+        if (type == typeof(bool)) return SchemaType("boolean");
+        if (type == typeof(byte) || type == typeof(sbyte) || type == typeof(short) || type == typeof(ushort) ||
+            type == typeof(int) || type == typeof(uint) || type == typeof(long) || type == typeof(ulong))
+            return SchemaType("integer");
+        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal)) return SchemaType("number");
+        if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "string", ["format"] = "date-time" };
+        if (type.IsEnum) return new System.Text.Json.Nodes.JsonObject
+        {
+            ["type"] = "string",
+            ["enum"] = new System.Text.Json.Nodes.JsonArray(type.GetNames().Select(name => (System.Text.Json.Nodes.JsonNode?)name).ToArray())
+        };
+        if (type.IsArray)
+            return new System.Text.Json.Nodes.JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = BuildJsonSchemaForType(type.GetElementType() ?? typeof(object), visiting, depth + 1)
+            };
+        if (type == typeof(LSArray))
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "array", ["items"] = new System.Text.Json.Nodes.JsonObject() };
+        if (type == typeof(object) || type == typeof(XPScriptJsonDocument) ||
+            type == typeof(System.Text.Json.Nodes.JsonObject) || type == typeof(System.Text.Json.Nodes.JsonNode))
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "object" };
+        if (type == typeof(System.Text.Json.Nodes.JsonArray))
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "array", ["items"] = new System.Text.Json.Nodes.JsonObject() };
+
+        if (!visiting.Add(type))
+            throw new XPScriptRuntimeException(5, "XPAi result contract contains a recursive class reference.");
+        try
+        {
+            var properties = new System.Text.Json.Nodes.JsonObject();
+            var required = new System.Text.Json.Nodes.JsonArray();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                         .OrderBy(field => field.MetadataToken))
+            {
+                if (field.IsStatic) continue;
+                var jsonName = ToJsonMemberName(field.Name);
+                if (!names.Add(jsonName)) continue;
+                properties[jsonName] = BuildJsonSchemaForType(field.FieldType, visiting, depth + 1);
+                required.Add(jsonName);
+            }
+
+            foreach (var property in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                         .OrderBy(property => property.MetadataToken))
+            {
+                if (!property.CanRead || property.GetMethod is null || !property.GetMethod.IsPublic || property.GetIndexParameters().Length != 0)
+                    continue;
+                var jsonName = ToJsonMemberName(property.Name);
+                if (!names.Add(jsonName)) continue;
+                properties[jsonName] = BuildJsonSchemaForType(property.PropertyType, visiting, depth + 1);
+                required.Add(jsonName);
+            }
+
+            if (properties.Count == 0)
+                throw new XPScriptRuntimeException(5, "XPAi result contract class must expose at least one public field or readable property.");
+
+            return new System.Text.Json.Nodes.JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = properties,
+                ["required"] = required,
+                ["additionalProperties"] = false
+            };
+        }
+        finally
+        {
+            visiting.Remove(type);
+        }
+    }
+
+    private static System.Text.Json.Nodes.JsonObject SchemaType(string type)
+        => new() { ["type"] = type };
+
+    private static string ToJsonMemberName(string name)
+    {
+        if (name.Length == 0 || char.IsLower(name[0])) return name;
+        if (name.Length == 1) return name.ToLowerInvariant();
+        return char.ToLowerInvariant(name[0]) + name[1..];
     }
 
     public void NewRequest()
