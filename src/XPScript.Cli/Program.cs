@@ -7,6 +7,8 @@ using XPScript.Web.FastCgi;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
+ConfigureRuntimeDiagnosticEnvironment(args);
+
 if (args.Length == 0 || args[0] is "--help" or "-h")
 {
     WriteHelp();
@@ -34,6 +36,17 @@ catch (Exception ex)
 {
     Console.Error.WriteLine("error: " + ex.Message);
     return 1;
+}
+
+static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
+{
+    if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
+        return;
+
+    var separator = Array.IndexOf(arguments, "--");
+    var optionCount = separator < 0 ? arguments.Length : separator;
+    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
 }
 
 static async Task<int> RunWebAsync(string[] commandArgs)

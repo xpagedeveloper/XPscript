@@ -6,10 +6,23 @@ var buildDate = Assembly.GetExecutingAssembly()
     .FirstOrDefault(attribute => string.Equals(attribute.Key, "XPScriptBuildDate", StringComparison.Ordinal))
     ?.Value ?? "unknown";
 
+ConfigureRuntimeDiagnosticEnvironment(args);
+
 if (ShouldWriteBanner(args))
     Console.WriteLine($"XPScript version 0.9.1 Beta - build {buildDate} - XPageDeveloper.com (c)");
 
 return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
+
+static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
+{
+    if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
+        return;
+
+    var separator = Array.IndexOf(arguments, "--");
+    var optionCount = separator < 0 ? arguments.Length : separator;
+    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
+}
 
 static bool ShouldWriteBanner(string[] arguments)
 {
