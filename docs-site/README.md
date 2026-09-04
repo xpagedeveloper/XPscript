@@ -25,12 +25,13 @@ npm run docs:audit -- --json
 
 It checks:
 
-- internal documentation targets under `/XPscript/`
+- all internal documentation URLs are relative from the current generated page
+- internal documentation targets under the configured GitHub Pages base
 - generated `#fragment` anchors
 - repository-local links rewritten to GitHub, including `samples/` and `demo/` files
 - structured function example links
 
-The command exits with an error if any checked link is broken. Third-party HTTP(S) URLs are counted separately and are not used as a deterministic CI dependency.
+The command exits with an error if any checked link is broken or if a generated internal link is root-relative or an absolute GitHub Pages URL. Third-party HTTP(S) URLs are counted separately and are not used as a deterministic CI dependency.
 
 ## Migration model
 
@@ -70,7 +71,8 @@ Property access values are stored as `Read` or `ReadWrite`. The UI renders `Read
 2. Migrate one coherent section at a time.
 3. Keep XPScript member casing in displayed names.
 4. Normalize generated URL segments to lowercase.
-5. Use stable documentation IDs for cross references.
-6. Do not invent API metadata when migrating existing reference tables.
-7. Keep the documentation audit informational until a section has been fully migrated and can be validated strictly.
-8. Require the generated-site link verifier to pass before merging documentation changes.
+5. Generate internal documentation paths relative to the current page.
+6. Use stable documentation IDs for cross references.
+7. Do not invent API metadata when migrating existing reference tables.
+8. Keep the documentation audit informational until a section has been fully migrated and can be validated strictly.
+9. Require the generated-site link verifier to pass before merging documentation changes.
