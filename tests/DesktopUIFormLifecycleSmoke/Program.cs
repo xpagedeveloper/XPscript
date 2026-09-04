@@ -56,5 +56,35 @@ foreach (var expected in new[]
         throw new InvalidOperationException("Generated modal-parent/modeless-child callback path is missing: " + expected);
 }
 
+var webViewSource = """
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("WebView", 960, 720, True)
+    Dim browser As Variant
+    Set browser = form.AddWebView("browser", "Browser")
+    browser.Source = "https://example.com/"
+    browser.UserAgent = "XPscript-WebView-Smoke"
+    Call form.Show(False)
+End Sub
+""";
+
+var generatedWebView = new XPScriptTranspiler().Transpile(webViewSource, "uiform-webview-smoke.xps", "linux-x64");
+foreach (var expected in new[]
+{
+    "public XPScriptUIField AddWebView(object? name)",
+    "public string Source",
+    "public string InvokeScript(object? script)",
+    "public string GetCookies()",
+    "XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument)",
+    "webViewSource = field.WebViewSource",
+    "webViewUserAgent = field.WebViewUserAgent"
+})
+{
+    if (!generatedWebView.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated UIForm WebView surface is missing: " + expected);
+}
+
 Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
 Console.WriteLine("DESKTOP_UIFORM_MODAL_CHILD_TRANSPILE_OK");
+Console.WriteLine("DESKTOP_UIFORM_WEBVIEW_TRANSPILE_OK");
