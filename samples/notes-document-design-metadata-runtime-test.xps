@@ -7,6 +7,7 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim doc As NotesDocument
+    Dim deletingDoc As NotesDocument
     Dim profile As NotesDocument
     Dim notes As NotesNoteCollection
     Dim noteId As String
@@ -30,12 +31,13 @@ Sub Main()
 
     If Not doc.IsValid Then Error 9901, "New NotesDocument should be valid"
     If Not doc.IsNewNote Then Error 9902, "New NotesDocument should report IsNewNote"
-    If doc.IsProfile Then Error 9903, "Normal NotesDocument reported IsProfile"
-    If doc.IsResponse Then Error 9904, "Normal NotesDocument reported IsResponse"
-    If doc.IsDesign Then Error 9905, "Normal NotesDocument reported IsDesign"
-    If doc.DesignType <> "" Then Error 9906, "DesignType must be empty for a data note"
-    If doc.DesignTitle <> "" Then Error 9907, "DesignTitle must be empty for a data note"
-    If doc.DesignAlias <> "" Then Error 9908, "DesignAlias must be empty for a data note"
+    If doc.IsDeleted Then Error 9903, "New NotesDocument should not report IsDeleted"
+    If doc.IsProfile Then Error 9904, "Normal NotesDocument reported IsProfile"
+    If doc.IsResponse Then Error 9905, "Normal NotesDocument reported IsResponse"
+    If doc.IsDesign Then Error 9906, "Normal NotesDocument reported IsDesign"
+    If doc.DesignType <> "" Then Error 9907, "DesignType must be empty for a data note"
+    If doc.DesignTitle <> "" Then Error 9908, "DesignTitle must be empty for a data note"
+    If doc.DesignAlias <> "" Then Error 9909, "DesignAlias must be empty for a data note"
 
     items = doc.Items
     itemCount = 0
@@ -43,15 +45,31 @@ Sub Main()
         itemCount = itemCount + 1
         Print "ITEM=" & items(i).Name
     Next
-    If itemCount < 2 Then Error 9909, "Items did not return NotesItem objects"
+    If itemCount < 2 Then Error 9910, "Items did not return NotesItem objects"
+
+    ' IsDeleted is current state. IsValid is the state captured when this
+    ' NotesDocument object was created. Delete the same note through a second
+    ' wrapper so the original object remains alive for both assertions.
+    Call doc.Save()
+    noteId = doc.NoteID
+    If doc.IsDeleted Then Error 9911, "Saved NotesDocument should not report IsDeleted"
+    If Not doc.IsValid Then Error 9912, "Saved NotesDocument should remain valid"
+
+    Set deletingDoc = db.GetDocumentByID(noteId)
+    If deletingDoc Is Nothing Then Error 9913, "Could not reopen document for deletion"
+    If Not deletingDoc.Remove(True) Then Error 9914, "Could not delete test document"
+
+    If Not doc.IsDeleted Then Error 9915, "IsDeleted did not observe deletion through NSFDbGetNoteInfoExt"
+    If Not doc.IsValid Then Error 9916, "IsValid must retain the initial valid state after deletion"
+    Print "DELETION IsDeleted=" & CStr(doc.IsDeleted) & " IsValid=" & CStr(doc.IsValid)
     Call doc.Recycle()
 
     ' NSFProfileOpen creates/opens a profile note and stamps the profile $Name.
     Set profile = db.GetProfileDocument("XPScriptMetadataProfile", "RuntimeTest")
-    If profile Is Nothing Then Error 9910, "GetProfileDocument returned Nothing"
-    If Not profile.IsValid Then Error 9911, "Profile NotesDocument should be valid"
-    If Not profile.IsProfile Then Error 9912, "Profile NotesDocument did not report IsProfile"
-    If profile.IsDesign Then Error 9913, "Profile NotesDocument reported IsDesign"
+    If profile Is Nothing Then Error 9917, "GetProfileDocument returned Nothing"
+    If Not profile.IsValid Then Error 9918, "Profile NotesDocument should be valid"
+    If Not profile.IsProfile Then Error 9919, "Profile NotesDocument did not report IsProfile"
+    If profile.IsDesign Then Error 9920, "Profile NotesDocument reported IsDesign"
     Print "PROFILE IsProfile=" & CStr(profile.IsProfile)
     Call profile.Recycle()
 
@@ -66,9 +84,9 @@ Sub Main()
     Do While noteId <> "" And count < 25
         Set doc = db.GetDocumentByID(noteId)
         If Not doc Is Nothing Then
-            If Not doc.IsValid Then Error 9914, "Design NotesDocument should be valid"
-            If Not doc.IsDesign Then Error 9915, "Design note did not report IsDesign"
-            If doc.DesignType = "" Then Error 9916, "Design note has empty DesignType"
+            If Not doc.IsValid Then Error 9921, "Design NotesDocument should be valid"
+            If Not doc.IsDesign Then Error 9922, "Design note did not report IsDesign"
+            If doc.DesignType = "" Then Error 9923, "Design note has empty DesignType"
 
             Print "DESIGN NoteID=" & noteId & _
                 " Type=" & doc.DesignType & _
@@ -81,7 +99,7 @@ Sub Main()
         noteId = notes.GetNextNoteID(noteId)
     Loop
 
-    If count = 0 Then Error 9917, "No design notes were enumerated"
+    If count = 0 Then Error 9924, "No design notes were enumerated"
 
     Call notes.Recycle()
     Call db.Recycle()

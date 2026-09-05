@@ -6,12 +6,34 @@ internal static class NotesDocumentMetadataPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        source = ReplaceRequired(source,
+            "        _handle = handle;\n        NoteId = noteId;",
+            "        _handle = handle;\n        NoteId = noteId;\n        _isValidAtCreation = noteId == 0 || Session.Api.IsDocumentValid(Database.Handle, noteId);",
+            "document-initial-validity");
+
         const string oldProperties = """
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
 """;
         const string newProperties = """
-    public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
-    public bool IsValid { get { EnsureAlive(); return NoteId == 0 || (NoteId & 0x80000000u) == 0; } }
+    private readonly bool _isValidAtCreation;
+
+    public bool IsDeleted
+    {
+        get
+        {
+            EnsureAlive();
+            if (NoteId == 0) return false;
+            return Session.Api.IsDocumentDeleted(Database.Handle, NoteId);
+        }
+    }
+    public bool IsValid
+    {
+        get
+        {
+            EnsureAlive();
+            return _isValidAtCreation;
+        }
+    }
     public bool IsProfile
     {
         get
@@ -110,10 +132,10 @@ internal static class NotesDocumentMetadataPostProcessor
 
         source = ReplaceRequired(source,
             "    internal int GetDxlExporterInt(uint exporter, ushort property)",
-            "    internal ushort GetNoteClass(uint note)\n    {\n        EnsureInitialized();\n        var value = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));\n        try\n        {\n            System.Runtime.InteropServices.Marshal.WriteInt16(value, 0);\n            Resolve<XPScriptNSFNoteGetInfoDelegate>(\"NSFNoteGetInfo\")(note, 3, value);\n            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(value));\n        }\n        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }\n    }\n\n    internal int GetDxlExporterInt(uint exporter, ushort property)",
-            "native-note-class");
+            "    private const ushort ErrNoteDeleted = 0x0225;\n    private const ushort ErrInvalidNote = 0x0227;\n\n    internal bool IsDocumentDeleted(uint database, uint noteId)\n    {\n        var status = GetDocumentInfoStatus(database, noteId);\n        if (status == ErrNoteDeleted) return true;\n        if (status == 0 || status == ErrInvalidNote) return false;\n        Check(status, \"NSFDbGetNoteInfoExt\");\n        return false;\n    }\n\n    internal bool IsDocumentValid(uint database, uint noteId)\n    {\n        var status = GetDocumentInfoStatus(database, noteId);\n        if (status == 0) return true;\n        if (status == ErrNoteDeleted || status == ErrInvalidNote) return false;\n        Check(status, \"NSFDbGetNoteInfoExt\");\n        return false;\n    }\n\n    private ushort GetDocumentInfoStatus(uint database, uint noteId)\n    {\n        EnsureInitialized();\n        return Resolve<XPScriptNSFDbGetNoteInfoExtDelegate>(\"NSFDbGetNoteInfoExt\")(\n            database, noteId, 0, 0, 0, 0, 0, 0);\n    }\n\n    internal ushort GetNoteClass(uint note)\n    {\n        EnsureInitialized();\n        var value = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(ushort));\n        try\n        {\n            System.Runtime.InteropServices.Marshal.WriteInt16(value, 0);\n            Resolve<XPScriptNSFNoteGetInfoDelegate>(\"NSFNoteGetInfo\")(note, 3, value);\n            return unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(value));\n        }\n        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }\n    }\n\n    internal int GetDxlExporterInt(uint exporter, ushort property)",
+            "native-document-status-and-note-class");
 
-        source += "\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate void XPScriptNSFNoteGetInfoDelegate(uint note, ushort noteMember, nint value);\n";
+        source += "\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate ushort XPScriptNSFDbGetNoteInfoExtDelegate(uint database, uint noteId, nint retNoteOid, nint retModified, nint retNoteClass, nint retAddedToFile, nint retResponseCount, nint retParentNoteId);\n\n[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]\ninternal delegate void XPScriptNSFNoteGetInfoDelegate(uint note, ushort noteMember, nint value);\n";
         return source;
     }
 
