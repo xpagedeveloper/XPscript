@@ -43,6 +43,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextNavigatorElementPostProcessor.Apply(source);
             source = NotesRichTextLinkedObjectsPostProcessor.Apply(source);
             source = NotesRichTextNavigatorPositionPostProcessor.Apply(source);
+            source = NotesRichTextLogicalSpanPostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
         }
 
