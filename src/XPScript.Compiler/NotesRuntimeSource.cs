@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSource
 {
-    internal static string Apply(string source, NotesRuntimeFeatureSet features)
+    internal static string Apply(string source, NotesRuntimeFeatures features)
     {
         ArgumentNullException.ThrowIfNull(source);
 
