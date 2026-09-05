@@ -32,7 +32,6 @@ internal static class NotesRuntimeSource
         source = NotesDocumentComputeWithFormPostProcessor.Apply(source);
         source = NotesDxlPostProcessor.Apply(source);
         source = NotesThreadLifecyclePostProcessor.Apply(source);
-        source = NotesDocumentLastAccessedPostProcessor.Apply(source);
 
         if (features.RichText)
         {
