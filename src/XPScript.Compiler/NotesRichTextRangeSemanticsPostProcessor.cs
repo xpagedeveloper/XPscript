@@ -17,6 +17,7 @@ internal static class NotesRichTextRangeSemanticsPostProcessor
         get
         {
             EnsureRangeAlive();
+            if (_type != 0) return _type;
             return ResolveRangeType();
         }
     }
