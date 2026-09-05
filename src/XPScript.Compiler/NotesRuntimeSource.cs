@@ -49,6 +49,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextStructuralSpanPostProcessor.Apply(source);
             source = NotesRichTextLogicalSpanPostProcessor.Apply(source);
             source = NotesRichTextRangeSemanticsPostProcessor.Apply(source);
+            source = NotesRichTextCdRewritePostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
         }
 
