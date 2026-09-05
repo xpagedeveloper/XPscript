@@ -85,7 +85,7 @@ internal static class NotesDocumentMetadataPostProcessor
     {
         profileName = "";
         key = "";
-        if (!HasItem("$Name")) return false;
+        if (_handle == 0 || !HasItem("$Name")) return false;
         var value = GetString("$Name");
         const string prefix = "$profile_";
         if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
