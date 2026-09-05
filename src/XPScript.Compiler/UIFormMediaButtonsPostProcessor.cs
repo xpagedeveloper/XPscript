@@ -129,9 +129,24 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 "web-media-rendering");
         }
 
+        generated = EnsureAccessibilityRuntimeForMediaForms(generated);
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
         return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
+    }
+
+    private static string EnsureAccessibilityRuntimeForMediaForms(string generated)
+    {
+        const string marker = "// XPScript UIForm media accessibility: .AccessibleName";
+        if (generated.Contains(marker, StringComparison.Ordinal)) return generated;
+        var runtimeIndex = generated.IndexOf("internal static class XPScriptUI", StringComparison.Ordinal);
+        if (runtimeIndex < 0) return generated;
+        var scriptPart = generated[..runtimeIndex];
+        var usesMedia = scriptPart.Contains(".AddImage(", StringComparison.OrdinalIgnoreCase) ||
+                        scriptPart.Contains(".AddWebView(", StringComparison.OrdinalIgnoreCase) ||
+                        scriptPart.Contains(".SetImageSource(", StringComparison.OrdinalIgnoreCase) ||
+                        scriptPart.Contains(".SetImageAltText(", StringComparison.OrdinalIgnoreCase);
+        return usesMedia ? generated.Insert(runtimeIndex, marker + "\n") : generated;
     }
 
     private static string ReplacePostHandling(string generated)
