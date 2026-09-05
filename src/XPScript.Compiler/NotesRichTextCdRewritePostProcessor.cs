@@ -5,7 +5,7 @@ internal static class NotesRichTextCdRewritePostProcessor
     public static string Apply(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return source + "\n\n" + RuntimeSupport;
+        return source + "\n\n" + RuntimeSupport + "\n\n" + NativeRuntime;
     }
 
     private const string RuntimeSupport = """
@@ -81,8 +81,6 @@ internal static class XPScriptNotesRichTextCdTransform
                 previousRecord = -1;
             }
 
-            // EnumCompositeBuffer exposes the canonical CD record length but not the
-            // inter-record alignment byte. Reconstruct that byte deterministically.
             bytes.AddRange(record.Data);
             if ((record.Data.Length & 1) != 0) bytes.Add(0);
             previousRecord = record.RecordIndex;
@@ -90,6 +88,71 @@ internal static class XPScriptNotesRichTextCdTransform
         segments.Add(bytes.ToArray());
         return segments;
     }
+}
+""";
+
+    private const string NativeRuntime = """
+internal sealed partial class XPScriptNotesNativeApi
+{
+    internal void RewriteRichTextCdRecords(
+        nint note,
+        string itemName,
+        IReadOnlyList<XPScriptNotesRichTextRecordRewrite> records)
+    {
+        EnsureInitialized();
+        itemName = itemName.Trim();
+        if (itemName.Length == 0) throw new XPScriptRuntimeException(5, "Rich text item name cannot be empty.");
+
+        // CompoundTextAddCDRecords accepts canonical CD records. Feed records in their
+        // original physical order; CompoundText owns item splitting when the context closes.
+        using var itemNameText = ToLmbcs(itemName);
+        Check(Resolve<CompoundTextCreateForRewriteDelegate>("CompoundTextCreate")(
+            checked((uint)note), itemNameText.Pointer, out var compound), "CompoundTextCreate");
+
+        var closed = false;
+        try
+        {
+            foreach (var record in records)
+            {
+                if (record.Data is null || record.Data.Length == 0) continue;
+                var alignedLength = checked(record.Data.Length + (record.Data.Length & 1));
+                var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(alignedLength);
+                try
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(record.Data, 0, buffer, record.Data.Length);
+                    if (alignedLength != record.Data.Length)
+                        System.Runtime.InteropServices.Marshal.WriteByte(buffer, record.Data.Length, 0);
+                    Check(Resolve<CompoundTextAddCDRecordsForRewriteDelegate>("CompoundTextAddCDRecords")(
+                        compound, buffer, checked((uint)alignedLength)), "CompoundTextAddCDRecords");
+                }
+                finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
+            }
+
+            Check(Resolve<CompoundTextCloseForRewriteDelegate>("CompoundTextClose")(
+                compound, 0, 0, 0, 0), "CompoundTextClose");
+            closed = true;
+        }
+        finally
+        {
+            if (!closed)
+            {
+                try { Resolve<CompoundTextDiscardForRewriteDelegate>("CompoundTextDiscard")(compound); }
+                catch { }
+            }
+        }
+    }
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort CompoundTextCreateForRewriteDelegate(uint note, nint itemName, out uint compound);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort CompoundTextAddCDRecordsForRewriteDelegate(uint compound, nint records, uint recordLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort CompoundTextCloseForRewriteDelegate(uint compound, uint flags, nint buffer, uint bufferLength, uint reserved);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate void CompoundTextDiscardForRewriteDelegate(uint compound);
 }
 """;
 }
