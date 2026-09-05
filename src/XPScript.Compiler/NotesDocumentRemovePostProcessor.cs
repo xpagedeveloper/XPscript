@@ -9,7 +9,7 @@ internal static class NotesDocumentRemovePostProcessor
         source = ReplaceRequired(
             source,
             "    public void Save()\n    {\n        EnsureAlive();\n        Session.Api.SaveNote(_handle);\n        NoteId = Session.Api.GetNoteId(_handle);\n    }",
-            "    public void Save()\n    {\n        EnsureAlive();\n        Session.Api.SaveNote(_handle);\n        NoteId = Session.Api.GetNoteId(_handle);\n    }\n\n    public bool Remove() => Remove(false);\n\n    public bool Remove(object? forceValue)\n    {\n        EnsureAlive();\n        if (NoteId == 0) throw new XPScriptRuntimeException(5, \"Cannot remove an unsaved NotesDocument.\");\n        var databaseHandle = Database.Handle;\n        var noteId = NoteId;\n        var api = Session.Api;\n        Recycle();\n        return api.DeleteNote(databaseHandle, noteId, XPScriptRuntime.CBool(forceValue));\n    }",
+            "    public void Save()\n    {\n        EnsureAlive();\n        RequireOpenNoteHandle();\n        Session.Api.SaveNote(_handle);\n        NoteId = Session.Api.GetNoteId(_handle);\n    }\n\n    public bool Remove() => Remove(false);\n\n    public bool Remove(object? forceValue)\n    {\n        EnsureAlive();\n        if (NoteId == 0) throw new XPScriptRuntimeException(5, \"Cannot remove an unsaved NotesDocument.\");\n        var databaseHandle = Database.Handle;\n        var noteId = NoteId;\n        var api = Session.Api;\n        Recycle();\n        return api.DeleteNote(databaseHandle, noteId, XPScriptRuntime.CBool(forceValue));\n    }",
             "document-remove-surface");
 
         source = ReplaceRequired(
