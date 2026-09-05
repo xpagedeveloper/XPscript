@@ -6,14 +6,13 @@ internal static class NotesRichTextLinkedObjectsCompatibilityPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // Newer linked-object sources already use the runtime array helper. Keep this
-        // compatibility normalization idempotent so either representation compiles.
+        // Older linked-object sources used LSArray.Create here. Newer sources either
+        // use the runtime array helper directly or remove RowLabels during the rich-text
+        // surface audit, so this compatibility normalization must be optional.
         const string legacyRowLabels = "return LSArray.Create(0, -1, labels);";
         const string normalizedRowLabels = "return LSOperatorArrayRuntime.CreateArray(labels);";
         if (source.Contains(legacyRowLabels, StringComparison.Ordinal))
             source = source.Replace(legacyRowLabels, normalizedRowLabels, StringComparison.Ordinal);
-        else if (!source.Contains(normalizedRowLabels, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply Notes linked rich-text compatibility patch (table-row-label-array).");
 
         return source + "\n\n" + NativeRuntime;
     }
