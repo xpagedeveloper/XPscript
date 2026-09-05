@@ -24,17 +24,50 @@ internal static class NotesRichTextLogicalSpanPostProcessor
     {
         if (_currentIndex < 0) return 0;
         if (_lastElementType != type) return _currentIndex + 1;
-
-        // Structural elements are logical spans rather than individual CD records.
-        // Continue after the complete current span so nested records cannot be
-        // mistaken for a following occurrence of the same LotusScript element.
         return FindElementEnd(_currentIndex, type) + 1;
+    }
+
+    internal (int Start, int End) CurrentLogicalSpan()
+    {
+        EnsureNavigatorAlive();
+        RefreshIfChanged();
+        if (_currentIndex < 0)
+            throw new XPScriptRuntimeException(91, "NotesRichTextNavigator has no current element position.");
+        return (_currentIndex, FindElementEnd(_currentIndex, _lastElementType));
     }
 
     private int FindElement(int start, int type, int occurrence)
     {
 """,
             "logical-span-search-helper");
+
+        source = ReplaceRequired(
+            source,
+            """
+            EnsureSameItem(navigator.RichTextItem);
+            return (navigator.CurrentIndex, navigator.CurrentCharOffset, navigator.CurrentElementType);
+""",
+            """
+            EnsureSameItem(navigator.RichTextItem);
+            var span = navigator.CurrentLogicalSpan();
+            return (span.Start, navigator.CurrentCharOffset, navigator.CurrentElementType);
+""",
+            "range-begin-logical-span");
+
+        source = ReplaceRequired(
+            source,
+            """
+            EnsureSameItem(navigator.RichTextItem);
+            return (navigator.CurrentIndex, navigator.CurrentCharOffset, navigator.CurrentElementType);
+""",
+            """
+            EnsureSameItem(navigator.RichTextItem);
+            var span = navigator.CurrentLogicalSpan();
+            var records = _item.ReadRichTextRecords();
+            var endOffset = span.End >= 0 && span.End < records.Count ? records[span.End].Text.Length : 0;
+            return (span.End, endOffset, navigator.CurrentElementType);
+""",
+            "range-end-logical-span");
 
         return source;
     }
