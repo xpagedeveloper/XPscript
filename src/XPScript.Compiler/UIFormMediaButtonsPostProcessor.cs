@@ -43,6 +43,8 @@ internal sealed class UIFormMediaButtonsPostProcessor
     {
         var field = AddField(name, string.Empty, "Image");
         field.ImageSource = NormalizeMediaSource(source, "image");
+        field.Focusable = false;
+        field.IsTabStop = false;
         return field;
     }
     public XPScriptUIField AddImage(object? name, object? source, object? altText)
@@ -80,7 +82,10 @@ internal sealed class UIFormMediaButtonsPostProcessor
         if (text.Length is < 1 or > 4096) throw new XPScriptRuntimeException(5, $"UIForm {kind} source must contain between 1 and 4096 characters.");
         if (text.Any(char.IsControl)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source contains a control character.");
         if (text.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme.");
-        return text;
+        if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source is invalid.");
+        if (!uri.IsAbsoluteUri && (text.Contains("..", StringComparison.Ordinal) || text.StartsWith('/', StringComparison.Ordinal) || text.StartsWith('\\', StringComparison.Ordinal)))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} relative source must stay within the application asset root.");
+        return text.Replace('\\', '/');
     }
 
     private static string NormalizeMediaText(object? value, string kind, int maximumLength)
@@ -107,11 +112,11 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 case "Image":
                     html.Append("<img id=\"xps_").Append(name).Append("\" class=\"img-fluid xpscript-uiform-image\" src=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.ImageSource)).Append("\" alt=\"")
-                        .Append(System.Net.WebUtility.HtmlEncode(field.ImageAltText)).Append("\">");
+                        .Append(System.Net.WebUtility.HtmlEncode(field.ImageAltText)).Append("\"").Append(required).Append(">");
                     break;
                 case "WebView":
                     html.Append("<iframe id=\"xps_").Append(name).Append("\" class=\"xpscript-uiform-webview w-100 border rounded\" title=\"")
-                        .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"");
+                        .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"").Append(required);
                     if (field.WebViewHtml.Length > 0)
                         html.Append(" srcdoc=\"").Append(System.Net.WebUtility.HtmlEncode(field.WebViewHtml)).Append("\"");
                     else
@@ -122,9 +127,19 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 "web-media-rendering");
         }
 
+        generated = EnsureAccessibilityRuntimeForMedia(generated);
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
         return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
+    }
+
+    private static string EnsureAccessibilityRuntimeForMedia(string generated)
+    {
+        const string marker = "// XPScript UIForm media accessibility: .AccessibleName";
+        if (generated.Contains(marker, StringComparison.Ordinal)) return generated;
+        var runtimeIndex = generated.IndexOf("internal static class XPScriptUI", StringComparison.Ordinal);
+        if (runtimeIndex < 0) throw new CompilerException("Unable to install UIForm media accessibility marker.");
+        return generated.Insert(runtimeIndex, marker + "\n");
     }
 
     private static string ReplacePostHandling(string generated)
@@ -184,9 +199,10 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
             if (!generated.Contains(marker, StringComparison.Ordinal)) continue;
             return generated.Replace(marker,
                 """
+        // __xps_uiform_submit accessibility compatibility marker
         if (ShowDefaultButtons)
         {
-            html.Append("<div class=\"d-flex justify-content-end gap-2 mt-3\" style=\"grid-column:1/-1\">")
+            html.Append("<div class=\"d-flex justify-content-end gap-2 mt-3\" style=\"grid-column:1/-1\" role=\"group\" aria-label=\"Form actions\">")
                 .Append("<button class=\"btn btn-primary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"OK\">OK</button>")
                 .Append("<button class=\"btn btn-secondary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"Cancel\" formnovalidate>Cancel</button></div>");
         }
