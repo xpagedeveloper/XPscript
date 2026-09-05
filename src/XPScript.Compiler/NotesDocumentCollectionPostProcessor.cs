@@ -117,6 +117,49 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         RemoveIds(ResolveSetOperand(documentOrCollection, "Subtract"));
     }
 
+    public void MarkAllRead() => MarkAllRead(Session.Username);
+    public void MarkAllRead(object? userNameValue)
+    {
+        EnsureAlive();
+        var userName = XPScriptRuntime.CStr(userNameValue);
+        foreach (var noteId in _noteIds) Session.Api.SetDocumentUnread(Database.Handle, noteId, userName, false);
+    }
+
+    public void MarkAllUnread() => MarkAllUnread(Session.Username);
+    public void MarkAllUnread(object? userNameValue)
+    {
+        EnsureAlive();
+        var userName = XPScriptRuntime.CStr(userNameValue);
+        foreach (var noteId in _noteIds) Session.Api.SetDocumentUnread(Database.Handle, noteId, userName, true);
+    }
+
+    public void PutAllInFolder(object? folderNameValue) => PutAllInFolder(folderNameValue, false);
+    public void PutAllInFolder(object? folderNameValue, object? createOnFailValue)
+    {
+        EnsureAlive();
+        var folderName = XPScriptRuntime.CStr(folderNameValue);
+        var create = XPScriptRuntime.CBool(createOnFailValue);
+        foreach (var noteId in _noteIds) Session.Api.PutDocumentInFolder(Database.Handle, noteId, folderName, create);
+        MoveCurrentToFirst();
+    }
+
+    public void RemoveAllFromFolder(object? folderNameValue)
+    {
+        EnsureAlive();
+        var folderName = XPScriptRuntime.CStr(folderNameValue);
+        foreach (var noteId in _noteIds) Session.Api.RemoveDocumentFromFolder(Database.Handle, noteId, folderName);
+        MoveCurrentToFirst();
+    }
+
+    public void StampAll(object? itemNameValue, object? value)
+    {
+        EnsureAlive();
+        var itemName = XPScriptRuntime.CStr(itemNameValue);
+        if (itemName.Trim().Length == 0) throw new XPScriptRuntimeException(5, "StampAll item name cannot be empty.");
+        ForEachOpenDocument(document => { document.SetValue(itemName, value); document.Save(); });
+        MoveCurrentToFirst();
+    }
+
     public XPScriptNotesDocument? GetFirstDocument()
     {
         EnsureAlive();
@@ -332,6 +375,27 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         _lastFetchedIndex = index;
         _lastFetchedNoteId = noteId;
         return document;
+    }
+
+    private void ForEachOpenDocument(Action<XPScriptNotesDocument> action)
+    {
+        foreach (var noteId in _noteIds)
+        {
+            var document = Database.OpenByNoteId(noteId);
+            if (document is null) continue;
+            try { action(document); }
+            finally { document.Recycle(); }
+        }
+    }
+
+    private void MoveCurrentToFirst()
+    {
+        if (_noteIds.Length == 0) ResetLastFetched();
+        else
+        {
+            _lastFetchedIndex = 0;
+            _lastFetchedNoteId = _noteIds[0];
+        }
     }
 
     private void RemoveIds(IEnumerable<uint> noteIds)
