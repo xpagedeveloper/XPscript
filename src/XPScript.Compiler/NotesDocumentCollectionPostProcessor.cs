@@ -160,6 +160,20 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         MoveCurrentToFirst();
     }
 
+    public void RemoveAll(object? forceValue)
+    {
+        EnsureAlive();
+        var force = XPScriptRuntime.CBool(forceValue);
+        var remaining = new List<uint>();
+        foreach (var noteId in _noteIds)
+        {
+            if (!Session.Api.DeleteNote(Database.Handle, noteId, force))
+                remaining.Add(noteId);
+        }
+        _noteIds = remaining.ToArray();
+        MoveCurrentToFirst();
+    }
+
     public XPScriptNotesDocument? GetFirstDocument()
     {
         EnsureAlive();
