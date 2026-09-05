@@ -133,7 +133,6 @@ internal abstract class XPScriptNotesRichTextLinkedObject : XPScriptNotesObject
     private readonly int _segmentIndex;
     private readonly int _recordIndex;
     private readonly ushort _signature;
-    private readonly long _revision;
 
     protected XPScriptNotesRichTextLinkedObject(
         XPScriptNotesSession session,
@@ -144,7 +143,6 @@ internal abstract class XPScriptNotesRichTextLinkedObject : XPScriptNotesObject
         _segmentIndex = record.SegmentIndex;
         _recordIndex = record.RecordIndex;
         _signature = record.Signature;
-        _revision = item.RichTextRevision;
     }
 
     public XPScriptNotesRichTextItem Parent
@@ -183,8 +181,6 @@ internal abstract class XPScriptNotesRichTextLinkedObject : XPScriptNotesObject
     {
         EnsureAlive();
         RichTextItem.EnsureRichTextAlive();
-        if (RichTextItem.RichTextRevision != _revision)
-            throw new XPScriptRuntimeException(91, "The rich text element is stale because its parent item was modified.");
     }
 
     protected static XPScriptRuntimeException UnsupportedWrite(string member) =>
@@ -262,8 +258,8 @@ internal sealed class XPScriptNotesRichTextSection : XPScriptNotesRichTextLinked
             var data = CurrentRecord().Data;
             if (data.Length < 14) return new XPScriptNotesColorObject(Session, 0);
             var flags = ReadUInt32(data, 4);
-            if ((flags & BarHasColor) == 0) return new XPScriptNotesColorObject(Session, 0);
-            return new XPScriptNotesColorObject(Session, data[12]);
+            var color = (flags & BarHasColor) != 0 ? ReadUInt16(data, 12) : 0;
+            return new XPScriptNotesColorObject(Session, color);
         }
     }
 
@@ -272,29 +268,37 @@ internal sealed class XPScriptNotesRichTextSection : XPScriptNotesRichTextLinked
         get
         {
             var data = CurrentRecord().Data;
-            var style = new XPScriptNotesRichTextStyle(Session);
-            if (data.Length < 12) return style;
+            var result = new XPScriptNotesRichTextStyle(Session);
+            if (data.Length < 12) return result;
             var face = data[8];
             var attrib = data[9];
             var color = data[10];
             var point = data[11];
-            style.NotesFont = face;
-            style.Bold = (attrib & 0x01) != 0;
-            style.Italic = (attrib & 0x02) != 0;
-            style.Underline = (attrib & 0x04) != 0;
-            style.Strikethrough = (attrib & 0x08) != 0;
-            style.NotesColor = color;
-            style.FontSize = Math.Max(1, point / 2);
-            return style;
+            result.NotesFont = face;
+            result.NotesColor = color;
+            if (point > 0) result.FontSize = point;
+            result.Bold = (attrib & 0x01) != 0;
+            result.Italic = (attrib & 0x02) != 0;
+            result.Underline = (attrib & 0x04) != 0;
+            result.Strikethrough = (attrib & 0x08) != 0;
+            if ((attrib & 0x10) != 0) result.Effects = 1;
+            else if ((attrib & 0x20) != 0) result.Effects = 2;
+            else if ((attrib & 0xE0) == 0x80) result.Effects = 3;
+            else if ((attrib & 0xF0) == 0x90) result.Effects = 4;
+            else if ((attrib & 0xF0) == 0xA0) result.Effects = 5;
+            else result.Effects = 0;
+            return result;
         }
     }
 
     public void Remove() => throw UnsupportedWrite("NotesRichTextSection.Remove");
-    public void SetBarColor(object? color) => throw UnsupportedWrite("NotesRichTextSection.SetBarColor");
-    public void SetTitleStyle(object? style) => throw UnsupportedWrite("NotesRichTextSection.SetTitleStyle");
+    public void SetBarColor(object? colorValue) => throw UnsupportedWrite("NotesRichTextSection.SetBarColor");
+    public void SetTitleStyle(object? styleValue) => throw UnsupportedWrite("NotesRichTextSection.SetTitleStyle");
 
+    private static ushort ReadUInt16(byte[] data, int offset) =>
+        (ushort)(data[offset] | (data[offset + 1] << 8));
     private static uint ReadUInt32(byte[] data, int offset) =>
-        System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset, 4));
+        (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
 }
 
 internal sealed class XPScriptNotesRichTextTable : XPScriptNotesRichTextLinkedObject
@@ -305,23 +309,8 @@ internal sealed class XPScriptNotesRichTextTable : XPScriptNotesRichTextLinkedOb
     internal XPScriptNotesRichTextTable(XPScriptNotesSession session, XPScriptNotesRichTextItem item, XPScriptNotesRichTextRecordData record)
         : base(session, item, record) { }
 
-    public int RowCount
-    {
-        get
-        {
-            var dimensions = GetDimensions();
-            return dimensions.Rows;
-        }
-    }
-
-    public int ColumnCount
-    {
-        get
-        {
-            var dimensions = GetDimensions();
-            return dimensions.Columns;
-        }
-    }
+    public int RowCount { get { var dimensions = GetDimensions(); return dimensions.Rows; } }
+    public int ColumnCount { get { var dimensions = GetDimensions(); return dimensions.Columns; } }
 
     public bool RightToLeft
     {
@@ -345,24 +334,23 @@ internal sealed class XPScriptNotesRichTextTable : XPScriptNotesRichTextLinkedOb
     {
         get
         {
-            var labels = Array.Empty<object?>();
-            return LSArray.Create(0, -1, labels);
+            EnsureLinkedAlive();
+            return LSOperatorArrayRuntime.CreateArray(Array.Empty<object?>());
         }
     }
 
-    public XPScriptNotesColorObject Color => new(Session, 0);
-    public XPScriptNotesColorObject AlternateColor => new(Session, 0);
+    public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }
+    public XPScriptNotesColorObject AlternateColor { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }
 
-    public void AddRow(object? count) => throw UnsupportedWrite("NotesRichTextTable.AddRow");
-    public void AddRow(object? count, object? targetRow) => throw UnsupportedWrite("NotesRichTextTable.AddRow");
+    public void AddRow() => throw UnsupportedWrite("NotesRichTextTable.AddRow");
+    public void AddRow(object? countValue) => throw UnsupportedWrite("NotesRichTextTable.AddRow");
+    public void AddRow(object? countValue, object? targetRowValue) => throw UnsupportedWrite("NotesRichTextTable.AddRow");
     public void Remove() => throw UnsupportedWrite("NotesRichTextTable.Remove");
     public void RemoveRow() => throw UnsupportedWrite("NotesRichTextTable.RemoveRow");
-    public void RemoveRow(object? count) => throw UnsupportedWrite("NotesRichTextTable.RemoveRow");
-    public void RemoveRow(object? count, object? targetRow) => throw UnsupportedWrite("NotesRichTextTable.RemoveRow");
-    public void SetAlternateColor(object? color) => throw UnsupportedWrite("NotesRichTextTable.SetAlternateColor");
-    public void SetAlternateColor(object? color, object? useColor) => throw UnsupportedWrite("NotesRichTextTable.SetAlternateColor");
-    public void SetColor(object? color) => throw UnsupportedWrite("NotesRichTextTable.SetColor");
-    public void SetColor(object? color, object? useColor) => throw UnsupportedWrite("NotesRichTextTable.SetColor");
+    public void RemoveRow(object? countValue) => throw UnsupportedWrite("NotesRichTextTable.RemoveRow");
+    public void RemoveRow(object? countValue, object? targetRowValue) => throw UnsupportedWrite("NotesRichTextTable.RemoveRow");
+    public void SetAlternateColor(object? colorValue) => throw UnsupportedWrite("NotesRichTextTable.SetAlternateColor");
+    public void SetColor(object? colorValue) => throw UnsupportedWrite("NotesRichTextTable.SetColor");
 
     private (int Rows, int Columns) GetDimensions()
     {
@@ -382,7 +370,7 @@ internal sealed class XPScriptNotesRichTextTable : XPScriptNotesRichTextLinkedOb
     }
 
     private static ushort ReadUInt16(byte[] data, int offset) =>
-        System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(offset, 2));
+        (ushort)(data[offset] | (data[offset + 1] << 8));
 }
 
 internal sealed class XPScriptNotesRichTextDocLink : XPScriptNotesRichTextLinkedObject
@@ -392,37 +380,37 @@ internal sealed class XPScriptNotesRichTextDocLink : XPScriptNotesRichTextLinked
     internal XPScriptNotesRichTextDocLink(XPScriptNotesSession session, XPScriptNotesRichTextItem item, XPScriptNotesRichTextRecordData record)
         : base(session, item, record) { }
 
-    public string DbReplicaID => ParseTarget().ReplicaId;
-    public string ViewUNID => ParseTarget().ViewUnid;
-    public string DocUNID => ParseTarget().DocUnid;
-    public string DisplayComment => ParseTarget().DisplayComment;
-    public string ServerHint => ParseTarget().ServerHint;
-    public string HotSpotText => ParseTarget().HotspotText;
-    public XPScriptNotesRichTextStyle HotSpotTextStyle => new(Session);
+    public string DbReplicaID { get { var target = ParseTarget(); return target.DbReplicaId; } }
+    public string ViewUNID { get { var target = ParseTarget(); return target.ViewUnid; } }
+    public string DocUNID { get { var target = ParseTarget(); return target.DocUnid; } }
+    public string DisplayComment { get { var target = ParseTarget(); return target.DisplayComment; } }
+    public string ServerHint { get { var target = ParseTarget(); return target.ServerHint; } }
+    public string HotSpotText { get { var target = ParseTarget(); return target.HotspotText; } }
+    public XPScriptNotesRichTextStyle HotSpotTextStyle { get { EnsureLinkedAlive(); return new XPScriptNotesRichTextStyle(Session); } }
 
     public void Remove() => throw UnsupportedWrite("NotesRichTextDocLink.Remove");
     public void RemoveLinkage() => throw UnsupportedWrite("NotesRichTextDocLink.RemoveLinkage");
-    public void SetHotSpotTextStyle(object? style) => throw UnsupportedWrite("NotesRichTextDocLink.SetHotSpotTextStyle");
+    public void SetHotSpotTextStyle(object? styleValue) => throw UnsupportedWrite("NotesRichTextDocLink.SetHotSpotTextStyle");
 
-    private (string ReplicaId, string ViewUnid, string DocUnid, string DisplayComment, string ServerHint, string HotspotText) ParseTarget()
+    private XPScriptNotesRichTextDocLinkTarget ParseTarget()
     {
         var record = CurrentRecord();
         var data = record.Data;
         if (record.Signature == LinkExport2Signature && data.Length >= 44)
         {
-            var replica = Convert.ToHexString(data.AsSpan(4, 8));
-            var view = Convert.ToHexString(data.AsSpan(12, 16));
-            var document = Convert.ToHexString(data.AsSpan(28, 16));
+            var replica = Session.Api.FormatRichTextTimeDate(data, 4);
+            var view = Session.Api.FormatRichTextUnid(data, 12);
+            var document = Session.Api.FormatRichTextUnid(data, 28);
             var strings = ReadStrings(data, 44, 3);
-            return (replica, view, document, strings[0], strings[1], strings[2]);
+            return new XPScriptNotesRichTextDocLinkTarget(replica, view, document, strings[0], strings[1], strings[2]);
         }
 
         if (data.Length >= 6)
         {
             var strings = ReadStrings(data, 6, 3);
-            return ("", "", "", strings[0], strings[1], strings[2]);
+            return new XPScriptNotesRichTextDocLinkTarget("", "", "", strings[0], strings[1], strings[2]);
         }
-        return ("", "", "", "", "", "");
+        return new XPScriptNotesRichTextDocLinkTarget("", "", "", "", "", "");
     }
 
     private string[] ReadStrings(byte[] data, int offset, int count)
@@ -431,43 +419,48 @@ internal sealed class XPScriptNotesRichTextDocLink : XPScriptNotesRichTextLinked
         for (var i = 0; i < count; i++)
         {
             if (offset >= data.Length) { result[i] = ""; continue; }
-            var end = Array.IndexOf(data, (byte)0, offset);
-            if (end < 0) end = data.Length;
+            var end = offset;
+            while (end < data.Length && data[end] != 0) end++;
             result[i] = Session.Api.DecodeRichTextText(data, offset, end - offset);
-            offset = Math.Min(data.Length, end + 1);
+            offset = end < data.Length ? end + 1 : end;
         }
         return result;
     }
 }
+
+internal readonly record struct XPScriptNotesRichTextDocLinkTarget(
+    string DbReplicaId,
+    string ViewUnid,
+    string DocUnid,
+    string DisplayComment,
+    string ServerHint,
+    string HotspotText);
 """;
 
     private const string NativeRuntime = """
 internal sealed partial class XPScriptNotesNativeApi
 {
-    internal void AppendRichTextStyled(uint note, string itemName, string text, XPScriptNotesRichTextStyleState style)
+    internal void AppendRichTextStyled(uint note, string name, string value, XPScriptNotesRichTextStyleState style)
     {
         EnsureInitialized();
-        using var itemNameText = ToLmbcs(itemName);
-        using var textValue = ToLmbcs(text);
-        Check(Resolve<CompoundTextCreateDelegate>("CompoundTextCreate")(note, itemNameText.Pointer, out var compound), "CompoundTextCreate");
+        using var itemName = ToLmbcs(name);
+        Check(Resolve<CompoundTextCreateDelegate>("CompoundTextCreate")(note, itemName.Pointer, out var compound), "CompoundTextCreate");
         var closed = false;
         try
         {
-            var textStyle = new XPScriptNotesTextStyle
-            {
-                Face = checked((byte)(style.NotesFont == XPScriptNotesRichTextStyle.StyleNoChange ? 0 : style.NotesFont)),
-                Attrib = BuildTextAttrib(style),
-                Color = checked((byte)(style.NotesColor == XPScriptNotesRichTextStyle.StyleNoChange ? 0 : style.NotesColor)),
-                PointSize = checked((byte)(style.FontSize == XPScriptNotesRichTextStyle.StyleNoChange ? 20 : Math.Clamp(style.FontSize * 2, 2, 250)))
-            };
+            using var text = ToLmbcs(value);
+            using var delimiter = ToLmbcs("\r\n");
+            const uint styleSameAsPrevious = 0xFFFFFFFFu;
+            const uint preserveLines = 0x00000002u;
+            var fontId = BuildRichTextFontId(style);
             Check(Resolve<CompoundTextAddTextExtDelegate>("CompoundTextAddTextExt")(
                 compound,
-                0,
-                ref textStyle,
-                0,
-                0,
-                textValue.Pointer,
-                checked((uint)textValue.Length),
+                styleSameAsPrevious,
+                fontId,
+                text.Pointer,
+                checked((uint)text.Length),
+                delimiter.Pointer,
+                preserveLines,
                 0), "CompoundTextAddTextExt(styled)");
             Check(Resolve<CompoundTextCloseDelegate>("CompoundTextClose")(compound, 0, 0, 0, 0), "CompoundTextClose");
             closed = true;
@@ -481,42 +474,92 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    private static byte BuildTextAttrib(XPScriptNotesRichTextStyleState style)
+    private static uint BuildRichTextFontId(XPScriptNotesRichTextStyleState style)
     {
-        byte attrib = 0;
-        if (style.Bold != 0 && style.Bold != XPScriptNotesRichTextStyle.StyleNoChange) attrib |= 0x01;
-        if (style.Italic != 0 && style.Italic != XPScriptNotesRichTextStyle.StyleNoChange) attrib |= 0x02;
-        if (style.Underline != 0 && style.Underline != XPScriptNotesRichTextStyle.StyleNoChange) attrib |= 0x04;
-        if (style.Strikethrough != 0 && style.Strikethrough != XPScriptNotesRichTextStyle.StyleNoChange) attrib |= 0x08;
-        return attrib;
+        const int noChange = XPScriptNotesRichTextStyle.StyleNoChange;
+        var face = style.NotesFont == noChange ? 0 : Math.Clamp(style.NotesFont, 0, 255);
+        var color = style.NotesColor == noChange ? 0 : Math.Clamp(style.NotesColor, 0, 255);
+        var point = style.FontSize == noChange ? 10 : Math.Clamp(style.FontSize, 1, 250);
+        var attributes = 0;
+        if (style.Bold != noChange && style.Bold != 0) attributes |= 0x01;
+        if (style.Italic != noChange && style.Italic != 0) attributes |= 0x02;
+        if (style.Underline != noChange && style.Underline != 0) attributes |= 0x04;
+        if (style.Strikethrough != noChange && style.Strikethrough != 0) attributes |= 0x08;
+        if (style.Effects == 1) attributes |= 0x10;
+        else if (style.Effects == 2) attributes |= 0x20;
+        else if (style.Effects == 3) attributes |= 0x80;
+        else if (style.Effects == 4) attributes |= 0x90;
+        else if (style.Effects == 5) attributes |= 0xA0;
+        return (uint)(face | (attributes << 8) | (color << 16) | (point << 24));
     }
 
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
-    private struct XPScriptNotesTextStyle
+    internal string DecodeRichTextText(byte[] data, int offset, int length)
     {
-        internal byte Face;
-        internal byte Attrib;
-        internal byte Color;
-        internal byte PointSize;
+        EnsureInitialized();
+        if (length <= 0) return "";
+        if (offset < 0 || offset > data.Length || length > data.Length - offset)
+            throw new XPScriptRuntimeException(5, "Invalid rich text string range.");
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(length);
+        try
+        {
+            System.Runtime.InteropServices.Marshal.Copy(data, offset, pointer, length);
+            return FromLmbcs(pointer, length);
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
     }
 
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextAddTextExtDelegate(
-        uint compound,
-        uint paragraphStyleId,
-        ref XPScriptNotesTextStyle textStyle,
-        uint fontId,
-        uint flags,
-        nint text,
-        uint textLength,
-        uint reserved);
+    internal string DecompileRichTextFormula(byte[] data, int offset, int length)
+    {
+        EnsureInitialized();
+        if (length <= 0) return "";
+        if (offset < 0 || offset > data.Length || length > data.Length - offset)
+            throw new XPScriptRuntimeException(5, "Invalid rich text formula range.");
+        var formula = System.Runtime.InteropServices.Marshal.AllocHGlobal(length);
+        try
+        {
+            System.Runtime.InteropServices.Marshal.Copy(data, offset, formula, length);
+            Check(Resolve<NSFFormulaDecompileDelegate>("NSFFormulaDecompile")(formula, 0, out var textHandle, out var textLength), "NSFFormulaDecompile(rich text)");
+            if (textHandle == 0 || textLength == 0)
+            {
+                if (textHandle != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(textHandle);
+                return "";
+            }
+            try
+            {
+                var text = Resolve<OSLockObjectDelegate>("OSLockObject")(textHandle);
+                if (text == 0) throw new XPScriptRuntimeException(5, "Unable to lock decompiled rich text formula.");
+                try { return FromLmbcs(text, textLength); }
+                finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(textHandle); }
+            }
+            finally { Resolve<OSMemFreeDelegate>("OSMemFree")(textHandle); }
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(formula); }
+    }
+
+    internal string FormatRichTextTimeDate(byte[] data, int offset)
+    {
+        if (offset < 0 || offset + 8 > data.Length) return "";
+        var first = ReadRichTextUInt32(data, offset);
+        var second = ReadRichTextUInt32(data, offset + 4);
+        return second.ToString("X8", System.Globalization.CultureInfo.InvariantCulture) +
+               first.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    internal string FormatRichTextUnid(byte[] data, int offset)
+    {
+        if (offset < 0 || offset + 16 > data.Length) return "";
+        return FormatRichTextTimeDate(data, offset) + FormatRichTextTimeDate(data, offset + 8);
+    }
+
+    private static uint ReadRichTextUInt32(byte[] data, int offset) =>
+        (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
 }
 """;
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply Notes rich-text linked-object patch (" + stage + ").");
+            throw new CompilerException("Unable to apply Notes rich-text linked object patch (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
