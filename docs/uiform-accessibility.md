@@ -1,8 +1,6 @@
 # UIForm accessibility
 
-UIForm keeps baseline accessibility enabled for desktop and browser rendering. Native labels and control semantics remain available without enabling the extended accessibility API.
-
-The generated accessibility/focus/validation runtime is feature-gated inside the UIForm pipeline. It is emitted when the script references one of the extended accessibility members. UIForm media controls also enable the accessibility runtime so `Image` and `WebView` receive consistent semantics across desktop, server-rendered web and browser WebAssembly.
+UIForm includes its accessibility, focus and validation runtime as part of the standard UIForm surface on desktop, server-rendered web and browser WebAssembly. This keeps one consistent metadata contract for ordinary fields, media controls, validation and focus behavior across all UIForm hosts.
 
 Field properties: `AccessibleName`, `AccessibleDescription`, `AccessibleHelpText`, `AccessibleLive`, `AccessibilityHidden`, `Focusable`, `IsTabStop`, `TabIndex`, `HasFocus`, `AccessKey`, `HotKey`.
 
