@@ -8,14 +8,14 @@ internal static class NotesDocumentCollectionProvenancePostProcessor
 
         source = ReplaceRequired(
             source,
-            "    private uint[]? _designNoteIds;",
-            "    private uint[]? _designNoteIds;\n    private bool _isSorted;\n    private string _query = \"\";",
+            "    private int _lastFetchedIndex = -1;\n    private uint _lastFetchedNoteId;",
+            "    private int _lastFetchedIndex = -1;\n    private uint _lastFetchedNoteId;\n    private bool _isSorted;\n    private string _query = \"\";",
             "collection-search-provenance-fields");
 
         source = ReplaceRequired(
             source,
-            "    public XPScriptNotesDateTime? UntilTime",
-            "    internal void InitializeSearchMetadata(string query, bool isSorted)\n    {\n        _query = query ?? \"\";\n        _isSorted = isSorted;\n    }\n\n    public bool IsSorted { get { EnsureAlive(); return _isSorted; } }\n    public string Query { get { EnsureAlive(); return _query; } }\n\n    public XPScriptNotesDateTime? UntilTime",
+            "    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "    public int Count { get { EnsureAlive(); return _noteIds.Length; } }\n\n    internal void InitializeSearchMetadata(string query, bool isSorted)\n    {\n        _query = query ?? \"\";\n        _isSorted = isSorted;\n    }\n\n    public bool IsSorted { get { EnsureAlive(); return _isSorted; } }\n    public string Query { get { EnsureAlive(); return _query; } }",
             "collection-search-provenance-properties");
 
         source = ReplaceRequired(
@@ -39,8 +39,8 @@ internal static class NotesDocumentCollectionProvenancePostProcessor
         source = ReplaceRequired(
             source,
             "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        return new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n    }",
-            "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        var clone = new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n        clone.InitializeSearchMetadata(_query, _isSorted);\n        if (_hasModifiedMetadata)\n            clone.InitializeModifiedMetadata(_untilTime, _documentNoteIds ?? [], _designNoteIds ?? []);\n        return clone;\n    }",
-            "collection-clone-provenance");
+            "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        var clone = new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n        clone.InitializeSearchMetadata(_query, _isSorted);\n        return clone;\n    }",
+            "collection-clone-search-provenance");
 
         return source;
     }
