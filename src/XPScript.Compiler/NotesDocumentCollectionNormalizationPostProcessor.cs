@@ -6,7 +6,7 @@ internal static class NotesDocumentCollectionNormalizationPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        const string oldValue = """
+        const string oldRemoveIds = """
     private void RemoveIds(IEnumerable<uint> noteIds)
     {
         var remove = noteIds as HashSet<uint> ?? new HashSet<uint>(noteIds.Select(id => id & 0x7fffffffu));
@@ -16,7 +16,7 @@ internal static class NotesDocumentCollectionNormalizationPostProcessor
     }
 """;
 
-        const string newValue = """
+        const string newRemoveIds = """
     private void RemoveIds(IEnumerable<uint> noteIds)
     {
         var remove = new HashSet<uint>(noteIds.Select(id => id & 0x7fffffffu));
@@ -28,19 +28,47 @@ internal static class NotesDocumentCollectionNormalizationPostProcessor
 
         if (!hadCurrent) return;
 
-        // Domino add/delete operations do not move the collection current pointer.
+        // Collection set/delete operations do not implicitly select another document.
         // If the current document survives, only its array index may have shifted.
-        // If it was deleted from the collection, retain the pointer identity instead
-        // of silently moving it to another document or resetting it.
+        // If it was removed, retain the pointer identity rather than silently moving it.
         var currentIndex = Array.IndexOf(_noteIds, currentNoteId);
         if (currentIndex >= 0)
             _lastFetchedIndex = currentIndex;
     }
 """;
 
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
+        if (!source.Contains(oldRemoveIds, StringComparison.Ordinal))
             throw new InvalidOperationException("NotesDocumentCollection RemoveIds normalization/current-pointer anchor was not found.");
+        source = source.Replace(oldRemoveIds, newRemoveIds, StringComparison.Ordinal);
 
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+        const string oldIntersect = """
+    public void Intersect(object? documentOrCollection)
+    {
+        EnsureAlive();
+        var keep = new HashSet<uint>(ResolveSetOperand(documentOrCollection, "Intersect"));
+        _noteIds = _noteIds.Where(keep.Contains).ToArray();
+        ResetLastFetched();
+    }
+""";
+
+        const string newIntersect = """
+    public void Intersect(object? documentOrCollection)
+    {
+        EnsureAlive();
+        var keep = new HashSet<uint>(ResolveSetOperand(documentOrCollection, "Intersect"));
+        var currentNoteId = _lastFetchedNoteId;
+        var hadCurrent = _lastFetchedIndex >= 0;
+        _noteIds = _noteIds.Where(keep.Contains).ToArray();
+
+        if (!hadCurrent) return;
+        var currentIndex = Array.IndexOf(_noteIds, currentNoteId);
+        if (currentIndex >= 0)
+            _lastFetchedIndex = currentIndex;
+    }
+""";
+
+        if (!source.Contains(oldIntersect, StringComparison.Ordinal))
+            throw new InvalidOperationException("NotesDocumentCollection Intersect current-pointer anchor was not found.");
+        return source.Replace(oldIntersect, newIntersect, StringComparison.Ordinal);
     }
 }
