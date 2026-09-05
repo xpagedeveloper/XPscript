@@ -8,7 +8,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
 
         source = ReplaceRequired(source,
             "    public uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetUnid(_handle); } }",
+            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
             "document-identifiers");
 
         const string marker = """
