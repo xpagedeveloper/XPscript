@@ -15,48 +15,24 @@ internal static class NotesRichTextCdElementModelPostProcessor
             return FindDelimitedEnd(startIndex, IsTableBeginForPosition, IsTableEndForPosition, "table");
         if (elementType == 8)
             return FindDelimitedEnd(startIndex, IsHotspotBeginForPosition, IsHotspotEndForPosition, "attachment hotspot");
+        if (elementType == 3)
+            return startIndex;
+        if (elementType == 4)
+            return FindParagraphEnd(startIndex);
 
-        // Current Section and DocLink materializers are record-backed. Once logical
-        // section/doclink spans are introduced this method can share those spans.
+        // CDLINK2/CDLINKEXPORT2, CDBAR and CDTABLECELL are record-backed identities.
         return startIndex;
     }
 
-    private int FindDelimitedEnd(
-        int startIndex,
-        Func<ushort, bool> isBegin,
-        Func<ushort, bool> isEnd,
-        string elementName)
+    private int FindParagraphEnd(int startIndex)
     {
-        var depth = 0;
         var last = Math.Min(_rangeEnd, _records.Count - 1);
-        for (var i = startIndex; i <= last; i++)
+        for (var i = startIndex + 1; i <= last; i++)
         {
-            var signature = _records[i].Signature;
-            if (isBegin(signature))
-            {
-                depth++;
-                continue;
-            }
-            if (!isEnd(signature)) continue;
-            depth--;
-            if (depth == 0) return i;
+            if (_records[i].ElementType == 4) return i - 1;
         }
-        throw new XPScriptRuntimeException(91, "The rich text " + elementName + " has no matching end record inside the navigator range.");
+        return last;
     }
-
-    private static int EndCharOffset(XPScriptNotesRichTextRecordData record) => record.Text.Length;
-
-    private static bool IsTableBeginForPosition(ushort signature) => signature is 163 or 207;
-    private static bool IsTableEndForPosition(ushort signature) => signature is 165 or 209;
-
-    // V6HOTSPOTBEGIN_CONTINUATION (-140) continues an existing hotspot and must
-    // not increase nesting depth. The record parser uses the same three actual
-    // hotspot-begin generations for attachment materialization.
-    private static bool IsHotspotBeginForPosition(ushort signature) =>
-        signature is unchecked((ushort)-87) or unchecked((ushort)-83) or unchecked((ushort)-130);
-
-    private static bool IsHotspotEndForPosition(ushort signature) =>
-        signature is 170 or 174 or 127;
 """,
             """
     private int FindElementEnd(int startIndex, int elementType) =>
@@ -85,46 +61,10 @@ internal static class NotesRichTextCdElementModelPostProcessor
         var last = Math.Min(_rangeEnd, _records.Count - 1);
         for (var i = startIndex + 1; i <= last; i++)
         {
-            if (_records[i].Signature == 129) return i - 1;
+            if (_records[i].ElementType == 4) return i - 1;
         }
         return last;
     }
-
-    private int FindDelimitedEnd(
-        int startIndex,
-        Func<ushort, bool> isBegin,
-        Func<ushort, bool> isEnd,
-        string elementName)
-    {
-        var depth = 0;
-        var last = Math.Min(_rangeEnd, _records.Count - 1);
-        for (var i = startIndex; i <= last; i++)
-        {
-            var signature = _records[i].Signature;
-            if (isBegin(signature))
-            {
-                depth++;
-                continue;
-            }
-            if (!isEnd(signature)) continue;
-            depth--;
-            if (depth == 0) return i;
-        }
-        throw new XPScriptRuntimeException(91, "The rich text " + elementName + " has no matching end record inside the navigator range.");
-    }
-
-    private static int EndCharOffset(XPScriptNotesRichTextRecordData record) => record.Text.Length;
-
-    private static bool IsTableBeginForPosition(ushort signature) => signature is 163 or 207;
-    private static bool IsTableEndForPosition(ushort signature) => signature is 165 or 209;
-
-    // V6HOTSPOTBEGIN_CONTINUATION (-140) continues an existing hotspot and must
-    // not increase nesting depth.
-    private static bool IsHotspotBeginForPosition(ushort signature) =>
-        signature is unchecked((ushort)-87) or unchecked((ushort)-83) or unchecked((ushort)-130);
-
-    private static bool IsHotspotEndForPosition(ushort signature) =>
-        signature is 170 or 174 or 127;
 """,
             "shared-element-span-model");
 
