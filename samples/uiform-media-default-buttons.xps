@@ -5,7 +5,7 @@ Sub Main()
     Dim grid As Variant
     Dim browser As Variant
 
-    Call form.AddImage("logo", "https://example.com/logo.png", "Example logo")
+    Call form.AddImage("logo", "assets/logo.png", "Application logo")
     Call form.AddTextField("name", "Name")
     browser = form.AddWebView("preview", "Preview")
     browser.Source = "https://example.com"
