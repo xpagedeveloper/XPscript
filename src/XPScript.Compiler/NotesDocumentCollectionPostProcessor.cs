@@ -69,7 +69,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     internal XPScriptNotesDocumentCollection(XPScriptNotesSession session, XPScriptNotesDatabase database, IEnumerable<uint> noteIds) : base(session, database)
     {
-        _noteIds = noteIds.Distinct().ToArray();
+        _noteIds = noteIds.Select(id => id & 0x7fffffffu).Distinct().ToArray();
         _replicaId = session.Api.GetDatabaseReplicaId(database.Handle);
     }
 
@@ -120,7 +120,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         }
         else
         {
-            noteId = XPScriptNotesConvert.NoteId(documentOrNoteId);
+            noteId = XPScriptNotesConvert.NoteId(documentOrNoteId) & 0x7fffffffu;
         }
 
         var index = Array.IndexOf(_noteIds, noteId);
@@ -195,6 +195,8 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
     {
         var noteId = _noteIds[index];
         var document = Database.OpenByNoteId(noteId);
+        if (document is null && Session.Api.IsDocumentDeleted(Database.Handle, noteId))
+            document = new XPScriptNotesDocument(Session, Database, 0, noteId);
         if (document is null)
         {
             ResetLastFetched();
