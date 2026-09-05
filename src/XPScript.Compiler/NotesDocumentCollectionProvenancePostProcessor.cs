@@ -39,8 +39,8 @@ internal static class NotesDocumentCollectionProvenancePostProcessor
         source = ReplaceRequired(
             source,
             "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        return new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n    }",
-            "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        var clone = new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n        clone.InitializeSearchMetadata(_query, _isSorted);\n        return clone;\n    }",
-            "collection-clone-search-provenance");
+            "    public XPScriptNotesDocumentCollection Clone()\n    {\n        EnsureAlive();\n        var clone = new XPScriptNotesDocumentCollection(Session, Database, _noteIds);\n        clone.InitializeSearchMetadata(_query, _isSorted);\n        if (_hasModifiedMetadata)\n            clone.InitializeModifiedMetadata(_untilTime, _documentNoteIds ?? [], _designNoteIds ?? []);\n        return clone;\n    }",
+            "collection-clone-provenance");
 
         return source;
     }
