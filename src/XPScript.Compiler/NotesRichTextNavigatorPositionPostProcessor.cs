@@ -96,10 +96,23 @@ internal static class NotesRichTextNavigatorPositionPostProcessor
             return FindDelimitedEnd(startIndex, IsTableBeginForPosition, IsTableEndForPosition, "table");
         if (elementType == 8)
             return FindDelimitedEnd(startIndex, IsHotspotBeginForPosition, IsHotspotEndForPosition, "attachment hotspot");
+        if (elementType == 3)
+            return startIndex;
+        if (elementType == 4)
+            return FindParagraphEnd(startIndex);
 
-        // Current Section and DocLink materializers are record-backed. Once logical
-        // section/doclink spans are introduced this method can share those spans.
+        // CDLINK2/CDLINKEXPORT2, CDBAR and CDTABLECELL are record-backed identities.
         return startIndex;
+    }
+
+    private int FindParagraphEnd(int startIndex)
+    {
+        var last = Math.Min(_rangeEnd, _records.Count - 1);
+        for (var i = startIndex + 1; i <= last; i++)
+        {
+            if (_records[i].ElementType == 4) return i - 1;
+        }
+        return last;
     }
 
     private int FindDelimitedEnd(
