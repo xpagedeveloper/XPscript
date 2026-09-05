@@ -10,10 +10,13 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
 
         if (generated.Contains("theme = form.Theme", StringComparison.Ordinal) &&
             generated.Contains("showValidationErrors = form.ShowValidationErrors", StringComparison.Ordinal) &&
+            generated.Contains("showDefaultButtons = form.ShowDefaultButtons", StringComparison.Ordinal) &&
             generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
             generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
+            generated.Contains("imageSource = field.ImageSource", StringComparison.Ordinal) &&
+            generated.Contains("webViewSource = field.WebViewSource", StringComparison.Ordinal) &&
             generated.Contains("regexPattern = field.RegexPattern", StringComparison.Ordinal))
             return generated;
 
@@ -40,6 +43,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             resizable = form.Resizable,
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
+            showDefaultButtons = form.ShowDefaultButtons,
             gridColumns = form.GridColumns,
             fields = fields.Select(field => new
             {
@@ -47,7 +51,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 label = field.Label,
                 type = field.Type,
                 required = field.Required,
-                value = field.Type is "PasswordField" or "MultiListBox"
+                value = field.Type is "PasswordField" or "MultiListBox" or "Image" or "WebView"
                     ? null
                     : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
@@ -69,6 +73,12 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 readOnly = field.ReadOnly,
                 placeholder = field.Placeholder,
                 tooltip = field.Tooltip,
+                imageSource = field.ImageSource,
+                imageAltText = field.ImageAltText,
+                webViewSource = field.WebViewSource,
+                webViewHtml = field.WebViewHtml,
+                webViewUserAgent = field.WebViewUserAgent,
+                webViewBackground = field.WebViewBackground,
                 regexPattern = field.RegexPattern
             }).ToArray(),
             buttons = form.Buttons.Select(button => new

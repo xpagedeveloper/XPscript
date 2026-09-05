@@ -1,0 +1,20 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Media controls", 900, 700, True)
+    Dim grid As Variant
+    Dim browser As Variant
+
+    Call form.AddImage("logo", "assets/logo.png", "Application logo")
+    Call form.AddTextField("name", "Name")
+    browser = form.AddWebView("preview", "Preview")
+    browser.Source = "https://example.com"
+
+    Set grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("logo", 4)
+    Call grid.SetFieldPosition("name", 8)
+    Call grid.SetFieldPosition("preview", 12)
+
+    form.ShowDefaultButtons = False
+    Call form.ShowDialog()
+End Sub

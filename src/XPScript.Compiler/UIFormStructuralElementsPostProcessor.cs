@@ -13,7 +13,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
             generated.Contains("var placeholder = field.Placeholder.Length > 0", StringComparison.Ordinal) &&
             generated.Contains("if (field.Tooltip.Length > 0)", StringComparison.Ordinal) &&
             generated.Contains("e.placeholder=x.placeholder||''", StringComparison.Ordinal))
-            return generated;
+            return Finish(generated);
 
         if (!generated.Contains(InstalledSentinel, StringComparison.Ordinal))
         {
@@ -127,7 +127,13 @@ foreach (var field in _fields)
                 StringComparison.Ordinal);
         }
 
-        return generated;
+        return Finish(generated);
+    }
+
+    private static string Finish(string generated)
+    {
+        generated = new UIFormMediaButtonsPostProcessor().Transform(generated);
+        return new UIFormServerAccessibilityEnhancementPostProcessor().Transform(generated);
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)

@@ -39,7 +39,8 @@ public sealed class XpsBrowserWasmCompiler
             throw new XpsWebCompilationException("Source is not marked [Platform:browser-wasm].");
 
         var compilerIdentity = typeof(XpsBrowserWasmCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity)));
+        var assetFingerprint = UIFormAppAssets.ComputeFingerprint(sourcePath);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + assetFingerprint)));
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
         var appRoot = Path.Combine(bundleRoot, "app");
@@ -80,6 +81,7 @@ public sealed class XpsBrowserWasmCompiler
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
+            if (UIFormAppAssets.UsesUIForm(sourcePath)) UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot);
 
             if (!IsValidAppRoot(appRoot))
                 throw new XpsWebCompilationException("browser-wasm persisted app bundle is incomplete.");
@@ -675,10 +677,21 @@ public sealed record XpsBrowserWasmBundle(string SourcePath, string SourceHash, 
     public string ResolveAsset(string relativePath)
     {
         var root = Path.GetFullPath(PublishRoot);
-        var candidate = Path.GetFullPath(relativePath.Replace('/', Path.DirectorySeparatorChar), root);
+        var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar);
+        var candidate = Path.GetFullPath(normalized, root);
         var relative = Path.GetRelativePath(root, candidate);
         if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             throw new XpsWebCompilationException("browser-wasm asset path resolves outside the bundle.");
-        return candidate;
+        if (File.Exists(candidate)) return candidate;
+
+        var webRelative = relativePath.Replace('\\', '/');
+        if (!webRelative.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) return candidate;
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(SourcePath) ?? Environment.CurrentDirectory);
+        var assetRoot = Path.Combine(sourceDirectory, UIFormAppAssets.DirectoryName);
+        var sourceCandidate = Path.GetFullPath(Path.Combine(sourceDirectory, normalized));
+        var assetPrefix = Path.GetFullPath(assetRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!sourceCandidate.StartsWith(assetPrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new XpsWebCompilationException("browser-wasm application asset path escapes the assets directory.");
+        return sourceCandidate;
     }
 }

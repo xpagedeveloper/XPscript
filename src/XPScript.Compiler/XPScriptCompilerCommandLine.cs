@@ -41,6 +41,7 @@ public static class XPScriptCompilerCommandLine
         string? target = null;
         var restricted = false;
         var debug = false;
+        var embedAssets = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
 
@@ -62,6 +63,8 @@ public static class XPScriptCompilerCommandLine
                     restricted = true;
                 else if (args[i] == "--debug")
                     debug = true;
+                else if (args[i] == "--embed-assets")
+                    embedAssets = true;
                 else if (args[i] == "--source-root" && i + 1 < args.Length)
                 {
                     restricted = true;
@@ -77,6 +80,8 @@ public static class XPScriptCompilerCommandLine
                 throw new ArgumentException("--result-format must be text, json, or xml.");
             if (target is not null && target != "webiis")
                 throw new ArgumentException("--target currently supports webiis.");
+            if (target == "webiis" && embedAssets)
+                throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var timer = Stopwatch.StartNew();
@@ -103,6 +108,10 @@ public static class XPScriptCompilerCommandLine
             var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
             outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
+            if (UIFormAppAssets.UsesUIForm(sourcePath))
+                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
+
+            using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
@@ -111,6 +120,8 @@ public static class XPScriptCompilerCommandLine
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
                 $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
+            if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
+                UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
                 ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
                 : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
@@ -237,6 +248,9 @@ public static class XPScriptCompilerCommandLine
 
             var sourceDirectory = Path.GetDirectoryName(sourcePath)
                 ?? throw new InvalidOperationException("Unable to determine the XPScript source directory.");
+
+            if (UIFormAppAssets.UsesUIForm(sourcePath))
+                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
             if (restricted && sourceRoots.Count == 0)
                 sourceRoots.Add(sourceDirectory);
@@ -456,7 +470,7 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--result-format text|json|xml] [--debug] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   {runCommand} <source.xps> [--info] [--debug] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
@@ -467,6 +481,9 @@ Compiler targets:
 
 If --runtime is omitted, XPScript targets the current operating system and process architecture.
 For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle dependent package. The default is self-contained win-x64.
+--embed-assets embeds a UIForm application's assets/ tree into a desktop executable. Embedded assets are materialized beside the executable at startup so existing assets/... paths continue to work.
+Without --embed-assets, UIForm assets are copied next to the compiled desktop executable.
+UIForm compile and run operations automatically create a sibling assets/ directory when it does not exist.
 --restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
 --source-root may be repeated and automatically enables restricted Include processing.
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
