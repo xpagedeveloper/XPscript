@@ -71,6 +71,7 @@ Sub Main()
     Set section = navigator.GetFirstElement(6)
     If Not section Is Nothing Then
         Call navigator.SetPosition(section)
+        Call navigator.SetPositionAtEnd(section)
         Print section.Title
         Print section.IsExpanded
         Print section.BarColor.NotesColor
@@ -81,6 +82,7 @@ Sub Main()
     Set table = navigator.GetFirstElement(1)
     If Not table Is Nothing Then
         Call navigator.SetPosition(table)
+        Call navigator.SetPositionAtEnd(table)
         Print table.RowCount
         Print table.ColumnCount
         Print table.RightToLeft
@@ -94,6 +96,7 @@ Sub Main()
     Set docLink = navigator.GetFirstElement(5)
     If Not docLink Is Nothing Then
         Call navigator.SetPosition(docLink)
+        Call navigator.SetPositionAtEnd(docLink)
         Print docLink.DbReplicaID
         Print docLink.DisplayComment
         Print docLink.DocUNID
@@ -108,6 +111,7 @@ Sub Main()
     Set embedded = richText.GetEmbeddedObject("missing.bin")
     If Not embedded Is Nothing Then
         Call navigator.SetPosition(embedded)
+        Call navigator.SetPositionAtEnd(embedded)
         Print embedded.FileCreated
         Print embedded.FileEncoding
         Print embedded.FileModified
