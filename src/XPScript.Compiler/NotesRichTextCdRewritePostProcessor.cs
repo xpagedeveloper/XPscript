@@ -46,8 +46,7 @@ internal static class XPScriptNotesRichTextCdTransform
             {
                 if (value.SegmentIndex != record.SegmentIndex || value.RecordIndex != record.RecordIndex)
                     throw new XPScriptRuntimeException(5, "A CD transform cannot change physical record identity.");
-                if (value.Data is null || value.Data.Length == 0)
-                    throw new XPScriptRuntimeException(5, "A preserved or replaced CD record must contain canonical record bytes.");
+                ValidateCanonicalRecord(value.Signature, value.Data);
                 result.Add(value with { Data = (byte[])value.Data.Clone() });
             }
 
@@ -69,6 +68,7 @@ internal static class XPScriptNotesRichTextCdTransform
         var previousRecord = -1;
         foreach (var record in records)
         {
+            ValidateCanonicalRecord(record.Signature, record.Data);
             if (record.SegmentIndex < segmentIndex ||
                 (record.SegmentIndex == segmentIndex && record.RecordIndex <= previousRecord))
                 throw new XPScriptRuntimeException(91, "Transformed CD records are not in physical item order.");
@@ -88,6 +88,33 @@ internal static class XPScriptNotesRichTextCdTransform
         segments.Add(bytes.ToArray());
         return segments;
     }
+
+    internal static void ValidateForPersistence(IReadOnlyList<XPScriptNotesRichTextRecordRewrite> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var previousSegment = -1;
+        var previousRecord = -1;
+        foreach (var record in records)
+        {
+            if (record.SegmentIndex < 0 || record.RecordIndex < 0)
+                throw new XPScriptRuntimeException(5, "Rich text CD record identity cannot be negative.");
+            if (record.SegmentIndex < previousSegment ||
+                (record.SegmentIndex == previousSegment && record.RecordIndex <= previousRecord))
+                throw new XPScriptRuntimeException(91, "Transformed CD records are not in physical item order.");
+            ValidateCanonicalRecord(record.Signature, record.Data);
+            previousSegment = record.SegmentIndex;
+            previousRecord = record.RecordIndex;
+        }
+    }
+
+    private static void ValidateCanonicalRecord(ushort signature, byte[]? data)
+    {
+        if (data is null || data.Length < 2)
+            throw new XPScriptRuntimeException(5, "A preserved or replaced CD record must contain canonical record bytes.");
+        var encodedSignature = (ushort)(data[0] | (data[1] << 8));
+        if (encodedSignature != signature)
+            throw new XPScriptRuntimeException(5, "A CD rewrite signature must match the canonical record header.");
+    }
 }
 """;
 
@@ -102,7 +129,11 @@ internal sealed partial class XPScriptNotesNativeApi
         EnsureInitialized();
         itemName = itemName.Trim();
         if (itemName.Length == 0) throw new XPScriptRuntimeException(5, "Rich text item name cannot be empty.");
+        XPScriptNotesRichTextCdTransform.ValidateForPersistence(records);
 
+        // This primitive deliberately remains append/create-only. Destructive callers
+        // must not use it until the physical TYPE_COMPOSITE replacement transaction
+        // has staging, commit and rollback semantics.
         using var itemNameText = ToLmbcs(itemName);
         Check(Resolve<CompoundTextCreateForRewriteDelegate>("CompoundTextCreate")(
             checked((uint)note), itemNameText.Pointer, out var compound), "CompoundTextCreate");
@@ -110,18 +141,15 @@ internal sealed partial class XPScriptNotesNativeApi
         var closed = false;
         try
         {
-            foreach (var record in records)
+            foreach (var segment in XPScriptNotesRichTextCdTransform.GroupCanonicalSegments(records))
             {
-                if (record.Data is null || record.Data.Length == 0) continue;
-                var alignedLength = checked(record.Data.Length + (record.Data.Length & 1));
-                var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(alignedLength);
+                if (segment.Length == 0) continue;
+                var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(segment.Length);
                 try
                 {
-                    System.Runtime.InteropServices.Marshal.Copy(record.Data, 0, buffer, record.Data.Length);
-                    if (alignedLength != record.Data.Length)
-                        System.Runtime.InteropServices.Marshal.WriteByte(buffer, record.Data.Length, 0);
+                    System.Runtime.InteropServices.Marshal.Copy(segment, 0, buffer, segment.Length);
                     Check(Resolve<CompoundTextAddCDRecordsForRewriteDelegate>("CompoundTextAddCDRecords")(
-                        compound, buffer, checked((uint)alignedLength)), "CompoundTextAddCDRecords");
+                        compound, buffer, checked((uint)segment.Length)), "CompoundTextAddCDRecords");
                 }
                 finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
             }
