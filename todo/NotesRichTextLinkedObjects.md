@@ -104,3 +104,56 @@ Primary references:
 - [ ] `Style`.
 - [ ] `AddRow`.
 - [ ] `Remove`.
+- [ ] `RemoveRow`.
+- [ ] `SetAlternateColor`.
+- [ ] `SetColor`.
+- [ ] `NotesRichTextItem.AppendTable`.
+
+## NotesRichTextDocLink
+
+- [ ] Materialize both `CDLINKEXPORT2` and normal Notes `CDLINK2` links.
+- [ ] Resolve `CDLINK2` linkage against `$Links`.
+- [ ] `DbReplicaID`.
+- [ ] `DisplayComment`.
+- [ ] `DocUNID`.
+- [ ] `HotSpotText`.
+- [ ] `HotSpotTextStyle`.
+- [ ] `ServerHint`.
+- [ ] `ViewUNID`.
+- [ ] `Remove`.
+- [ ] `RemoveLinkage`.
+- [ ] `SetHotSpotTextStyle`.
+- [ ] Keep `CDLINK2` and `$Links` synchronized when mutating links.
+- [ ] `NotesRichTextItem.AppendDocLink` overloads.
+
+## NotesRichTextItem remaining surface
+
+- [ ] `AppendStyle`.
+- [ ] `AppendParagraphStyle`.
+- [ ] `AppendTable`.
+- [ ] `AppendDocLink` overloads.
+- [ ] `BeginInsert`.
+- [ ] `EndInsert`.
+- [ ] `BeginSection`.
+- [ ] `EndSection`.
+- [ ] `GetNotesFont`.
+- [ ] Correct insertion point semantics across subsequent append operations.
+
+## Supporting Notes types
+
+- [ ] Minimal `NotesColorObject` required by Section and Table.
+- [ ] Color conversion and custom RGB behavior matching Notes.
+- [ ] Custom font support and `$FONT` / `CDFONTTABLE` / `CDFACE` maintenance.
+
+## Verification
+
+- [x] Cross-platform compiler CI for Navigator/Style/ParagraphStyle/Tab/Range surface.
+- [x] Cross-platform compiler CI for `NotesEmbeddedObject` surface.
+- [ ] Windows Notes client/runtime integration tests for attachment metadata, `ExtractFile`, and `ToByteArray`.
+- [ ] Windows Notes client/runtime integration tests for rich-text reads and mutations.
+- [ ] Domino server integration tests where server-only behavior differs.
+- [ ] Round-trip tests that compare unaffected CD records before and after mutation.
+- [ ] Documents with multiple physical composite segments.
+- [ ] Nested tables, sections containing tables, doclinks, images, attachments, and unknown CD records.
+- [ ] Multiple attachments with the same original filename.
+- [ ] Encrypted/sealed notes where supported.
