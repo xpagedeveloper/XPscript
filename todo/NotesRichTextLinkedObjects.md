@@ -64,7 +64,7 @@ Primary references:
 ## NotesRichTextRange
 
 - [ ] Parse actual text style from CD records for `Style` instead of returning a default style object.
-- [x] Match current logical element `Type` semantics for mixed and homogeneous ranges.
+- [ ] Validate full LotusScript `Type` semantics for mixed/homogeneous ranges; explicit logical-element ranges now preserve their element type and untyped ranges derive homogeneous CD element types.
 - [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
 - [ ] `Remove`.
 - [ ] `SetStyle`.
