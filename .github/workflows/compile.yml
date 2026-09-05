@@ -62,6 +62,20 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --framework-dependent
       - name: Run native XML DOM regression
         run: ./out/native-xml-dom
+      - name: Verify UIForm asset packaging
+        shell: bash
+        run: |
+          rm -rf ./samples/assets ./out/assets
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-create --framework-dependent
+          test -d ./samples/assets
+          printf 'embedded-asset-payload' > ./samples/assets/embed-test.txt
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-external --framework-dependent
+          test "$(cat ./out/assets/embed-test.txt)" = "embedded-asset-payload"
+          rm -rf ./out/assets
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-embedded --framework-dependent --embed-assets
+          rm -rf ./out/assets
+          ./out/uiform-assets-embedded | grep -q UIFORM_ASSETS_OK
+          test "$(cat ./out/assets/embed-test.txt)" = "embedded-asset-payload"
       - name: Install browser WASM workload
         run: dotnet workload install wasm-tools
       - name: Verify browser WASM multi-window UIForm
