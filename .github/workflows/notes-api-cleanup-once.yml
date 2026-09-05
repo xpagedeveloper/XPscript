@@ -1,0 +1,122 @@
+name: Notes API cleanup once
+
+on:
+  push:
+    branches:
+      - fix/notes-agent-native-properties-v3
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/notes-agent-native-properties-v3
+          fetch-depth: 0
+      - name: Remove unsupported Notes API surface
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'missing expected text in {path}: {old[:100]!r}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          # FTSearchScore is not backed by a reliable native score in the current
+          # Notes view-entry pipeline. Remove it from the public surface entirely.
+          v2 = Path('src/XPScript.Compiler/NotesViewNavigationV2PostProcessor.cs')
+          text = v2.read_text(encoding='utf-8')
+          needle = r'\n    public int FTSearchScore { get { EnsureAlive(); return 0; } }'
+          if needle not in text:
+              raise SystemExit('FTSearchScore V2 staging property not found')
+          v2.write_text(text.replace(needle, ''), encoding='utf-8')
+
+          v3 = Path('src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs')
+          text = v3.read_text(encoding='utf-8')
+          old_block = '''        source = ReplaceRequired(
+            source,
+            "    public int FTSearchScore { get { EnsureAlive(); return 0; } }",
+            "    public int FTSearchScore { get { EnsureAlive(); return Row.FTSearchScore; } }\\n    public bool GetRead() => GetRead(Session.Username);\\n    public bool GetRead(object? userNameValue)\\n    {\\n        EnsureAlive();\\n        return !Row.IsDocument || !Session.Api.IsDocumentUnread(Database.Handle, Row.NoteId, XPScriptRuntime.CStr(userNameValue));\\n    }",
+            "entry-read");
+
+        source = ReplaceRequired(
+            source,
+            "    internal XPScriptNotesViewEntryType Type { get; }\\n    internal bool IsDocument => Type == XPScriptNotesViewEntryType.Document;",
+            "    internal XPScriptNotesViewEntryType Type { get; }\\n    internal int FTSearchScore { get; set; }\\n    internal bool IsDocument => Type == XPScriptNotesViewEntryType.Document;",
+            "row-score");
+
+'''
+          new_block = '''        source = ReplaceRequired(
+            source,
+            "    public bool IsConflict { get { EnsureAlive(); return false; } }",
+            "    public bool IsConflict { get { EnsureAlive(); return false; } }\\n    public bool GetRead() => GetRead(Session.Username);\\n    public bool GetRead(object? userNameValue)\\n    {\\n        EnsureAlive();\\n        return !Row.IsDocument || !Session.Api.IsDocumentUnread(Database.Handle, Row.NoteId, XPScriptRuntime.CStr(userNameValue));\\n    }",
+            "entry-read");
+
+'''
+          if old_block not in text:
+              raise SystemExit('FTSearchScore V3 replacement block not found')
+          v3.write_text(text.replace(old_block, new_block), encoding='utf-8')
+
+          # Remove test/sample references to removed API.
+          p = Path('samples/notes-view-navigation-v3-domino-runtime-test.xps')
+          text = p.read_text(encoding='utf-8')
+          text = re.sub(r'^\s*If entry\.FTSearchScore < 0 Then failures = failures \+ 1\s*\n', '', text, flags=re.M)
+          p.write_text(text, encoding='utf-8')
+
+          p = Path('samples/notes-full-domino-runtime-test.xps')
+          text = p.read_text(encoding='utf-8')
+          text = re.sub(r'^\s*Print "FTSearchScore=" & CStr\(entry\.FTSearchScore\)\s*\n', '', text, flags=re.M)
+          text = re.sub(r'^\s*Print "AgentTarget=" & CStr\(agent\.Target\)\s*\n', '', text, flags=re.M)
+          p.write_text(text, encoding='utf-8')
+
+          # Keep NotesAgent docs aligned with the supported runtime surface.
+          p = Path('docs/notes-c-api.md')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace(
+              '`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `IsWebAgent`, `IsActivatable`,\n`HasRunSinceModified`, `ProhibitDesignUpdate`, `IsEnabled`, `Trigger`, `Target`,\n`NotesURL`, `HttpURL`, and `OnBehalfOf` are exposed.',
+              '`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `HasRunSinceModified`, `IsEnabled`,\n`Trigger`, `NotesURL`, and `OnBehalfOf` are exposed.'
+          )
+          text = re.sub(r'^.*`UnLock\(\)`.*\n', '', text, flags=re.M)
+          for name in ('IsWebAgent', 'IsActivatable', 'ProhibitDesignUpdate', 'Target', 'HttpURL', 'FTSearchScore'):
+              if name in text:
+                  raise SystemExit(f'{name} still present in docs/notes-c-api.md after cleanup')
+          p.write_text(text, encoding='utf-8')
+
+          # Removed members must not remain as placeholder debt.
+          p = Path('scripts/runtime-placeholder-allowlist.txt')
+          lines = []
+          for line in p.read_text(encoding='utf-8').splitlines():
+              if any(f'|{name}|' in line for name in (
+                  'IsWebAgent','IsActivatable','ProhibitDesignUpdate','Target','HttpURL','FTSearchScore'
+              )):
+                  continue
+              lines.append(line)
+          p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          # Verify the public/runtime source no longer contains the removed NotesAgent members.
+          agent = Path('src/XPScript.Compiler/NotesAgentPostProcessor.cs').read_text(encoding='utf-8')
+          for name in ('IsWebAgent','IsActivatable','ProhibitDesignUpdate','Target','HttpURL','UnLock'):
+              if re.search(r'public\s+[^\n]+\b' + re.escape(name) + r'\b', agent):
+                  raise SystemExit(f'{name} still exposed in NotesAgentPostProcessor.cs')
+
+          # Delete this one-shot workflow in the same commit.
+          Path('.github/workflows/notes-api-cleanup-once.yml').unlink()
+          PY
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Remove unsupported Notes API members"
+          git push origin HEAD:fix/notes-agent-native-properties-v3
