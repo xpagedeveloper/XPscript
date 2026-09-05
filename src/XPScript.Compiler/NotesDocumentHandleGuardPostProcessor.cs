@@ -45,6 +45,12 @@ internal static class NotesDocumentHandleGuardPostProcessor
         source = GuardRequired(source,
             "    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureAlive();\n",
             "document-save-attachment");
+        source = GuardRequired(source,
+            "    public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue)\n    {\n        EnsureAlive();\n",
+            "document-compute-with-form");
+        source = GuardRequired(source,
+            "    public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue, ref object? __xps_byref_failedFields)\n    {\n        EnsureAlive();\n",
+            "document-compute-with-form-failed-fields");
 
         // Rich-text support is feature-dependent, so guard it when present without
         // making reduced runtime feature sets fail source generation.
