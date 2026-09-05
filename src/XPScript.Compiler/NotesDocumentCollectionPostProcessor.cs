@@ -87,6 +87,29 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         return OpenAt(0);
     }
 
+    public XPScriptNotesDocument? GetLastDocument()
+    {
+        EnsureAlive();
+        if (_noteIds.Length == 0)
+        {
+            ResetLastFetched();
+            return null;
+        }
+        return OpenAt(_noteIds.Length - 1);
+    }
+
+    public XPScriptNotesDocument? GetNthDocument(object? indexValue)
+    {
+        EnsureAlive();
+        var index = XPScriptRuntime.CInt(indexValue);
+        if (index <= 0 || index > _noteIds.Length)
+        {
+            ResetLastFetched();
+            return null;
+        }
+        return OpenAt(index - 1);
+    }
+
     public XPScriptNotesDocument? GetNextDocument(object? documentValue)
     {
         EnsureAlive();
@@ -94,11 +117,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         document.EnsureAliveForCollectionOperation();
         EnsureSameReplica(document.OwningDatabase);
 
-        var index = document.NoteId == _lastFetchedNoteId && _lastFetchedIndex >= 0 &&
-                    _lastFetchedIndex < _noteIds.Length && _noteIds[_lastFetchedIndex] == document.NoteId
-            ? _lastFetchedIndex
-            : Array.IndexOf(_noteIds, document.NoteId);
-
+        var index = FindDocumentIndex(document);
         if (index < 0 || index + 1 >= _noteIds.Length)
         {
             ResetLastFetched();
@@ -106,6 +125,23 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         }
 
         return OpenAt(index + 1);
+    }
+
+    public XPScriptNotesDocument? GetPrevDocument(object? documentValue)
+    {
+        EnsureAlive();
+        var document = RequireDocument(documentValue, "GetPrevDocument");
+        document.EnsureAliveForCollectionOperation();
+        EnsureSameReplica(document.OwningDatabase);
+
+        var index = FindDocumentIndex(document);
+        if (index <= 0)
+        {
+            ResetLastFetched();
+            return null;
+        }
+
+        return OpenAt(index - 1);
     }
 
     public XPScriptNotesDocument? GetDocument(object? documentOrNoteId)
@@ -116,7 +152,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         {
             document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
-            noteId = document.NoteId;
+            noteId = document.NoteId & 0x7fffffffu;
         }
         else
         {
@@ -196,6 +232,15 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     private XPScriptNotesDocument RequireDocument(object? value, string member)
         => value as XPScriptNotesDocument ?? throw new XPScriptRuntimeException(13, member + " requires a NotesDocument.");
+
+    private int FindDocumentIndex(XPScriptNotesDocument document)
+    {
+        var noteId = document.NoteId & 0x7fffffffu;
+        return noteId == _lastFetchedNoteId && _lastFetchedIndex >= 0 &&
+               _lastFetchedIndex < _noteIds.Length && _noteIds[_lastFetchedIndex] == noteId
+            ? _lastFetchedIndex
+            : Array.IndexOf(_noteIds, noteId);
+    }
 
     private void EnsureSameReplica(XPScriptNotesDatabase database)
     {
