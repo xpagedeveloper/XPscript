@@ -55,8 +55,8 @@ Primary references:
 - [x] `GetLastElement` for materializable element types.
 - [x] `GetNextElement` for materializable element types.
 - [x] `GetNthElement` for materializable element types.
-- [ ] `SetPosition`.
-- [ ] `SetPositionAtEnd`.
+- [x] `SetPosition`.
+- [x] `SetPositionAtEnd`.
 - [ ] Correct logical grouping of all element types instead of treating every matching CD record as a separate LotusScript element.
 - [ ] Correct text-run and text-paragraph boundaries across CD records and physical composite item segments.
 - [x] Attachment materialization through `NotesEmbeddedObject`.
@@ -147,7 +147,7 @@ Primary references:
 ## Verification
 
 - [x] Cross-platform compiler CI for Navigator/Style/ParagraphStyle/Tab/Range surface.
-- [ ] Cross-platform compiler CI for `NotesEmbeddedObject` surface.
+- [x] Cross-platform compiler CI for `NotesEmbeddedObject` surface.
 - [ ] Windows Notes client/runtime integration tests for attachment metadata, `ExtractFile`, and `ToByteArray`.
 - [ ] Windows Notes client/runtime integration tests for rich-text reads and mutations.
 - [ ] Domino server integration tests where server-only behavior differs.

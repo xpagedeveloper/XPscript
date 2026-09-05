@@ -130,8 +130,11 @@ internal static class NotesRichTextNavigatorPositionPostProcessor
     private static bool IsTableBeginForPosition(ushort signature) => signature is 163 or 207;
     private static bool IsTableEndForPosition(ushort signature) => signature is 165 or 209;
 
+    // V6HOTSPOTBEGIN_CONTINUATION (-140) continues an existing hotspot and must
+    // not increase nesting depth. The record parser uses the same three actual
+    // hotspot-begin generations for attachment materialization.
     private static bool IsHotspotBeginForPosition(ushort signature) =>
-        signature is unchecked((ushort)-87) or unchecked((ushort)-83) or unchecked((ushort)-130) or unchecked((ushort)-140);
+        signature is unchecked((ushort)-87) or unchecked((ushort)-83) or unchecked((ushort)-130);
 
     private static bool IsHotspotEndForPosition(ushort signature) =>
         signature is 170 or 174 or 127;
