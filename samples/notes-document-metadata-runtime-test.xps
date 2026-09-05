@@ -1,0 +1,58 @@
+' NotesDocument metadata regression sample.
+' Requires an open local xpscript.nsf.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim accessed As NotesDateTime
+    Dim author As Variant
+    Dim authorCount As Integer
+    Dim failures As Integer
+
+    failures = 0
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES-DOCUMENT-METADATA=FAIL DATABASE"
+        Exit Sub
+    End If
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptMetadataTest")
+    Call doc.ReplaceItemValue("Subject", "NotesDocument metadata regression")
+    Call doc.Save()
+
+    If doc.ParentDatabase Is Nothing Then
+        failures = failures + 1
+    ElseIf doc.ParentDatabase.FilePath <> db.FilePath Then
+        failures = failures + 1
+    End If
+
+    authorCount = 0
+    Forall author In doc.Authors
+        If CStr(author) <> "" Then authorCount = authorCount + 1
+    End Forall
+    If authorCount = 0 Then failures = failures + 1
+
+    Set accessed = doc.LastAccessed
+    If accessed Is Nothing Then
+        failures = failures + 1
+    Else
+        If accessed.LocalTime = "" Then failures = failures + 1
+        Call accessed.Recycle()
+    End If
+
+    If doc.SentByAgent Then failures = failures + 1
+
+    Call doc.Remove(True)
+    Call db.Recycle()
+    Call session.Recycle()
+
+    If failures = 0 Then
+        Print "NOTES-DOCUMENT-METADATA=PASS"
+    Else
+        Print "NOTES-DOCUMENT-METADATA=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub

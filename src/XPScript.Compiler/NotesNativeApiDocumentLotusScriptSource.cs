@@ -14,6 +14,7 @@ internal struct XPScriptNotesOid
 internal sealed partial class XPScriptNotesNativeApi
 {
     private const ushort NoteMemberModified = 4;
+    private const ushort NoteMemberAccessed = 8;
     private const ushort NoteMemberParentNoteId = 10;
     private const ushort NoteMemberResponses = 12;
     private const uint DeletedNoteIdFlag = 0x80000000u;
@@ -40,6 +41,18 @@ internal sealed partial class XPScriptNotesNativeApi
         {
             Zero(pointer, 8);
             Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, NoteMemberModified, pointer);
+            return System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesTimeDate>(pointer);
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }
+    }
+
+    internal XPScriptNotesTimeDate GetDocumentLastAccessed(uint note)
+    {
+        var pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(8);
+        try
+        {
+            Zero(pointer, 8);
+            Resolve<NSFNoteGetInfoDelegate>("NSFNoteGetInfo")(note, NoteMemberAccessed, pointer);
             return System.Runtime.InteropServices.Marshal.PtrToStructure<XPScriptNotesTimeDate>(pointer);
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer); }

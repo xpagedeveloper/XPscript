@@ -39,7 +39,23 @@ internal static class NotesDocumentMetadataPostProcessor
         get
         {
             EnsureAlive();
-            return HasItem("$Name") && GetString("$Name").StartsWith("$profile_", StringComparison.OrdinalIgnoreCase);
+            return TryGetProfileIdentity(out _, out _);
+        }
+    }
+    public string NameOfProfile
+    {
+        get
+        {
+            EnsureAlive();
+            return TryGetProfileIdentity(out var profileName, out _) ? profileName : "";
+        }
+    }
+    public string Key
+    {
+        get
+        {
+            EnsureAlive();
+            return TryGetProfileIdentity(out _, out var key) ? key : "";
         }
     }
     public bool IsDesign { get { EnsureAlive(); return ResolveDesignType().Length != 0; } }
@@ -65,8 +81,29 @@ internal static class NotesDocumentMetadataPostProcessor
         }
     }
 
+    private bool TryGetProfileIdentity(out string profileName, out string key)
+    {
+        profileName = "";
+        key = "";
+        if (_handle == 0 || !HasItem("$Name")) return false;
+        var value = GetString("$Name");
+        const string prefix = "$profile_";
+        if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var lengthOffset = prefix.Length;
+        if (value.Length < lengthOffset + 3) return false;
+        if (!int.TryParse(value.AsSpan(lengthOffset, 3), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var profileLength)) return false;
+        var profileOffset = lengthOffset + 3;
+        if (profileLength < 0 || value.Length < profileOffset + profileLength) return false;
+        profileName = value.Substring(profileOffset, profileLength);
+        var keyOffset = profileOffset + profileLength;
+        if (keyOffset < value.Length && value[keyOffset] == '_') keyOffset++;
+        if (keyOffset < value.Length) key = value.Substring(keyOffset);
+        return true;
+    }
+
     private string ResolveDesignType()
     {
+        if (_handle == 0) return "";
         var noteClass = Session.Api.GetNoteClass(_handle);
         var flags = HasItem("$Flags") ? GetString("$Flags") : "";
 
@@ -113,7 +150,7 @@ internal static class NotesDocumentMetadataPostProcessor
 
     private string[] GetDesignNames()
     {
-        if (!Session.Api.TryGetFirstItemInfo(_handle, "$TITLE", out var info)) return [];
+        if (_handle == 0 || !Session.Api.TryGetFirstItemInfo(_handle, "$TITLE", out var info)) return [];
         var values = Session.Api.GetItemValues(_handle, info, Session);
         var names = new List<string>();
         foreach (var value in values)

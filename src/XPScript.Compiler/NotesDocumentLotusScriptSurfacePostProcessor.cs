@@ -8,7 +8,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
 
         source = ReplaceRequired(source,
             "    public uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
+            "    internal uint NoteId { get; private set; }\n    public string NoteIdHex => NoteId.ToString(\"X8\", System.Globalization.CultureInfo.InvariantCulture);\n    public string NoteID => NoteIdHex;\n    public string UniversalId { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetUnid(_handle); } }",
             "document-identifiers");
 
         const string marker = """
@@ -36,13 +36,19 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         return api.DeleteNote(databaseHandle, noteId, XPScriptRuntime.CBool(forceValue));
     }
 
-    public long Size { get { EnsureAlive(); return Session.Api.GetDocumentSize(_handle); } }
-    public XPScriptNotesDocumentCollection Responses { get { EnsureAlive(); return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.GetResponseIds(_handle)); } }
+    private void RequireOpenNoteHandle()
+    {
+        if (_handle == 0) throw new XPScriptRuntimeException(91, "NotesDocument has no open note handle.");
+    }
+
+    public long Size { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetDocumentSize(_handle); } }
+    public XPScriptNotesDocumentCollection Responses { get { EnsureAlive(); RequireOpenNoteHandle(); return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.GetResponseIds(_handle)); } }
     public string ParentDocumentUNID
     {
         get
         {
             EnsureAlive();
+            RequireOpenNoteHandle();
             var parentId = Session.Api.GetParentNoteId(_handle);
             if (parentId == 0) return "";
             var parent = Database.OpenByNoteId(parentId);
@@ -51,11 +57,12 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
             finally { parent.Recycle(); }
         }
     }
-    public XPScriptNotesDateTime LastModified { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastModified(_handle)); } }
+    public XPScriptNotesDateTime LastModified { get { EnsureAlive(); RequireOpenNoteHandle(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastModified(_handle)); } }
+    public XPScriptNotesDateTime LastAccessed { get { EnsureAlive(); RequireOpenNoteHandle(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastAccessed(_handle)); } }
     public bool IsNewNote { get { EnsureAlive(); return NoteId == 0; } }
-    public bool IsResponse { get { EnsureAlive(); return Session.Api.GetParentNoteId(_handle) != 0; } }
+    public bool IsResponse { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetParentNoteId(_handle) != 0; } }
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
-    public XPScriptNotesDateTime Created { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentCreated(_handle)); } }
+    public XPScriptNotesDateTime Created { get { EnsureAlive(); RequireOpenNoteHandle(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentCreated(_handle)); } }
 
     public void PutInFolder(object? folderNameValue) => PutInFolder(folderNameValue, false);
     public void PutInFolder(object? folderNameValue, object? createOnFailValue)
@@ -91,16 +98,19 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public void MakeResponse(object? parentDocumentValue)
     {
         EnsureAlive();
+        RequireOpenNoteHandle();
         if (parentDocumentValue is not XPScriptNotesDocument parent)
             throw new XPScriptRuntimeException(13, "MakeResponse requires a NotesDocument.");
         if (!string.Equals(Session.Api.GetDatabaseReplicaId(Database.Handle), Session.Api.GetDatabaseReplicaId(parent.OwningDatabase.Handle), StringComparison.OrdinalIgnoreCase))
             throw new XPScriptRuntimeException(13, "MakeResponse requires documents in the same database.");
+        if (parent.NativeHandle == 0) throw new XPScriptRuntimeException(91, "Parent NotesDocument has no open note handle.");
         Session.Api.MakeResponse(_handle, parent.NativeHandle);
     }
 
     public XPScriptNotesDocument CopyToDatabase(object? databaseValue)
     {
         EnsureAlive();
+        RequireOpenNoteHandle();
         if (databaseValue is not XPScriptNotesDatabase destination || !destination.IsOpen)
             throw new XPScriptRuntimeException(13, "CopyToDatabase requires an open NotesDatabase.");
         var copied = Session.Api.CopyDocumentToDatabase(_handle, destination.Handle);
@@ -111,8 +121,10 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public void CopyAllItems(object? destinationValue, object? replaceValue)
     {
         EnsureAlive();
+        RequireOpenNoteHandle();
         if (destinationValue is not XPScriptNotesDocument destination)
             throw new XPScriptRuntimeException(13, "CopyAllItems requires a destination NotesDocument.");
+        if (destination.NativeHandle == 0) throw new XPScriptRuntimeException(91, "Destination NotesDocument has no open note handle.");
         Session.Api.CopyAllItems(_handle, destination.NativeHandle, XPScriptRuntime.CBool(replaceValue));
     }
 
@@ -120,8 +132,10 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     public XPScriptNotesItem CopyItem(object? itemValue, object? newNameValue)
     {
         EnsureAlive();
+        RequireOpenNoteHandle();
         if (itemValue is not XPScriptNotesItem item)
             throw new XPScriptRuntimeException(13, "CopyItem requires a NotesItem.");
+        if (item.Parent.NativeHandle == 0) throw new XPScriptRuntimeException(91, "Source NotesDocument has no open note handle.");
         var newName = XPScriptRuntime.CStr(newNameValue).Trim();
         if (newName.Length == 0) newName = item.Name;
         Session.Api.CopyItemToDocument(item.Parent.NativeHandle, item.Name, _handle, newName);
@@ -145,7 +159,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
 
         source = ReplaceRequired(source,
             "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
+            "public string UniversalId { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); RequireOpenNoteHandle(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
             "built-universalid-setter");
 
         const string oldItems = """
@@ -168,6 +182,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         get
         {
             EnsureAlive();
+            RequireOpenNoteHandle();
             var items = Session.Api.GetAllItemNames(_handle)
                 .Select(name => GetFirstItem(name))
                 .Where(item => item is not null)
