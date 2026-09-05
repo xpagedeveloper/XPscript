@@ -45,6 +45,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextTableSpanPostProcessor.Apply(source);
             source = NotesRichTextNavigatorPositionPostProcessor.Apply(source);
             source = NotesRichTextCdElementModelPostProcessor.Apply(source);
+            source = NotesRichTextStructuralSpanPostProcessor.Apply(source);
             source = NotesRichTextLogicalSpanPostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
         }
