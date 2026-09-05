@@ -83,10 +83,10 @@ Primary references:
 ## NotesRichTextSection
 
 - [x] Materialize sections as complete, nested-aware logical CD spans for navigator/range positioning.
-- [ ] `BarColor`.
-- [ ] `IsExpanded`.
-- [ ] `Title`.
-- [ ] `TitleStyle`.
+- [x] `BarColor`.
+- [x] `IsExpanded`.
+- [x] `Title`.
+- [x] `TitleStyle`.
 - [ ] `Remove`.
 - [ ] `SetBarColor`.
 - [ ] `SetTitleStyle`.
@@ -101,7 +101,7 @@ Primary references:
 - [ ] `RightToLeft` after validating current Notes C API record mapping.
 - [x] `RowCount` ignores cells belonging to nested tables.
 - [ ] `RowLabels`.
-- [ ] `Style`.
+- [x] `Style` (raw validated table flag/style word; semantic mapping still requires C API validation).
 - [ ] `AddRow`.
 - [ ] `Remove`.
 - [ ] `RemoveRow`.
@@ -113,13 +113,13 @@ Primary references:
 
 - [ ] Materialize both `CDLINKEXPORT2` and normal Notes `CDLINK2` links.
 - [ ] Resolve `CDLINK2` linkage against `$Links`.
-- [ ] `DbReplicaID`.
-- [ ] `DisplayComment`.
-- [ ] `DocUNID`.
-- [ ] `HotSpotText`.
+- [x] `DbReplicaID` for the currently materialized link record form.
+- [x] `DisplayComment` for the currently materialized link record form.
+- [x] `DocUNID` for the currently materialized link record form.
+- [x] `HotSpotText` for the currently materialized link record form.
 - [ ] `HotSpotTextStyle`.
-- [ ] `ServerHint`.
-- [ ] `ViewUNID`.
+- [x] `ServerHint` for the currently materialized link record form.
+- [x] `ViewUNID` for the currently materialized link record form.
 - [ ] `Remove`.
 - [ ] `RemoveLinkage`.
 - [ ] `SetHotSpotTextStyle`.
@@ -128,7 +128,7 @@ Primary references:
 
 ## NotesRichTextItem remaining surface
 
-- [ ] `AppendStyle`.
+- [x] `AppendStyle`.
 - [ ] `AppendParagraphStyle`.
 - [ ] `AppendTable`.
 - [ ] `AppendDocLink` overloads.
@@ -141,7 +141,7 @@ Primary references:
 
 ## Supporting Notes types
 
-- [ ] Minimal `NotesColorObject` required by Section and Table.
+- [x] Minimal `NotesColorObject` required by Section and Table.
 - [ ] Color conversion and custom RGB behavior matching Notes.
 - [ ] Custom font support and `$FONT` / `CDFONTTABLE` / `CDFACE` maintenance.
 
