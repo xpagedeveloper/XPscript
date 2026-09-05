@@ -40,11 +40,17 @@ internal static class NotesRuntimeSource
             source = NotesRichTextRangePostProcessor.Apply(source);
             source = NotesEmbeddedObjectPostProcessor.Apply(source);
             source = NotesRichTextAttachmentInsertPostProcessor.Apply(source);
+            source = NotesRichTextAttachmentRemovePostProcessor.Apply(source);
             source = NotesRichTextNavigatorElementPostProcessor.Apply(source);
             source = NotesRichTextLinkedObjectsPostProcessor.Apply(source);
+            source = NotesRichTextLinkedObjectsCompatibilityPostProcessor.Apply(source);
+            source = NotesRichTextTableSpanPostProcessor.Apply(source);
             source = NotesRichTextNavigatorPositionPostProcessor.Apply(source);
             source = NotesRichTextCdElementModelPostProcessor.Apply(source);
+            source = NotesRichTextStructuralSpanPostProcessor.Apply(source);
             source = NotesRichTextLogicalSpanPostProcessor.Apply(source);
+            source = NotesRichTextRangeSemanticsPostProcessor.Apply(source);
+            source = NotesRichTextCdRewritePostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
         }
 

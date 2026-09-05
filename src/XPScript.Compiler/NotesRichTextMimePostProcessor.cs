@@ -6,116 +6,25 @@ internal static class NotesRichTextMimePostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(
-            source,
-            """
-    public string Platform { get; }
-    public bool IsRecycled => _recycled;
-""",
-            """
-    public string Platform { get; }
-    public bool ConvertMIME { get; set; } = true;
-    public bool IsRecycled => _recycled;
-""",
-            "session-convert-mime");
+        source = ReplaceRequired(source,
+            "    public string Platform { get; }\n    public bool IsRecycled => _recycled;",
+            "    public string Platform { get; }\n    public bool ConvertMIME { get; set; } = true;\n    public bool IsRecycled => _recycled;", "session-convert-mime");
 
-        source = ReplaceRequired(
-            source,
-            """
-        _handle = handle;
-        NoteId = noteId;
-""",
-            """
-        _handle = handle;
-        NoteId = noteId;
-        if (handle != 0 && session.ConvertMIME)
-            Session.Api.ConvertMimePartsToComposite(checked((uint)handle));
-""",
-            "document-open-convert-mime");
+        source = ReplaceRequired(source,
+            "        _handle = handle;\n        NoteId = noteId;",
+            "        _handle = handle;\n        NoteId = noteId;\n        if (handle != 0 && session.ConvertMIME)\n            Session.Api.ConvertMimePartsToComposite(checked((uint)handle));", "document-open-convert-mime");
 
-        // Keep the GetFirstItem -> HasItem adjacency intact. NotesRuntimeSourceBuilder
-        // uses that exact sequence as an ABI-normalization anchor before adding the
-        // wider LotusScript item surface.
-        source = ReplaceRequired(
-            source,
-            """
-    public bool HasItem(object? nameValue)
-    {
-        EnsureAlive();
-        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));
-    }
+        source = ReplaceRequired(source,
+            "    public bool HasItem(object? nameValue)\n    {\n        EnsureAlive();\n        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));\n    }\n\n    public object? GetValue(object? nameValue)",
+            "    public bool HasItem(object? nameValue)\n    {\n        EnsureAlive();\n        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));\n    }\n\n    public XPScriptNotesRichTextItem CreateRichTextItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Rich text item name cannot be empty.\");\n        if (TryGetItemInfo(name, out _)) throw new XPScriptRuntimeException(5, \"Notes item '\" + name + \"' already exists.\");\n        Session.Api.CreateRichTextItem(checked((uint)_handle), name);\n        return new XPScriptNotesRichTextItem(Session, this, name);\n    }\n\n    public object? GetValue(object? nameValue)", "document-create-richtext");
 
-    public object? GetValue(object? nameValue)
-""",
-            """
-    public bool HasItem(object? nameValue)
-    {
-        EnsureAlive();
-        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));
-    }
+        source = ReplaceRequired(source,
+            "    public XPScriptNotesDateTime? DateTimeValue",
+            "    public XPScriptNotesRichTextItem? GetRichTextItem()\n    {\n        var info = Info();\n        if (info.DataType != XPScriptNotesNativeApi.NotesTypeComposite) return null;\n        return this as XPScriptNotesRichTextItem ?? new XPScriptNotesRichTextItem(Session, Document, ItemName);\n    }\n\n    public XPScriptNotesDateTime? DateTimeValue", "item-get-richtext");
 
-    public XPScriptNotesRichTextItem CreateRichTextItem(object? nameValue)
-    {
-        EnsureAlive();
-        var name = XPScriptRuntime.CStr(nameValue).Trim();
-        if (name.Length == 0) throw new XPScriptRuntimeException(5, "Rich text item name cannot be empty.");
-        if (TryGetItemInfo(name, out _)) throw new XPScriptRuntimeException(5, "Notes item '" + name + "' already exists.");
-        Session.Api.CreateRichTextItem(checked((uint)_handle), name);
-        return new XPScriptNotesRichTextItem(Session, this, name);
-    }
-
-    public object? GetValue(object? nameValue)
-""",
-            "document-create-richtext");
-
-        source = ReplaceRequired(
-            source,
-            """
-    public XPScriptNotesDateTime? DateTimeValue
-""",
-            """
-    public XPScriptNotesRichTextItem? GetRichTextItem()
-    {
-        var info = Info();
-        if (info.DataType != XPScriptNotesNativeApi.NotesTypeComposite) return null;
-        return this as XPScriptNotesRichTextItem ?? new XPScriptNotesRichTextItem(Session, Document, ItemName);
-    }
-
-    public XPScriptNotesDateTime? DateTimeValue
-""",
-            "item-get-richtext");
-
-        source = ReplaceRequired(
-            source,
-            """
-    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)
-    {
-        EnsureItemAlive();
-        return Session.Api.SaveRichTextAttachment(
-            Document.NativeHandle,
-            ItemName,
-            XPScriptRuntime.CStr(attachmentNameValue),
-            XPScriptRuntime.CStr(pathValue));
-    }
-""",
-            """
-    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)
-    {
-        EnsureItemAlive();
-        return Session.Api.SaveRichTextAttachment(
-            Document.NativeHandle,
-            ItemName,
-            XPScriptRuntime.CStr(attachmentNameValue),
-            XPScriptRuntime.CStr(pathValue));
-    }
-
-    public void AppendText(object? value)
-    {
-        EnsureItemAlive();
-        Session.Api.AppendRichText(checked((uint)Document.NativeHandle), ItemName, XPScriptRuntime.CStr(value));
-    }
-""",
-            "richtext-append-text");
+        source = ReplaceRequired(source,
+            "    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureItemAlive();\n        return Session.Api.SaveRichTextAttachment(\n            Document.NativeHandle,\n            ItemName,\n            XPScriptRuntime.CStr(attachmentNameValue),\n            XPScriptRuntime.CStr(pathValue));\n    }",
+            "    public bool SaveAttachment(object? attachmentNameValue, object? pathValue)\n    {\n        EnsureItemAlive();\n        return Session.Api.SaveRichTextAttachment(\n            Document.NativeHandle,\n            ItemName,\n            XPScriptRuntime.CStr(attachmentNameValue),\n            XPScriptRuntime.CStr(pathValue));\n    }\n\n    public void AppendText(object? value)\n    {\n        EnsureItemAlive();\n        Session.Api.AppendRichText(checked((uint)Document.NativeHandle), ItemName, XPScriptRuntime.CStr(value));\n    }", "richtext-append-text");
 
         return source + "\n\n" + NativeRuntime;
     }
@@ -149,15 +58,9 @@ internal sealed partial class XPScriptNotesNativeApi
             const uint styleSameAsPrevious = 0xFFFFFFFFu;
             const uint defaultFontId = 0u;
             const uint preserveLines = 0x00000002u;
-            Check(Resolve<CompoundTextAddTextExtDelegate>("CompoundTextAddTextExt")(
-                compound,
-                styleSameAsPrevious,
-                defaultFontId,
-                text.Pointer,
-                checked((uint)text.Length),
-                delimiter.Pointer,
-                preserveLines,
-                0), "CompoundTextAddTextExt");
+            Check(Resolve<CompoundTextAddPlainTextExtDelegate>("CompoundTextAddTextExt")(
+                compound, styleSameAsPrevious, defaultFontId, text.Pointer,
+                checked((uint)text.Length), delimiter.Pointer, preserveLines, 0), "CompoundTextAddTextExt");
             Check(Resolve<CompoundTextCloseDelegate>("CompoundTextClose")(compound, 0, 0, 0, 0), "CompoundTextClose");
             closed = true;
         }
@@ -189,16 +92,12 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort CompoundTextCreateDelegate(uint note, nint itemName, out uint compound);
-
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort CompoundTextCloseDelegate(uint compound, nint returnBuffer, nint returnBufferSize, nint returnFile, ushort returnFileNameSize);
-
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate void CompoundTextDiscardDelegate(uint compound);
-
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextAddTextExtDelegate(uint compound, uint styleId, uint fontId, nint text, uint textLength, nint lineDelimiter, uint flags, nint nlsInfo);
-
+    private delegate ushort CompoundTextAddPlainTextExtDelegate(uint compound, uint styleId, uint fontId, nint text, uint textLength, nint lineDelimiter, uint flags, nint nlsInfo);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEConvertMIMEPartsCCDelegate(uint note, int canonical, nint conversionControls);
 }

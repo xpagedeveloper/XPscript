@@ -46,11 +46,11 @@ Sub Main()
     Call richText.AppendStyle(style)
     Call richText.AppendText("Navigator test")
 
-    ' Compile both NotesRichTextItem.EmbedObject attachment overloads.
-    ' These calls are not executed by the cross-platform compiler smoke test.
+    ' Compile attachment mutation surfaces without executing them in the cross-platform smoke test.
     If False Then
         Set embedded = richText.EmbedObject(1454, "", "missing.bin")
         Set embedded = richText.EmbedObject(1454, "", "missing.bin", "ignored-name.bin")
+        Call embedded.Remove()
     End If
 
     Set navigator = richText.CreateNavigator()

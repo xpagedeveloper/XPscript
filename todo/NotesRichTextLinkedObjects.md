@@ -64,7 +64,7 @@ Primary references:
 ## NotesRichTextRange
 
 - [ ] Parse actual text style from CD records for `Style` instead of returning a default style object.
-- [ ] Match LotusScript `Type` semantics for mixed and homogeneous ranges.
+- [ ] Validate full LotusScript `Type` semantics for mixed/homogeneous ranges; explicit logical-element ranges now preserve their element type and untyped ranges derive homogeneous CD element types.
 - [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
 - [ ] `Remove`.
 - [ ] `SetStyle`.
@@ -72,16 +72,17 @@ Primary references:
 
 ## Rich-text editor/rewrite layer
 
-- [ ] Build a shared CD transformation pipeline used by Range, Table, Section, DocLink, attachment removal, and insertion.
-- [ ] Write transformed records with `CompoundTextAddCDRecords` rather than holding native CD pointers.
-- [ ] Preserve all unknown records and unknown flag bits.
-- [ ] Handle rich-text split across multiple physical items with the same item name.
+- [x] Build the shared managed CD transformation model used by Range, Table, Section, DocLink, attachment removal, and insertion.
+- [x] Add the native persistence primitive that feeds transformed canonical records through `CompoundTextAddCDRecords`.
+- [x] Preserve unknown records and unknown flag bits in the managed transform model unless a caller explicitly replaces/removes that record.
+- [x] Read rich text split across multiple physical items with the same item name and preserve physical record ordering during transformation.
+- [ ] Validate rewrite persistence against multi-segment rich text and Domino-managed re-segmentation before enabling destructive public mutations.
 - [ ] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
 - [ ] Add rollback/error handling so failed writes do not leave partially modified rich text.
 
 ## NotesRichTextSection
 
-- [ ] Materialize sections from the correct CD span.
+- [x] Materialize sections as complete, nested-aware logical CD spans for navigator/range positioning.
 - [ ] `BarColor`.
 - [ ] `IsExpanded`.
 - [ ] `Title`.
@@ -96,9 +97,9 @@ Primary references:
 - [ ] Parse complete table spans including `CDPRETABLEBEGIN`, `CDTABLEDATAEXTENSION`, `CDTABLEBEGIN`, `CDTABLECELL`, `CDTABLEEND`, rows, cells, and nested tables.
 - [ ] `AlternateColor`.
 - [ ] `Color`.
-- [ ] `ColumnCount`.
+- [x] `ColumnCount` ignores cells belonging to nested tables.
 - [ ] `RightToLeft` after validating current Notes C API record mapping.
-- [ ] `RowCount`.
+- [x] `RowCount` ignores cells belonging to nested tables.
 - [ ] `RowLabels`.
 - [ ] `Style`.
 - [ ] `AddRow`.
