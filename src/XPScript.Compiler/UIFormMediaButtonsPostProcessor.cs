@@ -188,6 +188,22 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
     {
         if (generated.Contains("if (ShowDefaultButtons)", StringComparison.Ordinal)) return generated;
 
+        const string reactiveMarker = "        html.Append(\"<button style=\\\"grid-column:1/-1\\\" type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button>\");";
+        if (generated.Contains(reactiveMarker, StringComparison.Ordinal))
+        {
+            return generated.Replace(reactiveMarker,
+                """
+        // __xps_uiform_submit accessibility compatibility marker
+        if (ShowDefaultButtons)
+        {
+            html.Append("<div class=\"d-flex justify-content-end gap-2 mt-3\" style=\"grid-column:1/-1\" role=\"group\" aria-label=\"Form actions\">")
+                .Append("<button class=\"btn btn-primary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"OK\">OK</button>")
+                .Append("<button class=\"btn btn-secondary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"Cancel\" formnovalidate>Cancel</button></div>");
+        }
+""",
+                StringComparison.Ordinal);
+        }
+
         var patterns = new[]
         {
             "        html.Append(\"<button type=\\\"submit\\\" style=\\\"grid-column:1/-1\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");",
