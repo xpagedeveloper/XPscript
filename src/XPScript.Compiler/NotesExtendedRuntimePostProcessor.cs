@@ -9,8 +9,8 @@ internal static class NotesExtendedRuntimePostProcessor
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentAuthorsPostProcessor.ApplyBuiltSurface(source);
         source = NotesSigningPostProcessor.ApplyBuiltSurface(source);
-        source = NotesDocumentHandleGuardPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentCollectionStampAllMultiPostProcessor.ApplyBuiltSurface(source);
+        source = NotesDocumentHandleGuardPostProcessor.ApplyBuiltSurface(source);
         return source;
     }
 }
