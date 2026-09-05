@@ -83,7 +83,8 @@ internal sealed class UIFormMediaButtonsPostProcessor
         if (text.Any(char.IsControl)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source contains a control character.");
         if (text.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme.");
         if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source is invalid.");
-        if (!uri.IsAbsoluteUri && (text.Contains("..", StringComparison.Ordinal) || text.StartsWith('/', StringComparison.Ordinal) || text.StartsWith('\\', StringComparison.Ordinal)))
+        var hasParentSegment = text.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == "..");
+        if (!uri.IsAbsoluteUri && (hasParentSegment || text.StartsWith("/", StringComparison.Ordinal) || text.StartsWith("\\", StringComparison.Ordinal)))
             throw new XPScriptRuntimeException(5, $"UIForm {kind} relative source must stay within the application asset root.");
         return text.Replace('\\', '/');
     }
