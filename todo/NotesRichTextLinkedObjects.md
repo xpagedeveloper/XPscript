@@ -64,7 +64,7 @@ Primary references:
 ## NotesRichTextRange
 
 - [ ] Parse actual text style from CD records for `Style` instead of returning a default style object.
-- [ ] Match LotusScript `Type` semantics for mixed and homogeneous ranges.
+- [x] Match current logical element `Type` semantics for mixed and homogeneous ranges.
 - [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
 - [ ] `Remove`.
 - [ ] `SetStyle`.
@@ -81,7 +81,7 @@ Primary references:
 
 ## NotesRichTextSection
 
-- [ ] Materialize sections from the correct CD span.
+- [x] Materialize sections as complete, nested-aware logical CD spans for navigator/range positioning.
 - [ ] `BarColor`.
 - [ ] `IsExpanded`.
 - [ ] `Title`.
@@ -96,9 +96,9 @@ Primary references:
 - [ ] Parse complete table spans including `CDPRETABLEBEGIN`, `CDTABLEDATAEXTENSION`, `CDTABLEBEGIN`, `CDTABLECELL`, `CDTABLEEND`, rows, cells, and nested tables.
 - [ ] `AlternateColor`.
 - [ ] `Color`.
-- [ ] `ColumnCount`.
+- [x] `ColumnCount` ignores cells belonging to nested tables.
 - [ ] `RightToLeft` after validating current Notes C API record mapping.
-- [ ] `RowCount`.
+- [x] `RowCount` ignores cells belonging to nested tables.
 - [ ] `RowLabels`.
 - [ ] `Style`.
 - [ ] `AddRow`.
