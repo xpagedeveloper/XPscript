@@ -2,21 +2,20 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSource
 {
-    public static string Code => Build(NotesRuntimeFeatures.Full);
-
-    public static string Build(NotesRuntimeFeatures features)
+    internal static string Apply(string source, NotesRuntimeFeatureSet features)
     {
-        var source = NotesRuntimeCoreSource.Code + "\n\n" +
-                     NotesRuntimeValueSource.Code + "\n\n" +
-                     NotesRuntimeDataSource.Code + "\n\n" +
-                     NotesRuntimeItemSource.Build(features.RichText) + "\n\n" +
-                     NotesRuntimeIndexedValueSource.Code + "\n\n" +
-                     NotesNativeApiSource.Code;
+        ArgumentNullException.ThrowIfNull(source);
 
-        source = NotesDocumentCollectionPostProcessor.Apply(source);
-        source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
-        source = NotesDatabaseLifecyclePostProcessor.Apply(source);
-        source = NotesViewColumnNamesPostProcessor.Apply(source);
+        source = NotesSessionPostProcessor.Apply(source);
+        source = NotesDatabasePostProcessor.Apply(source);
+        source = NotesDocumentPostProcessor.Apply(source);
+        source = NotesItemPostProcessor.Apply(source);
+        source = NotesDateTimePostProcessor.Apply(source);
+        source = NotesNamePostProcessor.Apply(source);
+        source = NotesViewPostProcessor.Apply(source);
+        source = NotesViewEntryPostProcessor.Apply(source);
+        source = NotesViewEntryCollectionPostProcessor.Apply(source);
+        source = NotesViewNavigatorPostProcessor.Apply(source);
         source = NotesViewNavigationPostProcessor.Apply(source);
         source = NotesViewNavigationV2PostProcessor.Apply(source);
         source = NotesViewNavigationV2FixPostProcessor.Apply(source);
@@ -37,6 +36,7 @@ internal static class NotesRuntimeSource
         {
             source = NotesRichTextMimePostProcessor.Apply(source);
             source = NotesRichTextObjectsPostProcessor.Apply(source);
+            source = NotesRichTextNavigatorConstantsPostProcessor.Apply(source);
             source = NotesRichTextRangePostProcessor.Apply(source);
             source = NotesEmbeddedObjectPostProcessor.Apply(source);
             source = NotesRichTextAttachmentInsertPostProcessor.Apply(source);
