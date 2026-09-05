@@ -69,6 +69,50 @@ internal static class NotesDocumentCollectionNormalizationPostProcessor
 
         if (!source.Contains(oldIntersect, StringComparison.Ordinal))
             throw new InvalidOperationException("NotesDocumentCollection Intersect current-pointer anchor was not found.");
-        return source.Replace(oldIntersect, newIntersect, StringComparison.Ordinal);
+        source = source.Replace(oldIntersect, newIntersect, StringComparison.Ordinal);
+
+        const string oldRemoveAll = """
+    public void RemoveAll(object? forceValue)
+    {
+        EnsureAlive();
+        var force = XPScriptRuntime.CBool(forceValue);
+        var remaining = new List<uint>();
+        foreach (var noteId in _noteIds)
+        {
+            if (!Session.Api.DeleteNote(Database.Handle, noteId, force))
+                remaining.Add(noteId);
+        }
+        _noteIds = remaining.ToArray();
+        MoveCurrentToFirst();
+    }
+""";
+
+        const string newRemoveAll = """
+    public void RemoveAll(object? forceValue)
+    {
+        EnsureAlive();
+        var force = XPScriptRuntime.CBool(forceValue);
+        var currentNoteId = _lastFetchedNoteId;
+        var hadCurrent = _lastFetchedIndex >= 0;
+        var remaining = new List<uint>();
+        foreach (var noteId in _noteIds)
+        {
+            if (!Session.Api.DeleteNote(Database.Handle, noteId, force))
+                remaining.Add(noteId);
+        }
+        _noteIds = remaining.ToArray();
+
+        // LotusScript only moves the RemoveAll current pointer for remote IIOP.
+        // XPscript uses the native local backend, so preserve pointer identity here.
+        if (!hadCurrent) return;
+        var currentIndex = Array.IndexOf(_noteIds, currentNoteId);
+        if (currentIndex >= 0)
+            _lastFetchedIndex = currentIndex;
+    }
+""";
+
+        if (!source.Contains(oldRemoveAll, StringComparison.Ordinal))
+            throw new InvalidOperationException("NotesDocumentCollection RemoveAll current-pointer anchor was not found.");
+        return source.Replace(oldRemoveAll, newRemoveAll, StringComparison.Ordinal);
     }
 }
