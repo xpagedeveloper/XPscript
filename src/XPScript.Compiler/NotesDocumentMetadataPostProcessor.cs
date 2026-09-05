@@ -6,10 +6,17 @@ internal static class NotesDocumentMetadataPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        source = ReplaceRequired(source,
+            "        _handle = handle;\n        NoteId = noteId;",
+            "        _handle = handle;\n        NoteId = noteId;\n        _isValidAtCreation = noteId == 0 || Session.Api.IsDocumentValid(Database.Handle, noteId);",
+            "document-initial-validity");
+
         const string oldProperties = """
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
 """;
         const string newProperties = """
+    private readonly bool _isValidAtCreation;
+
     public bool IsDeleted
     {
         get
@@ -24,8 +31,7 @@ internal static class NotesDocumentMetadataPostProcessor
         get
         {
             EnsureAlive();
-            if (NoteId == 0) return true;
-            return Session.Api.IsDocumentValid(Database.Handle, NoteId);
+            return _isValidAtCreation;
         }
     }
     public bool IsProfile
