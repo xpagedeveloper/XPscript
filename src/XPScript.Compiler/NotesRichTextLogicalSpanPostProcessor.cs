@@ -44,28 +44,48 @@ internal static class NotesRichTextLogicalSpanPostProcessor
         source = ReplaceRequired(
             source,
             """
+    private (int Record, int Offset, int Type) ResolveBeginPosition(object? element)
+    {
+        if (element is XPScriptNotesRichTextNavigator navigator)
+        {
             EnsureSameItem(navigator.RichTextItem);
             return (navigator.CurrentIndex, navigator.CurrentCharOffset, navigator.CurrentElementType);
+        }
 """,
             """
+    private (int Record, int Offset, int Type) ResolveBeginPosition(object? element)
+    {
+        if (element is XPScriptNotesRichTextNavigator navigator)
+        {
             EnsureSameItem(navigator.RichTextItem);
             var span = navigator.CurrentLogicalSpan();
             return (span.Start, navigator.CurrentCharOffset, navigator.CurrentElementType);
+        }
 """,
             "range-begin-logical-span");
 
         source = ReplaceRequired(
             source,
             """
+    private (int Record, int Offset, int Type) ResolveEndPosition(object? element)
+    {
+        if (element is XPScriptNotesRichTextNavigator navigator)
+        {
             EnsureSameItem(navigator.RichTextItem);
             return (navigator.CurrentIndex, navigator.CurrentCharOffset, navigator.CurrentElementType);
+        }
 """,
             """
+    private (int Record, int Offset, int Type) ResolveEndPosition(object? element)
+    {
+        if (element is XPScriptNotesRichTextNavigator navigator)
+        {
             EnsureSameItem(navigator.RichTextItem);
             var span = navigator.CurrentLogicalSpan();
             var records = _item.ReadRichTextRecords();
             var endOffset = span.End >= 0 && span.End < records.Count ? records[span.End].Text.Length : 0;
             return (span.End, endOffset, navigator.CurrentElementType);
+        }
 """,
             "range-end-logical-span");
 
