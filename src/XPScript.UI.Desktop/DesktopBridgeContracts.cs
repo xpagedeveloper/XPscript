@@ -135,6 +135,15 @@ public static class XpsUIDesktopRuntimeBridge
                 ReadOnly = true,
                 Options = Array.Empty<string>()
             },
+            "Image" => field with
+            {
+                Type = "WebView",
+                Label = string.Empty,
+                Required = false,
+                ReadOnly = true,
+                WebViewSource = "about:blank",
+                WebViewHtml = "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><img src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(field.ImageSource)) + "\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.ImageAltText) + "\" style=\"max-width:100%;max-height:100%;object-fit:contain\"></body></html>"
+            },
             _ => field
         }).ToArray();
 
