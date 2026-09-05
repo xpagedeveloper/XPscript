@@ -52,6 +52,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         }
     }
     public XPScriptNotesDateTime LastModified { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastModified(_handle)); } }
+    public XPScriptNotesDateTime LastAccessed { get { EnsureAlive(); return XPScriptNotesDateTime.FromNative(Session, Session.Api.GetDocumentLastAccessed(_handle)); } }
     public bool IsNewNote { get { EnsureAlive(); return NoteId == 0; } }
     public bool IsResponse { get { EnsureAlive(); return Session.Api.GetParentNoteId(_handle) != 0; } }
     public bool IsDeleted { get { EnsureAlive(); return (NoteId & 0x80000000u) != 0; } }
