@@ -103,8 +103,6 @@ internal sealed partial class XPScriptNotesNativeApi
         itemName = itemName.Trim();
         if (itemName.Length == 0) throw new XPScriptRuntimeException(5, "Rich text item name cannot be empty.");
 
-        // CompoundTextAddCDRecords accepts canonical CD records. Feed records in their
-        // original physical order; CompoundText owns item splitting when the context closes.
         using var itemNameText = ToLmbcs(itemName);
         Check(Resolve<CompoundTextCreateForRewriteDelegate>("CompoundTextCreate")(
             checked((uint)note), itemNameText.Pointer, out var compound), "CompoundTextCreate");
@@ -149,7 +147,7 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate ushort CompoundTextAddCDRecordsForRewriteDelegate(uint compound, nint records, uint recordLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort CompoundTextCloseForRewriteDelegate(uint compound, uint flags, nint buffer, uint bufferLength, uint reserved);
+    private delegate ushort CompoundTextCloseForRewriteDelegate(uint compound, nint returnBuffer, nint returnBufferSize, nint returnFile, ushort returnFileNameSize);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate void CompoundTextDiscardForRewriteDelegate(uint compound);
