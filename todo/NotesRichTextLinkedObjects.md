@@ -57,8 +57,8 @@ Primary references:
 - [x] `GetNthElement` for materializable element types.
 - [x] `SetPosition`.
 - [x] `SetPositionAtEnd`.
-- [ ] Correct logical grouping of all element types instead of treating every matching CD record as a separate LotusScript element.
-- [ ] Correct text-run and text-paragraph boundaries across CD records and physical composite item segments.
+- [x] Correct logical grouping of the currently materialized element types instead of treating records inside structural spans as separate LotusScript elements.
+- [x] Correct text-run and text-paragraph boundaries across the flattened CD record stream and physical composite item segments.
 - [x] Attachment materialization through `NotesEmbeddedObject`.
 
 ## NotesRichTextRange
