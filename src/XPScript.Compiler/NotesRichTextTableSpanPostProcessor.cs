@@ -6,7 +6,19 @@ internal static class NotesRichTextTableSpanPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        const string oldValue = """
+        source = ReplaceRequired(
+            source,
+            """
+        if (signature == SigCdTableBeginForObjects) return 1;
+""",
+            """
+        if (signature is SigCdTableBeginForObjects or 207) return 1;
+""",
+            "table-element-generations");
+
+        source = ReplaceRequired(
+            source,
+            """
     private (int Rows, int Columns) GetDimensions()
     {
         var records = Records();
@@ -23,9 +35,8 @@ internal static class NotesRichTextTableSpanPostProcessor
         }
         return (maxRow + 1, maxColumn + 1);
     }
-""";
-
-        const string newValue = """
+""",
+            """
     private (int Rows, int Columns) GetDimensions()
     {
         var records = Records();
@@ -56,10 +67,16 @@ internal static class NotesRichTextTableSpanPostProcessor
 
     private static bool IsTableBegin(ushort signature) => signature is 163 or 207;
     private static bool IsTableEnd(ushort signature) => signature is 165 or 209;
-""";
+""",
+            "table-dimensions");
 
+        return source;
+    }
+
+    private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
+    {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply Notes rich-text table span patch.");
+            throw new CompilerException("Unable to apply Notes rich-text table span patch (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
