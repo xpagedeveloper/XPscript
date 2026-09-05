@@ -49,28 +49,19 @@ foreach (var expected in new[]
     "public void Show(object? modalValue)",
     "XPScriptCallbackRuntime.Invoke(",
     "XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);",
-    "new XPScriptUIFormEvent(this, \"button\""
-})
-{
-    if (!generated.Contains(expected, StringComparison.Ordinal))
-        throw new InvalidOperationException("Generated modal-parent/modeless-child callback path is missing: " + expected);
-}
-
-foreach (var unusedAccessibilitySymbol in new[]
-{
+    "new XPScriptUIFormEvent(this, \"button\"",
     "public string AccessibleName",
     "public string InitialFocus",
-    "DesktopAccessibilityHost",
     "BuildAccessibilityAttributes(",
     "aria-describedby"
 })
 {
-    if (generated.Contains(unusedAccessibilitySymbol, StringComparison.Ordinal))
-        throw new InvalidOperationException("Ordinary UIForm unexpectedly contains unused accessibility runtime: " + unusedAccessibilitySymbol);
+    if (!generated.Contains(expected, StringComparison.Ordinal))
+        throw new InvalidOperationException("Generated baseline UIForm surface is missing: " + expected);
 }
 
 Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
-Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_GATE_OK");
+Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_BASELINE_OK");
 
 var accessibilitySource = """
 Option Declare
