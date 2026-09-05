@@ -134,8 +134,9 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         {
             document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
-            if (Array.IndexOf(_noteIds, document.NoteId) < 0)
-                _noteIds = [.. _noteIds, document.NoteId];
+            var noteId = document.NoteId & 0x7fffffffu;
+            if (Array.IndexOf(_noteIds, noteId) < 0)
+                _noteIds = [.. _noteIds, noteId];
             return;
         }
 
@@ -157,6 +158,18 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         throw new XPScriptRuntimeException(13, "AddDocument requires a NotesDocument or NotesDocumentCollection.");
     }
 
+    public void DeleteDocument(object? documentValue)
+    {
+        EnsureAlive();
+        var document = RequireDocument(documentValue, "DeleteDocument");
+        document.EnsureAliveForCollectionOperation();
+        EnsureSameReplica(document.OwningDatabase);
+        var noteId = document.NoteId & 0x7fffffffu;
+        if (Array.IndexOf(_noteIds, noteId) < 0)
+            throw new XPScriptRuntimeException(5, "DeleteDocument requires a document contained in this NotesDocumentCollection.");
+        RemoveIds([noteId]);
+    }
+
     public void RemoveDocument(object? documentOrCollection)
     {
         EnsureAlive();
@@ -164,7 +177,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         {
             document.EnsureAliveForCollectionOperation();
             EnsureSameReplica(document.OwningDatabase);
-            RemoveIds([document.NoteId]);
+            RemoveIds([document.NoteId & 0x7fffffffu]);
             return;
         }
 
@@ -209,7 +222,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     private void RemoveIds(IEnumerable<uint> noteIds)
     {
-        var remove = noteIds as HashSet<uint> ?? new HashSet<uint>(noteIds);
+        var remove = noteIds as HashSet<uint> ?? new HashSet<uint>(noteIds.Select(id => id & 0x7fffffffu));
         if (remove.Count == 0) return;
         _noteIds = _noteIds.Where(id => !remove.Contains(id)).ToArray();
         ResetLastFetched();
