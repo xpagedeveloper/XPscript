@@ -777,7 +777,6 @@ Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
         Print "AgentComment=" & agent.Comment
         Print "AgentIsEnabled=" & CStr(agent.IsEnabled)
         Print "AgentTrigger=" & CStr(agent.Trigger)
-        Print "AgentTarget=" & CStr(agent.Target)
         runResult = agent.Run()
         Print "AgentRun=" & CStr(runResult)
         Call agent.Recycle()
@@ -1114,7 +1113,6 @@ Function TestViewNavigationV3(ByVal db As Variant, ByVal viewName As String) As 
         failures = failures + 1
     Else
         Print "GetRead=" & CStr(entry.GetRead())
-        Print "FTSearchScore=" & CStr(entry.FTSearchScore)
         Print "IsConflict=" & CStr(entry.IsConflict)
         Call entry.Recycle()
     End If

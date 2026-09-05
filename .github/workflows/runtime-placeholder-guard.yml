@@ -1,0 +1,32 @@
+name: Runtime Placeholder Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'scripts/validate-runtime-placeholders.py'
+      - 'scripts/runtime-placeholder-allowlist.txt'
+      - '.github/workflows/runtime-placeholder-guard.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'scripts/validate-runtime-placeholders.py'
+      - 'scripts/runtime-placeholder-allowlist.txt'
+      - '.github/workflows/runtime-placeholder-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Reject unallowlisted runtime placeholders
+        run: python ./scripts/validate-runtime-placeholders.py

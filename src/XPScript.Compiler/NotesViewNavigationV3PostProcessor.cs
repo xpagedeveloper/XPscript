@@ -14,15 +14,9 @@ internal static class NotesViewNavigationV3PostProcessor
 
         source = ReplaceRequired(
             source,
-            "    public int FTSearchScore { get { EnsureAlive(); return 0; } }",
-            "    public int FTSearchScore { get { EnsureAlive(); return Row.FTSearchScore; } }\n    public bool GetRead() => GetRead(Session.Username);\n    public bool GetRead(object? userNameValue)\n    {\n        EnsureAlive();\n        return !Row.IsDocument || !Session.Api.IsDocumentUnread(Database.Handle, Row.NoteId, XPScriptRuntime.CStr(userNameValue));\n    }",
+            "    public bool IsConflict { get { EnsureAlive(); return false; } }",
+            "    public bool IsConflict { get { EnsureAlive(); return false; } }\n    public bool GetRead() => GetRead(Session.Username);\n    public bool GetRead(object? userNameValue)\n    {\n        EnsureAlive();\n        return !Row.IsDocument || !Session.Api.IsDocumentUnread(Database.Handle, Row.NoteId, XPScriptRuntime.CStr(userNameValue));\n    }",
             "entry-read");
-
-        source = ReplaceRequired(
-            source,
-            "    internal XPScriptNotesViewEntryType Type { get; }\n    internal bool IsDocument => Type == XPScriptNotesViewEntryType.Document;",
-            "    internal XPScriptNotesViewEntryType Type { get; }\n    internal int FTSearchScore { get; set; }\n    internal bool IsDocument => Type == XPScriptNotesViewEntryType.Document;",
-            "row-score");
 
         source = ReplaceRequired(
             source,

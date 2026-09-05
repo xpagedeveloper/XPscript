@@ -1,0 +1,6 @@
+# path|member|reason
+# Keep entries narrow. Remove an entry when the member gains real backing.
+src/XPScript.Compiler/NotesAgentPostProcessor.cs|IsNotesAgent|Compatibility discriminator: every NotesAgent wrapper represents a Notes agent.
+src/XPScript.Compiler/NotesRuntimeValueSource.cs|IsValidDate|A constructed NotesDateTime is valid by construction; invalid native values fail during creation/conversion.
+src/XPScript.Compiler/NotesViewNavigationV2PostProcessor.cs|IsConflict|Known compatibility placeholder pending native conflict metadata backing.
+src/XPScript.Compiler/NotesViewNavigationV3PostProcessor.cs|IsConflict|V3 carries the same known compatibility placeholder while adding read-state methods; native conflict metadata backing is still pending.
