@@ -68,7 +68,8 @@ internal sealed class UIFormDirtyTrackingPostProcessor
             throw new CompilerException("Unable to install UIForm dirty tracking API.");
 
         generated = ReplaceBindData(generated);
-        return new UIFormMediaButtonsPostProcessor().Transform(generated);
+        generated = new UIFormMediaButtonsPostProcessor().Transform(generated);
+        return new UIFormServerAccessibilityEnhancementPostProcessor().Transform(generated);
     }
 
     private static string ReplaceBindData(string generated)
