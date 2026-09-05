@@ -31,11 +31,19 @@ internal static class NotesDocumentAuthorsPostProcessor
                 .Any(value => string.Equals(XPScriptRuntime.CStr(value).Trim(), "1", StringComparison.Ordinal));
         }
     }
+    public XPScriptNotesDatabase ParentDatabase
+    {
+        get
+        {
+            EnsureAlive();
+            return Database;
+        }
+    }
     public bool IsDesign { get { EnsureAlive(); return ResolveDesignType().Length != 0; } }
 """;
 
         if (!source.Contains(marker, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply NotesDocument Authors/SentByAgent surface.");
+            throw new CompilerException("Unable to apply NotesDocument Authors/SentByAgent/ParentDatabase surface.");
         return source.Replace(marker, replacement, StringComparison.Ordinal);
     }
 }
