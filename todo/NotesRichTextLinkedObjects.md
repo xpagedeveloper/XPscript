@@ -72,10 +72,11 @@ Primary references:
 
 ## Rich-text editor/rewrite layer
 
-- [ ] Build a shared CD transformation pipeline used by Range, Table, Section, DocLink, attachment removal, and insertion.
-- [ ] Write transformed records with `CompoundTextAddCDRecords` rather than holding native CD pointers.
-- [ ] Preserve all unknown records and unknown flag bits.
-- [ ] Handle rich-text split across multiple physical items with the same item name.
+- [x] Build the shared managed CD transformation model used by Range, Table, Section, DocLink, attachment removal, and insertion.
+- [x] Add the native persistence primitive that feeds transformed canonical records through `CompoundTextAddCDRecords`.
+- [x] Preserve unknown records and unknown flag bits in the managed transform model unless a caller explicitly replaces/removes that record.
+- [x] Read rich text split across multiple physical items with the same item name and preserve physical record ordering during transformation.
+- [ ] Validate rewrite persistence against multi-segment rich text and Domino-managed re-segmentation before enabling destructive public mutations.
 - [ ] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
 - [ ] Add rollback/error handling so failed writes do not leave partially modified rich text.
 
@@ -103,56 +104,3 @@ Primary references:
 - [ ] `Style`.
 - [ ] `AddRow`.
 - [ ] `Remove`.
-- [ ] `RemoveRow`.
-- [ ] `SetAlternateColor`.
-- [ ] `SetColor`.
-- [ ] `NotesRichTextItem.AppendTable`.
-
-## NotesRichTextDocLink
-
-- [ ] Materialize both `CDLINKEXPORT2` and normal Notes `CDLINK2` links.
-- [ ] Resolve `CDLINK2` linkage against `$Links`.
-- [ ] `DbReplicaID`.
-- [ ] `DisplayComment`.
-- [ ] `DocUNID`.
-- [ ] `HotSpotText`.
-- [ ] `HotSpotTextStyle`.
-- [ ] `ServerHint`.
-- [ ] `ViewUNID`.
-- [ ] `Remove`.
-- [ ] `RemoveLinkage`.
-- [ ] `SetHotSpotTextStyle`.
-- [ ] Keep `CDLINK2` and `$Links` synchronized when mutating links.
-- [ ] `NotesRichTextItem.AppendDocLink` overloads.
-
-## NotesRichTextItem remaining surface
-
-- [ ] `AppendStyle`.
-- [ ] `AppendParagraphStyle`.
-- [ ] `AppendTable`.
-- [ ] `AppendDocLink` overloads.
-- [ ] `BeginInsert`.
-- [ ] `EndInsert`.
-- [ ] `BeginSection`.
-- [ ] `EndSection`.
-- [ ] `GetNotesFont`.
-- [ ] Correct insertion point semantics across subsequent append operations.
-
-## Supporting Notes types
-
-- [ ] Minimal `NotesColorObject` required by Section and Table.
-- [ ] Color conversion and custom RGB behavior matching Notes.
-- [ ] Custom font support and `$FONT` / `CDFONTTABLE` / `CDFACE` maintenance.
-
-## Verification
-
-- [x] Cross-platform compiler CI for Navigator/Style/ParagraphStyle/Tab/Range surface.
-- [x] Cross-platform compiler CI for `NotesEmbeddedObject` surface.
-- [ ] Windows Notes client/runtime integration tests for attachment metadata, `ExtractFile`, and `ToByteArray`.
-- [ ] Windows Notes client/runtime integration tests for rich-text reads and mutations.
-- [ ] Domino server integration tests where server-only behavior differs.
-- [ ] Round-trip tests that compare unaffected CD records before and after mutation.
-- [ ] Documents with multiple physical composite segments.
-- [ ] Nested tables, sections containing tables, doclinks, images, attachments, and unknown CD records.
-- [ ] Multiple attachments with the same original filename.
-- [ ] Encrypted/sealed notes where supported.
