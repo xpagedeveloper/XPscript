@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 
 namespace XPScript.Compiler;
@@ -28,7 +29,7 @@ internal static class UIFormAssetCompileContext
     }
 }
 
-internal static class UIFormAppAssets
+public static class UIFormAppAssets
 {
     public const string DirectoryName = "assets";
     private const long MaximumEmbeddedBytes = 64L * 1024 * 1024;
@@ -51,6 +52,25 @@ internal static class UIFormAppAssets
         Directory.CreateDirectory(assets);
         RejectLinkedDirectory(assets, "UIForm assets directory");
         return assets;
+    }
+
+    public static string ComputeFingerprint(string sourcePath)
+    {
+        if (!UsesUIForm(sourcePath)) return string.Empty;
+        var root = EnsureAssetsDirectory(sourcePath);
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var file in EnumerateAssetFiles(root))
+        {
+            var name = Encoding.UTF8.GetBytes(file.RelativePath);
+            hash.AppendData(name);
+            hash.AppendData([0]);
+            using var stream = File.OpenRead(file.FullPath);
+            var buffer = new byte[81920];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) hash.AppendData(buffer, 0, read);
+            hash.AppendData([0]);
+        }
+        return Convert.ToHexString(hash.GetHashAndReset());
     }
 
     public static void PublishExternalAssets(string sourcePath, string outputPath)
