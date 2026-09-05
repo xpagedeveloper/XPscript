@@ -40,6 +40,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextRangePostProcessor.Apply(source);
             source = NotesEmbeddedObjectPostProcessor.Apply(source);
             source = NotesRichTextAttachmentInsertPostProcessor.Apply(source);
+            source = NotesRichTextAttachmentRemovePostProcessor.Apply(source);
             source = NotesRichTextNavigatorElementPostProcessor.Apply(source);
             source = NotesRichTextLinkedObjectsPostProcessor.Apply(source);
             source = NotesRichTextTableSpanPostProcessor.Apply(source);
