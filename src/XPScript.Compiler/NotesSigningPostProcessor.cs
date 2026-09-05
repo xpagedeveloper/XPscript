@@ -34,7 +34,35 @@ internal static class NotesSigningPostProcessor
     public void Sign()
     {
         EnsureAlive();
+        if (_handle == 0) throw new XPScriptRuntimeException(91, "NotesDocument has no open note handle.");
         Session.Api.SignNote(_handle);
+    }
+
+    public bool IsSigned
+    {
+        get
+        {
+            EnsureAlive();
+            return _handle != 0 && Session.Api.HasItem(_handle, "$Signature");
+        }
+    }
+
+    public string Signer
+    {
+        get
+        {
+            EnsureAlive();
+            return _handle == 0 ? "" : Session.Api.GetNoteSignatureInfo(_handle).Signer;
+        }
+    }
+
+    public string Verifier
+    {
+        get
+        {
+            EnsureAlive();
+            return _handle == 0 ? "" : Session.Api.GetNoteSignatureInfo(_handle).Verifier;
+        }
     }
 
     public bool Remove(object? forceValue)
@@ -46,6 +74,29 @@ internal static class NotesSigningPostProcessor
     {
         EnsureInitialized();
         Check(Resolve<NSFNoteSignDelegate>("NSFNoteSign")(note), "NSFNoteSign");
+    }
+
+    internal (string Signer, string Verifier) GetNoteSignatureInfo(uint note)
+    {
+        EnsureInitialized();
+        if (!HasItem(note, "$Signature")) return ("", "");
+
+        const int capacity = 2048;
+        var signer = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
+        var verifier = System.Runtime.InteropServices.Marshal.AllocHGlobal(capacity);
+        try
+        {
+            Zero(signer, capacity);
+            Zero(verifier, capacity);
+            var status = Resolve<NSFNoteVerifySignatureDelegate>("NSFNoteVerifySignature")(note, 0, 0, signer, verifier);
+            if ((status & 0x3fff) != 0) return ("", "");
+            return (FromLmbcsZeroTerminated(signer, capacity - 1), FromLmbcsZeroTerminated(verifier, capacity - 1));
+        }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(verifier);
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(signer);
+        }
     }
 
     internal void SignNoteById(uint db, uint noteId)
@@ -62,6 +113,13 @@ internal static class NotesSigningPostProcessor
 
 """;
         source = InsertBeforeRequired(source, "    internal string RunAgent(", nativeSigning, "native-sign");
+
+        const string signatureDelegate = """
+
+[System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+internal delegate ushort NSFNoteVerifySignatureDelegate(uint note, nint signatureItemName, nint retWhenSigned, nint retSigner, nint retCertifier);
+""";
+        source += signatureDelegate;
 
         return source;
     }
