@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Asset packaging regression")
+    Call form.AddImage("logo", "assets/embed-test.txt", "Asset test")
+    Print "UIFORM_ASSETS_OK"
+End Sub
