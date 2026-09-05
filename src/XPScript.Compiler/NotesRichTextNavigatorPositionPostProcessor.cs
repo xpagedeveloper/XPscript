@@ -30,7 +30,21 @@ internal static class NotesRichTextNavigatorPositionPostProcessor
     {
         EnsureNavigatorAlive();
         RefreshIfChanged();
+        var position = ResolveElementPosition(elementValue);
+        SetCurrent(position.Index, position.ElementType, 0);
+    }
 
+    public void SetPositionAtEnd(object? elementValue)
+    {
+        EnsureNavigatorAlive();
+        RefreshIfChanged();
+        var position = ResolveElementPosition(elementValue);
+        var endIndex = FindElementEnd(position.Index, position.ElementType);
+        SetCurrent(endIndex, position.ElementType, EndCharOffset(_records[endIndex]));
+    }
+
+    private (int Index, int ElementType) ResolveElementPosition(object? elementValue)
+    {
         int segmentIndex;
         int recordIndex;
         ushort signature;
@@ -63,19 +77,64 @@ internal static class NotesRichTextNavigatorPositionPostProcessor
         }
         else
         {
-            throw new XPScriptRuntimeException(13, "NotesRichTextNavigator.SetPosition requires a rich text element.");
+            throw new XPScriptRuntimeException(13, "NotesRichTextNavigator position methods require a rich text element.");
         }
 
         for (var i = _rangeStart; i <= Math.Min(_rangeEnd, _records.Count - 1); i++)
         {
             var record = _records[i];
             if (record.SegmentIndex != segmentIndex || record.RecordIndex != recordIndex || record.Signature != signature) continue;
-            SetCurrent(i, elementType, 0);
-            return;
+            return (i, elementType);
         }
 
         throw new XPScriptRuntimeException(91, "The rich text element is outside the navigator range or no longer exists.");
     }
+
+    private int FindElementEnd(int startIndex, int elementType)
+    {
+        if (elementType == 1)
+            return FindDelimitedEnd(startIndex, IsTableBeginForPosition, IsTableEndForPosition, "table");
+        if (elementType == 8)
+            return FindDelimitedEnd(startIndex, IsHotspotBeginForPosition, IsHotspotEndForPosition, "attachment hotspot");
+
+        // Current Section and DocLink materializers are record-backed. Once logical
+        // section/doclink spans are introduced this method can share those spans.
+        return startIndex;
+    }
+
+    private int FindDelimitedEnd(
+        int startIndex,
+        Func<ushort, bool> isBegin,
+        Func<ushort, bool> isEnd,
+        string elementName)
+    {
+        var depth = 0;
+        var last = Math.Min(_rangeEnd, _records.Count - 1);
+        for (var i = startIndex; i <= last; i++)
+        {
+            var signature = _records[i].Signature;
+            if (isBegin(signature))
+            {
+                depth++;
+                continue;
+            }
+            if (!isEnd(signature)) continue;
+            depth--;
+            if (depth == 0) return i;
+        }
+        throw new XPScriptRuntimeException(91, "The rich text " + elementName + " has no matching end record inside the navigator range.");
+    }
+
+    private static int EndCharOffset(XPScriptNotesRichTextRecordData record) => record.Text.Length;
+
+    private static bool IsTableBeginForPosition(ushort signature) => signature is 163 or 207;
+    private static bool IsTableEndForPosition(ushort signature) => signature is 165 or 209;
+
+    private static bool IsHotspotBeginForPosition(ushort signature) =>
+        signature is unchecked((ushort)-87) or unchecked((ushort)-83) or unchecked((ushort)-130) or unchecked((ushort)-140);
+
+    private static bool IsHotspotEndForPosition(ushort signature) =>
+        signature is 170 or 174 or 127;
 
     public object? GetFirstElement(object? typeValue)
 """,
