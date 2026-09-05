@@ -28,6 +28,27 @@ internal static class DesktopImageHost
         return image;
     }
 
+    public static string ToWebSource(string source)
+    {
+        var value = (source ?? string.Empty).Trim();
+        if (value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)) return value;
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https") return value;
+
+        var path = ResolveLocalPath(value);
+        var bytes = ReadImageBytes(path);
+        var mime = Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".svg" => "image/svg+xml",
+            _ => "application/octet-stream"
+        };
+        return "data:" + mime + ";base64," + Convert.ToBase64String(bytes);
+    }
+
     private static byte[] ReadImageBytes(string source)
     {
         var value = (source ?? string.Empty).Trim();
