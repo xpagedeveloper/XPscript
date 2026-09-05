@@ -21,11 +21,21 @@ internal static class NotesDocumentAuthorsPostProcessor
             return LSOperatorArrayRuntime.CreateArray(authors);
         }
     }
+    public bool SentByAgent
+    {
+        get
+        {
+            EnsureAlive();
+            if (_handle == 0 || !Session.Api.TryGetFirstItemInfo(_handle, "$AssistMail", out var info)) return false;
+            return Session.Api.GetItemValues(_handle, info, Session)
+                .Any(value => string.Equals(XPScriptRuntime.CStr(value).Trim(), "1", StringComparison.Ordinal));
+        }
+    }
     public bool IsDesign { get { EnsureAlive(); return ResolveDesignType().Length != 0; } }
 """;
 
         if (!source.Contains(marker, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply NotesDocument Authors surface.");
+            throw new CompilerException("Unable to apply NotesDocument Authors/SentByAgent surface.");
         return source.Replace(marker, replacement, StringComparison.Ordinal);
     }
 }
