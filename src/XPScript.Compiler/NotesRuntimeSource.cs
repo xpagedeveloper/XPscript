@@ -2,20 +2,21 @@ namespace XPScript.Compiler;
 
 internal static class NotesRuntimeSource
 {
-    internal static string Apply(string source, NotesRuntimeFeatures features)
-    {
-        ArgumentNullException.ThrowIfNull(source);
+    public static string Code => Build(NotesRuntimeFeatures.Full);
 
-        source = NotesSessionPostProcessor.Apply(source);
-        source = NotesDatabasePostProcessor.Apply(source);
-        source = NotesDocumentPostProcessor.Apply(source);
-        source = NotesItemPostProcessor.Apply(source);
-        source = NotesDateTimePostProcessor.Apply(source);
-        source = NotesNamePostProcessor.Apply(source);
-        source = NotesViewPostProcessor.Apply(source);
-        source = NotesViewEntryPostProcessor.Apply(source);
-        source = NotesViewEntryCollectionPostProcessor.Apply(source);
-        source = NotesViewNavigatorPostProcessor.Apply(source);
+    public static string Build(NotesRuntimeFeatures features)
+    {
+        var source = NotesRuntimeCoreSource.Code + "\n\n" +
+                     NotesRuntimeValueSource.Code + "\n\n" +
+                     NotesRuntimeDataSource.Code + "\n\n" +
+                     NotesRuntimeItemSource.Build(features.RichText) + "\n\n" +
+                     NotesRuntimeIndexedValueSource.Code + "\n\n" +
+                     NotesNativeApiSource.Code;
+
+        source = NotesDocumentCollectionPostProcessor.Apply(source);
+        source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
+        source = NotesDatabaseLifecyclePostProcessor.Apply(source);
+        source = NotesViewColumnNamesPostProcessor.Apply(source);
         source = NotesViewNavigationPostProcessor.Apply(source);
         source = NotesViewNavigationV2PostProcessor.Apply(source);
         source = NotesViewNavigationV2FixPostProcessor.Apply(source);
