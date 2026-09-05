@@ -9,23 +9,23 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class NotesRichTextSurfaceAuditPostProcessor
 {
-    private static readonly string[] UnsupportedMethods =
-    [
-        "AppendParagraphStyle", "AppendTable", "AppendDocLink", "BeginSection", "EndSection",
-        "AddRow", "RemoveRow", "SetAlternateColor", "SetColor", "RemoveLinkage", "SetHotSpotTextStyle",
-        "SetBarColor", "SetTitleStyle"
-    ];
-
     public static string Apply(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        foreach (var member in UnsupportedMethods)
-            source = RemoveUnsupportedMethods(source, member);
-
+        // Remove expression-bodied public members that only report an unsupported
+        // structural write. Do this generically so newly-added overloads cannot
+        // accidentally leak into the generated Notes API.
         source = Regex.Replace(
             source,
-            @"(?m)^\s*public\s+void\s+Remove\s*\([^\r\n]*\)\s*=>\s*throw\s+UnsupportedWrite\([^\r\n]*\);\s*\r?\n?",
+            @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
+            string.Empty);
+
+        // Remove block-bodied public methods whose only terminal operation is the
+        // same unsupported-write exception (for example AppendParagraphStyle).
+        source = Regex.Replace(
+            source,
+            @"(?ms)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*\{(?:(?!^\s*public\s).)*?throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\}\s*\r?\n?",
             string.Empty);
 
         source = Regex.Replace(
@@ -45,27 +45,12 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
         return source;
     }
 
-    private static string RemoveUnsupportedMethods(string source, string member)
-    {
-        source = Regex.Replace(
-            source,
-            @"(?m)^\s*public\s+[^\r\n{;]+\s+" + Regex.Escape(member) + @"\s*\([^\r\n]*\)\s*=>\s*(?:\r?\n\s*)?throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
-            string.Empty);
-
-        if (member == "AppendParagraphStyle")
-        {
-            source = Regex.Replace(
-                source,
-                "(?s)\\s*public\\s+void\\s+AppendParagraphStyle\\s*\\([^)]*\\)\\s*\\{.*?throw\\s+RichTextStructuralWriteNotSupported\\(\\\"AppendParagraphStyle\\\"\\);\\s*\\}",
-                string.Empty);
-        }
-        return source;
-    }
-
     private static void Validate(string source)
     {
-        if (source.Contains("RichTextStructuralWriteNotSupported(\"", StringComparison.Ordinal) ||
-            Regex.IsMatch(source, @"public\s+[^\r\n]+=>\s*throw\s+UnsupportedWrite\("))
+        if (Regex.IsMatch(
+                source,
+                @"public\s+[^\r\n{;]+\([^\r\n]*\)\s*(?:=>\s*throw\s+|\{(?:(?!^\s*public\s).)*?throw\s+)(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\(",
+                RegexOptions.Multiline | RegexOptions.Singleline))
             throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported public API member.");
 
         string[] fabricated =
