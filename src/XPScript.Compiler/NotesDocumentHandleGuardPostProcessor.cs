@@ -52,13 +52,19 @@ internal static class NotesDocumentHandleGuardPostProcessor
             "    public bool ComputeWithForm(object? doDataTypesValue, object? raiseErrorValue, ref object? __xps_byref_failedFields)\n    {\n        EnsureAlive();\n",
             "document-compute-with-form-failed-fields");
 
+        // GetFirstItem reaches the native item API through TryGetItemInfo, which
+        // previously passed the raw _handle and therefore bypassed NativeHandle.
+        source = GuardRequired(source,
+            "    internal bool TryGetItemInfo(string name, out XPScriptNotesItemInfo info)\n    {\n        EnsureAlive();\n",
+            "document-try-get-item-info");
+
         // Rich-text support is feature-dependent, so guard it when present without
         // making reduced runtime feature sets fail source generation.
         source = GuardOptional(source,
             "    public XPScriptNotesRichTextItem CreateRichTextItem(object? nameValue)\n    {\n        EnsureAlive();\n");
 
-        // GetFirstItem delegates through NativeHandle. Guard that common handle
-        // accessor so deletion stubs cannot reach the native item API through it.
+        // Item objects and other native consumers use this common accessor. Guard it
+        // so deletion stubs cannot reach native APIs through an absent note handle.
         source = ReplaceRequired(source,
             "internal uint NativeHandle { get { EnsureAlive(); return _handle; } }\n    internal XPScriptNotesSession SessionForItem",
             "internal uint NativeHandle { get { EnsureAlive(); RequireOpenNoteHandle(); return _handle; } }\n    internal XPScriptNotesSession SessionForItem",
