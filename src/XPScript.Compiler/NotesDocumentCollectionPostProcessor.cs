@@ -76,6 +76,47 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
     public XPScriptNotesDatabase Parent { get { EnsureAlive(); return Database; } }
     public int Count { get { EnsureAlive(); return _noteIds.Length; } }
 
+    public XPScriptNotesDocumentCollection Clone()
+    {
+        EnsureAlive();
+        return new XPScriptNotesDocumentCollection(Session, Database, _noteIds);
+    }
+
+    public bool Contains(object? documentOrCollection)
+    {
+        EnsureAlive();
+        var ids = ResolveSetOperand(documentOrCollection, "Contains");
+        if (ids.Length == 0) return true;
+        var current = new HashSet<uint>(_noteIds);
+        return ids.All(current.Contains);
+    }
+
+    public void Merge(object? documentOrCollection)
+    {
+        EnsureAlive();
+        var ids = ResolveSetOperand(documentOrCollection, "Merge");
+        if (ids.Length == 0) return;
+        var merged = new List<uint>(_noteIds);
+        var seen = new HashSet<uint>(_noteIds);
+        foreach (var id in ids)
+            if (seen.Add(id)) merged.Add(id);
+        _noteIds = merged.ToArray();
+    }
+
+    public void Intersect(object? documentOrCollection)
+    {
+        EnsureAlive();
+        var keep = new HashSet<uint>(ResolveSetOperand(documentOrCollection, "Intersect"));
+        _noteIds = _noteIds.Where(keep.Contains).ToArray();
+        ResetLastFetched();
+    }
+
+    public void Subtract(object? documentOrCollection)
+    {
+        EnsureAlive();
+        RemoveIds(ResolveSetOperand(documentOrCollection, "Subtract"));
+    }
+
     public XPScriptNotesDocument? GetFirstDocument()
     {
         EnsureAlive();
@@ -228,6 +269,34 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
         }
 
         throw new XPScriptRuntimeException(13, "RemoveDocument requires a NotesDocument or NotesDocumentCollection.");
+    }
+
+    private uint[] ResolveSetOperand(object? value, string member)
+    {
+        if (value is XPScriptNotesDocument document)
+        {
+            document.EnsureAliveForCollectionOperation();
+            EnsureSameReplica(document.OwningDatabase);
+            return [document.NoteId & 0x7fffffffu];
+        }
+
+        if (value is XPScriptNotesDocumentCollection collection)
+        {
+            collection.EnsureAliveForCollectionOperation();
+            EnsureSameReplica(collection.OwningDatabase);
+            if (!string.Equals(_replicaId, collection._replicaId, StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(13, member + " requires Notes objects from the same database replica.");
+            return collection._noteIds.ToArray();
+        }
+
+        try
+        {
+            return [XPScriptNotesConvert.NoteId(value) & 0x7fffffffu];
+        }
+        catch
+        {
+            throw new XPScriptRuntimeException(13, member + " requires a note ID, NotesDocument, or NotesDocumentCollection.");
+        }
     }
 
     private XPScriptNotesDocument RequireDocument(object? value, string member)
