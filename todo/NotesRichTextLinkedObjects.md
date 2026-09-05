@@ -34,9 +34,9 @@ Primary references:
 - [x] Implement `NotesRichTextItem.GetEmbeddedObject(name)`.
 - [x] Implement `NotesRichTextItem.EmbeddedObjects`.
 - [x] Materialize attachment elements from `NotesRichTextNavigator.GetElement()` as `NotesEmbeddedObject`.
-- [ ] Implement `NotesRichTextItem.EmbedObject(EMBED_ATTACHMENT, "", source [, name])`.
-- [ ] Attach physical file data with `NSFNoteAttachFile` and add the corresponding `HOTSPOTREC_TYPE_FILE` CD hotspot to the rich-text item.
-- [ ] Roll back the `$FILE` object if adding the rich-text hotspot fails.
+- [x] Implement `NotesRichTextItem.EmbedObject(EMBED_ATTACHMENT, "", source [, name])`.
+- [x] Attach physical file data with `NSFNoteAttachFile` and add the corresponding `HOTSPOTREC_TYPE_FILE` CD hotspot to the rich-text item.
+- [x] Roll back the `$FILE` object if adding the rich-text hotspot fails.
 - [ ] Implement attachment `Remove()` atomically: remove the rich-text hotspot and then detach/deallocate the `$FILE` object.
 
 ## Binary array support
