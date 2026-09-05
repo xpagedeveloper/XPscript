@@ -21,7 +21,7 @@ internal static class NotesModifiedDocumentsPostProcessor
         source = ReplaceRequired(
             source,
             "    public XPScriptNotesDatabase Parent { get { EnsureAlive(); return Database; } }\n    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); } }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
-            "    public XPScriptNotesDatabase Parent { get { EnsureAlive(); return Database; } }\n\n    internal void InitializeModifiedMetadata(XPScriptNotesTimeDate untilTime, IEnumerable<uint> documentNoteIds, IEnumerable<uint> designNoteIds)\n    {\n        _untilTime = untilTime;\n        _documentNoteIds = documentNoteIds.Select(id => id & 0x7fffffffu).Distinct().ToArray();\n        _designNoteIds = designNoteIds.Select(id => id & 0x7fffffffu).Distinct().ToArray();\n        _hasModifiedMetadata = true;\n    }\n\n    private XPScriptNotesDocumentCollection CreateModifiedSubset(uint[] noteIds, bool documents)\n    {\n        var subset = new XPScriptNotesDocumentCollection(Session, Database, noteIds);\n        subset.InitializeModifiedMetadata(_untilTime, documents ? noteIds : [], documents ? [] : noteIds);\n        return subset;\n    }\n\n    public XPScriptNotesDateTime? UntilTime\n    {\n        get\n        {\n            EnsureAlive();\n            return _hasModifiedMetadata ? XPScriptNotesDateTime.FromNative(Session, _untilTime) : null;\n        }\n    }\n\n    public XPScriptNotesDocumentCollection Documents\n    {\n        get\n        {\n            EnsureAlive();\n            EnsureModifiedMetadata();\n            return CreateModifiedSubset(_documentNoteIds!, true);\n        }\n    }\n\n    public XPScriptNotesDocumentCollection DesignElements\n    {\n        get\n        {\n            EnsureAlive();\n            EnsureModifiedMetadata();\n            return CreateModifiedSubset(_designNoteIds!, false);\n        }\n    }\n\n    private void EnsureModifiedMetadata()\n    {\n        if (_hasModifiedMetadata && _documentNoteIds is not null && _designNoteIds is not null) return;\n        throw new XPScriptRuntimeException(5, \"Documents and DesignElements are available on collections returned by NotesDatabase.GetModifiedDocuments.\");\n    }\n\n    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); } }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
+            "    public XPScriptNotesDatabase Parent { get { EnsureAlive(); return Database; } }\n\n    internal void InitializeModifiedMetadata(XPScriptNotesTimeDate untilTime, IEnumerable<uint> documentNoteIds, IEnumerable<uint> designNoteIds)\n    {\n        _untilTime = untilTime;\n        _documentNoteIds = documentNoteIds.Select(NormalizeNoteId).Distinct().ToArray();\n        _designNoteIds = designNoteIds.Select(NormalizeNoteId).Distinct().ToArray();\n        _hasModifiedMetadata = true;\n    }\n\n    private static uint NormalizeNoteId(uint noteId) => noteId & 0x7fffffffu;\n\n    private XPScriptNotesDocumentCollection CreateModifiedSubset(uint[] noteIds, bool documents)\n    {\n        var subset = new XPScriptNotesDocumentCollection(Session, Database, noteIds);\n        subset.InitializeModifiedMetadata(_untilTime, documents ? noteIds : [], documents ? [] : noteIds);\n        return subset;\n    }\n\n    public XPScriptNotesDateTime? UntilTime\n    {\n        get\n        {\n            EnsureAlive();\n            return _hasModifiedMetadata ? XPScriptNotesDateTime.FromNative(Session, _untilTime) : null;\n        }\n    }\n\n    public XPScriptNotesDocumentCollection Documents\n    {\n        get\n        {\n            EnsureAlive();\n            EnsureModifiedMetadata();\n            return CreateModifiedSubset(_documentNoteIds!, true);\n        }\n    }\n\n    public XPScriptNotesDocumentCollection DesignElements\n    {\n        get\n        {\n            EnsureAlive();\n            EnsureModifiedMetadata();\n            return CreateModifiedSubset(_designNoteIds!, false);\n        }\n    }\n\n    private void EnsureModifiedMetadata()\n    {\n        if (_hasModifiedMetadata && _documentNoteIds is not null && _designNoteIds is not null) return;\n        throw new XPScriptRuntimeException(5, \"Documents and DesignElements are available on collections returned by NotesDatabase.GetModifiedDocuments.\");\n    }\n\n    internal uint[] NativeNoteIds { get { EnsureAlive(); return _noteIds.ToArray(); } }\n    public int Count { get { EnsureAlive(); return _noteIds.Length; } }",
             "document-collection-modified-properties");
 
         source = ReplaceRequired(
@@ -54,7 +54,7 @@ internal static class NotesModifiedDocumentsPostProcessor
             ? Array.Empty<uint>()
             : IntersectModifiedIds(all, ReadModifiedNoteTable(database, designMask, start, out _));
 
-        return (all, documents, design, until);
+        return (NormalizeModifiedIds(all), NormalizeModifiedIds(documents), NormalizeModifiedIds(design), until);
     }
 
     private XPScriptNotesTimeDate GetMinimumTimeDate()
@@ -96,9 +96,14 @@ internal static class NotesModifiedDocumentsPostProcessor
     private static uint[] IntersectModifiedIds(uint[] all, uint[] subset)
     {
         if (all.Length == 0 || subset.Length == 0) return Array.Empty<uint>();
-        var selected = new HashSet<uint>(subset);
-        return all.Where(selected.Contains).ToArray();
+        var selected = new HashSet<uint>(subset.Select(NormalizeModifiedNoteId));
+        return all.Where(id => selected.Contains(NormalizeModifiedNoteId(id))).ToArray();
     }
+
+    private static uint[] NormalizeModifiedIds(IEnumerable<uint> ids)
+        => ids.Select(NormalizeModifiedNoteId).Distinct().ToArray();
+
+    private static uint NormalizeModifiedNoteId(uint noteId) => noteId & 0x7fffffffu;
 """;
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
