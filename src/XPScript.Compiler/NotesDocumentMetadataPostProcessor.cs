@@ -34,6 +34,14 @@ internal static class NotesDocumentMetadataPostProcessor
             return _isValidAtCreation;
         }
     }
+    public bool IsUIDocOpen
+    {
+        get
+        {
+            EnsureAlive();
+            return false;
+        }
+    }
     public bool IsProfile
     {
         get
