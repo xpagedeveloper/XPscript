@@ -23,14 +23,11 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
         foreach (var member in UnsupportedMethods)
             source = RemoveUnsupportedMethods(source, member);
 
-        // Remove linked-object Remove() overloads only when their implementation is the
-        // explicit UnsupportedWrite placeholder. Real attachment/range Remove methods are retained.
         source = Regex.Replace(
             source,
             @"(?m)^\s*public\s+void\s+Remove\s*\([^\r\n]*\)\s*=>\s*throw\s+UnsupportedWrite\([^\r\n]*\);\s*\r?\n?",
             string.Empty);
 
-        // These table values were previously fabricated rather than decoded from CD records.
         source = Regex.Replace(
             source,
             @"(?s)\s*public\s+object\s+RowLabels\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+LSOperatorArrayRuntime\.CreateArray\(Array\.Empty<object\?>\(\)\);\s*\}\s*\}",
@@ -39,8 +36,6 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
             source,
             @"(?m)^\s*public\s+XPScriptNotesColorObject\s+(?:Color|AlternateColor)\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+new\s+XPScriptNotesColorObject\(Session,\s*0\);\s*\}\s*\}\s*\r?\n?",
             string.Empty);
-
-        // A default style object is not the style of a doclink hotspot.
         source = Regex.Replace(
             source,
             @"(?m)^\s*public\s+XPScriptNotesRichTextStyle\s+HotSpotTextStyle\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+new\s+XPScriptNotesRichTextStyle\(Session\);\s*\}\s*\}\s*\r?\n?",
@@ -52,19 +47,16 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
 
     private static string RemoveUnsupportedMethods(string source, string member)
     {
-        // Expression-bodied placeholder overloads.
         source = Regex.Replace(
             source,
             @"(?m)^\s*public\s+[^\r\n{;]+\s+" + Regex.Escape(member) + @"\s*\([^\r\n]*\)\s*=>\s*(?:\r?\n\s*)?throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
             string.Empty);
 
-        // AppendParagraphStyle is the one block-bodied placeholder: it validates the
-        // argument and then unconditionally reports unsupported.
         if (member == "AppendParagraphStyle")
         {
             source = Regex.Replace(
                 source,
-                @"(?s)\s*public\s+void\s+AppendParagraphStyle\s*\([^)]*\)\s*\{.*?throw\s+RichTextStructuralWriteNotSupported\(\"AppendParagraphStyle\"\);\s*\}",
+                "(?s)\\s*public\\s+void\\s+AppendParagraphStyle\\s*\\([^)]*\\)\\s*\\{.*?throw\\s+RichTextStructuralWriteNotSupported\\(\\\"AppendParagraphStyle\\\"\\);\\s*\\}",
                 string.Empty);
         }
         return source;
@@ -78,7 +70,8 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
 
         string[] fabricated =
         [
-            "public object RowLabels", "public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0);",
+            "public object RowLabels",
+            "public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0);",
             "public XPScriptNotesColorObject AlternateColor { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0);",
             "public XPScriptNotesRichTextStyle HotSpotTextStyle { get { EnsureLinkedAlive(); return new XPScriptNotesRichTextStyle(Session);"
         ];
