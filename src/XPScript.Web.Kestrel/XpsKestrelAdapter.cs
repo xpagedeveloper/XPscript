@@ -53,8 +53,6 @@ public static class XpsKestrelAdapter
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
 
-        // XPScript owns command-line logging. Do not expose Microsoft.Hosting,
-        // Microsoft.AspNetCore, Kestrel or other framework categories by default.
         builder.Logging.ClearProviders();
 
         builder.WebHost.ConfigureKestrel(kestrel =>
@@ -89,8 +87,6 @@ public static class XpsKestrelAdapter
         if (runtimeTelemetry is not null)
             app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
 
-        // Keep a compact XPScript-owned access log while framework logging stays silent.
-        // Query strings are intentionally excluded so secrets are not written to console.
         app.Use(async (http, next) =>
         {
             var started = Stopwatch.GetTimestamp();
@@ -192,6 +188,55 @@ public static class XpsKestrelAdapter
                         http.RequestAborted);
             });
         }
+
+        var applicationAssetServer = new XpsWebServer(serverInfo);
+        app.Use(async (http, next) =>
+        {
+            if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+            {
+                await next();
+                return;
+            }
+
+            var rawPath = http.Request.Path.Value ?? string.Empty;
+            if (!rawPath.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase) ||
+                !TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType) ||
+                !relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                await next();
+                return;
+            }
+
+            string fullPath;
+            try { fullPath = applicationAssetServer.MapPath(relativePath); }
+            catch (XpsWebPathException)
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            FileInfo info;
+            try { info = new FileInfo(fullPath); }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            if (!info.Exists || info.Length > options.MaxStaticFileBytes || IsLinkedFile(info))
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            http.Response.StatusCode = StatusCodes.Status200OK;
+            http.Response.ContentType = contentType;
+            http.Response.ContentLength = info.Length;
+            http.Response.Headers.CacheControl = options.StaticCacheControl;
+            http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            if (!HttpMethods.IsHead(http.Request.Method))
+                await http.Response.SendFileAsync(fullPath, http.RequestAborted);
+        });
 
         if (options.EnableStaticFiles)
         {
@@ -381,6 +426,12 @@ public static class XpsKestrelAdapter
             if (value[i] == '%' && Uri.IsHexDigit(value[i + 1]) && Uri.IsHexDigit(value[i + 2])) return true;
         }
         return false;
+    }
+
+    private static bool IsLinkedFile(FileInfo info)
+    {
+        try { return info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }
     }
 
     private static bool HostAllowed(string host, IReadOnlyList<string> allowedHosts)
