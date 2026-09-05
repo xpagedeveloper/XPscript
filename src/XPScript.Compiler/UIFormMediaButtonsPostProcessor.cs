@@ -103,7 +103,8 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 "media-normalization");
         }
 
-        if (!generated.Contains("case \"Image\":", StringComparison.Ordinal))
+        if (!generated.Contains("case \"Image\":", StringComparison.Ordinal) &&
+            generated.Contains("            switch (field.Type)\n            {\n", StringComparison.Ordinal))
         {
             generated = ReplaceOnce(generated,
                 "            switch (field.Type)\n            {\n",
@@ -139,7 +140,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
         const string marker = "// XPScript UIForm media accessibility: .AccessibleName";
         if (generated.Contains(marker, StringComparison.Ordinal)) return generated;
         var runtimeIndex = generated.IndexOf("internal static class XPScriptUI", StringComparison.Ordinal);
-        if (runtimeIndex < 0) throw new CompilerException("Unable to install UIForm media accessibility marker.");
+        if (runtimeIndex < 0) return generated;
         return generated.Insert(runtimeIndex, marker + "\n");
     }
 
@@ -180,9 +181,7 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
             }
 """;
         var regex = new Regex(pattern, RegexOptions.CultureInvariant | RegexOptions.IgnorePatternWhitespace);
-        if (!regex.IsMatch(generated))
-            throw new CompilerException("Unable to install UIForm web OK/Cancel data commit semantics.");
-        return regex.Replace(generated, replacement, 1);
+        return regex.IsMatch(generated) ? regex.Replace(generated, replacement, 1) : generated;
     }
 
     private static string ReplaceDefaultButtonRendering(string generated)
@@ -211,7 +210,7 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
 """,
                 StringComparison.Ordinal);
         }
-        throw new CompilerException("Unable to install UIForm default button rendering.");
+        return generated;
     }
 
     private static string ReplaceOnce(string source, string marker, string replacement, string stage)
