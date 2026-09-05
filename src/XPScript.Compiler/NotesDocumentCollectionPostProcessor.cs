@@ -414,7 +414,7 @@ internal sealed class XPScriptNotesDocumentCollection : XPScriptNotesOwnedObject
 
     private void RemoveIds(IEnumerable<uint> noteIds)
     {
-        var remove = noteIds as HashSet<uint> ?? new HashSet<uint>(noteIds.Select(id => id & 0x7fffffffu));
+        var remove = new HashSet<uint>(noteIds.Select(id => id & 0x7fffffffu));
         if (remove.Count == 0) return;
         _noteIds = _noteIds.Where(id => !remove.Contains(id)).ToArray();
         ResetLastFetched();
