@@ -1,0 +1,1 @@
+V6HOTSPOTBEGIN_CONTINUATION continues an existing hotspot and is not counted as a nested hotspot begin by NotesRichTextNavigator.SetPositionAtEnd.
