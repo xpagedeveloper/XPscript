@@ -103,6 +103,7 @@ internal static class NotesDocumentMetadataPostProcessor
 
     private string ResolveDesignType()
     {
+        if (_handle == 0) return "";
         var noteClass = Session.Api.GetNoteClass(_handle);
         var flags = HasItem("$Flags") ? GetString("$Flags") : "";
 
@@ -149,7 +150,7 @@ internal static class NotesDocumentMetadataPostProcessor
 
     private string[] GetDesignNames()
     {
-        if (!Session.Api.TryGetFirstItemInfo(_handle, "$TITLE", out var info)) return [];
+        if (_handle == 0 || !Session.Api.TryGetFirstItemInfo(_handle, "$TITLE", out var info)) return [];
         var values = Session.Api.GetItemValues(_handle, info, Session);
         var names = new List<string>();
         foreach (var value in values)
