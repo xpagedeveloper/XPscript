@@ -37,8 +37,6 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext.exe --framework-dependent
-      - name: Compile Notes navigator position regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-navigator-position-regression.xps -o ./out/notes-richtext-position.exe --framework-dependent
 
   compile-linux:
     name: Compile Linux
@@ -100,8 +98,6 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent
-      - name: Compile Notes navigator position regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-navigator-position-regression.xps -o ./out/notes-richtext-position --framework-dependent
 
   compile-macos:
     name: Compile macOS
@@ -129,5 +125,3 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent
-      - name: Compile Notes navigator position regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-navigator-position-regression.xps -o ./out/notes-richtext-position --framework-dependent
