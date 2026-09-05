@@ -1,0 +1,431 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Database Ui Datasources | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="database-ui-data-sources">Database UI data sources</h1>
+<p>XPScript database UI data sources provide one consistent JSON binding model for <code>UIListView</code> and <code>UIForm</code> without changing the database storage model. JSON is the runtime transport/binding representation only. SQL databases keep searchable native columns, Supabase keeps native PostgreSQL columns, and Domino keeps native document items.</p>
+<p>The same provider-neutral model applies to record attachments. An attachment collection is scoped to one parent/owner record or document. Attachment file names are metadata, not identifiers.</p>
+<h2 id="data-ownership-rules">Data ownership rules</h2>
+<ul>
+<li>A list/query/view is exposed as <code>XPJsonArray</code> and can be passed directly to <code>UIListView.BindData</code>.</li>
+<li>A complete row/document is exposed as <code>XPJsonObject</code> and can be passed directly to <code>UIForm.BindData</code>.</li>
+<li><code>UIForm.BindData</code> keeps the same <code>XPJsonObject</code> instance, so multiple forms can share one record object.</li>
+<li>A form only changes fields it edits; hidden/unbound properties remain in the shared object.</li>
+<li><code>SaveRow</code> writes native database columns/items, never one opaque JSON record blob.</li>
+<li>SQLite generated/hidden columns and SQL Server identity/computed columns remain readable but are excluded from <code>SaveRow</code> assignments.</li>
+<li>Domino top-level provider metadata beginning with <code>@</code> remains in the object but is excluded from document-item writes.</li>
+<li>Attachment collections are parent-scoped. The same <code>originalName</code> may appear on many parents and multiple times on the same parent.</li>
+<li>Every attachment has a stable <code>attachmentId</code> GUID. Binary retrieval and delete use that ID, never a file name.</li>
+<li><code>Save</code> and <code>SaveAs</code> always create a new attachment ID, even when another attachment has the same <code>originalName</code>.</li>
+<li>Attachments are immutable. To replace a file, delete the old attachment and create a new one with a new <code>attachmentId</code>.</li>
+<li><code>createdBy</code> is supplied explicitly when <code>Save</code> or <code>SaveAs</code> is called.</li>
+<li>The current portable attachment runtime limits one file to 64 MiB because one attachment is buffered at a time.</li>
+</ul>
+<p>The executable SQLite regressions <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource.xps">database-uiform-datasource.xps</a> and <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a> demonstrate both record and attachment flows.</p>
+<h2 id="sqlite">SQLite</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>XPDBSQLite.QueryArray</code></td><td><code>db.QueryArray(sql [, parameters])</code></td><td><code>sql</code>: query text; <code>parameters</code>: optional scalar <code>XPJsonObject</code>.</td><td>Executes the query and returns its array root directly as <code>XPJsonArray</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource.xps">database-uiform-datasource.xps</a></td></tr><tr><td><code>XPDBSQLite.GetRow</code></td><td><code>db.GetRow(table, keyColumn, keyValue)</code></td><td>Native table, validated key column and lookup value.</td><td>Loads exactly one complete row with <code>SELECT *</code> as <code>XPJsonObject</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource.xps">database-uiform-datasource.xps</a></td></tr><tr><td><code>XPDBSQLite.SaveRow</code></td><td><code>db.SaveRow(table, keyColumn, data)</code></td><td>Native table, key column and complete <code>XPJsonObject</code>.</td><td>Updates native writable columns using parameters.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource.xps">database-uiform-datasource.xps</a></td></tr><tr><td><code>XPDBSQLite.Attachments</code></td><td><code>db.Attachments(table, keyColumn, keyValue)</code></td><td>Parent table, key column and unique key value.</td><td>Returns an attachment collection scoped to exactly one row. Binary data and metadata are stored in the managed native SQLite BLOB side table.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr></tbody></table>
+<h2 id="sql-server">SQL Server</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>XPDbMsSql.QueryArray</code></td><td><code>db.QueryArray(sql [, parameters])</code></td><td>Query and optional scalar parameters.</td><td>Returns query rows directly as <code>XPJsonArray</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource-mssql.xps">database-uiform-datasource-mssql.xps</a></td></tr><tr><td><code>XPDbMsSql.GetRow</code></td><td><code>db.GetRow(table, keyColumn, keyValue)</code></td><td><code>table</code> or <code>schema.table</code>, validated key column and lookup value.</td><td>Loads exactly one complete row.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource-mssql.xps">database-uiform-datasource-mssql.xps</a></td></tr><tr><td><code>XPDbMsSql.SaveRow</code></td><td><code>db.SaveRow(table, keyColumn, data)</code></td><td>Native table, key column and complete <code>XPJsonObject</code>.</td><td>Updates native writable columns; identity/computed columns are not assigned.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-uiform-datasource-mssql.xps">database-uiform-datasource-mssql.xps</a></td></tr><tr><td><code>XPDbMsSql.Attachments</code></td><td><code>db.Attachments(table, keyColumn, keyValue)</code></td><td>Parent table, key column and unique key value.</td><td>Returns one parent-scoped collection. Default storage uses <code>varbinary(max)</code> plus indexed owner metadata, without requiring FILESTREAM.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments-mssql.xps">database-attachments-mssql.xps</a></td></tr></tbody></table>
+<h2 id="supabase--postgrest">Supabase / PostgREST</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>XPHttpDbSupabase.QueryArray</code></td><td><code>db.QueryArray(table [, query])</code></td><td>PostgREST table/view and optional query.</td><td>Returns rows as <code>XPJsonArray</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbSupabase.GetRow</code></td><td><code>db.GetRow(table, keyColumn, keyValue)</code></td><td>Table, key column and value.</td><td>Loads exactly one complete row.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbSupabase.SaveRow</code></td><td><code>db.SaveRow(table, keyColumn, data)</code></td><td>Table, key and complete row object.</td><td>PATCHes native PostgreSQL/PostgREST fields.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbSupabase.SetAttachmentBucket</code></td><td><code>db.SetAttachmentBucket(bucket)</code></td><td>Existing Storage bucket name.</td><td>Selects the Supabase Storage bucket used by <code>Attachments</code>; default is <code>attachments</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbSupabase.Attachments</code></td><td><code>db.Attachments(table, keyColumn, keyValue)</code></td><td>Parent table, key column and value.</td><td>Verifies the row exists and returns a parent-scoped collection backed by Supabase Storage.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr></tbody></table>
+<h2 id="domino-rest">Domino REST</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>XPHttpDbDominoRest.GetViewArray</code></td><td><code>db.GetViewArray(viewName [, query])</code></td><td>Domino view/list and optional query.</td><td>Returns view entries as <code>XPJsonArray</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbDominoRest.QueryArray</code></td><td><code>db.QueryArray(queryPayload)</code></td><td>Domino query string/payload.</td><td>Returns query documents as <code>XPJsonArray</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbDominoRest.GetRow</code></td><td><code>db.GetRow(unid)</code></td><td>32-character document UNID.</td><td>Loads the complete Notes document as one shared <code>XPJsonObject</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbDominoRest.SaveRow</code></td><td><code>db.SaveRow(unid, data)</code></td><td>UNID and complete shared object.</td><td>Updates native document items while excluding top-level <code>@...</code> provider metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>XPHttpDbDominoRest.Attachments</code></td><td><code>db.Attachments(unid [, fieldName])</code></td><td>Notes UNID and optional rich-text item such as <code>Body</code>.</td><td>Returns attachments scoped to the same Notes document. <code>fieldName</code> targets the native rich-text item.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr></tbody></table>
+<h2 id="attachment-identity-and-metadata">Attachment identity and metadata</h2>
+<p><code>originalName</code> is never unique. <code>attachmentId</code> is the stable identity.</p>
+<p>A metadata object contains at least:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "attachmentId"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"91f12b98-378c-4dd2-a83d-e4674d9f16e3"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "originalName"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"contracts.pdf"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "contentType"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"application/pdf"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "size"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">183244</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "created"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"2026-08-23T13:21:00Z"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "createdBy"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"creator@example"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "checksumSha256"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"..."</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Two or more attachments on the same parent may all have <code>originalName = "contracts.pdf"</code>; their <code>attachmentId</code> values remain different.</p>
+<h2 id="attachment-collection">Attachment collection</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>AttachmentCollection.List</code></td><td><code>files.List()</code></td><td>none</td><td>Alias for <code>GetMetadata()</code> returning metadata for all attachments belonging to the current parent.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.GetMetadata</code></td><td><code>files.GetMetadata()</code> or <code>files.GetMetadata(attachmentId)</code></td><td>Optional attachment GUID.</td><td>Returns all metadata as <code>XPJsonArray</code>, or one metadata <code>XPJsonObject</code> by ID. Does not download binary content.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.FindByName</code></td><td><code>files.FindByName(originalName)</code></td><td>Original display/file name.</td><td>Returns every matching metadata object. Multiple matches are valid and expected.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.Save</code></td><td><code>files.Save(sourcePath, createdBy)</code></td><td>Existing local source file and creator identity.</td><td>Creates a new immutable attachment with a new GUID and returns its metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.SaveAs</code></td><td><code>files.SaveAs(sourcePath, originalName, createdBy)</code></td><td>Existing file, display/original name and creator identity.</td><td>Creates a new immutable attachment even if the same name already exists.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.Get</code></td><td><code>files.Get(attachmentId, targetPath)</code></td><td>Attachment GUID and disk target.</td><td>Compatibility alias for <code>SaveToDisk</code>. Desktop uses normal OS file permissions. Web uses the private export sandbox.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.SaveToDisk</code></td><td><code>files.SaveToDisk(attachmentId, targetPath)</code></td><td>Attachment GUID and output path.</td><td>On desktop, writes to the requested OS path. On web/server, <code>targetPath</code> must be relative and is resolved inside a private non-web-served sandbox. Not available in browser-WASM.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.GetAll</code></td><td><code>files.GetAll(targetFolder)</code></td><td>Local destination directory only. Parent/owner is already fixed by <code>Attachments(...)</code>.</td><td>Desktop exports all attachments under the requested directory. Web requires a relative private directory and exports only inside the private sandbox. Browser-WASM must use <code>SendToBrowser</code> per attachment.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr><tr><td><code>AttachmentCollection.SendToBrowser</code></td><td><code>files.SendToBrowser(attachmentId [, downloadName])</code></td><td>Attachment GUID and optional safe browser download name.</td><td>Server web streams bytes through the active <code>Response</code> with <code>Content-Disposition: attachment</code>; browser-WASM creates a browser Blob download. No web-accessible disk file is created.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/httpdb-supabase-domino.xps">httpdb-supabase-domino.xps</a></td></tr><tr><td><code>AttachmentCollection.Delete</code></td><td><code>files.Delete(attachmentId)</code></td><td>Attachment GUID.</td><td>Deletes exactly one attachment from the current parent. To replace content, delete then create a new attachment.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/database-attachments.xps">database-attachments.xps</a></td></tr></tbody></table>
+<h3 id="example-with-duplicate-names">Example with duplicate names</h3>
+<pre><code class="language-xpscript">Dim files As Variant
+Dim first As XPJsonObject
+Dim second As XPJsonObject
+Dim matches As XPJsonArray
+
+Set files = db.Attachments("customers", "id", 42)
+Set first = files.SaveAs("docs/contract-v1.pdf", "contracts.pdf", "user@example")
+Set second = files.SaveAs("docs/contract-v2.pdf", "contracts.pdf", "user@example")
+
+Print first.Get("attachmentId")
+Print second.Get("attachmentId")
+
+Set matches = files.FindByName("contracts.pdf")
+Print matches.Count
+</code></pre>
+<h3 id="replace-an-attachment">Replace an attachment</h3>
+<p>Attachments are immutable. Replacing a file means deleting the old attachment and creating a new one:</p>
+<pre><code class="language-xpscript">Call files.Delete(oldAttachmentId)
+Set replacement = files.SaveAs("docs/revised-contract.pdf", "contracts.pdf", "editor@example")
+</code></pre>
+<p>The replacement has a new <code>attachmentId</code>, <code>created</code> timestamp and <code>createdBy</code> value.</p>
+<h2 id="disk-export-security">Disk export security</h2>
+<p>Desktop programs use the ordinary operating-system security boundary. <code>SaveToDisk</code> may write wherever the desktop process account has permission.</p>
+<p>Web/server programs do not receive arbitrary filesystem write access through the attachment API. The requested path must be relative, traversal such as <code>..</code> is rejected, and the output is resolved beneath an XPScript-managed private export sandbox under the operating-system temporary area. The sandbox is not under the configured web root, so an exported file cannot become directly reachable merely because the web server serves static files from the application root. Symbolic-link/reparse-point directories are rejected.</p>
+<p>Use <code>SendToBrowser</code> when the intent is to let the HTTP client download an attachment. It streams the attachment through the response instead of publishing a file.</p>
+<h3 id="server-web-download">Server web download</h3>
+<pre><code class="language-xpscript">Dim files As Variant
+Set files = db.Attachments("customers", "id", 23)
+Call files.SendToBrowser(attachmentId, "contract.pdf")
+</code></pre>
+<p><code>SendToBrowser</code> uses the active web response, sets a safe attachment <code>Content-Disposition</code>, applies the attachment content type and writes the bytes directly to the response body.</p>
+<h3 id="browser-wasm-download">Browser-WASM download</h3>
+<p>The same public call is valid in a <code>[Platform:browser-wasm]</code> program:</p>
+<pre><code class="language-xpscript">Call files.SendToBrowser(attachmentId, "contract.pdf")
+</code></pre>
+<p>In browser-WASM no server filesystem is used. XPScript converts the retrieved bytes to a browser Blob, creates a temporary object URL, triggers the browser download and revokes the URL afterwards.</p>
+<h3 id="get-all-attachments-for-one-parent">Get all attachments for one parent</h3>
+<pre><code class="language-xpscript">Dim files As Variant
+Dim downloaded As XPJsonArray
+
+Set files = db.Attachments("customers", "id", 23)
+Set downloaded = files.GetAll("customer-23")
+</code></pre>
+<p>On desktop the directory can be an ordinary OS path. On web it is interpreted as a relative path beneath the private export sandbox. The parent remains <code>customers/id=23</code> because it was fixed when <code>files</code> was created.</p>
+<h3 id="provider-storage-model">Provider storage model</h3>
+<ul>
+<li><strong>SQLite</strong> stores binary content and metadata in a managed native BLOB side table keyed by <code>attachmentId</code> and parent identity.</li>
+<li><strong>SQL Server</strong> stores binary content in <code>varbinary(max)</code> with a GUID primary key and indexed parent hash. FILESTREAM is not required for the simple portable API.</li>
+<li><strong>Supabase</strong> stores content and metadata in Supabase Storage under a parent-scoped object prefix. The Storage bucket is configured with <code>SetAttachmentBucket</code>.</li>
+<li><strong>Domino</strong> stores the binary as a real Notes document attachment. XPScript uses a unique internal storage name derived from <code>attachmentId</code>, while <code>originalName</code> remains metadata, allowing multiple attachments with the same displayed name. Metadata is associated with the same Notes document.</li>
+</ul>
+<h2 id="shared-uiform-example">Shared UIForm example</h2>
+<pre><code class="language-xpscript">Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("customers.db")
+    Dim customer As XPJsonObject
+    Dim generalForm As New UIForm("General")
+    Dim addressForm As New UIForm("Address")
+
+    Set customer = db.GetRow("customers", "id", 42)
+    Call generalForm.BindData(customer)
+    Call generalForm.AddTextField("name", "Name")
+    Call addressForm.BindData(customer)
+    Call addressForm.AddTextField("city", "City")
+
+    Call generalForm.SetFieldValue("name", "Anna Andersson")
+    Call addressForm.SetFieldValue("city", "Goteborg")
+    Call db.SaveRow("customers", "id", customer)
+End Sub
+</code></pre>
+<p>Compile a complete runnable version with:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscriptc samples/database-uiform-datasource.xps -o database-uiform-datasource --framework-dependent</span></span></code></pre>
+<h2 id="uilistview-example">UIListView example</h2>
+<pre><code class="language-xpscript">Dim rows As XPJsonArray
+Dim list As New UIListView("Customers")
+
+Set rows = db.QueryArray("SELECT id, name, city FROM customers ORDER BY name")
+Call list.BindData(rows)
+Call list.SetKeyField("id")
+Call list.AddColumn("name", "Name")
+Call list.AddColumn("city", "City")
+</code></pre>
+<p>A reduced list projection should never become the authoritative editable record. When a user opens a row, call <code>GetRow</code> with its key and bind the complete result to one or more forms.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

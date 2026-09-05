@@ -1,0 +1,472 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Cli Reference | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="compiler-and-host-cli-reference">Compiler and host CLI reference</h1>
+<p>This page is the searchable reference for the XPScript compiler and host command-line interface. Each command/option includes syntax, parameter meaning, behavior, and a complete <code>.xps</code> program that can be used with it.</p>
+<h2 id="xpscriptc-compiler"><code>xpscriptc</code> compiler</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td>compile</td><td><code>xpscriptc source.xps -o output [options]</code></td><td><code>source.xps</code>: source file; <code>output</code>: generated application path.</td><td>Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>run</code></td><td><code>xpscriptc run source.xps [arguments...]</code></td><td><code>source.xps</code>: program to compile/run; following values are exposed through <code>Application.Args</code>.</td><td>Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>--info</code></td><td><code>xpscriptc run source.xps --info</code></td><td>none</td><td>Shows run compilation progress, elapsed compile time, program start, and exit code on stderr. Without <code>--info</code>, <code>run</code> emits only program output and errors.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>-o</code></td><td><code>-o path</code></td><td><code>path</code>: output executable/application path.</td><td>Selects the compiler output path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>--runtime</code></td><td><code>--runtime RID</code></td><td><code>RID</code>: one of the supported runtime identifiers such as <code>win-x64</code>, <code>win-arm64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>osx-x64</code>, <code>osx-arm64</code>.</td><td>Compiles/publishes for an explicit target operating system and architecture.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/platform-shell.xps">platform-shell.xps</a></td></tr><tr><td><code>--framework-dependent</code></td><td><code>--framework-dependent</code></td><td>none</td><td>Produces framework-dependent output instead of a self-contained application.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>--result-format text</code></td><td><code>--result-format text</code></td><td>none</td><td>Emits human-readable compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format json</code></td><td><code>--result-format json</code></td><td>none</td><td>Emits structured JSON compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format xml</code></td><td><code>--result-format xml</code></td><td>none</td><td>Emits structured XML compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--</code></td><td><code>-- scriptArg1 ...</code></td><td>all following values are script arguments.</td><td>Ends compiler option parsing so option-looking values can be passed to the program.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr></tbody></table>
+<h2 id="xpscript-service-host-installation"><code>xpscript service</code> host installation</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>xpscript service install</code></td><td><code>xpscript service install EXECUTABLE --name NAME --display-name "DISPLAY NAME" [--start MODE]</code></td><td><code>EXECUTABLE</code>: compiled <code>[Service]</code> application.</td><td>Registers the compiled executable with Windows SCM, Linux systemd or macOS launchd. Installation refuses to overwrite an existing service with the same internal name.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/service-interval.xps">service-interval.xps</a></td></tr><tr><td>service <code>--name</code></td><td><code>--name NAME</code></td><td>stable native service identifier.</td><td>Required. The value is validated before any native service-manager change is attempted.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/service-interval.xps">service-interval.xps</a></td></tr><tr><td><code>--display-name</code></td><td><code>--display-name "DISPLAY NAME"</code></td><td>human-readable service name.</td><td>Required. Windows uses the native DisplayName. Linux uses the systemd Description. macOS stores the display name as XPScript service metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/service-interval.xps">service-interval.xps</a></td></tr><tr><td>service <code>--start</code></td><td>`—start auto</td><td>manual</td><td>disabled`</td><td>startup mode.</td></tr></tbody></table>
+<p>Service files use <code>[Service]</code>, optional <code>[StopTimeout:value]</code>, <code>ServiceStart()</code>, one or more optional <code>[Interval:value]</code> procedures, and <code>ServiceStop()</code>. See <a href="../services/">XPScript services</a> for the lifecycle contract.</p>
+<h2 id="xpscript-web-kestrel-host"><code>xpscript web</code> Kestrel host</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>web</code></td><td><code>xpscript web --root PATH [options]</code></td><td><code>PATH</code>: XPScript web root.</td><td>Starts the persistent Kestrel web host.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--root</code></td><td><code>--root PATH</code></td><td><code>PATH</code>: directory containing web <code>.xps</code> files.</td><td>Selects the required web application root.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--default-document</code></td><td><code>--default-document FILE.xps</code></td><td><code>FILE.xps</code>: default route file, normally <code>index.xps</code>.</td><td>Changes the file resolved for directory/default-document requests.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--address</code></td><td><code>--address IP</code></td><td><code>IP</code>: listener address.</td><td>Selects the Kestrel bind address.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--bind</code></td><td><code>--bind IP</code></td><td><code>IP</code>: listener address.</td><td>Alias for the Kestrel listener address option.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--port</code></td><td><code>--port N</code></td><td><code>N</code>: TCP port.</td><td>Selects the Kestrel listener port.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--host</code></td><td><code>--host NAME</code></td><td><code>NAME</code>: accepted HTTP Host value; repeatable.</td><td>Adds an allowed public Host value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--allowed-host</code></td><td><code>--allowed-host NAME</code></td><td><code>NAME</code>: accepted HTTP Host value; repeatable.</td><td>Alias for adding an allowed Host value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--https-cert</code></td><td><code>--https-cert PATH</code></td><td><code>PATH</code>: PFX certificate file.</td><td>Enables HTTPS using the selected PFX certificate.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--https-cert-password-env</code></td><td><code>--https-cert-password-env NAME</code></td><td><code>NAME</code>: environment variable holding the PFX password.</td><td>Reads the HTTPS certificate password from environment rather than the command line.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--protocols</code></td><td>`—protocols http1</td><td>http2</td><td>http1+2`</td><td>protocol selection.</td></tr><tr><td><code>--health</code></td><td><code>--health</code></td><td>none</td><td>Enables the host health endpoint.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--metrics</code></td><td><code>--metrics</code></td><td>none</td><td>Enables the host metrics endpoint.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--sessions</code></td><td><code>--sessions</code></td><td>none</td><td>Enables in-memory XPScript web sessions.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/web-state/index.xps">index.xps</a></td></tr><tr><td><code>--session-cookie</code></td><td><code>--session-cookie NAME</code></td><td><code>NAME</code>: cookie name.</td><td>Overrides the session cookie name.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/web-state/index.xps">index.xps</a></td></tr><tr><td><code>--session-timeout-seconds</code></td><td><code>--session-timeout-seconds N</code></td><td><code>N</code>: idle timeout in seconds.</td><td>Sets session idle expiration.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/web-state/index.xps">index.xps</a></td></tr><tr><td><code>--session-same-site</code></td><td><code>--session-same-site VALUE</code></td><td><code>VALUE</code>: supported SameSite setting.</td><td>Selects SameSite behavior for the session cookie.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/web-state/index.xps">index.xps</a></td></tr><tr><td><code>--session-secure</code></td><td><code>--session-secure</code></td><td>none</td><td>Requires the session cookie to use the Secure attribute.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/web-state/index.xps">index.xps</a></td></tr><tr><td><code>--operational-external</code></td><td><code>--operational-external</code></td><td>none</td><td>Allows enabled health/metrics endpoints beyond loopback.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--structured-log</code></td><td><code>--structured-log PATH</code></td><td><code>PATH</code>: JSON-lines log file.</td><td>Writes structured request logging to the selected path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--static-files</code></td><td><code>--static-files</code></td><td>none</td><td>Enables static-file serving from the web root.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--static-max-bytes</code></td><td><code>--static-max-bytes N</code></td><td><code>N</code>: maximum static response size in bytes.</td><td>Limits static-file size.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr><tr><td><code>--config</code></td><td><code>--config FILE</code></td><td><code>FILE</code>: host configuration file.</td><td>Loads Kestrel host configuration. Explicit CLI values override config values.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/kestrel/index.xps">index.xps</a></td></tr></tbody></table>
+<h2 id="xpscript-fastcgi-host"><code>xpscript fastcgi</code> host</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>fastcgi</code></td><td><code>xpscript fastcgi --root PATH --listen ADDRESS:PORT</code></td><td>web root and private FastCGI listener.</td><td>Starts a persistent FastCGI worker.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--root</code></td><td><code>--root PATH</code></td><td><code>PATH</code>: directory containing web <code>.xps</code> files.</td><td>Selects the required FastCGI web root.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--default-document</code></td><td><code>--default-document FILE.xps</code></td><td><code>FILE.xps</code>: default route file.</td><td>Selects the FastCGI default document.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td><code>--listen</code></td><td><code>--listen ADDRESS:PORT</code></td><td>listener IP/host and TCP port.</td><td>Selects the private FastCGI TCP endpoint.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--address</code></td><td><code>--address IP</code></td><td><code>IP</code>: listener address.</td><td>Selects the FastCGI bind address.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--bind</code></td><td><code>--bind IP</code></td><td><code>IP</code>: listener address.</td><td>Alias for the FastCGI bind address.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--port</code></td><td><code>--port N</code></td><td><code>N</code>: TCP port.</td><td>Selects the FastCGI listener port.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td><code>--unix-socket</code></td><td><code>--unix-socket PATH</code></td><td><code>PATH</code>: Unix-domain socket path on Linux/macOS.</td><td>Uses a Unix-domain socket instead of TCP.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr><tr><td>FastCGI <code>--config</code></td><td><code>--config FILE</code></td><td><code>FILE</code>: FastCGI configuration file.</td><td>Loads FastCGI host configuration.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/fastcgi/index.xps">index.xps</a></td></tr></tbody></table>
+<p>FastCGI should normally listen on a private loopback address or Unix socket behind a reverse proxy.</p>
+<h2 id="xpscript-compile---target-webiis"><code>xpscript compile --target webiis</code></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>compile</code></td><td><code>xpscript compile main.xps --target webiis [options]</code></td><td><code>main.xps</code>: mandatory WebIIS build entry.</td><td>Builds an IIS-deployable XPScript application package.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td><code>--target webiis</code></td><td><code>--target webiis</code></td><td>target value <code>webiis</code>.</td><td>Selects the direct IIS deployment package target.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>--framework-dependent</code></td><td><code>--framework-dependent</code></td><td>none</td><td>Builds a WebIIS package that requires the matching .NET runtime/hosting bundle on the server.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>-o</code></td><td><code>-o PATH</code></td><td><code>PATH</code>: deployment output directory outside the source application directory.</td><td>Selects the WebIIS package output directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr></tbody></table>
+<p>For the generated IIS package layout, permissions, ASP.NET Core Module V2 requirements, and deployment workflow, see <a href="../webiis/">WebIIS deployment target</a>.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

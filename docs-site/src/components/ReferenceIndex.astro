@@ -1,0 +1,45 @@
+---
+import type { DocEntry } from "../lib/docs";
+import { relativeHrefForEntry, titleForEntry } from "../lib/docs";
+
+interface Props {
+  entry: DocEntry;
+  entries: DocEntry[];
+}
+
+const { entry, entries } = Astro.props;
+const hrefForEntry = (candidate: DocEntry) => relativeHrefForEntry(entry, candidate);
+
+const items = entry.data.type === "function-category"
+  ? entries.filter((candidate) =>
+      candidate.data.type === "function" &&
+      candidate.data.category === entry.data.category
+    )
+  : entry.data.type === "object"
+    ? entries.filter((candidate) =>
+        candidate.data.type === "property" &&
+        candidate.data.object === entry.data.title
+      )
+    : [];
+
+items.sort((left, right) => {
+  const order = (left.data.order ?? Number.MAX_SAFE_INTEGER) - (right.data.order ?? Number.MAX_SAFE_INTEGER);
+  if (order !== 0) return order;
+  return titleForEntry(left).localeCompare(titleForEntry(right));
+});
+
+const heading = entry.data.type === "object" ? "Properties" : "Functions";
+---
+{items.length > 0 && (
+  <section class="reference-index" aria-label={heading}>
+    <h2>{heading}</h2>
+    <div class="reference-grid">
+      {items.map((item) => (
+        <a class="reference-card" href={hrefForEntry(item)}>
+          <strong>{titleForEntry(item)}</strong>
+          {item.data.shortDescription && <span>{item.data.shortDescription}</span>}
+        </a>
+      ))}
+    </div>
+  </section>
+)}

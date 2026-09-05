@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Uiform Fields | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="extended-uiform-fields">Extended UIForm fields</h1>
+<p>XPScript UIForm supports additional data-entry fields for web and desktop applications.</p>
+<h2 id="filefield">FileField</h2>
+<pre><code class="language-xpscript">Call form.AddFileField("attachment", "Attachment")
+Call form.SetFileOptions("attachment", ".pdf,image/*", 8388608, True)
+</code></pre>
+<p>On web forms this uses multipart/form-data. A single file is stored in <code>form.Data</code> as a JSON object. With <code>multiple=True</code>, the value is a JSON array. Each uploaded file contains:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "fileName"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"document.pdf"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "contentType"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"application/pdf"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "length"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">12345</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "base64"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"..."</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The configured per-file maximum is enforced before the value is exposed to the form. The supported maximum configuration is 64 MiB per file. Desktop currently presents FileField as a text/path field. Use the existing desktop file-dialog API when a native picker is required.</p>
+<h2 id="multiselect">MultiSelect</h2>
+<pre><code class="language-xpscript">Call form.AddMultiSelect("roles", "Roles")
+Call form.AddOption("roles", "admin")
+Call form.AddOption("roles", "editor")
+</code></pre>
+<p>The stored value is a <code>XPJsonArray</code>.</p>
+<h2 id="checkboxgroup">CheckBoxGroup</h2>
+<pre><code class="language-xpscript">Call form.AddCheckBoxGroup("features", "Features")
+Call form.AddOption("features", "api")
+Call form.AddOption("features", "reports")
+</code></pre>
+<p>The web renderer uses a checkbox for each option. The stored value is a <code>XPJsonArray</code>.</p>
+<h2 id="telfield">TelField</h2>
+<pre><code class="language-xpscript">Call form.AddTelField("phone", "Phone")
+Call form.SetLength("phone", 0, 64)
+</code></pre>
+<p>The web renderer uses <code>input type="tel"</code>. XPScript does not impose one global phone-number format.</p>
+<h2 id="weekfield">WeekField</h2>
+<pre><code class="language-xpscript">Call form.AddWeekField("week", "Week")
+</code></pre>
+<p>Values use ISO week form such as <code>2026-W34</code> and are validated before they are stored.</p>
+<h2 id="decimalfield">DecimalField</h2>
+<pre><code class="language-xpscript">Call form.AddDecimalField("amount", "Amount")
+Call form.SetNumberRange("amount", -1000000, 1000000)
+</code></pre>
+<p>The value is parsed using invariant decimal syntax and stored as a numeric JSON value.</p>
+<h2 id="currencyfield">CurrencyField</h2>
+<pre><code class="language-xpscript">Call form.AddCurrencyField("price", "Price", "SEK")
+Call form.SetNumberRange("price", 0, 1000000)
+</code></pre>
+<p>The currency code is display metadata. The stored value is numeric. Currency codes must contain three ASCII letters.</p>
+<h2 id="richtextfield">RichTextField</h2>
+<pre><code class="language-xpscript">Call form.AddRichTextField("description", "Description")
+Call form.SetLength("description", 0, 100000)
+</code></pre>
+<p>On the web, RichTextField stores HTML and is rendered with TinyMCE 7. Desktop falls back to a multiline text editor.</p>
+<p>TinyMCE can use Tiny Cloud or a locally hosted TinyMCE installation. Configuration is read from <code>xpscript-ui.json</code> in the current application directory or beside the executable.</p>
+<p>Tiny Cloud, default configuration:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "tinyMce"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">    "mode"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"cloud"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">    "scriptUrl"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js"</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><code>scriptUrl</code> may be omitted in cloud mode. XPScript then uses the default Tiny Cloud URL above. A Tiny Cloud API-key URL can be supplied instead.</p>
+<p>Local/self-hosted TinyMCE:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "tinyMce"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">    "mode"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"local"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">    "scriptUrl"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"/assets/tinymce/tinymce.min.js"</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The local URL must be an application-relative path beginning with <code>/</code>, or an absolute HTTPS URL. The application is responsible for actually serving the configured local TinyMCE files.</p>
+<p>Environment variables override the JSON file. This is useful for IIS, containers and deployment pipelines:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>XPSCRIPT_TINYMCE_MODE=local</span></span>
+<span class="line"><span>XPSCRIPT_TINYMCE_SCRIPT_URL=/assets/tinymce/tinymce.min.js</span></span></code></pre>
+<p>Allowed modes are <code>cloud</code> and <code>local</code>. Local mode requires a script URL. Invalid modes or URLs fail explicitly instead of silently falling back to another source.</p>
+<p>Rich-text HTML is application data. Treat it as untrusted HTML when rendering it outside the editor. Apply an allow-list HTML sanitizer before placing stored HTML into pages where arbitrary HTML execution would be unsafe.</p>
+<h2 id="lookupfield">LookupField</h2>
+<p>LookupField loads its options from an HTTP endpoint. This is useful when the lookup data comes from an XPS file that in turn reads Supabase, Domino REST, or another REST API.</p>
+<p>Static lookup mode loads the option array when the form is created:</p>
+<pre><code class="language-xpscript">Call form.AddLookupField( _
+    "customerId", _
+    "Customer", _
+    "https://app.example.com/api/customer-options.xps", _
+    "id", _
+    "name")
+</code></pre>
+<p>The endpoint must return a JSON array:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">[</span></span>
+<span class="line"><span style="color:#E1E4E8">  { </span><span style="color:#79B8FF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"c1"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Customer One"</span><span style="color:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#E1E4E8">  { </span><span style="color:#79B8FF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"c2"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Customer Two"</span><span style="color:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>The fourth and fifth arguments select the JSON property used as the stored value and display label. The three-argument form expects properties named <code>value</code> and <code>label</code>.</p>
+<pre><code class="language-xpscript">Call form.AddLookupField("customerId", "Customer", url)
+</code></pre>
+<p>Lookup endpoints must use an absolute HTTP or HTTPS URL. Static mode accepts up to 5000 option rows. The web renderer uses a select control. Desktop currently uses its existing select control.</p>
+<h3 id="server-side-lookup-search">Server-side lookup search</h3>
+<p>For large datasets, pass <code>True</code> as the final argument. XPScript then does not preload the endpoint. The browser requests matching rows as the user types.</p>
+<pre><code class="language-xpscript">Call form.AddLookupField( _
+    "customerId", _
+    "Customer", _
+    "https://app.example.com/api/customer-options.xps", _
+    "id", _
+    "name", _
+    True)
+
+Call form.SetRemoteSearchOptions("customerId", "q", "value", 2, 25)
+</code></pre>
+<p><code>SetRemoteSearchOptions</code> arguments are field name, search parameter, exact-value parameter, minimum number of typed characters and maximum results shown by the client.</p>
+<p>The browser searches with requests such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/customer-options.xps?q=fred&#x26;limit=25</span></span></code></pre>
+<p>When the form is submitted, XPScript validates the selected value against the backend instead of trusting a value posted by the browser:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/customer-options.xps?value=c123&#x26;limit=2</span></span></code></pre>
+<p>The endpoint must therefore support both the configured search parameter and exact-value parameter. The <code>limit</code> parameter is a requested upper bound. The endpoint should enforce its own maximum as well.</p>
+<p>The server-side search endpoint returns the same JSON-array format as static lookup mode. Server-side search is intended primarily for same-origin XPS endpoints. Cross-origin endpoints must allow the browser request through CORS.</p>
+<h2 id="autocompletefield">AutoCompleteField</h2>
+<p>AutoCompleteField uses the same JSON endpoint contract as LookupField:</p>
+<pre><code class="language-xpscript">Call form.AddAutoCompleteField( _
+    "productId", _
+    "Product", _
+    "https://app.example.com/api/product-options.xps", _
+    "id", _
+    "name")
+</code></pre>
+<p>Static mode uses an HTML datalist. The selected/stored value is the value property, not the display label. Desktop currently maps AutoCompleteField to the existing select control.</p>
+<p>Server-side autocomplete uses the same final <code>True</code> argument and remote-search settings:</p>
+<pre><code class="language-xpscript">Call form.AddAutoCompleteField( _
+    "productId", _
+    "Product", _
+    "https://app.example.com/api/product-options.xps", _
+    "id", _
+    "name", _
+    True)
+
+Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
+</code></pre>
+<p>The web renderer performs a debounced search after the configured minimum number of characters. The visible label and stored value remain separate. The posted value is validated server-side using the exact-value lookup before it is accepted.</p>
+<h2 id="example-xps-lookup-endpoint">Example XPS lookup endpoint</h2>
+<p>The endpoint can use any existing XPScript database or HTTP client. For server-side mode, inspect <code>Request.Query</code> and apply the filter to the backend instead of loading the complete table.</p>
+<p>Conceptually, the endpoint should implement these two request forms:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>?q=search text&#x26;limit=25</span></span>
+<span class="line"><span>?value=exact-id&#x26;limit=2</span></span></code></pre>
+<p>It should then return the same JSON array:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">[</span></span>
+<span class="line"><span style="color:#E1E4E8">  { </span><span style="color:#79B8FF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"c1"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Customer One"</span><span style="color:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>The implementation can use <code>XPHttpDbSupabase</code>, <code>XPHttpDbDominoRest</code> or <code>XPHttpClient</code>. Keep authentication and authorization on the lookup endpoint. Do not expose database service credentials to browser code.</p>
+<h2 id="dirty-tracking">Dirty tracking</h2>
+<p>All stored field values participate in normal UIForm dirty tracking. Changes appear through:</p>
+<pre><code class="language-xpscript">form.IsDirty
+form.DirtyFields
+</code></pre>
+<p>If a value is restored to its clean baseline, its field name is removed from <code>DirtyFields</code>.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

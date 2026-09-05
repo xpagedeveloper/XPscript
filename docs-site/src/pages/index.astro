@@ -1,0 +1,17 @@
+---
+import { getCollection, render } from "astro:content";
+import DocumentationLayout from "../layouts/DocumentationLayout.astro";
+import { routeForEntry } from "../lib/docs";
+
+const entries = await getCollection("docs");
+const entry = entries.find((candidate) => routeForEntry(candidate) === "/");
+
+if (!entry) {
+  throw new Error("docs/index.md is required as the documentation root.");
+}
+
+const { Content } = await render(entry);
+---
+<DocumentationLayout entry={entry}>
+  <Content />
+</DocumentationLayout>

@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Command Examples | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="core-command-examples">Core command examples</h1>
+<p>This page supplements <a href="../commands/">commands.md</a>. The command reference is the authoritative list of built-in commands, functions, parameters and links to tested repository samples. The examples below are intentionally small and can be saved as individual <code>.xps</code> files and executed with <code>xpscriptc run file.xps</code>.</p>
+<h2 id="option-declare">Option Declare</h2>
+<pre><code class="language-xpscript">Option Declare
+Sub Main()
+    Dim name As String
+    name = "XPScript"
+    Print name
+End Sub
+</code></pre>
+<h2 id="dim">Dim</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim count As Integer
+    count = 5
+    Print CStr(count)
+End Sub
+</code></pre>
+<h2 id="sub-and-call">Sub and Call</h2>
+<pre><code class="language-xpscript">Sub Hello(ByVal name As String)
+    Print "Hello " + name
+End Sub
+Sub Main()
+    Call Hello("Kalle")
+End Sub
+</code></pre>
+<h2 id="function">Function</h2>
+<pre><code class="language-xpscript">Function Add(ByVal a As Integer, ByVal b As Integer) As Integer
+    Add = a + b
+End Function
+Sub Main()
+    Print CStr(Add(2, 3))
+End Sub
+</code></pre>
+<h2 id="byref">ByRef</h2>
+<pre><code class="language-xpscript">Sub Increment(ByRef value As Integer)
+    value = value + 1
+End Sub
+Sub Main()
+    Dim n As Integer
+    n = 1
+    Call Increment(n)
+    Print CStr(n)
+End Sub
+</code></pre>
+<h2 id="optional">Optional</h2>
+<pre><code class="language-xpscript">Function Greeting(ByVal name As String, Optional prefix As String = "Hello") As String
+    Greeting = prefix + " " + name
+End Function
+Sub Main()
+    Print Greeting("Kalle")
+End Sub
+</code></pre>
+<h2 id="static">Static</h2>
+<pre><code class="language-xpscript">Function Counter() As Long
+    Static value As Long
+    value = value + 1
+    Counter = value
+End Function
+Sub Main()
+    Print CStr(Counter())
+    Print CStr(Counter())
+End Sub
+</code></pre>
+<h2 id="if">If</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim value As Integer
+    value = 10
+    If value >= 10 Then
+        Print "ten or more"
+    Else
+        Print "less than ten"
+    End If
+End Sub
+</code></pre>
+<h2 id="select-case">Select Case</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim value As Integer
+    value = 2
+    Select Case value
+    Case 1
+        Print "one"
+    Case 2
+        Print "two"
+    Case Else
+        Print "other"
+    End Select
+End Sub
+</code></pre>
+<h2 id="for">For</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim i As Integer
+    For i = 1 To 3
+        Print CStr(i)
+    Next
+End Sub
+</code></pre>
+<h2 id="forall">ForAll</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim values List As String
+    Dim item As Variant
+    values("first") = "A"
+    values("second") = "B"
+    ForAll item In values
+        Print CStr(item)
+    End ForAll
+End Sub
+</code></pre>
+<h2 id="goto">GoTo</h2>
+<pre><code class="language-xpscript">Sub Main()
+    GoTo Done
+    Print "not printed"
+Done:
+    Print "done"
+End Sub
+</code></pre>
+<h2 id="gosub-and-return">GoSub and Return</h2>
+<pre><code class="language-xpscript">Sub Main()
+    GoSub Worker
+    Print "back"
+    Exit Sub
+Worker:
+    Print "worker"
+    Return
+End Sub
+</code></pre>
+<h2 id="on-error-and-resume-next">On Error and Resume Next</h2>
+<pre><code class="language-xpscript">Sub Main()
+    On Error Resume Next
+    Error 1001, "example"
+    Print "continued"
+End Sub
+</code></pre>
+<h2 id="error">Error</h2>
+<pre><code class="language-xpscript">Sub Main()
+    On Error GoTo Handler
+    Error 1001, "example"
+    Exit Sub
+Handler:
+    Print CStr(Err)
+    Print Error$
+End Sub
+</code></pre>
+<h2 id="with">With</h2>
+<pre><code class="language-xpscript">Class Person
+    Public Name As String
+End Class
+Sub Main()
+    Dim p As Person
+    Set p = New Person()
+    With p
+        .Name = "Kalle"
+        Print .Name
+    End With
+End Sub
+</code></pre>
+<h2 id="redim">ReDim</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim values() As String
+    ReDim values(2)
+    values(0) = "A"
+    Print values(0)
+End Sub
+</code></pre>
+<h2 id="redim-preserve">ReDim Preserve</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim values() As String
+    ReDim values(1)
+    values(0) = "A"
+    ReDim Preserve values(2)
+    Print values(0)
+End Sub
+</code></pre>
+<h2 id="erase">Erase</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim values() As String
+    ReDim values(2)
+    Erase values
+    Print "array erased"
+End Sub
+</code></pre>
+<h2 id="set-and-new">Set and New</h2>
+<pre><code class="language-xpscript">Class Person
+    Public Name As String
+End Class
+Sub Main()
+    Dim p As Person
+    Set p = New Person()
+    p.Name = "Kalle"
+    Print p.Name
+End Sub
+</code></pre>
+<p>For string, date, array, filesystem, JSON, HTTP, process and other built-in functions, use <a href="../commands/">commands.md</a>. Each reference entry links to a repository sample that exercises that API.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

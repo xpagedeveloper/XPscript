@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Documentation Rules | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="documentation-rules">Documentation rules</h1>
+<p>This file defines how XPScript documentation must be maintained. Treat it as part of the project contract whenever language syntax, runtime APIs, web behavior, UI APIs or command-line options change.</p>
+<p>All user-facing documentation in <code>docs/</code> must be written in English.</p>
+<h2 id="required-top-level-documents">Required top-level documents</h2>
+<p>The primary documentation entry points are:</p>
+<ul>
+<li><code>index.md</code>, overview and navigation.</li>
+<li><code>getting-started.md</code>, build, compile, run and hosting setup.</li>
+<li><code>language.md</code>, BASIC language guide.</li>
+<li><code>language-reference.md</code>, complete language statement, built-in scalar function and process-command reference.</li>
+<li><code>file-io-reference.md</code>, complete file I/O, filesystem, metadata and locking command reference.</li>
+<li><code>native-interop-reference.md</code>, complete native declaration selectors plus managed/native reference directives.</li>
+<li><code>cli-reference.md</code>, complete compiler, Kestrel, FastCGI and WebIIS command-line reference.</li>
+<li><code>api-reference.md</code>, complete searchable runtime-object API reference.</li>
+<li><code>commands.md</code>, compact compatibility/quick command index.</li>
+<li><code>command-examples.md</code>, small runnable examples for common core language commands.</li>
+<li><code>date-time.md</code>, Date/date-time command details.</li>
+<li><code>evaluate.md</code>, Evaluate behavior.</li>
+<li><code>classes.md</code>, classes/types/object model.</li>
+<li><code>web.md</code> and <code>rest-api.md</code>, web runtime, routing, state and REST behavior.</li>
+<li><code>uiform.md</code> and <code>uiform-fields.md</code>, UIForm/UIListView behavior and controls.</li>
+<li><code>documentation-rules.md</code>, this maintenance contract.</li>
+<li><code>../demo/README.md</code>, runnable feature/application demonstrations.</li>
+</ul>
+<p>Do not create a new page for every small feature. Extend the appropriate reference or topical page unless the subject is large enough to need its own navigable page. File I/O, native interop and the compiler/host CLI are intentionally separated because each surface is large and independently searchable.</p>
+<h2 id="source-of-truth">Source of truth</h2>
+<p>Documentation must describe implemented behavior. Verify syntax and parameters against compiler/runtime source and executable tests before documenting them. Do not invent LotusScript-compatible functions simply because a similarly named function exists elsewhere.</p>
+<p>Implementation checklists under <code>todo/</code> may be used to discover implemented areas, but compiler/runtime source and executable regressions remain authoritative for syntax and behavior.</p>
+<h2 id="required-commandapi-entry-format">Required command/API entry format</h2>
+<p>Every user-callable command, built-in function, runtime method/property, route rule or compiler command that belongs in a reference must have these five fields:</p>
+<ol>
+<li><strong>Title/member name</strong>, using the documented spelling.</li>
+<li><strong>Syntax</strong>, showing the accepted call/statement form.</li>
+<li><strong>Parameters</strong>, naming each argument/option and briefly stating what it controls. Use <code>none</code> when there are no parameters.</li>
+<li><strong>Description/behavior</strong>, a short statement of what the command does. Include return behavior when it is important to using the command correctly.</li>
+<li><strong>Example</strong>, linking to a complete <code>.xps</code> file under <code>demo/</code> or <code>samples/</code> that can be copied and compiled.</li>
+</ol>
+<p>Reference ownership is explicit:</p>
+<ul>
+<li><code>language-reference.md</code> owns language statements, built-in scalar functions and process commands.</li>
+<li><code>file-io-reference.md</code> owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands.</li>
+<li><code>native-interop-reference.md</code> owns <code>Declare ... Lib</code>, every OS/RID-specific <code>Lib</code>/<code>Alias</code> selector, <code>Reference</code> and <code>ReferenceNative</code>.</li>
+<li><code>cli-reference.md</code> owns compiler, Kestrel, FastCGI and WebIIS command-line commands/options.</li>
+<li><code>api-reference.md</code> owns runtime objects such as HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web state.</li>
+</ul>
+<p>Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.</p>
+<h2 id="when-a-language-command-changes">When a language command changes</h2>
+<p>For every new command, language statement, built-in function or operator family, update <code>language-reference.md</code>. For every new file I/O, locking, file metadata or filesystem command, update <code>file-io-reference.md</code>. For every new native declaration selector or managed/native reference directive, update <code>native-interop-reference.md</code>. For every new compiler/host CLI command or option, update <code>cli-reference.md</code>. Keep <code>commands.md</code> in sync when the command belongs in the compact index. If it is a common core statement, also add or update a minimal runnable program in <code>command-examples.md</code>.</p>
+<h2 id="when-a-runtime-api-changes">When a runtime API changes</h2>
+<p>For every new public runtime object, method, property, route/binding rule or response/state helper, update <code>api-reference.md</code> using the five-field format. Also update the relevant topical page for behavior that needs more explanation, limits, security guidance or platform boundaries.</p>
+<p>Examples:</p>
+<ul>
+<li>HTTP/JSON: <code>http-client.md</code> plus <code>api-reference.md</code>.</li>
+<li>SQLite/SQL Server/HTTP DB: database topical page plus <code>api-reference.md</code>.</li>
+<li>XPAi/AITool/session memory: <code>ai.md</code>, <code>ai-tools-sessions.md</code> and <code>api-reference.md</code>.</li>
+<li>UIForm/UIListView: <code>uiform.md</code>, <code>uiform-fields.md</code> and <code>api-reference.md</code>.</li>
+<li>Web/REST/Session/Application/RequestScope: <code>web.md</code>, <code>rest-api.md</code> and <code>api-reference.md</code>.</li>
+</ul>
+<h2 id="when-a-web-feature-changes">When a web feature changes</h2>
+<p>Update <code>web.md</code> for route rules, Request/Response/Session/Application members, HTTP methods, precompile/cache semantics, CGI variables, security behavior or transport-independent behavior. Update <code>rest-api.md</code> for REST binding/validation/response helpers. Update <code>getting-started.md</code> when host configuration changes and <code>cli-reference.md</code> when a host command/option changes.</p>
+<h2 id="when-ui-changes">When UI changes</h2>
+<p>Update <code>uiform.md</code> or <code>uiform-fields.md</code> whenever UIForm/UIListView APIs, field types, layout, desktop behavior, web behavior, browser-WASM behavior, Bootstrap version or rendering semantics change. Examples must compile with the current language.</p>
+<h2 id="demo-catalog">Demo catalog</h2>
+<p><code>demo/</code> is the user-facing feature demonstration tree. It is intentionally different from <code>samples/</code>:</p>
+<ul>
+<li><code>demo/</code> contains short programs intended to be run by a developer evaluating or demonstrating XPScript.</li>
+<li><code>samples/</code> contains regression/compatibility programs and may exercise many edge cases in one file.</li>
+</ul>
+<p>Every <code>.xps</code> file under <code>demo/</code> must be listed in <code>demo/README.md</code> with the command/environment needed to run it. Add a new demo when a new application/runtime type is introduced or when an important integration has no simple demonstration.</p>
+<h2 id="examples">Examples</h2>
+<p>Examples must be executable, minimal and focused on the documented behavior. Use <code>.xps</code> syntax exactly as accepted by the compiler. Prefer a matching file under <code>demo/</code> for user-facing walkthroughs and an existing tested file under <code>samples/</code> for low-level API reference coverage.</p>
+<p>A documentation table must not link to an invented or future example filename. CI validates <code>.xps</code> links in all primary reference files.</p>
+<h2 id="ci-validation">CI validation</h2>
+<p><code>scripts/validate-docs-demos.ps1</code> validates the documentation/demo contract. The required PR gate must run it before restore/build. The validator checks:</p>
+<ul>
+<li>the primary language, file-I/O, interop, CLI and runtime reference files exist;</li>
+<li>reference rows contain the required fields and an <code>.xps</code> example link;</li>
+<li>every referenced <code>demo/</code> or <code>samples/</code> <code>.xps</code> file exists;</li>
+<li>high-risk/easy-to-miss command families remain present in the master references;</li>
+<li>every <code>demo/**/*.xps</code> program appears in <code>demo/README.md</code>.</li>
+</ul>
+<p>Relevant standalone demos should also be compiler-checked in CI so documentation drift cannot silently leave copyable examples syntactically invalid.</p>
+<h2 id="links-and-navigation">Links and navigation</h2>
+<p><code>index.md</code> is the documentation entry point. The demo catalog and all primary references must be visible near the top of that page. Every primary topical page must be reachable from <code>index.md</code>.</p>
+<h2 id="review-checklist">Review checklist</h2>
+<p>Before merging a documentation change, verify that names and casing match source, examples compile where CI coverage exists, parameters match current CLI/runtime code, reference/example links resolve, obsolete behavior has been removed, and the documentation does not claim unimplemented compatibility.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

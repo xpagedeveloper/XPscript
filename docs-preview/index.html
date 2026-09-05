@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>XPScript Documentation | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+</style></head> <body> <header class="site-header"> <a class="brand" href="./">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="./">Overview</a> <a href="getting-started/">Getting Started</a> <a href="language/">Language</a> <a href="functions/">Functions</a> <a href="language-reference/">Language Reference</a> <a href="api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">  <h1 id="xpscript-documentation">XPScript documentation</h1>
+<p>XPScript is a BASIC-style programming language implemented on .NET 10. Source files use the <code>.xps</code> extension. The same language can be compiled into normal applications, executed directly from the command line, hosted as web routes through Kestrel, FastCGI or CGI, packaged directly for IIS, and used with the shared UIForm model for desktop and web interfaces.</p>
+<h2 id="start-here">Start here</h2>
+<ul>
+<li><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/README.md">Runnable demo catalog</a>: small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.</li>
+<li><a href="language-reference/">Language and built-in command reference</a>: statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete <code>.xps</code> example.</li>
+<li><a href="application-reference/">Application and state reference</a>: complete <code>Application</code> runtime aliases/UI metadata plus <code>Application.State</code>, <code>Process.State</code>, <code>Session.State</code> and <code>Request.State</code>.</li>
+<li><a href="file-io-reference/">File and filesystem command reference</a>: complete file I/O, metadata, filesystem and locking command catalog, including <code>Seek</code>, <code>Loc</code>, <code>LOF</code> and <code>Reset</code>.</li>
+<li><a href="desktop-ui-reference/">Desktop UI command reference</a>: <code>MsgBox</code>, desktop choice/input dialogs and native open/save file dialogs.</li>
+<li><a href="database-ui-datasources/">Database UI data sources</a>: <code>QueryArray</code>, <code>GetRow</code>, <code>SaveRow</code> and shared <code>XPJsonObject</code> binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.</li>
+<li><a href="native-interop-reference/">Native and managed interop reference</a>: native declarations plus every OS/RID-specific <code>Lib</code>/<code>Alias</code> selector and managed/native dependency directive.</li>
+<li><a href="cli-reference/">Compiler and host CLI reference</a>: <code>xpscriptc</code>, Kestrel, FastCGI and WebIIS commands/options.</li>
+<li><a href="api-reference/">Runtime API reference</a>: HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.</li>
+<li><a href="commands/">Compact command index</a>: the older compact overview. Use the references above for the complete searchable catalog.</li>
+</ul>
+<h2 id="documentation-map">Documentation map</h2>
+<ol>
+<li><a href="getting-started/">Getting started</a>, install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.</li>
+<li><a href="language/">Programming language</a>, syntax, variables, procedures, control flow, types and coding rules.</li>
+<li><a href="language-reference/">Language and built-in command reference</a>, the primary language/built-in catalog with parameters and executable examples.</li>
+<li><a href="application-reference/">Application and state reference</a>, complete executable/runtime path aliases, UI metadata and state-scope API.</li>
+<li><a href="file-io-reference/">File and filesystem command reference</a>, complete file handles, text/binary I/O, positioning, reset, locking, metadata and filesystem commands.</li>
+<li><a href="desktop-ui-reference/">Desktop UI command reference</a>, <code>MsgBox</code>, <code>ShowDialog</code> and desktop file pickers.</li>
+<li><a href="database-ui-datasources/">Database UI data sources</a>, complete list/row/document JSON binding and native save semantics for UIListView and shared UIForm data.</li>
+<li><a href="native-interop-reference/">Native and managed interop reference</a>, complete native target selectors and reference directives.</li>
+<li><a href="cli-reference/">Compiler and host CLI reference</a>, complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.</li>
+<li><a href="api-reference/">Runtime API reference</a>, HTTP/JSON/database/AI/UI/web runtime members with parameters and executable examples.</li>
+<li><a href="commands/">Compact command index</a>, a concise compatibility overview.</li>
+<li><a href="command-examples/">Core command examples</a>, minimal copy/paste examples for common language constructs.</li>
+<li><a href="date-time/">Date and time</a>, date functions, Date object enhancements and OS formatting metadata.</li>
+<li><a href="evaluate/">Evaluate</a>, dynamic XPScript evaluation.</li>
+<li><a href="classes/">Classes</a>, classes, constructors, properties, object references and module state.</li>
+<li><a href="web/">Web programming</a>, routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.</li>
+<li><a href="rest-api/">REST API development</a>, explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.</li>
+<li><a href="csrf/">CSRF protection</a>, automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.</li>
+<li><a href="webiis/">WebIIS deployment target</a>, build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.</li>
+<li><a href="iis-hosting/">Hosting on IIS</a>, alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.</li>
+<li><a href="uiform/">UIForm</a>, shared form API for desktop and web, including the web Bootstrap grid.</li>
+<li><a href="uiform-fields/">Extended UIForm fields</a>, file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.</li>
+<li><a href="http-client/">HTTP client</a>, outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.</li>
+<li><a href="httpdb/">HTTP database clients</a>, Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.</li>
+<li><a href="sqlite/">SQLite database</a>, local parameterized SQL, JSON query results, transactions and file-path boundaries.</li>
+<li><a href="mssql/">SQL Server database</a>, SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.</li>
+<li><a href="ai/">XPAi client</a>, OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.</li>
+<li><a href="ai-tools-sessions/">XPAi tools and session memory</a>, AITool schemas/callbacks, automatic tool execution and provider session continuation.</li>
+<li><a href="browser-wasm/">Browser WebAssembly</a>, browser UIForm hosting, WASM compilation/cache and browser runtime behavior.</li>
+<li><a href="documentation-rules/">Documentation rules</a>, the required structure and CI validation for command/API documentation and demos.</li>
+</ol>
+<h2 id="how-xpscript-runs">How XPScript runs</h2>
+<p>A normal program starts in <code>Sub Main()</code> or, when applicable, <code>Sub Initialize()</code>. The compiler translates XPScript into a .NET application. A compiled application does not need the compiler source tree at runtime. Deploy the complete publish output for the selected target.</p>
+<p>A web application is a directory of <code>.xps</code> files. The web dispatcher maps request paths to files and exported procedures. <code>/</code>, <code>/index</code> and <code>/index.xps</code> resolve to the same default route when <code>index.xps</code> is the configured default document. Route matching and precompile cache keys are normalized independently of URL spelling.</p>
+<p>A WebIIS application uses <code>main.xps</code> as its application entry file and can be packaged with:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis</span></span></code></pre>
+<h2 id="minimal-program">Minimal program</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Print "Hello from XPScript"
+End Sub
+</code></pre>
+<p>Compile it with:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscriptc hello.xps -o hello</span></span></code></pre>
+<p>For a feature tour, start with the <a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/README.md">demo catalog</a>. For lookup use <a href="language-reference/">language-reference.md</a>, <a href="application-reference/">application-reference.md</a>, <a href="file-io-reference/">file-io-reference.md</a>, <a href="desktop-ui-reference/">desktop-ui-reference.md</a>, <a href="database-ui-datasources/">database-ui-datasources.md</a>, <a href="native-interop-reference/">native-interop-reference.md</a>, <a href="cli-reference/">cli-reference.md</a>, or <a href="api-reference/">api-reference.md</a> according to the command family. The topical pages then provide deeper behavior, security and deployment guidance.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

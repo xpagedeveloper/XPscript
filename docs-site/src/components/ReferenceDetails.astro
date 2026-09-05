@@ -1,0 +1,111 @@
+---
+import type { DocEntry } from "../lib/docs";
+import { displayAccess } from "../lib/docs";
+import "../styles/reference.css";
+
+interface Props {
+  entry: DocEntry;
+}
+
+const { entry } = Astro.props;
+const data = entry.data;
+const isReference = data.type === "function" || data.type === "object" || data.type === "property";
+const parameters = data.parameters ?? [];
+const showParameterTypes = parameters.some((parameter) => Boolean(parameter.type));
+const exampleUrl = data.example
+  ? `https://github.com/xpagedeveloper/XPscript/blob/main${data.example}`
+  : null;
+const exampleName = data.example?.split("/").filter(Boolean).at(-1);
+const access = displayAccess(data.access);
+---
+{isReference && (
+  <section class="reference-details" aria-label="Reference details">
+    <dl class="reference-meta">
+      <div>
+        <dt>Kind</dt>
+        <dd>{data.type}</dd>
+      </div>
+      {data.category && (
+        <div>
+          <dt>Category</dt>
+          <dd>{data.category}</dd>
+        </div>
+      )}
+      {data.object && (
+        <div>
+          <dt>Object</dt>
+          <dd>{data.object}</dd>
+        </div>
+      )}
+      {data.returnType && (
+        <div>
+          <dt>Returns</dt>
+          <dd><code>{data.returnType}</code></dd>
+        </div>
+      )}
+      {data.dataType && (
+        <div>
+          <dt>Data type</dt>
+          <dd><code>{data.dataType}</code></dd>
+        </div>
+      )}
+      {access && (
+        <div>
+          <dt>Access</dt>
+          <dd>{access}</dd>
+        </div>
+      )}
+    </dl>
+
+    {data.syntax && (
+      <>
+        <h2>Syntax</h2>
+        <pre><code class="language-xpscript">{data.syntax}</code></pre>
+      </>
+    )}
+
+    {data.type === "function" && (
+      <>
+        <h2>Parameters</h2>
+        {parameters.length > 0 ? (
+          <div class="reference-table-wrap">
+            <table class="reference-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  {showParameterTypes && <th>Type</th>}
+                  <th>Required</th>
+                  <th>Description</th>
+                  <th>Default</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parameters.map((parameter) => (
+                  <tr>
+                    <td><code>{parameter.name}</code></td>
+                    {showParameterTypes && <td>{parameter.type ? <code>{parameter.type}</code> : ""}</td>}
+                    <td>{parameter.required ? "Yes" : "No"}</td>
+                    <td>{parameter.description}</td>
+                    <td>{Object.prototype.hasOwnProperty.call(parameter, "default") ? String(parameter.default) : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p>None.</p>
+        )}
+      </>
+    )}
+
+    {exampleUrl && (
+      <>
+        <h2>Example</h2>
+        <p>
+          <a href={exampleUrl}>{exampleName}</a>
+          {" "}is the complete runnable example used by the reference.
+        </p>
+      </>
+    )}
+  </section>
+)}

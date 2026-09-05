@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Csrf | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="csrf-protection">CSRF protection</h1>
+<p>XPScript has built-in CSRF protection for browser requests that use Session or other cookies. The protection applies before REST binding and before the target XPScript route is invoked.</p>
+<p>CSRF protection applies to unsafe HTTP methods:</p>
+<ul>
+<li><code>POST</code></li>
+<li><code>PUT</code></li>
+<li><code>PATCH</code></li>
+<li><code>DELETE</code></li>
+</ul>
+<p>A request that fails CSRF validation receives HTTP 403 with <code>application/problem+json</code>. The route procedure is not executed.</p>
+<h2 id="uiform">UIForm</h2>
+<p>Server-rendered UIForm forms are protected automatically. XPScript adds a hidden field named <code>__xps_csrf</code> when an active Session is available.</p>
+<p>Normal UIForm code does not need to create or validate the token manually:</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim form As New UIForm("Customer")
+    Call form.AddTextField("name", "Name")
+    Call form.AddEmailField("email", "Email")
+    Call form.ShowDialog()
+End Sub
+</code></pre>
+<p>When the form is posted with the session cookie, the dispatcher validates the token before the route runs.</p>
+<h2 id="manually-rendered-html-forms">Manually rendered HTML forms</h2>
+<p>For a form that you render yourself, obtain the current session-bound token from <code>Server.CsrfToken()</code> and submit it as <code>__xps_csrf</code>.</p>
+<pre><code class="language-xpscript">Dim token As String
+token = Server.CsrfToken()
+
+Response.Write("&#x3C;form method=\"post\">")
+Response.Write("&#x3C;input type=\"hidden\" name=\"__xps_csrf\" value=\"" &#x26; Server.HtmlEncode(token) &#x26; "\">")
+Response.Write("&#x3C;input type=\"text\" name=\"name\">")
+Response.Write("&#x3C;button type=\"submit\">Save&#x3C;/button>")
+Response.Write("&#x3C;/form>")
+</code></pre>
+<p><code>Server.CsrfToken()</code> requires an active Session. Do not generate your own CSRF token and do not store a fixed token in source code or configuration.</p>
+<h2 id="custom-browser-rest-requests">Custom browser REST requests</h2>
+<p>For browser code that sends an unsafe request using the session cookie, send the token in the <code>X-XPS-CSRF-Token</code> header.</p>
+<p>A server-rendered page can expose the token to its own same-origin JavaScript through a meta element:</p>
+<pre><code class="language-xpscript">Dim token As String
+token = Server.CsrfToken()
+Response.Write("&#x3C;meta name=\"xps-csrf-token\" content=\"" &#x26; Server.HtmlEncode(token) &#x26; "\">")
+</code></pre>
+<p>The browser request can then send it:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> token</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'meta[name="xps-csrf-token"]'</span><span style="color:#E1E4E8">).content;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">await</span><span style="color:#B392F0"> fetch</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'/api/customer/42'</span><span style="color:#E1E4E8">, {</span></span>
+<span class="line"><span style="color:#E1E4E8">  method: </span><span style="color:#9ECBFF">'PATCH'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  credentials: </span><span style="color:#9ECBFF">'same-origin'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  headers: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    'Content-Type'</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">'application/json'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    'X-XPS-CSRF-Token'</span><span style="color:#E1E4E8">: token</span></span>
+<span class="line"><span style="color:#E1E4E8">  },</span></span>
+<span class="line"><span style="color:#E1E4E8">  body: </span><span style="color:#79B8FF">JSON</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">stringify</span><span style="color:#E1E4E8">({ name: </span><span style="color:#9ECBFF">'Example'</span><span style="color:#E1E4E8"> })</span></span>
+<span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
+<p>The header name is <code>X-XPS-CSRF-Token</code>. The hidden form field name is <code>__xps_csrf</code>.</p>
+<h2 id="browser-webassembly">Browser WebAssembly</h2>
+<p>The XPScript browser-WASM <code>XPHttpClient</code> handles the CSRF token flow automatically for unsafe same-origin requests.</p>
+<p>The first unsafe request can receive HTTP 403 together with a fresh <code>X-XPS-CSRF-Token</code> response header. The browser-WASM client retains that token for the request flow and retries the request once with the token header. The Session cookie remains HttpOnly and is not read by WebAssembly code.</p>
+<p>Normal browser-WASM code therefore uses the ordinary HTTP API:</p>
+<pre><code class="language-xpscript">Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
+
+Call payload.Set("name", "Example")
+Set result = http.PatchJson("/api/customer/42", payload)
+</code></pre>
+<p>Do not add a second CSRF implementation around the built-in browser-WASM client unless you intentionally replace the XPScript HTTP transport.</p>
+<h2 id="rest-api-and-bearer-tokens">REST API and bearer tokens</h2>
+<p>CSRF protects browser credentials that are attached automatically, especially cookies. A bearer-only API request with no cookies does not require a CSRF token.</p>
+<p>For example, a non-browser API client using only:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Authorization: Bearer &#x3C;token></span></span></code></pre>
+<p>is not rejected for missing CSRF when no cookies are present.</p>
+<p>If a request includes session cookies, treat it as cookie-authenticated browser traffic and send the CSRF token for unsafe methods.</p>
+<h2 id="token-properties">Token properties</h2>
+<p>The XPScript token is bound to the active Session and site. The runtime derives it using HMAC-SHA-256 and a per-runtime secret. Validation uses a fixed-time comparison.</p>
+<p>Applications should treat the token as opaque. Do not parse it, modify it or depend on its encoded length or internal format.</p>
+<h2 id="failure-response">Failure response</h2>
+<p>Missing or invalid tokens return HTTP 403. XPScript returns Problem Details and does not invoke the target route.</p>
+<p>The response also uses <code>Cache-Control: no-store</code>. For browser-WASM challenge handling, XPScript can return a fresh token in the <code>X-XPS-CSRF-Token</code> response header.</p>
+<h2 id="xss-interaction">XSS interaction</h2>
+<p>CSRF tokens do not protect against XSS. If an attacker can execute JavaScript in your origin, that script can usually read a token exposed to browser JavaScript and make same-origin requests.</p>
+<p>Keep dynamic HTML encoded with <code>Server.HtmlEncode()</code>. Prefer UIForm controls, JSON response helpers and DOM text APIs instead of concatenating untrusted HTML.</p>
+<p>XPScript also emits web security headers including <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code> and a Content Security Policy for HTML responses.</p>
+<h2 id="practical-rules">Practical rules</h2>
+<ol>
+<li>Use UIForm normally. Its CSRF field is automatic.</li>
+<li>For manually rendered HTML forms, include <code>Server.CsrfToken()</code> as <code>__xps_csrf</code>.</li>
+<li>For custom same-origin JavaScript using Session cookies, send <code>X-XPS-CSRF-Token</code>.</li>
+<li>For XPScript browser-WASM <code>XPHttpClient</code>, use the normal methods. Challenge/retry is automatic.</li>
+<li>Bearer-only requests without cookies do not need CSRF.</li>
+<li>Never disable authorization, role checks or input validation because CSRF protection is enabled.</li>
+</ol>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

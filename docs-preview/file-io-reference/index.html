@@ -1,0 +1,434 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>File Io Reference | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="file-and-filesystem-command-reference">File and filesystem command reference</h1>
+<p>This is the complete reference for XPScript file I/O and filesystem commands. Each entry includes syntax, parameters, behavior, and a complete <code>.xps</code> program that can be copied and compiled.</p>
+<p>For broader compatibility notes, also see the repository <a href="https://github.com/xpagedeveloper/XPscript/blob/main/COMPATIBILITY.md">compatibility matrix</a>.</p>
+<h2 id="file-handles-and-text-io">File handles and text I/O</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>FreeFile</code></td><td><code>FreeFile()</code></td><td>none</td><td>Returns an available XPScript file number.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Open</code></td><td><code>Open path For mode As #number [Len = recordLength]</code></td><td><code>path</code>: file path; <code>mode</code>: <code>Input</code>, <code>Output</code>, <code>Append</code>, <code>Binary</code>, or <code>Random</code>; <code>number</code>: file number; <code>recordLength</code>: optional Random record size.</td><td>Opens a file using the requested access mode.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-portability.xps">file-io-portability.xps</a></td></tr><tr><td><code>Open ... Charset</code></td><td>`Open path For Input</td><td>Output</td><td>Append As #number Charset charset [Encoding transferEncoding]`</td><td><code>charset</code>: text encoding such as <code>utf-8</code>; <code>transferEncoding</code>: optional <code>base64</code>; other arguments are the normal <code>Open</code> arguments.</td></tr><tr><td><code>Close</code></td><td><code>Close [#number]</code></td><td>optional <code>number</code>: one open file number.</td><td>Closes the selected file. With no number, closes all currently open XPScript file numbers.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Reset</code></td><td><code>Reset</code></td><td>none</td><td>Flushes and closes all currently open XPScript file numbers. It is equivalent to <code>Close</code> without a file number and makes those numbers available to <code>FreeFile</code> again.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">file-position-reset.xps</a></td></tr><tr><td><code>Print #</code></td><td><code>Print #number, value</code></td><td><code>number</code>: output file number; <code>value</code>: text/value to write.</td><td>Writes a line to a sequential output/append file.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/textio-console.xps">textio-console.xps</a></td></tr><tr><td><code>Write #</code></td><td><code>Write #number, value [, value ...]</code></td><td><code>number</code>: output file number; <code>value</code>: one or more values.</td><td>Writes comma-separated, type-aware sequential data suitable for <code>Input #</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Line Input #</code></td><td><code>Line Input #number, variable</code></td><td><code>number</code>: input file number; <code>variable</code>: String/Variant target.</td><td>Reads one complete text line from a sequential input file.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Input #</code></td><td><code>Input #number, variable</code></td><td><code>number</code>: input file number; <code>variable</code>: target variable.</td><td>Reads the next delimited sequential value from an input file.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Input$</code></td><td><code>Input$(count, #number)</code></td><td><code>count</code>: requested character/byte count according to the file mode; <code>number</code>: input file number.</td><td>Reads a fixed amount of content from an open file.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>EOF</code></td><td><code>EOF(number)</code></td><td><code>number</code>: input file number.</td><td>Returns <code>True</code> when the current input file has no more data to read.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>LOF</code></td><td><code>LOF(number)</code></td><td><code>number</code>: open file number.</td><td>Returns the length of the open file in bytes.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">file-position-reset.xps</a></td></tr><tr><td><code>Seek</code></td><td><code>Seek(number)</code></td><td><code>number</code>: open file number.</td><td>Returns the current one-based byte position for sequential/Binary files, or the current one-based record position for Random files.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">file-position-reset.xps</a></td></tr><tr><td><code>Seek</code> statement</td><td><code>Seek #number, position</code></td><td><code>number</code>: open file number; <code>position</code>: one-based byte position, or Random record position.</td><td>Moves the current file position. Reader buffers are discarded and writer buffers are flushed before repositioning.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">file-position-reset.xps</a></td></tr><tr><td><code>Loc</code></td><td><code>Loc(number)</code></td><td><code>number</code>: open file number.</td><td>Returns the current logical location. Binary/Random mode reports the most recent logical record/location; sequential mode follows XPScript compatibility block semantics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">file-position-reset.xps</a></td></tr></tbody></table>
+<h2 id="binary-random-and-locking">Binary, Random, and locking</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Put</code></td><td><code>Put #number, position, value</code></td><td><code>number</code>: Binary/Random file number; <code>position</code>: byte/record position, or omitted position where supported; <code>value</code>: data to write.</td><td>Writes binary or Random-mode data.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Get</code></td><td><code>Get #number, position, variable</code></td><td><code>number</code>: Binary/Random file number; <code>position</code>: byte/record position; <code>variable</code>: destination.</td><td>Reads binary or Random-mode data.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Lock</code></td><td><code>Lock #number [, start [To end]]</code></td><td><code>number</code>: Binary/Random file number; <code>start</code>/<code>end</code>: optional byte or record range.</td><td>Acquires an OS-backed file or range lock.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr><tr><td><code>Unlock</code></td><td><code>Unlock #number [, start [To end]]</code></td><td><code>number</code>: file number; <code>start</code>/<code>end</code>: range previously locked.</td><td>Releases an OS-backed file or range lock.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">file-io-extensions.xps</a></td></tr></tbody></table>
+<h2 id="file-metadata-and-filesystem-operations">File metadata and filesystem operations</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>FileLen</code></td><td><code>FileLen(path)</code></td><td><code>path</code>: file path.</td><td>Returns the file length in bytes using XPScript’s portable filesystem runtime.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-portability.xps">file-io-portability.xps</a></td></tr><tr><td><code>FileDateTime</code></td><td><code>FileDateTime(path)</code></td><td><code>path</code>: file path.</td><td>Returns the file’s last-write date/time.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>GetFileAttr</code></td><td><code>GetFileAttr(fullPath)</code></td><td><code>fullPath</code>: existing file or directory path.</td><td>Returns the platform file-attribute bit mask. Multiple bits may be set at once. See the attribute list below.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>SetFileAttr</code></td><td><code>SetFileAttr path, attributes</code> or <code>SetFileAttr(path, attributes)</code></td><td><code>path</code>: file path; <code>attributes</code>: attribute bit mask.</td><td>Changes supported file attributes. Platform limitations are reported explicitly.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>FileCopy</code></td><td><code>FileCopy source, destination</code></td><td><code>source</code>: existing file; <code>destination</code>: target path.</td><td>Copies a file with XPScript’s cross-platform safety and metadata behavior.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-portability.xps">file-io-portability.xps</a></td></tr><tr><td><code>Kill</code></td><td><code>Kill path</code></td><td><code>path</code>: file to delete.</td><td>Deletes a file using the portable filesystem runtime.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>Name</code></td><td><code>Name oldPath As newPath</code></td><td><code>oldPath</code>: current file path; <code>newPath</code>: destination path.</td><td>Renames or moves a file using target-filesystem semantics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>MkDir</code></td><td><code>MkDir path</code></td><td><code>path</code>: directory to create.</td><td>Creates a directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>RmDir</code></td><td><code>RmDir path</code></td><td><code>path</code>: empty directory to remove.</td><td>Removes an empty directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>ChDir</code></td><td><code>ChDir path</code></td><td><code>path</code>: directory path.</td><td>Changes the process current directory using target-OS path semantics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/filesystem-portability-semantics.xps">filesystem-portability-semantics.xps</a></td></tr><tr><td><code>ChDrive</code></td><td><code>ChDrive drive</code></td><td><code>drive</code>: Windows drive specifier.</td><td>Changes the current drive on Windows. Other platforms report explicit unsupported behavior.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-portability.xps">file-io-portability.xps</a></td></tr><tr><td><code>IsFile</code></td><td><code>IsFile(path)</code></td><td><code>path</code>: filesystem path.</td><td>Returns <code>True</code> when the path exists and is a file; otherwise <code>False</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-platform-semantics.xps">file-io-platform-semantics.xps</a></td></tr><tr><td><code>IsDir</code></td><td><code>IsDir(path)</code></td><td><code>path</code>: filesystem path.</td><td>Returns <code>True</code> when the path exists and is a directory; otherwise <code>False</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-platform-semantics.xps">file-io-platform-semantics.xps</a></td></tr><tr><td><code>Dir</code></td><td><code>Dir([pattern] [, mode [, maxDepth]])</code></td><td>optional <code>pattern</code>: path/search mask. optional <code>mode</code>: omitted or <code>0</code> = files and directories in the current directory level; <code>1</code> = files only in the current level; <code>2</code> = directories only in the current level; <code>3</code> = files recursively. optional <code>maxDepth</code>: recursion depth for mode <code>3</code>, default <code>3</code>, valid <code>0..32</code>. Depth <code>0</code> searches only the starting directory, <code>1</code> includes one subdirectory level, and so on. Call <code>Dir()</code> again to continue the current enumeration.</td><td>Enumerates filesystem entries using target-filesystem matching semantics. <code>.</code> and <code>..</code> are always excluded. Mode <code>3</code> is bounded, skips reparse-point/symbolic-link directories, and returns paths relative to the searched directory so nested files retain their subdirectory path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-platform-semantics.xps">file-io-platform-semantics.xps</a></td></tr></tbody></table>
+<p>| <code>FileInfo</code> | <code>FileInfo(path)</code> | <code>path</code>: existing file or directory. | Returns a metadata object with <code>Name</code>, <code>FullPath</code>, <code>Extension</code>, <code>Length</code>, <code>Created</code>, <code>Modified</code>, <code>Accessed</code>, <code>IsFile</code>, <code>IsDirectory</code>, <code>IsLink</code>, and <code>Attributes</code>. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>FileHash</code> | <code>FileHash(path [, algorithm])</code> | <code>algorithm</code>: optional <code>SHA256</code> (default), <code>SHA384</code>, <code>SHA512</code>; legacy compatibility also accepts <code>SHA1</code> and <code>MD5</code>. | Streams the file and returns an uppercase hexadecimal digest. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>FileEquals</code> | <code>FileEquals(path1, path2)</code> | two file paths. | Returns <code>True</code> when files have equal length and byte-for-byte content. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>Files</code> | <code>Files(pathOrPattern [, mask [, recursive [, maxDepth]]])</code> | path/pattern, optional mask, recursive flag, optional depth <code>0..32</code> (default <code>3</code>). | Returns a String array of matching full file paths; recursive traversal skips link/reparse directories. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>Directories</code> | <code>Directories(pathOrPattern [, mask [, recursive [, maxDepth]]])</code> | path/pattern, optional mask, recursive flag, optional depth <code>0..32</code> (default <code>3</code>). | Returns a String array of matching full directory paths and works directly with <code>ForAll</code>. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>ReadFile</code> | <code>ReadFile(path [, charset])</code> | file path and optional charset. | Reads an entire text file. UTF-8 is the default; BOMs are detected. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>WriteFile</code> | <code>WriteFile path, content [, charset]</code> | path, text, optional charset. | Replaces an entire text file. Function-call syntax is also accepted. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>AppendFile</code> | <code>AppendFile path, content [, charset]</code> | path, text, optional charset. | Appends text to a file. Function-call syntax is also accepted. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>ReadLines</code> | <code>ReadLines(path [, charset])</code> | path and optional charset. | Returns a String array with one element per text line. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>WriteLines</code> | <code>WriteLines path, values [, charset]</code> | path, array/list values, optional charset. | Writes one array/list value per line. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>ReadBytes</code> | <code>ReadBytes(path)</code> | file path. | Returns the complete file as a Byte array. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |
+| <code>WriteBytes</code> | <code>WriteBytes path, values</code> | path and Byte array/array-like value. | Replaces a file with the supplied bytes. | <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-convenience.xps">file-convenience.xps</a> |</p>
+<h3 id="getfileattrfullpath-attribute-values"><code>GetFileAttr(fullPath)</code> attribute values</h3>
+<p><code>GetFileAttr</code> returns an integer bit mask. Test a specific attribute with a bitwise <code>And</code>, for example:</p>
+<pre><code class="language-xpscript">If (GetFileAttr(fullPath) And 16) &#x3C;> 0 Then
+    Print "directory"
+End If
+</code></pre>
+<p>Common attribute bits are:</p>
+<ul>
+<li><code>1</code> (<code>ReadOnly</code>) — Windows: native read-only attribute. macOS/Linux: may be returned when the runtime/filesystem exposes a read-only attribute; Unix permission bits are not a one-to-one Windows attribute mapping.</li>
+<li><code>2</code> (<code>Hidden</code>) — Windows: native Hidden attribute. macOS/Linux: XPScript guarantees this bit when the final path component starts with <code>.</code>.</li>
+<li><code>4</code> (<code>System</code>) — Windows System attribute where supported; normally not meaningful on Unix-like filesystems.</li>
+<li><code>16</code> (<code>Directory</code>) — directory on Windows, macOS, and Linux.</li>
+<li><code>32</code> (<code>Archive</code>) — Windows Archive attribute where supported; normally not meaningful on Unix-like filesystems.</li>
+<li><code>128</code> (<code>Normal</code>) — an otherwise ordinary file/path may report Normal.</li>
+<li><code>256</code> (<code>Temporary</code>) — temporary attribute where the runtime/filesystem exposes it.</li>
+<li><code>512</code> (<code>SparseFile</code>) — sparse-file attribute where exposed.</li>
+<li><code>1024</code> (<code>ReparsePoint</code>) — Windows reparse point; on macOS/Linux .NET can use this bit for symbolic-link/reparse-style entries where exposed.</li>
+<li><code>2048</code> (<code>Compressed</code>) — compressed attribute where exposed.</li>
+<li><code>4096</code> (<code>Offline</code>) — Windows Offline attribute where supported; normally not meaningful on Unix-like filesystems.</li>
+<li><code>8192</code> (<code>NotContentIndexed</code>) — Windows indexing attribute where supported; normally not meaningful on Unix-like filesystems.</li>
+<li><code>16384</code> (<code>Encrypted</code>) — encrypted attribute where the runtime/filesystem exposes it.</li>
+</ul>
+<p>The result is a bit mask, not a single value. Windows can therefore return combinations such as <code>Directory + Hidden = 18</code>. On macOS/Linux, XPScript explicitly adds <code>Hidden (2)</code> for dot-prefixed names because hidden state is conventionally represented by the filename rather than a native Windows-style attribute. Other bits are whatever the underlying .NET runtime and filesystem report for that path; do not assume Windows-only metadata such as <code>Archive</code> or <code>System</code> exists on Unix-like systems.</p>
+<h3 id="whole-file-convenience-api">Whole-file convenience API</h3>
+<p><code>Files(...)</code>, <code>Directories(...)</code>, <code>ReadLines(...)</code>, and <code>ReadBytes(...)</code> return arrays that can be consumed directly by <code>ForAll</code>. Recursive <code>Files</code>/<code>Directories</code> use the same bounded-depth model as recursive <code>Dir</code>: default depth <code>3</code>, valid range <code>0..32</code>, and link/reparse-point directories are not traversed.</p>
+<p>Text helpers accept .NET charset names. Common names include <code>utf-8</code>, <code>utf-16</code>, <code>utf-16be</code>, <code>iso-8859-1</code>, and other ISO/code-page names available through the platform encoding provider. UTF-8 without BOM is used when charset is omitted; readers still detect BOMs.</p>
+<p><code>FileHash</code> defaults to SHA-256. SHA-384 and SHA-512 are recommended alternatives. SHA-1 and MD5 are available only for compatibility with legacy file manifests and should not be chosen for security-sensitive integrity checks.</p>
+<h3 id="dir-mode-examples"><code>Dir</code> mode examples</h3>
+<pre><code class="language-xpscript">Dim item As String
+
+' Omitted mode / 0: files and directories at this level.
+item = Dir("C:\\Temp\\*")
+
+' 1: files only at this level.
+item = Dir("C:\\Temp\\*", 1)
+
+' 2: directories only at this level.
+item = Dir("C:\\Temp\\*", 2)
+
+' 3: recursive files, default maximum depth 3.
+item = Dir("C:\\Temp\\*", 3)
+
+' Recursive files, but only one level below C:\\Temp.
+item = Dir("C:\\Temp\\*", 3, 1)
+
+Do While item &#x3C;> ""
+    Print item
+    item = Dir()
+Loop
+</code></pre>
+<p><code>Dir()</code> without arguments never starts a new search; it continues the most recently started <code>Dir(pattern [, mode [, maxDepth]])</code> enumeration. Mode values outside <code>0</code> through <code>3</code> are invalid. <code>maxDepth</code> values outside <code>0</code> through <code>32</code> are invalid. The <code>maxDepth</code> limit prevents accidental unbounded traversal of large roots such as <code>C:\\</code> or <code>/</code>.</p>
+<h2 id="copyable-example">Copyable example</h2>
+<p>For the broadest text/Binary/locking demonstration, copy <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-io-extensions.xps">samples/file-io-extensions.xps</a>. For file position and global handle reset, copy <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/file-position-reset.xps">samples/file-position-reset.xps</a>.</p>
+<p>Compile them with:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">xpscriptc .\samples\file</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">io</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">extensions.xps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o .\out\</span><span style="color:#79B8FF">file-io-demo.exe</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">framework</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">dependent</span></span>
+<span class="line"><span style="color:#E1E4E8">xpscriptc .\samples\file</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">position</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">reset.xps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o .\out\</span><span style="color:#79B8FF">file-position-demo.exe</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">framework</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">dependent</span></span></code></pre>
+<h2 id="copyfile-and-movefile">CopyFile and MoveFile</h2>
+<p><code>CopyFile(source, target [, action])</code> and <code>MoveFile(source, target [, action])</code> return <code>True</code> only when a file was actually copied or moved. The optional <code>action</code> defaults to <code>1</code>.</p>
+<ul>
+<li><code>1</code> = fail if the target already exists; returns <code>False</code> and leaves both files unchanged.</li>
+<li><code>2</code> = overwrite an existing target; returns <code>True</code> when the transfer succeeds.</li>
+<li><code>3</code> = skip if the target already exists; returns <code>False</code> because no transfer was performed.</li>
+</ul>
+<p>A missing source or unavailable destination directory returns <code>False</code>. Invalid action values raise runtime error 5. The legacy <code>FileCopy</code> statement remains available for compatibility and keeps its existing behavior.</p>
+<pre><code class="language-xpscript">ok = CopyFile("in.dat", "out.dat")
+ok = CopyFile("in.dat", "out.dat", 2)
+ok = MoveFile("out.dat", "archive/out.dat", 3)
+</code></pre>
+<h2 id="path-object">Path object</h2>
+<p><code>Path</code> is an instance object. The path is supplied once when the object is created and all methods operate on that stored path.</p>
+<pre><code class="language-xpscript">p = New Path("src/test/data.json")
+Print p.FileName()
+Print p.FileNameWithoutExtension()
+Print p.Extension()
+Print p.Directory()
+Print p.Root()
+Print p.Normalize()
+Print p.Absolute()
+Print p.Relative("src/test/archive.json")
+Print p.ChangeExtension(".xml")
+Print p.IsAbsolute()
+Print p.Exists()
+Print p.Combine("child.txt")
+</code></pre>
+<p>Methods:</p>
+<ul>
+<li><code>FileName()</code> returns the final file or directory name.</li>
+<li><code>FileNameWithoutExtension()</code> removes the final extension.</li>
+<li><code>Extension()</code> returns the extension including the leading dot, or an empty string.</li>
+<li><code>Directory()</code> returns the absolute parent directory.</li>
+<li><code>Root()</code> returns the filesystem root of the absolute path.</li>
+<li><code>Normalize()</code> normalizes the stored path using the target platform path rules.</li>
+<li><code>Absolute()</code> resolves the stored path to an absolute path.</li>
+<li><code>Relative(targetPath)</code> returns <code>targetPath</code> relative to this Path object’s stored path.</li>
+<li><code>ChangeExtension(newExtension)</code> returns the stored path with its extension replaced; it does not rename the file.</li>
+<li><code>IsAbsolute()</code> reports whether the originally supplied path is fully qualified.</li>
+<li><code>Exists()</code> returns <code>True</code> when the stored path identifies an existing file or directory and reuses the existing <code>FileExists</code>/<code>DirExists</code> checks.</li>
+<li><code>Combine(child)</code> combines the stored path with one child path component.</li>
+</ul>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

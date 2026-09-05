@@ -406,9 +406,8 @@ Represents an agent design element returned by `NotesDatabase.GetAgent` or `Note
 ### Properties
 
 `Parent`, `Name`, `Owner`, `CommonOwner`, `Comment`, `Query`, `ServerName`,
-`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `IsWebAgent`, `IsActivatable`,
-`HasRunSinceModified`, `ProhibitDesignUpdate`, `IsEnabled`, `Trigger`, `Target`,
-`NotesURL`, `HttpURL`, and `OnBehalfOf` are exposed.
+`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `HasRunSinceModified`, `IsEnabled`,
+`Trigger`, `NotesURL`, and `OnBehalfOf` are exposed.
 
 ### Methods
 

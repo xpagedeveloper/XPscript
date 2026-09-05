@@ -1,0 +1,450 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Getting Started | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="./">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="getting-started">Getting started</h1>
+<h2 id="contents">Contents</h2>
+<ul>
+<li><a href="#build-the-tools">Build the tools</a></li>
+<li><a href="#run-xpscript-directly">Run XPScript directly</a></li>
+<li><a href="#compile-code">Compile code</a></li>
+<li><a href="#compiler-parameters">Compiler parameters</a></li>
+<li><a href="#run-kestrel-for-local-testing">Run Kestrel for local testing</a></li>
+<li><a href="#kestrel-hosting">Kestrel hosting</a></li>
+<li><a href="#kestrel-parameters">Kestrel parameters</a></li>
+<li><a href="#fastcgi-hosting">FastCGI hosting</a></li>
+<li><a href="#fastcgi-parameters">FastCGI parameters</a></li>
+<li><a href="#cgi-hosting">CGI hosting</a></li>
+<li><a href="#cgi-configuration">CGI configuration</a></li>
+<li><a href="#iis-hosting">IIS hosting</a></li>
+<li><a href="#deployment-packages">Deployment packages</a></li>
+<li><a href="#github-actions-artifacts">GitHub Actions artifacts</a></li>
+<li><a href="#publish-parameters">Publish parameters</a></li>
+<li><a href="#which-package-to-deploy">Which package to deploy</a></li>
+</ul>
+<h2 id="build-the-tools">Build the tools</h2>
+<p>XPScript targets .NET 10.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">dotnet build .\src\XPScript.Compiler\XPScript.Compiler.csproj </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">c Release</span></span>
+<span class="line"><span style="color:#E1E4E8">dotnet build .\src\XPScript.Cli\XPScript.Cli.csproj </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">c Release</span></span>
+<span class="line"><span style="color:#E1E4E8">dotnet build .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">c Release</span></span></code></pre>
+<p><code>xpscriptc</code> is the compiler executable. <code>xpscript</code> is the CLI that also hosts Kestrel and FastCGI.</p>
+<h2 id="run-xpscript-directly">Run XPScript directly</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscriptc run hello.xps</span></span>
+<span class="line"><span>xpscriptc run hello.xps first "second value"</span></span></code></pre>
+<p>Arguments are available through <code>Application.ArgCount</code> and <code>Application.Args(index)</code>.</p>
+<h2 id="compile-code">Compile code</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscriptc hello.xps -o hello</span></span></code></pre>
+<p>Target another runtime:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscriptc hello.xps --runtime win-x64 -o hello.exe</span></span>
+<span class="line"><span>xpscriptc hello.xps --runtime linux-x64 -o hello</span></span>
+<span class="line"><span>xpscriptc hello.xps --runtime osx-arm64 -o hello</span></span></code></pre>
+<p>Cross-compilation is supported. For example, on a Linux machine you can create a self-contained Windows x64 console application:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">xpscript</span><span style="color:#9ECBFF"> compile</span><span style="color:#9ECBFF"> app.xps</span><span style="color:#79B8FF"> --runtime</span><span style="color:#9ECBFF"> win-x64</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> app.exe</span></span></code></pre>
+<p>The resulting Windows application includes the required .NET runtime and does not require .NET 10 to be installed on the target computer.</p>
+<p>To create a smaller Windows x64 application that requires .NET 10 on the target computer, add <code>--framework-dependent</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">xpscript</span><span style="color:#9ECBFF"> compile</span><span style="color:#9ECBFF"> app.xps</span><span style="color:#79B8FF"> --runtime</span><span style="color:#9ECBFF"> win-x64</span><span style="color:#79B8FF"> --framework-dependent</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> app.exe</span></span></code></pre>
+<p>The host operating system and target runtime are independent. The same Linux installation of <code>xpscript</code> can target Windows, Linux or macOS by selecting the appropriate runtime identifier.</p>
+<p>Supported deployment RIDs include <code>win-x64</code>, <code>win-arm64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>osx-x64</code> and <code>osx-arm64</code>.</p>
+<h2 id="compiler-parameters">Compiler parameters</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Parameter</th><th>Purpose</th></tr></thead><tbody><tr><td><code>source.xps</code></td><td>Source file to compile.</td></tr><tr><td><code>run source.xps</code></td><td>Compile to an isolated temporary directory and run immediately.</td></tr><tr><td><code>-o path</code></td><td>Output executable/path.</td></tr><tr><td><code>--runtime RID</code></td><td>Select target runtime.</td></tr><tr><td><code>--framework-dependent</code></td><td>Require a compatible .NET runtime on the target instead of producing self-contained output.</td></tr><tr><td><code>--result-format text</code></td><td>Human-readable compiler result.</td></tr><tr><td><code>--result-format json</code></td><td>Structured JSON result.</td></tr><tr><td><code>--result-format xml</code></td><td>Structured XML result.</td></tr><tr><td><code>--</code></td><td>End compiler option parsing when following values belong to the script.</td></tr></tbody></table>
+<p>For automation, JSON/XML errors include source location and compiler diagnostics.</p>
+<h2 id="run-kestrel-for-local-testing">Run Kestrel for local testing</h2>
+<p>Create <code>site/index.xps</code>:</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+Sub Index()
+    Response.ContentType = "text/html; charset=utf-8"
+    Response.Write("&#x3C;h1>Hello from XPScript&#x3C;/h1>")
+End Sub
+</code></pre>
+<p>Start the development server:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript web --root ./site --address 127.0.0.1 --port 8080</span></span></code></pre>
+<p>Open <code>http://127.0.0.1:8080/</code>. Keep a local test listener on loopback unless another machine must reach it.</p>
+<h2 id="kestrel-hosting">Kestrel hosting</h2>
+<p>Basic production-style invocation:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript web --root /srv/xpsite --address 0.0.0.0 --port 8080 --host www.example.com</span></span></code></pre>
+<p>Kestrel can use a JSON <code>web.cfg</code>. Explicit command-line values override config values.</p>
+<h2 id="kestrel-parameters">Kestrel parameters</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Parameter</th><th>Purpose</th></tr></thead><tbody><tr><td><code>--root PATH</code></td><td>Required web root.</td></tr><tr><td><code>--default-document FILE.xps</code></td><td>Default route file, normally <code>index.xps</code>.</td></tr><tr><td><code>--address IP</code>, <code>--bind IP</code></td><td>Listener address.</td></tr><tr><td><code>--port N</code></td><td>Listener port.</td></tr><tr><td><code>--host NAME</code>, <code>--allowed-host NAME</code></td><td>Add an accepted Host value. Repeatable.</td></tr><tr><td><code>--https-cert PATH</code></td><td>PFX certificate.</td></tr><tr><td><code>--https-cert-password-env NAME</code></td><td>Environment variable containing the PFX password.</td></tr><tr><td>`—protocols http1</td><td>http2</td></tr><tr><td><code>--health</code></td><td>Enable health endpoint.</td></tr><tr><td><code>--metrics</code></td><td>Enable metrics endpoint.</td></tr><tr><td><code>--sessions</code></td><td>Enable in-memory sessions.</td></tr><tr><td><code>--session-cookie NAME</code></td><td>Session cookie name.</td></tr><tr><td><code>--session-timeout-seconds N</code></td><td>Session idle timeout.</td></tr><tr><td><code>--session-same-site VALUE</code></td><td>Session SameSite setting.</td></tr><tr><td><code>--session-secure</code></td><td>Require Secure session cookie.</td></tr><tr><td><code>--operational-external</code></td><td>Permit enabled health/metrics endpoints beyond loopback.</td></tr><tr><td><code>--structured-log PATH</code></td><td>JSON-line request log.</td></tr><tr><td><code>--static-files</code></td><td>Enable static file serving.</td></tr><tr><td><code>--static-max-bytes N</code></td><td>Static file size limit.</td></tr><tr><td><code>--config FILE</code></td><td>Load host configuration.</td></tr></tbody></table>
+<h2 id="fastcgi-hosting">FastCGI hosting</h2>
+<p>Start a persistent FastCGI worker:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript fastcgi --root /srv/xpsite --listen 127.0.0.1:9000</span></span></code></pre>
+<p>A reverse proxy such as nginx forwards FastCGI requests to that private endpoint. Do not expose the FastCGI listener directly to untrusted networks.</p>
+<h2 id="fastcgi-parameters">FastCGI parameters</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Parameter</th><th>Purpose</th></tr></thead><tbody><tr><td><code>--root PATH</code></td><td>Required web root.</td></tr><tr><td><code>--default-document FILE.xps</code></td><td>Default route file.</td></tr><tr><td><code>--listen ADDRESS:PORT</code></td><td>FastCGI TCP endpoint.</td></tr><tr><td><code>--address IP</code>, <code>--bind IP</code></td><td>Listener address.</td></tr><tr><td><code>--port N</code></td><td>Listener port.</td></tr><tr><td><code>--unix-socket PATH</code></td><td>Unix socket on Linux/macOS.</td></tr><tr><td><code>--config FILE</code></td><td>Load FastCGI configuration.</td></tr></tbody></table>
+<h2 id="cgi-hosting">CGI hosting</h2>
+<p>CGI uses the separate <code>XPScript.Web.Cgi</code> executable. The web server starts it per request. The host reads CGI variables and stdin, dispatches the <code>.xps</code> route and writes CGI headers/body to stdout.</p>
+<p>Publish example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">dotnet publish .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">c Release </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">r win</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64 </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">self</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">contained false </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o C:\XPScript\cgi</span></span></code></pre>
+<p>CGI is process-per-request. Prefer Kestrel or FastCGI for persistent workers and higher throughput.</p>
+<h2 id="cgi-configuration">CGI configuration</h2>
+<p>The CGI host reads its routing information from CGI environment variables. Configure <code>XPSCRIPT_WEB_ROOT</code> explicitly when possible. If it is absent, <code>DOCUMENT_ROOT</code> can provide the root. <code>SCRIPT_FILENAME</code> is used only as a final root-discovery fallback.</p>
+<p>Important CGI values include <code>REQUEST_METHOD</code>, <code>QUERY_STRING</code>, <code>CONTENT_TYPE</code>, <code>CONTENT_LENGTH</code>, <code>SCRIPT_NAME</code>, <code>PATH_INFO</code>, <code>SCRIPT_FILENAME</code>, <code>SERVER_NAME</code>, <code>SERVER_PORT</code>, <code>SERVER_PROTOCOL</code>, <code>REMOTE_ADDR</code> and <code>HTTPS</code>.</p>
+<h2 id="iis-hosting">IIS hosting</h2>
+<p>For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an XPScript Kestrel process bound to <code>127.0.0.1</code>. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.</p>
+<p>See <a href="../iis-hosting/">Hosting XPScript on IIS</a> for the complete IIS setup, including ARR and URL Rewrite, <code>web.config</code>, application pool settings, permissions, CGI handler mapping, TLS, updates and troubleshooting.</p>
+<h2 id="deployment-packages">Deployment packages</h2>
+<p>Production systems should use published distributions instead of copying repository <code>src</code> directories.</p>
+<p>Publish all packages:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package all</span></span></code></pre>
+<p>The script creates:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>artifacts/distributions/</span></span>
+<span class="line"><span>  compiler/</span></span>
+<span class="line"><span>  desktop-runtime/</span></span>
+<span class="line"><span>  cgi/</span></span>
+<span class="line"><span>  fastcgi/</span></span>
+<span class="line"><span>  kestrel/</span></span></code></pre>
+<p>Publish one package only:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package compiler</span></span>
+<span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package desktop</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">runtime</span></span>
+<span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package cgi</span></span>
+<span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package fastcgi</span></span>
+<span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package kestrel</span></span></code></pre>
+<p>Use an explicit runtime identifier when required:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package compiler </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">Runtime win</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64</span></span>
+<span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package kestrel </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">Runtime linux</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64</span></span></code></pre>
+<p>Create a self-contained package:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">.</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">scripts</span><span style="color:#F97583">/</span><span style="color:#79B8FF">publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package cgi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">Runtime win</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64 </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">SelfContained</span></span></code></pre>
+<p>Framework-dependent output requires the matching .NET runtime on the target machine. Self-contained output includes the .NET runtime for the selected RID. Web hosts that dynamically compile <code>.xps</code> files still need the SDK/toolchain required by the web compiler.</p>
+<h2 id="github-actions-artifacts">GitHub Actions artifacts</h2>
+<p>The <code>Distribution Publish</code> workflow publishes five separate downloadable artifacts after a successful run:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Artifact</th><th>Contents</th></tr></thead><tbody><tr><td><code>xpscript-compiler</code></td><td>Compiler distribution.</td></tr><tr><td><code>xpscript-desktop-runtime</code></td><td>Desktop runtime distribution.</td></tr><tr><td><code>xpscript-cgi</code></td><td>CGI host distribution.</td></tr><tr><td><code>xpscript-fastcgi</code></td><td>FastCGI host distribution.</td></tr><tr><td><code>xpscript-kestrel</code></td><td>Kestrel host distribution.</td></tr></tbody></table>
+<p>The <code>Distribution Publish Matrix</code> workflow verifies every package for <code>win-x64</code>, <code>win-arm64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>osx-x64</code> and <code>osx-arm64</code> on pull requests. Manual runs also create one release bundle per RID. Each bundle contains five versioned ZIP files and one SHA-256 manifest.</p>
+<p>Example files for version <code>1.2.0</code> and <code>linux-x64</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript-compiler-1.2.0-linux-x64.zip</span></span>
+<span class="line"><span>xpscript-desktop-runtime-1.2.0-linux-x64.zip</span></span>
+<span class="line"><span>xpscript-cgi-1.2.0-linux-x64.zip</span></span>
+<span class="line"><span>xpscript-fastcgi-1.2.0-linux-x64.zip</span></span>
+<span class="line"><span>xpscript-kestrel-1.2.0-linux-x64.zip</span></span>
+<span class="line"><span>SHA256SUMS-1.2.0-linux-x64.txt</span></span></code></pre>
+<p>Start the matrix workflow manually and optionally supply the <code>version</code> input. If <code>version</code> is empty, the first 12 characters of the commit SHA are used in the file names. Version values may contain letters, numbers, dots, underscores and hyphens.</p>
+<p>Verify a downloaded ZIP against the manifest before deployment. On PowerShell:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">Get-FileHash</span><span style="color:#E1E4E8"> .\xpscript</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">kestrel</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1.2</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">linux</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64.zip </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">Algorithm SHA256).Hash.ToLowerInvariant()</span></span>
+<span class="line"><span style="color:#79B8FF">Get-Content</span><span style="color:#E1E4E8"> .\SHA256SUMS</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1.2</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">linux</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64.txt</span></span></code></pre>
+<p>Artifacts are retained for 14 days. Both distribution workflows fail if required output is missing. The matrix release step also verifies that exactly five ZIP files and five checksum entries were produced.</p>
+<h2 id="publish-parameters">Publish parameters</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Parameter</th><th>Purpose</th></tr></thead><tbody><tr><td><code>-Package all</code></td><td>Publish all distribution types.</td></tr><tr><td><code>-Package compiler</code></td><td>Publish the compiler package.</td></tr><tr><td><code>-Package desktop-runtime</code></td><td>Publish desktop UI runtime dependencies.</td></tr><tr><td><code>-Package cgi</code></td><td>Publish the CGI host.</td></tr><tr><td><code>-Package fastcgi</code></td><td>Publish the FastCGI host bundle.</td></tr><tr><td><code>-Package kestrel</code></td><td>Publish the Kestrel host bundle.</td></tr><tr><td><code>-Configuration Release</code></td><td>Select the .NET build configuration. <code>Release</code> is the default.</td></tr><tr><td><code>-Runtime RID</code></td><td>Publish for an explicit runtime identifier.</td></tr><tr><td><code>-SelfContained</code></td><td>Include the .NET runtime for the selected RID.</td></tr><tr><td><code>-OutputRoot PATH</code></td><td>Override the default <code>artifacts/distributions</code> output directory.</td></tr></tbody></table>
+<h2 id="which-package-to-deploy">Which package to deploy</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Target</th><th>Package</th></tr></thead><tbody><tr><td>Developer or build server</td><td><code>compiler</code></td></tr><tr><td>Compiled desktop application</td><td>Application output plus required <code>desktop-runtime</code> dependencies</td></tr><tr><td>CGI web server</td><td><code>cgi</code></td></tr><tr><td>FastCGI web server</td><td><code>fastcgi</code></td></tr><tr><td>Standalone Kestrel web server</td><td><code>kestrel</code></td></tr></tbody></table>
+<p>The FastCGI and Kestrel packages currently publish the <code>XPScript.Cli</code> dependency closure because those commands are hosted by the CLI. A production web server does not need the repository source tree. It needs the selected distribution and the site’s <code>.xps</code> files.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>
