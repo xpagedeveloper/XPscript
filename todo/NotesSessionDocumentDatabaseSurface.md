@@ -6,9 +6,9 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 
 ## Current XPscript surface
 
-- NotesSession: 23 public members, fulltest-covered.
+- NotesSession: 24 public members, fulltest-covered.
 - NotesDocument: 55 public members, fulltest-covered across `notes-full-domino-runtime-test.xps` and `notes-document-metadata-runtime-test.xps`.
-- NotesDatabase: 46 public members, fulltest-covered.
+- NotesDatabase: 47 public members, fulltest-covered.
 - No obvious `NotImplementedException`, `NotSupportedException`, `Unsupported`, or constant-placeholder bodies were found by the generated-runtime audit.
 
 ## NotesSession — HCL members not currently exposed
@@ -52,7 +52,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] FreeResourceSearch
 - [ ] FreeTimeSearch
 - [ ] GetCalendar
-- [ ] GetDatabase
+- [x] GetDatabase
 - [ ] GetDbDirectory
 - [ ] GetDirectory
 - [ ] GetEnvironmentString
@@ -170,7 +170,7 @@ The currently exposed XPscript document surface already includes core item acces
 - [ ] GetURLHeaderInfo
 - [ ] GrantAccess
 - [ ] MarkForDelete
-- [ ] Open
+- [x] Open
 - [ ] OpenIfModified
 - [ ] OpenMail
 - [ ] OpenURLDb
