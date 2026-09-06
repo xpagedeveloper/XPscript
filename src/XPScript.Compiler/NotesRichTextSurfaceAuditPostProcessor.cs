@@ -47,12 +47,14 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
 
     private static void Validate(string source)
     {
+        // Validate the unsupported expression itself rather than trying to rediscover
+        // its enclosing public method with a second multi-line parser-like regex.
+        // The latter can cross C# member boundaries and produced false positives.
         if (Regex.IsMatch(
                 source,
-                @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\("))
-            throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported public API member.");
-        if (source.Contains("public void AppendParagraphStyle", StringComparison.Ordinal) &&
-            source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
+                @"=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\("))
+            throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported expression-bodied API member.");
+        if (source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
             throw new CompilerException("Generated Notes rich-text runtime still exposes unsupported AppendParagraphStyle.");
 
         string[] fabricated =
