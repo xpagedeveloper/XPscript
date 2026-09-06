@@ -24,7 +24,7 @@ internal static class NotesAgentNotFoundPostProcessor
             // helpers can exist even when the native agent implementation is omitted,
             // so only the native design-note lookup proves that this patch is required.
             if (!source.Contains("NIFFindDesignNote(agent)", StringComparison.Ordinal))
-                return source;
+                return DeduplicateTimeDateCollateDelegate(source);
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
         }
 
@@ -72,7 +72,23 @@ internal static class NotesAgentNotFoundPostProcessor
             "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return output is null ? null : new XPScriptNotesAgentResult(Session, this, output);",
             "database-runagent-nothing");
 
-        return source;
+        return DeduplicateTimeDateCollateDelegate(source);
+    }
+
+    private static string DeduplicateTimeDateCollateDelegate(string source)
+    {
+        const string marker = "delegate int TimeDateCollateDelegate(";
+        var first = source.IndexOf(marker, StringComparison.Ordinal);
+        if (first < 0 || source.IndexOf(marker, first + marker.Length, StringComparison.Ordinal) < 0)
+            return source;
+
+        const string databaseDeclaration = """
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate int TimeDateCollateDelegate(ref XPScriptNotesTimeDate first, ref XPScriptNotesTimeDate second);
+""";
+        if (!source.Contains(databaseDeclaration, StringComparison.Ordinal))
+            throw new CompilerException("Unable to deduplicate Notes TimeDateCollateDelegate safely.");
+        return source.Replace(databaseDeclaration, string.Empty, StringComparison.Ordinal);
     }
 
     private static string EnsureReplacementAfter(string source, string anchor, string oldValue, string newValue, string stage)
