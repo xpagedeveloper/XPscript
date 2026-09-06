@@ -9,16 +9,17 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class NotesRichTextSurfaceAuditPostProcessor
 {
+    private const string UnsupportedExpressionBodiedPublicMethodPattern =
+        @"(?m)^\s*public\s+[^;{}]+?\([^;{}]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?";
+
     public static string Apply(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // Expression-bodied placeholders are structurally simple and safe to remove
-        // generically without crossing a method boundary.
-        source = Regex.Replace(
-            source,
-            @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
-            string.Empty);
+        // Expression-bodied placeholders may wrap the signature and arrow onto
+        // separate lines. Keep the match bounded by member delimiters so it cannot
+        // consume a following method or helper.
+        source = Regex.Replace(source, UnsupportedExpressionBodiedPublicMethodPattern, string.Empty);
 
         // AppendParagraphStyle is the one block-bodied placeholder. Match its exact
         // generated body; a generic block regex can cross into a following private
@@ -47,12 +48,9 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
 
     private static void Validate(string source)
     {
-        // Validate the unsupported expression itself rather than trying to rediscover
-        // its enclosing public method with a second multi-line parser-like regex.
-        // The latter can cross C# member boundaries and produced false positives.
-        if (Regex.IsMatch(
-                source,
-                @"=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\("))
+        // Reuse the same bounded public-member grammar as removal. This catches a
+        // missed placeholder without flagging private helpers or crossing members.
+        if (Regex.IsMatch(source, UnsupportedExpressionBodiedPublicMethodPattern))
             throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported expression-bodied API member.");
         if (source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
             throw new CompilerException("Generated Notes rich-text runtime still exposes unsupported AppendParagraphStyle.");
