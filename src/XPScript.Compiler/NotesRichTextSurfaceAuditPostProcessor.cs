@@ -23,22 +23,30 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
             "(?ms)^\\s*public\\s+void\\s+AppendParagraphStyle\\s*\\([^)]*\\)\\s*\\{\\s*EnsureItemAlive\\(\\);\\s*if\\s*\\(styleValue\\s+is\\s+not\\s+XPScriptNotesRichTextParagraphStyle\\)\\s*throw\\s+new\\s+XPScriptRuntimeException\\(13,\\s*\"NotesRichTextItem\\.AppendParagraphStyle requires a NotesRichTextParagraphStyle\\.\"\\);\\s*throw\\s+RichTextStructuralWriteNotSupported\\(\"AppendParagraphStyle\"\\);\\s*\\}\\s*",
             string.Empty);
 
-        source = Regex.Replace(
-            source,
-            @"(?s)\s*public\s+object\s+RowLabels\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+LSOperatorArrayRuntime\.CreateArray\(Array\.Empty<object\?>\(\)\);\s*\}\s*\}",
-            string.Empty);
-        source = Regex.Replace(
-            source,
-            @"(?m)^\s*public\s+XPScriptNotesColorObject\s+(?:Color|AlternateColor)\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+new\s+XPScriptNotesColorObject\(Session,\s*0\);\s*\}\s*\}\s*\r?\n?",
-            string.Empty);
-        source = Regex.Replace(
-            source,
-            @"(?m)^\s*public\s+XPScriptNotesRichTextStyle\s+HotSpotTextStyle\s*\{\s*get\s*\{\s*EnsureLinkedAlive\(\);\s*return\s+new\s+XPScriptNotesRichTextStyle\(Session\);\s*\}\s*\}\s*\r?\n?",
-            string.Empty);
+        source = RemoveExact(source,
+            """
+    public object RowLabels
+    {
+        get
+        {
+            EnsureLinkedAlive();
+            return LSOperatorArrayRuntime.CreateArray(Array.Empty<object?>());
+        }
+    }
+""");
+        source = RemoveExact(source,
+            "    public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }\n");
+        source = RemoveExact(source,
+            "    public XPScriptNotesColorObject AlternateColor { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }\n");
+        source = RemoveExact(source,
+            "    public XPScriptNotesRichTextStyle HotSpotTextStyle { get { EnsureLinkedAlive(); return new XPScriptNotesRichTextStyle(Session); } }\n");
 
         Validate(source);
         return source;
     }
+
+    private static string RemoveExact(string source, string member) =>
+        source.Replace(member, string.Empty, StringComparison.Ordinal);
 
     private static string RemoveUnsupportedExpressionBodiedPublicMethods(string source)
     {
@@ -68,8 +76,6 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
                 source.LastIndexOf('}', markerIndex));
             if (publicIndex <= boundary)
             {
-                // The marker belongs to a non-public helper or another construct;
-                // skip it without letting the audit cross a member boundary.
                 var next = source.IndexOf(';', markerIndex);
                 if (next < 0) return source;
                 source = source.Remove(markerIndex, next - markerIndex + 1)
