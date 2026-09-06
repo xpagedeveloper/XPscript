@@ -6,10 +6,17 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        var nativeSignature = source.Contains(
+            "    internal string RunAgent(nint db, string name, nint documentContext)",
+            StringComparison.Ordinal)
+            ? "    internal string RunAgent(nint db, string name, nint documentContext)"
+            : "    internal string RunAgent(uint db, string name, uint documentContext)";
+        var nullableNativeSignature = nativeSignature.Replace("internal string RunAgent", "internal string? RunAgent", StringComparison.Ordinal);
+
         source = EnsureReplacement(
             source,
-            "    internal string RunAgent(uint db, string name, uint documentContext)",
-            "    internal string? RunAgent(uint db, string name, uint documentContext)",
+            nativeSignature,
+            nullableNativeSignature,
             "native-runagent-nullable");
 
         const string oldFindAgent = """
@@ -29,7 +36,7 @@ internal static class NotesAgentNotFoundPostProcessor
 """;
         source = EnsureReplacementAfter(
             source,
-            "    internal string? RunAgent(uint db, string name, uint documentContext)",
+            nullableNativeSignature,
             oldFindAgent,
             newFindAgent,
             "native-runagent-not-found");
