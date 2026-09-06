@@ -221,6 +221,11 @@ Function TestSession(ByVal session As Variant, ByVal db As Variant) As Integer
     Print "NotesIni=" & session.NotesIni
     Print "IniDir=" & session.IniDir
     Print "DataDir=" & session.DataDir
+    Print "IsRecycled=" & CStr(session.IsRecycled)
+    session.ConvertMIME = False
+    Print "ConvertMIME=False -> " & CStr(session.ConvertMIME)
+    session.ConvertMIME = True
+    Print "ConvertMIME=True -> " & CStr(session.ConvertMIME)
 
     Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)
     If replicaDb Is Nothing Or Not replicaDb.IsOpen Then failures = failures + 1
@@ -336,6 +341,13 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Print "PercentUsed=" & CStr(db.PercentUsed)
     Print "CurrentAccessLevel=" & CStr(db.CurrentAccessLevel)
     Print "FileFormat=" & CStr(db.FileFormat)
+    Print "OpenError=" & CStr(db.OpenError)
+    Print "IsFTIndexed=" & CStr(db.IsFTIndexed)
+    If Not db.LastFTIndexed Is Nothing Then
+        Set dt = db.LastFTIndexed
+        Print "LastFTIndexed=" & dt.LocalTime
+        Call dt.Recycle()
+    End If
     Set dt = db.Created
     Print "Created=" & dt.LocalTime
     Call dt.Recycle()
@@ -376,6 +388,11 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
 
     Set docs = db.CreateDocumentCollection()
     Call docs.Recycle()
+    Set dt = session.CreateDateTimeNow()
+    Call dt.AdjustDay(-1)
+    Set docs = db.GetModifiedDocuments(dt, 0)
+    If Not docs Is Nothing Then Call docs.Recycle()
+    Call dt.Recycle()
     Set docs = db.AllDocuments
     Call docs.Recycle()
     Set docs = db.Search("Form=\"XPScriptTest\"")
@@ -401,6 +418,14 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
 
     Set agent = db.GetAgent(agentName)
     If agent Is Nothing Then failures = failures + 1 Else Call agent.Recycle()
+
+    ' Compile coverage for valid but destructive/side-effecting database operations.
+    If False Then
+        Set opened = db.CreateCopy("", "xpscript-full-runtime-copy.nsf")
+        Call opened.Recycle()
+        Call db.RemoveFTIndex()
+        Call db.Sign()
+    End If
 
     Set profile = db.GetProfileDocument("XPScriptTestProfile", "FullRuntime")
     Call profile.ReplaceItemValue("XPScriptProfileMarker", "profile-ok")
