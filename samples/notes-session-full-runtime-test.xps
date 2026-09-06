@@ -1,0 +1,44 @@
+' Focused NotesSession full runtime regression.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim failures As Integer
+
+    failures = 0
+    Set session = New NotesSession()
+
+    If session Is Nothing Then
+        Print "NOTES-SESSION-FULL=FAIL COUNT=1"
+        Exit Sub
+    End If
+
+    If session.IsRecycled Then
+        Print "FAIL IsRecycled expected False before Recycle"
+        failures = failures + 1
+    End If
+
+    session.ConvertMIME = False
+    If session.ConvertMIME Then
+        Print "FAIL ConvertMIME expected False after assignment"
+        failures = failures + 1
+    End If
+
+    session.ConvertMIME = True
+    If Not session.ConvertMIME Then
+        Print "FAIL ConvertMIME expected True after assignment"
+        failures = failures + 1
+    End If
+
+    Call session.Recycle()
+    If Not session.IsRecycled Then
+        Print "FAIL IsRecycled expected True after Recycle"
+        failures = failures + 1
+    End If
+
+    If failures = 0 Then
+        Print "NOTES-SESSION-FULL=PASS"
+    Else
+        Print "NOTES-SESSION-FULL=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub
