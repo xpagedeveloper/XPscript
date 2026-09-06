@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace XPScript.Compiler;
 
 internal static class NotesAgentNotFoundPostProcessor
@@ -8,10 +6,17 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var signatureMatch = Regex.Match(
-            source,
-            @"(?m)^\s*internal\s+string(?<nullable>\?)?\s+RunAgent\([^\r\n]*\bdb\s*,\s*string\s+name\s*,[^\r\n]*\bdocumentContext\s*\)\s*$");
-        if (!signatureMatch.Success)
+        string[] nativeSignatures =
+        [
+            "internal string RunAgent(uint db, string name, uint documentContext)",
+            "internal string? RunAgent(uint db, string name, uint documentContext)",
+            "internal string RunAgent(nint db, string name, nint documentContext)",
+            "internal string? RunAgent(nint db, string name, nint documentContext)"
+        ];
+
+        var nativeSignature = nativeSignatures.FirstOrDefault(signature =>
+            source.Contains(signature, StringComparison.Ordinal));
+        if (nativeSignature is null)
         {
             // Notes runtime features are emitted on demand. Database-level RunAgent
             // helpers can exist even when the native agent implementation is omitted,
@@ -21,15 +26,14 @@ internal static class NotesAgentNotFoundPostProcessor
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
         }
 
-        var nullableNativeSignature = signatureMatch.Value;
-        if (!signatureMatch.Groups["nullable"].Success)
+        var nullableNativeSignature = nativeSignature;
+        if (nativeSignature.StartsWith("internal string RunAgent", StringComparison.Ordinal))
         {
-            nullableNativeSignature = Regex.Replace(
-                nullableNativeSignature,
-                @"\binternal\s+string\s+RunAgent",
+            nullableNativeSignature = nativeSignature.Replace(
+                "internal string RunAgent",
                 "internal string? RunAgent",
-                RegexOptions.CultureInvariant);
-            source = source[..signatureMatch.Index] + nullableNativeSignature + source[(signatureMatch.Index + signatureMatch.Length)..];
+                StringComparison.Ordinal);
+            source = source.Replace(nativeSignature, nullableNativeSignature, StringComparison.Ordinal);
         }
 
         const string oldFindAgent = """
