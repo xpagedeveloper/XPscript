@@ -13,19 +13,19 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // Remove expression-bodied public members that only report an unsupported
-        // structural write. Do this generically so newly-added overloads cannot
-        // accidentally leak into the generated Notes API.
+        // Expression-bodied placeholders are structurally simple and safe to remove
+        // generically without crossing a method boundary.
         source = Regex.Replace(
             source,
             @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
             string.Empty);
 
-        // Remove block-bodied public methods whose only terminal operation is the
-        // same unsupported-write exception (for example AppendParagraphStyle).
+        // AppendParagraphStyle is the one block-bodied placeholder. Match its exact
+        // generated body; a generic block regex can cross into a following private
+        // helper and incorrectly classify a real public method as unsupported.
         source = Regex.Replace(
             source,
-            @"(?ms)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*\{(?:(?!^\s*public\s).)*?throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\}\s*\r?\n?",
+            "(?ms)^\\s*public\\s+void\\s+AppendParagraphStyle\\s*\\([^)]*\\)\\s*\\{\\s*EnsureItemAlive\\(\\);\\s*if\\s*\\(styleValue\\s+is\\s+not\\s+XPScriptNotesRichTextParagraphStyle\\)\\s*throw\\s+new\\s+XPScriptRuntimeException\\(13,\\s*\"NotesRichTextItem\\.AppendParagraphStyle requires a NotesRichTextParagraphStyle\\.\"\\);\\s*throw\\s+RichTextStructuralWriteNotSupported\\(\"AppendParagraphStyle\"\\);\\s*\\}\\s*",
             string.Empty);
 
         source = Regex.Replace(
@@ -47,11 +47,15 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
 
     private static void Validate(string source)
     {
+        // Validate the unsupported expression itself rather than trying to rediscover
+        // its enclosing public method with a second multi-line parser-like regex.
+        // The latter can cross C# member boundaries and produced false positives.
         if (Regex.IsMatch(
                 source,
-                @"public\s+[^\r\n{;]+\([^\r\n]*\)\s*(?:=>\s*throw\s+|\{(?:(?!^\s*public\s).)*?throw\s+)(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\(",
-                RegexOptions.Multiline | RegexOptions.Singleline))
-            throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported public API member.");
+                @"=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\("))
+            throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported expression-bodied API member.");
+        if (source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
+            throw new CompilerException("Generated Notes rich-text runtime still exposes unsupported AppendParagraphStyle.");
 
         string[] fabricated =
         [
