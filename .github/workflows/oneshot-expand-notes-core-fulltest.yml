@@ -1,0 +1,56 @@
+name: One-shot expand Notes core fulltest
+
+on:
+  push:
+    branches:
+      - feat/richtext-structural-surface
+    paths:
+      - .github/workflows/oneshot-expand-notes-core-fulltest.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/richtext-structural-surface
+      - name: Expand NotesSession and NotesDatabase coverage
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('samples/notes-full-domino-runtime-test.xps')
+          s=p.read_text(encoding='utf-8')
+          def rep(old,new,label):
+              global s
+              if old not in s: raise SystemExit('missing anchor: '+label)
+              s=s.replace(old,new,1)
+
+          rep('    Print "DataDir=" & session.DataDir\n\n    Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)',
+              '    Print "DataDir=" & session.DataDir\n    Print "IsRecycled=" & CStr(session.IsRecycled)\n    session.ConvertMIME = False\n    Print "ConvertMIME=False -> " & CStr(session.ConvertMIME)\n    session.ConvertMIME = True\n    Print "ConvertMIME=True -> " & CStr(session.ConvertMIME)\n\n    Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)',
+              'session coverage')
+
+          rep('    Print "FileFormat=" & CStr(db.FileFormat)\n    Set dt = db.Created',
+              '    Print "FileFormat=" & CStr(db.FileFormat)\n    Print "OpenError=" & CStr(db.OpenError)\n    Print "IsFTIndexed=" & CStr(db.IsFTIndexed)\n    If Not db.LastFTIndexed Is Nothing Then\n        Set dt = db.LastFTIndexed\n        Print "LastFTIndexed=" & dt.LocalTime\n        Call dt.Recycle()\n    End If\n    Set dt = db.Created',
+              'database properties')
+
+          rep('    Set docs = db.CreateDocumentCollection()\n    Call docs.Recycle()\n    Set docs = db.AllDocuments',
+              '    Set docs = db.CreateDocumentCollection()\n    Call docs.Recycle()\n    Set dt = session.CreateDateTimeNow()\n    Call dt.AdjustDay(-1)\n    Set docs = db.GetModifiedDocuments(dt, 0)\n    If Not docs Is Nothing Then Call docs.Recycle()\n    Call dt.Recycle()\n    Set docs = db.AllDocuments',
+              'modified documents')
+
+          rep('    Set agent = db.GetAgent(agentName)\n    If agent Is Nothing Then failures = failures + 1 Else Call agent.Recycle()\n',
+              '    Set agent = db.GetAgent(agentName)\n    If agent Is Nothing Then failures = failures + 1 Else Call agent.Recycle()\n\n    \' Compile coverage for valid but destructive/side-effecting database operations.\n    If False Then\n        Set opened = db.CreateCopy("", "xpscript-full-runtime-copy.nsf")\n        Call opened.Recycle()\n        Call db.RemoveFTIndex()\n        Call db.Sign()\n    End If\n',
+              'database methods')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit update
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add samples/notes-full-domino-runtime-test.xps
+          git commit -m "Cover NotesSession and NotesDatabase full surface"
+          git push origin HEAD:feat/richtext-structural-surface
