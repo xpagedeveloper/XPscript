@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Delete branches from merged pull requests
+      - name: Delete branches already contained in default branch
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -31,15 +31,19 @@ jobs:
           set -euo pipefail
 
           default_branch="${{ github.event.repository.default_branch }}"
-          page=1
-          branches_file="$(mktemp)"
+          git fetch --prune origin "+refs/heads/*:refs/remotes/origin/*"
 
+          # A squash-merged PR does not make its original head commit an ancestor of
+          # main, while old implementation branches often do not have a surviving PR.
+          # Collect both sources, but only delete a branch when either Git proves that
+          # its tip is already contained in the default branch or GitHub records a
+          # merged same-repository PR for that exact branch.
+          merged_pr_branches="$(mktemp)"
+          page=1
           while true; do
             response="$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=${default_branch}&per_page=100&page=${page}")"
             count="$(jq 'length' <<<"$response")"
-            if [ "$count" -eq 0 ]; then
-              break
-            fi
+            [ "$count" -eq 0 ] && break
 
             jq -r --arg default_branch "$default_branch" '
               .[]
@@ -47,21 +51,31 @@ jobs:
               | select(.head.repo.full_name == .base.repo.full_name)
               | .head.ref
               | select(. != $default_branch)
-            ' <<<"$response" >> "$branches_file"
+            ' <<<"$response" >> "$merged_pr_branches"
 
-            if [ "$count" -lt 100 ]; then
-              break
-            fi
+            [ "$count" -lt 100 ] && break
             page=$((page + 1))
           done
+          sort -u -o "$merged_pr_branches" "$merged_pr_branches"
 
-          sort -u "$branches_file" | while IFS= read -r branch; do
-            [ -z "$branch" ] && continue
+          while IFS= read -r remote_ref; do
+            branch="${remote_ref#origin/}"
+            [ "$branch" = "$default_branch" ] && continue
+            [ "$branch" = "HEAD" ] && continue
 
-            if git ls-remote --exit-code --heads origin "refs/heads/${branch}" >/dev/null 2>&1; then
-              echo "Deleting merged branch: ${branch}"
+            contained=false
+            merged_pr=false
+            if git merge-base --is-ancestor "$remote_ref" "origin/${default_branch}"; then
+              contained=true
+            fi
+            if grep -Fxq "$branch" "$merged_pr_branches"; then
+              merged_pr=true
+            fi
+
+            if [ "$contained" = true ] || [ "$merged_pr" = true ]; then
+              echo "Deleting merged branch: ${branch} (contained=${contained}, merged_pr=${merged_pr})"
               git push origin --delete "$branch"
             else
-              echo "Already gone: ${branch}"
+              echo "Keeping unmerged branch: ${branch}"
             fi
-          done
+          done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sort)
