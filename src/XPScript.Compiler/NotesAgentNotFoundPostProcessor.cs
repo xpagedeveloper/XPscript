@@ -13,10 +13,10 @@ internal static class NotesAgentNotFoundPostProcessor
             @"(?m)^\s*internal\s+string(?<nullable>\?)?\s+RunAgent\([^\r\n]*\bdb\s*,\s*string\s+name\s*,[^\r\n]*\bdocumentContext\s*\)\s*$");
         if (!signatureMatch.Success)
         {
-            // Notes runtime features are emitted on demand. A rich-text-only build
-            // legitimately contains no agent surface, so there is nothing to patch.
-            if (!source.Contains("RunAgentCore(", StringComparison.Ordinal) &&
-                !source.Contains("NIFFindDesignNote(agent)", StringComparison.Ordinal))
+            // Notes runtime features are emitted on demand. Database-level RunAgent
+            // helpers can exist even when the native agent implementation is omitted,
+            // so only the native design-note lookup proves that this patch is required.
+            if (!source.Contains("NIFFindDesignNote(agent)", StringComparison.Ordinal))
                 return source;
             throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
         }
