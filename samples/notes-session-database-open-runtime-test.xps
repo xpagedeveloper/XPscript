@@ -1,0 +1,32 @@
+' Runtime/compile regression for NotesSession.GetDatabase and NotesDatabase.Open.
+' Requires a local xpscript.nsf for the positive runtime path.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim missing As NotesDatabase
+    Dim opened As Boolean
+
+    Set session = New NotesSession()
+
+    ' HCL GetDatabase creates a closed object when server/file are empty.
+    Set db = session.GetDatabase("", "")
+    If db Is Nothing Then Error 9970, "GetDatabase create-on-fail default returned Nothing"
+    If db.IsOpen Then Error 9971, "Unassigned GetDatabase unexpectedly opened a database"
+
+    opened = db.Open("", "xpscript.nsf")
+    If opened Then
+        Print "GETDATABASE-OPEN=" & db.FilePath
+    Else
+        Print "GETDATABASE-OPEN=SKIP " & db.OpenError
+    End If
+
+    ' createOnFail=False must return Nothing if the target cannot be opened.
+    Set missing = session.GetDatabase("", "__xpscript_missing_database__.nsf", False)
+    If Not missing Is Nothing Then Error 9972, "GetDatabase(createOnFail=False) returned a closed object"
+
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NOTES-GETDATABASE-OPEN=PASS"
+End Sub
