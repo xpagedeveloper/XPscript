@@ -54,6 +54,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextCdRewritePostProcessor.Apply(source);
             source = NotesRichTextMutationPostProcessor.Apply(source);
             source = NotesRichTextMutationSpanPostProcessor.Apply(source);
+            source = NotesRichTextStructuralWriteSurfacePostProcessor.Apply(source);
             source = NotesRichTextHtmlPostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
             source = NotesRichTextSurfaceAuditPostProcessor.Apply(source);
