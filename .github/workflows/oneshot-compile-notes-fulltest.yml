@@ -1,0 +1,26 @@
+name: One-shot compile Notes fulltest
+
+on:
+  push:
+    branches:
+      - feat/richtext-structural-surface
+    paths:
+      - .github/workflows/oneshot-compile-notes-fulltest.yml
+
+permissions:
+  contents: read
+
+jobs:
+  compile-fulltest:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compile Notes full runtime sample
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-full-domino-runtime-test.xps ./out/notes-fulltest
