@@ -1,0 +1,515 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Ai | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="xpai-openai-compatible-client">XPAi OpenAI-compatible client</h1>
+<p><code>XPAi</code> connects XPScript applications to services that implement an OpenAI-compatible chat-completions HTTP API. The endpoint is supplied by the application. The class does not hard-code a provider or provider hostname.</p>
+<p><code>XPAi</code> is available in normal applications and server-side web targets. It is intentionally unavailable in browser WebAssembly because browser code cannot keep API credentials private.</p>
+<h2 id="basic-request">Basic request</h2>
+<pre><code class="language-xpscript">Sub Main()
+    Dim ai As New XPAi("https://api.example.com/v1/chat/completions", Environ("AI_API_KEY"))
+    Dim response As XPAiResponse
+
+    ai.Model = "example-model"
+    ai.Temperature = 0.2
+    ai.MaxOutputTokens = 500
+    ai.SystemPrompt = "Answer clearly and briefly."
+    ai.UserPrompt = "What is privacy by design?"
+
+    Set response = ai.Complete()
+    Print response.Text
+End Sub
+</code></pre>
+<p>Keep API keys outside source files. Read them from environment variables, a protected service configuration store or a secrets manager.</p>
+<h2 id="constructor-and-endpoint">Constructor and endpoint</h2>
+<pre><code class="language-xpscript">Dim ai As New XPAi(endpoint)
+Dim ai As New XPAi(endpoint, apiKey)
+Dim ai As New XPAi(preset, apiKey [, providerConfiguration])
+</code></pre>
+<p><code>endpoint</code> must be an absolute HTTP or HTTPS URL. Credentials and URL fragments are rejected. <code>apiKey</code> is optional, which allows local providers and providers that use a custom authentication header.</p>
+<p>When an API key is supplied, <code>XPAi</code> adds <code>Authorization: Bearer &#x3C;key></code>. An explicit <code>Authorization</code> header set with <code>SetHeader</code> takes precedence.</p>
+<h2 id="provider-presets">Provider presets</h2>
+<p>Presets select the official OpenAI-compatible chat-completions endpoint and authentication style. Preset names are case-insensitive.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Preset</th><th>Constructor</th><th>Endpoint</th><th>Authentication</th></tr></thead><tbody><tr><td>OpenAI</td><td><code>New XPAi("openai", apiKey)</code></td><td><code>https://api.openai.com/v1/chat/completions</code></td><td>Bearer token</td></tr><tr><td>Claude</td><td><code>New XPAi("claude", apiKey)</code></td><td><code>https://api.anthropic.com/v1/chat/completions</code></td><td>Bearer token</td></tr><tr><td>OpenRouter</td><td><code>New XPAi("openrouter", apiKey)</code></td><td><code>https://openrouter.ai/api/v1/chat/completions</code></td><td>Bearer token</td></tr><tr><td>Azure OpenAI</td><td><code>New XPAi("azure", apiKey, resourceName)</code></td><td><code>https://{resourceName}.openai.azure.com/openai/v1/chat/completions</code></td><td><code>api-key</code> header</td></tr></tbody></table>
+<p><code>anthropic</code> is accepted as an alias for <code>claude</code>. <code>azureopenai</code> is accepted as an alias for <code>azure</code>.</p>
+<p>OpenAI:</p>
+<pre><code class="language-xpscript">Dim ai As New XPAi("openai", Environ("OPENAI_API_KEY"))
+ai.Model = "your-openai-model"
+</code></pre>
+<p>Claude through Anthropic’s OpenAI compatibility layer:</p>
+<pre><code class="language-xpscript">Dim ai As New XPAi("claude", Environ("ANTHROPIC_API_KEY"))
+ai.Model = "your-claude-model"
+</code></pre>
+<p>Anthropic describes this compatibility layer as suitable for evaluating OpenAI-style integrations. Native Claude-only capabilities can require the native Anthropic API and are outside the common <code>XPAi</code> schema.</p>
+<p>OpenRouter:</p>
+<pre><code class="language-xpscript">Dim ai As New XPAi("openrouter", Environ("OPENROUTER_API_KEY"))
+ai.Model = "provider/model-name"
+Call ai.SetHeader("HTTP-Referer", "https://application.example.com")
+Call ai.SetHeader("X-OpenRouter-Title", "My application")
+</code></pre>
+<p>The two OpenRouter attribution headers are optional.</p>
+<p>Azure OpenAI v1:</p>
+<pre><code class="language-xpscript">Dim ai As New XPAi("azure", Environ("AZURE_OPENAI_API_KEY"), "my-resource")
+ai.Model = "my-deployment-name"
+</code></pre>
+<p>The third argument is the Azure OpenAI resource name, not a full URL. The Azure v1 endpoint does not require a dated <code>api-version</code> query parameter. Use a custom full endpoint instead of the preset when an installation still requires a legacy deployment URL.</p>
+<p><code>Provider</code> returns <code>OpenAI</code>, <code>Claude</code>, <code>OpenRouter</code>, <code>Azure</code> or <code>Custom</code>. <code>Endpoint</code> returns the resolved request URL.</p>
+<p><code>EndpointPath</code> replaces the path below the configured endpoint origin. This supports providers whose OpenAI-compatible route is selected at runtime:</p>
+<pre><code class="language-xpscript">Dim ai As New XPAi("https://gateway.example.com")
+ai.EndpointPath = "/tenant-a/v1/chat/completions"
+</code></pre>
+<p>The path must remain relative to the configured origin. It cannot redirect requests to another host.</p>
+<h2 id="prompt-parts">Prompt parts</h2>
+<p>For the common two-part prompt shape, use <code>SystemPrompt</code> and <code>UserPrompt</code>:</p>
+<pre><code class="language-xpscript">ai.SystemPrompt = "Return concise structured data."
+ai.UserPrompt = "Summarize this customer record."
+Set response = ai.Complete()
+</code></pre>
+<p><code>SystemPrompt</code> is inserted as the first <code>system</code> message. <code>UserPrompt</code> is appended as the final <code>user</code> message. Any messages added with <code>AddMessage</code> remain between them.</p>
+<p>The helper methods are:</p>
+<pre><code class="language-xpscript">Call ai.SetPrompt("Return concise structured data.", "Summarize this customer record.")
+Call ai.ClearPrompt()
+</code></pre>
+<p>A request can use only prompt properties; <code>AddMessage</code> is not required when at least one prompt part is set.</p>
+<h2 id="messages">Messages</h2>
+<p>The internal message collection supports <code>system</code>, <code>user</code> and <code>assistant</code> roles:</p>
+<pre><code class="language-xpscript">Call ai.AddMessage("system", "Use Swedish.")
+Call ai.AddMessage("user", "Summarize the supplied text.")
+Set response = ai.Complete()
+Call ai.ClearMessages()
+</code></pre>
+<p><code>GetMessages()</code> returns a cloned <code>XPJsonDocument</code>. A request can instead receive a <code>XPJsonArray</code> or a <code>XPJsonDocument</code> with an array root:</p>
+<pre><code class="language-xpscript">Dim messages As New XPJsonArray
+Dim message As New XPJsonObject
+
+Call message.Set("role", "user")
+Call message.Set("content", "Hello")
+Call messages.Add(message)
+Set response = ai.Complete(messages)
+</code></pre>
+<p>Pass a model as the second argument to override the client model for one request:</p>
+<pre><code class="language-xpscript">Set response = ai.Complete(messages, "another-model")
+</code></pre>
+<h2 id="structured-json-results">Structured JSON results</h2>
+<p>The preferred API is to define the desired result shape as an XPscript class and pass an instance to <code>SetResultClass</code>:</p>
+<pre><code class="language-xpscript">Class CustomerSummary
+    Public Name As String
+    Public RiskScore As Double
+    Public Active As Boolean
+End Class
+
+Dim contract As CustomerSummary
+Set contract = New CustomerSummary()
+
+ai.JsonSchemaName = "customer_summary"
+ai.JsonSchemaStrict = True
+Call ai.SetResultClass(contract)
+Set response = ai.Complete()
+</code></pre>
+<p><code>XPAi</code> derives OpenAI-compatible JSON Schema from the class using the same visibility model as XPscript JSON serialization. Public fields and public readable properties are included. Private fields/properties and write-only properties are excluded. Nested classes are converted recursively. Recursive class graphs are rejected.</p>
+<p>Included members are emitted as required properties. Object schemas disallow additional properties. Scalar mappings include strings, booleans, integer and floating-point numbers, dates (<code>string</code> with <code>date-time</code> format), enums, arrays and nested classes.</p>
+<p>The overloads are:</p>
+<pre><code class="language-xpscript">Call ai.SetResultClass(contract)
+Call ai.SetResultClass(contract, "customer_summary")
+Call ai.SetResultClass(contract, "customer_summary", True)
+</code></pre>
+<p>For advanced/provider-specific schemas, raw JSON Schema is also supported:</p>
+<pre><code class="language-xpscript">Call ai.SetJsonSchema(schema)
+Call ai.SetJsonSchema(schema, "result_name")
+Call ai.SetJsonSchema(schema, "result_name", True)
+</code></pre>
+<p><code>ResponseJsonSchema</code> gets a cloned configured schema or sets a raw schema. <code>HasJsonSchema</code> reports whether one is configured. <code>ClearJsonSchema()</code> removes it. <code>JsonSchemaName</code> defaults to <code>response</code>, and <code>JsonSchemaStrict</code> defaults to <code>True</code>.</p>
+<p>The generated request uses OpenAI-compatible <code>response_format.type = "json_schema"</code>. Provider support depends on the configured endpoint implementing that request shape.</p>
+<p>See <a href="../xpai-structured-output/">XPAi prompts and structured results</a> for the detailed class-to-schema mapping and examples.</p>
+<h2 id="request-options">Request options</h2>
+<p><code>Temperature</code> accepts <code>0</code> through <code>2</code>. <code>MaxOutputTokens</code> accepts <code>1</code> through <code>1000000</code> and is sent as <code>max_tokens</code>.</p>
+<p>Use <code>SetOption</code> for other provider-compatible JSON properties. Values use the native JSON conversion rules.</p>
+<pre><code class="language-xpscript">Call ai.SetOption("top_p", 0.9)
+Call ai.RemoveOption("top_p")
+Call ai.ClearOptions()
+</code></pre>
+<p><code>model</code>, <code>messages</code>, <code>stream</code> and <code>response_format</code> cannot be supplied through <code>SetOption</code>. Use their dedicated APIs.</p>
+<h2 id="provider-headers">Provider headers</h2>
+<pre><code class="language-xpscript">Call ai.SetHeader("api-key", Environ("AZURE_AI_KEY"))
+Call ai.SetHeader("HTTP-Referer", "https://application.example.com")
+Call ai.RemoveHeader("HTTP-Referer")
+Call ai.ClearHeaders()
+</code></pre>
+<p>Header names and values are validated. CR, LF and null characters are rejected. Callers cannot set <code>Host</code>, <code>Content-Length</code> or <code>Transfer-Encoding</code>.</p>
+<h2 id="response">Response</h2>
+<p><code>Complete</code> returns an <code>XPAiResponse</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Description</th></tr></thead><tbody><tr><td><code>StatusCode</code></td><td>HTTP response status code.</td></tr><tr><td><code>IsSuccess</code></td><td><code>True</code> for an HTTP success status.</td></tr><tr><td><code>Model</code></td><td>Model returned by the provider.</td></tr><tr><td><code>Text</code></td><td>Assistant text extracted from the response.</td></tr><tr><td><code>Content</code></td><td>Alias for <code>Text</code>.</td></tr><tr><td><code>RawJson</code></td><td>Complete provider JSON as a <code>XPJsonDocument</code>. Unknown properties are preserved.</td></tr><tr><td><code>Usage</code></td><td>Provider usage object as a <code>XPJsonDocument</code>.</td></tr><tr><td><code>HasJsonResult</code></td><td><code>True</code> when <code>Text</code> contains valid JSON within XPscript JSON limits.</td></tr><tr><td><code>ResultJson</code></td><td>Parses <code>Text</code> and returns a <code>XPJsonDocument</code>; raises an XPScript error if the text is not valid JSON.</td></tr></tbody></table>
+<p><code>ResultJson</code> parses the provider result but does not independently validate it against the configured JSON Schema. Schema enforcement is requested from the provider.</p>
+<p><code>ThrowOnHttpError</code> defaults to <code>True</code>. A non-success response then raises an error containing only the HTTP status code. Set it to <code>False</code> when the application needs to inspect a failed response object.</p>
+<p>Provider response bodies, API keys and authorization headers are never copied into runtime error messages.</p>
+<h2 id="streaming">Streaming</h2>
+<p>Streaming uses OpenAI-compatible server-sent events. The callback must be a module procedure that accepts one <code>ByVal String</code> parameter.</p>
+<pre><code class="language-xpscript">Dim collected As String
+
+Sub OnChunk(ByVal text As String)
+    collected = collected &#x26; text
+    Print text
+End Sub
+
+Sub Main()
+    Dim ai As New XPAi("https://api.example.com/v1/chat/completions", Environ("AI_API_KEY"))
+    Dim response As XPAiResponse
+
+    ai.Model = "example-model"
+    Call ai.AddMessage("user", "Write one sentence.")
+    Set response = ai.Stream("OnChunk")
+    Print response.Text
+End Sub
+</code></pre>
+<p><code>CollectStreamedResponse</code> defaults to <code>True</code>. It controls whether <code>response.Text</code> contains all received chunks. The callback still receives each chunk when collection is disabled.</p>
+<p>The overloads are:</p>
+<pre><code class="language-xpscript">Set response = ai.Stream("OnChunk")
+Set response = ai.Stream(messages, "OnChunk")
+Set response = ai.Stream(messages, "OnChunk", "request-model")
+</code></pre>
+<p>The parser handles <code>[DONE]</code>, rejects malformed JSON and enforces limits for lines, events and total payload size.</p>
+<h2 id="timeout-and-cancellation">Timeout and cancellation</h2>
+<p><code>Timeout</code> is measured in seconds and defaults to 60. Values from <code>0.1</code> through <code>3600</code> are accepted.</p>
+<pre><code class="language-xpscript">ai.Timeout = 120
+Call ai.Cancel()
+</code></pre>
+<p><code>Cancel</code> stops the active HTTP request and closes an active response stream. One <code>XPAi</code> instance allows one active request. Use separate instances for concurrent requests.</p>
+<h2 id="supported-provider-patterns">Supported provider patterns</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Provider pattern</th><th>Configuration</th></tr></thead><tbody><tr><td>OpenAI-compatible endpoint</td><td>Full chat-completions URL plus bearer key.</td></tr><tr><td>Azure-compatible endpoint</td><td>Full deployment URL with API version plus an <code>api-key</code> header.</td></tr><tr><td>OpenRouter-compatible endpoint</td><td>Full endpoint, bearer key and optional provider headers.</td></tr><tr><td>Local model server</td><td>Local HTTP endpoint with no key, or custom headers when required.</td></tr></tbody></table>
+<p><code>XPAi</code> does not follow HTTP redirects. Applications that accept user-controlled endpoint URLs must apply an endpoint allowlist before creating the client.</p>
+<h2 id="resource-limits">Resource limits</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Resource</th><th align="right">Limit</th></tr></thead><tbody><tr><td>Request body</td><td align="right">8 MiB</td></tr><tr><td>Non-streaming response</td><td align="right">16 MiB</td></tr><tr><td>Streaming payload</td><td align="right">16 MiB</td></tr><tr><td>One SSE line</td><td align="right">1 MiB</td></tr><tr><td>SSE events</td><td align="right">100000</td></tr><tr><td>Messages</td><td align="right">10000</td></tr></tbody></table>
+<p>See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/xpai.xps">xpai.xps</a> for the general executable example and <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/xpai-structured-output.xps">xpai-structured-output.xps</a> for prompt/schema compilation coverage.</p>
+<p>Provider endpoint references: <a href="https://developers.openai.com/api/reference/resources/chat">OpenAI Chat API</a>, <a href="https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk">Claude OpenAI compatibility</a>, <a href="https://openrouter.ai/docs/quickstart">OpenRouter quickstart</a> and <a href="https://learn.microsoft.com/azure/foundry/openai/api-version-lifecycle">Azure OpenAI v1 API</a>.</p>
+<h2 id="complete-api-reference">Complete API reference</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>XPAi(endpoint [, apiKey])</code></td><td>Creates a client for a custom full endpoint. The API key uses bearer authentication.</td></tr><tr><td><code>XPAi(preset, apiKey [, providerConfiguration])</code></td><td>Creates a client from a provider preset. Azure requires its resource name as provider configuration.</td></tr><tr><td><code>Endpoint</code></td><td>Returns the resolved request endpoint.</td></tr><tr><td><code>Provider</code></td><td>Returns the selected provider name.</td></tr><tr><td><code>EndpointPath</code></td><td>Replaces the path while keeping the configured origin.</td></tr><tr><td><code>Model</code></td><td>Gets or sets the default model.</td></tr><tr><td><code>SystemPrompt</code></td><td>Gets or sets the first system prompt message.</td></tr><tr><td><code>UserPrompt</code></td><td>Gets or sets the final user prompt message.</td></tr><tr><td><code>SetPrompt(system, user)</code></td><td>Sets both prompt parts.</td></tr><tr><td><code>ClearPrompt()</code></td><td>Clears both prompt parts.</td></tr><tr><td><code>JsonSchemaName</code></td><td>Gets or sets the structured result schema name.</td></tr><tr><td><code>JsonSchemaStrict</code></td><td>Gets or sets strict JSON Schema request mode.</td></tr><tr><td><code>HasJsonSchema</code></td><td>Reports whether structured output is configured.</td></tr><tr><td><code>ResponseJsonSchema</code></td><td>Gets a cloned configured schema or sets a raw schema.</td></tr><tr><td><code>SetResultClass(contract [, name [, strict]])</code></td><td>Derives structured-result JSON Schema from an XPscript class instance.</td></tr><tr><td><code>SetJsonSchema(schema [, name [, strict]])</code></td><td>Sets an explicit raw JSON Schema.</td></tr><tr><td><code>ClearJsonSchema()</code></td><td>Removes structured-output configuration.</td></tr><tr><td><code>Temperature</code></td><td>Gets or sets a value from 0 through 2.</td></tr><tr><td><code>MaxOutputTokens</code></td><td>Gets or sets the output token limit.</td></tr><tr><td><code>Timeout</code></td><td>Gets or sets the total request timeout in seconds.</td></tr><tr><td><code>CollectStreamedResponse</code></td><td>Controls whether streaming also builds <code>XPAiResponse.Text</code>.</td></tr><tr><td><code>ThrowOnHttpError</code></td><td>Controls whether non-success HTTP responses raise an XPScript error.</td></tr><tr><td><code>AddMessage(role, content)</code></td><td>Adds a system, user or assistant message.</td></tr><tr><td><code>GetMessages()</code></td><td>Returns a cloned message array as <code>XPJsonDocument</code>.</td></tr><tr><td><code>ClearMessages()</code></td><td>Removes all stored messages.</td></tr><tr><td><code>SetOption(name, value)</code></td><td>Adds or replaces an extra request JSON property except dedicated properties.</td></tr><tr><td><code>RemoveOption(name)</code></td><td>Removes one extra request property.</td></tr><tr><td><code>ClearOptions()</code></td><td>Removes all extra request properties.</td></tr><tr><td><code>SetHeader(name, value)</code></td><td>Adds or replaces a request header.</td></tr><tr><td><code>RemoveHeader(name)</code></td><td>Removes one request header.</td></tr><tr><td><code>ClearHeaders()</code></td><td>Removes all caller-defined headers.</td></tr><tr><td><code>Complete([messages [, model]])</code></td><td>Sends a non-streaming request.</td></tr><tr><td><code>Stream([messages,] callback [, model])</code></td><td>Sends an SSE request and invokes the callback for each text chunk.</td></tr><tr><td><code>Cancel()</code></td><td>Cancels the active request.</td></tr><tr><td><code>Dispose()</code></td><td>Cancels active work and releases HTTP resources.</td></tr></tbody></table>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

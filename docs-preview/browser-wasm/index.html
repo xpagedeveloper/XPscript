@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Browser Wasm | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="browser-webassembly">Browser WebAssembly</h1>
+<p>XPScript can run a UIForm application in the browser as .NET WebAssembly.</p>
+<h2 id="web-server-marker">Web-server marker</h2>
+<p>Add this file-level marker:</p>
+<pre><code class="language-xpscript">[Platform:browser-wasm]
+</code></pre>
+<p>The marker is interpreted only by the XPScript web server. The normal compiler removes it before compiling the source. This means the same <code>.xps</code> file can still be compiled as a desktop application for an explicit desktop runtime.</p>
+<p>A browser-wasm file does not need <code>[Get]</code> or another HTTP route attribute. It can use the same <code>Sub Main()</code> entry point as a desktop UI application.</p>
+<pre><code class="language-xpscript">[Platform:browser-wasm]
+
+Sub Main()
+    Dim form As New UIForm("Customer")
+    Dim grid As Variant
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextField("email", "Email")
+
+    grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("name", 6)
+    Call grid.SetFieldPosition("email", 6)
+
+    Call form.ShowDialog()
+End Sub
+</code></pre>
+<p><code>AddGridColumns()</code> returns the generated grid helper as a <code>Variant</code>. Assign it with a normal <code>=</code> assignment. <code>Set</code> is reserved for source-level object-reference variables and is not required for this runtime helper.</p>
+<h2 id="on-demand-compilation">On-demand compilation</h2>
+<p>When the web server receives the first request for a browser-wasm <code>.xps</code> file, it compiles and publishes the application for the <code>browser-wasm</code> runtime. The result is stored under the web root in <code>.xpscript-cache/wasm</code> using a source hash.</p>
+<p>If the source has not changed, later requests reuse the cached WebAssembly publish output. A source change produces a new hash and a new build.</p>
+<p>The generated runtime assets are served below the logical <code>.xps</code> route. For example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/customer.xps</span></span>
+<span class="line"><span>/customer.xps/_framework/dotnet.js</span></span>
+<span class="line"><span>/customer.xps/_framework/...</span></span></code></pre>
+<p>The <code>.xps</code> request returns the generated bootstrap page. Asset requests are resolved to the cached WebAssembly bundle.</p>
+<h2 id="uiform">UIForm</h2>
+<p>Browser WebAssembly uses the same XPScript UIForm object model and layout metadata as desktop. The browser host maps the shared UI model to DOM controls and uses Bootstrap 5.3.8 styling.</p>
+<p>The browser renderer supports the shared grid row, column, column-span and row-span metadata. <code>AddGridColumns</code>, <code>SetFieldPosition</code> and explicit row breaks therefore use the same layout intent as desktop.</p>
+<p>The browser renderer also applies the shared field metadata for visibility, enabled state, read-only state, required fields, minimum and maximum length, numeric minimum and maximum values and bound field values.</p>
+<p>Supported browser controls include text fields, text areas, password fields, number and range fields, date, time, date-time, month, color, email and URL fields, check boxes, select lists and radio groups. Select and radio options come from the same UIForm option model used by desktop.</p>
+<p>Custom UIForm buttons are rendered with their shared visibility, enabled-state and style metadata. Browser-side form results are published as an <code>xpscript:form-result</code> DOM event and mirrored in <code>#xpscript-app</code> as <code>data-xpscript-result</code>. <code>ShowDialog()</code> itself remains non-blocking in browser-wasm and initially returns <code>Pending</code> because a browser cannot synchronously block the WebAssembly thread while waiting for user input.</p>
+<p>The browser build does not change the source-level UI API. The same UIForm source can still be compiled as a desktop application.</p>
+<h2 id="callback-execution-boundary">Callback execution boundary</h2>
+<p>A browser-wasm XPScript application executes inside the browser. UI callbacks that are part of that application are local WebAssembly callbacks and do not need a network round trip merely because the event originated in a DOM control.</p>
+<p><code>SetOnChangeCallback</code> and <code>AddButtonCallback</code> are dispatched from DOM events back into the generated WebAssembly runtime. The callback receives a <code>UIFormEvent</code> as its first argument and caller-supplied context arguments after it, matching the callback contract used by the other XPScript runtimes. Callback action state is applied back to the rendered form, including changed field/button state and navigation requests.</p>
+<pre><code class="language-xpscript">Sub NameChanged(evt As Variant, context As String)
+    Print evt.EventType &#x26; ":" &#x26; evt.ControlName &#x26; ":" &#x26; context
+End Sub
+
+Sub SaveClicked(evt As Variant, context As String, mode As Integer)
+    Print evt.EventType &#x26; ":" &#x26; context &#x26; ":" &#x26; CStr(mode)
+End Sub
+
+Sub Main()
+    Dim form As New UIForm("Customer")
+    Call form.AddTextField("name", "Name")
+    Call form.SetOnChangeCallback("name", "NameChanged", "browser")
+    Call form.AddButtonCallback("save", "Save", "SaveClicked", "browser", 2)
+    Call form.ShowDialog()
+End Sub
+</code></pre>
+<p>Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic <code>xpscript:form-error</code> event rather than exposing runtime exception details.</p>
+<p>Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm <code>XPHttpClient</code> to call an explicit server API for that work.</p>
+<p>UI event objects provide <code>ToJson()</code> and <code>ToJsonObject()</code> for this boundary. These methods create a snapshot that deliberately excludes live runtime references. <code>UIFormEvent</code> serializes only <code>eventType</code>, <code>controlName</code>, <code>value</code> and <code>values</code>. <code>UIListViewEvent</code> serializes only <code>eventType</code>, <code>rowIndex</code>, <code>key</code> and <code>row</code>.</p>
+<p>For example, a browser callback can explicitly post its event snapshot to an application API route:</p>
+<pre><code class="language-xpscript">Sub NameChanged(evt As Variant, context As String)
+    Dim http As New XPHttpClient
+    Dim payload As Variant
+    Dim response As XPHttpResponse
+
+    Set payload = evt.ToJsonObject()
+    Call payload.Set("context", context)
+    Set response = http.PostJson("/api/ui-event", payload)
+End Sub
+</code></pre>
+<p>The route is selected by application code. The browser never sends an XPScript callback/function name to the server. This keeps authorization attached to normal server routes and avoids exposing a generic remote function dispatcher.</p>
+<p>XPScript must not implement browser-to-server callbacks as a generic endpoint that accepts an arbitrary function name from the client. If a dedicated server-callback facility is added, the browser request must use a server-issued opaque registration identifier or an explicit application route. The server must map that identifier to an allowlisted callback and must not trust a callback name supplied by the browser.</p>
+<p>A server callback request must use a same-origin unsafe HTTP method such as <code>POST</code>, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live <code>UIForm</code> or <code>UIListView</code> instance cannot be transferred to the server.</p>
+<p>This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.</p>
+<h2 id="csrf-protection">CSRF protection</h2>
+<p>Unsafe same-origin browser requests that use Session cookies are protected by the XPScript CSRF runtime.</p>
+<p>The browser-WASM <code>XPHttpClient</code> handles the CSRF challenge automatically for <code>POST</code>, <code>PUT</code>, <code>PATCH</code> and <code>DELETE</code>. Application code uses the normal HTTP methods:</p>
+<pre><code class="language-xpscript">Dim http As New XPHttpClient
+Dim payload As New XPJsonObject
+Dim result As XPHttpResponse
+
+Call payload.Set("name", "Example")
+Set result = http.PatchJson("/api/customer/42", payload)
+</code></pre>
+<p>If the server requires a token, it can answer the first unsafe request with HTTP 403 and a fresh <code>X-XPS-CSRF-Token</code> response header. The browser-WASM client retries the request once with that token. The Session cookie remains HttpOnly and is never read by the WebAssembly application.</p>
+<p>This automatic behavior applies to the built-in browser-WASM HTTP transport. If application code bypasses it and uses custom JavaScript <code>fetch</code>, the request must send <code>X-XPS-CSRF-Token</code> explicitly when Session cookies are used.</p>
+<p>See <a href="../csrf/">CSRF protection</a> for UIForm, manual HTML forms, custom browser REST requests and bearer-token behavior.</p>
+<h2 id="build-requirement">Build requirement</h2>
+<p>The web-server machine needs the .NET WebAssembly build tools because the first request may need to publish a new browser application:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet workload install wasm-tools</span></span></code></pre>
+<p>Precompiling the browser application during deployment is optional. On-demand compilation is the default model.</p>
+<h2 id="cache-behavior">Cache behavior</h2>
+<p>The browser-wasm cache is persistent on disk because a WebAssembly publish contains multiple runtime and application assets. Normal server-side XPScript web compilation continues to use the existing compiled-unit cache.</p>
+<p>The <code>.xpscript-cache</code> directory must not be exposed as a normal static web directory. Browser assets are served only through their owning <code>.xps</code> route.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

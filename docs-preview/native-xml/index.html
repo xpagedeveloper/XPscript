@@ -1,0 +1,644 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Native Xml | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="native-xml">Native XML</h1>
+<p>XPscript provides a native XML DOM-style API backed by .NET <code>System.Xml.Linq</code>. It supports document creation, parsing, navigation, XPath element selection, attributes, mutation, cloning, serialization and internal DTD validation.</p>
+<p>The XML runtime is cross-platform and is only included when an application uses the XML API.</p>
+<h2 id="create-a-document">Create a document</h2>
+<p>Create an empty document with either form:</p>
+<pre><code class="language-xpscript">Dim doc As New XPXmlDocument
+</code></pre>
+<p>or:</p>
+<pre><code class="language-xpscript">Dim doc As XPXmlDocument
+Set doc = New XPXmlDocument
+</code></pre>
+<p>A new document has no root element:</p>
+<pre><code class="language-xpscript">If Not doc.HasRoot Then
+    Print "empty"
+End If
+</code></pre>
+<p>Create the root directly:</p>
+<pre><code class="language-xpscript">Dim root As XPXmlElement
+Set root = doc.AddRoot("person")
+</code></pre>
+<p>Or create a detached element and assign it as the root:</p>
+<pre><code class="language-xpscript">Set root = doc.CreateElement("person")
+Call doc.SetRoot(root)
+</code></pre>
+<p><code>SetRoot</code> clones the supplied element into the document. The source element remains independent.</p>
+<p><code>DocumentElement</code> is an alias for <code>Root</code>.</p>
+<h2 id="parse-xml">Parse XML</h2>
+<pre><code class="language-xpscript">Dim doc As XPXmlDocument
+Set doc = XPXmlDocument.Parse("&#x3C;person id=""42"">&#x3C;name>Fredrik&#x3C;/name>&#x3C;/person>")
+</code></pre>
+<p><code>XmlParse(xml)</code> is the shorthand equivalent:</p>
+<pre><code class="language-xpscript">Set doc = XmlParse(xmlText)
+</code></pre>
+<p>A constructor argument also parses XML:</p>
+<pre><code class="language-xpscript">Dim doc As New XPXmlDocument("&#x3C;root>&#x3C;child />&#x3C;/root>")
+</code></pre>
+<p><code>LoadXml(xml)</code> replaces the contents of an existing <code>XPXmlDocument</code>:</p>
+<pre><code class="language-xpscript">Call doc.LoadXml("&#x3C;newroot>&#x3C;item>1&#x3C;/item>&#x3C;/newroot>")
+</code></pre>
+<p>Normal parsing requires well-formed XML. DTD processing is prohibited, <code>XmlResolver</code> is disabled, and external entities are not resolved. XML input is limited to 8 MiB.</p>
+<h2 id="build-xml">Build XML</h2>
+<pre><code class="language-xpscript">Dim doc As New XPXmlDocument
+Dim root As XPXmlElement
+Dim person As XPXmlElement
+
+Set root = doc.AddRoot("people")
+Set person = root.AddElement("person")
+Call person.SetAttribute("id", 42)
+Call person.AddElement("name", "Fredrik")
+Call person.AddElement("active", True)
+
+Print doc.Stringify()
+</code></pre>
+<p>Scalar values are converted using invariant formatting. Text and attribute values are escaped automatically.</p>
+<p>A document can also create detached nodes:</p>
+<pre><code class="language-xpscript">Dim element As XPXmlElement
+Dim node As XPXmlNode
+
+Set element = doc.CreateElement("item", "value")
+Set node = doc.CreateTextNode("plain text")
+Set node = doc.CreateCData("raw &#x3C;content>")
+Set node = doc.CreateComment("comment")
+Set node = doc.CreateProcessingInstruction("target", "value=1")
+</code></pre>
+<p>Detached nodes can later be inserted into an element. Insertions clone the supplied node, so the original remains independent.</p>
+<h2 id="xpxmldocument-reference">XPXmlDocument reference</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>Root</code></td><td>Returns the root <code>XPXmlElement</code>, or <code>Nothing</code> when empty.</td></tr><tr><td><code>DocumentElement</code></td><td>Alias for <code>Root</code>.</td></tr><tr><td><code>HasRoot</code></td><td><code>True</code> when the document has a root element.</td></tr><tr><td><code>ChildNodes</code></td><td>Top-level XML nodes as <code>XPXmlNodeCollection</code>.</td></tr><tr><td><code>Indent</code></td><td>Controls formatted serialization. Default <code>True</code>.</td></tr><tr><td><code>OmitXmlDeclaration</code></td><td>Omits the XML declaration when <code>True</code>. Default <code>True</code>.</td></tr><tr><td><code>CreateElement(name)</code></td><td>Creates a detached element.</td></tr><tr><td><code>CreateElement(name, value)</code></td><td>Creates a detached element with text content.</td></tr><tr><td><code>CreateTextNode(value)</code></td><td>Creates a detached text node.</td></tr><tr><td><code>CreateCData(value)</code></td><td>Creates a detached CDATA node.</td></tr><tr><td><code>CreateComment(value)</code></td><td>Creates a detached comment.</td></tr><tr><td><code>CreateProcessingInstruction(target, data)</code></td><td>Creates a detached processing instruction.</td></tr><tr><td><code>AddRoot(name [, value])</code></td><td>Creates and attaches the root element. Raises an error if a root already exists.</td></tr><tr><td><code>SetRoot(element)</code></td><td>Replaces or creates the root using a clone of <code>element</code>.</td></tr><tr><td><code>RemoveRoot()</code></td><td>Removes the root. Returns <code>True</code> if one existed.</td></tr><tr><td><code>Clear()</code></td><td>Removes all nodes and the XML declaration.</td></tr><tr><td><code>LoadXml(xml)</code></td><td>Replaces document contents by securely parsing XML text.</td></tr><tr><td><code>SelectSingleNode(xpath)</code></td><td>Returns the first matching element or <code>Nothing</code>.</td></tr><tr><td><code>SelectNodes(xpath)</code></td><td>Returns matching elements as <code>XPXmlNodeCollection</code>.</td></tr><tr><td><code>ValidateDTD(dtd)</code></td><td>Validates against internal DTD declarations.</td></tr><tr><td><code>IsValidDTD(dtd)</code></td><td>Boolean DTD validation helper.</td></tr><tr><td><code>Stringify()</code></td><td>Serializes the document.</td></tr></tbody></table>
+<h2 id="xpxmlnode-navigation">XPXmlNode navigation</h2>
+<p>All element objects are also <code>XPXmlNode</code> objects.</p>
+<pre><code class="language-xpscript">Dim node As XPXmlNode
+Set node = doc.SelectSingleNode("/people/person[1]")
+
+Print node.NodeType
+Print node.Name
+Print node.Parent.Name
+Print node.NextSibling.Name
+</code></pre>
+<p><code>XPXmlNode</code> exposes:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>NodeType</code></td><td><code>Element</code>, <code>Text</code>, <code>CData</code>, <code>Comment</code>, <code>ProcessingInstruction</code>, <code>DocumentType</code> or <code>Node</code>.</td></tr><tr><td><code>Name</code></td><td>Element name, otherwise an empty string.</td></tr><tr><td><code>Value</code></td><td>Gets or sets element/text/CDATA/comment/processing-instruction content where applicable.</td></tr><tr><td><code>InnerText</code></td><td>Alias for <code>Value</code>.</td></tr><tr><td><code>OuterXml</code></td><td>Serialized node XML.</td></tr><tr><td><code>Parent</code></td><td>Parent <code>XPXmlElement</code>, or <code>Nothing</code>.</td></tr><tr><td><code>OwnerDocument</code></td><td>Owning <code>XPXmlDocument</code>, or <code>Nothing</code> for a detached node.</td></tr><tr><td><code>HasParent</code></td><td><code>True</code> when attached to an element or document.</td></tr><tr><td><code>HasChildNodes</code></td><td>Whether the node contains child nodes.</td></tr><tr><td><code>ChildCount</code></td><td>Number of child nodes, including text/comments.</td></tr><tr><td><code>ChildNodes</code></td><td>Child nodes as <code>XPXmlNodeCollection</code>.</td></tr><tr><td><code>FirstChild</code></td><td>First child or <code>Nothing</code>.</td></tr><tr><td><code>LastChild</code></td><td>Last child or <code>Nothing</code>.</td></tr><tr><td><code>PreviousSibling</code></td><td>Previous sibling or <code>Nothing</code>.</td></tr><tr><td><code>NextSibling</code></td><td>Next sibling or <code>Nothing</code>.</td></tr><tr><td><code>Clone()</code></td><td>Returns a detached deep clone.</td></tr><tr><td><code>InsertBefore(node)</code></td><td>Inserts a clone before the current attached node and returns the inserted clone.</td></tr><tr><td><code>InsertAfter(node)</code></td><td>Inserts a clone after the current attached node and returns the inserted clone.</td></tr><tr><td><code>ReplaceWith(node)</code></td><td>Replaces the current attached node with a clone and returns the replacement.</td></tr><tr><td><code>Remove()</code></td><td>Removes the node. Returns <code>False</code> when already detached.</td></tr><tr><td><code>Delete()</code></td><td>Alias for <code>Remove()</code>.</td></tr><tr><td><code>Stringify()</code></td><td>Serializes the node.</td></tr></tbody></table>
+<p>Sibling insertion follows XML document rules. For example, inserting a second root element beside the document root is invalid.</p>
+<h2 id="xpxmlelement-elements-and-children">XPXmlElement elements and children</h2>
+<p><code>XPXmlElement</code> adds element-specific navigation and mutation:</p>
+<pre><code class="language-xpscript">Dim root As XPXmlElement
+Dim item As XPXmlElement
+
+Set root = doc.AddRoot("items")
+Set item = root.AddElement("item", "first")
+Set item = root.PrependElement("item", "zero")
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>Name</code></td><td>Local element name.</td></tr><tr><td><code>Rename(name)</code></td><td>Renames the element.</td></tr><tr><td><code>Count</code></td><td>Number of direct child elements.</td></tr><tr><td><code>ElementCount</code></td><td>Alias for <code>Count</code>.</td></tr><tr><td><code>Elements</code></td><td>All direct child elements as <code>XPXmlNodeCollection</code>.</td></tr><tr><td><code>AddElement(name [, value])</code></td><td>Appends and returns a child element.</td></tr><tr><td><code>PrependElement(name [, value])</code></td><td>Prepends and returns a child element.</td></tr><tr><td><code>Add(node)</code></td><td>Appends a clone of a node.</td></tr><tr><td><code>AppendChild(node)</code></td><td>Appends a clone and returns the inserted node.</td></tr><tr><td><code>PrependChild(node)</code></td><td>Prepends a clone and returns the inserted node.</td></tr><tr><td><code>AddText(value)</code></td><td>Appends a text node.</td></tr><tr><td><code>AddCData(value)</code></td><td>Appends a CDATA node.</td></tr><tr><td><code>AddComment(value)</code></td><td>Appends a comment node.</td></tr><tr><td><code>GetElement(name)</code></td><td>Returns the first direct child element with that name.</td></tr><tr><td><code>GetElements(name)</code></td><td>Returns matching direct child elements.</td></tr><tr><td><code>GetDescendants(name)</code></td><td>Returns matching descendant elements at any depth.</td></tr><tr><td><code>RemoveElement(name)</code></td><td>Removes the first matching direct child. Returns Boolean.</td></tr><tr><td><code>RemoveElements(name)</code></td><td>Removes all matching direct children and returns the number removed.</td></tr><tr><td><code>RemoveChildren()</code></td><td>Removes all child nodes but preserves attributes.</td></tr><tr><td><code>RemoveAll()</code></td><td>Removes all child nodes and all attributes.</td></tr><tr><td><code>SelectSingleNode(xpath)</code></td><td>XPath element selection relative to the element.</td></tr><tr><td><code>SelectNodes(xpath)</code></td><td>XPath element collection relative to the element.</td></tr></tbody></table>
+<p><code>Value</code> on an element replaces its child content with text, matching <code>System.Xml.Linq.XElement.Value</code> semantics.</p>
+<h2 id="attributes">Attributes</h2>
+<p>String helpers remain available:</p>
+<pre><code class="language-xpscript">Call root.SetAttribute("id", 42)
+Print root.GetAttribute("id")
+Print root.HasAttribute("id")
+Call root.RemoveAttribute("id")
+</code></pre>
+<p><code>RemoveAttribute(name)</code> now returns <code>True</code> when an attribute was removed and <code>False</code> when it did not exist.</p>
+<p>For object-level attribute navigation:</p>
+<pre><code class="language-xpscript">Dim attr As XPXmlAttribute
+Dim attrs As XPXmlAttributeCollection
+
+Set attrs = root.Attributes
+Set attr = root.GetAttributeNode("id")
+
+Print attr.Name
+Print attr.Value
+attr.Value = "43"
+Call attr.Delete()
+</code></pre>
+<p><code>XPXmlElement</code> attribute members:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>AttributeCount</code></td><td>Number of attributes.</td></tr><tr><td><code>Attributes</code></td><td><code>XPXmlAttributeCollection</code>.</td></tr><tr><td><code>SetAttribute(name, value)</code></td><td>Adds or replaces an attribute.</td></tr><tr><td><code>GetAttribute(name)</code></td><td>Returns attribute text or an empty string when missing.</td></tr><tr><td><code>GetAttributeNode(name)</code></td><td>Returns the <code>XPXmlAttribute</code> object or <code>Nothing</code>.</td></tr><tr><td><code>HasAttribute(name)</code></td><td>Tests for an attribute.</td></tr><tr><td><code>RemoveAttribute(name)</code></td><td>Removes an attribute and returns Boolean.</td></tr><tr><td><code>RemoveAllAttributes()</code></td><td>Removes all attributes.</td></tr></tbody></table>
+<p><code>XPXmlAttribute</code> exposes:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Behavior</th></tr></thead><tbody><tr><td><code>Name</code></td><td>Attribute local name.</td></tr><tr><td><code>Value</code></td><td>Read/write attribute value.</td></tr><tr><td><code>Parent</code></td><td>Owning element or <code>Nothing</code> when detached.</td></tr><tr><td><code>OwnerElement</code></td><td>Alias for <code>Parent</code>.</td></tr><tr><td><code>IsNamespaceDeclaration</code></td><td>Whether this is an XML namespace declaration.</td></tr><tr><td><code>Remove()</code></td><td>Removes the attribute and returns Boolean.</td></tr><tr><td><code>Delete()</code></td><td>Alias for <code>Remove()</code>.</td></tr><tr><td><code>Stringify()</code></td><td>Serializes the attribute.</td></tr></tbody></table>
+<p><code>XPXmlAttributeCollection</code> exposes <code>Count</code>, <code>First</code>, <code>Last</code>, <code>Get(index)</code>, <code>Get(name)</code> and <code>Has(name)</code>.</p>
+<p>Indexes are zero-based.</p>
+<h2 id="collections-and-forall">Collections and ForAll</h2>
+<p><code>XPXmlNodeCollection</code>, <code>XPXmlAttributeCollection</code> and <code>XPXmlValidationErrorCollection</code> are enumerable with <code>ForAll</code>.</p>
+<pre><code class="language-xpscript">Dim nodes As XPXmlNodeCollection
+Set nodes = doc.SelectNodes("/people/person")
+
+ForAll node In nodes
+    Print node.Name
+End ForAll
+</code></pre>
+<p><code>XPXmlNodeCollection</code> exposes:</p>
+<ul>
+<li><code>Count</code></li>
+<li><code>First</code></li>
+<li><code>Last</code></li>
+<li><code>Get(index)</code></li>
+</ul>
+<h2 id="xpath">XPath</h2>
+<pre><code class="language-xpscript">Dim node As XPXmlNode
+Dim nodes As XPXmlNodeCollection
+
+Set node = doc.SelectSingleNode("/people/person[@id='42']")
+Set nodes = doc.SelectNodes("/people/person")
+</code></pre>
+<p><code>SelectSingleNode</code> and <code>SelectNodes</code> are available on both <code>XPXmlDocument</code> and <code>XPXmlElement</code>.</p>
+<p>The current XPath API returns element nodes and does not expose a namespace-manager abstraction. Use the direct attribute API for attributes.</p>
+<h2 id="delete-and-replace-examples">Delete and replace examples</h2>
+<p>Delete a selected node:</p>
+<pre><code class="language-xpscript">Dim node As XPXmlNode
+Set node = doc.SelectSingleNode("/people/person[@id='42']")
+If Not node Is Nothing Then
+    Call node.Delete()
+End If
+</code></pre>
+<p>Replace a node:</p>
+<pre><code class="language-xpscript">Dim replacement As XPXmlElement
+Set replacement = doc.CreateElement("person")
+Call replacement.SetAttribute("id", "99")
+Call node.ReplaceWith(replacement)
+</code></pre>
+<p>Remove all direct elements with a name:</p>
+<pre><code class="language-xpscript">removed = root.RemoveElements("person")
+</code></pre>
+<p>Clear a whole document:</p>
+<pre><code class="language-xpscript">Call doc.Clear()
+</code></pre>
+<h2 id="serialization">Serialization</h2>
+<p><code>XmlStringify(documentOrNode)</code> serializes an XML document, node or attribute.</p>
+<pre><code class="language-xpscript">Print XmlStringify(doc)
+Print XmlStringify(root)
+</code></pre>
+<p><code>XPXmlDocument.Stringify()</code> is equivalent for documents.</p>
+<p>Formatting properties:</p>
+<ul>
+<li><code>Indent</code>, default <code>True</code></li>
+<li><code>OmitXmlDeclaration</code>, default <code>True</code></li>
+</ul>
+<p>When the declaration is emitted it uses UTF-8 without a BOM. Serialized newlines use LF.</p>
+<p><code>XmlEscape(value)</code> escapes standalone XML text:</p>
+<pre><code class="language-xpscript">Print XmlEscape("5 &#x3C; 10 &#x26; 20 > 10")
+</code></pre>
+<p>Result:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>5 &#x26;lt; 10 &#x26;amp; 20 &#x26;gt; 10</span></span></code></pre>
+<h2 id="internal-dtd-validation">Internal DTD validation</h2>
+<p>DTD validation accepts internal DTD declarations as a string. XPscript does not resolve external DTDs or external entities.</p>
+<pre><code class="language-xpscript">Dim dtd As String
+Dim result As XPXmlValidationResult
+
+dtd = _
+    "&#x3C;!ELEMENT person (name,email)>" &#x26; Chr(10) &#x26; _
+    "&#x3C;!ELEMENT name (#PCDATA)>" &#x26; Chr(10) &#x26; _
+    "&#x3C;!ELEMENT email (#PCDATA)>"
+
+Set result = doc.ValidateDTD(dtd)
+
+If result.Valid Then
+    Print "Valid"
+Else
+    Print result.Errors.Get(0).Message
+End If
+</code></pre>
+<p><code>ValidateDTD(dtd)</code> expects internal DTD declarations only. Do not include a <code>DOCTYPE</code> wrapper. <code>SYSTEM</code> and <code>PUBLIC</code> external identifiers are rejected and validation runs with <code>XmlResolver = null</code>.</p>
+<p>For a Boolean-only check:</p>
+<pre><code class="language-xpscript">If doc.IsValidDTD(dtd) Then
+    Print "Valid"
+End If
+</code></pre>
+<p>Validation objects expose:</p>
+<ul>
+<li><code>XPXmlValidationResult.Valid</code></li>
+<li><code>XPXmlValidationResult.Errors</code></li>
+<li><code>XPXmlValidationErrorCollection.Count</code></li>
+<li><code>XPXmlValidationErrorCollection.Get(index)</code></li>
+<li><code>XPXmlValidationError.Message</code></li>
+<li><code>XPXmlValidationError.Line</code></li>
+<li><code>XPXmlValidationError.Column</code></li>
+<li><code>XPXmlValidationError.Severity</code></li>
+</ul>
+<h2 id="resource-and-security-limits">Resource and security limits</h2>
+<ul>
+<li>XML parse input: 8 MiB maximum.</li>
+<li>DTD validation input: 1 MiB maximum.</li>
+<li>Normal parsing prohibits DTD processing.</li>
+<li><code>XmlResolver</code> is disabled.</li>
+<li>DTD validation rejects <code>SYSTEM</code> and <code>PUBLIC</code> external identifiers.</li>
+<li>The API does not fetch external entities or schemas.</li>
+</ul>
+<p>See <code>samples/native-xml-dom-regression.xps</code> for executable creation, navigation, attributes, insertion, replacement, deletion, parsing and clearing coverage.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

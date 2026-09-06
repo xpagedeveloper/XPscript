@@ -1,0 +1,1328 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Notes C Api | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="hcl-notesdomino-c-api-wrapper">HCL Notes/Domino C API wrapper</h1>
+<p>XPscript exposes a native HCL Notes/Domino object model backed by the Notes/Domino C API. The implementation does not use the Domino Java APIs, JNI, JNA, or JNX.</p>
+<p>The supported XPscript Notes classes are:</p>
+<ul>
+<li><code>NotesSession</code></li>
+<li><code>NotesDatabase</code></li>
+<li><code>NotesView</code></li>
+<li><code>NotesDocumentCollection</code></li>
+<li><code>NotesDocument</code></li>
+<li><code>NotesItem</code></li>
+<li><code>NotesRichTextItem</code></li>
+<li><code>NotesName</code></li>
+<li><code>NotesDateTime</code></li>
+<li><code>NotesAgentResult</code></li>
+</ul>
+<p>Except for <code>NotesSession</code>, objects are created from another Notes object rather than with <code>New</code>. Every Notes object supports <code>Recycle()</code>, and every wrapper exposes <code>IsRecycled</code> while it is alive. Explicitly recycling a typed Notes variable also sets that XPscript variable to <code>Nothing</code>.</p>
+<h2 id="notessession">NotesSession</h2>
+<p>Exactly one <code>NotesSession</code> may be active in a process. The first constructor argument is the directory containing the Notes/Domino native runtime. The second argument is an optional explicit <code>notes.ini</code>. The third optional argument is an ID password used during Notes initialization.</p>
+<pre><code class="language-xpscript">Dim session As NotesSession
+Set session = New NotesSession("C:\Program Files\HCL\Notes")
+
+Dim sessionWithIni As NotesSession
+Set sessionWithIni = New NotesSession("C:\Program Files\HCL\Notes", "C:\NotesData\notes.ini")
+</code></pre>
+<h3 id="properties">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>RuntimeDirectory</code></td><td>String</td><td>read-only</td><td>Resolved Notes/Domino runtime directory.</td></tr><tr><td><code>NotesIni</code></td><td>String</td><td>read-only</td><td>Resolved <code>notes.ini</code> path, or an empty string when the default configuration is used.</td></tr><tr><td><code>Username</code></td><td>String</td><td>read-only</td><td>Current Notes user name.</td></tr><tr><td><code>UserName</code></td><td>String</td><td>read-only</td><td>Alias of <code>Username</code>.</td></tr><tr><td><code>CommonUsername</code></td><td>String</td><td>read-only</td><td>Common-name form derived from the current Notes user name.</td></tr><tr><td><code>CommonUserName</code></td><td>String</td><td>read-only</td><td>Alias of <code>CommonUsername</code>.</td></tr><tr><td><code>NotesVersion</code></td><td>String</td><td>read-only</td><td>Notes/Domino runtime version text.</td></tr><tr><td><code>NotesBuildVersion</code></td><td>Long</td><td>read-only</td><td>Runtime build number.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the session has been recycled.</td></tr></tbody></table>
+<h3 id="functions-and-methods">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>OpenDatabase(server, filePath)</code></td><td><code>NotesDatabase</code></td><td>Opens a local or server NSF. An empty server selects a local database. If the database cannot be opened, a <code>NotesDatabase</code> object is still returned with <code>IsOpen = False</code>.</td></tr><tr><td><code>OpenByReplicaID(server, replicaId)</code></td><td><code>NotesDatabase</code></td><td>Locates and opens a database by replica ID. Returns a closed <code>NotesDatabase</code> wrapper if the database cannot be located or opened.</td></tr><tr><td><code>CreateName(value)</code></td><td><code>NotesName</code></td><td>Creates and parses a Notes name.</td></tr><tr><td><code>CreateDateTime(value)</code></td><td><code>NotesDateTime</code></td><td>Parses a Notes date/time value.</td></tr><tr><td><code>CreateDateTimeNow()</code></td><td><code>NotesDateTime</code></td><td>Creates a Notes date/time representing the current time.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Recycles child objects, terminates the Notes runtime, releases the password hook if used, and unloads the native runtime.</td></tr></tbody></table>
+<h2 id="notesdatabase">NotesDatabase</h2>
+<p>Create a database from <code>NotesSession</code>.</p>
+<pre><code class="language-xpscript">Dim db As NotesDatabase
+Set db = session.OpenDatabase("", "names.nsf")
+
+Dim serverDb As NotesDatabase
+Set serverDb = session.OpenDatabase("CN=Domino01/O=Example", "apps\customers.nsf")
+</code></pre>
+<h3 id="properties-1">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesSession</code></td><td>read-only</td><td>Owning session.</td></tr><tr><td><code>Server</code></td><td>String</td><td>read-only</td><td>Server supplied when the database was opened. Empty for local databases.</td></tr><tr><td><code>FilePath</code></td><td>String</td><td>read-only</td><td>NSF path supplied or resolved when opening the database.</td></tr><tr><td><code>FileName</code></td><td>String</td><td>read-only</td><td>Final path component of <code>FilePath</code>.</td></tr><tr><td><code>IsOpen</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> when the native database handle is open.</td></tr><tr><td><code>OpenError</code></td><td>String</td><td>read-only</td><td>Error text from the most recent failed database open, or an empty string when no error was recorded.</td></tr><tr><td><code>Title</code></td><td>String</td><td>read/write</td><td>Database title. Setting the property updates the NSF title when the database is open.</td></tr><tr><td><code>Categories</code></td><td>String</td><td>read/write</td><td>Database categories.</td></tr><tr><td><code>TemplateName</code></td><td>String</td><td>read-only</td><td>Template name stored by the database.</td></tr><tr><td><code>DesignTemplateName</code></td><td>String</td><td>read-only</td><td>Design template name stored by the database.</td></tr><tr><td><code>ReplicaID</code></td><td>String</td><td>read-only</td><td>Database replica ID.</td></tr><tr><td><code>Size</code></td><td>Long</td><td>read-only</td><td>Database space usage size returned by the C API.</td></tr><tr><td><code>PercentUsed</code></td><td>Double</td><td>read-only</td><td>Percentage of allocated database space currently used.</td></tr><tr><td><code>CurrentAccessLevel</code></td><td>Integer</td><td>read-only</td><td>Current user’s numeric Notes database access level.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr><tr><td><code>Agents</code></td><td>NotesAgent array</td><td>read-only</td><td>All agent design elements in the database. Agent wrappers retain their Note IDs and open native agent handles only when needed.</td></tr><tr><td><code>Forms</code></td><td>NotesForm array</td><td>read-only</td><td>All form design elements in the database. Form wrappers retain their Note IDs and open design documents only when needed.</td></tr><tr><td><code>Views</code></td><td>NotesView array</td><td>read-only</td><td>All view and folder design elements in the database.</td></tr></tbody></table>
+<h3 id="functions-and-methods-1">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>OpenView(name)</code></td><td><code>NotesView</code> or <code>Nothing</code></td><td>Opens a view by name. Returns <code>Nothing</code> when the database is closed. Empty view names raise runtime error 5.</td></tr><tr><td><code>GetDocumentByNoteId(noteId)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Opens a document by numeric or hexadecimal Note ID.</td></tr><tr><td><code>OpenDocumentByNoteId(noteId)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Alias of <code>GetDocumentByNoteId</code>.</td></tr><tr><td><code>GetDocumentByUNID(unid)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Opens a document by Universal ID.</td></tr><tr><td><code>OpenDocumentByUNID(unid)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Alias of <code>GetDocumentByUNID</code>.</td></tr><tr><td><code>Search(formula)</code></td><td><code>NotesDocumentCollection</code> or <code>Nothing</code></td><td>Executes a formula search with no explicit result limit.</td></tr><tr><td><code>Search(formula, maxResults)</code></td><td><code>NotesDocumentCollection</code> or <code>Nothing</code></td><td>Executes a formula search and limits results when <code>maxResults > 0</code>.</td></tr><tr><td><code>FTSearch(query)</code></td><td><code>NotesDocumentCollection</code> or <code>Nothing</code></td><td>Runs a full-text search against the database.</td></tr><tr><td><code>FTSearch(query, maxResults)</code></td><td><code>NotesDocumentCollection</code> or <code>Nothing</code></td><td>Runs a full-text search with a result limit. The database must have the required FT index for the query.</td></tr><tr><td><code>RunAgent(name)</code></td><td><code>NotesAgentResult</code> or <code>Nothing</code></td><td>Runs an agent by name.</td></tr><tr><td><code>RunAgent(name, document)</code></td><td><code>NotesAgentResult</code> or <code>Nothing</code></td><td>Runs an agent with a <code>NotesDocument</code> as document context.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Recycles owned views, documents, collections, agent results, and then closes the native database handle.</td></tr></tbody></table>
+<p><code>FullTextSearch</code> was an earlier internal/public name. The supported XPscript API is <code>FTSearch</code>.</p>
+<h2 id="notesview">NotesView</h2>
+<p>Create a view from an open <code>NotesDatabase</code>.</p>
+<pre><code class="language-xpscript">Dim view As NotesView
+Set view = db.OpenView("People")
+</code></pre>
+<h3 id="properties-2">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Name</code></td><td>String</td><td>read-only</td><td>View name used when opening the collection.</td></tr><tr><td><code>AutoUpdate</code></td><td>Boolean</td><td>read/write</td><td>Controls whether document navigation refreshes the native collection before locating the next document. Defaults to <code>True</code>.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="functions-and-methods-2">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstDocumentByKey(key)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first matching document using an exact text-key match. V1 lookup targets the first sorted text column.</td></tr><tr><td><code>GetFirstDocumentByKey(key, exactMatch)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first document by text key and controls exact versus partial matching.</td></tr><tr><td><code>GetAllDocumentsByKey(key)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns all exact text-key matches.</td></tr><tr><td><code>GetAllDocumentsByKey(key, exactMatch)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns text-key matches and controls exact versus partial matching.</td></tr><tr><td><code>FTSearch(query)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a full-text search scoped to the view.</td></tr><tr><td><code>FTSearch(query, maxResults)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a view full-text search with a result limit.</td></tr><tr><td><code>GetFirstDocument()</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Starts navigation from the beginning of the view and returns the first document.</td></tr><tr><td><code>GetNextDocument(document)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Locates <code>document</code> in the current view state and returns the immediate next document. Returns <code>Nothing</code> if the supplied document is no longer present or is the last document.</td></tr><tr><td><code>Refresh()</code></td><td>Void</td><td>Calls the native collection update and rebuilds the view navigation snapshot.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native NIF collection handle.</td></tr></tbody></table>
+<h3 id="autoupdate-navigation-semantics">AutoUpdate navigation semantics</h3>
+<p>Each <code>NotesView</code> instance has independent navigation state, even when two objects point to the same underlying view design.</p>
+<p>With <code>AutoUpdate = True</code>, <code>GetFirstDocument()</code> and <code>GetNextDocument(doc)</code> update the collection and read the current view order before returning a document. <code>GetNextDocument</code> finds the supplied document by Note ID in that current order.</p>
+<p>With <code>AutoUpdate = False</code>, switching the property to <code>False</code> updates the collection once and captures the current Note ID order. <code>GetFirstDocument()</code> and <code>GetNextDocument(doc)</code> then use that frozen order. <code>Refresh()</code> explicitly refreshes that particular view object even while <code>AutoUpdate</code> is <code>False</code>.</p>
+<pre><code class="language-xpscript">Dim liveView As NotesView
+Dim frozenView As NotesView
+
+Set liveView = db.OpenView("($VIMGroups)")
+Set frozenView = db.OpenView("($VIMGroups)")
+
+liveView.AutoUpdate = True
+frozenView.AutoUpdate = False
+</code></pre>
+<h2 id="notesdocumentcollection">NotesDocumentCollection</h2>
+<p>Searches and view lookups return copied Note IDs. The collection does not keep all matching notes open.</p>
+<h3 id="properties-3">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Count</code></td><td>Integer</td><td>read-only</td><td>Number of Note IDs in the collection.</td></tr><tr><td><code>FirstNoteId</code></td><td>String or <code>Nothing</code></td><td>read-only</td><td>First Note ID as an 8-digit hexadecimal string, or <code>Nothing</code> for an empty collection.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="functions-indexing-and-bounds">Functions, indexing, and bounds</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetNoteIdString(index)</code></td><td>String</td><td>Returns the Note ID at a zero-based index as an 8-digit hexadecimal string.</td></tr><tr><td><code>Get(index)</code></td><td>String</td><td>Alias of <code>GetNoteIdString(index)</code>.</td></tr><tr><td><code>collection(index)</code></td><td>String</td><td>XPscript index syntax. The compiler rewrites this to <code>GetNoteIdString(index)</code>.</td></tr><tr><td><code>LBound(collection)</code></td><td>Integer</td><td>Returns <code>0</code>.</td></tr><tr><td><code>UBound(collection)</code></td><td>Integer</td><td>Returns <code>Count - 1</code>.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Releases the managed Note ID snapshot.</td></tr></tbody></table>
+<p>To open a returned document, pass the Note ID to the owning database:</p>
+<pre><code class="language-xpscript">Dim docs As NotesDocumentCollection
+Dim doc As NotesDocument
+Dim noteId As String
+
+Set docs = db.Search("@All", 10)
+If docs.Count > 0 Then
+    noteId = docs(0)
+    Set doc = db.GetDocumentByNoteId(noteId)
+End If
+</code></pre>
+<h2 id="notesdocument">NotesDocument</h2>
+<p>A <code>NotesDocument</code> owns an open native note handle and is created from a database, view navigation, or another Notes API returning a document.</p>
+<h3 id="properties-4">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>NoteId</code></td><td>Long-compatible numeric value</td><td>read-only to XPscript</td><td>Native Note ID value.</td></tr><tr><td><code>NoteIdHex</code></td><td>String</td><td>read-only</td><td>Note ID formatted as 8 hexadecimal digits.</td></tr><tr><td><code>UniversalId</code></td><td>String</td><td>read-only</td><td>Document Universal ID.</td></tr><tr><td><code>Items</code></td><td>String array</td><td>read-only</td><td>Array containing the name of every item in native item order. Duplicate item names are preserved. No <code>NotesItem</code> wrappers are allocated by this property.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="functions-and-methods-3">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstItem(itemName)</code></td><td><code>NotesItem</code>, <code>NotesRichTextItem</code>, or <code>Nothing</code></td><td>Returns the first matching item. Composite items are returned as <code>NotesRichTextItem</code>.</td></tr><tr><td><code>CreateNotesItem(itemName)</code></td><td><code>NotesItem</code></td><td>Creates an empty text item and returns its wrapper. Item name cannot be empty.</td></tr><tr><td><code>ReplaceItemValue(itemName, value)</code></td><td><code>NotesItem</code></td><td>Creates the item if necessary, replaces its value, and returns the resulting item wrapper.</td></tr><tr><td><code>HasItem(itemName)</code></td><td>Boolean</td><td>Tests whether an item exists.</td></tr><tr><td><code>GetValue(itemName)</code></td><td>Variant</td><td>Returns the native item value through the basic V1 value conversion.</td></tr><tr><td><code>GetItemValue(itemName)</code></td><td>Variant array</td><td>XPscript indexed-value surface. Returns all values as a one-dimensional array.</td></tr><tr><td><code>GetItemValue(itemName)(index)</code></td><td>Variant</td><td>Returns one zero-based value from a text, number, time, or corresponding list/range item. Out-of-range access raises runtime error 9.</td></tr><tr><td><code>GetString(itemName)</code></td><td>String</td><td>Returns a text value.</td></tr><tr><td><code>GetNumber(itemName)</code></td><td>Double</td><td>Returns a numeric value.</td></tr><tr><td><code>GetDateTime(itemName)</code></td><td><code>NotesDateTime</code></td><td>Returns a Notes time/date item as a new <code>NotesDateTime</code> wrapper.</td></tr><tr><td><code>SetValue(itemName, value)</code></td><td>Void</td><td>Writes a value using the generic native item setter.</td></tr><tr><td><code>SetString(itemName, value)</code></td><td>Void</td><td>Writes a text item.</td></tr><tr><td><code>SetNumber(itemName, value)</code></td><td>Void</td><td>Writes a numeric item.</td></tr><tr><td><code>SetDateTime(itemName, value)</code></td><td>Void</td><td>Writes a <code>NotesDateTime</code>. Other value types raise runtime error 13.</td></tr><tr><td><code>RemoveItem(itemName)</code></td><td>Void</td><td>Removes an item by name.</td></tr><tr><td><code>SaveAttachment(attachmentName, path)</code></td><td>Boolean</td><td>Extracts an attachment from the document to <code>path</code>. Returns <code>False</code> when it cannot be saved.</td></tr><tr><td><code>Save()</code></td><td>Void</td><td>Saves the note and refreshes its Note ID.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native note handle.</td></tr></tbody></table>
+<h3 id="item-name-rules">Item-name rules</h3>
+<p>Item names used for creation and replacement cannot be empty. Indexed <code>GetItemValue</code> access also rejects <code>Nothing</code> and empty item names with runtime error 5. Values themselves may be empty.</p>
+<h3 id="generic-item-values">Generic item values</h3>
+<p><code>ReplaceItemValue</code> and <code>NotesItem.Values</code> currently support scalar values and one-dimensional arrays of homogeneous text, numeric, or <code>NotesDateTime</code> values. Mixed arrays and unsupported value kinds raise runtime error 13. An empty or unallocated array writes an empty text value.</p>
+<p>Current numeric handling accepts XPscript/.NET numeric scalar types and writes list values as Notes number lists. Arrays passed to the setter must be one-dimensional.</p>
+<h2 id="notesitem">NotesItem</h2>
+<p><code>NotesItem</code> is a wrapper over an item in a <code>NotesDocument</code>. It does not own a separate native note handle. Recycling an item wrapper invalidates that wrapper but does not recycle its parent document.</p>
+<h3 id="properties-5">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesDocument</code></td><td>read-only</td><td>Parent document.</td></tr><tr><td><code>Name</code></td><td>String</td><td>read-only</td><td>Actual item name.</td></tr><tr><td><code>DateTimeValue</code></td><td><code>NotesDateTime</code> or <code>Nothing</code></td><td>read/write</td><td>Returns a date/time wrapper when the item type is a Notes time value. Setting requires a <code>NotesDateTime</code>.</td></tr><tr><td><code>IsAuthors</code></td><td>Boolean</td><td>read/write</td><td>Authors-item flag state. Enabling it also enables the names and summary flags and clears readers.</td></tr><tr><td><code>IsEncrypted</code></td><td>Boolean</td><td>read/write</td><td>Sealed/encrypted item flag.</td></tr><tr><td><code>IsNames</code></td><td>Boolean</td><td>read/write</td><td>Names-item flag. Enabling also enables summary. Disabling clears names, readers, and authors flags.</td></tr><tr><td><code>IsProtected</code></td><td>Boolean</td><td>read/write</td><td>Protected item flag.</td></tr><tr><td><code>IsReaders</code></td><td>Boolean</td><td>read/write</td><td>Readers-item flag state. Enabling also enables names and summary and clears authors.</td></tr><tr><td><code>IsSigned</code></td><td>Boolean</td><td>read/write</td><td>Signed item flag.</td></tr><tr><td><code>IsSummary</code></td><td>Boolean</td><td>read/write</td><td>Summary item flag.</td></tr><tr><td><code>LastModified</code></td><td><code>NotesDateTime</code></td><td>read-only</td><td>Item modified time as a new <code>NotesDateTime</code> wrapper.</td></tr><tr><td><code>Text</code></td><td>String</td><td>read-only</td><td>Item converted to text through the Notes C API.</td></tr><tr><td><code>Type</code></td><td>Integer</td><td>read-only</td><td>LotusScript-compatible item type code where the runtime has a mapping.</td></tr><tr><td><code>ValueLength</code></td><td>Long</td><td>read-only</td><td>Native item value length.</td></tr><tr><td><code>Values</code></td><td>Variant array</td><td>read/write</td><td>All item values. Reading returns a one-dimensional XPscript array. Writing accepts the homogeneous V1 value types described above.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<p><code>Values(index)</code> is supported for a typed <code>NotesItem</code>/<code>NotesRichTextItem</code> variable. It returns the zero-based indexed value directly without first materializing the full value array.</p>
+<p>When an item has the Notes names flag, <code>Values</code> and indexed <code>Values(index)</code> convert text values to <code>NotesName</code> wrappers.</p>
+<h3 id="type-values">Type values</h3>
+<p>The current <code>Type</code> mapping includes common Notes/LotusScript-compatible values such as:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">Value</th><th>Meaning</th></tr></thead><tbody><tr><td align="right"><code>1</code></td><td>Rich text/composite</td></tr><tr><td align="right"><code>768</code></td><td>Number or number range</td></tr><tr><td align="right"><code>1024</code></td><td>Date/time or time range</td></tr><tr><td align="right"><code>1074</code></td><td>Names</td></tr><tr><td align="right"><code>1075</code></td><td>Readers</td></tr><tr><td align="right"><code>1076</code></td><td>Authors</td></tr><tr><td align="right"><code>1085</code></td><td>Object</td></tr><tr><td align="right"><code>1280</code></td><td>Text or text list</td></tr><tr><td align="right"><code>1282</code></td><td>RFC822 text</td></tr><tr><td align="right"><code>1536</code></td><td>Formula</td></tr><tr><td align="right"><code>1792</code></td><td>User ID</td></tr></tbody></table>
+<p>Other native Notes item types are mapped when the runtime recognizes them; unknown types return <code>0</code>.</p>
+<h3 id="functions-and-methods-4">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>Remove()</code></td><td>Void</td><td>Removes the represented item from its parent document. Subsequent use of that wrapper raises runtime error 91.</td></tr><tr><td><code>CopyToDocument(document)</code></td><td><code>NotesItem</code></td><td>Copies the item to another document using the same item name.</td></tr><tr><td><code>CopyToDocument(document, newName)</code></td><td><code>NotesItem</code></td><td>Copies the item and optionally changes its name. An empty <code>newName</code> keeps the original name.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the wrapper.</td></tr></tbody></table>
+<h2 id="notesrichtextitem">NotesRichTextItem</h2>
+<p><code>NotesRichTextItem</code> is returned by <code>GetFirstItem</code> when the native item type is composite/rich text. It inherits all <code>NotesItem</code> properties and methods.</p>
+<h3 id="additional-functions-and-methods">Additional functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetUnformattedText()</code></td><td>String</td><td>Converts the rich-text item to unformatted text through the native C API.</td></tr><tr><td><code>SaveAttachment(attachmentName, path)</code></td><td>Boolean</td><td>Extracts an attachment associated with this rich-text item to <code>path</code>.</td></tr></tbody></table>
+<pre><code class="language-xpscript">Dim item As NotesItem
+Dim richText As NotesRichTextItem
+
+Set item = doc.GetFirstItem("Body")
+If item &#x3C;> Nothing Then
+    If item.Type = 1 Then
+        Set richText = item
+        Print richText.GetUnformattedText()
+    End If
+End If
+</code></pre>
+<h2 id="notesname">NotesName</h2>
+<p>Create a name from <code>NotesSession.CreateName</code>.</p>
+<pre><code class="language-xpscript">Dim name As NotesName
+Set name = session.CreateName("CN=Ada Lovelace/O=Example")
+</code></pre>
+<h3 id="properties-6">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesSession</code></td><td>read-only</td><td>Owning session.</td></tr><tr><td><code>Source</code></td><td>String</td><td>read-only</td><td>Original trimmed input text.</td></tr><tr><td><code>Canonical</code></td><td>String</td><td>read-only</td><td>Native canonical Notes name.</td></tr><tr><td><code>Abbreviated</code></td><td>String</td><td>read-only</td><td>Native abbreviated Notes name.</td></tr><tr><td><code>IsHierarchical</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> when the canonical representation is hierarchical.</td></tr><tr><td><code>Common</code></td><td>String</td><td>read-only</td><td><code>CN</code> component.</td></tr><tr><td><code>Country</code></td><td>String</td><td>read-only</td><td><code>C</code> component.</td></tr><tr><td><code>Organization</code></td><td>String</td><td>read-only</td><td><code>O</code> component.</td></tr><tr><td><code>OrgUnit1</code></td><td>String</td><td>read-only</td><td>First <code>OU</code> component.</td></tr><tr><td><code>OrgUnit2</code></td><td>String</td><td>read-only</td><td>Second <code>OU</code> component.</td></tr><tr><td><code>OrgUnit3</code></td><td>String</td><td>read-only</td><td>Third <code>OU</code> component.</td></tr><tr><td><code>OrgUnit4</code></td><td>String</td><td>read-only</td><td>Fourth <code>OU</code> component.</td></tr><tr><td><code>ADMD</code></td><td>String</td><td>read-only</td><td><code>A</code> component.</td></tr><tr><td><code>PRMD</code></td><td>String</td><td>read-only</td><td><code>P</code> component.</td></tr><tr><td><code>Addr821</code></td><td>String</td><td>read-only</td><td>Parsed Internet/RFC821-style address when present.</td></tr><tr><td><code>Addr822LocalPart</code></td><td>String</td><td>read-only</td><td>Parsed local part of an Internet address.</td></tr><tr><td><code>Addr822Phrase</code></td><td>String</td><td>read-only</td><td>Parsed display phrase from an Internet address.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="methods">Methods</h3>
+<p><code>NotesName</code> currently adds no methods beyond <code>Recycle()</code>.</p>
+<h2 id="notesdatetime">NotesDateTime</h2>
+<p><code>NotesDateTime</code> stores the native C API <code>TIMEDATE</code> representation.</p>
+<pre><code class="language-xpscript">Dim value As NotesDateTime
+Set value = session.CreateDateTime("2026-08-25 12:00:00")
+Call value.AdjustDay(1)
+Print value.LocalTime
+</code></pre>
+<h3 id="properties-7">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesSession</code></td><td>read-only</td><td>Owning session.</td></tr><tr><td><code>IsValidDate</code></td><td>Boolean</td><td>read-only</td><td>Currently returns <code>True</code> for a successfully constructed Notes date/time.</td></tr><tr><td><code>IsDST</code></td><td>Boolean</td><td>read-only</td><td>Daylight-saving indicator returned by native time expansion.</td></tr><tr><td><code>TimeZone</code></td><td>Integer</td><td>read-only</td><td>Notes time-zone value returned by native time expansion.</td></tr><tr><td><code>LocalTime</code></td><td>String</td><td>read-only</td><td>Native-formatted local date/time.</td></tr><tr><td><code>GMTTime</code></td><td>String</td><td>read-only</td><td>Native-expanded GMT date/time.</td></tr><tr><td><code>ZoneTime</code></td><td>String</td><td>read-only</td><td>Native-expanded date/time including the current Notes zone interpretation.</td></tr><tr><td><code>DateOnly</code></td><td>String</td><td>read-only</td><td><code>YYYY-MM-DD</code> from the expanded local time.</td></tr><tr><td><code>TimeOnly</code></td><td>String</td><td>read-only</td><td><code>HH:MM:SS</code> from the expanded local time.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="functions-and-methods-5">Functions and methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>AdjustSecond(amount)</code></td><td>Void</td><td>Adds or subtracts seconds.</td></tr><tr><td><code>AdjustMinute(amount)</code></td><td>Void</td><td>Adds or subtracts minutes.</td></tr><tr><td><code>AdjustHour(amount)</code></td><td>Void</td><td>Adds or subtracts hours.</td></tr><tr><td><code>AdjustDay(amount)</code></td><td>Void</td><td>Adds or subtracts days.</td></tr><tr><td><code>AdjustMonth(amount)</code></td><td>Void</td><td>Adds or subtracts months.</td></tr><tr><td><code>AdjustYear(amount)</code></td><td>Void</td><td>Adds or subtracts years.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the wrapper.</td></tr></tbody></table>
+<h2 id="notesagent">NotesAgent</h2>
+<p>Represents an agent design element returned by <code>NotesDatabase.GetAgent</code> or <code>NotesDatabase.Agents</code>.</p>
+<h3 id="properties-8">Properties</h3>
+<p><code>Parent</code>, <code>Name</code>, <code>Owner</code>, <code>CommonOwner</code>, <code>Comment</code>, <code>Query</code>, <code>ServerName</code>,
+<code>ParameterDocID</code>, <code>IsNotesAgent</code>, <code>IsPublic</code>, <code>IsWebAgent</code>, <code>IsActivatable</code>,
+<code>HasRunSinceModified</code>, <code>ProhibitDesignUpdate</code>, <code>IsEnabled</code>, <code>Trigger</code>, <code>Target</code>,
+<code>NotesURL</code>, <code>HttpURL</code>, and <code>OnBehalfOf</code> are exposed.</p>
+<h3 id="methods-1">Methods</h3>
+<p><code>Run</code>, <code>RunWithDocumentContext</code>, <code>RunOnServer</code>, <code>Save</code>, <code>Remove</code>, and <code>UnLock</code> are exposed. <code>RunWithDocumentContext</code>
+passes an open <code>NotesDocument</code> as the agent document context. <code>RunOnServer</code>
+accepts an optional document Note ID and passes that document as context.
+<code>Remove</code>
+permanently deletes the agent design note when the caller has permission.</p>
+<h2 id="notesagentresult">NotesAgentResult</h2>
+<p>Returned by <code>NotesDatabase.RunAgent</code>.</p>
+<h3 id="properties-9">Properties</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Success</code></td><td>Boolean</td><td>read-only</td><td>Currently <code>True</code> for a successfully returned agent run result. Native execution failures raise an XPscript runtime error instead of returning a failed result object.</td></tr><tr><td><code>Status</code></td><td>Integer</td><td>read-only</td><td>Currently <code>0</code> for a successfully returned agent run result.</td></tr><tr><td><code>Output</code></td><td>String</td><td>read-only</td><td>Captured agent stdout/output text.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+<h3 id="methods-2">Methods</h3>
+<p><code>NotesAgentResult</code> currently adds no methods beyond <code>Recycle()</code>.</p>
+<h2 id="object-creation-rules">Object creation rules</h2>
+<p>Only <code>NotesSession</code> is constructed with <code>New</code>.</p>
+<p>These classes must be obtained from the owning Notes object:</p>
+<ul>
+<li><code>NotesDatabase</code> from <code>NotesSession.OpenDatabase</code> or <code>OpenByReplicaID</code></li>
+<li><code>NotesView</code> from <code>NotesDatabase.OpenView</code></li>
+<li><code>NotesDocumentCollection</code> from searches or view lookups</li>
+<li><code>NotesDocument</code> from <code>NotesDatabase</code>, <code>NotesView</code>, or a Note ID returned by a collection</li>
+<li><code>NotesItem</code> and <code>NotesRichTextItem</code> from <code>NotesDocument</code></li>
+<li><code>NotesName</code> from <code>NotesSession.CreateName</code></li>
+<li><code>NotesDateTime</code> from <code>NotesSession.CreateDateTime</code>, <code>CreateDateTimeNow</code>, document/item time access, or item metadata</li>
+<li><code>NotesAgentResult</code> from <code>NotesDatabase.RunAgent</code></li>
+</ul>
+<p>Attempting to use <code>New</code> with the other Notes classes is rejected by the compiler.</p>
+<h2 id="recycling-and-ownership">Recycling and ownership</h2>
+<p><code>Recycle()</code> is idempotent. A session tracks its live children and recycles them before calling <code>NotesTerm</code> and unloading the native library. A database similarly recycles its owned views, documents, result collections, and agent result objects before <code>NSFDbClose</code>.</p>
+<p>Native resource ownership remains inside the generated runtime:</p>
+<ul>
+<li>database handles are closed with <code>NSFDbClose</code>;</li>
+<li>note handles are closed with <code>NSFNoteClose</code>;</li>
+<li>NIF collection handles are closed with <code>NIFCloseCollection</code>;</li>
+<li>formula, full-text, and other movable Notes memory handles are released through the matching native memory functions;</li>
+<li>movable Notes memory is accessed only while locked;</li>
+<li>pointers obtained from locked Notes memory are not stored in public wrapper objects;</li>
+<li>view/search result Note IDs are copied into managed arrays before native result memory is released;</li>
+<li><code>NotesDocument.Items</code> copies item names to an XPscript string array and leaves note-owned item blocks under Notes ownership;</li>
+<li>agent stdout is copied while its native memory is valid.</li>
+</ul>
+<p>When a typed Notes variable is reassigned with <code>Set</code>, XPscript evaluates the replacement first and then recycles the previous wrapper unless both references are the same object. This allows patterns such as:</p>
+<pre><code class="language-xpscript">Set doc = view.GetNextDocument(doc)
+</code></pre>
+<p>The next document is resolved before the previous <code>doc</code> wrapper is recycled.</p>
+<h2 id="error-handling">Error handling</h2>
+<p>Notes wrapper validation and native C API failures are surfaced as <code>XPScriptRuntimeException</code> values and therefore participate in normal XPscript error handling.</p>
+<pre><code class="language-xpscript">On Error GoTo Handler
+
+Set doc = db.GetDocumentByUNID("0123456789ABCDEF0123456789ABCDEF")
+Exit Sub
+
+Handler:
+Print "Error " &#x26; CStr(Err) &#x26; ": " &#x26; Error$
+</code></pre>
+<p>Common wrapper-generated errors include runtime error 5 for invalid or empty arguments, runtime error 9 for indexed value access outside its valid range, runtime error 13 for type mismatches, and runtime error 91 for recycled or removed Notes wrappers.</p>
+<h2 id="validation-samples">Validation samples</h2>
+<p>The repository includes:</p>
+<ul>
+<li><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps"><code>notes-c-api-v1.xps</code></a>, a manual runtime validation program for a machine with Notes/Domino installed.</li>
+<li><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-surface.xps"><code>notes-c-api-surface.xps</code></a>, a compile-only surface probe whose <code>Main</code> routine does not initialize Notes.</li>
+<li><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-database-properties-console.xps"><code>notes-database-properties-console.xps</code></a>, a focused database property sample.</li>
+<li><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-view-autoupdate-console.xps"><code>notes-view-autoupdate-console.xps</code></a>, a focused view navigation and <code>AutoUpdate</code> sample.</li>
+</ul>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

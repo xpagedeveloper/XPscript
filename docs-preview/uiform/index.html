@@ -1,0 +1,186 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Uiform | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="uiform">UIForm</h1>
+<p>Desktop UIForms also support an embedded native browser control. See <a href="../uiform-webview/">UIForm WebView</a>.</p>
+<p><code>UIForm</code> is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a <code>XPJsonObject</code> or object-root <code>XPJsonDocument</code>. The same form definition is rendered by the active UI backend.</p>
+<h2 id="basic-form">Basic form</h2>
+<pre><code class="language-xpscript">Dim data As New XPJsonObject
+Dim form As New UIForm("Customer")
+Dim result As String
+
+Call form.BindData(data)
+Call form.AddTextField("name", "Name")
+Call form.AddTextField("email", "Email")
+Call form.AddTextField("company", "Company")
+Call form.SetRequired("name", True)
+
+result = form.ShowDialog()
+</code></pre>
+<p>The form title belongs to the top-level form container. On the web it is rendered before the field grid.</p>
+<h2 id="fields">Fields</h2>
+<p>Core field APIs include <code>AddTextField(name, label)</code>, <code>AddTextArea(name, label)</code>, <code>AddNumberField(name, label)</code>, <code>AddCheckBox(name, label)</code>, <code>AddDateField(name, label)</code>, <code>AddSelect(name, label)</code>, <code>AddRadioGroup(name, label)</code>, <code>AddListBox(name, label)</code> and <code>AddMultiListBox(name, label)</code>. <code>SetRequired(name, True)</code> marks a field required.</p>
+<p>A field name is also its JSON binding key. Creating or rendering an empty field does not by itself create a missing JSON key. A supplied value creates or updates the key.</p>
+<h2 id="listbox-and-multilistbox">ListBox and MultiListBox</h2>
+<p><code>ListBox</code> allows one selected option. Its bound value is a scalar string.</p>
+<pre><code class="language-xpscript">Call form.AddListBox("country", "Country")
+Call form.AddOption("country", "SE")
+Call form.AddOption("country", "NO")
+Call form.AddOption("country", "DK")
+</code></pre>
+<p><code>MultiListBox</code> allows several selected options. Its bound value is a <code>XPJsonArray</code> of strings. Use <code>GetFieldValues(name)</code> when you want the selected values as a <code>XPJsonArray</code> regardless of the current backing value.</p>
+<pre><code class="language-xpscript">Dim data As New XPJsonObject
+Dim selected As New XPJsonArray
+Dim values As Variant
+
+Call selected.Add("SE")
+Call selected.Add("DK")
+Call data.Set("markets", selected)
+Call form.BindData(data)
+
+Call form.AddMultiListBox("markets", "Markets")
+Call form.AddOption("markets", "SE")
+Call form.AddOption("markets", "NO")
+Call form.AddOption("markets", "DK")
+
+values = form.GetFieldValues("markets")
+Print CStr(values.Count)
+</code></pre>
+<p><code>AddOption</code> and <code>ClearOptions</code> work with <code>Select</code>, <code>RadioGroup</code>, <code>ListBox</code> and <code>MultiListBox</code>. Submitted values are checked against the configured option list before they are written to bound data.</p>
+<p>The same ListBox APIs are used on desktop, server-rendered web and browser-wasm. Desktop uses native Avalonia list controls. Server-rendered web uses HTML <code>select</code> controls. Browser-wasm uses DOM <code>select</code> controls and returns multiple selections as an array.</p>
+<h2 id="separator-and-spacer">Separator and Spacer</h2>
+<p><code>AddSeparator(name)</code> adds a visual separator to the form. <code>AddSpacer(name)</code> adds vertical spacing. They are structural elements, not data-entry fields, and are never written to bound <code>XPJsonObject</code> data.</p>
+<pre><code class="language-xpscript">Call form.AddTextField("name", "Name")
+Call form.AddSeparator("details_separator")
+Call form.AddTextField("email", "Email")
+Call form.AddSpacer("actions_spacer")
+</code></pre>
+<p>Separator and Spacer participate in the same grid as normal fields. Give them a name so they can be positioned with the grid API.</p>
+<pre><code class="language-xpscript">Set grid = form.AddGridColumns(12)
+Call grid.SetFieldPosition("name", 6)
+Call grid.SetFieldPosition("details_separator", 12)
+Call grid.SetFieldPosition("email", 6)
+Call grid.SetFieldPosition("actions_spacer", 12)
+</code></pre>
+<p>Server-rendered web uses a Bootstrap-compatible horizontal rule for Separator and an empty spacing block for Spacer. Desktop and browser-wasm preserve the same structural intent through their UI backends.</p>
+<h2 id="placeholder-and-tooltip">Placeholder and Tooltip</h2>
+<p>Use <code>SetFieldPlaceholder(name, text)</code> for text-entry controls. Supported field types are <code>TextField</code>, <code>TextArea</code>, <code>PasswordField</code>, <code>EmailField</code> and <code>UrlField</code>.</p>
+<pre><code class="language-xpscript">Call form.AddTextField("name", "Name")
+Call form.SetFieldPlaceholder("name", "Enter the customer name")
+</code></pre>
+<p>Use <code>SetFieldTooltip(name, text)</code> to add help text to normal data-entry fields.</p>
+<pre><code class="language-xpscript">Call form.SetFieldTooltip("name", "The name shown in customer lists")
+</code></pre>
+<p>The same metadata is used by all UI backends. Desktop maps placeholder text to the Avalonia <code>PlaceholderText</code> property and tooltip text to <code>ToolTip</code>. Server-rendered web uses HTML <code>placeholder</code> and <code>title</code> attributes. Browser-wasm sets the corresponding DOM properties.</p>
+<p>Placeholder and tooltip values can be changed from UI event handlers. Reactive updates send the changed metadata with the normal UIForm state response.</p>
+<p>Empty text clears an existing placeholder or tooltip. Hint text rejects control characters. Placeholder text is limited to 512 characters and tooltip text to 1024 characters.</p>
+<h2 id="date-and-time-ranges">Date and time ranges</h2>
+<p>UIForm supports range validation for date and time controls. The same rules are enforced by desktop, server-rendered web and browser-wasm.</p>
+<pre><code class="language-xpscript">Call form.SetDateRange("birthday", "2020-01-01", "2030-12-31")
+Call form.SetTimeRange("start_time", "08:00", "18:00")
+Call form.SetDateTimeRange("meeting", "2026-01-01T08:00", "2026-12-31T18:00")
+Call form.SetMonthRange("billing_month", "2026-01", "2026-12")
+</code></pre>
+<p><code>SetDateRange</code> applies to <code>DateField</code> and uses <code>yyyy-MM-dd</code>. <code>SetTimeRange</code> applies to <code>TimeField</code> and accepts <code>HH:mm</code> or <code>HH:mm:ss</code>. <code>SetDateTimeRange</code> applies to <code>DateTimeField</code> and accepts local values in <code>yyyy-MM-ddTHH:mm</code> or <code>yyyy-MM-ddTHH:mm:ss</code>. <code>SetMonthRange</code> applies to <code>MonthField</code> and uses <code>yyyy-MM</code>.</p>
+<p>The minimum value must not be greater than the maximum value. Server-side validation is authoritative. Web and browser-wasm also map the configured limits to native HTML <code>min</code> and <code>max</code> constraints for immediate client-side feedback.</p>
+<h2 id="grid-layout">Grid layout</h2>
+<p>The form is the top container. Add a grid with a configurable number of columns:</p>
+<pre><code class="language-xpscript">Dim grid As Variant
+Set grid = form.AddGridColumns(12)
+</code></pre>
+<p><code>12</code> is the number of columns in a full row. Fields flow from left to right. <code>SetFieldPosition(fieldName, columns)</code> only specifies how many grid columns the field consumes. It does not specify absolute coordinates.</p>
+<pre><code class="language-xpscript">Call grid.SetFieldPosition("name", 6)
+Call grid.SetFieldPosition("email", 6)
+Call grid.SetFieldPosition("company", 8)
+Call grid.SetFieldPosition("status", 4)
+</code></pre>
+<p>With a 12-column grid this produces two rows: <code>name 6 + email 6</code>, then <code>company 8 + status 4</code>. If the next field does not fit in the remaining columns, it automatically flows to the next row.</p>
+<p>Use <code>AddNewRow()</code> only when you want an explicit row break:</p>
+<pre><code class="language-xpscript">Call grid.SetFieldPosition("name", 4)
+Call grid.AddNewRow()
+Call grid.SetFieldPosition("email", 6)
+</code></pre>
+<p>The email field starts a new row even though eight columns remained on the previous row.</p>
+<h2 id="complete-web-form">Complete web form</h2>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Customer")
+    Dim grid As Variant
+    Dim result As String
+
+    Call form.BindData(data)
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextField("email", "Email")
+    Call form.AddTextField("company", "Company")
+    Call form.AddTextField("status", "Status")
+    Call form.SetRequired("name", True)
+
+    Set grid = form.AddGridColumns(12)
+    Call grid.SetFieldPosition("name", 6)
+    Call grid.SetFieldPosition("email", 6)
+    Call grid.AddNewRow()
+    Call grid.SetFieldPosition("company", 8)
+    Call grid.SetFieldPosition("status", 4)
+
+    result = form.ShowDialog()
+    If result = "OK" Then
+        Response.ContentType = "application/json; charset=utf-8"
+        Response.Write(data.Stringify())
+    End If
+End Sub
+</code></pre>
+<h2 id="web-rendering">Web rendering</h2>
+<p>Web UIForm uses Bootstrap 5.3.8 styling. The runtime loads the Bootstrap stylesheet once per response and applies Bootstrap form, grid and button classes. The title is outside the field grid so explicit field layout cannot move it below the controls.</p>
+<p>On GET, <code>ShowDialog()</code> renders the form and returns <code>Pending</code>. On POST, it reads submitted values, performs form validation, updates the bound data and returns <code>OK</code> when accepted.</p>
+<p>HTML labels, names, values, placeholders and tooltips are encoded before rendering.</p>
+<h2 id="desktop-rendering">Desktop rendering</h2>
+<p>Desktop UIForm uses the same form definition, fields, binding and layout intent. The desktop backend renders native desktop controls instead of Bootstrap HTML. Web-only styling does not change desktop rendering.</p>
+<h2 id="uilistview-on-web">UIListView on web</h2>
+<p>UIListView web output uses Bootstrap table styling, responsive table wrapping, controls and buttons. UIListView runtime is installed only when a script actually uses UIListView, so a UIForm-only script does not require UIListView runtime structures.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Web Security | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="web-security">Web security</h1>
+<p>XPScript web applications use layered protection for browser requests.</p>
+<h2 id="csrf-protection">CSRF protection</h2>
+<p>Unsafe methods are POST, PUT, PATCH and DELETE.</p>
+<p>For cookie/session-based browser requests, XPScript validates a session-bound HMAC CSRF token before REST binding and before the XPScript route procedure executes.</p>
+<p>Server-rendered UIForm forms automatically receive a hidden field:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">input</span><span style="color:#B392F0"> type</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"hidden"</span><span style="color:#B392F0"> name</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"__xps_csrf"</span><span style="color:#B392F0"> value</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"..."</span><span style="color:#E1E4E8">></span></span></code></pre>
+<p>Applications do not need to add this field manually when UIForm renders the form.</p>
+<p>For programmatic browser requests, the token can be sent in:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>X-XPS-CSRF-Token: &#x3C;token></span></span></code></pre>
+<p>A missing or invalid token returns HTTP 403 and the route does not execute.</p>
+<p>Bearer-only API calls without browser cookies are not forced through CSRF validation. CSRF protects browser cookie/session authentication, not Authorization bearer tokens.</p>
+<h3 id="browser-webassembly">Browser WebAssembly</h3>
+<p>The browser-wasm XPHttpClient has automatic CSRF challenge handling. On the first unsafe same-origin request without a token, the server returns HTTP 403 with a fresh <code>X-XPS-CSRF-Token</code> response header. The generated browser-wasm XPHttpClient retries the request once with that token.</p>
+<p>The session cookie remains HttpOnly. WebAssembly code never reads the session cookie.</p>
+<p>Applications can still explicitly set <code>X-XPS-CSRF-Token</code> when needed. Explicit headers are not overwritten.</p>
+<p>CSRF tokens are bound to the server site instance and session id. Session id rotation invalidates previously issued tokens.</p>
+<h2 id="xss-protection">XSS protection</h2>
+<p>XPScript applies several layers:</p>
+<ul>
+<li>UIForm values and labels are HTML encoded before being inserted into generated HTML.</li>
+<li>Browser WebAssembly UI rendering uses DOM APIs such as <code>textContent</code> for labels and option text instead of injecting user strings through <code>innerHTML</code>.</li>
+<li>HTML responses receive <code>Content-Security-Policy</code>, <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy</code>, <code>X-Frame-Options</code> and a restrictive <code>Permissions-Policy</code> unless the application already supplied the header.</li>
+<li><code>Server.HtmlEncode(value)</code> is available for dynamic values written into HTML.</li>
+<li><code>Server.JsonStringEncode(value)</code> is available for values placed into JSON/string contexts.</li>
+</ul>
+<p><code>Response.Write()</code> remains a raw response writer because applications need to generate HTML. Do not concatenate untrusted request data directly into raw HTML.</p>
+<p>Use:</p>
+<pre><code class="language-xpscript">Response.Write("&#x3C;p>" &#x26; Server.HtmlEncode(Request.QueryFirst("name")) &#x26; "&#x3C;/p>")
+</code></pre>
+<p>instead of:</p>
+<pre><code class="language-xpscript">Response.Write("&#x3C;p>" &#x26; Request.QueryFirst("name") &#x26; "&#x3C;/p>")
+</code></pre>
+<p>RichTextField stores HTML intentionally. Stored rich-text HTML must be treated as untrusted when rendered outside the editor and should be passed through an application allow-list sanitizer before raw rendering.</p>
+<h2 id="server-side-script-injection-protection">Server-side script injection protection</h2>
+<p>XPScript does not compile request bodies, query-string values or form fields as XPScript source code.</p>
+<p><code>Evaluate</code> uses a restricted expression evaluator. It does not expose <code>Shell</code>, <code>CreateObject</code>, <code>GetObject</code>, compiler APIs, file execution APIs or arbitrary method invocation. Attempts to call unsupported functions fail with a runtime error.</p>
+<p>Dynamic Evaluate input is limited to 32768 characters to reduce parser and resource-exhaustion abuse.</p>
+<p>Do not build XPScript source files from request data and invoke the compiler manually from host application code. Keep code and request data separate.</p>
+<h2 id="security-behavior">Security behavior</h2>
+<p>CSRF validation happens before REST parameter binding and before the route procedure executes. A rejected request therefore cannot trigger route-side writes or database operations.</p>
+<p>The web security regression suite verifies valid, missing and modified CSRF tokens, bearer-token compatibility, security headers, HTML encoding and blocked server-side Evaluate access to Shell.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

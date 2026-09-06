@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Webiis | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="webiis-deployment-target">WebIIS deployment target</h1>
+<p><code>webiis</code> builds an IIS-deployable XPscript web application package that uses ASP.NET Core Module V2 and Kestrel.</p>
+<h2 id="build">Build</h2>
+<p>The application build entry file must be named <code>main.xps</code>.</p>
+<p>Self-contained Windows package:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis</span></span></code></pre>
+<p>Framework-dependent package:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --framework-dependent</span></span></code></pre>
+<p>Explicit output directory:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --framework-dependent -o C:\deploy\myapp</span></span></code></pre>
+<p>The output directory must be outside the XPscript source directory.</p>
+<p><code>main.xps</code> is the build entry. It is not the HTTP default document.</p>
+<p>The HTTP default document is <code>index.xps</code>.</p>
+<p>A request for <code>/</code> resolves to <code>index.xps</code>. The same rule applies to directories, so <code>/admin/</code> resolves to <code>/admin/index.xps</code> when that file exists.</p>
+<p><code>index.xps</code> can be any supported web application type:</p>
+<ul>
+<li>normal server-side XPscript</li>
+<li>server-side UIForm</li>
+<li><code>[Platform:browser-wasm]</code></li>
+</ul>
+<h2 id="output">Output</h2>
+<p>A build creates an IIS deployment directory and a ZIP package.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>myapp\</span></span>
+<span class="line"><span>  site\</span></span>
+<span class="line"><span>    main.xps</span></span>
+<span class="line"><span>    index.xps</span></span>
+<span class="line"><span>    ...other .xps and static files...</span></span>
+<span class="line"><span>    host\</span></span>
+<span class="line"><span>      xpscript.dll or xpscript.exe</span></span>
+<span class="line"><span>      ...runtime dependencies...</span></span>
+<span class="line"><span>    web.config</span></span>
+<span class="line"><span>  deploy.cmd</span></span>
+<span class="line"><span>  SetParameters.xml</span></span>
+<span class="line"><span>  README-IIS.txt</span></span>
+<span class="line"><span>myapp.zip</span></span></code></pre>
+<p>Repository, build and runtime cache directories such as <code>.git</code>, <code>.xpscript-cache</code>, <code>bin</code> and <code>obj</code> are excluded. A source-machine <code>.xpscript-cache</code> is never copied into the deployment package.</p>
+<h2 id="iis-hosting-model">IIS hosting model</h2>
+<p>The generated <code>web.config</code> uses <code>AspNetCoreModuleV2</code> with <code>hostingModel="outofprocess"</code>.</p>
+<p>IIS receives the public HTTP or HTTPS request. ASP.NET Core Module starts the XPscript host and assigns a private loopback port. XPscript reads the IIS-provided <code>ASPNETCORE_PORT</code>, binds Kestrel to loopback only and accepts the original public host value because IIS bindings are the public host boundary.</p>
+<p>Normal standalone <code>xpscript web</code> hosting keeps its explicit XPscript host allowlist behavior. The IIS behavior is activated only when the ASP.NET Core Module environment contains both its assigned port and pairing token.</p>
+<h2 id="supported-xpscript-web-application-types">Supported XPscript web application types</h2>
+<p>A WebIIS package can contain all current XPscript web application types in the same IIS application:</p>
+<ul>
+<li>normal server-side XPscript routes using <code>Response</code>, <code>Request</code>, <code>Session</code> and the other web runtime objects</li>
+<li>server-side UIForm routes rendered as HTML by XPscript</li>
+<li><code>[Platform:browser-wasm]</code> applications that publish and run as browser WebAssembly</li>
+</ul>
+<p>Normal server-side routes and UIForm routes are handled by the persistent XPscript host behind IIS.</p>
+<p>A browser-WASM route is compiled and published when it is first requested unless its existing cache can be reused. Its bootstrap document and <code>_framework</code> assets are served through the owning XPscript route, for example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/customer.xps</span></span>
+<span class="line"><span>/customer.xps/_framework/dotnet.js</span></span></code></pre>
+<p>When <code>index.xps</code> is browser-WASM and requested as <code>/</code>, the generated bootstrap document sets its base route to <code>index.xps/</code>. Browser assets therefore continue through the owning XPscript route:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/</span></span>
+<span class="line"><span>/index.xps/main.js</span></span>
+<span class="line"><span>/index.xps/_framework/dotnet.js</span></span></code></pre>
+<p>This also works when the WebIIS package is installed as an IIS application below a parent site because the browser base route is relative to the current application URL.</p>
+<h2 id="server-requirements">Server requirements</h2>
+<p>Install IIS and ASP.NET Core Module V2.</p>
+<p>For a framework-dependent package, install the .NET 10 Hosting Bundle.</p>
+<p>A self-contained package includes the .NET runtime, but ASP.NET Core Module V2 is still required for IIS integration.</p>
+<p>Use an IIS application pool configured as <code>No Managed Code</code>.</p>
+<p>Server-side XPscript runtime compilation requires the matching .NET SDK to be available to the IIS worker environment.</p>
+<p>If the deployed application contains <code>[Platform:browser-wasm]</code> files and uses on-demand browser-WASM compilation, also install the WebAssembly build tools on the IIS server:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>dotnet workload install wasm-tools</span></span></code></pre>
+<h2 id="manual-deployment">Manual deployment</h2>
+<ol>
+<li>Create an IIS site or application.</li>
+<li>Set its physical path to the extracted <code>site</code> directory.</li>
+<li>Give the application pool identity read and execute access to the site.</li>
+<li>Create <code>.xpscript-cache</code> below the site root and give the application pool identity Modify permission only to that cache directory.</li>
+<li>Configure HTTP or HTTPS bindings in IIS.</li>
+<li>Start or recycle the application pool.</li>
+<li>Browse to the configured hostname.</li>
+</ol>
+<p>Example Windows permission model:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>site\                         Read + Execute</span></span>
+<span class="line"><span>site\.xpscript-cache\        Modify</span></span></code></pre>
+<p>XPscript uses <code>.xpscript-cache</code> for persisted server-side compiled units, browser-WASM publish output and the private .NET/NuGet build environment used by the IIS worker. The generated <code>web.config</code> redirects <code>DOTNET_CLI_HOME</code>, NuGet caches and user-profile locations such as <code>APPDATA</code> away from the Windows <code>systemprofile</code> directory and into this writable application-local area.</p>
+<p>Do not grant Modify permission to the complete site merely to support runtime compilation or browser-WASM caching.</p>
+<p>TLS certificates and public hostnames are configured on the IIS site bindings.</p>
+<h2 id="web-deploy">Web Deploy</h2>
+<p>If Microsoft Web Deploy is installed, use the generated command:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>deploy.cmd "Default Web Site/MyApp"</span></span></code></pre>
+<p>The command synchronizes the generated <code>site</code> directory to the specified IIS application.</p>
+<p><code>SetParameters.xml</code> contains the default IIS application name and can be changed for deployment automation.</p>
+<h2 id="application-files">Application files</h2>
+<p>All <code>.xps</code> files and static application assets under the directory containing <code>main.xps</code> are copied into the package.</p>
+<p>The generated IIS <code>web.config</code> replaces any source <code>web.config</code> in the application directory.</p>
+<p><code>main.xps</code> remains the mandatory build entry for the WebIIS compiler target.</p>
+<p><code>index.xps</code> is the HTTP default document. A request for <code>/</code> or for a directory path executes that directory’s <code>index.xps</code> when present, regardless of whether it is server-side XPscript, server-side UIForm or browser-WASM.</p>
+<h2 id="sessions-and-state">Sessions and state</h2>
+<p>The generated WebIIS host enables XPscript sessions and static file serving.</p>
+<p>The existing scope rules remain unchanged:</p>
+<ul>
+<li><code>Process.State</code> belongs to the XPscript worker process.</li>
+<li><code>Application.State</code> is shared by users of the IIS application.</li>
+<li><code>Session.State</code> is isolated per user session and shared between <code>.xps</code> files in that session.</li>
+<li><code>Request.State</code> lasts for its request/navigation scope.</li>
+</ul>
+<p>An IIS application-pool recycle restarts the XPscript worker process, so in-memory <code>Process.State</code>, <code>Application.State</code> and sessions do not survive a recycle unless application code persists required data externally.</p>
+<h2 id="runtime-compilation-cache">Runtime compilation cache</h2>
+<p>Runtime compilation data is stored below:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>.xpscript-cache</span></span></code></pre>
+<p>The directory can contain persisted server-side compiled units, the private .NET CLI/NuGet profile and caches, and browser-WASM publish output under:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>.xpscript-cache\wasm</span></span></code></pre>
+<p>The application-pool identity needs Modify permission on <code>.xpscript-cache</code>.</p>
+<p>The cache is not copied from the source application into a newly generated WebIIS deployment package. Create it on the target IIS installation with the required ACL instead.</p>
+<p>The cache is not a public IIS static directory. XPscript resolves browser-WASM assets through the corresponding <code>.xps</code> route.</p>
+<p>The browser-WASM cache identity includes the XPscript browser compiler identity. Updating the compiler therefore creates a new publish bundle even when the <code>.xps</code> source itself has not changed.</p>
+<p>If browser-WASM applications are precompiled as part of a deployment pipeline in the future, production servers can avoid WebAssembly workload requirements for those already-published applications.</p>
+<h2 id="updating-an-application">Updating an application</h2>
+<p>Build a new package and deploy the new <code>site</code> directory or use <code>deploy.cmd</code>.</p>
+<p>Replacing <code>web.config</code> or host binaries can cause IIS to restart the application. Design deployment so users do not depend on in-memory state surviving an application recycle.</p>
+<p>A deployment process should preserve or safely rebuild <code>.xpscript-cache</code> rather than exposing it as static content.</p>
+<h2 id="automated-iis-verification">Automated IIS verification</h2>
+<p>The <code>WebIIS IIS E2E</code> GitHub Actions workflow provisions a real IIS instance on <code>windows-latest</code>, installs ASP.NET Core Module V2 and WebAssembly build tools, deploys a generated WebIIS package and verifies:</p>
+<ul>
+<li>normal XPscript HTTP routing</li>
+<li>routes with and without <code>.xps</code></li>
+<li>case-insensitive route matching</li>
+<li>directory <code>index.xps</code> resolution</li>
+<li><code>/</code> resolving to a browser-WASM <code>index.xps</code></li>
+<li><code>Application.State</code>, <code>Process.State</code>, <code>Session.State</code> and <code>Request.State</code> behavior over real HTTP sessions</li>
+<li>server-side UIForm HTML rendering</li>
+<li>browser-WASM bootstrap generation</li>
+<li>browser-WASM <code>main.js</code> and <code>_framework/dotnet.js</code> delivery through IIS</li>
+<li>actual browser-WASM execution in headless Chromium until UIForm fields are present in the DOM</li>
+</ul>
+<h2 id="security">Security</h2>
+<ul>
+<li>Keep <code>.xps</code> files handled by XPscript. Do not add a static IIS MIME mapping for <code>.xps</code>.</li>
+<li>Terminate public TLS at IIS.</li>
+<li>Keep the XPscript backend on the IIS-assigned loopback port.</li>
+<li>Restrict public hostnames with IIS bindings.</li>
+<li>Give the application-pool identity only the filesystem permissions required by the application.</li>
+<li>Give runtime compilation Modify permission only to <code>.xpscript-cache</code>, not to the whole site.</li>
+<li>Keep the IIS worker’s .NET and NuGet profile/cache locations inside the writable <code>.xpscript-cache</code> area rather than granting access to the Windows system profile.</li>
+<li>Grant other write access only to explicit data, upload or log directories that need it.</li>
+<li>Keep ASP.NET Core Hosting Bundle, IIS, the .NET SDK used for runtime compilation and installed workloads patched.</li>
+</ul>
+<p>For alternative IIS topologies such as reverse proxy or CGI, see <a href="../iis-hosting/">Hosting XPScript on IIS</a>.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

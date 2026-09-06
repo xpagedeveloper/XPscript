@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Native Csv | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="native-csv">Native CSV</h1>
+<p>XPscript provides a native CSV API for parsing, building, iterating, sorting, serializing and saving CSV data without external runtime dependencies.</p>
+<p>CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as <code>00123</code> are preserved exactly.</p>
+<h2 id="parse-csv">Parse CSV</h2>
+<pre><code class="language-xpscript">Dim doc As XPCsvDocument
+Dim row As XPCsvRow
+
+Set doc = CsvParse(csvText, ";")
+Set row = doc.Rows[0]
+
+Print doc.RowCount
+Print doc.ColumnCount
+Print row.Get("name")
+</code></pre>
+<p><code>XPCsvDocument.Parse(text)</code> and <code>CsvParse(text)</code> use comma as the default delimiter. Pass <code>","</code> or <code>";"</code> explicitly when required:</p>
+<pre><code class="language-xpscript">Set doc = XPCsvDocument.Parse(csvText, ";")
+</code></pre>
+<p>Only comma and semicolon are accepted as delimiters.</p>
+<p>The parser supports quoted fields, doubled quotes, embedded delimiters and embedded CR/LF line breaks. Input line endings may be LF, CRLF or CR. Serialized output uses LF.</p>
+<h2 id="headers-rows-and-columns">Headers, rows and columns</h2>
+<p>Headers are exposed as an indexed and iterable collection. Headers can also be added through the collection:</p>
+<pre><code class="language-xpscript">Print doc.Headers.Count
+Print doc.Headers[0]
+Print doc.Headers.Get(1)
+
+Call doc.Headers.Add("email")
+
+ForAll header In doc.Headers
+    Print header
+End ForAll
+</code></pre>
+<p><code>Headers.Add(name)</code> and <code>AddHeader(name)</code> perform the same schema-changing operation. Existing rows are extended with an empty value. Duplicate header names are rejected case-insensitively.</p>
+<p>Rows are also indexed and iterable:</p>
+<pre><code class="language-xpscript">Dim row As XPCsvRow
+
+Set row = doc.Rows[0]
+
+ForAll row In doc.Rows
+    Print row.Get("name")
+End ForAll
+</code></pre>
+<p>Each row exposes individual columns as an indexed and iterable collection:</p>
+<pre><code class="language-xpscript">Dim column As XPCsvColumn
+
+ForAll column In row.Columns
+    Print CStr(column.Index) &#x26; " " &#x26; column.Name &#x26; " = " &#x26; column.Value
+End ForAll
+
+Print row.Columns[0].Value
+</code></pre>
+<p><code>XPCsvColumn</code> exposes <code>Index</code>, <code>Name</code> and <code>Value</code>. <code>Name</code> is empty when <code>HasHeaders = False</code>.</p>
+<p>The document exposes:</p>
+<ul>
+<li><code>RowCount</code>, number of data rows. The header row is not counted when <code>HasHeaders = True</code>.</li>
+<li><code>ColumnCount</code>, number of columns.</li>
+<li><code>Headers.Count</code>.</li>
+<li><code>Rows.Count</code>, equal to <code>RowCount</code>.</li>
+</ul>
+<p>Indexes are zero-based.</p>
+<h2 id="row-access-and-strict-column-names">Row access and strict column names</h2>
+<p>Rows support index and name access:</p>
+<pre><code class="language-xpscript">Print row[0]
+Print row.Get(0)
+Print row.Get("name")
+</code></pre>
+<p>Name lookup is case-insensitive and requires headers. Missing names are runtime errors that can be trapped with normal XPscript error handling:</p>
+<pre><code class="language-xpscript">On Error Resume Next
+Print row.Get("missing")
+Print CStr(Err)
+Print Error$
+On Error GoTo 0
+</code></pre>
+<p>The diagnostic is:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>CSV column name 'missing' not found.</span></span></code></pre>
+<p><code>Set</code> is intentionally strict as well:</p>
+<pre><code class="language-xpscript">Call row.Set("name", "Anna")
+</code></pre>
+<p><code>row.Set("missing", value)</code> does not create a new column. It raises the same missing-column error. Index access outside the row raises <code>CSV column index out of range.</code></p>
+<h2 id="build-csv">Build CSV</h2>
+<pre><code class="language-xpscript">Dim csv As New XPCsvDocument
+Dim row As XPCsvRow
+
+csv.Delimiter = ";"
+
+Call csv.Headers.Add("id")
+Call csv.Headers.Add("name")
+Call csv.Headers.Add("city")
+
+Set row = csv.AddRow()
+Call row.Set("id", "00123")
+Call row.Set("name", "Åsa")
+Call row.Set("city", "Malmö; Sweden")
+
+Print CsvStringify(csv)
+</code></pre>
+<p>The builder escapes fields automatically. <code>CsvEscape(value [, delimiter])</code> is available when an escaped field is needed independently:</p>
+<pre><code class="language-xpscript">Print CsvEscape("Malmö; Sweden", ";")
+</code></pre>
+<p>returns:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>"Malmö; Sweden"</span></span></code></pre>
+<h2 id="sort-rows">Sort rows</h2>
+<p><code>XPCsvDocument.Sort(column)</code> sorts all data rows in place in ascending alphanumeric order. The header row is never moved.</p>
+<p>The column selector can be a header name:</p>
+<pre><code class="language-xpscript">Call csv.Sort("name")
+</code></pre>
+<p>or a zero-based numeric column index:</p>
+<pre><code class="language-xpscript">Call csv.Sort(0)
+</code></pre>
+<p>Header-name lookup is case-insensitive and requires <code>HasHeaders = True</code>. A numeric selector works with or without headers and must be between <code>0</code> and <code>ColumnCount - 1</code>.</p>
+<p>Sorting is case-insensitive and uses natural alphanumeric ordering. Numeric runs are compared numerically, so values such as <code>item2</code> sort before <code>item10</code>. Rows whose selected values compare equal keep their original relative order.</p>
+<p>Example:</p>
+<pre><code class="language-xpscript">Dim csv As XPCsvDocument
+Set csv = CsvParse("id;name" &#x26; Chr(10) &#x26; _
+                   "2;item10" &#x26; Chr(10) &#x26; _
+                   "1;item2" &#x26; Chr(10) &#x26; _
+                   "3;Item1", ";")
+
+Call csv.Sort("name")
+' Item1, item2, item10
+
+Call csv.Sort(0)
+' 1, 2, 3
+</code></pre>
+<h2 id="save-csv-files">Save CSV files</h2>
+<p>File output belongs to the <code>XPCsvDocument</code> that contains the CSV data.</p>
+<pre><code class="language-xpscript">Dim csv As New XPCsvDocument
+
+Call csv.Headers.Add("name")
+Call csv.Headers.Add("city")
+Call csv.Save("output.csv")
+</code></pre>
+<p><code>Save(path [, encoding])</code> serializes the current contents of that <code>XPCsvDocument</code> and replaces the target file:</p>
+<pre><code class="language-xpscript">Call csv.Save("customers.csv")
+Call csv.Save("customers-1252.csv", "windows-1252")
+</code></pre>
+<p><code>SaveFile(path [, encoding])</code> is the explicit file-named alias and has identical behavior:</p>
+<pre><code class="language-xpscript">Call csv.SaveFile("customers.csv")
+Call csv.SaveFile("customers-utf16.csv", "utf-16")
+</code></pre>
+<p>There are no global <code>CsvSave</code> or <code>CsvWriteFile</code> functions. <code>XPCsvDocument.WriteFile</code> is also not part of the API. Use <code>Save</code> or <code>SaveFile</code> on the document instance.</p>
+<p>The document encoding is used by default. <code>FileEncoding</code> is an alias for <code>Encoding</code> when working with file output:</p>
+<pre><code class="language-xpscript">csv.FileEncoding = "utf-8-bom"
+Call csv.Save("customers.csv")
+</code></pre>
+<p>Passing an encoding to <code>Save</code> or <code>SaveFile</code> overrides the encoding for that write without changing the document setting.</p>
+<p>Relative paths follow XPscript file-system path handling.</p>
+<h2 id="header-mode">Header mode</h2>
+<p><code>HasHeaders</code> defaults to <code>True</code>.</p>
+<pre><code class="language-xpscript">Set doc = CsvParse(text, ";", False)
+</code></pre>
+<p>When <code>HasHeaders = False</code>, every record is a data row and <code>RowCount</code> includes the first record. Name-based <code>Get</code> and <code>Set</code> require headers.</p>
+<p>Changing <code>HasHeaders</code> on an existing document promotes the first row to headers or demotes the current headers to the first data row.</p>
+<h2 id="encoding-and-bytes">Encoding and bytes</h2>
+<p>XPscript <code>String</code> values are Unicode, so encoding is only relevant when CSV crosses a byte boundary.</p>
+<p>Parse byte data with an explicit encoding:</p>
+<pre><code class="language-xpscript">Set doc = CsvParseBytes(data, "windows-1252", ";")
+</code></pre>
+<p>or:</p>
+<pre><code class="language-xpscript">Set doc = XPCsvDocument.ParseBytes(data, "utf-8", ",")
+</code></pre>
+<p>Supported encoding names are:</p>
+<ul>
+<li><code>utf-8</code></li>
+<li><code>utf-8-bom</code></li>
+<li><code>windows-1252</code> (<code>cp1252</code> and <code>1252</code> aliases)</li>
+<li><code>iso-8859-1</code> (<code>latin1</code> and <code>latin-1</code> aliases)</li>
+<li><code>utf-16</code> / <code>utf-16le</code></li>
+<li><code>utf-16be</code></li>
+</ul>
+<p>Serialize to bytes using the document encoding:</p>
+<pre><code class="language-xpscript">csv.Encoding = "windows-1252"
+data = csv.ToBytes()
+</code></pre>
+<p>or choose an encoding for one call:</p>
+<pre><code class="language-xpscript">data = csv.ToBytes("utf-8")
+</code></pre>
+<p><code>FileEncoding</code> and <code>Encoding</code> refer to the same document encoding for file output.</p>
+<p>Characters that cannot be represented in Windows-1252 cause a trap-able runtime error instead of silent replacement.</p>
+<h2 id="api-summary">API summary</h2>
+<p><code>XPCsvDocument</code>:</p>
+<ul>
+<li><code>Headers</code></li>
+<li><code>Rows</code></li>
+<li><code>RowCount</code></li>
+<li><code>ColumnCount</code></li>
+<li><code>HasHeaders</code></li>
+<li><code>Delimiter</code></li>
+<li><code>Encoding</code></li>
+<li><code>FileEncoding</code></li>
+<li><code>AddHeader(name)</code></li>
+<li><code>AddRow()</code></li>
+<li><code>Sort(column)</code></li>
+<li><code>Stringify()</code></li>
+<li><code>ToBytes([encoding])</code></li>
+<li><code>Save(path [, encoding])</code></li>
+<li><code>SaveFile(path [, encoding])</code></li>
+</ul>
+<p>Functions:</p>
+<ul>
+<li><code>CsvParse(text [, delimiter [, hasHeaders]])</code></li>
+<li><code>CsvParseBytes(bytes, encoding [, delimiter [, hasHeaders]])</code></li>
+<li><code>CsvStringify(document)</code></li>
+<li><code>CsvEscape(value [, delimiter])</code></li>
+</ul>
+<p>Collections:</p>
+<ul>
+<li><code>XPCsvHeaderCollection</code>: <code>Count</code>, <code>Get(index)</code>, <code>Add(name)</code>, <code>ForAll</code></li>
+<li><code>XPCsvRowCollection</code>: <code>Count</code>, <code>Get(index)</code>, <code>ForAll</code></li>
+<li><code>XPCsvColumnCollection</code>: <code>Count</code>, <code>Get(index)</code>, <code>ForAll</code></li>
+</ul>
+<p><code>XPCsvRow</code>:</p>
+<ul>
+<li><code>Count</code></li>
+<li><code>Columns</code></li>
+<li><code>Get(indexOrName)</code></li>
+<li><code>Set(indexOrName, value)</code></li>
+</ul>
+<h2 id="resource-limit">Resource limit</h2>
+<p>Native CSV parsing accepts at most 32 MiB of input. The byte limit is checked directly for byte input and as UTF-8 size for String input.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

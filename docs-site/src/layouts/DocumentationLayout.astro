@@ -1,0 +1,104 @@
+---
+import type { DocEntry } from "../lib/docs";
+import { isStructuredEntry, relativeRouteHref, routeForEntry, titleForEntry } from "../lib/docs";
+import "../styles/global.css";
+
+interface Props {
+  entry: DocEntry;
+}
+
+const { entry } = Astro.props;
+const pageTitle = titleForEntry(entry);
+const structured = isStructuredEntry(entry);
+const currentRoute = routeForEntry(entry);
+const href = (route: string) => relativeRouteHref(currentRoute, route);
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle} | XPScript</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={href("/")}>XPScript Documentation</a>
+      <span class="site-status">Documentation preview</span>
+    </header>
+
+    <div class="page-shell">
+      <aside class="sidebar" aria-label="Documentation navigation">
+        <nav>
+          <a href={href("/")}>Overview</a>
+          <a href={href("/getting-started/")}>Getting Started</a>
+          <a href={href("/language/")}>Language</a>
+          <a href={href("/functions/")}>Functions</a>
+          <a href={href("/language-reference/")}>Language Reference</a>
+          <a href={href("/api-reference/")}>Runtime API</a>
+        </nav>
+      </aside>
+
+      <main class="content" data-pagefind-body>
+        {structured && (
+          <header class="structured-header">
+            <p class="structured-kind">{entry.data.type}</p>
+            <h1>{entry.data.title}</h1>
+            {entry.data.shortDescription && <p>{entry.data.shortDescription}</p>}
+          </header>
+        )}
+
+        <article class="doc-body">
+          <slot />
+        </article>
+      </main>
+    </div>
+
+    <script is:inline>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script>
+  </body>
+</html>

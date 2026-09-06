@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Web | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="web-programming">Web programming</h1>
+<p>XPScript web applications use the same <code>.xps</code> language and a shared dispatcher across Kestrel, FastCGI and CGI.</p>
+<p>For the complete verified REST API, Response, Session, Application and RequestScope reference, see <a href="../rest-api/">REST API development</a>.</p>
+<h2 id="route-files">Route files</h2>
+<p>A site is a directory of <code>.xps</code> files:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>site/</span></span>
+<span class="line"><span>  index.xps</span></span>
+<span class="line"><span>  users.xps</span></span>
+<span class="line"><span>  admin/</span></span>
+<span class="line"><span>    index.xps</span></span></code></pre>
+<p><code>/</code>, <code>/index</code> and <code>/index.xps</code> resolve to the default <code>index.xps</code>. <code>/users</code>, <code>/users.xps</code> and procedure routes such as <code>/users/Save</code> are resolved by the common router.</p>
+<h2 id="route-rules">Route rules</h2>
+<p>Rules are written before route procedures. Their order does not define their meaning.</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[PreCompile:kalle.xps]
+Sub Index()
+    Response.Write("Hello")
+End Sub
+</code></pre>
+<p>Supported HTTP method rules include the standard methods handled by the web runtime. <code>Request.Method</code> always contains the normalized actual HTTP method. A misspelled or unknown bracket rule is reported on the console but does not stop compilation. Conflicting <code>[Anonymous]</code> and <code>[Authenticated]</code> rules are reported, and <code>[Authenticated]</code> takes precedence.</p>
+<p>Role rules use OR semantics. A user needs any positive role declared for the route. A role prefixed with <code>!</code> is forbidden and overrides matching positive roles.</p>
+<pre><code class="language-xpscript">[Authenticated]
+[Get]
+[Role:admin;user]
+[Role:editor]
+[Role:!blocked]
+Sub Index()
+    Response.Write("Authorized")
+End Sub
+</code></pre>
+<p>The example allows <code>admin</code>, <code>user</code> or <code>editor</code>, but rejects a principal or session that also has <code>blocked</code>.</p>
+<h2 id="rest-api-routes">REST API routes</h2>
+<p><code>[Route:/path]</code> creates an explicit REST route that is independent of the <code>.xps</code> filename. Route parameters use <code>{name}</code> and bind to procedure parameters by name.</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Route:/api/users/{id}]
+Function GetUser(ByVal id As Integer) As String
+    GetUser = "user-" + id
+End Function
+</code></pre>
+<p><code>GET /api/users/42</code> binds <code>id</code> to the integer <code>42</code>. Invalid scalar conversion returns HTTP 400 instead of invoking the procedure. Returning a value from a Function automatically serializes that value as JSON when the route has not already written a response.</p>
+<p>Explicit parameter sources can be combined with <code>[Route]</code>:</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Route:/api/orders/{id}]
+Sub GetOrder([FromRoute] id As Integer, [FromQuery] details As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String)
+    Response.OK(id)
+End Sub
+</code></pre>
+<p>Supported parameter bindings are <code>[FromRoute]</code>, <code>[FromQuery]</code>, <code>[FromHeader]</code>, <code>[FromHeader:"Header-Name"]</code> and <code>[FromBody]</code>. Route, query and header values are converted to the declared parameter type. Without an explicit binding, the runtime first checks a matching route parameter, then query string, then JSON body for a complex type.</p>
+<p>Explicit REST routes are indexed across the web root. Duplicate route/method combinations are rejected. Parameter names in templates do not make otherwise identical templates unique, so <code>/api/users/{id}</code> and <code>/api/users/{name}</code> conflict when they use the same HTTP method.</p>
+<p>See <a href="../rest-api/">REST API development</a> for the complete route, validation, CORS, rate-limit and response-helper reference.</p>
+<h2 id="json-request-body-and-models">JSON request body and models</h2>
+<p><code>Body</code> is a reserved XPScript runtime identifier for web request content. It cannot be used as a variable, parameter, procedure or class name. It gives direct access to request content:</p>
+<pre><code class="language-xpscript">Response.OK(Body.Text())
+</code></pre>
+<p>For typed JSON input, use a class and bind a differently named parameter with <code>[FromBody]</code>. A complex model parameter is also treated as JSON body input when no explicit source is given.</p>
+<pre><code class="language-xpscript">Public Class CreateUserRequest
+    [Required]
+    [MaxLength:100]
+    Public Name As String
+
+    [Required]
+    [Email]
+    Public Email As String
+
+    [Range:18;120]
+    Public Age As Integer
+End Class
+
+[Anonymous]
+[Post]
+[Route:/api/users]
+Sub CreateUser([FromBody] payload As CreateUserRequest)
+    Response.OK(payload)
+End Sub
+</code></pre>
+<p>JSON binding accepts <code>application/json</code> and structured <code>+json</code> media types. Property matching is case-insensitive. The default JSON body limit is 4 MiB.</p>
+<p>Model validation rules are <code>[Required]</code>, <code>[MaxLength:n]</code>, <code>[Email]</code> and <code>[Range:min;max]</code>. These rules apply to REST request model fields. Validation failures return HTTP 400 using <code>application/problem+json</code> and include an <code>errors</code> object keyed by field name.</p>
+<h2 id="rest-response-helpers">REST response helpers</h2>
+<p>REST helpers are methods on <code>Response</code>. They serialize data with the shared JSON configuration.</p>
+<pre><code class="language-xpscript">Response.OK(data)
+Response.Json(data)
+Response.Created("/api/users/42", data)
+Response.NoContent()
+Response.BadRequest("Invalid input")
+Response.NotFound("User not found")
+Response.Unauthorized()
+Response.Forbidden()
+Response.Conflict("Already exists")
+Response.problem(400, "Invalid request", "Email is required")
+</code></pre>
+<p><code>Response.OK(data)</code> returns HTTP 200 and JSON. <code>Response.Created(location, data)</code> returns HTTP 201 and a <code>Location</code> header. <code>Response.NoContent()</code> returns HTTP 204. Problem helpers use the RFC Problem Details shape with <code>type</code>, <code>title</code>, <code>status</code> and <code>detail</code>.</p>
+<p>The complete Response member list is maintained in <a href="../rest-api/#response-object">REST API development</a>.</p>
+<h2 id="cors-route-rule">CORS route rule</h2>
+<p>CORS is opt-in per route. <code>[Cors]</code> and <code>[Cors:*]</code> allow any origin. Use one or more explicit origins separated by semicolons when the route should be restricted.</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Route:/api/public]
+[Cors:https://app.example.com;https://admin.example.com]
+Sub PublicApi()
+    Response.OK("ok")
+End Sub
+</code></pre>
+<p>The runtime handles CORS preflight <code>OPTIONS</code> requests for CORS-enabled REST routes and emits <code>Access-Control-Allow-Origin</code>, allowed methods and requested headers. Explicit origins use <code>Vary: Origin</code>.</p>
+<h2 id="rate-limiting-route-rule">Rate limiting route rule</h2>
+<p><code>[RateLimit:requests;window]</code> applies a fixed-window limit to one procedure. Windows support seconds, minutes, hours and days.</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Route:/api/search]
+[RateLimit:100;1m]
+Sub Search()
+    Response.OK("ok")
+End Sub
+</code></pre>
+<p>Examples are <code>10;30s</code>, <code>100;1m</code>, <code>1000;1h</code> and <code>5000;1d</code>. An authenticated request is keyed by its user identity when available. Anonymous requests use the remote address. Exceeding the limit returns HTTP 429 as Problem Details and includes <code>Retry-After</code>.</p>
+<h2 id="precompile">PreCompile</h2>
+<p><code>[PreCompile:file.xps]</code> asks the web engine to warm another route. If the extension is omitted, the engine also tries <code>.xps</code>. A missing target is reported and skipped rather than stopping the server.</p>
+<p>Startup warms the default document and its direct precompile targets. Nested targets are not recursively warmed at startup. If <code>index.xps</code> precompiles <code>kalle.xps</code>, and <code>kalle.xps</code> declares <code>[PreCompile:nisse.xps]</code>, <code>nisse.xps</code> is warmed after the first real request to <code>kalle.xps</code>.</p>
+<p>Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side <code>.xps</code> pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives process restarts and is reused only when the source/dependency snapshot, runtime/compiler configuration, compiler build identity and web runtime build identity still match. Changed source or dependencies automatically invalidate the artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.</p>
+<p><code>XpsWebCompilationCacheOptions.EnablePersistentCache</code> controls persistent artifact reuse for custom hosts. <code>PersistentCacheDirectory</code> can override the default per-site cache directory under the process user’s local application data directory.</p>
+<h2 id="request">Request</h2>
+<p>The Request API uses a singular method for the common first-value case and an <code>All</code> method when HTTP permits multiple values.</p>
+<pre><code class="language-xpscript">Dim id As String
+Dim tenant As String
+Dim token As String
+
+id = Request.Query("id")
+tenant = Request.Header("X-Tenant-ID")
+token = Request.BearerToken
+</code></pre>
+<p>Important properties:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>Request.Method</code></td><td>Actual normalized HTTP method.</td></tr><tr><td><code>Request.Path</code></td><td>Request path.</td></tr><tr><td><code>Request.PathInfo</code></td><td>Path-info portion.</td></tr><tr><td><code>Request.QueryString</code></td><td>Raw query string.</td></tr><tr><td><code>Request.Query_String</code></td><td>Raw CGI-compatible query string alias.</td></tr><tr><td><code>Request.Query_String_Decoded</code></td><td>URL-decoded query string.</td></tr><tr><td><code>Request.ContentType</code></td><td>Request Content-Type.</td></tr><tr><td><code>Request.ContentLength</code></td><td>Request body length when known.</td></tr><tr><td><code>Request.Host</code></td><td>Host value.</td></tr><tr><td><code>Request.Scheme</code></td><td>Request scheme.</td></tr><tr><td><code>Request.RemoteAddress</code></td><td>Client/peer address supplied by the host.</td></tr><tr><td><code>Request.Protocol</code></td><td>HTTP protocol.</td></tr><tr><td><code>Request.Authorization</code></td><td>First Authorization header value, or an empty string.</td></tr><tr><td><code>Request.BearerToken</code></td><td>Bearer token when exactly one valid Bearer Authorization value exists, otherwise Null.</td></tr><tr><td><code>Request.Headers</code></td><td>Read-only multi-value header collection.</td></tr><tr><td><code>Request.Cookies</code></td><td>Read-only cookie collection.</td></tr><tr><td><code>Request.CgiVariables</code></td><td>Read-only CGI-compatible variable collection.</td></tr></tbody></table>
+<p>Request value methods:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Method</th><th>Result</th></tr></thead><tbody><tr><td><code>Request.Query(name)</code></td><td>First decoded query value, or an empty string.</td></tr><tr><td><code>Request.QueryAll(name)</code></td><td>All decoded query values.</td></tr><tr><td><code>Request.Form(name)</code></td><td>First form value, or an empty string.</td></tr><tr><td><code>Request.FormAll(name)</code></td><td>All form values.</td></tr><tr><td><code>Request.Header(name)</code></td><td>First header value, or an empty string.</td></tr><tr><td><code>Request.HeaderAll(name)</code></td><td>All header values.</td></tr><tr><td><code>Request.Cookie(name)</code></td><td>Cookie value, or Null when missing.</td></tr><tr><td><code>Request.Cgi(name)</code></td><td>CGI-compatible variable value, or Null when missing.</td></tr></tbody></table>
+<p><code>QueryFirst</code>, <code>FormFirst</code> and <code>HeaderFirst</code> remain compatibility aliases for <code>Query</code>, <code>Form</code> and <code>Header</code>. New code should use the shorter singular names.</p>
+<p>Query and form names are case-insensitive. Repeated query and form fields preserve their values through the <code>All</code> methods. Header lookup is case-insensitive and preserves multiple header values.</p>
+<p>Body and upload methods include <code>BodyText()</code>, <code>BodyBytes()</code>, <code>Files()</code>, <code>Files(name)</code> and <code>FileFirst(name)</code>. These methods enforce their configured size and count limits.</p>
+<p><code>Request.Authorization</code> is a convenience alias for <code>Request.Header("Authorization")</code>. <code>Request.BearerToken</code> only accepts one Authorization header whose scheme is Bearer and whose token is non-empty. Multiple Authorization values are treated as ambiguous and produce <code>Null</code>.</p>
+<h2 id="response">Response</h2>
+<p><code>Response</code> represents the outgoing HTTP response. Set <code>Response.ContentType</code> before writing when a specific media type is required. Use <code>Response.Write(value)</code> to append response content. For REST APIs prefer typed response helpers instead of constructing JSON strings manually.</p>
+<p>For headers and cookies use the explicit response methods:</p>
+<pre><code class="language-xpscript">Response.SetHeader("Cache-Control", "no-store")
+Response.AppendHeader("Vary", "Origin")
+Response.SetCookie("session", token)
+Response.DeleteCookie("session")
+</code></pre>
+<p><code>SetHeader</code> replaces the values for a header. <code>AppendHeader</code> adds another value. <code>RemoveHeader</code> removes a header. Cookie values and options are validated by the runtime before a <code>Set-Cookie</code> header is emitted.</p>
+<p>See <a href="../rest-api/#response-object">Response object</a> for the verified complete member list.</p>
+<h2 id="session">Session</h2>
+<p>Sessions are host-controlled. Kestrel sessions must be enabled with <code>--sessions</code>. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.</p>
+<p>Session state supports <code>Add</code>, <code>Set</code>, <code>Get</code>, <code>Exists</code>, <code>Remove</code>, <code>Unset</code> and <code>Clear</code>. <code>Add</code> overwrites an existing value. <code>Get</code> returns <code>Null</code> when the key does not exist. <code>Remove</code> returns false without throwing when a key does not exist.</p>
+<p>Authenticated sessions can hold roles used directly by <code>[Role:...]</code> authorization:</p>
+<pre><code class="language-xpscript">Session.Authenticate("42", "Fredrik")
+Session.SetRole("admin")
+Session.SetRole("editor")
+</code></pre>
+<p>Session state is thread-safe inside one runtime process. Concurrent requests using the same session serialize session state mutations through the session record lock.</p>
+<p>See <a href="../rest-api/#session-object">Session object</a> for all implemented Session members.</p>
+<h2 id="application-and-request-scopes">Application and Request scopes</h2>
+<p>Application scope is shared by requests in one application runtime instance. RequestScope exists only for one request.</p>
+<pre><code class="language-xpscript">Application.Add("site", "example")
+Session.Add("cart", "123")
+RequestScope.Add("temporary", "value")
+</code></pre>
+<p>For all three scopes, <code>Add(name, value)</code> overwrites an existing key, <code>Get(name)</code> returns <code>Null</code> for a missing key, and <code>Remove(name)</code> is safe for missing keys and returns false.</p>
+<p>Application scope is thread-safe inside one runtime process. RequestScope is also internally synchronized. In-memory Application state is not a distributed store across multiple processes or servers.</p>
+<p>See <a href="../rest-api/#application-scope">Application scope</a> and <a href="../rest-api/#request-scope">Request scope</a> for the complete API and lifetime rules.</p>
+<h2 id="http-methods">HTTP methods</h2>
+<p>A route can declare the methods it accepts. Do not assume a UIForm route is GET-only. A form commonly accepts both GET and POST:</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Response.Write(Request.Method)
+End Sub
+</code></pre>
+<p>The runtime preserves other valid HTTP methods in <code>Request.Method</code> so application logic can inspect the actual request method.</p>
+<h2 id="cgi-variables">CGI variables</h2>
+<p>CGI-compatible request variables are available in Kestrel, FastCGI and CGI hosting. Use <code>Request.Cgi("VARIABLE_NAME")</code> when you need a specific variable. Prefer normalized Request properties such as <code>Method</code>, <code>ContentType</code>, <code>RemoteAddress</code> and <code>Query_String</code> when an equivalent property exists.</p>
+<p>The normalized base set includes <code>REQUEST_METHOD</code>, <code>REQUEST_URI</code>, <code>QUERY_STRING</code>, <code>PATH_INFO</code>, <code>SCRIPT_NAME</code>, <code>SERVER_NAME</code>, <code>SERVER_PORT</code>, <code>SERVER_PROTOCOL</code>, <code>REMOTE_ADDR</code>, <code>CONTENT_TYPE</code>, <code>CONTENT_LENGTH</code> and <code>HTTPS</code>. Incoming headers are also exposed using CGI-style <code>HTTP_*</code> names. CGI and FastCGI retain transport-provided environment variables in addition to the normalized values.</p>
+<h2 id="iis-hosting">IIS hosting</h2>
+<p>On Windows Server, the recommended IIS topology is IIS as the public TLS endpoint and reverse proxy to an XPScript Kestrel process on loopback. Direct IIS CGI hosting is also supported for simpler deployments.</p>
+<p>See <a href="../iis-hosting/">Hosting XPScript on IIS</a> for the full configuration, including ARR, URL Rewrite, <code>web.config</code>, CGI mappings, application pool settings, filesystem permissions and troubleshooting.</p>
+<h2 id="security-boundaries">Security boundaries</h2>
+<p>The configured web root is a trust boundary. XPScript route resolution constrains resolved source files to that root. Never expose <code>.xps</code> source as ordinary static files. Validate query/form/header/cookie values before use. Treat uploaded filenames as untrusted. Bind FastCGI to loopback or a Unix socket unless the network is explicitly trusted.</p>
+<p>The persistent compiler cache contains executable .NET assemblies generated from trusted <code>.xps</code> source. Keep its directory writable only by the XPScript service identity or an equally trusted administrator.</p>
+<p>REST endpoints should use explicit CORS origins when browser callers are known. Do not use <code>[Cors:*]</code> for credentialed or sensitive APIs. Rate limits complement authentication and authorization but do not replace them.</p>
+<p>See <a href="../getting-started/">Getting started</a> for host setup and parameters and <a href="../uiform/">UIForm</a> for forms.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

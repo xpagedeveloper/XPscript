@@ -1,0 +1,399 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Application Reference | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="application-and-state-reference">Application and state reference</h1>
+<p>This page documents the complete XPScript <code>Application</code> runtime surface plus the shared <code>Application.State</code>, <code>Process.State</code>, <code>Session.State</code> and <code>Request.State</code> proxies. Every row contains syntax, parameter meaning, behavior and a copyable <code>.xps</code> example.</p>
+<p>The complete runnable reference is <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">samples/application-object.xps</a>.</p>
+<h2 id="application-runtime-information">Application runtime information</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.ArgCount</code></td><td><code>Application.ArgCount</code></td><td>none</td><td>Returns the number of command-line arguments passed to the program.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Args</code></td><td><code>Application.Args(index)</code></td><td><code>index</code>: zero-based argument index.</td><td>Returns one command-line argument and raises an XPScript bounds error for an invalid index.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.CommandLine</code></td><td><code>Application.CommandLine</code></td><td>none</td><td>Returns the argument list joined into the convenience command-line string.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.ExecutablePath</code></td><td><code>Application.ExecutablePath</code></td><td>none</td><td>Returns the generated application’s executable path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.ExecutableFileName</code></td><td><code>Application.ExecutableFileName</code></td><td>none</td><td>Returns only the generated executable file name.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.ExecutableDirectory</code></td><td><code>Application.ExecutableDirectory</code></td><td>none</td><td>Returns the directory containing the generated executable.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.TempPath</code></td><td><code>Application.TempPath</code></td><td>none</td><td>Returns the operating-system temporary directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.TempFolder</code></td><td><code>Application.TempFolder</code></td><td>none</td><td>Compatibility alias for <code>Application.TempPath</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Path</code></td><td><code>Application.Path</code></td><td>none</td><td>Compatibility alias for <code>Application.ExecutablePath</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.FileName</code></td><td><code>Application.FileName</code></td><td>none</td><td>Compatibility alias for <code>Application.ExecutableFileName</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.ExitCode</code></td><td><code>Application.ExitCode = value</code></td><td><code>value</code>: integer process exit code.</td><td>Gets or sets the process exit code for compiled console and desktop applications. The default is <code>0</code>; the final value is returned to the operating system when the program exits.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime-exit-code.xps">application-runtime-exit-code.xps</a></td></tr></tbody></table>
+<h2 id="system-log">System log</h2>
+<p><code>Application.SystemLog</code> writes to the operating system’s central system log. The source/tag is derived from the compiled executable file name. The optional <code>eventId</code> must be a non-negative integer.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.SystemLog.Info</code></td><td><code>Application.SystemLog.Info(message [, eventId])</code></td><td><code>message</code>: text; <code>eventId</code>: optional non-negative integer.</td><td>Writes an informational system-log entry. On Windows this uses Event Log, and on Linux/macOS it uses the platform system logger.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-systemlog.xps">application-systemlog.xps</a></td></tr><tr><td><code>Application.SystemLog.Warning</code></td><td><code>Application.SystemLog.Warning(message [, eventId])</code></td><td><code>message</code>: text; <code>eventId</code>: optional non-negative integer.</td><td>Writes a warning system-log entry.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-systemlog.xps">application-systemlog.xps</a></td></tr><tr><td><code>Application.SystemLog.Error</code></td><td><code>Application.SystemLog.Error(message [, eventId])</code></td><td><code>message</code>: text; <code>eventId</code>: optional non-negative integer.</td><td>Writes an error system-log entry.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-systemlog.xps">application-systemlog.xps</a></td></tr></tbody></table>
+<p>Windows entries are written through the Windows Event Log API. Linux and macOS entries are submitted through <code>/usr/bin/logger</code>, which routes them into the platform’s configured system logging facility. A logging failure raises an XPScript runtime error rather than silently discarding the entry.</p>
+<h2 id="application-ui-metadata">Application UI metadata</h2>
+<p>These properties are writable. Their values are stored in the application state used by the applicable UI/build runtime.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Title</code></td><td><code>Application.Title = value</code></td><td><code>value</code>: application/window title.</td><td>Gets or sets the application title metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Icon</code></td><td><code>Application.Icon = path</code></td><td><code>path</code>: icon path/value. A literal <code>.ico</code> path is build-validated when the compiler can resolve it.</td><td>Gets or sets application icon metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Width</code></td><td><code>Application.Width = value</code></td><td><code>value</code>: preferred application/window width.</td><td>Gets or sets width metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Height</code></td><td><code>Application.Height = value</code></td><td><code>value</code>: preferred application/window height.</td><td>Gets or sets height metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr></tbody></table>
+<h2 id="state-scopes">State scopes</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.State</code></td><td><code>Application.State</code></td><td>none</td><td>Application-wide state proxy. In web hosting it bridges to application state; outside web hosting it uses process-local XPScript state.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Process.State</code></td><td><code>Process.State</code></td><td>none</td><td>Process-wide state proxy.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Session.State</code></td><td><code>Session.State</code></td><td>none</td><td>Session state proxy when hosted by the web runtime; otherwise uses the local XPScript state implementation.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Request.State</code></td><td><code>Request.State</code></td><td>none</td><td>Request/navigation state proxy. The local compiled-navigation runtime resets it according to request/navigation boundaries.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr></tbody></table>
+<p>All four state proxies expose the same member set below.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>State.Get</code></td><td><code>scope.Get(name)</code></td><td><code>name</code>: case-insensitive state key.</td><td>Returns the stored value or runtime empty/null when no value exists.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Set</code></td><td><code>scope.Set(name, value)</code></td><td><code>name</code>: state key; <code>value</code>: value to store.</td><td>Adds or replaces a state value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Add</code></td><td><code>scope.Add(name, value)</code></td><td><code>name</code>: state key; <code>value</code>: value to store.</td><td>Alias with the same replace/add behavior as <code>Set</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Exists</code></td><td><code>scope.Exists(name)</code></td><td><code>name</code>: state key.</td><td>Returns whether the key exists.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Remove</code></td><td><code>scope.Remove(name)</code></td><td><code>name</code>: state key.</td><td>Removes the key and returns whether it existed.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Unset</code></td><td><code>scope.Unset(name)</code></td><td><code>name</code>: state key.</td><td>Alias for <code>Remove</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Clear</code></td><td><code>scope.Clear()</code></td><td>none</td><td>Removes all values in that state scope.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Count</code></td><td><code>scope.Count</code></td><td>none</td><td>Returns the number of keys in the scope.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>State.Keys</code></td><td><code>scope.Keys</code></td><td>none</td><td>Returns the state keys ordered case-insensitively by the local runtime.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr></tbody></table>
+<h2 id="persistent-settings-and-secrets">Persistent settings and secrets</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Registry.User.Get</code></td><td><code>Application.Registry.User.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a current-user persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.User.Set</code></td><td><code>Application.Registry.User.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a current-user setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Get</code></td><td><code>Application.Registry.System.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a machine-wide persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Set</code></td><td><code>Application.Registry.System.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a machine-wide persistent setting and may require elevated OS permissions.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Get</code></td><td><code>Application.Secrets.Get(service, account)</code></td><td>service/application identifier and account</td><td>Reads a secret from Credential Manager, Keychain or Linux Secret Service.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Set</code></td><td><code>Application.Secrets.Set(service, account, secret)</code></td><td>service/application identifier, account and secret</td><td>Adds or replaces a secret in the operating-system credential store.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr></tbody></table>
+<p>Windows registry values support <code>String</code>, <code>ExpandString</code>, <code>Binary</code>, <code>DWord</code>, <code>MultiString</code> and <code>QWord</code>. Linux and macOS preserve equivalent type metadata in their file-backed application settings. See <a href="../application-registry-secrets/">Application Registry and Secrets</a> for the platform paths, type mapping, Linux Secret Service requirements and security details.</p>
+<h2 id="read-only-runtime-properties">Read-only runtime properties</h2>
+<p><code>Application.Args</code>, <code>ArgCount</code>, <code>CommandLine</code>, <code>ExecutablePath</code>, <code>ExecutableFileName</code>, <code>ExecutableDirectory</code>, <code>TempPath</code>, <code>TempFolder</code>, <code>Path</code> and <code>FileName</code> are read-only. Assignments to them are rejected by the compiler. <code>Application.ExitCode</code> is writable and defaults to <code>0</code>. <code>Application.Title</code>, <code>Icon</code>, <code>Width</code> and <code>Height</code> are intentionally writable metadata properties.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

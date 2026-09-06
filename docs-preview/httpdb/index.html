@@ -1,0 +1,287 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Httpdb | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="http-database-clients">HTTP database clients</h1>
+<p>XPScript provides two native HTTP database clients for common server-side data access scenarios:</p>
+<ul>
+<li><code>XPHttpDbSupabase</code> for Supabase Cloud or self-hosted Supabase.</li>
+<li><code>XPHttpDbDominoRest</code> for self-hosted HCL Domino REST API servers.</li>
+</ul>
+<p>Both clients use the native XPScript HTTP and JSON runtimes. They support configurable timeouts and return <code>XPJsonDocument</code> objects for JSON responses.</p>
+<h2 id="xphttpdbsupabase">XPHttpDbSupabase</h2>
+<h3 id="create-a-client">Create a client</h3>
+<p>Cloud-hosted Supabase:</p>
+<pre><code class="language-xpscript">Dim db As New XPHttpDbSupabase("https://project-ref.supabase.co", apiKey)
+</code></pre>
+<p>Self-hosted Supabase:</p>
+<pre><code class="language-xpscript">Dim db As New XPHttpDbSupabase("https://supabase.example.com", apiKey)
+</code></pre>
+<p>The base URL is not restricted to <code>supabase.co</code>. The client appends <code>/rest/v1</code> unless the supplied URL already ends with <code>/rest/v1</code>.</p>
+<p>The supplied API key is sent in the <code>apikey</code> header.</p>
+<p>For Row Level Security or an authenticated user context, set a bearer token separately:</p>
+<pre><code class="language-xpscript">Call db.SetBearerToken(userJwt)
+</code></pre>
+<p>This causes data API requests to include:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Authorization: Bearer &#x3C;token></span></span></code></pre>
+<h3 id="schema">Schema</h3>
+<p>The default PostgREST schema is <code>public</code>.</p>
+<pre><code class="language-xpscript">Call db.SetSchema("private_api")
+</code></pre>
+<p>The client uses <code>Accept-Profile</code> and, for write operations, <code>Content-Profile</code>.</p>
+<h3 id="select">Select</h3>
+<pre><code class="language-xpscript">Dim result As XPJsonDocument
+
+Set result = db.Select("customers")
+</code></pre>
+<p>This requests:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/rest/v1/customers?select=*</span></span></code></pre>
+<p>A raw PostgREST query can be supplied:</p>
+<pre><code class="language-xpscript">Set result = db.Select(
+    "customers",
+    "select=id,name,email&#x26;status=eq.active&#x26;order=name.asc"
+)
+</code></pre>
+<h3 id="filters">Filters</h3>
+<p><code>Eq</code> creates an escaped equality filter:</p>
+<pre><code class="language-xpscript">Dim filter As String
+filter = db.Eq("id", 42)
+
+Set result = db.Select("customers", "select=*&#x26;" &#x26; filter)
+</code></pre>
+<p>For advanced PostgREST filtering, pass the filter/query string directly.</p>
+<h3 id="insert">Insert</h3>
+<pre><code class="language-xpscript">Dim customer As New XPJsonObject
+Call customer.Set("name", "Ada")
+Call customer.Set("email", "ada@example.com")
+
+Set result = db.Insert("customers", customer)
+</code></pre>
+<p>Insert requests use <code>Prefer: return=representation</code>, so modified rows are returned as JSON.</p>
+<h3 id="update">Update</h3>
+<pre><code class="language-xpscript">Call customer.Set("name", "Ada Updated")
+
+Set result = db.Update(
+    "customers",
+    db.Eq("id", 42),
+    customer
+)
+</code></pre>
+<p>Always use a filter when updating records.</p>
+<h3 id="upsert">Upsert</h3>
+<pre><code class="language-xpscript">Set result = db.Upsert("customers", customer)
+</code></pre>
+<p>Upsert uses PostgREST merge-duplicate semantics and returns the affected rows.</p>
+<h3 id="delete">Delete</h3>
+<pre><code class="language-xpscript">Set result = db.Delete(
+    "customers",
+    db.Eq("id", 42)
+)
+</code></pre>
+<p>A filter is mandatory.</p>
+<h3 id="postgresql-rpc">PostgreSQL RPC</h3>
+<pre><code class="language-xpscript">Dim args As New XPJsonObject
+Call args.Set("customer_id", 42)
+
+Set result = db.Rpc("get_customer_summary", args)
+</code></pre>
+<p>This calls the PostgREST <code>/rpc/&#x3C;function></code> endpoint.</p>
+<h2 id="sql-and-database-design">SQL and database design</h2>
+<p>Data API keys do not automatically provide arbitrary SQL/DDL execution. XPScript therefore keeps SQL administration separate from normal data access.</p>
+<h3 id="supabase-cloud-management-api">Supabase Cloud Management API</h3>
+<p>Configure the project reference and a Supabase Management API access token:</p>
+<pre><code class="language-xpscript">Call db.ConfigureCloudManagement(
+    "project-ref",
+    managementAccessToken
+)
+</code></pre>
+<p>Then execute SQL:</p>
+<pre><code class="language-xpscript">Set result = db.ExecuteSql("select now()")
+</code></pre>
+<p>Database design operations use the same SQL execution path:</p>
+<pre><code class="language-xpscript">Set result = db.CreateTable(
+    "create table if not exists app.customer (id bigint primary key, name text not null)"
+)
+
+Set result = db.AlterTable(
+    "alter table app.customer add column email text"
+)
+
+Set result = db.CreateView(
+    "create view app.active_customer as select * from app.customer where active = true"
+)
+
+Set result = db.AlterView(
+    "create or replace view app.active_customer as select id, name from app.customer where active = true"
+)
+</code></pre>
+<p><code>CreateTable</code>, <code>AlterTable</code>, <code>CreateView</code>, and <code>AlterView</code> are convenience aliases for <code>ExecuteSql</code>. They do not parse or rewrite SQL.</p>
+<h3 id="self-hosted-supabase-sql-administration">Self-hosted Supabase SQL administration</h3>
+<p>A self-hosted Supabase installation does not have to expose the Supabase Cloud Management API. Configure an administrator-controlled SQL HTTP endpoint explicitly:</p>
+<pre><code class="language-xpscript">Call db.ConfigureSqlEndpoint(
+    "https://supabase.example.com/internal/sql",
+    adminToken
+)
+</code></pre>
+<p>The endpoint receives:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "query"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"select now()"</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>and must return JSON. The token is sent as a bearer token.</p>
+<p>This design keeps normal PostgREST access portable between Supabase Cloud and self-hosted installations while allowing each self-hosted deployment to choose how administrative SQL is exposed.</p>
+<p>Do not expose an unrestricted SQL endpoint to browsers or untrusted clients. Treat <code>ExecuteSql</code> and all database design helpers as privileged server-side operations.</p>
+<h2 id="xphttpdbdominorest">XPHttpDbDominoRest</h2>
+<p><code>XPHttpDbDominoRest</code> targets a self-hosted HCL Domino REST API server.</p>
+<h3 id="create-a-client-1">Create a client</h3>
+<pre><code class="language-xpscript">Dim domino As New XPHttpDbDominoRest(
+    "https://domino.example.com:8880",
+    bearerToken,
+    "customers"
+)
+</code></pre>
+<p>Arguments:</p>
+<ol>
+<li>Domino REST API server base URL.</li>
+<li>Bearer token. It may be an empty string when <code>Login()</code> will be used.</li>
+<li>Domino REST API <code>dataSource</code>, which is the configured API/scope name.</li>
+</ol>
+<p>The constructor accepts a server URL, <code>/api/v1</code> URL, or <code>/api/setup-v1</code> URL and normalizes it to the server base URL.</p>
+<h3 id="login">Login</h3>
+<p>Domino REST API can issue a bearer token using <code>/api/v1/auth</code>:</p>
+<pre><code class="language-xpscript">Dim token As String
+
+token = domino.Login(
+    "CN=Ada Lovelace/O=Example",
+    password
+)
+</code></pre>
+<p>The returned bearer token is retained by the client for later requests.</p>
+<p>An externally acquired token can be supplied later:</p>
+<pre><code class="language-xpscript">Call domino.SetBearerToken(token)
+</code></pre>
+<h3 id="change-data-source">Change data source</h3>
+<pre><code class="language-xpscript">Call domino.SetDataSource("sales")
+</code></pre>
+<h3 id="create-document">Create document</h3>
+<pre><code class="language-xpscript">Dim data As New XPJsonObject
+Call data.Set("Form", "Customer")
+Call data.Set("Name", "Ada")
+Call data.Set("Email", "ada@example.com")
+
+Dim created As XPJsonDocument
+Set created = domino.CreateDocument(data)
+</code></pre>
+<p>This uses:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>POST /api/v1/document?dataSource=&#x3C;scope></span></span></code></pre>
+<h3 id="retrieve-document">Retrieve document</h3>
+<pre><code class="language-xpscript">Set result = domino.GetDocument(
+    "0123456789ABCDEF0123456789ABCDEF"
+)
+</code></pre>
+<p>This uses:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/v1/document/&#x3C;UNID>?dataSource=&#x3C;scope></span></span></code></pre>
+<p>UNIDs must contain exactly 32 hexadecimal characters.</p>
+<h3 id="update-document">Update document</h3>
+<p>Full update:</p>
+<pre><code class="language-xpscript">Set result = domino.UpdateDocument(unid, data)
+</code></pre>
+<p>Partial update:</p>
+<pre><code class="language-xpscript">Set result = domino.PatchDocument(unid, changes)
+</code></pre>
+<p>The methods target <code>/api/v1/document/&#x3C;UNID></code> using PUT and PATCH respectively.</p>
+<h3 id="delete-document">Delete document</h3>
+<pre><code class="language-xpscript">If domino.DeleteDocument(unid) Then
+    Print "Deleted"
+End If
+</code></pre>
+<p>This uses the documented DELETE endpoint:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>DELETE /api/v1/document/&#x3C;UNID>?dataSource=&#x3C;scope></span></span></code></pre>
+<h3 id="list-configured-views">List configured views</h3>
+<pre><code class="language-xpscript">Set result = domino.ListViews()
+</code></pre>
+<p>This uses:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/v1/lists?dataSource=&#x3C;scope></span></span></code></pre>
+<h3 id="read-view-entries">Read view entries</h3>
+<pre><code class="language-xpscript">Set result = domino.GetView("People")
+</code></pre>
+<p>Query parameters can be supplied when needed:</p>
+<pre><code class="language-xpscript">Set result = domino.GetView(
+    "People",
+    "count=100&#x26;start=0"
+)
+</code></pre>
+<p>This targets:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/v1/lists/&#x3C;view>?dataSource=&#x3C;scope>&#x26;...</span></span></code></pre>
+<h3 id="domino-query">Domino query</h3>
+<p>For a normal Domino query string:</p>
+<pre><code class="language-xpscript">Set result = domino.Query(
+    "Form = 'Customer' and Status = 'Active'"
+)
+</code></pre>
+<p>XPScript creates the request object with <code>query</code>, <code>viewRefresh</code>, and <code>noViews</code>, and posts it to:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>POST /api/v1/query?dataSource=&#x3C;scope>&#x26;action=execute</span></span></code></pre>
+<p>A custom JSON query payload can also be supplied:</p>
+<pre><code class="language-xpscript">Dim query As New XPJsonObject
+Call query.Set("query", "Form = 'Customer'")
+Call query.Set("viewRefresh", True)
+Call query.Set("noViews", False)
+
+Set result = domino.Query(query)
+</code></pre>
+<h3 id="list-forms">List forms</h3>
+<pre><code class="language-xpscript">Set result = domino.ListForms()
+</code></pre>
+<p>This uses the setup API endpoint:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>GET /api/setup-v1/design/forms?dataSource=&#x3C;scope></span></span></code></pre>
+<p>The account/token must have the access required by the Domino REST API configuration.</p>
+<h3 id="logout">Logout</h3>
+<pre><code class="language-xpscript">Call domino.Logout()
+</code></pre>
+<p>The client calls <code>/api/v1/auth/logout</code> and clears its retained bearer token after a successful response.</p>
+<h2 id="security">Security</h2>
+<p>Use HTTPS for production Supabase and Domino connections.</p>
+<p>Keep Supabase secret/service keys, Management API tokens, Domino passwords, and Domino bearer tokens on the server side. Do not embed administrative credentials in browser-delivered XPScript or client assets.</p>
+<p>Normal Supabase CRUD operations remain subject to Postgres privileges and Row Level Security. Domino operations remain subject to the configured Domino REST API schema, scope, ACL, forms/modes, and user access.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Iis Hosting | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="hosting-xpscript-on-iis">Hosting XPScript on IIS</h1>
+<p>XPScript can be hosted on Windows Server with IIS in two practical ways:</p>
+<ol>
+<li>IIS in front of the XPScript Kestrel host. This is the recommended setup for production because the XPScript process stays persistent and the shared route resolver handles extensionless URLs such as <code>/users</code> and <code>/users/Save</code>.</li>
+<li>IIS CGI using <code>XPScript.Web.Cgi.exe</code>. This is simpler to wire directly into IIS, but IIS starts the CGI process per request and throughput is lower.</li>
+</ol>
+<p>The current <code>xpscript fastcgi</code> command exposes a FastCGI TCP listener. IIS FastCGI application mappings launch a FastCGI process directly and do not act as a generic TCP FastCGI proxy, so do not point an IIS FastCGI handler at the XPScript TCP listener. Use Kestrel behind IIS or the CGI host instead.</p>
+<h2 id="requirements">Requirements</h2>
+<p>On the IIS server install:</p>
+<ul>
+<li>IIS Web Server.</li>
+<li>IIS URL Rewrite when using IIS as a reverse proxy.</li>
+<li>Application Request Routing, ARR, when using IIS as a reverse proxy to Kestrel.</li>
+<li>CGI role service when using the direct CGI option.</li>
+<li>.NET 10 runtime when deploying a framework-dependent XPScript package.</li>
+</ul>
+<p>A self-contained <code>win-x64</code> XPScript package does not require the .NET runtime to be installed separately.</p>
+<p>The account running XPScript must have read access to the deployed XPScript binaries and the site directory. Grant write access only to directories that the application actually needs to modify.</p>
+<p>Do not configure IIS to serve <code>.xps</code> files as static content.</p>
+<h2 id="recommended-layout">Recommended layout</h2>
+<p>Example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\</span></span>
+<span class="line"><span>  host\</span></span>
+<span class="line"><span>    xpscript.exe</span></span>
+<span class="line"><span>    ...runtime files...</span></span>
+<span class="line"><span>  sites\</span></span>
+<span class="line"><span>    example\</span></span>
+<span class="line"><span>      index.xps</span></span>
+<span class="line"><span>      users.xps</span></span>
+<span class="line"><span>      admin\</span></span>
+<span class="line"><span>        index.xps</span></span></code></pre>
+<p>Keep the host binaries outside the public site directory.</p>
+<h2 id="option-1-iis-reverse-proxy-to-xpscript-kestrel">Option 1: IIS reverse proxy to XPScript Kestrel</h2>
+<h3 id="1-publish-or-install-the-kestrel-package">1. Publish or install the Kestrel package</h3>
+<p>From the repository:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">\scripts\publish-distributions.ps1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Package kestrel </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">Runtime win</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64 </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">SelfContained</span></span></code></pre>
+<p>Deploy the resulting Kestrel distribution to a directory such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\host</span></span></code></pre>
+<p>Deploy the <code>.xps</code> site files to a separate directory such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\sites\example</span></span></code></pre>
+<h3 id="2-test-xpscript-locally">2. Test XPScript locally</h3>
+<p>Start XPScript on loopback only:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">C:\XPScript\host\</span><span style="color:#79B8FF">xpscript.exe</span><span style="color:#E1E4E8"> web </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">root C:\XPScript\sites\example </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">address </span><span style="color:#79B8FF">127.0</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0.1</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">port </span><span style="color:#79B8FF">8080</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">host </span><span style="color:#79B8FF">example.com</span></span></code></pre>
+<p>If IIS also answers <code>www.example.com</code>, add another allowed host:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">C:\XPScript\host\</span><span style="color:#79B8FF">xpscript.exe</span><span style="color:#E1E4E8"> web </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">root C:\XPScript\sites\example </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">address </span><span style="color:#79B8FF">127.0</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0.1</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">port </span><span style="color:#79B8FF">8080</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">host </span><span style="color:#79B8FF">example.com</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">host </span><span style="color:#79B8FF">www.example.com</span></span></code></pre>
+<p>Verify locally before configuring IIS:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#79B8FF">Invoke-WebRequest</span><span style="color:#E1E4E8"> http:</span><span style="color:#F97583">//</span><span style="color:#79B8FF">127.0</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0.1</span><span style="color:#E1E4E8">:</span><span style="color:#79B8FF">8080</span><span style="color:#F97583">/</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Headers </span><span style="color:#F97583">@</span><span style="color:#E1E4E8">{ Host </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "example.com"</span><span style="color:#E1E4E8"> }</span></span></code></pre>
+<p>Do not bind the XPScript listener to a public address when IIS is the public frontend.</p>
+<h3 id="3-run-xpscript-as-a-windows-service">3. Run XPScript as a Windows service</h3>
+<p>For production, run the Kestrel host under a Windows service manager so it starts after reboot and restarts after a failure.</p>
+<p>The service command must execute the same tested command, for example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\host\xpscript.exe web --root C:\XPScript\sites\example --address 127.0.0.1 --port 8080 --host example.com --host www.example.com</span></span></code></pre>
+<p>Use a dedicated service account with the minimum filesystem permissions required by the application.</p>
+<h3 id="4-install-iis-reverse-proxy-components">4. Install IIS reverse proxy components</h3>
+<p>Install IIS URL Rewrite and Application Request Routing. In IIS Manager, enable proxy support in the ARR proxy settings at server level.</p>
+<h3 id="5-create-the-iis-site">5. Create the IIS site</h3>
+<p>Create an IIS site for the public hostname, for example <code>example.com</code>.</p>
+<p>The IIS physical path can point to a small proxy-only directory such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\inetpub\xpscript-proxy\example</span></span></code></pre>
+<p>It does not need to contain the <code>.xps</code> source files.</p>
+<p>Configure the HTTP and HTTPS bindings normally. TLS terminates at IIS in this topology.</p>
+<h3 id="6-add-webconfig">6. Add web.config</h3>
+<p>Create <code>web.config</code> in the IIS site’s proxy directory:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="xml"><code><span class="line"><span style="color:#E1E4E8">&#x3C;?</span><span style="color:#85E89D">xml</span><span style="color:#B392F0"> version</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"1.0"</span><span style="color:#B392F0"> encoding</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"UTF-8"</span><span style="color:#E1E4E8">?></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">configuration</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;</span><span style="color:#85E89D">system.webServer</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">    &#x3C;</span><span style="color:#85E89D">rewrite</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">      &#x3C;</span><span style="color:#85E89D">rules</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">        &#x3C;</span><span style="color:#85E89D">rule</span><span style="color:#B392F0"> name</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"XPScript reverse proxy"</span><span style="color:#B392F0"> stopProcessing</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"true"</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">          &#x3C;</span><span style="color:#85E89D">match</span><span style="color:#B392F0"> url</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"(.*)"</span><span style="color:#E1E4E8"> /></span></span>
+<span class="line"><span style="color:#E1E4E8">          &#x3C;</span><span style="color:#85E89D">action</span><span style="color:#B392F0"> type</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"Rewrite"</span><span style="color:#B392F0"> url</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"http://127.0.0.1:8080/{R:1}"</span><span style="color:#B392F0"> appendQueryString</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"true"</span><span style="color:#E1E4E8"> /></span></span>
+<span class="line"><span style="color:#E1E4E8">        &#x3C;/</span><span style="color:#85E89D">rule</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">      &#x3C;/</span><span style="color:#85E89D">rules</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">    &#x3C;/</span><span style="color:#85E89D">rewrite</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;/</span><span style="color:#85E89D">system.webServer</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;/</span><span style="color:#85E89D">configuration</span><span style="color:#E1E4E8">></span></span></code></pre>
+<p>This forwards paths such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/</span></span>
+<span class="line"><span>/users</span></span>
+<span class="line"><span>/users.xps</span></span>
+<span class="line"><span>/users/Save</span></span>
+<span class="line"><span>/admin/</span></span></code></pre>
+<p>The XPScript router resolves the route after IIS forwards the request.</p>
+<h3 id="7-preserve-the-original-host">7. Preserve the original host</h3>
+<p>XPScript can restrict accepted hosts with <code>--host</code>. Configure ARR to preserve the original Host header when proxying. The forwarded request must reach XPScript with the hostname that was added with <code>--host</code>.</p>
+<p>Do not solve a host mismatch by allowing arbitrary public Host values.</p>
+<h3 id="8-https">8. HTTPS</h3>
+<p>Install the certificate on the IIS site and bind HTTPS in IIS. The backend connection can remain HTTP on <code>127.0.0.1</code> because it never leaves the server.</p>
+<p>If application code must know that the original request used HTTPS, configure the proxy to forward the scheme information expected by the hosting layer. Do not trust forwarded headers from arbitrary internet clients. Only trust values added by the local IIS reverse proxy.</p>
+<h3 id="9-static-files">9. Static files</h3>
+<p>XPScript can serve static files when started with <code>--static-files</code>. If IIS should serve static files instead, add explicit IIS rewrite exclusions for those directories before the catch-all proxy rule.</p>
+<p>Never add an IIS static MIME mapping for <code>.xps</code>.</p>
+<h2 id="option-2-direct-iis-cgi-hosting">Option 2: Direct IIS CGI hosting</h2>
+<p>Use this option when you specifically want IIS to execute XPScript through CGI.</p>
+<p>CGI starts a new process for each request. Use the Kestrel reverse-proxy option for higher request volume or when persistent in-memory state is required.</p>
+<h3 id="1-enable-cgi-in-iis">1. Enable CGI in IIS</h3>
+<p>On Windows Server, enable:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Web Server (IIS)</span></span>
+<span class="line"><span>  Web Server</span></span>
+<span class="line"><span>    Application Development</span></span>
+<span class="line"><span>      CGI</span></span></code></pre>
+<p>This installs the IIS CGI module.</p>
+<h3 id="2-publish-the-cgi-host">2. Publish the CGI host</h3>
+<p>Example self-contained deployment:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">dotnet publish .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">c Release </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">r win</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">x64 </span><span style="color:#F97583">--</span><span style="color:#E1E4E8">self</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">contained true </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o C:\XPScript\cgi</span></span></code></pre>
+<p>The executable is:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\cgi\XPScript.Web.Cgi.exe</span></span></code></pre>
+<h3 id="3-set-the-xpscript-web-root">3. Set the XPScript web root</h3>
+<p>The CGI host reads <code>XPSCRIPT_WEB_ROOT</code>. Set it for the IIS worker process or CGI application environment to the directory containing the site:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>XPSCRIPT_WEB_ROOT=C:\XPScript\sites\example</span></span></code></pre>
+<p>When <code>XPSCRIPT_WEB_ROOT</code> is not set, the CGI host can use CGI values such as <code>DOCUMENT_ROOT</code> and <code>SCRIPT_FILENAME</code> for root discovery, but an explicit root is safer and easier to audit.</p>
+<h3 id="4-add-a-cgi-handler-mapping">4. Add a CGI handler mapping</h3>
+<p>In IIS Manager for the site:</p>
+<ol>
+<li>Open Handler Mappings.</li>
+<li>Add a Module Mapping.</li>
+<li>Request path: <code>*.xps</code>.</li>
+<li>Module: <code>CgiModule</code>.</li>
+<li>Executable: <code>C:\XPScript\cgi\XPScript.Web.Cgi.exe</code>.</li>
+<li>Name: <code>XPScript CGI</code>.</li>
+<li>Allow script execution when IIS asks whether the executable should be allowed.</li>
+</ol>
+<p>IIS must also allow this executable through CGI and ISAPI Restrictions where that IIS configuration requires an explicit allow entry.</p>
+<p>Do not create a static content MIME type for <code>.xps</code>.</p>
+<h3 id="5-test-an-explicit-xpscript-route">5. Test an explicit XPScript route</h3>
+<p>Create:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>C:\XPScript\sites\example\index.xps</span></span></code></pre>
+<p>with:</p>
+<pre><code class="language-xpscript">[Anonymous]
+[Get]
+Sub Index()
+    Response.ContentType = "text/html; charset=utf-8"
+    Response.Write("&#x3C;h1>Hello from XPScript on IIS&#x3C;/h1>")
+End Sub
+</code></pre>
+<p>Test:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>https://example.com/index.xps</span></span></code></pre>
+<p>The CGI transport supplies request data through CGI variables such as <code>REQUEST_METHOD</code>, <code>QUERY_STRING</code>, <code>CONTENT_TYPE</code>, <code>CONTENT_LENGTH</code>, <code>SCRIPT_NAME</code>, <code>PATH_INFO</code>, <code>SERVER_NAME</code>, <code>SERVER_PORT</code>, <code>SERVER_PROTOCOL</code>, <code>REMOTE_ADDR</code> and <code>HTTPS</code>.</p>
+<h3 id="6-extensionless-urls">6. Extensionless URLs</h3>
+<p>A <code>*.xps</code> CGI handler naturally handles requests that contain the <code>.xps</code> extension. If you want clean URLs such as <code>/users</code> or <code>/users/Save</code>, use the recommended Kestrel reverse-proxy setup, or add carefully tested IIS URL Rewrite rules that route those requests into the CGI handler without exposing source files.</p>
+<p>Do not use a catch-all CGI mapping unless you have verified that static files and operational endpoints are handled correctly.</p>
+<h2 id="application-pool-settings">Application pool settings</h2>
+<p>For a reverse-proxy-only IIS site, the application pool does not execute XPScript code. Keep it dedicated to the proxy site.</p>
+<p>For CGI hosting:</p>
+<ul>
+<li>Use a dedicated application pool.</li>
+<li>Use <code>No Managed Code</code> because XPScript CGI is an external .NET executable, not an ASP.NET Framework application loaded into the IIS worker process.</li>
+<li>Use a dedicated identity when filesystem isolation is required.</li>
+<li>Grant only read and execute access to <code>C:\XPScript\cgi</code>.</li>
+<li>Grant read access to the XPScript site directory.</li>
+<li>Add write permissions only to explicit data, upload or log directories that require them.</li>
+</ul>
+<h2 id="updating-a-site">Updating a site</h2>
+<p>The <code>.xps</code> files can be deployed independently from the host binaries.</p>
+<p>For Kestrel hosting, replace site files using an atomic deployment strategy when possible. XPScript recompiles routes when their source/dependency snapshot changes.</p>
+<p>When replacing host binaries, stop the XPScript Windows service, replace the distribution, then start the service again. IIS can remain online and will return a proxy error only while the backend is unavailable.</p>
+<p>For CGI hosting, make sure no deployment process leaves a partially replaced executable or dependency set in <code>C:\XPScript\cgi</code>.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="iis-returns-502-through-the-reverse-proxy">IIS returns 502 through the reverse proxy</h3>
+<p>Check that XPScript is listening locally:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#79B8FF">Test-NetConnection</span><span style="color:#79B8FF"> 127.0</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0.1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Port </span><span style="color:#79B8FF">8080</span></span></code></pre>
+<p>Then test the backend directly with the correct Host header:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#79B8FF">Invoke-WebRequest</span><span style="color:#E1E4E8"> http:</span><span style="color:#F97583">//</span><span style="color:#79B8FF">127.0</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">0.1</span><span style="color:#E1E4E8">:</span><span style="color:#79B8FF">8080</span><span style="color:#F97583">/</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">Headers </span><span style="color:#F97583">@</span><span style="color:#E1E4E8">{ Host </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "example.com"</span><span style="color:#E1E4E8"> }</span></span></code></pre>
+<p>If the direct request works, inspect IIS URL Rewrite and ARR proxy settings.</p>
+<h3 id="xpscript-rejects-the-host-header">XPScript rejects the Host header</h3>
+<p>Make sure every public IIS hostname is included in the XPScript startup command with <code>--host</code> and that ARR preserves the original Host header.</p>
+<h3 id="iis-serves-xpscript-source-code">IIS serves XPScript source code</h3>
+<p>Remove any static MIME mapping for <code>.xps</code>. <code>.xps</code> is source code and must never be returned as static content.</p>
+<h3 id="cgi-returns-500">CGI returns 500</h3>
+<p>Verify:</p>
+<ul>
+<li>The IIS CGI feature is installed.</li>
+<li><code>XPScript.Web.Cgi.exe</code> exists and can execute.</li>
+<li>The CGI executable is allowed by IIS restrictions.</li>
+<li>The application pool identity has read and execute access to the host files.</li>
+<li><code>XPSCRIPT_WEB_ROOT</code> points to the intended site directory.</li>
+<li>The site identity has read access to the <code>.xps</code> files.</li>
+<li>The requested route has a valid HTTP method attribute such as <code>[Get]</code> or <code>[Post]</code>.</li>
+</ul>
+<h3 id="framework-dependent-deployment-does-not-start">Framework-dependent deployment does not start</h3>
+<p>Install the matching .NET 10 runtime, or deploy a self-contained <code>win-x64</code> distribution.</p>
+<h2 id="security-checklist">Security checklist</h2>
+<ul>
+<li>Terminate public TLS at IIS.</li>
+<li>Keep Kestrel bound to <code>127.0.0.1</code> when IIS is the frontend.</li>
+<li>Restrict accepted hostnames with <code>--host</code>.</li>
+<li>Never serve <code>.xps</code> as static files.</li>
+<li>Keep XPScript binaries outside the site directory.</li>
+<li>Run the XPScript service or CGI handler with a low-privilege identity.</li>
+<li>Grant write permissions only where required.</li>
+<li>Treat query strings, headers, cookies, form values and uploaded filenames as untrusted input.</li>
+<li>Protect admin and authenticated routes with XPScript authentication and role rules.</li>
+<li>Patch Windows Server, IIS and the installed .NET runtime.</li>
+</ul>
+<p>See <a href="../getting-started/">Getting started</a> for XPScript package creation and host parameters, and <a href="../web/">Web programming</a> for routing, Request, Response, sessions and authorization rules.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>
