@@ -31,8 +31,12 @@ Sub Main()
     Dim importer As NotesDXLImporter
     Dim failures As Integer
     Dim bootstrapErr As Integer
+    Dim previousReplicaId As String
+    Dim hadPreviousReplica As Boolean
 
     failures = 0
+    previousReplicaId = ""
+    hadPreviousReplica = False
     If NOTES_INI = "" Then
         Set session = New NotesSession()
     Else
@@ -62,7 +66,10 @@ Sub Main()
     End If
 
     If db.IsOpen Then
+        previousReplicaId = db.ReplicaID
+        hadPreviousReplica = previousReplicaId <> ""
         Print "FOUND " & db.FilePath
+        Print "OLD-REPLICAID=" & previousReplicaId
         Print "REMOVE " & db.FilePath
         bootstrapErr = 0
         On Error Resume Next
@@ -103,6 +110,21 @@ Sub Main()
                 Print "BOOTSTRAP-DXL-IMPORTED-NOTE-COUNT=" & CStr(importer.ImportedNoteCount)
             End If
             Call importer.Recycle()
+        End If
+
+        If bootstrapErr = 0 And hadPreviousReplica Then
+            Print "RESTORE-REPLICAID=" & previousReplicaId
+            Call db.SetReplicaId(previousReplicaId)
+            bootstrapErr = Err
+            If bootstrapErr = 0 Then
+                Print "RESTORED-REPLICAID=" & db.ReplicaID
+                If UCase(db.ReplicaID) <> UCase(previousReplicaId) Then
+                    Print "BOOTSTRAP-REPLICAID-MISMATCH expected=" & previousReplicaId & " actual=" & db.ReplicaID
+                    bootstrapErr = 5
+                End If
+            Else
+                Print "BOOTSTRAP-REPLICAID-RESTORE-ERROR=" & CStr(bootstrapErr)
+            End If
         End If
     End If
     On Error GoTo 0
@@ -753,7 +775,151 @@ Function TestItemAndRichText(ByVal session As Variant, ByVal db As Variant, ByVa
     Call view.Recycle()
     Call other.Recycle()
     Call doc.Recycle()
+
+    failures = failures + TestRichTextExtendedSurface(session, db)
     TestItemAndRichText = failures
+End Function
+
+Function TestRichTextExtendedSurface(ByVal session As Variant, ByVal db As Variant) As Integer
+    Dim failures As Integer
+    Dim doc As NotesDocument
+    Dim rich As NotesRichTextItem
+    Dim style As NotesRichTextStyle
+    Dim rangeStyle As NotesRichTextStyle
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+    Dim navigator As NotesRichTextNavigator
+    Dim rangeNavigator As NotesRichTextNavigator
+    Dim richRange As NotesRichTextRange
+    Dim rangeClone As NotesRichTextRange
+    Dim section As NotesRichTextSection
+    Dim table As NotesRichTextTable
+    Dim docLink As NotesRichTextDocLink
+    Dim embedded As NotesEmbeddedObject
+    Dim html As String
+    Dim htmlInline As String
+    Dim embeddedObjects As Variant
+    Dim attachmentBytes As Variant
+
+    failures = 0
+    Print "SECTION=NotesRichText extended surface"
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptTest")
+    Set rich = doc.CreateRichTextItem("RichSurface")
+
+    Set style = session.CreateRichTextStyle()
+    style.Bold = True
+    style.Italic = False
+    style.Underline = True
+    style.Strikethrough = False
+    style.FontSize = 12
+    style.NotesColor = 0
+    style.NotesFont = 1
+    Print "RichStyleBold=" & CStr(style.Bold)
+    Print "RichStyleItalic=" & CStr(style.Italic)
+    Print "RichStyleUnderline=" & CStr(style.Underline)
+    Print "RichStyleStrikethrough=" & CStr(style.Strikethrough)
+    Print "RichStyleFontSize=" & CStr(style.FontSize)
+    Print "RichStyleNotesColor=" & CStr(style.NotesColor)
+    Print "RichStyleNotesFont=" & CStr(style.NotesFont)
+
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    paragraphStyle.Alignment = 0
+    paragraphStyle.LeftMargin = 1440
+    paragraphStyle.RightMargin = 1440
+    paragraphStyle.FirstLineLeftMargin = 0
+    paragraphStyle.Pagination = 0
+    Set tab = paragraphStyle.SetTab(1440, 0)
+    Print "RichTabPosition=" & CStr(tab.Position)
+    Print "RichTabType=" & CStr(tab.Type)
+    Call paragraphStyle.SetTabs(3, 1440, 720, 0)
+
+    Call rich.AppendStyle(style)
+    Call rich.AppendText("XPscript rich-text full surface")
+    Call rich.Compact()
+    Print "RichTextName=" & rich.Name
+    Print "RichTextType=" & CStr(rich.Type)
+    Print "RichTextText=" & rich.Text
+
+    html = rich.ConvertToHTML()
+    htmlInline = rich.ConvertToHTML(True)
+    Print "RichTextHTMLLength=" & CStr(Len(html))
+    Print "RichTextHTMLInlineLength=" & CStr(Len(htmlInline))
+
+    Set navigator = rich.CreateNavigator()
+    Set richRange = rich.CreateRange()
+    If navigator.FindFirstElement(3) Then
+        Call navigator.SetCharOffset(0)
+        Call richRange.SetBegin(navigator)
+        Call navigator.SetCharOffset(Len(richRange.TextRun))
+        Call richRange.SetEnd(navigator)
+        Print "RichRangeType=" & CStr(richRange.Type)
+        Print "RichRangeTextRun=" & richRange.TextRun
+        Print "RichRangeTextParagraph=" & richRange.TextParagraph
+        Set rangeStyle = richRange.Style
+        Print "RichRangeStyleFontSize=" & CStr(rangeStyle.FontSize)
+        Call rangeStyle.Recycle()
+        Call richRange.SetStyle(style)
+        Set rangeNavigator = richRange.Navigator
+        Set rangeClone = richRange.Clone()
+        Call rangeClone.Reset()
+    Else
+        failures = failures + 1
+    End If
+
+    embeddedObjects = rich.EmbeddedObjects
+    Set embedded = rich.GetEmbeddedObject("missing-runtime-attachment.bin")
+    If Not embedded Is Nothing Then Call embedded.Recycle()
+
+    ' Compile-only coverage for linked objects that require existing CD structures.
+    If False Then
+        Set section = navigator.GetFirstElement(6)
+        Print section.Title
+        Print CStr(section.IsExpanded)
+        Print CStr(section.BarColor.NotesColor)
+        Print CStr(section.TitleStyle.FontSize)
+        Call section.SetBarColor(section.BarColor)
+        Call section.SetTitleStyle(style)
+        Call section.Remove()
+
+        Set table = navigator.GetFirstElement(1)
+        Print CStr(table.RowCount)
+        Print CStr(table.ColumnCount)
+        Print CStr(table.RightToLeft)
+        Print CStr(table.Style)
+        Call table.Remove()
+
+        Set docLink = navigator.GetFirstElement(5)
+        Print docLink.DbReplicaID
+        Print docLink.ViewUNID
+        Print docLink.DocUNID
+        Print docLink.DisplayComment
+        Print docLink.ServerHint
+        Print docLink.HotSpotText
+        Call docLink.Remove()
+
+        Set embedded = rich.EmbedObject(1454, "", "missing-runtime-attachment.bin")
+        Print embedded.Name
+        Print embedded.Source
+        Print CStr(embedded.Type)
+        Print CStr(embedded.FileSize)
+        Print embedded.FileEncoding
+        attachmentBytes = embedded.ToByteArray()
+        Call embedded.ExtractFile("missing-runtime-attachment.out")
+    End If
+
+    If Not rangeNavigator Is Nothing Then Call rangeNavigator.Recycle()
+    If Not rangeClone Is Nothing Then Call rangeClone.Recycle()
+    Call richRange.Recycle()
+    Call navigator.Recycle()
+    Call tab.Recycle()
+    Call paragraphStyle.Recycle()
+    Call style.Recycle()
+    Call rich.Recycle()
+    Call doc.Recycle()
+
+    TestRichTextExtendedSurface = failures
 End Function
 
 Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
