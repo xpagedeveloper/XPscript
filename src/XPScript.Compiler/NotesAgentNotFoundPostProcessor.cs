@@ -6,11 +6,37 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = EnsureReplacement(
-            source,
-            "    internal string RunAgent(uint db, string name, uint documentContext)",
-            "    internal string? RunAgent(uint db, string name, uint documentContext)",
-            "native-runagent-nullable");
+        string[] nativeSignatures =
+        [
+            "internal string RunAgent(uint db, string name, uint documentContext, uint parameterNoteId = 0)",
+            "internal string? RunAgent(uint db, string name, uint documentContext, uint parameterNoteId = 0)",
+            "internal string RunAgent(uint db, string name, uint documentContext)",
+            "internal string? RunAgent(uint db, string name, uint documentContext)",
+            "internal string RunAgent(nint db, string name, nint documentContext)",
+            "internal string? RunAgent(nint db, string name, nint documentContext)"
+        ];
+
+        var nativeSignature = nativeSignatures.FirstOrDefault(signature =>
+            source.Contains(signature, StringComparison.Ordinal));
+        if (nativeSignature is null)
+        {
+            // Notes runtime features are emitted on demand. Database-level RunAgent
+            // helpers can exist even when the native agent implementation is omitted,
+            // so only the native design-note lookup proves that this patch is required.
+            if (!source.Contains("NIFFindDesignNote(agent)", StringComparison.Ordinal))
+                return DeduplicateTimeDateCollateDelegate(source);
+            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
+        }
+
+        var nullableNativeSignature = nativeSignature;
+        if (nativeSignature.StartsWith("internal string RunAgent", StringComparison.Ordinal))
+        {
+            nullableNativeSignature = nativeSignature.Replace(
+                "internal string RunAgent",
+                "internal string? RunAgent",
+                StringComparison.Ordinal);
+            source = source.Replace(nativeSignature, nullableNativeSignature, StringComparison.Ordinal);
+        }
 
         const string oldFindAgent = """
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
@@ -29,7 +55,7 @@ internal static class NotesAgentNotFoundPostProcessor
 """;
         source = EnsureReplacementAfter(
             source,
-            "    internal string? RunAgent(uint db, string name, uint documentContext)",
+            nullableNativeSignature,
             oldFindAgent,
             newFindAgent,
             "native-runagent-not-found");
@@ -46,7 +72,23 @@ internal static class NotesAgentNotFoundPostProcessor
             "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return output is null ? null : new XPScriptNotesAgentResult(Session, this, output);",
             "database-runagent-nothing");
 
-        return source;
+        return DeduplicateTimeDateCollateDelegate(source);
+    }
+
+    private static string DeduplicateTimeDateCollateDelegate(string source)
+    {
+        const string marker = "delegate int TimeDateCollateDelegate(";
+        var first = source.IndexOf(marker, StringComparison.Ordinal);
+        if (first < 0 || source.IndexOf(marker, first + marker.Length, StringComparison.Ordinal) < 0)
+            return source;
+
+        const string databaseDeclaration = """
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate int TimeDateCollateDelegate(ref XPScriptNotesTimeDate first, ref XPScriptNotesTimeDate second);
+""";
+        if (!source.Contains(databaseDeclaration, StringComparison.Ordinal))
+            throw new CompilerException("Unable to deduplicate Notes TimeDateCollateDelegate safely.");
+        return source.Replace(databaseDeclaration, string.Empty, StringComparison.Ordinal);
     }
 
     private static string EnsureReplacementAfter(string source, string anchor, string oldValue, string newValue, string stage)

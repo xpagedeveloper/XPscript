@@ -111,9 +111,17 @@ internal static class XPScriptNotesRichTextCdTransform
     {
         if (data is null || data.Length < 2)
             throw new XPScriptRuntimeException(5, "A preserved or replaced CD record must contain canonical record bytes.");
-        var encodedSignature = (ushort)(data[0] | (data[1] << 8));
-        if (encodedSignature != signature)
+
+        // EnumCompositeBuffer returns the normalized SIG_CD_xxx WORD, while the
+        // physical header's second byte is overloaded: it is the record length for
+        // BSIG, 0xFF for WSIG, and 0x00 for LSIG. Therefore comparing the first
+        // physical WORD with the normalized signature rejects every BSIG whose
+        // length is non-zero. The low byte is the actual CD signature in all three
+        // header forms; WSIG additionally has an unambiguous 0xFF marker.
+        if (data[0] != (byte)(signature & 0xff))
             throw new XPScriptRuntimeException(5, "A CD rewrite signature must match the canonical record header.");
+        if ((signature & 0xff00) == 0xff00 && data[1] != 0xff)
+            throw new XPScriptRuntimeException(5, "A WSIG CD rewrite record must contain the canonical WSIG header marker.");
     }
 }
 """;
