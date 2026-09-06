@@ -9,7 +9,8 @@ var samplePaths = new[]
 {
     Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-document-metadata-runtime-test.xps"),
-    Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps")
+    Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -39,9 +40,11 @@ if (parseErrors.Length != 0)
 
 var classes = new[]
 {
-    (Runtime: "XPScriptNotesSession", Surface: "NotesSession"),
-    (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument"),
-    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase")
+    (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
+    // NotesDocument is heavily rewritten by the generated-surface post-processors. Resolve it by
+    // a stable LotusScript member anchor instead of relying on the generated CLR class name.
+    (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
+    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null)
 };
 
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -52,15 +55,24 @@ var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 var missing = new List<string>();
 var placeholders = new List<string>();
 var suspiciousConstants = new List<string>();
+var allClassDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
 
 foreach (var item in classes)
 {
-    var declarations = root.DescendantNodes()
-        .OfType<ClassDeclarationSyntax>()
-        .Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal))
-        .ToArray();
+    var declarations = item.Anchor is null
+        ? allClassDeclarations
+            .Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal))
+            .ToArray()
+        : allClassDeclarations
+            .Where(c => c.Members.Any(member =>
+                member.Modifiers.Any(SyntaxKind.PublicKeyword) &&
+                GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
+            .ToArray();
+
     if (declarations.Length == 0)
-        throw new InvalidOperationException("Generated runtime class was not found: " + item.Runtime);
+        throw new InvalidOperationException("Generated runtime class was not found: " + item.Surface);
+    if (declarations.Length > 1)
+        throw new InvalidOperationException($"Generated runtime class resolution for {item.Surface} was ambiguous: {declarations.Length} classes matched.");
 
     var members = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var declaration in declarations)
@@ -69,12 +81,7 @@ foreach (var item in classes)
         {
             if (!member.Modifiers.Any(SyntaxKind.PublicKeyword)) continue;
 
-            string? name = member switch
-            {
-                PropertyDeclarationSyntax property => property.Identifier.ValueText,
-                MethodDeclarationSyntax method => method.Identifier.ValueText,
-                _ => null
-            };
+            var name = GetMemberName(member);
             if (string.IsNullOrEmpty(name) || ignoredMembers.Contains(name)) continue;
 
             members.Add(name);
@@ -108,3 +115,10 @@ foreach (var value in missing.OrderBy(x => x))
 
 if (placeholders.Count != 0 || missing.Count != 0)
     Environment.ExitCode = 1;
+
+static string? GetMemberName(MemberDeclarationSyntax member) => member switch
+{
+    PropertyDeclarationSyntax property => property.Identifier.ValueText,
+    MethodDeclarationSyntax method => method.Identifier.ValueText,
+    _ => null
+};
