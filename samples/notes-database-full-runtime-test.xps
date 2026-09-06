@@ -25,15 +25,15 @@ Sub Main()
         Exit Sub
     End If
     If Not db.IsOpen Then
-        Print "NOTES-DATABASE-FULL=FAIL database not open"
+        Print "NOTES-DATABASE-FULL=FAIL database not open OpenError=" & db.OpenError
         Call db.Recycle()
         Call session.Recycle()
         Exit Sub
     End If
 
-    Print "OpenError=" & CStr(db.OpenError)
-    If db.OpenError <> 0 Then
-        Print "FAIL OpenError expected 0 for open database"
+    Print "OpenError=" & db.OpenError
+    If db.OpenError <> "" Then
+        Print "FAIL OpenError expected empty string for open database"
         failures = failures + 1
     End If
 
@@ -79,7 +79,7 @@ Sub Main()
         Print "FAIL CreateCopy returned Nothing"
         failures = failures + 1
     ElseIf Not copyDb.IsOpen Then
-        Print "FAIL CreateCopy returned closed database"
+        Print "FAIL CreateCopy returned closed database OpenError=" & copyDb.OpenError
         failures = failures + 1
         Call copyDb.Recycle()
     Else
