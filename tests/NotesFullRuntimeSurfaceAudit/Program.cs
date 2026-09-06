@@ -42,8 +42,9 @@ if (parseErrors.Length != 0)
 var classes = new[]
 {
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
-    // NotesDocument is heavily rewritten by the generated-surface post-processors. Resolve it by
-    // a stable LotusScript member anchor instead of relying on the generated CLR class name.
+    // NotesDocument is heavily rewritten by generated-surface post-processors. Resolve it by the
+    // stable NoteID anchor, then require the document-specific NoteIdHex member to exclude other
+    // Notes classes (for example NotesAgent) that also expose a public NoteID property.
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null)
 };
@@ -68,6 +69,9 @@ foreach (var item in classes)
             .Where(c => c.Members.Any(member =>
                 member.Modifiers.Any(SyntaxKind.PublicKeyword) &&
                 GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
+            .Where(c => item.Surface != "NotesDocument" || c.Members.Any(member =>
+                member.Modifiers.Any(SyntaxKind.PublicKeyword) &&
+                GetMemberName(member)?.Equals("NoteIdHex", StringComparison.OrdinalIgnoreCase) == true))
             .ToArray();
 
     if (declarations.Length == 0)
