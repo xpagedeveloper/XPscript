@@ -6,7 +6,10 @@ var samplePath = Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-te
 if (!File.Exists(samplePath))
     throw new FileNotFoundException("Notes full runtime sample not found.", samplePath);
 
-var compiler = Assembly.Load("XPScript.Compiler");
+var compilerPath = Path.Combine(AppContext.BaseDirectory, "XPScript.Compiler.dll");
+if (!File.Exists(compilerPath))
+    throw new FileNotFoundException("XPScript.Compiler.dll was not copied to the audit output directory.", compilerPath);
+var compiler = Assembly.LoadFrom(compilerPath);
 var builder = compiler.GetType("XPScript.Compiler.NotesRuntimeSourceBuilder", throwOnError: true)!;
 var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, binder: null, Type.EmptyTypes, modifiers: null)
     ?? throw new InvalidOperationException("NotesRuntimeSourceBuilder.Build() not found.");
