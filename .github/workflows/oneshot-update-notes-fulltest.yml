@@ -1,0 +1,71 @@
+name: One-shot update Notes full test
+
+on:
+  push:
+    branches:
+      - feat/richtext-structural-surface
+    paths:
+      - .github/workflows/oneshot-update-notes-fulltest.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/richtext-structural-surface
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Update full Notes runtime sample
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('samples/notes-full-domino-runtime-test.xps')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str, name: str) -> None:
+              global text
+              if old not in text:
+                  raise SystemExit(f'missing anchor: {name}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              '    Dim failures As Integer\n    Dim bootstrapErr As Integer\n\n    failures = 0',
+              '    Dim failures As Integer\n    Dim bootstrapErr As Integer\n    Dim previousReplicaId As String\n    Dim hadPreviousReplica As Boolean\n\n    failures = 0\n    previousReplicaId = ""\n    hadPreviousReplica = False',
+              'bootstrap declarations')
+
+          replace_once(
+              '    If db.IsOpen Then\n        Print "FOUND " & db.FilePath\n        Print "REMOVE " & db.FilePath',
+              '    If db.IsOpen Then\n        previousReplicaId = db.ReplicaID\n        hadPreviousReplica = previousReplicaId <> ""\n        Print "FOUND " & db.FilePath\n        Print "OLD-REPLICAID=" & previousReplicaId\n        Print "REMOVE " & db.FilePath',
+              'save previous replica id')
+
+          replace_once(
+              '            Call importer.Recycle()\n        End If\n    End If\n    On Error GoTo 0',
+              '''            Call importer.Recycle()\n        End If\n\n        If bootstrapErr = 0 And hadPreviousReplica Then\n            Print "RESTORE-REPLICAID=" & previousReplicaId\n            Call db.SetReplicaId(previousReplicaId)\n            bootstrapErr = Err\n            If bootstrapErr = 0 Then\n                Print "RESTORED-REPLICAID=" & db.ReplicaID\n                If UCase(db.ReplicaID) <> UCase(previousReplicaId) Then\n                    Print "BOOTSTRAP-REPLICAID-MISMATCH expected=" & previousReplicaId & " actual=" & db.ReplicaID\n                    bootstrapErr = 5\n                End If\n            Else\n                Print "BOOTSTRAP-REPLICAID-RESTORE-ERROR=" & CStr(bootstrapErr)\n            End If\n        End If\n    End If\n    On Error GoTo 0''',
+              'restore previous replica id')
+
+          replace_once(
+              '    Call view.Recycle()\n    Call other.Recycle()\n    Call doc.Recycle()\n    TestItemAndRichText = failures\nEnd Function\n\nFunction TestAgent',
+              '''    Call view.Recycle()\n    Call other.Recycle()\n    Call doc.Recycle()\n\n    failures = failures + TestRichTextExtendedSurface(session, db)\n    TestItemAndRichText = failures\nEnd Function\n\nFunction TestRichTextExtendedSurface(ByVal session As Variant, ByVal db As Variant) As Integer\n    Dim failures As Integer\n    Dim doc As NotesDocument\n    Dim rich As NotesRichTextItem\n    Dim style As NotesRichTextStyle\n    Dim rangeStyle As NotesRichTextStyle\n    Dim paragraphStyle As NotesRichTextParagraphStyle\n    Dim tab As NotesRichTextTab\n    Dim navigator As NotesRichTextNavigator\n    Dim rangeNavigator As NotesRichTextNavigator\n    Dim richRange As NotesRichTextRange\n    Dim rangeClone As NotesRichTextRange\n    Dim section As NotesRichTextSection\n    Dim table As NotesRichTextTable\n    Dim docLink As NotesRichTextDocLink\n    Dim embedded As NotesEmbeddedObject\n    Dim html As String\n    Dim htmlInline As String\n    Dim embeddedObjects As Variant\n    Dim attachmentBytes As Variant\n\n    failures = 0\n    Print "SECTION=NotesRichText extended surface"\n\n    Set doc = db.CreateDocument()\n    Call doc.ReplaceItemValue("Form", "XPScriptTest")\n    Set rich = doc.CreateRichTextItem("RichSurface")\n\n    Set style = session.CreateRichTextStyle()\n    style.Bold = True\n    style.Italic = False\n    style.Underline = True\n    style.Strikethrough = False\n    style.FontSize = 12\n    style.NotesColor = 0\n    style.NotesFont = 1\n    Print "RichStyleBold=" & CStr(style.Bold)\n    Print "RichStyleItalic=" & CStr(style.Italic)\n    Print "RichStyleUnderline=" & CStr(style.Underline)\n    Print "RichStyleStrikethrough=" & CStr(style.Strikethrough)\n    Print "RichStyleFontSize=" & CStr(style.FontSize)\n    Print "RichStyleNotesColor=" & CStr(style.NotesColor)\n    Print "RichStyleNotesFont=" & CStr(style.NotesFont)\n\n    Set paragraphStyle = session.CreateRichTextParagraphStyle()\n    paragraphStyle.Alignment = 0\n    paragraphStyle.LeftMargin = 1440\n    paragraphStyle.RightMargin = 1440\n    paragraphStyle.FirstLineLeftMargin = 0\n    paragraphStyle.Pagination = 0\n    Set tab = paragraphStyle.SetTab(1440, 0)\n    Print "RichTabPosition=" & CStr(tab.Position)\n    Print "RichTabType=" & CStr(tab.Type)\n    Call paragraphStyle.SetTabs(3, 1440, 720, 0)\n\n    Call rich.AppendStyle(style)\n    Call rich.AppendText("XPscript rich-text full surface")\n    Call rich.Compact()\n    Print "RichTextName=" & rich.Name\n    Print "RichTextType=" & CStr(rich.Type)\n    Print "RichTextText=" & rich.Text\n\n    html = rich.ConvertToHTML()\n    htmlInline = rich.ConvertToHTML(True)\n    Print "RichTextHTMLLength=" & CStr(Len(html))\n    Print "RichTextHTMLInlineLength=" & CStr(Len(htmlInline))\n\n    Set navigator = rich.CreateNavigator()\n    Set richRange = rich.CreateRange()\n    If navigator.FindFirstElement(3) Then\n        Call navigator.SetCharOffset(0)\n        Call richRange.SetBegin(navigator)\n        Call navigator.SetCharOffset(Len(richRange.TextRun))\n        Call richRange.SetEnd(navigator)\n        Print "RichRangeType=" & CStr(richRange.Type)\n        Print "RichRangeTextRun=" & richRange.TextRun\n        Print "RichRangeTextParagraph=" & richRange.TextParagraph\n        Set rangeStyle = richRange.Style\n        Print "RichRangeStyleFontSize=" & CStr(rangeStyle.FontSize)\n        Call rangeStyle.Recycle()\n        Call richRange.SetStyle(style)\n        Set rangeNavigator = richRange.Navigator\n        Set rangeClone = richRange.Clone()\n        Call rangeClone.Reset()\n    Else\n        failures = failures + 1\n    End If\n\n    embeddedObjects = rich.EmbeddedObjects\n    Set embedded = rich.GetEmbeddedObject("missing-runtime-attachment.bin")\n    If Not embedded Is Nothing Then Call embedded.Recycle()\n\n    ' Compile-only coverage for linked objects that require existing CD structures.\n    If False Then\n        Set section = navigator.GetFirstElement(6)\n        Print section.Title\n        Print CStr(section.IsExpanded)\n        Print CStr(section.BarColor.NotesColor)\n        Print CStr(section.TitleStyle.FontSize)\n        Call section.SetBarColor(section.BarColor)\n        Call section.SetTitleStyle(style)\n        Call section.Remove()\n\n        Set table = navigator.GetFirstElement(1)\n        Print CStr(table.RowCount)\n        Print CStr(table.ColumnCount)\n        Print CStr(table.RightToLeft)\n        Print CStr(table.Style)\n        Call table.Remove()\n\n        Set docLink = navigator.GetFirstElement(5)\n        Print docLink.DbReplicaID\n        Print docLink.ViewUNID\n        Print docLink.DocUNID\n        Print docLink.DisplayComment\n        Print docLink.ServerHint\n        Print docLink.HotSpotText\n        Call docLink.Remove()\n\n        Set embedded = rich.EmbedObject(1454, "", "missing-runtime-attachment.bin")\n        Print embedded.Name\n        Print embedded.Source\n        Print CStr(embedded.Type)\n        Print CStr(embedded.FileSize)\n        Print embedded.FileEncoding\n        attachmentBytes = embedded.ToByteArray()\n        Call embedded.ExtractFile("missing-runtime-attachment.out")\n    End If\n\n    If Not rangeNavigator Is Nothing Then Call rangeNavigator.Recycle()\n    If Not rangeClone Is Nothing Then Call rangeClone.Recycle()\n    Call richRange.Recycle()\n    Call navigator.Recycle()\n    Call tab.Recycle()\n    Call paragraphStyle.Recycle()\n    Call style.Recycle()\n    Call rich.Recycle()\n    Call doc.Recycle()\n\n    TestRichTextExtendedSurface = failures\nEnd Function\n\nFunction TestAgent''',
+              'extended rich text test')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit full test update
+        shell: bash
+        run: |
+          if git diff --quiet -- samples/notes-full-domino-runtime-test.xps; then
+            echo "No changes produced"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add samples/notes-full-domino-runtime-test.xps
+          git commit -m "Expand Notes full runtime regression"
+          git push origin HEAD:feat/richtext-structural-surface
