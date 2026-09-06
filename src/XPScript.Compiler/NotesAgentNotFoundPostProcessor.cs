@@ -8,6 +8,8 @@ internal static class NotesAgentNotFoundPostProcessor
 
         string[] nativeSignatures =
         [
+            "internal string RunAgent(uint db, string name, uint documentContext, uint parameterNoteId = 0)",
+            "internal string? RunAgent(uint db, string name, uint documentContext, uint parameterNoteId = 0)",
             "internal string RunAgent(uint db, string name, uint documentContext)",
             "internal string? RunAgent(uint db, string name, uint documentContext)",
             "internal string RunAgent(nint db, string name, nint documentContext)",
