@@ -54,7 +54,7 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         if (html.Length == 0) return html;
         var escaped = System.Text.RegularExpressions.Regex.Escape(itemName);
-        var pattern = @"(?<url>[^\"']*/" + escaped + @"/(?<item>[0-9]+)\.(?<offset>[0-9A-Fa-f]+)\?OpenElement)";
+        var pattern = "(?<url>[^\\\"']*/" + escaped + "/(?<item>[0-9]+)\\.(?<offset>[0-9A-Fa-f]+)\\?OpenElement)";
         return System.Text.RegularExpressions.Regex.Replace(html, pattern, match =>
         {
             if (!uint.TryParse(match.Groups["item"].Value, out var itemIndex) ||
