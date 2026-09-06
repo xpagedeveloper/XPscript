@@ -14,6 +14,10 @@ internal static class NotesRichTextLinkedObjectsCompatibilityPostProcessor
         if (source.Contains(legacyRowLabels, StringComparison.Ordinal))
             source = source.Replace(legacyRowLabels, normalizedRowLabels, StringComparison.Ordinal);
 
+        const string styledDelegateSignature = "delegate ushort CompoundTextAddTextExtDelegate(";
+        if (!source.Contains(styledDelegateSignature, StringComparison.Ordinal))
+            source += "\n\n" + StyledTextDelegateRuntime;
+
         const string decodeSignature = "internal string DecodeRichTextText(byte[] data, int offset, int length)";
         const string formulaSignature = "internal string DecompileRichTextFormula(byte[] data, int offset, int length)";
         var hasDecode = source.Contains(decodeSignature, StringComparison.Ordinal);
@@ -27,6 +31,22 @@ internal static class NotesRichTextLinkedObjectsCompatibilityPostProcessor
 
         return source + "\n\n" + NativeRuntime;
     }
+
+    private const string StyledTextDelegateRuntime = """
+internal sealed partial class XPScriptNotesNativeApi
+{
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort CompoundTextAddTextExtDelegate(
+        uint compound,
+        uint styleId,
+        uint fontId,
+        nint text,
+        uint textLength,
+        nint lineDelimiter,
+        uint flags,
+        nint nlsInfo);
+}
+""";
 
     private const string NativeRuntime = """
 internal sealed partial class XPScriptNotesNativeApi
