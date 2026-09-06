@@ -6,6 +6,10 @@ on:
       - feat/richtext-structural-surface
     paths:
       - .github/workflows/oneshot-notes-full-surface-audit.yml
+      - tests/NotesFullRuntimeSurfaceAudit/**
+      - samples/notes-full-domino-runtime-test.xps
+      - src/XPScript.Compiler/**
+      - src/XPScript.Compiler.Core/**
 
 permissions:
   contents: read
