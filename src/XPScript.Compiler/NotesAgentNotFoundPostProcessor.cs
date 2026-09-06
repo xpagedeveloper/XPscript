@@ -6,18 +6,34 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var nativeSignature = source.Contains(
-            "    internal string RunAgent(nint db, string name, nint documentContext)",
-            StringComparison.Ordinal)
-            ? "    internal string RunAgent(nint db, string name, nint documentContext)"
-            : "    internal string RunAgent(uint db, string name, uint documentContext)";
-        var nullableNativeSignature = nativeSignature.Replace("internal string RunAgent", "internal string? RunAgent", StringComparison.Ordinal);
+        const string nintSignature = "    internal string RunAgent(nint db, string name, nint documentContext)";
+        const string nullableNintSignature = "    internal string? RunAgent(nint db, string name, nint documentContext)";
+        const string uintSignature = "    internal string RunAgent(uint db, string name, uint documentContext)";
+        const string nullableUintSignature = "    internal string? RunAgent(uint db, string name, uint documentContext)";
 
-        source = EnsureReplacement(
-            source,
-            nativeSignature,
-            nullableNativeSignature,
-            "native-runagent-nullable");
+        string nullableNativeSignature;
+        if (source.Contains(nullableNintSignature, StringComparison.Ordinal))
+        {
+            nullableNativeSignature = nullableNintSignature;
+        }
+        else if (source.Contains(nintSignature, StringComparison.Ordinal))
+        {
+            source = source.Replace(nintSignature, nullableNintSignature, StringComparison.Ordinal);
+            nullableNativeSignature = nullableNintSignature;
+        }
+        else if (source.Contains(nullableUintSignature, StringComparison.Ordinal))
+        {
+            nullableNativeSignature = nullableUintSignature;
+        }
+        else if (source.Contains(uintSignature, StringComparison.Ordinal))
+        {
+            source = source.Replace(uintSignature, nullableUintSignature, StringComparison.Ordinal);
+            nullableNativeSignature = nullableUintSignature;
+        }
+        else
+        {
+            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
+        }
 
         const string oldFindAgent = """
         var find = Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote");
