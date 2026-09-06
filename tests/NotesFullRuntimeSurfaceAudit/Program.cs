@@ -35,6 +35,9 @@ var suspiciousConstants = new List<string>();
 foreach (var item in classes)
 {
     var bodies = ExtractClassBodies(source, item.Runtime);
+    if (bodies.Count == 0)
+        throw new InvalidOperationException("Generated runtime class was not found: " + item.Runtime);
+
     var members = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
     foreach (var body in bodies)
@@ -84,7 +87,7 @@ if (placeholders.Count != 0 || missing.Count != 0)
 static List<string> ExtractClassBodies(string source, string className)
 {
     var result = new List<string>();
-    var regex = new Regex(@"(?m)^\s*(?:internal|public)\s+(?:sealed\s+|partial\s+|abstract\s+)*class\s+" + Regex.Escape(className) + @"\b[^\{]*\{");
+    var regex = new Regex(@"\bclass\s+" + Regex.Escape(className) + @"\b[^\{]*\{");
     foreach (Match match in regex.Matches(source))
     {
         var open = source.IndexOf('{', match.Index);
