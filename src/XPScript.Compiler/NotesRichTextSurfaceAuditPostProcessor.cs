@@ -21,13 +21,11 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
             @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?",
             string.Empty);
 
-        // AppendParagraphStyle validates its argument before reporting that the
-        // structural write is unavailable, so it is not expression-bodied. Remove
-        // this exact generated placeholder without allowing a regex to consume
-        // neighbouring real methods.
+        // Remove block-bodied public methods whose only terminal operation is the
+        // same unsupported-write exception (for example AppendParagraphStyle).
         source = Regex.Replace(
             source,
-            @"(?ms)^\s*public\s+void\s+AppendParagraphStyle\s*\([^)]*\)\s*\{\s*EnsureItemAlive\(\);\s*if\s*\(styleValue\s+is\s+not\s+XPScriptNotesRichTextParagraphStyle\)\s*throw\s+new\s+XPScriptRuntimeException\(13,\s*\"NotesRichTextItem\.AppendParagraphStyle requires a NotesRichTextParagraphStyle\.\"\);\s*throw\s+RichTextStructuralWriteNotSupported\(\"AppendParagraphStyle\"\);\s*\}\s*",
+            @"(?ms)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*\{(?:(?!^\s*public\s).)*?throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\}\s*\r?\n?",
             string.Empty);
 
         source = Regex.Replace(
@@ -51,11 +49,9 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
     {
         if (Regex.IsMatch(
                 source,
-                @"(?m)^\s*public\s+[^\r\n{;]+\([^\r\n]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\("))
+                @"public\s+[^\r\n{;]+\([^\r\n]*\)\s*(?:=>\s*throw\s+|\{(?:(?!^\s*public\s).)*?throw\s+)(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\(",
+                RegexOptions.Multiline | RegexOptions.Singleline))
             throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported public API member.");
-        if (source.Contains("public void AppendParagraphStyle", StringComparison.Ordinal) &&
-            source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
-            throw new CompilerException("Generated Notes rich-text runtime still exposes unsupported AppendParagraphStyle.");
 
         string[] fabricated =
         [
