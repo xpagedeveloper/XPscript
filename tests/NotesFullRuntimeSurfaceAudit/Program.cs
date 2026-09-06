@@ -50,7 +50,7 @@ foreach (var item in classes)
             if (Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
                 placeholders.Add(item.Surface + "." + name);
 
-            if (Regex.IsMatch(memberText, @"=>\s*(?:false|true|0|\"\")\s*;", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
                 suspiciousConstants.Add(item.Surface + "." + name);
         }
     }
