@@ -14,6 +14,17 @@ internal static class NotesRichTextLinkedObjectsCompatibilityPostProcessor
         if (source.Contains(legacyRowLabels, StringComparison.Ordinal))
             source = source.Replace(legacyRowLabels, normalizedRowLabels, StringComparison.Ordinal);
 
+        const string decodeSignature = "internal string DecodeRichTextText(byte[] data, int offset, int length)";
+        const string formulaSignature = "internal string DecompileRichTextFormula(byte[] data, int offset, int length)";
+        var hasDecode = source.Contains(decodeSignature, StringComparison.Ordinal);
+        var hasFormula = source.Contains(formulaSignature, StringComparison.Ordinal);
+        if (hasDecode || hasFormula)
+        {
+            if (!(hasDecode && hasFormula))
+                throw new CompilerException("Notes rich-text compatibility helpers are only partially present.");
+            return source;
+        }
+
         return source + "\n\n" + NativeRuntime;
     }
 
