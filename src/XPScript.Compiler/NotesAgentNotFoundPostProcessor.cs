@@ -10,7 +10,7 @@ internal static class NotesAgentNotFoundPostProcessor
 
         var signatureMatch = Regex.Match(
             source,
-            @"(?m)^\s{4}internal\s+string(?<nullable>\?)?\s+RunAgent\([^\r\n]*\bdb\s*,\s*string\s+name\s*,[^\r\n]*\bdocumentContext\s*\)\s*$");
+            @"(?m)^\s*internal\s+string(?<nullable>\?)?\s+RunAgent\([^\r\n]*\bdb\s*,\s*string\s+name\s*,[^\r\n]*\bdocumentContext\s*\)\s*$");
         if (!signatureMatch.Success)
         {
             // Notes runtime features are emitted on demand. A rich-text-only build
