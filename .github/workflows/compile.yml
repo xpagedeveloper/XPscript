@@ -37,6 +37,8 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext.exe
+      - name: Compile Notes core database surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database.exe
 
   compile-linux:
     name: Compile Linux
@@ -98,6 +100,8 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
+      - name: Compile Notes core database surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database
 
   compile-macos:
     name: Compile macOS
@@ -125,3 +129,5 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
+      - name: Compile Notes core database surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database

@@ -27,6 +27,7 @@ internal static class NotesRuntimeSource
         source = NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(source);
         source = NotesViewNavigatorHistoryCapPostProcessor.Apply(source);
         source = NotesDatabaseCreateCompatibilityPostProcessor.Apply(source);
+        source = NotesSessionEnvironmentPostProcessor.Apply(source);
         source = NotesDocumentRemovePostProcessor.Apply(source);
         source = NotesDocumentLotusScriptSurfacePostProcessor.Apply(source);
         source = NotesDocumentComputeWithFormPostProcessor.Apply(source);
@@ -54,6 +55,7 @@ internal static class NotesRuntimeSource
             source = NotesRichTextCdRewritePostProcessor.Apply(source);
             source = NotesRichTextMutationPostProcessor.Apply(source);
             source = NotesRichTextMutationSpanPostProcessor.Apply(source);
+            source = NotesRichTextStructuralWriteSurfacePostProcessor.Apply(source);
             source = NotesRichTextHtmlPostProcessor.Apply(source);
             source = NotesEmbeddedBinaryArrayFixPostProcessor.Apply(source);
             source = NotesRichTextSurfaceAuditPostProcessor.Apply(source);

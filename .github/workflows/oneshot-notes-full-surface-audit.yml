@@ -1,0 +1,29 @@
+name: One-shot Notes full surface audit
+
+on:
+  push:
+    branches:
+      - feat/richtext-structural-surface
+    paths:
+      - .github/workflows/oneshot-notes-full-surface-audit.yml
+      - tests/NotesFullRuntimeSurfaceAudit/**
+      - samples/notes-full-domino-runtime-test.xps
+      - samples/notes-document-metadata-runtime-test.xps
+      - samples/notes-session-database-open-runtime-test.xps
+      - src/XPScript.Compiler/**
+      - src/XPScript.Compiler.Core/**
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Audit NotesSession NotesDocument NotesDatabase fulltest coverage
+        run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release
+      # Temporary workflow; remove once all three Notes runtime classes are covered.

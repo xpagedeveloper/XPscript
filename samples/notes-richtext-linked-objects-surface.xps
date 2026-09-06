@@ -44,8 +44,9 @@ Sub Main()
     Set richText = doc.CreateRichTextItem("Body")
     Call richText.AppendStyle(style)
     Call richText.AppendText("Navigator test")
+    Call richText.Compact()
 
-    ' Compile supported attachment insertion surfaces without executing them in the cross-platform smoke test.
+    ' Compile supported destructive surfaces without executing them in the cross-platform smoke test.
     If False Then
         Set embedded = richText.EmbedObject(1454, "", "missing.bin")
         Set embedded = richText.EmbedObject(1454, "", "missing.bin", "ignored-name.bin")
@@ -85,6 +86,7 @@ Sub Main()
         Print table.ColumnCount
         Print table.RightToLeft
         Print table.Style
+        If False Then Call table.Remove()
         Call table.Recycle()
     End If
 
@@ -98,6 +100,7 @@ Sub Main()
         Print docLink.HotSpotText
         Print docLink.ServerHint
         Print docLink.ViewUNID
+        If False Then Call docLink.Remove()
         Call docLink.Recycle()
     End If
 

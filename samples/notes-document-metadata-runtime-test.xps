@@ -6,6 +6,7 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim doc As NotesDocument
+    Dim profile As NotesDocument
     Dim accessed As NotesDateTime
     Dim author As Variant
     Dim authorCount As Integer
@@ -45,8 +46,21 @@ Sub Main()
     End If
 
     If doc.SentByAgent Then failures = failures + 1
+    Print "Signer=" & doc.Signer
+    Print "Verifier=" & doc.Verifier
+
+    Set profile = db.GetProfileDocument("XPScriptMetadataProfile", "SurfaceAudit")
+    If profile Is Nothing Then
+        failures = failures + 1
+    Else
+        Print "NameOfProfile=" & profile.NameOfProfile
+        Print "Key=" & profile.Key
+        If profile.NameOfProfile = "" Then failures = failures + 1
+        Call profile.Recycle()
+    End If
 
     Call doc.Remove(True)
+    Call doc.Recycle()
     Call db.Recycle()
     Call session.Recycle()
 

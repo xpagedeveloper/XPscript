@@ -47,7 +47,7 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    private string GetEnvironmentString(string name)
+    internal string GetEnvironmentString(string name)
     {
         EnsureInitialized();
         using var variableName = ToLmbcs(name);
