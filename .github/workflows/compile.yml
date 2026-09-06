@@ -36,7 +36,7 @@ jobs:
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext.exe --framework-dependent --debug
 
   compile-linux:
     name: Compile Linux
@@ -97,7 +97,7 @@ jobs:
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent --debug
 
   compile-macos:
     name: Compile macOS
@@ -124,4 +124,4 @@ jobs:
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
       - name: Compile Notes rich-text surface
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-richtext-linked-objects-surface.xps -o ./out/notes-richtext --framework-dependent --debug
