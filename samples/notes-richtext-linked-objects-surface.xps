@@ -44,7 +44,6 @@ Sub Main()
     Set richText = doc.CreateRichTextItem("Body")
     Call richText.AppendStyle(style)
     Call richText.AppendText("Navigator test")
-    Call richText.Update()
     Call richText.Compact()
 
     ' Compile supported destructive surfaces without executing them in the cross-platform smoke test.
