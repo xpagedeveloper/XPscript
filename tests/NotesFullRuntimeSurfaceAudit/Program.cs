@@ -18,9 +18,9 @@ var sample = File.ReadAllText(samplePath);
 
 var classes = new[]
 {
-    (Runtime: "XPScriptNotesSession", Surface: "NotesSession"),
-    (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument"),
-    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase")
+    (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: "public string Username"),
+    (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: "public string UniversalId"),
+    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: "public string Server")
 };
 
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -34,7 +34,7 @@ var suspiciousConstants = new List<string>();
 
 foreach (var item in classes)
 {
-    var bodies = ExtractClassBodies(source, item.Runtime);
+    var bodies = ExtractClassBodies(source, item.Runtime, item.Anchor);
     if (bodies.Count == 0)
         throw new InvalidOperationException("Generated runtime class was not found: " + item.Runtime);
 
@@ -84,28 +84,62 @@ foreach (var value in missing.OrderBy(x => x))
 if (placeholders.Count != 0 || missing.Count != 0)
     Environment.ExitCode = 1;
 
-static List<string> ExtractClassBodies(string source, string className)
+static List<string> ExtractClassBodies(string source, string className, string fallbackAnchor)
 {
     var result = new List<string>();
     var regex = new Regex(@"\bclass\s+" + Regex.Escape(className) + @"\b[^\{]*\{");
     foreach (Match match in regex.Matches(source))
+        AddBody(source, source.IndexOf('{', match.Index), result);
+
+    if (result.Count != 0) return result;
+
+    // Some post-processed runtime declarations no longer retain the original class header text.
+    // Resolve those classes from a stable public member and the nearest enclosing class declaration.
+    var anchor = source.IndexOf(fallbackAnchor, StringComparison.Ordinal);
+    if (anchor >= 0)
     {
-        var open = source.IndexOf('{', match.Index);
-        if (open < 0) continue;
-        var depth = 0;
-        for (var i = open; i < source.Length; i++)
+        var classStart = source.LastIndexOf("class ", anchor, StringComparison.Ordinal);
+        if (classStart >= 0)
+            AddBody(source, source.IndexOf('{', classStart), result);
+    }
+    return result;
+}
+
+static void AddBody(string source, int open, List<string> result)
+{
+    if (open < 0) return;
+    var depth = 0;
+    var inString = false;
+    var verbatim = false;
+    for (var i = open; i < source.Length; i++)
+    {
+        var c = source[i];
+        if (inString)
         {
-            if (source[i] == '{') depth++;
-            else if (source[i] == '}')
+            if (!verbatim && c == '\\') { i++; continue; }
+            if (c == '"')
             {
-                depth--;
-                if (depth == 0)
-                {
-                    result.Add(source.Substring(open + 1, i - open - 1));
-                    break;
-                }
+                if (verbatim && i + 1 < source.Length && source[i + 1] == '"') { i++; continue; }
+                inString = false;
+                verbatim = false;
+            }
+            continue;
+        }
+        if (c == '"')
+        {
+            inString = true;
+            verbatim = i > 0 && source[i - 1] == '@';
+            continue;
+        }
+        if (c == '{') depth++;
+        else if (c == '}')
+        {
+            depth--;
+            if (depth == 0)
+            {
+                result.Add(source.Substring(open + 1, i - open - 1));
+                return;
             }
         }
     }
-    return result;
 }
