@@ -8,6 +8,7 @@ on:
       - .github/workflows/oneshot-notes-full-surface-audit.yml
       - tests/NotesFullRuntimeSurfaceAudit/**
       - samples/notes-full-domino-runtime-test.xps
+      - samples/notes-document-metadata-runtime-test.xps
       - src/XPScript.Compiler/**
       - src/XPScript.Compiler.Core/**
 
