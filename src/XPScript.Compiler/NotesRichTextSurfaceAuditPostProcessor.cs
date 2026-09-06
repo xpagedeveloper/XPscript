@@ -35,11 +35,11 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
     }
 """);
         source = RemoveExact(source,
-            "    public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }\n");
+            "    public XPScriptNotesColorObject Color { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }");
         source = RemoveExact(source,
-            "    public XPScriptNotesColorObject AlternateColor { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }\n");
+            "    public XPScriptNotesColorObject AlternateColor { get { EnsureLinkedAlive(); return new XPScriptNotesColorObject(Session, 0); } }");
         source = RemoveExact(source,
-            "    public XPScriptNotesRichTextStyle HotSpotTextStyle { get { EnsureLinkedAlive(); return new XPScriptNotesRichTextStyle(Session); } }\n");
+            "    public XPScriptNotesRichTextStyle HotSpotTextStyle { get { EnsureLinkedAlive(); return new XPScriptNotesRichTextStyle(Session); } }");
 
         Validate(source);
         return source;
