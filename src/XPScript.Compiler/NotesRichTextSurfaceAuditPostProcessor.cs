@@ -9,17 +9,11 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class NotesRichTextSurfaceAuditPostProcessor
 {
-    private const string UnsupportedExpressionBodiedPublicMethodPattern =
-        @"(?m)^\s*public\s+[^;{}]+?\([^;{}]*\)\s*=>\s*throw\s+(?:RichTextStructuralWriteNotSupported|UnsupportedWrite)\([^;]+;\s*\r?\n?";
-
     public static string Apply(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // Expression-bodied placeholders may wrap the signature and arrow onto
-        // separate lines. Keep the match bounded by member delimiters so it cannot
-        // consume a following method or helper.
-        source = Regex.Replace(source, UnsupportedExpressionBodiedPublicMethodPattern, string.Empty);
+        source = RemoveUnsupportedExpressionBodiedPublicMethods(source);
 
         // AppendParagraphStyle is the one block-bodied placeholder. Match its exact
         // generated body; a generic block regex can cross into a following private
@@ -46,11 +40,70 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
         return source;
     }
 
+    private static string RemoveUnsupportedExpressionBodiedPublicMethods(string source)
+    {
+        string[] markers =
+        [
+            "=> throw RichTextStructuralWriteNotSupported(",
+            "=> throw UnsupportedWrite("
+        ];
+
+        while (true)
+        {
+            var markerIndex = -1;
+            foreach (var marker in markers)
+            {
+                var candidate = source.IndexOf(marker, StringComparison.Ordinal);
+                if (candidate >= 0 && (markerIndex < 0 || candidate < markerIndex))
+                    markerIndex = candidate;
+            }
+            if (markerIndex < 0) return source;
+
+            var publicIndex = source.LastIndexOf("public ", markerIndex, StringComparison.Ordinal);
+            if (publicIndex < 0)
+                return source;
+
+            var boundary = Math.Max(
+                source.LastIndexOf(';', markerIndex),
+                source.LastIndexOf('}', markerIndex));
+            if (publicIndex <= boundary)
+            {
+                // The marker belongs to a non-public helper or another construct;
+                // skip it without letting the audit cross a member boundary.
+                var next = source.IndexOf(';', markerIndex);
+                if (next < 0) return source;
+                source = source.Remove(markerIndex, next - markerIndex + 1)
+                    .Insert(markerIndex, "/* unsupported private helper reference */");
+                continue;
+            }
+
+            var declaration = source[publicIndex..markerIndex];
+            if (!declaration.Contains('(') || declaration.Contains('{') || declaration.Contains(';'))
+            {
+                var next = source.IndexOf(';', markerIndex);
+                if (next < 0) return source;
+                source = source.Remove(markerIndex, next - markerIndex + 1)
+                    .Insert(markerIndex, "/* unsupported non-member reference */");
+                continue;
+            }
+
+            var memberStart = publicIndex;
+            while (memberStart > 0 && (source[memberStart - 1] == ' ' || source[memberStart - 1] == '\t')) memberStart--;
+            var lineBreak = source.LastIndexOf('\n', memberStart > 0 ? memberStart - 1 : 0);
+            if (lineBreak >= 0) memberStart = lineBreak + 1;
+
+            var memberEnd = source.IndexOf(';', markerIndex);
+            if (memberEnd < 0)
+                throw new CompilerException("Malformed unsupported Notes rich-text expression-bodied member.");
+            memberEnd++;
+            while (memberEnd < source.Length && (source[memberEnd] == '\r' || source[memberEnd] == '\n')) memberEnd++;
+            source = source.Remove(memberStart, memberEnd - memberStart);
+        }
+    }
+
     private static void Validate(string source)
     {
-        // Reuse the same bounded public-member grammar as removal. This catches a
-        // missed placeholder without flagging private helpers or crossing members.
-        if (Regex.IsMatch(source, UnsupportedExpressionBodiedPublicMethodPattern))
+        if (ContainsUnsupportedExpressionBodiedPublicMethod(source))
             throw new CompilerException("Generated Notes rich-text runtime still exposes an unsupported expression-bodied API member.");
         if (source.Contains("RichTextStructuralWriteNotSupported(\"AppendParagraphStyle\")", StringComparison.Ordinal))
             throw new CompilerException("Generated Notes rich-text runtime still exposes unsupported AppendParagraphStyle.");
@@ -65,5 +118,33 @@ internal static class NotesRichTextSurfaceAuditPostProcessor
         foreach (var marker in fabricated)
             if (source.Contains(marker, StringComparison.Ordinal))
                 throw new CompilerException("Generated Notes rich-text runtime still exposes fabricated member: " + marker.Split(' ')[^1]);
+    }
+
+    private static bool ContainsUnsupportedExpressionBodiedPublicMethod(string source)
+    {
+        string[] markers =
+        [
+            "=> throw RichTextStructuralWriteNotSupported(",
+            "=> throw UnsupportedWrite("
+        ];
+        foreach (var marker in markers)
+        {
+            var searchFrom = 0;
+            while (searchFrom < source.Length)
+            {
+                var markerIndex = source.IndexOf(marker, searchFrom, StringComparison.Ordinal);
+                if (markerIndex < 0) break;
+                var publicIndex = source.LastIndexOf("public ", markerIndex, StringComparison.Ordinal);
+                var boundary = Math.Max(source.LastIndexOf(';', markerIndex), source.LastIndexOf('}', markerIndex));
+                if (publicIndex > boundary)
+                {
+                    var declaration = source[publicIndex..markerIndex];
+                    if (declaration.Contains('(') && !declaration.Contains('{') && !declaration.Contains(';'))
+                        return true;
+                }
+                searchFrom = markerIndex + marker.Length;
+            }
+        }
+        return false;
     }
 }
