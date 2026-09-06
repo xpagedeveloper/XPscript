@@ -1,5 +1,6 @@
-' Runtime/compile regression for NotesSession.GetDatabase and NotesDatabase.Open.
-' Requires a local xpscript.nsf for the positive runtime path.
+' Runtime/compile regression for NotesSession.GetDatabase, NotesDatabase.Open,
+' and NotesSession environment getters.
+' Requires a local xpscript.nsf for the positive database runtime path.
 Option Declare
 
 Sub Main()
@@ -7,8 +8,13 @@ Sub Main()
     Dim db As NotesDatabase
     Dim missing As NotesDatabase
     Dim opened As Boolean
+    Dim envValue As Variant
 
     Set session = New NotesSession()
+
+    Print "ENV-DIRECTORY=" & session.GetEnvironmentString("Directory", True)
+    envValue = session.GetEnvironmentValue("__XPscriptMissingNumericEnvironment__", True)
+    If Not IsEmpty(envValue) Then Error 9969, "Missing numeric environment variable did not return Empty"
 
     ' HCL GetDatabase creates a closed object when server/file are empty.
     Set db = session.GetDatabase("", "")
