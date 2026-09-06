@@ -5,9 +5,16 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
-var samplePath = Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-test.xps");
-if (!File.Exists(samplePath))
-    throw new FileNotFoundException("Notes full runtime sample not found.", samplePath);
+var samplePaths = new[]
+{
+    Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-document-metadata-runtime-test.xps")
+};
+foreach (var samplePath in samplePaths)
+{
+    if (!File.Exists(samplePath))
+        throw new FileNotFoundException("Notes runtime sample not found.", samplePath);
+}
 
 var compilerPath = Path.Combine(AppContext.BaseDirectory, "XPScript.Compiler.Core.dll");
 if (!File.Exists(compilerPath))
@@ -17,7 +24,7 @@ var builder = compiler.GetType("XPScript.Compiler.NotesRuntimeSourceBuilder", th
 var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, binder: null, Type.EmptyTypes, modifiers: null)
     ?? throw new InvalidOperationException("NotesRuntimeSourceBuilder.Build() not found.");
 var source = (string?)build.Invoke(null, null) ?? throw new InvalidOperationException("Notes runtime source was null.");
-var sample = File.ReadAllText(samplePath);
+var sample = string.Join("\n", samplePaths.Select(File.ReadAllText));
 
 var syntaxTree = CSharpSyntaxTree.ParseText(source);
 var root = syntaxTree.GetCompilationUnitRoot();
