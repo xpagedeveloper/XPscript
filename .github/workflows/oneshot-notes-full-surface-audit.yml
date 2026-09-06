@@ -20,4 +20,4 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Audit NotesSession NotesDocument NotesDatabase fulltest coverage
         run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release
-      # Temporary workflow; remove once the core runtime member audit is clean.
+      # Temporary workflow; remove once all three Notes runtime classes are covered.
