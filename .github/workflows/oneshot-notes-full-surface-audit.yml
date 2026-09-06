@@ -9,6 +9,7 @@ on:
       - tests/NotesFullRuntimeSurfaceAudit/**
       - samples/notes-full-domino-runtime-test.xps
       - samples/notes-document-metadata-runtime-test.xps
+      - samples/notes-session-database-open-runtime-test.xps
       - src/XPScript.Compiler/**
       - src/XPScript.Compiler.Core/**
 
