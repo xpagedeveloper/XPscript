@@ -67,16 +67,8 @@ internal static class NotesRichTextStructuralWriteSurfacePostProcessor
         if (records.Count == 0) return;
         RewriteRichTextRecords(XPScriptNotesRichTextCdTransform.Preserve(records));
     }
-
-    public void Update()
-    {
-        // XPscript commits each rich-text mutation immediately through CompoundText/CD rewrite.
-        // LotusScript Update therefore has no deferred work to flush, but remains a real
-        // synchronization point that validates object lifetime.
-        EnsureItemAlive();
-    }
 """,
-            "compact-update");
+            "compact");
 
         return source;
     }
