@@ -157,10 +157,12 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(source,
-            "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }",
-            "public string UniversalId { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); RequireOpenNoteHandle(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }",
-            "built-universalid-setter");
+        const string oldUniversalId = "public string UniversalId { get { EnsureAlive(); return Session.Api.GetUnid(_handle); } }";
+        const string newUniversalId = "public string UniversalId { get { EnsureAlive(); RequireOpenNoteHandle(); return Session.Api.GetUnid(_handle); } set { EnsureAlive(); RequireOpenNoteHandle(); Session.Api.SetUnid(_handle, XPScriptRuntime.CStr(value)); } }";
+        if (source.Contains(oldUniversalId, StringComparison.Ordinal))
+            source = source.Replace(oldUniversalId, newUniversalId, StringComparison.Ordinal);
+        else if (!source.Contains(newUniversalId, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply NotesDocument LotusScript surface (built-universalid-setter).");
 
         const string oldItems = """
     public LSArray Items
@@ -192,7 +194,10 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
         }
     }
 """;
-        return ReplaceRequired(source, oldItems, newItems, "built-document-items");
+        if (source.Contains(oldItems, StringComparison.Ordinal))
+            return source.Replace(oldItems, newItems, StringComparison.Ordinal);
+        if (source.Contains(newItems, StringComparison.Ordinal)) return source;
+        throw new CompilerException("Unable to apply NotesDocument LotusScript surface (built-document-items).");
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
