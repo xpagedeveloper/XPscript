@@ -49,4 +49,13 @@ If Not(doc Is Nothing) Then
     If Not(item Is Nothing) Then Set mime = item.GetMIMEEntity()
     Call doc.CloseMIMEEntities()
 End If
+
+' Creation surface is intentionally unreachable in this probe, but must compile.
+If False Then
+    Set mime = doc.CreateMIMEEntity("Body2")
+    Set child = mime.CreateChildEntity()
+    Set sibling = mime.CreateChildEntity(child)
+    Set parent = child.CreateParentEntity()
+    Call child.Remove()
+End If
 session.ConvertMIME = True
