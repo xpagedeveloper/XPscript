@@ -17,6 +17,6 @@ NotesView.GetDocumentByKey(key) As NotesDocument
 NotesView.GetDocumentByKey(key, exactMatch) As NotesDocument
 ```
 
-The one-argument form performs an exact match. The two-argument form controls exact versus partial text-key matching.
+The one-argument form performs a partial match, equivalent to `exactMatch = False`, matching LotusScript semantics. Pass `True` as the second argument to require an exact match.
 
 `GetFirstDocumentByKey` was the previous XPscript name and is no longer supported. Code using it produces a compiler error directing callers to `GetDocumentByKey`.
