@@ -31,6 +31,13 @@ internal static class NotesDxlExportResultPostProcessor
             "    internal string GetDxlExporterLog(uint exporter)\n    {\n        EnsureInitialized();\n        var value = System.Runtime.InteropServices.Marshal.AllocHGlobal(sizeof(uint));\n        try\n        {\n            System.Runtime.InteropServices.Marshal.WriteInt32(value, 0);\n            Check(Resolve<DXLGetExporterPropertyDelegate>(\"DXLGetExporterProperty\")(exporter, 1, value), \"DXLGetExporterProperty(eDxlExportResultLog)\");\n            var handle = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));\n            if (handle == 0) return string.Empty;\n            var size = Resolve<OSMemoryGetSizeDelegate>(\"OSMemoryGetSize\")(handle);\n            if (size == 0) return string.Empty;\n            var pointer = Resolve<OSMemoryLockDelegate>(\"OSMemoryLock\")(handle);\n            if (pointer == 0) return string.Empty;\n            try { return FromLmbcsZeroTerminated(pointer, checked((int)Math.Min(size, int.MaxValue))); }\n            finally { Resolve<OSMemoryUnlockDelegate>(\"OSMemoryUnlock\")(handle); }\n        }\n        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }\n    }\n\n    internal int GetDxlExporterInt(uint exporter, ushort property)",
             "native-exporter-log-access");
 
+        const string xmlWriteDeclaration = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XMLWriteFunctionDelegate(nint buffer, uint length, nint action);";
+        if (!source.Contains(xmlWriteDeclaration, StringComparison.Ordinal))
+        {
+            const string exportNoteDeclaration = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportNoteDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint note, nint action);";
+            source = ReplaceRequired(source, exportNoteDeclaration, xmlWriteDeclaration + "\n" + exportNoteDeclaration, "xml-write-delegate");
+        }
+
         return source;
     }
 
