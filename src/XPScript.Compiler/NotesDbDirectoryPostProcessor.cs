@@ -31,7 +31,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     public XPScriptNotesDatabase? GetFirstDatabase(object? typeValue)
     {
         EnsureAlive();
-        _paths = Session.Api.ListDatabases(_server, NormalizeType(typeValue));
+        _paths = Session.Api.ListDatabases(_server, Session.DataDir, NormalizeType(typeValue));
         _position = 0;
         return CurrentDatabase();
     }
@@ -73,7 +73,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
         source = ReplaceRequired(source,
             "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
-            "    internal string[] ListDatabases(string server, int type)\n    {\n        EnsureInitialized();\n        if (server.Length != 0)\n            throw new XPScriptRuntimeException(5, \"Remote NotesDBDirectory enumeration is not available through the current Notes C API runtime surface.\");\n\n        var dataDirectory = Environment.GetEnvironmentVariable(\"NotesDataDirectory\");\n        if (string.IsNullOrWhiteSpace(dataDirectory))\n            dataDirectory = Environment.CurrentDirectory;\n        if (!Directory.Exists(dataDirectory)) return [];\n\n        var extensions = type == 1 ? new[] { \".ntf\" } : type == 4 ? new[] { \".nsf\" } : new[] { \".nsf\", \".ntf\" };\n        return Directory.EnumerateFiles(dataDirectory, \"*.*\", SearchOption.AllDirectories)\n            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))\n            .Select(path => Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/'))\n            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)\n            .ToArray();\n    }\n\n    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
+            "    internal string[] ListDatabases(string server, string dataDirectory, int type)\n    {\n        EnsureInitialized();\n        if (server.Length != 0)\n            throw new XPScriptRuntimeException(5, \"Remote NotesDBDirectory enumeration is not available through the current Notes C API runtime surface.\");\n\n        if (string.IsNullOrWhiteSpace(dataDirectory) || !Directory.Exists(dataDirectory)) return [];\n\n        var extensions = type == 1 ? new[] { \".ntf\" } : type == 4 ? new[] { \".nsf\" } : new[] { \".nsf\", \".ntf\" };\n        return Directory.EnumerateFiles(dataDirectory, \"*.*\", SearchOption.AllDirectories)\n            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))\n            .Select(path => Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/'))\n            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)\n            .ToArray();\n    }\n\n    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
             "native-db-directory-enumeration");
 
         return source;
