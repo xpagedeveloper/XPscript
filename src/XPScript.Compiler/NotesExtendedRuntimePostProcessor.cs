@@ -2,16 +2,12 @@ namespace XPScript.Compiler;
 
 internal static class NotesExtendedRuntimePostProcessor
 {
-    public static string ApplyBuiltSurface(string source)
+    public static string ApplyBuiltSurface(string source, NotesRuntimeFeatures features)
     {
         ArgumentNullException.ThrowIfNull(source);
         source = NotesStreamPostProcessor.ApplyBuiltSurface(source);
 
-        // The MIME surface currently extends NotesItem at the rich-text/MIME-capable
-        // runtime boundary. Core Notes builds deliberately omit that boundary, so do
-        // not attempt MIME injection there. NotesRuntimeFeatures enables RichText for
-        // explicit NotesMIMEEntity/NotesMIMEHeader usage.
-        if (source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal))
+        if (features.Mime)
         {
             source = NotesMimeEntityPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeEntityAbiPostProcessor.ApplyBuiltSurface(source);
