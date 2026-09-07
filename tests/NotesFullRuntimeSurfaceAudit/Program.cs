@@ -43,12 +43,10 @@ if (parseErrors.Length != 0)
 var classes = new[]
 {
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
-    // NotesDocument is heavily rewritten by generated-surface post-processors. Resolve it by the
-    // stable NoteID anchor, then require the document-specific NoteIdHex member to exclude other
-    // Notes classes (for example NotesAgent) that also expose a public NoteID property.
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null),
@@ -78,16 +76,10 @@ var allClassDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>
 foreach (var item in classes)
 {
     var declarations = item.Anchor is null
-        ? allClassDeclarations
-            .Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal))
-            .ToArray()
+        ? allClassDeclarations.Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal)).ToArray()
         : allClassDeclarations
-            .Where(c => c.Members.Any(member =>
-                member.Modifiers.Any(SyntaxKind.PublicKeyword) &&
-                GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
-            .Where(c => item.Surface != "NotesDocument" || c.Members.Any(member =>
-                member.Modifiers.Any(SyntaxKind.PublicKeyword) &&
-                GetMemberName(member)?.Equals("NoteIdHex", StringComparison.OrdinalIgnoreCase) == true))
+            .Where(c => c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
+            .Where(c => item.Surface != "NotesDocument" || c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals("NoteIdHex", StringComparison.OrdinalIgnoreCase) == true))
             .ToArray();
 
     if (declarations.Length == 0)
@@ -101,10 +93,8 @@ foreach (var item in classes)
         foreach (var member in declaration.Members)
         {
             if (!member.Modifiers.Any(SyntaxKind.PublicKeyword)) continue;
-
             var name = GetMemberName(member);
             if (string.IsNullOrEmpty(name) || ignoredMembers.Contains(name)) continue;
-
             members.Add(name);
             var memberText = member.ToFullString();
             if (Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
@@ -125,14 +115,11 @@ foreach (var item in classes)
 
 Console.WriteLine();
 Console.WriteLine("PLACEHOLDER-LIKE MEMBERS:");
-foreach (var value in placeholders.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
-    Console.WriteLine("  " + value);
+foreach (var value in placeholders.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x)) Console.WriteLine("  " + value);
 Console.WriteLine("SUSPICIOUS CONSTANT MEMBERS:");
-foreach (var value in suspiciousConstants.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
-    Console.WriteLine("  " + value);
+foreach (var value in suspiciousConstants.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x)) Console.WriteLine("  " + value);
 Console.WriteLine("MISSING FULLTEST COVERAGE:");
-foreach (var value in missing.OrderBy(x => x))
-    Console.WriteLine("  " + value);
+foreach (var value in missing.OrderBy(x => x)) Console.WriteLine("  " + value);
 
 if (placeholders.Count != 0 || missing.Count != 0)
     Environment.ExitCode = 1;
