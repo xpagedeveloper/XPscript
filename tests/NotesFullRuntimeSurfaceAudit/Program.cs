@@ -11,7 +11,8 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-document-metadata-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
-    Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps")
+    Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -50,7 +51,18 @@ var classes = new[]
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
-    (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null)
+    (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextItem", Surface: "NotesRichTextItem", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextNavigator", Surface: "NotesRichTextNavigator", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextRange", Surface: "NotesRichTextRange", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextSection", Surface: "NotesRichTextSection", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextTable", Surface: "NotesRichTextTable", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextDocLink", Surface: "NotesRichTextDocLink", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesEmbeddedObject", Surface: "NotesEmbeddedObject", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextStyle", Surface: "NotesRichTextStyle", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextParagraphStyle", Surface: "NotesRichTextParagraphStyle", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesRichTextTab", Surface: "NotesRichTextTab", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null)
 };
 
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
