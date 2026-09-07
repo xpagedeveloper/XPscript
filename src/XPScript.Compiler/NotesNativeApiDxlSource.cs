@@ -27,8 +27,6 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort DxlExportOmitMiscFileObjects = 38;
     private const ushort DxlExportOmitPictures = 39;
 
-    private const ushort DxlReplaceElseCreate = 6;
-
     private const ushort DxlNoteClassForm = 0x0004;
     private const ushort DxlNoteClassView = 0x0008;
     private const ushort DxlNoteClassIcon = 0x0010;
@@ -44,18 +42,7 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         EnsureInitialized();
         Check(Resolve<DXLCreateImporterDelegate>("DXLCreateImporter")(out var handle), "DXLCreateImporter");
-        try
-        {
-            SetDxlImporterWord(handle, DxlImportDesignOption, DxlReplaceElseCreate);
-            SetDxlImporterWord(handle, DxlImportDocumentsOption, DxlReplaceElseCreate);
-            SetDxlImporterBool(handle, DxlImportReplicaRequired, false);
-            return handle;
-        }
-        catch
-        {
-            Resolve<DXLDeleteImporterDelegate>("DXLDeleteImporter")(handle);
-            throw;
-        }
+        return handle;
     }
 
     internal void DeleteDxlImporter(uint handle)
@@ -308,40 +295,29 @@ internal sealed partial class XPScriptNotesNativeApi
             {
                 var block = checked((int)Math.Min(remaining, 1024u * 1024u));
                 var managed = new byte[block];
-                System.Runtime.InteropServices.Marshal.Copy(nint.Add(buffer, offset), managed, 0, block);
-                stream.Write(managed, 0, block);
+                System.Runtime.InteropServices.Marshal.Copy(buffer + offset, managed, 0, block);
+                stream.Write(managed, 0, managed.Length);
                 offset += block;
                 remaining -= checked((uint)block);
             }
         };
         export(writer);
-        stream.Flush(true);
         GC.KeepAlive(writer);
     }
 
-    private string ResolveDxlFilePath(string filePath, bool output)
+    private string ResolveDxlFilePath(string filePath, bool createParent)
     {
         filePath = filePath.Trim();
         if (filePath.Length == 0) throw new XPScriptRuntimeException(5, "DXL file path cannot be empty.");
-        var fullPath = Path.GetFullPath(filePath, _applicationDirectory);
-        if (!output && !File.Exists(fullPath)) throw new XPScriptRuntimeException(53, "DXL file not found: " + fullPath);
-        return fullPath;
+        if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);
+        filePath = Path.GetFullPath(filePath);
+        if (createParent)
+        {
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        }
+        return filePath;
     }
-
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateImporterDelegate(out uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteImporterDelegate(uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetImporterPropertyDelegate(uint importer, int property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetImporterPropertyDelegate(uint importer, int property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XMLReadFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLImportDelegate(uint importer, XMLReadFunctionDelegate reader, uint database, nint action);
-
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateExporterDelegate(out uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteExporterDelegate(uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetExporterPropertyDelegate(uint exporter, int property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetExporterPropertyDelegate(uint exporter, int property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XMLWriteFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportNoteDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint note, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportIDTableDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint database, uint idTable, nint action);
 }
 """;
 }
