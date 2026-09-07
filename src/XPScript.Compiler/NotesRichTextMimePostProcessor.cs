@@ -7,14 +7,6 @@ internal static class NotesRichTextMimePostProcessor
         ArgumentNullException.ThrowIfNull(source);
 
         source = ReplaceRequired(source,
-            "    public string Platform { get; }\n    public bool IsRecycled => _recycled;",
-            "    public string Platform { get; }\n    public bool ConvertMIME { get; set; } = true;\n    public bool IsRecycled => _recycled;", "session-convert-mime");
-
-        source = ReplaceRequired(source,
-            "        _handle = handle;\n        NoteId = noteId;",
-            "        _handle = handle;\n        NoteId = noteId;\n        if (handle != 0 && session.ConvertMIME)\n            Session.Api.ConvertMimePartsToComposite(checked((uint)handle));", "document-open-convert-mime");
-
-        source = ReplaceRequired(source,
             "    public bool HasItem(object? nameValue)\n    {\n        EnsureAlive();\n        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));\n    }\n\n    public object? GetValue(object? nameValue)",
             "    public bool HasItem(object? nameValue)\n    {\n        EnsureAlive();\n        return Session.Api.HasItem(_handle, XPScriptRuntime.CStr(nameValue));\n    }\n\n    public XPScriptNotesRichTextItem CreateRichTextItem(object? nameValue)\n    {\n        EnsureAlive();\n        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0) throw new XPScriptRuntimeException(5, \"Rich text item name cannot be empty.\");\n        if (TryGetItemInfo(name, out _)) throw new XPScriptRuntimeException(5, \"Notes item '\" + name + \"' already exists.\");\n        Session.Api.CreateRichTextItem(checked((uint)_handle), name);\n        return new XPScriptNotesRichTextItem(Session, this, name);\n    }\n\n    public object? GetValue(object? nameValue)", "document-create-richtext");
 
@@ -73,23 +65,6 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    internal void ConvertMimePartsToComposite(uint note)
-    {
-        EnsureInitialized();
-        if (!HasMimePart(note)) return;
-        Check(Resolve<MIMEConvertMIMEPartsCCDelegate>("MIMEConvertMIMEPartsCC")(note, 0, 0), "MIMEConvertMIMEPartsCC");
-    }
-
-    private bool HasMimePart(uint note)
-    {
-        foreach (var name in GetItemNames(note))
-        {
-            if (!TryGetFirstItemInfo(note, name, out var info)) continue;
-            if (info.DataType == NotesTypeMimePart) return true;
-        }
-        return false;
-    }
-
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort CompoundTextCreateDelegate(uint note, nint itemName, out uint compound);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
@@ -98,15 +73,13 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate void CompoundTextDiscardDelegate(uint compound);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort CompoundTextAddPlainTextExtDelegate(uint compound, uint styleId, uint fontId, nint text, uint textLength, nint lineDelimiter, uint flags, nint nlsInfo);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEConvertMIMEPartsCCDelegate(uint note, int canonical, nint conversionControls);
 }
 """;
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply Notes rich-text/MIME patch (" + stage + ").");
+            throw new CompilerException("Unable to apply Notes rich-text patch (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
