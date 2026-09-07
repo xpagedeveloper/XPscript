@@ -2,6 +2,13 @@ namespace XPScript.Compiler;
 
 internal static class NotesExtendedRuntimePostProcessor
 {
+    public static string ApplyBuiltSurface(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var mime = source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
+        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(mime, mime));
+    }
+
     public static string ApplyBuiltSurface(string source, NotesRuntimeFeatures features)
     {
         ArgumentNullException.ThrowIfNull(source);
