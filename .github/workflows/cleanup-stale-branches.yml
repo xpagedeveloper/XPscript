@@ -1,0 +1,36 @@
+name: Cleanup stale branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-stale-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stale branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for branch in \
+            'docs/sync-notes-runtime-surface' \
+            'feature/notes-id-file' \
+            'fix/notes-const-compile-validation' \
+            'fix/notes-full-modified-doc-const'
+          do
+            encoded=${branch//\//%2F}
+            if gh api "repos/$REPO/git/ref/heads/$encoded" >/dev/null 2>&1; then
+              gh api --method DELETE "repos/$REPO/git/refs/heads/$encoded"
+              echo "Deleted $branch"
+            else
+              echo "Already absent: $branch"
+            fi
+          done
