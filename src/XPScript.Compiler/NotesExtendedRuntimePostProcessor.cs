@@ -16,7 +16,9 @@ internal static class NotesExtendedRuntimePostProcessor
 
         if (features.Mime)
         {
+            source = NotesMimeItemAnchorPostProcessor.Prepare(source);
             source = NotesMimeEntityPostProcessor.ApplyBuiltSurface(source);
+            source = NotesMimeItemAnchorPostProcessor.Cleanup(source);
             source = NotesMimeEntityAbiPostProcessor.ApplyBuiltSurface(source);
         }
 
