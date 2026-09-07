@@ -1,0 +1,15 @@
+Option Declare
+
+Dim session As NotesSession
+Dim idFile As NotesIDFile
+
+Set session = New NotesSession("C:\Program Files\HCL\Notes")
+Set idFile = session.OpenIDFile("C:\Notes\data\user.id", "password")
+
+Print "IDFile=" & idFile.FilePath
+Print "Name=" & idFile.Name
+Print "Certifier=" & idFile.Certifier
+Print "PublicKey=" & idFile.PublicKey
+
+Call idFile.Recycle()
+Call session.Recycle()
