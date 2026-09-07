@@ -8,14 +8,6 @@ This page documents the public XPscript surface implemented by the generated run
 
 Exactly one `NotesSession` may be active in a process. A session can be created with an explicit Notes/Domino runtime directory, `notes.ini`, and optional ID password. XPscript also supports the default constructor when the runtime can be resolved by the host-specific discovery rules.
 
-```xpscript
-Dim session As NotesSession
-Set session = New NotesSession("C:\Program Files\HCL\Notes")
-
-Dim sessionWithIni As NotesSession
-Set sessionWithIni = New NotesSession("C:\Program Files\HCL\Notes", "C:\NotesData\notes.ini")
-```
-
 ### Properties
 
 | Property | Type | Access | Description |
@@ -39,6 +31,10 @@ Set sessionWithIni = New NotesSession("C:\Program Files\HCL\Notes", "C:\NotesDat
 
 | Member | Return type | Description |
 | --- | --- | --- |
+| `GetEnvironmentString(name)` | String | Reads a Notes environment value. Non-system names are resolved with a leading `$`. |
+| `GetEnvironmentString(name, system)` | String | Reads a Notes environment value and controls whether the name is treated as a system variable. |
+| `GetEnvironmentValue(name)` | Variant | Reads an environment value and returns an Integer when the stored text is an integer; otherwise returns `Nothing`. |
+| `GetEnvironmentValue(name, system)` | Variant | Numeric environment lookup with explicit system-variable handling. |
 | `OpenDatabase(server, filePath)` | `NotesDatabase` | Opens a local or server NSF. An empty server selects a local database. Failed opens return a closed wrapper with `IsOpen = False`. |
 | `OpenByReplicaID(server, replicaId)` | `NotesDatabase` | Locates and opens a database by replica ID. |
 | `CreateName(value)` | `NotesName` | Creates and parses a Notes name. |
