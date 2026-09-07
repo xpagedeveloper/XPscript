@@ -19,6 +19,7 @@ internal sealed partial class XPScriptNotesNativeApi
     internal string ConvertRichTextToHtml(nint db, nint note, string itemName, bool inlineImages)
     {
         EnsureInitialized();
+        using var nativeStandardOutput = XPScriptRuntimeDebugTrace.SuppressNativeStandardOutputUnlessDetailed();
         Check(Resolve<HTMLCreateConverterDelegate>("HTMLCreateConverter")(out var converter), "HTMLCreateConverter");
         try
         {
@@ -68,6 +69,7 @@ internal sealed partial class XPScriptNotesNativeApi
 
     private byte[] ConvertHtmlElement(nint db, nint note, string itemName, uint itemIndex, uint offset)
     {
+        using var nativeStandardOutput = XPScriptRuntimeDebugTrace.SuppressNativeStandardOutputUnlessDetailed();
         Check(Resolve<HTMLCreateConverterDelegate>("HTMLCreateConverter")(out var converter), "HTMLCreateConverter(element)");
         try
         {
