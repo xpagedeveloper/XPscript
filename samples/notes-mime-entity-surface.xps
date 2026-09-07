@@ -4,6 +4,9 @@ Dim db As NotesDatabase
 Dim doc As NotesDocument
 Dim item As NotesItem
 Dim mime As NotesMIMEEntity
+Dim child As NotesMIMEEntity
+Dim sibling As NotesMIMEEntity
+Dim parent As NotesMIMEEntity
 Dim header As NotesMIMEHeader
 Dim stream As NotesStream
 
@@ -31,6 +34,16 @@ If Not(doc Is Nothing) Then
         End If
         Set stream = session.CreateStream()
         Call mime.GetContentAsBytes(stream)
+
+        Set child = mime.GetFirstChildEntity()
+        If Not(child Is Nothing) Then
+            Set sibling = child.GetNextSibling()
+            Set parent = child.GetParentEntity()
+            Set sibling = child.GetNextEntity()
+            Set sibling = child.GetNextEntity(1724)
+            Set sibling = child.GetPrevEntity()
+            Set sibling = child.GetPrevSibling()
+        End If
     End If
     Set item = doc.GetFirstItem("Body")
     If Not(item Is Nothing) Then Set mime = item.GetMIMEEntity()
