@@ -22,8 +22,13 @@ Dim session As NotesSession
 Set session = New NotesSession("/opt/hcl/domino", "/local/notesdata/notes.ini")
 
 Print session.Platform
+Print session.ProgramDir
+Print session.IniDir
+Print session.DataDir
 
 Call session.Recycle()
 ```
+
+`Platform` is one property on the larger generated NotesSession surface. `ProgramDir` aliases the resolved runtime directory. `IniDir` and `DataDir` expose the resolved Notes configuration paths. `ConvertMIME` is a separate read/write session property and defaults to `True`. See `notes-c-api.md` for the complete implemented NotesSession surface.
 
 HCL LotusScript reference: `Platform (NotesSession - LotusScript)`. The HCL API defines this property as read-only and documents values including `Windows/32`, `Windows/64`, `Linux/64`, `Macintosh`, `Macintosh/64`, `AIX/64`, `OS/400`, and `UNIX`.
