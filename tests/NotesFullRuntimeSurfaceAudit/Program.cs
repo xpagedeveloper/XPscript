@@ -46,7 +46,8 @@ var classes = new[]
     // stable NoteID anchor, then require the document-specific NoteIdHex member to exclude other
     // Notes classes (for example NotesAgent) that also expose a public NoteID property.
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
-    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null)
+    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null)
 };
 
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
