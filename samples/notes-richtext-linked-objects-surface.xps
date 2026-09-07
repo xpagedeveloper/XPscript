@@ -19,7 +19,7 @@ Sub Main()
     Dim attachmentBytes As Variant
     Dim embeddedObjects As Variant
 
-    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set session = New NotesSession()
 
     Set style = session.CreateRichTextStyle()
     style.Bold = True
