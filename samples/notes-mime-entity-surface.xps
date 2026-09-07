@@ -6,6 +6,7 @@ Sub Main()
     Dim item As NotesItem
     Dim mime As NotesMIMEEntity
     Dim itemMime As NotesMIMEEntity
+    Dim createdMime As NotesMIMEEntity
     Dim header As NotesMIMEHeader
     Dim stream As NotesStream
 
@@ -39,9 +40,11 @@ Sub Main()
             Set itemMime = item.GetMIMEEntity()
         End If
         Call doc.CloseMIMEEntities()
-    End If
 
-    ' Creation of a top-level MIME entity is backed by Domino MIMEStream APIs.
-    If False Then Set mime = doc.CreateMIMEEntity("Body2")
+        ' Creation of a top-level MIME entity is backed by Domino MIMEStream APIs.
+        If False Then
+            Set createdMime = doc.CreateMIMEEntity("Body2")
+        End If
+    End If
     session.ConvertMIME = True
 End Sub
