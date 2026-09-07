@@ -5,6 +5,7 @@ Sub Main()
     Dim doc As NotesDocument
     Dim item As NotesItem
     Dim mime As NotesMIMEEntity
+    Dim itemMime As NotesMIMEEntity
     Dim header As NotesMIMEHeader
     Dim stream As NotesStream
 
@@ -34,7 +35,9 @@ Sub Main()
             Call mime.GetContentAsBytes(stream)
         End If
         Set item = doc.GetFirstItem("Body")
-        If Not(item Is Nothing) Then Set mime = item.GetMIMEEntity()
+        If Not(item Is Nothing) Then
+            Set itemMime = item.GetMIMEEntity()
+        End If
         Call doc.CloseMIMEEntities()
     End If
 
