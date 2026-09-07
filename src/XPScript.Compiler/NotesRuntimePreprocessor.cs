@@ -4,11 +4,11 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgentResult|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
+    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
 
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "RunAgent", "GetAgent"],
+        ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "GetAgent"],
         ["NotesView"] = ["GetFirstDocumentByKey", "GetFirstDocument", "GetNextDocument"],
         ["NotesDocumentCollection"] = ["GetFirstDocument", "GetNextDocument", "GetDocument"],
         ["NotesDocument"] = ["GetFirstItem"]
@@ -38,6 +38,11 @@ internal sealed class NotesRuntimePreprocessor
         {
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
+
+            if (Regex.IsMatch(line, @"\bNotesAgentResult\b", RegexOptions.IgnoreCase))
+                throw new CompilerException("NotesAgentResult has been removed. Use NotesDatabase.GetAgent and NotesAgent.Run, RunWithDocumentContext, or RunOnServer.");
+            if (Regex.IsMatch(line, @"\.RunAgent\s*\(", RegexOptions.IgnoreCase))
+                throw new CompilerException("NotesDatabase.RunAgent has been removed. Use NotesDatabase.GetAgent and NotesAgent.Run or RunWithDocumentContext.");
 
             var dimNew = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+({NotesTypePattern})\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNew.Success)

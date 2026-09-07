@@ -20,12 +20,9 @@ internal static class NotesAgentNotFoundPostProcessor
             source.Contains(signature, StringComparison.Ordinal));
         if (nativeSignature is null)
         {
-            // Notes runtime features are emitted on demand. Database-level RunAgent
-            // helpers can exist even when the native agent implementation is omitted,
-            // so only the native design-note lookup proves that this patch is required.
             if (!source.Contains("NIFFindDesignNote(agent)", StringComparison.Ordinal))
-                return DeduplicateTimeDateCollateDelegate(source);
-            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (native-runagent-nullable).");
+                return RemoveLegacyAgentResultSurface(DeduplicateTimeDateCollateDelegate(source));
+            throw new CompilerException("Unable to apply Notes agent not-found patch (native-runagent-nullable).");
         }
 
         var nullableNativeSignature = nativeSignature;
@@ -60,19 +57,36 @@ internal static class NotesAgentNotFoundPostProcessor
             newFindAgent,
             "native-runagent-not-found");
 
-        source = EnsureReplacement(
-            source,
-            "    private XPScriptNotesAgentResult RunAgentCore(object? nameValue, XPScriptNotesDocument? document)",
-            "    private XPScriptNotesAgentResult? RunAgentCore(object? nameValue, XPScriptNotesDocument? document)",
-            "database-runagent-nullable");
+        source = DeduplicateTimeDateCollateDelegate(source);
+        return RemoveLegacyAgentResultSurface(source);
+    }
 
-        source = EnsureReplacement(
-            source,
-            "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return new XPScriptNotesAgentResult(Session, this, output);",
-            "        var output = Session.Api.RunAgent(_handle, name, document?.NativeHandle ?? 0);\n        return output is null ? null : new XPScriptNotesAgentResult(Session, this, output);",
-            "database-runagent-nothing");
+    private static string RemoveLegacyAgentResultSurface(string source)
+    {
+        const string firstMethod = "    public XPScriptNotesAgentResult? RunAgent(object? nameValue)";
+        const string releaseAnchor = "    protected override void ReleaseNative()";
+        var methodStart = source.IndexOf(firstMethod, StringComparison.Ordinal);
+        if (methodStart >= 0)
+        {
+            var methodEnd = source.IndexOf(releaseAnchor, methodStart, StringComparison.Ordinal);
+            if (methodEnd < 0)
+                throw new CompilerException("Unable to remove legacy NotesDatabase.RunAgent surface.");
+            source = source[..methodStart] + source[methodEnd..];
+        }
 
-        return DeduplicateTimeDateCollateDelegate(source);
+        const string resultClass = "internal sealed class XPScriptNotesAgentResult : XPScriptNotesOwnedObject";
+        var classStart = source.IndexOf(resultClass, StringComparison.Ordinal);
+        if (classStart >= 0)
+        {
+            var nextClass = source.IndexOf("internal static class XPScriptNotesConvert", classStart, StringComparison.Ordinal);
+            if (nextClass < 0)
+                throw new CompilerException("Unable to remove legacy NotesAgentResult class.");
+            source = source[..classStart] + source[nextClass..];
+        }
+
+        if (source.Contains("XPScriptNotesAgentResult", StringComparison.Ordinal))
+            throw new CompilerException("Legacy NotesAgentResult references remain in generated runtime.");
+        return source;
     }
 
     private static string DeduplicateTimeDateCollateDelegate(string source)
@@ -95,7 +109,7 @@ internal static class NotesAgentNotFoundPostProcessor
     {
         var anchorIndex = source.IndexOf(anchor, StringComparison.Ordinal);
         if (anchorIndex < 0)
-            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + "-anchor).");
+            throw new CompilerException("Unable to apply Notes agent not-found patch (" + stage + "-anchor).");
 
         var searchStart = anchorIndex + anchor.Length;
         if (source.IndexOf(newValue, searchStart, StringComparison.Ordinal) >= 0)
@@ -103,17 +117,8 @@ internal static class NotesAgentNotFoundPostProcessor
 
         var matchIndex = source.IndexOf(oldValue, searchStart, StringComparison.Ordinal);
         if (matchIndex < 0)
-            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + ").");
+            throw new CompilerException("Unable to apply Notes agent not-found patch (" + stage + ").");
 
         return source[..matchIndex] + newValue + source[(matchIndex + oldValue.Length)..];
-    }
-
-    private static string EnsureReplacement(string source, string oldValue, string newValue, string stage)
-    {
-        if (source.Contains(newValue, StringComparison.Ordinal))
-            return source;
-        if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply Notes RunAgent not-found patch (" + stage + ").");
-        return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
