@@ -15,8 +15,10 @@ internal static class NotesDbDirectoryPostProcessor
 
 internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 {
-    private const int DatabaseTypeTemplate = 1;
-    private const int DatabaseTypeDatabase = 4;
+    private const int ReplicaCandidate = 1245;
+    private const int TemplateCandidate = 1246;
+    private const int Database = 1247;
+    private const int Template = 1248;
     private readonly string _server;
     private string[] _paths = [];
     private int _position = -1;
@@ -31,7 +33,8 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     public XPScriptNotesDatabase? GetFirstDatabase(object? typeValue)
     {
         EnsureAlive();
-        _paths = Session.Api.ListDatabases(_server, Session.DataDir, NormalizeType(typeValue));
+        var type = NormalizeType(typeValue);
+        _paths = Session.Api.ListDatabases(_server, Session.DataDir, type);
         _position = 0;
         return CurrentDatabase();
     }
@@ -58,9 +61,9 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
     private static int NormalizeType(object? value)
     {
-        var type = value is null ? 0 : XPScriptRuntime.CInt(value);
-        if (type == 0 || type == DatabaseTypeTemplate || type == DatabaseTypeDatabase) return type;
-        throw new XPScriptRuntimeException(5, "NotesDBDirectory database type must be 0, 1, or 4.");
+        var type = XPScriptRuntime.CInt(value);
+        if (type == ReplicaCandidate || type == TemplateCandidate || type == Database || type == Template) return type;
+        throw new XPScriptRuntimeException(5, "NotesDBDirectory database type must be REPLICA_CANDIDATE (1245), TEMPLATE_CANDIDATE (1246), DATABASE (1247), or TEMPLATE (1248).");
     }
 
     protected override void ReleaseNative()
@@ -73,7 +76,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
         source = ReplaceRequired(source,
             "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
-            "    internal string[] ListDatabases(string server, string dataDirectory, int type)\n    {\n        EnsureInitialized();\n        if (server.Length != 0)\n            throw new XPScriptRuntimeException(5, \"Remote NotesDBDirectory enumeration is not available through the current Notes C API runtime surface.\");\n\n        if (string.IsNullOrWhiteSpace(dataDirectory) || !Directory.Exists(dataDirectory)) return [];\n\n        var extensions = type == 1 ? new[] { \".ntf\" } : type == 4 ? new[] { \".nsf\" } : new[] { \".nsf\", \".ntf\" };\n        return Directory.EnumerateFiles(dataDirectory, \"*.*\", SearchOption.AllDirectories)\n            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))\n            .Select(path => Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/'))\n            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)\n            .ToArray();\n    }\n\n    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
+            "    internal string[] ListDatabases(string server, string dataDirectory, int type)\n    {\n        EnsureInitialized();\n        if (server.Length != 0)\n            throw new XPScriptRuntimeException(5, \"Remote NotesDBDirectory enumeration is not available through the current Notes C API runtime surface.\");\n\n        if (string.IsNullOrWhiteSpace(dataDirectory) || !Directory.Exists(dataDirectory)) return [];\n\n        var extensions = type == 1248 || type == 1246 ? new[] { \".ntf\" } : type == 1247 ? new[] { \".nsf\" } : new[] { \".nsf\", \".ntf\" };\n        return Directory.EnumerateFiles(dataDirectory, \"*.*\", SearchOption.AllDirectories)\n            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))\n            .Select(path => Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/'))\n            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)\n            .ToArray();\n    }\n\n    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
             "native-db-directory-enumeration");
 
         return source;
