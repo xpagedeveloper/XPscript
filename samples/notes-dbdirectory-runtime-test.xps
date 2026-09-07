@@ -1,0 +1,44 @@
+' NotesDBDirectory regression coverage.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim directory As NotesDBDirectory
+    Dim db As NotesDatabase
+    Dim count As Integer
+    Dim errCode As Integer
+
+    Set session = New NotesSession()
+    Set directory = session.GetDbDirectory("")
+
+    Print "NOTES-DBDIRECTORY-BEGIN"
+    Print "Name=" & directory.Name
+
+    Set db = directory.GetFirstDatabase(4)
+    Do While Not db Is Nothing
+        Print "DATABASE=" & db.FilePath
+        count = count + 1
+        Call db.Recycle()
+        Set db = directory.GetNextDatabase()
+    Loop
+    Print "DATABASE-COUNT=" & CStr(count)
+
+    Set db = directory.OpenDatabase("names.nsf")
+    Print "OPEN-NAMES=" & CStr(db.IsOpen)
+    Call db.Recycle()
+
+    errCode = 0
+    On Error Resume Next
+    Set db = directory.GetFirstDatabase(99)
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 5 Then
+        Print "NOTES-DBDIRECTORY=FAIL INVALID-TYPE=" & CStr(errCode)
+    Else
+        Print "INVALID-TYPE=PASS"
+    End If
+
+    Call directory.Recycle()
+    Call session.Recycle()
+    Print "NOTES-DBDIRECTORY-END"
+End Sub
