@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Delete branches
+      - name: Delete branches already contained in default branch
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -33,17 +33,11 @@ jobs:
           default_branch="${{ github.event.repository.default_branch }}"
           git fetch --prune origin "+refs/heads/*:refs/remotes/origin/*"
 
-          if [[ "${{ github.event.head_commit.message }}" == *"[cleanup-all-branches]"* ]]; then
-            while IFS= read -r remote_ref; do
-              branch="${remote_ref#origin/}"
-              [ "$branch" = "$default_branch" ] && continue
-              [ "$branch" = "HEAD" ] && continue
-              echo "Deleting extra branch: ${branch}"
-              git push origin --delete "$branch"
-            done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sort)
-            exit 0
-          fi
-
+          # A squash-merged PR does not make its original head commit an ancestor of
+          # main, while old implementation branches often do not have a surviving PR.
+          # Collect both sources, but only delete a branch when either Git proves that
+          # its tip is already contained in the default branch or GitHub records a
+          # merged same-repository PR for that exact branch.
           merged_pr_branches="$(mktemp)"
           page=1
           while true; do
