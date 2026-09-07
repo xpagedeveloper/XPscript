@@ -163,7 +163,7 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     public string Name { get; }
 
     public XPScriptNotesDocument? GetDocumentByKey(object? keyValue)
-        => GetDocumentByKey(keyValue, true);
+        => GetDocumentByKey(keyValue, false);
 
     public XPScriptNotesDocument? GetDocumentByKey(object? keyValue, object? exactMatchValue)
     {
