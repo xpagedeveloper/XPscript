@@ -22,7 +22,7 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         if (directory == 0) return;
         EnsureInitialized();
-        Resolve<MIMEFreeDirectoryDelegate>("MIMEFreeDirectory")(directory);
+        Check(Resolve<MIMEFreeDirectoryDelegate>("MIMEFreeDirectory")(directory), "MIMEFreeDirectory");
     }
 
     internal nint GetMimeRootEntity(nint directory)
@@ -32,44 +32,48 @@ internal sealed partial class XPScriptNotesNativeApi
         return entity;
     }
 
-    internal nint GetMimeFirstSubpart(nint entity)
+    internal nint GetMimeFirstSubpart(nint directory, nint entity)
     {
         EnsureInitialized();
-        return Resolve<MIMEGetFirstSubpartDelegate>("MIMEGetFirstSubpart")(entity);
+        Check(Resolve<MIMEGetFirstSubpartDelegate>("MIMEGetFirstSubpart")(directory, entity, out var child), "MIMEGetFirstSubpart");
+        return child;
     }
 
-    internal nint GetMimeNextSibling(nint entity)
+    internal nint GetMimeNextSibling(nint directory, nint entity)
     {
         EnsureInitialized();
-        return Resolve<MIMEGetNextSiblingDelegate>("MIMEGetNextSibling")(entity);
+        Check(Resolve<MIMEGetNextSiblingDelegate>("MIMEGetNextSibling")(directory, entity, out var sibling), "MIMEGetNextSibling");
+        return sibling;
     }
 
-    internal nint GetMimePrevSibling(nint entity)
+    internal nint GetMimePrevSibling(nint directory, nint entity)
     {
         EnsureInitialized();
-        return Resolve<MIMEGetPrevSiblingDelegate>("MIMEGetPrevSibling")(entity);
+        Check(Resolve<MIMEGetPrevSiblingDelegate>("MIMEGetPrevSibling")(directory, entity, out var sibling), "MIMEGetPrevSibling");
+        return sibling;
     }
 
-    internal nint GetMimeParent(nint entity)
+    internal nint GetMimeParent(nint directory, nint entity)
     {
         EnsureInitialized();
-        return Resolve<MIMEGetParentDelegate>("MIMEGetParent")(entity);
+        Check(Resolve<MIMEGetParentDelegate>("MIMEGetParent")(directory, entity, out var parent), "MIMEGetParent");
+        return parent;
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEOpenDirectoryDelegate(uint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate void MIMEFreeDirectoryDelegate(nint directory);
+    private delegate ushort MIMEFreeDirectoryDelegate(nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEGetRootEntityDelegate(nint directory, out nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate nint MIMEGetFirstSubpartDelegate(nint entity);
+    private delegate ushort MIMEGetFirstSubpartDelegate(nint directory, nint entity, out nint child);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate nint MIMEGetNextSiblingDelegate(nint entity);
+    private delegate ushort MIMEGetNextSiblingDelegate(nint directory, nint entity, out nint sibling);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate nint MIMEGetPrevSiblingDelegate(nint entity);
+    private delegate ushort MIMEGetPrevSiblingDelegate(nint directory, nint entity, out nint sibling);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate nint MIMEGetParentDelegate(nint entity);
+    private delegate ushort MIMEGetParentDelegate(nint directory, nint entity, out nint parent);
 }
 """;
 }
