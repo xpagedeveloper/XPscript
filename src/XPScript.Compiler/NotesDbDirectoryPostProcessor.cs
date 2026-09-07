@@ -23,10 +23,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     private string[] _paths = [];
     private int _position = -1;
 
-    internal XPScriptNotesDbDirectory(XPScriptNotesSession session, string server) : base(session)
-    {
-        _server = server;
-    }
+    internal XPScriptNotesDbDirectory(XPScriptNotesSession session, string server) : base(session) { _server = server; }
 
     public string Name { get { EnsureAlive(); return _server; } }
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
@@ -34,8 +31,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     public XPScriptNotesDatabase? GetFirstDatabase(object? typeValue)
     {
         EnsureAlive();
-        var type = NormalizeType(typeValue);
-        _paths = Session.Api.ListDatabases(_server, type);
+        _paths = Session.Api.ListDatabases(_server, NormalizeType(typeValue));
         _position = 0;
         return CurrentDatabase();
     }
@@ -57,8 +53,6 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     private XPScriptNotesDatabase? CurrentDatabase()
     {
         if (_position < 0 || _position >= _paths.Length) return null;
-        // LotusScript NotesDBDirectory enumeration returns a closed NotesDatabase.
-        // The caller explicitly opens it afterwards when database access is required.
         return new XPScriptNotesDatabase(Session, 0, _server, _paths[_position]);
     }
 
@@ -69,11 +63,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         throw new XPScriptRuntimeException(5, "NotesDBDirectory database type must be REPLICA_CANDIDATE (1245), TEMPLATE_CANDIDATE (1246), DATABASE (1247), or TEMPLATE (1248).");
     }
 
-    protected override void ReleaseNative()
-    {
-        _paths = [];
-        _position = -1;
-    }
+    protected override void ReleaseNative() { _paths = []; _position = -1; }
 }
 """;
 
@@ -82,11 +72,8 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
             """    internal string[] ListDatabases(string server, int type)
     {
         EnsureInitialized();
-
-        // Domino's directory-mode NSFSearch uses the FILE_xxx value in NoteClassMask
-        // when SEARCH_FILETYPE is set. These map directly to NotesDBDirectory's four
-        // documented enumeration categories.
         const ushort SearchFileType = 0x0004;
+        const ushort SearchSummary = 0x0002;
         const ushort FileDbRepl = 1;
         const ushort FileDbDesign = 2;
         const ushort FileDbAny = 4;
@@ -100,15 +87,14 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
             _ => throw new XPScriptRuntimeException(5, "Invalid NotesDBDirectory database type.")
         };
 
-        // NSFDbOpen accepts a directory. An empty local pathname opens the local data
-        // directory; OSPathNetConstruct builds the equivalent remote server directory.
+        // HCL documents NSFDbOpen on a directory followed by directory-mode NSFSearch.
+        // This works for both the local data directory and remote Domino servers.
         var directory = OpenDatabase(server, "");
         var paths = new List<string>();
-        NSFSearchDirectoryDelegate? callback = null;
-        callback = (parameter, searchMatch, summaryBuffer) =>
+        NSFSearchDirectoryCallback callback = (parameter, searchMatch, summaryBuffer) =>
         {
             if (summaryBuffer == 0) return 0;
-            if (TryReadDirectorySummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
+            if (TryGetSummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
                 paths.Add(path.Replace('\\', '/'));
             return 0;
         };
@@ -116,7 +102,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         try
         {
             Check(Resolve<NSFSearchDirectoryDelegate>("NSFSearch")(
-                directory, 0, 0, SearchFileType, fileType, 0, callback, 0, 0), "NSFSearch");
+                directory, 0, 0, SearchFileType | SearchSummary, fileType, 0, callback, 0, 0), "NSFSearch");
             GC.KeepAlive(callback);
         }
         finally { CloseDatabase(directory); }
@@ -126,24 +112,18 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
             .ToArray();
     }
 
-    private bool TryReadDirectorySummaryText(nint summaryBuffer, string itemName, out string value)
+    private bool TryGetSummaryText(nint summaryBuffer, string itemName, out string value)
     {
         using var name = ToLmbcs(itemName);
-        if (Resolve<NSFItemInfoDelegate>("NSFItemInfo")(summaryBuffer, name.Pointer, checked((ushort)name.Length), out _, out _, out var valuePointer, out var valueLength) != 0 || valuePointer == 0 || valueLength < 2)
+        var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4096);
+        try
         {
-            value = "";
-            return false;
+            Zero(buffer, 4096);
+            var found = Resolve<NSFGetSummaryValueDelegate>("NSFGetSummaryValue")(summaryBuffer, name.Pointer, buffer, 4095);
+            value = found == 0 ? "" : FromLmbcsZeroTerminated(buffer, 4095);
+            return found != 0;
         }
-
-        // Directory summaries expose $Path as TYPE_TEXT: WORD datatype followed by LMBCS.
-        const ushort TypeText = 0x0500;
-        if (unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(valuePointer)) != TypeText)
-        {
-            value = "";
-            return false;
-        }
-        value = FromLmbcs(valuePointer + 2, valueLength - 2);
-        return true;
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
@@ -153,7 +133,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     internal delegate ushort NSFSearchDirectoryCallback(nint parameter, nint searchMatch, nint summaryBuffer);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort NSFItemInfoDelegate(nint noteOrSummary, nint itemName, ushort itemNameLength, out nint itemBlockId, out ushort dataType, out nint valueBlockId, out int valueLength);
+    internal delegate int NSFGetSummaryValueDelegate(nint summaryBuffer, nint itemName, nint itemValue, ushort maximumLength);
 
     internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)""",
             "native-db-directory-enumeration");
