@@ -67,9 +67,8 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 }
 """;
 
-        source = ReplaceRequired(source,
-            "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
-            """    internal string[] ListDatabases(string server, int type)
+        var nativeDirectoryCode = """
+    internal string[] ListDatabases(string server, int type)
     {
         EnsureInitialized();
         const ushort SearchFileType = 0x0004;
@@ -87,8 +86,6 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
             _ => throw new XPScriptRuntimeException(5, "Invalid NotesDBDirectory database type.")
         };
 
-        // HCL documents NSFDbOpen on a directory followed by directory-mode NSFSearch.
-        // This works for both the local data directory and remote Domino servers.
         var directory = OpenDatabase(server, "");
         var paths = new List<string>();
         NSFSearchDirectoryCallback callback = (parameter, searchMatch, summaryBuffer) =>
@@ -135,7 +132,11 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate int NSFGetSummaryValueDelegate(nint summaryBuffer, nint itemName, nint itemValue, ushort maximumLength);
 
-    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)""",
+""";
+
+        source = ReplaceRequired(source,
+            "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
+            nativeDirectoryCode + "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
             "native-db-directory-enumeration");
 
         return source;
