@@ -29,6 +29,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     }
 
     public string Name { get { EnsureAlive(); return _server; } }
+    public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
 
     public XPScriptNotesDatabase? GetFirstDatabase(object? typeValue)
     {
@@ -56,7 +57,9 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     private XPScriptNotesDatabase? CurrentDatabase()
     {
         if (_position < 0 || _position >= _paths.Length) return null;
-        return Session.OpenDatabase(_server, _paths[_position]);
+        // LotusScript NotesDBDirectory enumeration returns a closed NotesDatabase.
+        // The caller explicitly opens it afterwards when database access is required.
+        return new XPScriptNotesDatabase(Session, 0, _server, _paths[_position]);
     }
 
     private static int NormalizeType(object? value)
