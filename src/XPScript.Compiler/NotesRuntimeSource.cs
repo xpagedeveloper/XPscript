@@ -36,7 +36,7 @@ internal static class NotesRuntimeSource
         source = NotesDxlPostProcessor.Apply(source);
         source = NotesThreadLifecyclePostProcessor.Apply(source);
 
-        if (features.Mime)
+        if (features.Mime || features.RichText)
             source = NotesMimeSessionPostProcessor.Apply(source);
 
         if (features.RichText)
