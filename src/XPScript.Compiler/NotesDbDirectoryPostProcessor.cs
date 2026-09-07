@@ -71,6 +71,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     internal string[] ListDatabases(string server, int type)
     {
         EnsureInitialized();
+        // Domino C API nsfsearc.h: SEARCH_FILETYPE makes NoteClassMask a FILE_xxx value.
         const ushort SearchFileType = 0x0004;
         const ushort SearchSummary = 0x0002;
         const ushort FileDbRepl = 1;
@@ -90,6 +91,8 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         var paths = new List<string>();
         NSFSearchDirectoryCallback callback = (parameter, searchMatch, summaryBuffer) =>
         {
+            // NSFSEARCHPROC receives pointers to SEARCH_MATCH and ITEM_TABLE. Directory
+            // scans do not need SEARCH_MATCH fields here; $Path comes from ITEM_TABLE.
             if (summaryBuffer == 0) return 0;
             if (TryGetSummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
                 paths.Add(path.Replace('\\', '/'));
@@ -116,6 +119,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         try
         {
             Zero(buffer, 4096);
+            // NSFGetSummaryValue returns Domino BOOL (32-bit int), not STATUS.
             var found = Resolve<NSFGetSummaryValueDelegate>("NSFGetSummaryValue")(summaryBuffer, name.Pointer, buffer, 4095);
             value = found == 0 ? "" : FromLmbcsZeroTerminated(buffer, 4095);
             return found != 0;
@@ -123,12 +127,17 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
     }
 
+    // Exact C API shape from nsfsearc.h:
+    // STATUS NSFSearch(DBHANDLE, FORMULAHANDLE, char*, WORD, WORD, TIMEDATE*,
+    //                  NSFSEARCHPROC, void*, TIMEDATE*).
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFSearchDirectoryDelegate(nint db, nint formula, nint viewTitle, ushort searchFlags, ushort noteClassMask, nint since, NSFSearchDirectoryCallback callback, nint parameter, nint retUntil);
 
+    // NSFSEARCHPROC: STATUS callback(void*, SEARCH_MATCH*, ITEM_TABLE*).
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFSearchDirectoryCallback(nint parameter, nint searchMatch, nint summaryBuffer);
 
+    // BOOL NSFGetSummaryValue(const void*, const char*, char*, WORD).
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate int NSFGetSummaryValueDelegate(nint summaryBuffer, nint itemName, nint itemValue, ushort maximumLength);
 
