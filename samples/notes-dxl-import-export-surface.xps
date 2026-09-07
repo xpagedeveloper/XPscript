@@ -9,7 +9,7 @@ Sub Main()
     Dim doc As NotesDocument
     Dim docs As NotesDocumentCollection
 
-    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
 
     Set importer = session.CreateDXLImporter()

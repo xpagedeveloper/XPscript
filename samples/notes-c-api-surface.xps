@@ -4,7 +4,7 @@
 Option Declare
 
 Sub CompileNotesSurface()
-    Dim session As New NotesSession("C:\Program Files\HCL\Notes")
+    Dim session As NotesSession
     Dim db As NotesDatabase
     Dim dbCopy As NotesDatabase
     Dim docs As NotesDocumentCollection
@@ -12,6 +12,8 @@ Sub CompileNotesSurface()
     Dim doc As NotesDocument
     Dim name As NotesName
     Dim whenValue As NotesDateTime
+
+    Set session = New NotesSession()
 
     Print session.Username
     Print session.Platform

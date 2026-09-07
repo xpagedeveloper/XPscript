@@ -8,7 +8,7 @@ Sub Main()
     Dim richText As NotesRichTextItem
     Dim maybeRichText As NotesRichTextItem
 
-    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set session = New NotesSession()
 
     session.ConvertMIME = False
     Print "ConvertMIME=" & CStr(session.ConvertMIME)
