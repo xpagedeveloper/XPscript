@@ -40,29 +40,29 @@ internal sealed class XPScriptNotesStream : XPScriptNotesObject
     public int Position
     {
         get { EnsureAlive(); return checked((int)Math.Min(Stream.Position, int.MaxValue)); }
-        set { EnsureAlive(); if (value < 0) throw new XPScriptRuntimeException(5, "NotesStream.Position cannot be negative."); Stream.Position = Math.Min((long)value, Stream.Length); }
+        set { EnsureAlive(); if (value < 0) throw new XPScriptRuntimeException(5, "NotesStream.Position cannot be negative."); Stream.Position = value; }
     }
 
-    public bool Open(object? filePathValue) => Open(filePathValue, "binary");
+    public bool Open(object? filePathValue) => Open(filePathValue, "Unicode");
 
-    public bool Open(object? filePathValue, object? modeValue)
+    public bool Open(object? filePathValue, object? charsetValue)
     {
         EnsureAlive();
         Close();
         var path = XPScriptRuntime.CStr(filePathValue);
         if (string.IsNullOrWhiteSpace(path)) return false;
-        var mode = XPScriptRuntime.CStr(modeValue).Trim();
-        _readOnly = mode.Equals("readonly", StringComparison.OrdinalIgnoreCase) || mode.Equals("read", StringComparison.OrdinalIgnoreCase);
+        var charset = XPScriptRuntime.CStr(charsetValue).Trim();
+        if (charset.Length == 0) charset = "Unicode";
+        _ = ResolveEncoding(charset);
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_readOnly)
-            {
-                var directory = Path.GetDirectoryName(fullPath);
-                if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-            }
-            _file = new FileStream(fullPath, _readOnly ? FileMode.Open : FileMode.OpenOrCreate, _readOnly ? FileAccess.Read : FileAccess.ReadWrite, FileShare.Read);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+            _file = new FileStream(fullPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             _file.Position = 0;
+            _charset = charset;
+            _readOnly = false;
             return true;
         }
         catch
@@ -104,18 +104,34 @@ internal sealed class XPScriptNotesStream : XPScriptNotesObject
         return bytes;
     }
 
-    public string ReadText()
-    {
-        EnsureAlive();
-        var bytes = (byte[])Read();
-        return Encoding.GetString(bytes);
-    }
+    public string ReadText() => ReadText(0);
 
-    public string ReadText(object? lengthValue)
+    public string ReadText(object? modeValue)
     {
         EnsureAlive();
-        var bytes = (byte[])Read(lengthValue);
-        return Encoding.GetString(bytes);
+        var mode = XPScriptRuntime.CInt(modeValue);
+        if (mode == 0)
+        {
+            var bytes = (byte[])Read();
+            return Encoding.GetString(bytes);
+        }
+        if (mode != 1) throw new XPScriptRuntimeException(5, "NotesStream.ReadText mode must be STMREAD_ALL (0) or STMREAD_LINE (1).");
+        if (IsEOS) return "";
+
+        var bytesRead = new List<byte>();
+        var unitSize = Encoding.GetByteCount("\n");
+        var newline = Encoding.GetBytes("\n");
+        while (!IsEOS)
+        {
+            var unit = new byte[unitSize];
+            var read = Stream.Read(unit, 0, unit.Length);
+            if (read == 0) break;
+            if (read != unit.Length) Array.Resize(ref unit, read);
+            bytesRead.AddRange(unit);
+            if (unit.Length == newline.Length && unit.SequenceEqual(newline)) break;
+        }
+        var text = Encoding.GetString(bytesRead.ToArray());
+        return text.TrimEnd('\n').TrimEnd('\r');
     }
 
     public void Write(object? data)
@@ -131,10 +147,21 @@ internal sealed class XPScriptNotesStream : XPScriptNotesObject
         Stream.Flush();
     }
 
-    public void WriteText(object? textValue)
+    public void WriteText(object? textValue) => WriteText(textValue, 0);
+
+    public void WriteText(object? textValue, object? eolValue)
     {
         EnsureAlive();
-        Write(Encoding.GetBytes(XPScriptRuntime.CStr(textValue)));
+        var text = XPScriptRuntime.CStr(textValue);
+        var eol = XPScriptRuntime.CInt(eolValue);
+        text += eol switch
+        {
+            0 => "",
+            1 => "\r\n",
+            2 => "\n",
+            _ => throw new XPScriptRuntimeException(5, "NotesStream.WriteText EOL must be STMWRITE_NONE (0), STMWRITE_CRLF (1), or STMWRITE_LF (2).")
+        };
+        Write(Encoding.GetBytes(text));
     }
 
     public void Truncate()
@@ -158,6 +185,7 @@ internal sealed class XPScriptNotesStream : XPScriptNotesObject
         var name = charset.Trim();
         if (name.Length == 0 || name.Equals("Unicode", StringComparison.OrdinalIgnoreCase)) return System.Text.Encoding.Unicode;
         if (name.Equals("UTF-8", StringComparison.OrdinalIgnoreCase) || name.Equals("UTF8", StringComparison.OrdinalIgnoreCase)) return new System.Text.UTF8Encoding(false);
+        if (name.Equals("ASCII", StringComparison.OrdinalIgnoreCase)) return System.Text.Encoding.ASCII;
         try { return System.Text.Encoding.GetEncoding(name); }
         catch { throw new XPScriptRuntimeException(5, "Unsupported NotesStream charset: " + charset); }
     }
