@@ -42,11 +42,20 @@ internal static class NotesDxlImportResultPostProcessor
             "native-importer-result-access");
 
         const string delegateAnchor = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateExporterDelegate(out uint exporter);";
-        const string memoryDelegates = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint OSMemoryGetSizeDelegate(uint handle);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSMemoryLockDelegate(uint handle);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSMemoryUnlockDelegate(uint handle);\n    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint IDEntriesDelegate(uint table);\n\n";
-        if (!source.Contains("internal delegate uint OSMemoryGetSizeDelegate(uint handle);", StringComparison.Ordinal))
-            source = ReplaceRequired(source, delegateAnchor, memoryDelegates + delegateAnchor, "result-memory-delegates");
+        var missingDelegates = new System.Text.StringBuilder();
+        AppendDelegateIfMissing(source, missingDelegates, "OSMemoryGetSizeDelegate", "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint OSMemoryGetSizeDelegate(uint handle);\n");
+        AppendDelegateIfMissing(source, missingDelegates, "OSMemoryLockDelegate", "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSMemoryLockDelegate(uint handle);\n");
+        AppendDelegateIfMissing(source, missingDelegates, "OSMemoryUnlockDelegate", "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSMemoryUnlockDelegate(uint handle);\n");
+        AppendDelegateIfMissing(source, missingDelegates, "IDEntriesDelegate", "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint IDEntriesDelegate(uint table);\n");
+        if (missingDelegates.Length != 0)
+            source = ReplaceRequired(source, delegateAnchor, missingDelegates + "\n" + delegateAnchor, "result-memory-delegates");
 
         return source;
+    }
+
+    private static void AppendDelegateIfMissing(string source, System.Text.StringBuilder target, string delegateName, string declaration)
+    {
+        if (!source.Contains(delegateName, StringComparison.Ordinal)) target.Append(declaration);
     }
 
     private const string ImportOptionValidation = """
