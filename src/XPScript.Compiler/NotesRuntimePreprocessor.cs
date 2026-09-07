@@ -69,7 +69,6 @@ internal sealed class NotesRuntimePreprocessor
 
             var rewritten = Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\s*\((.*)\)", "XPScriptNotes.CreateSession($1)", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesDBDirectory\s*\((.*)\)", "XPScriptNotes.CreateDbDirectory($1)", RegexOptions.IgnoreCase);
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
@@ -105,45 +104,75 @@ internal sealed class NotesRuntimePreprocessor
             foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length)) rewritten = RewriteDocumentItemValues(rewritten, documentName);
             foreach (var itemName in notesItems.OrderByDescending(value => value.Length)) rewritten = RewriteNotesItemValues(rewritten, itemName);
             rewritten = RewriteNothingReturningMembers(rewritten, notesVariableTypes);
+
+            foreach (var collectionName in notesDocumentCollections)
+            {
+                var escaped = Regex.Escape(collectionName);
+                if (Regex.IsMatch(rewritten, $@"\b(?:LBound|UBound)\s*\(\s*{escaped}\s*(?:,\s*1\s*)?\)", RegexOptions.IgnoreCase)) throw new CompilerException("LBound/UBound are no longer supported for NotesDocumentCollection. Use Count and document navigation methods.");
+                if (Regex.IsMatch(rewritten, $@"\b{escaped}\s*\(", RegexOptions.IgnoreCase)) throw new CompilerException("NotesDocumentCollection index syntax is no longer supported. Use GetDocument, GetFirstDocument, or GetNextDocument.");
+                if (Regex.IsMatch(rewritten, $@"\b{escaped}\.Get\s*\(", RegexOptions.IgnoreCase) || Regex.IsMatch(rewritten, $@"\b{escaped}\.GetNoteIdString\s*\(", RegexOptions.IgnoreCase)) throw new CompilerException("NotesDocumentCollection.Get/GetNoteIdString are no longer supported. Use GetDocument instead.");
+            }
             output.Add(indent + rewritten);
         }
-
         return string.Join(Environment.NewLine, output);
     }
 
-    private static void RegisterNotesVariable(string name, string type, HashSet<string> notesVariables, Dictionary<string, string> notesVariableTypes, HashSet<string> notesDocumentCollections, HashSet<string> notesDocuments, HashSet<string> notesItems)
+    private static void RegisterNotesVariable(string name, string type, ISet<string> notesVariables, IDictionary<string, string> notesVariableTypes, ISet<string> documentCollections, ISet<string> documents, ISet<string> items)
     {
-        notesVariables.Add(name);
-        notesVariableTypes[name] = type;
-        if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase)) notesDocumentCollections.Add(name);
-        if (type.Equals("NotesDocument", StringComparison.OrdinalIgnoreCase)) notesDocuments.Add(name);
-        if (type.Equals("NotesItem", StringComparison.OrdinalIgnoreCase) || type.Equals("NotesRichTextItem", StringComparison.OrdinalIgnoreCase)) notesItems.Add(name);
+        notesVariables.Add(name); notesVariableTypes[name] = type;
+        if (type.Equals("NotesDocumentCollection", StringComparison.OrdinalIgnoreCase)) documentCollections.Add(name);
+        if (type.Equals("NotesDocument", StringComparison.OrdinalIgnoreCase)) documents.Add(name);
+        if (type.Equals("NotesItem", StringComparison.OrdinalIgnoreCase) || type.Equals("NotesRichTextItem", StringComparison.OrdinalIgnoreCase)) items.Add(name);
     }
 
     private static string RewriteNothingReturningMembers(string line, IReadOnlyDictionary<string, string> notesVariableTypes)
     {
-        foreach (var pair in notesVariableTypes.OrderByDescending(pair => pair.Key.Length))
+        foreach (var pair in notesVariableTypes.OrderByDescending(value => value.Key.Length))
         {
-            if (NothingReturningMethods.TryGetValue(pair.Value, out var methods))
-                foreach (var method in methods)
-                    line = Regex.Replace(line, $@"\b{Regex.Escape(pair.Key)}\s*\.\s*{Regex.Escape(method)}\s*\(([^)]*)\)", $"XPScriptNotes.NormalizeObjectResult({pair.Key}.{method}($1))", RegexOptions.IgnoreCase);
-            if (NothingReturningProperties.TryGetValue(pair.Value, out var properties))
-                foreach (var property in properties)
-                    line = Regex.Replace(line, $@"\b{Regex.Escape(pair.Key)}\s*\.\s*{Regex.Escape(property)}\b", $"XPScriptNotes.NormalizeObjectResult({pair.Key}.{property})", RegexOptions.IgnoreCase);
+            if (NothingReturningMethods.TryGetValue(pair.Value, out var methods)) foreach (var method in methods) line = WrapMethodCalls(line, pair.Key, method);
+            if (NothingReturningProperties.TryGetValue(pair.Value, out var properties)) foreach (var property in properties) line = WrapPropertyRead(line, pair.Key, property);
         }
         return line;
     }
 
-    private static string RewriteDocumentItemValues(string line, string documentName)
+    private static string WrapMethodCalls(string line, string variableName, string methodName)
     {
-        var pattern = new Regex($@"\b{Regex.Escape(documentName)}\.([A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant); var offset = 0;
+        var pattern = new Regex($@"\b{Regex.Escape(variableName)}\.{Regex.Escape(methodName)}\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var offset = 0;
         while (offset < line.Length)
         {
-            var match = pattern.Match(line, offset); if (!match.Success) break; var next = match.Index + match.Length; while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
-            if (next < line.Length && (line[next] == '(' || line[next] == '=')) { offset = next + 1; continue; }
-            var itemName = match.Groups[1].Value;
-            var replacement = $"XPScriptNotesValueApi.GetDocumentItemValues({documentName}, \"{itemName}\")";
-            line = line[..match.Index] + replacement + line[(match.Index + match.Length)..]; offset = match.Index + replacement.Length;
+            var match = pattern.Match(line, offset); if (!match.Success) break;
+            if (IsInsideNothingNormalizer(line, match.Index)) { offset = match.Index + match.Length; continue; }
+            var open = line.IndexOf('(', match.Index); var close = FindMatchingParen(line, open); if (close < 0) break;
+            var call = line[match.Index..(close + 1)]; var replacement = "XPScriptNotes.NormalizeObjectResult(" + call + ")";
+            line = line[..match.Index] + replacement + line[(close + 1)..]; offset = match.Index + replacement.Length;
+        }
+        return line;
+    }
+
+    private static string WrapPropertyRead(string line, string variableName, string propertyName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(variableName)}\.{Regex.Escape(propertyName)}\b(?!\s*=)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return pattern.Replace(line, match => IsInsideNothingNormalizer(line, match.Index) ? match.Value : "XPScriptNotes.NormalizeObjectResult(" + match.Value + ")");
+    }
+
+    private static bool IsInsideNothingNormalizer(string line, int memberIndex)
+    {
+        const string prefix = "XPScriptNotes.NormalizeObjectResult("; var start = Math.Max(0, memberIndex - prefix.Length);
+        return line.AsSpan(start, memberIndex - start).EndsWith(prefix, StringComparison.Ordinal);
+    }
+
+    private static string RewriteDocumentItemValues(string line, string documentName)
+    {
+        var pattern = new Regex($@"\b{Regex.Escape(documentName)}\.GetItemValue\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant); var offset = 0;
+        while (offset < line.Length)
+        {
+            var match = pattern.Match(line, offset); if (!match.Success) break; var open = line.IndexOf('(', match.Index); var close = FindMatchingParen(line, open); if (close < 0) break;
+            var args = line[(open + 1)..close].Trim(); var next = close + 1; while (next < line.Length && char.IsWhiteSpace(line[next])) next++;
+            string replacement; int consumedThrough;
+            if (next < line.Length && line[next] == '(') { var indexClose = FindMatchingParen(line, next); if (indexClose < 0) break; var index = line[(next + 1)..indexClose].Trim(); replacement = $"XPScriptNotesValueApi.GetDocumentItemValueAt({documentName}, {args}, {index})"; consumedThrough = indexClose; }
+            else { replacement = $"XPScriptNotesValueApi.GetDocumentItemValues({documentName}, {args})"; consumedThrough = close; }
+            line = line[..match.Index] + replacement + line[(consumedThrough + 1)..]; offset = match.Index + replacement.Length;
         }
         return line;
     }
@@ -173,16 +202,8 @@ internal sealed class NotesRuntimePreprocessor
     private static string CreateExpression(string type, string rawArguments)
     {
         var args = rawArguments.Trim();
-        if (type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
-            return $"XPScriptNotes.CreateSession({args})";
-        }
-        if (type.Equals("NotesDBDirectory", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("NotesDBDirectory requires a server name argument. Use an empty string for the current computer.");
-            return $"XPScriptNotes.CreateDbDirectory({args})";
-        }
-        throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
+        if (!type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase)) throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
+        if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
+        return $"XPScriptNotes.CreateSession({args})";
     }
 }
