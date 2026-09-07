@@ -8,6 +8,8 @@ internal static class NotesExtendedRuntimePostProcessor
         source = NotesStreamPostProcessor.ApplyBuiltSurface(source);
         source = NotesMimeEntityPostProcessor.ApplyBuiltSurface(source);
         source = NotesMimeEntityAbiPostProcessor.ApplyBuiltSurface(source);
+        source = NotesMimeMultipartPostProcessor.ApplyBuiltSurface(source);
+        source = NotesMimeMultipartSemanticsPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentAuthorsPostProcessor.ApplyBuiltSurface(source);
         source = NotesSigningPostProcessor.ApplyBuiltSurface(source);
