@@ -49,6 +49,7 @@ var classes = new[]
     (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocumentCollection", Surface: "NotesDocumentCollection", Anchor: (string?)null),
     (Runtime: "XPScriptNotesNoteCollection", Surface: "NotesNoteCollection", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDateTime", Surface: "NotesDateTime", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null),

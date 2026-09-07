@@ -104,7 +104,17 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     internal static object FromNativeObject(XPScriptNotesTimeDate value) => throw new XPScriptRuntimeException(13, "Use NotesDocument.GetDateTime for Notes time/date fields.");
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
-    public bool IsValidDate { get { EnsureAlive(); return true; } }
+    public bool IsValidDate
+    {
+        get
+        {
+            EnsureAlive();
+            var value = Session.Api.ExpandTimeDate(_value);
+            if (value.Year < 1 || value.Year > 9999 || value.Month < 1 || value.Month > 12 || value.Day < 1)
+                return false;
+            return value.Day <= DateTime.DaysInMonth(value.Year, value.Month);
+        }
+    }
     public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
     public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
     public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }
