@@ -55,8 +55,15 @@ internal static class NotesDxlExportResultPostProcessor
         AppendIfMissing(source, declarations, "OSMemoryUnlockDelegate", "internal delegate void OSMemoryUnlockDelegate(uint handle);");
         AppendIfMissing(source, declarations, "IDEntriesDelegate", "internal delegate uint IDEntriesDelegate(uint table);");
 
-        if (declarations.Length == 0) return source;
-        return source + "\n\ninternal sealed partial class XPScriptNotesNativeApi\n{\n" + declarations + "}\n";
+        var helpers = new System.Text.StringBuilder();
+        if (source.Contains("Path.Combine(DataDirectory, filePath)", StringComparison.Ordinal) &&
+            !source.Contains("private string DataDirectory =>", StringComparison.Ordinal))
+        {
+            helpers.Append("    private string DataDirectory => Environment.GetEnvironmentVariable(\"Notes_ExecDirectory\") ?? Environment.CurrentDirectory;\n");
+        }
+
+        if (declarations.Length == 0 && helpers.Length == 0) return source;
+        return source + "\n\ninternal sealed partial class XPScriptNotesNativeApi\n{\n" + helpers + declarations + "}\n";
     }
 
     private static void AppendIfMissing(string source, System.Text.StringBuilder target, string delegateName, string declaration)
