@@ -7,6 +7,7 @@ Sub Main()
     Dim db As NotesDatabase
     Dim since As NotesDateTime
     Dim changed As NotesDocumentCollection
+    Dim numericAll As NotesDocumentCollection
     Dim documents As NotesDocumentCollection
     Dim design As NotesDocumentCollection
     Dim doc As NotesDocument
@@ -18,10 +19,18 @@ Sub Main()
         Exit Sub
     End If
 
-    ' Query one hour back using the native Domino modified-note table.
     Set since = session.CreateDateTimeNow()
     Call since.AdjustHour(-1)
+
+    ' Regression: the literal Domino DBMOD_DOC_ALL value must be accepted.
+    Set numericAll = db.GetModifiedDocuments(since, 32767)
+    If numericAll Is Nothing Then Error 9959, "GetModifiedDocuments(since, 32767) returned Nothing"
+    Print "MODIFIED-32767=" & CStr(numericAll.Count)
+
+    ' The NotesConst alias must have identical behavior.
     Set changed = db.GetModifiedDocuments(since, NotesConst.All)
+    If changed Is Nothing Then Error 9960, "GetModifiedDocuments(since, NotesConst.All) returned Nothing"
+    If changed.Count <> numericAll.Count Then Error 9961, "NotesConst.All differs from literal 32767"
 
     Set documents = changed.Documents
     Set design = changed.DesignElements
@@ -32,19 +41,19 @@ Sub Main()
     Print "UNTIL=" & changed.UntilTime.LocalTime
 
     If documents.Count + design.Count > changed.Count Then
-        Error 9960, "Filtered modified collections exceed the complete collection"
+        Error 9962, "Filtered modified collections exceed the complete collection"
     End If
 
     Set doc = documents.GetFirstDocument()
     If Not doc Is Nothing Then
-        If doc.IsDesign Then Error 9961, "Documents filter returned a design note"
+        If doc.IsDesign Then Error 9963, "Documents filter returned a design note"
         Print "FIRST-DOCUMENT=" & doc.NoteID
         Call doc.Recycle()
     End If
 
     Set doc = design.GetFirstDocument()
     If Not doc Is Nothing Then
-        If Not doc.IsDesign Then Error 9962, "DesignElements filter returned a data note"
+        If Not doc.IsDesign Then Error 9964, "DesignElements filter returned a data note"
         Print "FIRST-DESIGN=" & doc.DesignType & " " & doc.DesignTitle
         Call doc.Recycle()
     End If
@@ -55,6 +64,7 @@ Sub Main()
     Call design.Recycle()
     Call documents.Recycle()
     Call changed.Recycle()
+    Call numericAll.Recycle()
     Call since.Recycle()
     Call db.Recycle()
     Call session.Recycle()
