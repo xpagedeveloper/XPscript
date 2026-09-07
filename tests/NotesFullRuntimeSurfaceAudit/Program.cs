@@ -87,7 +87,8 @@ foreach (var item in classes)
             .ToArray();
 
     if (declarations.Length == 0) throw new InvalidOperationException("Generated runtime class was not found: " + item.Surface);
-    if (declarations.Length > 1) throw new InvalidOperationException($"Generated runtime class resolution for {item.Surface} was ambiguous: {declarations.Length} classes matched.");
+    if (declarations.Length > 1 && declarations.Any(c => !c.Modifiers.Any(SyntaxKind.PartialKeyword)))
+        throw new InvalidOperationException($"Generated runtime class resolution for {item.Surface} was ambiguous: {declarations.Length} classes matched and not all were partial.");
 
     var members = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var declaration in declarations)
