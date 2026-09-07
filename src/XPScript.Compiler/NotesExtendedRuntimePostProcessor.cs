@@ -5,9 +5,9 @@ internal static class NotesExtendedRuntimePostProcessor
     public static string ApplyBuiltSurface(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        var mime = source.Contains("XPScriptNotesMIMEEntity", StringComparison.Ordinal) ||
-                   source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
-        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(mime, mime));
+        var mime = source.Contains("XPScriptNotesMIMEEntity", StringComparison.Ordinal);
+        var richText = source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
+        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(richText, mime));
     }
 
     public static string ApplyBuiltSurface(string source, NotesRuntimeFeatures features)
