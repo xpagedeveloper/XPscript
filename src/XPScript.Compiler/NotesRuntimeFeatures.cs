@@ -21,10 +21,6 @@ internal readonly record struct NotesRuntimeFeatures(bool RichText, bool Mime)
                            "NotesRichTextTable", "NotesRichTextDocLink", "NotesEmbeddedObject") ||
                        PreprocessorFeatureGate.ContainsCall(code, "CreateRichTextItem", "GetEmbeddedObject");
 
-        // ConvertMIME and the current NotesItem rich-text/MIME boundary are still
-        // emitted by the shared rich-text MIME processor. Keep that infrastructure
-        // enabled for MIME callers while tracking MIME independently so the MIME
-        // surface itself no longer has to be inferred from a RichText marker.
-        return new NotesRuntimeFeatures(richText || mime, mime);
+        return new NotesRuntimeFeatures(richText, mime);
     }
 }
