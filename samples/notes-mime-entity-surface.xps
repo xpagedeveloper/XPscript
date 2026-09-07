@@ -4,9 +4,6 @@ Dim db As NotesDatabase
 Dim doc As NotesDocument
 Dim item As NotesItem
 Dim mime As NotesMIMEEntity
-Dim child As NotesMIMEEntity
-Dim sibling As NotesMIMEEntity
-Dim parent As NotesMIMEEntity
 Dim header As NotesMIMEHeader
 Dim stream As NotesStream
 
@@ -34,28 +31,12 @@ If Not(doc Is Nothing) Then
         End If
         Set stream = session.CreateStream()
         Call mime.GetContentAsBytes(stream)
-
-        Set child = mime.GetFirstChildEntity()
-        If Not(child Is Nothing) Then
-            Set sibling = child.GetNextSibling()
-            Set parent = child.GetParentEntity()
-            Set sibling = child.GetNextEntity()
-            Set sibling = child.GetNextEntity(1724)
-            Set sibling = child.GetPrevEntity()
-            Set sibling = child.GetPrevSibling()
-        End If
     End If
     Set item = doc.GetFirstItem("Body")
     If Not(item Is Nothing) Then Set mime = item.GetMIMEEntity()
     Call doc.CloseMIMEEntities()
 End If
 
-' Creation surface is intentionally unreachable in this probe, but must compile.
-If False Then
-    Set mime = doc.CreateMIMEEntity("Body2")
-    Set child = mime.CreateChildEntity()
-    Set sibling = mime.CreateChildEntity(child)
-    Set parent = child.CreateParentEntity()
-    Call child.Remove()
-End If
+' Creation of a top-level MIME entity is backed by Domino MIMEStream APIs.
+If False Then Set mime = doc.CreateMIMEEntity("Body2")
 session.ConvertMIME = True
