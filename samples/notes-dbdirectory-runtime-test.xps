@@ -14,7 +14,7 @@ Sub Main()
     Print "NOTES-DBDIRECTORY-BEGIN"
     Print "Name=" & directory.Name
 
-    Set db = directory.GetFirstDatabase(4)
+    Set db = directory.GetFirstDatabase(1247)
     Do While Not db Is Nothing
         Print "DATABASE=" & db.FilePath
         count = count + 1
