@@ -162,10 +162,10 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     internal nint NativeHandle { get { EnsureAlive(); return _handle; } }
     public string Name { get; }
 
-    public XPScriptNotesDocument? GetFirstDocumentByKey(object? keyValue)
-        => GetFirstDocumentByKey(keyValue, true);
+    public XPScriptNotesDocument? GetDocumentByKey(object? keyValue)
+        => GetDocumentByKey(keyValue, true);
 
-    public XPScriptNotesDocument? GetFirstDocumentByKey(object? keyValue, object? exactMatchValue)
+    public XPScriptNotesDocument? GetDocumentByKey(object? keyValue, object? exactMatchValue)
     {
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
