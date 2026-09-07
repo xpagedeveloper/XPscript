@@ -1,0 +1,28 @@
+name: One-shot NotesDatabase fulltest validation
+
+on:
+  push:
+    branches:
+      - test/notes-database-fulltest
+    paths:
+      - .github/workflows/oneshot-notes-database-fulltest.yml
+      - samples/notes-database-full-runtime-test.xps
+      - tests/NotesFullRuntimeSurfaceAudit/**
+      - src/XPScript.Compiler/**
+      - src/XPScript.Compiler.Core/**
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compile NotesDatabase focused fulltest
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-database-full-runtime-test.xps ./out/notes-database-fulltest
+      - name: Audit Notes core fulltest coverage
+        run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release
