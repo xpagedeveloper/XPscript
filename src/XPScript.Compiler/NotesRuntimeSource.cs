@@ -14,6 +14,7 @@ internal static class NotesRuntimeSource
                      NotesNativeApiSource.Code;
 
         source = NotesConstPostProcessor.Apply(source);
+        source = NotesIDFilePostProcessor.Apply(source);
         source = NotesDocumentCollectionPostProcessor.Apply(source);
         source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
         source = NotesDatabaseLifecyclePostProcessor.Apply(source);
