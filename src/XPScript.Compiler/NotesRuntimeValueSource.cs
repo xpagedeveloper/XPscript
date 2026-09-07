@@ -61,18 +61,26 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
 
     private void ParseInternet(string source)
     {
-        var at = source.LastIndexOf('@');
-        if (at <= 0 || at >= source.Length - 1) return;
-        _parts["ADDR821"] = source;
-        var before = source[..at].Trim();
-        var lt = before.LastIndexOf('<');
-        var gt = before.LastIndexOf('>');
+        var text = source.Trim();
+        var lt = text.LastIndexOf('<');
+        var gt = text.LastIndexOf('>');
+        string address;
+
         if (lt >= 0 && gt > lt)
         {
-            _parts["PHRASE"] = before[..lt].Trim().Trim('"');
-            _parts["LOCALPART"] = before[(lt + 1)..gt].Split('@')[0];
+            address = text[(lt + 1)..gt].Trim();
+            var phrase = text[..lt].Trim().Trim('"');
+            if (phrase.Length != 0) _parts["PHRASE"] = phrase;
         }
-        else _parts["LOCALPART"] = before;
+        else
+        {
+            address = text;
+        }
+
+        var at = address.LastIndexOf('@');
+        if (at <= 0 || at >= address.Length - 1) return;
+        _parts["ADDR821"] = address;
+        _parts["LOCALPART"] = address[..at].Trim();
     }
 
     protected override void ReleaseNative() => _parts.Clear();
