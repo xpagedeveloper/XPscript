@@ -13,8 +13,8 @@ internal readonly record struct NotesRuntimeFeatures(bool RichText)
                            code,
                            "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle",
                            "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab",
-                           "NotesRichTextTable", "NotesRichTextDocLink", "NotesEmbeddedObject") ||
-                       PreprocessorFeatureGate.ContainsCall(code, "CreateRichTextItem", "GetEmbeddedObject");
+                           "NotesRichTextTable", "NotesRichTextDocLink", "NotesEmbeddedObject", "NotesMIMEEntity", "NotesMIMEHeader") ||
+                       PreprocessorFeatureGate.ContainsCall(code, "CreateRichTextItem", "GetEmbeddedObject", "CreateMIMEEntity", "GetMIMEEntity");
         return new NotesRuntimeFeatures(richText);
     }
 }
