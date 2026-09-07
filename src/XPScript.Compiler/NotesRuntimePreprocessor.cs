@@ -4,10 +4,11 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesDatabase|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
+    private const string NotesTypePattern = "NotesSession|NotesDBDirectory|NotesDatabase|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
 
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["NotesDBDirectory"] = ["GetFirstDatabase", "GetNextDatabase"],
         ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "GetAgent"],
         ["NotesView"] = ["GetFirstDocumentByKey", "GetFirstDocument", "GetNextDocument"],
         ["NotesDocumentCollection"] = ["GetFirstDocument", "GetNextDocument", "GetDocument"],
