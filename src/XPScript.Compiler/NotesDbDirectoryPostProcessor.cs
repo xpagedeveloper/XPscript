@@ -35,7 +35,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     {
         EnsureAlive();
         var type = NormalizeType(typeValue);
-        _paths = Session.Api.ListDatabases(_server, Session.DataDir, type);
+        _paths = Session.Api.ListDatabases(_server, type);
         _position = 0;
         return CurrentDatabase();
     }
@@ -79,7 +79,83 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
         source = ReplaceRequired(source,
             "    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
-            "    internal string[] ListDatabases(string server, string dataDirectory, int type)\n    {\n        EnsureInitialized();\n        if (server.Length != 0)\n            throw new XPScriptRuntimeException(5, \"Remote NotesDBDirectory enumeration is not available through the current Notes C API runtime surface.\");\n\n        if (string.IsNullOrWhiteSpace(dataDirectory) || !Directory.Exists(dataDirectory)) return [];\n\n        var extensions = type == 1248 || type == 1246 ? new[] { \".ntf\" } : type == 1247 ? new[] { \".nsf\" } : new[] { \".nsf\", \".ntf\" };\n        return Directory.EnumerateFiles(dataDirectory, \"*.*\", SearchOption.AllDirectories)\n            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))\n            .Select(path => Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/'))\n            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)\n            .ToArray();\n    }\n\n    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)",
+            """    internal string[] ListDatabases(string server, int type)
+    {
+        EnsureInitialized();
+
+        // Domino's directory-mode NSFSearch uses the FILE_xxx value in NoteClassMask
+        // when SEARCH_FILETYPE is set. These map directly to NotesDBDirectory's four
+        // documented enumeration categories.
+        const ushort SearchFileType = 0x0004;
+        const ushort FileDbRepl = 1;
+        const ushort FileDbDesign = 2;
+        const ushort FileDbAny = 4;
+        const ushort FileFtAny = 5;
+        var fileType = type switch
+        {
+            1245 => FileDbRepl,
+            1246 => FileDbDesign,
+            1247 => FileDbAny,
+            1248 => FileFtAny,
+            _ => throw new XPScriptRuntimeException(5, "Invalid NotesDBDirectory database type.")
+        };
+
+        // NSFDbOpen accepts a directory. An empty local pathname opens the local data
+        // directory; OSPathNetConstruct builds the equivalent remote server directory.
+        var directory = OpenDatabase(server, "");
+        var paths = new List<string>();
+        NSFSearchDirectoryDelegate? callback = null;
+        callback = (parameter, searchMatch, summaryBuffer) =>
+        {
+            if (summaryBuffer == 0) return 0;
+            if (TryReadDirectorySummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
+                paths.Add(path.Replace('\\', '/'));
+            return 0;
+        };
+
+        try
+        {
+            Check(Resolve<NSFSearchDirectoryDelegate>("NSFSearch")(
+                directory, 0, 0, SearchFileType, fileType, 0, callback, 0, 0), "NSFSearch");
+            GC.KeepAlive(callback);
+        }
+        finally { CloseDatabase(directory); }
+
+        return paths.Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private bool TryReadDirectorySummaryText(nint summaryBuffer, string itemName, out string value)
+    {
+        using var name = ToLmbcs(itemName);
+        if (Resolve<NSFItemInfoDelegate>("NSFItemInfo")(summaryBuffer, name.Pointer, checked((ushort)name.Length), out _, out _, out var valuePointer, out var valueLength) != 0 || valuePointer == 0 || valueLength < 2)
+        {
+            value = "";
+            return false;
+        }
+
+        // Directory summaries expose $Path as TYPE_TEXT: WORD datatype followed by LMBCS.
+        const ushort TypeText = 0x0500;
+        if (unchecked((ushort)System.Runtime.InteropServices.Marshal.ReadInt16(valuePointer)) != TypeText)
+        {
+            value = "";
+            return false;
+        }
+        value = FromLmbcs(valuePointer + 2, valueLength - 2);
+        return true;
+    }
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFSearchDirectoryDelegate(nint db, nint formula, nint viewTitle, ushort searchFlags, ushort noteClassMask, nint since, NSFSearchDirectoryCallback callback, nint parameter, nint retUntil);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFSearchDirectoryCallback(nint parameter, nint searchMatch, nint summaryBuffer);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate ushort NSFItemInfoDelegate(nint noteOrSummary, nint itemName, ushort itemNameLength, out nint itemBlockId, out ushort dataType, out nint valueBlockId, out int valueLength);
+
+    internal XPScriptNotesTimeDate GetDatabaseCreated(nint db)""",
             "native-db-directory-enumeration");
 
         return source;
