@@ -21,23 +21,23 @@ internal sealed class UIExtensionPreprocessor
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
-            var dimNewForm = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+UIForm\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var dimNewForm = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(UIForm)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNewForm.Success)
             {
                 var name = dimNewForm.Groups[1].Value;
                 uiVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
-                output.Add(indent + $"{name} = {CreateFormExpression(dimNewForm.Groups[2].Value)}");
+                output.Add(indent + $"{name} = {CreateFormExpression(dimNewForm.Groups[3].Value)}");
                 continue;
             }
 
-            var dimNewList = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+UIListView\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var dimNewList = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(UIListView)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNewList.Success)
             {
                 var name = dimNewList.Groups[1].Value;
                 uiVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
-                output.Add(indent + $"{name} = {CreateListViewExpression(dimNewList.Groups[2].Value)}");
+                output.Add(indent + $"{name} = {CreateListViewExpression(dimNewList.Groups[3].Value)}");
                 continue;
             }
 
@@ -65,7 +65,8 @@ internal sealed class UIExtensionPreprocessor
 
     private static string TransformNotesAndAttachments(string source)
     {
-        var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(source);
+        var notesConstants = new NotesConstSourcePreprocessor().Transform(source);
+        var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(notesConstants);
         var notes = new NotesRuntimePreprocessor().Transform(notesPrepared);
         var transformed = new NotesEmbeddedObjectPreprocessor().Transform(notes);
         return new AttachmentCollectionPreprocessor().Transform(transformed);
