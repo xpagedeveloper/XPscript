@@ -8,7 +8,7 @@ Sub Main()
     Dim exporter As NotesDXLExporter
     Dim noteId As String
 
-    Set session = New NotesSession("C:\Program Files\HCL\Notes")
+    Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
     Set nc = db.CreateNoteCollection(False)
 
