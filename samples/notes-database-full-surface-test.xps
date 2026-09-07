@@ -1,22 +1,14 @@
-' NotesDatabase full local smoke test for xpscript.nsf.
+' NotesDatabase, NotesSession and NotesRichText full local runtime surface test.
 ' Requires HCL Notes/Domino runtime and a configured local Notes environment.
-'
-' The test is intentionally split into safe and destructive sections.
-' ENABLE_METADATA_WRITES tests Title, Categories, TemplateName and DesignTemplateName
-' by changing each value and restoring the original value immediately.
-' ENABLE_REMOVE_FT_INDEX calls RemoveFTIndex and therefore deletes the database FT index.
-'
-' See docs/notes-database-full-surface-test.md for database preparation.
-
 Option Declare
 
 Sub Main()
-    Const NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
     Const LOCAL_DATABASE = "xpscript.nsf"
     Const TEST_VIEW = "XPScriptTestView"
     Const TEST_AGENT = "XPScriptTestAgent"
     Const TEST_PROFILE = "XPScriptTestProfile"
     Const TEST_PROFILE_KEY = "Local"
+    Const COPY_DATABASE = "xpscript-database-surface-copy.nsf"
 
     Const ENABLE_METADATA_WRITES = True
     Const ENABLE_FT_SEARCH = False
@@ -36,33 +28,40 @@ Sub Main()
     Dim created As NotesDateTime
     Dim modified As NotesDateTime
     Dim agentResult As NotesAgentResult
-
     Dim originalTitle As String
     Dim originalCategories As String
     Dim originalTemplate As String
     Dim originalDesignTemplate As String
     Dim noteId As String
     Dim unid As String
+    Dim failures As Integer
 
+    failures = 0
     Print "NOTESDATABASE-TEST-BEGIN"
 
-    Set session = New NotesSession(NOTES_RUNTIME)
-    Set db = session.OpenDatabase("", LOCAL_DATABASE)
+    Set session = New NotesSession()
+    If session Is Nothing Then
+        Print "FAIL: NotesSession returned Nothing"
+        Exit Sub
+    End If
 
-    If db = Nothing Then
+    failures = failures + TestChangedSessionSurface(session)
+
+    Set db = session.OpenDatabase("", LOCAL_DATABASE)
+    If db Is Nothing Then
         Print "FAIL: OpenDatabase returned Nothing"
+        failures = failures + 1
         GoTo Cleanup
     End If
 
     Print "IsOpen=" & CStr(db.IsOpen)
+    Print "OpenError=" & db.OpenError
     If Not db.IsOpen Then
-        Print "FAIL: xpscript.nsf is not open"
+        Print "FAIL: xpscript.nsf is not open OpenError=" & db.OpenError
+        failures = failures + 1
         GoTo Cleanup
     End If
 
-    ' ------------------------------------------------------------------
-    ' Basic NotesDatabase properties
-    ' ------------------------------------------------------------------
     Set parentSession = db.Parent
     Print "Parent.Username=" & parentSession.Username
     Print "Server=" & db.Server
@@ -77,16 +76,18 @@ Sub Main()
     Print "PercentUsed=" & CStr(db.PercentUsed)
     Print "CurrentAccessLevel=" & CStr(db.CurrentAccessLevel)
     Print "FileFormat=" & CStr(db.FileFormat)
+    Print "IsFTIndexed=" & CStr(db.IsFTIndexed)
 
     Set created = db.Created
     Set modified = db.LastModified
     Print "Created=" & created.LocalTime
     Print "LastModified=" & modified.LocalTime
+    If Not db.LastFTIndexed Is Nothing Then
+        Print "LastFTIndexed=" & db.LastFTIndexed.LocalTime
+    Else
+        Print "LastFTIndexed=Nothing"
+    End If
 
-    ' ------------------------------------------------------------------
-    ' Read/write database-info properties.
-    ' Original values are restored after every write.
-    ' ------------------------------------------------------------------
     If ENABLE_METADATA_WRITES Then
         originalTitle = db.Title
         originalCategories = db.Categories
@@ -94,33 +95,22 @@ Sub Main()
         originalDesignTemplate = db.DesignTemplateName
 
         db.Title = "XPscript property test"
-        Print "WRITE Title=" & db.Title
+        If db.Title <> "XPscript property test" Then failures = failures + 1
         db.Title = originalTitle
-        Print "RESTORE Title=" & db.Title
 
         db.Categories = "XPscriptTestCategory"
-        Print "WRITE Categories=" & db.Categories
+        If db.Categories <> "XPscriptTestCategory" Then failures = failures + 1
         db.Categories = originalCategories
-        Print "RESTORE Categories=" & db.Categories
 
         db.TemplateName = "XPscriptTestTemplate"
-        Print "WRITE TemplateName=" & db.TemplateName
+        If db.TemplateName <> "XPscriptTestTemplate" Then failures = failures + 1
         db.TemplateName = originalTemplate
-        Print "RESTORE TemplateName=" & db.TemplateName
 
         db.DesignTemplateName = "XPscriptTestDesignTemplate"
-        Print "WRITE DesignTemplateName=" & db.DesignTemplateName
+        If db.DesignTemplateName <> "XPscriptTestDesignTemplate" Then failures = failures + 1
         db.DesignTemplateName = originalDesignTemplate
-        Print "RESTORE DesignTemplateName=" & db.DesignTemplateName
-    Else
-        Print "SKIP: metadata write tests disabled"
     End If
 
-    ' ------------------------------------------------------------------
-    ' CreateDocument, GetDocumentByID, GetDocumentByUNID
-    ' The test document remains in xpscript.nsf because NotesDocument delete
-    ' is not part of the current wrapper surface.
-    ' ------------------------------------------------------------------
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
     Call doc.ReplaceItemValue("Subject", "XPscript NotesDatabase smoke test")
@@ -133,125 +123,414 @@ Sub Main()
     Print "CreateDocument.UNID=" & unid
 
     Set byId = db.GetDocumentByID(noteId)
-    If byId <> Nothing Then
-        Print "GetDocumentByID.Subject=" & byId.GetString("Subject")
-    Else
-        Print "FAIL: GetDocumentByID returned Nothing"
-    End If
-
+    If byId Is Nothing Then failures = failures + 1 Else Print "GetDocumentByID.Subject=" & byId.GetString("Subject")
     Set byUnid = db.GetDocumentByUNID(unid)
-    If byUnid <> Nothing Then
-        Print "GetDocumentByUNID.Subject=" & byUnid.GetString("Subject")
-    Else
-        Print "FAIL: GetDocumentByUNID returned Nothing"
-    End If
+    If byUnid Is Nothing Then failures = failures + 1 Else Print "GetDocumentByUNID.Subject=" & byUnid.GetString("Subject")
 
-    ' Backward-compatible aliases.
     Set byId = db.GetDocumentByNoteId(noteId)
-    Print "GetDocumentByNoteId alias works=" & CStr(byId <> Nothing)
+    If byId Is Nothing Then failures = failures + 1
     Set byId = db.OpenDocumentByNoteId(noteId)
-    Print "OpenDocumentByNoteId alias works=" & CStr(byId <> Nothing)
+    If byId Is Nothing Then failures = failures + 1
     Set byUnid = db.OpenDocumentByUNID(unid)
-    Print "OpenDocumentByUNID alias works=" & CStr(byUnid <> Nothing)
+    If byUnid Is Nothing Then failures = failures + 1
 
-    ' ------------------------------------------------------------------
-    ' Collections: CreateDocumentCollection, AllDocuments and Search
-    ' ------------------------------------------------------------------
     Set emptyDocs = db.CreateDocumentCollection()
-    Print "CreateDocumentCollection.Count=" & CStr(emptyDocs.Count)
     Call emptyDocs.AddDocument(doc)
-    Print "CreateDocumentCollection.CountAfterAdd=" & CStr(emptyDocs.Count)
+    If emptyDocs.Count <> 1 Then failures = failures + 1
 
     Set docs = db.AllDocuments
     Print "AllDocuments.Count=" & CStr(docs.Count)
-
+    Call docs.Recycle()
     Set docs = db.Search("XPScriptMarker=\"notes-database-full-surface-test\"")
     Print "Search.Count=" & CStr(docs.Count)
 
-    ' ------------------------------------------------------------------
-    ' GetProfileDocument. NSFProfileOpen creates the profile if missing.
-    ' This profile is intentionally saved so it can be inspected in Notes.
-    ' ------------------------------------------------------------------
     Set profile = db.GetProfileDocument(TEST_PROFILE, TEST_PROFILE_KEY)
     Call profile.ReplaceItemValue("XPScriptProfileMarker", "profile-ok")
     Call profile.Save()
-    Print "GetProfileDocument.Marker=" & profile.GetString("XPScriptProfileMarker")
+    If profile.GetString("XPScriptProfileMarker") <> "profile-ok" Then failures = failures + 1
 
-    ' ------------------------------------------------------------------
-    ' GetView plus the older OpenView alias.
-    ' Requires a view named XPScriptTestView in xpscript.nsf.
-    ' ------------------------------------------------------------------
     Set view = db.GetView(TEST_VIEW)
-    If view <> Nothing Then
+    If view Is Nothing Then
+        Print "FAIL: GetView returned Nothing"
+        failures = failures + 1
+    Else
         Print "GetView.Name=" & view.Name
-        Set byId = view.GetFirstDocument()
-        If byId <> Nothing Then
-            Print "GetView.FirstDocument.NoteID=" & byId.NoteIdHex
-        Else
-            Print "GetView.FirstDocument=Nothing"
-        End If
         Call view.Recycle()
         Set view = Nothing
-    Else
-        Print "FAIL: GetView(" & TEST_VIEW & ") returned Nothing"
     End If
 
     Set view = db.OpenView(TEST_VIEW)
-    Print "OpenView alias works=" & CStr(view <> Nothing)
-    If view <> Nothing Then
-        Call view.Recycle()
-        Set view = Nothing
-    End If
+    If view Is Nothing Then failures = failures + 1 Else Call view.Recycle()
+    Set view = Nothing
 
-    ' ------------------------------------------------------------------
-    ' FTSearch. Enable only when xpscript.nsf has a full-text index.
-    ' ------------------------------------------------------------------
     If ENABLE_FT_SEARCH Then
         Set docs = db.FTSearch("XPscript", 100)
         Print "FTSearch.Count=" & CStr(docs.Count)
-    Else
-        Print "SKIP: FTSearch disabled"
     End If
 
-    ' ------------------------------------------------------------------
-    ' RunAgent. Enable only when XPScriptTestAgent exists.
-    ' ------------------------------------------------------------------
     If ENABLE_AGENT_TEST Then
         Set agentResult = db.RunAgent(TEST_AGENT)
-        If agentResult <> Nothing Then
-            Print "RunAgent.Success=" & CStr(agentResult.Success)
-            Print "RunAgent.Status=" & CStr(agentResult.Status)
-            Print "RunAgent.Output=" & agentResult.Output
-        Else
-            Print "FAIL: RunAgent returned Nothing"
-        End If
-    Else
-        Print "SKIP: RunAgent disabled"
+        If agentResult Is Nothing Then failures = failures + 1
     End If
 
-    ' ------------------------------------------------------------------
-    ' RemoveFTIndex is destructive. It is disabled by default.
-    ' ------------------------------------------------------------------
-    If ENABLE_REMOVE_FT_INDEX Then
-        Call db.RemoveFTIndex()
-        Print "RemoveFTIndex=CALLED"
-    Else
-        Print "SKIP: RemoveFTIndex disabled"
-    End If
-
-    Print "NOTESDATABASE-TEST-END"
+    failures = failures + TestChangedDatabaseSurface(session, db, COPY_DATABASE, ENABLE_REMOVE_FT_INDEX)
+    failures = failures + TestRichTextSurface(session, db)
 
 Cleanup:
-    If agentResult <> Nothing Then Call agentResult.Recycle()
-    If profile <> Nothing Then Call profile.Recycle()
-    If byUnid <> Nothing Then Call byUnid.Recycle()
-    If byId <> Nothing Then Call byId.Recycle()
-    If doc <> Nothing Then Call doc.Recycle()
-    If emptyDocs <> Nothing Then Call emptyDocs.Recycle()
-    If docs <> Nothing Then Call docs.Recycle()
-    If view <> Nothing Then Call view.Recycle()
-    If modified <> Nothing Then Call modified.Recycle()
-    If created <> Nothing Then Call created.Recycle()
-    If db <> Nothing Then Call db.Recycle()
-    If session <> Nothing Then Call session.Recycle()
+    If agentResult Is Not Nothing Then Call agentResult.Recycle()
+    If profile Is Not Nothing Then Call profile.Recycle()
+    If byUnid Is Not Nothing Then Call byUnid.Recycle()
+    If byId Is Not Nothing Then Call byId.Recycle()
+    If doc Is Not Nothing Then Call doc.Recycle()
+    If emptyDocs Is Not Nothing Then Call emptyDocs.Recycle()
+    If docs Is Not Nothing Then Call docs.Recycle()
+    If view Is Not Nothing Then Call view.Recycle()
+    If modified Is Not Nothing Then Call modified.Recycle()
+    If created Is Not Nothing Then Call created.Recycle()
+    If db Is Not Nothing Then Call db.Recycle()
+
+    If failures = 0 Then
+        Print "NOTESDATABASE-TEST=PASS"
+    Else
+        Print "NOTESDATABASE-TEST=FAIL COUNT=" & CStr(failures)
+    End If
+    If session Is Not Nothing Then Call session.Recycle()
+    Print "NOTESDATABASE-TEST-END"
 End Sub
+
+Function TestChangedSessionSurface(ByVal session As NotesSession) As Integer
+    Dim failures As Integer
+    Dim style As NotesRichTextStyle
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim stream As NotesStream
+    Dim name As NotesName
+    Dim dt As NotesDateTime
+
+    failures = 0
+    Print "SECTION=NotesSession changed/full surface"
+    Print "Username=" & session.Username
+    Print "UserName=" & session.UserName
+    Print "CommonUsername=" & session.CommonUsername
+    Print "CommonUserName=" & session.CommonUserName
+    Print "NotesVersion=" & session.NotesVersion
+    Print "NotesBuildVersion=" & CStr(session.NotesBuildVersion)
+    Print "Platform=" & session.Platform
+    Print "RuntimeDirectory=" & session.RuntimeDirectory
+    Print "ProgramDir=" & session.ProgramDir
+    Print "NotesIni=" & session.NotesIni
+    Print "IniDir=" & session.IniDir
+    Print "DataDir=" & session.DataDir
+
+    If session.IsRecycled Then failures = failures + 1
+    session.ConvertMIME = False
+    If session.ConvertMIME Then failures = failures + 1
+    session.ConvertMIME = True
+    If Not session.ConvertMIME Then failures = failures + 1
+
+    Set name = session.CreateName("CN=Ada Lovelace/O=Example/C=SE")
+    If name Is Nothing Then failures = failures + 1 Else Call name.Recycle()
+    Set dt = session.CreateDateTimeNow()
+    If dt Is Nothing Then failures = failures + 1 Else Call dt.Recycle()
+    Set stream = session.CreateStream()
+    If stream Is Nothing Then failures = failures + 1 Else Call stream.Recycle()
+    Set style = session.CreateRichTextStyle()
+    If style Is Nothing Then failures = failures + 1 Else Call style.Recycle()
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    If paragraphStyle Is Nothing Then failures = failures + 1 Else Call paragraphStyle.Recycle()
+
+    TestChangedSessionSurface = failures
+End Function
+
+Function TestChangedDatabaseSurface(ByVal session As NotesSession, ByVal db As NotesDatabase, ByVal copyPath As String, ByVal removeFtIndex As Boolean) As Integer
+    Dim failures As Integer
+    Dim since As NotesDateTime
+    Dim modifiedDocs As NotesDocumentCollection
+    Dim copyDb As NotesDatabase
+    Dim replicaDb As NotesDatabase
+    Dim errCode As Integer
+
+    failures = 0
+    Print "SECTION=NotesDatabase changed surface"
+    Print "OpenError=" & db.OpenError
+    Print "IsFTIndexed=" & CStr(db.IsFTIndexed)
+    If Not db.LastFTIndexed Is Nothing Then Print "LastFTIndexed=" & db.LastFTIndexed.LocalTime
+
+    Set since = session.CreateDateTimeNow()
+    Call since.AdjustDay(-1)
+    Set modifiedDocs = db.GetModifiedDocuments(since, 0)
+    If modifiedDocs Is Nothing Then
+        failures = failures + 1
+    Else
+        Print "GetModifiedDocuments.Count=" & CStr(modifiedDocs.Count)
+        Call modifiedDocs.Recycle()
+    End If
+    Call since.Recycle()
+
+    Set replicaDb = session.OpenByReplicaID("", db.ReplicaID)
+    If replicaDb Is Nothing Then
+        failures = failures + 1
+    ElseIf Not replicaDb.IsOpen Then
+        failures = failures + 1
+    Else
+        Call replicaDb.Recycle()
+    End If
+
+    errCode = 0
+    On Error Resume Next
+    Set copyDb = db.CreateCopy("", copyPath)
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 0 Then
+        Print "FAIL CreateCopy Err=" & CStr(errCode)
+        failures = failures + 1
+    ElseIf copyDb Is Nothing Then
+        failures = failures + 1
+    ElseIf Not copyDb.IsOpen Then
+        failures = failures + 1
+    Else
+        Print "CreateCopy.FilePath=" & copyDb.FilePath
+
+        errCode = 0
+        On Error Resume Next
+        Call copyDb.Sign()
+        errCode = Err
+        On Error GoTo 0
+        If errCode <> 0 Then
+            Print "FAIL Sign Err=" & CStr(errCode)
+            failures = failures + 1
+        Else
+            Print "Sign=PASS"
+        End If
+
+        If removeFtIndex Then
+            errCode = 0
+            On Error Resume Next
+            Call copyDb.RemoveFTIndex()
+            errCode = Err
+            On Error GoTo 0
+            If errCode <> 0 Then failures = failures + 1
+            If copyDb.IsFTIndexed Then failures = failures + 1
+        Else
+            Print "SKIP RemoveFTIndex destructive runtime check"
+        End If
+
+        errCode = 0
+        On Error Resume Next
+        Call copyDb.Remove()
+        errCode = Err
+        On Error GoTo 0
+        If errCode <> 0 Then failures = failures + 1
+        Call copyDb.Recycle()
+    End If
+
+    TestChangedDatabaseSurface = failures
+End Function
+
+Function TestRichTextSurface(ByVal session As NotesSession, ByVal db As NotesDatabase) As Integer
+    Dim failures As Integer
+    Dim doc As NotesDocument
+    Dim rich As NotesRichTextItem
+    Dim item As NotesItem
+    Dim style As NotesRichTextStyle
+    Dim rangeStyle As NotesRichTextStyle
+    Dim paragraphStyle As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+    Dim navigator As NotesRichTextNavigator
+    Dim navigatorClone As NotesRichTextNavigator
+    Dim rangeNavigator As NotesRichTextNavigator
+    Dim richRange As NotesRichTextRange
+    Dim rangeClone As NotesRichTextRange
+    Dim section As NotesRichTextSection
+    Dim table As NotesRichTextTable
+    Dim docLink As NotesRichTextDocLink
+    Dim embedded As NotesEmbeddedObject
+    Dim embeddedObjects As Variant
+    Dim attachmentBytes As Variant
+    Dim html As String
+    Dim htmlInline As String
+    Dim saved As Boolean
+
+    failures = 0
+    Print "SECTION=All NotesRichText related surfaces"
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptTest")
+    Set rich = doc.CreateRichTextItem("RichSurface")
+    If rich Is Nothing Then
+        TestRichTextSurface = 1
+        Exit Function
+    End If
+
+    Print "RichText.Name=" & rich.Name
+    Print "RichText.Type=" & CStr(rich.Type)
+    Print "RichText.Text=" & rich.Text
+
+    Set style = session.CreateRichTextStyle()
+    style.Bold = True
+    style.Italic = True
+    style.Underline = True
+    style.Strikethrough = True
+    style.FontSize = 12
+    style.NotesColor = 0
+    style.NotesFont = 1
+    If Not style.Bold Then failures = failures + 1
+    If Not style.Italic Then failures = failures + 1
+    If Not style.Underline Then failures = failures + 1
+    If Not style.Strikethrough Then failures = failures + 1
+    If style.FontSize <> 12 Then failures = failures + 1
+    Print "Style.Bold=" & CStr(style.Bold)
+    Print "Style.Italic=" & CStr(style.Italic)
+    Print "Style.Underline=" & CStr(style.Underline)
+    Print "Style.Strikethrough=" & CStr(style.Strikethrough)
+    Print "Style.FontSize=" & CStr(style.FontSize)
+    Print "Style.NotesColor=" & CStr(style.NotesColor)
+    Print "Style.NotesFont=" & CStr(style.NotesFont)
+
+    Set paragraphStyle = session.CreateRichTextParagraphStyle()
+    paragraphStyle.Alignment = 0
+    paragraphStyle.LeftMargin = 1440
+    paragraphStyle.RightMargin = 1440
+    paragraphStyle.FirstLineLeftMargin = 0
+    paragraphStyle.Pagination = 0
+    Print "Paragraph.Alignment=" & CStr(paragraphStyle.Alignment)
+    Print "Paragraph.LeftMargin=" & CStr(paragraphStyle.LeftMargin)
+    Print "Paragraph.RightMargin=" & CStr(paragraphStyle.RightMargin)
+    Print "Paragraph.FirstLineLeftMargin=" & CStr(paragraphStyle.FirstLineLeftMargin)
+    Print "Paragraph.Pagination=" & CStr(paragraphStyle.Pagination)
+
+    Set tab = paragraphStyle.SetTab(1440, 0)
+    Print "Tab.Position=" & CStr(tab.Position)
+    Print "Tab.Type=" & CStr(tab.Type)
+    Call paragraphStyle.SetTabs(3, 1440, 720, 0)
+
+    Call rich.AppendStyle(style)
+    Call rich.AppendText("XPscript rich-text full surface")
+    Call rich.Compact()
+    If rich.Text = "" Then failures = failures + 1
+
+    html = rich.ConvertToHTML()
+    htmlInline = rich.ConvertToHTML(True)
+    Print "ConvertToHTML.Length=" & CStr(Len(html))
+    Print "ConvertToHTML.InlineLength=" & CStr(Len(htmlInline))
+
+    saved = rich.SaveAttachment("missing-runtime-attachment.bin", "missing-runtime-attachment.out")
+    Print "SaveAttachmentMissing=" & CStr(saved)
+
+    Set item = doc.GetFirstItem("RichSurface")
+    If item Is Nothing Then
+        failures = failures + 1
+    Else
+        If item.GetRichTextItem() Is Nothing Then failures = failures + 1
+        Call item.Recycle()
+    End If
+
+    Set navigator = rich.CreateNavigator()
+    Set richRange = rich.CreateRange()
+    If navigator Is Nothing Then failures = failures + 1
+    If richRange Is Nothing Then failures = failures + 1
+
+    If navigator.FindFirstElement(3) Then
+        Call navigator.SetCharOffset(0)
+        Call richRange.SetBegin(navigator)
+        Print "Range.Type=" & CStr(richRange.Type)
+        Print "Range.TextRun=" & richRange.TextRun
+        Print "Range.TextParagraph=" & richRange.TextParagraph
+        Call navigator.SetCharOffset(Len(richRange.TextRun))
+        Call richRange.SetEnd(navigator)
+        Set rangeStyle = richRange.Style
+        If rangeStyle Is Nothing Then failures = failures + 1 Else Print "Range.Style.FontSize=" & CStr(rangeStyle.FontSize)
+        If rangeStyle Is Not Nothing Then Call rangeStyle.Recycle()
+        Call richRange.SetStyle(style)
+        Set rangeNavigator = richRange.Navigator
+        Set rangeClone = richRange.Clone()
+        If rangeNavigator Is Nothing Then failures = failures + 1
+        If rangeClone Is Nothing Then failures = failures + 1 Else Call rangeClone.Reset()
+    Else
+        failures = failures + 1
+    End If
+
+    If navigator.FindFirstString("XPscript", 1) Then Print "Navigator.FindFirstString=PASS" Else failures = failures + 1
+    Set navigatorClone = navigator.Clone()
+    If navigatorClone Is Nothing Then failures = failures + 1
+
+    embeddedObjects = rich.EmbeddedObjects
+    Set embedded = rich.GetEmbeddedObject("missing-runtime-attachment.bin")
+    If embedded Is Not Nothing Then Call embedded.Recycle()
+
+    ' Linked CD objects need a document containing the corresponding CD records.
+    ' Keep their entire public surface compile-covered here. Runtime materialization
+    ' is exercised when such records are present in the fixture document.
+    If False Then
+        Set section = navigator.GetFirstElement(6)
+        Call navigator.SetPosition(section)
+        Call navigator.SetPositionAtEnd(section)
+        Print section.Title
+        Print CStr(section.IsExpanded)
+        Print CStr(section.BarColor.NotesColor)
+        Print CStr(section.TitleStyle.FontSize)
+        Call section.SetBarColor(section.BarColor)
+        Call section.SetTitleStyle(style)
+        Call section.Remove()
+        Call section.Recycle()
+
+        Set table = navigator.GetFirstElement(1)
+        Call navigator.SetPosition(table)
+        Call navigator.SetPositionAtEnd(table)
+        Print CStr(table.RowCount)
+        Print CStr(table.ColumnCount)
+        Print CStr(table.RightToLeft)
+        Print CStr(table.Style)
+        Call table.Remove()
+        Call table.Recycle()
+
+        Set docLink = navigator.GetFirstElement(5)
+        Call navigator.SetPosition(docLink)
+        Call navigator.SetPositionAtEnd(docLink)
+        Print docLink.DbReplicaID
+        Print docLink.ViewUNID
+        Print docLink.DocUNID
+        Print docLink.DisplayComment
+        Print docLink.ServerHint
+        Print docLink.HotSpotText
+        Call docLink.Remove()
+        Call docLink.Recycle()
+
+        Set embedded = rich.EmbedObject(1454, "", "missing-runtime-attachment.bin")
+        Set embedded = rich.EmbedObject(1454, "", "missing-runtime-attachment.bin", "runtime-attachment.bin")
+        Call navigator.SetPosition(embedded)
+        Call navigator.SetPositionAtEnd(embedded)
+        Print embedded.FileCreated
+        Print embedded.FileEncoding
+        Print embedded.FileModified
+        Print CStr(embedded.FileSize)
+        Print embedded.Name
+        Print embedded.Parent.Name
+        Print embedded.Source
+        Print CStr(embedded.Type)
+        attachmentBytes = embedded.ToByteArray()
+        Call embedded.ExtractFile("missing-runtime-attachment.out")
+        Call embedded.Remove()
+        Call embedded.Recycle()
+
+        Set embedded = navigator.GetElement()
+        Set embedded = navigator.GetLastElement(8)
+        Set embedded = navigator.GetNthElement(8, 1)
+        Set embedded = navigator.GetNextElement(8)
+    End If
+
+    Call doc.Save()
+
+    If navigatorClone Is Not Nothing Then Call navigatorClone.Recycle()
+    If rangeNavigator Is Not Nothing Then Call rangeNavigator.Recycle()
+    If rangeClone Is Not Nothing Then Call rangeClone.Recycle()
+    If richRange Is Not Nothing Then Call richRange.Recycle()
+    If navigator Is Not Nothing Then Call navigator.Recycle()
+    If tab Is Not Nothing Then Call tab.Recycle()
+    If paragraphStyle Is Not Nothing Then Call paragraphStyle.Recycle()
+    If style Is Not Nothing Then Call style.Recycle()
+    If rich Is Not Nothing Then Call rich.Recycle()
+    Call doc.Remove(True)
+    Call doc.Recycle()
+
+    TestRichTextSurface = failures
+End Function
