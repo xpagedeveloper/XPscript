@@ -5,10 +5,9 @@ internal static class NotesExtendedRuntimePostProcessor
     public static string ApplyBuiltSurface(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        var richText = source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
-        var mime = source.Contains("public bool ConvertMIME { get; set; }", StringComparison.Ordinal) ||
-                   source.Contains("MIMEConvertMIMEPartsCCDelegate", StringComparison.Ordinal);
-        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(richText, mime));
+        var mime = source.Contains("XPScriptNotesMIMEEntity", StringComparison.Ordinal) ||
+                   source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
+        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(mime, mime));
     }
 
     public static string ApplyBuiltSurface(string source, NotesRuntimeFeatures features)
@@ -21,7 +20,7 @@ internal static class NotesExtendedRuntimePostProcessor
             source = NotesMimeItemAnchorPostProcessor.Prepare(source);
             source = NotesMimeEntityPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeItemAnchorPostProcessor.Cleanup(source);
-            source = NotesMimeEntityAbiPostProcessor.ApplyBuiltSurface(source);
+            source = NotesMimeStreamAbiPostProcessor.ApplyBuiltSurface(source);
         }
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
