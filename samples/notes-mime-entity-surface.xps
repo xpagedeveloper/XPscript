@@ -1,0 +1,39 @@
+' Compile/runtime surface probe for NotesMIMEEntity and NotesMIMEHeader.
+Dim session As New NotesSession(".")
+Dim db As NotesDatabase
+Dim doc As NotesDocument
+Dim item As NotesItem
+Dim mime As NotesMIMEEntity
+Dim header As NotesMIMEHeader
+Dim stream As NotesStream
+
+session.ConvertMIME = False
+Set db = session.OpenDatabase("", "mail.nsf")
+Set doc = db.GetDocumentByNoteId("00000000")
+If Not(doc Is Nothing) Then
+    Set mime = doc.GetMIMEEntity("Body")
+    If Not(mime Is Nothing) Then
+        Print mime.ContentType
+        Print mime.ContentSubType
+        Print mime.Charset
+        Print mime.Encoding
+        Print mime.Headers
+        Print mime.ContentAsText
+        Print mime.BoundaryStart
+        Print mime.BoundaryEnd
+        Print mime.Preamble
+        Set header = mime.GetNthHeader("Content-Type")
+        If Not(header Is Nothing) Then
+            Print header.HeaderName
+            Print header.GetHeaderVal()
+            Print header.GetHeaderValAndParams()
+            Print header.GetParamVal("charset")
+        End If
+        Set stream = session.CreateStream()
+        Call mime.GetContentAsBytes(stream)
+    End If
+    Set item = doc.GetFirstItem("Body")
+    If Not(item Is Nothing) Then Set mime = item.GetMIMEEntity()
+    Call doc.CloseMIMEEntities()
+End If
+session.ConvertMIME = True
