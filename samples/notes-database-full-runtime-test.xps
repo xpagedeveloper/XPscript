@@ -47,17 +47,13 @@ Sub Main()
             Print "LastFTIndexed=" & lastIndexed.LocalTime
         End If
     Else
-        If lastIndexed Is Nothing Then
-            Print "LastFTIndexed=Nothing"
-        Else
-            Print "LastFTIndexed=" & lastIndexed.LocalTime
-        End If
+        If lastIndexed Is Nothing Then Print "LastFTIndexed=Nothing" Else Print "LastFTIndexed=" & lastIndexed.LocalTime
     End If
     If Not lastIndexed Is Nothing Then Call lastIndexed.Recycle()
 
     Set since = session.CreateDateTimeNow()
     Call since.AdjustDay(-1)
-    Set docs = db.GetModifiedDocuments(since, 0)
+    Set docs = db.GetModifiedDocuments(since, NotesConst.All)
     If docs Is Nothing Then
         Print "FAIL GetModifiedDocuments returned Nothing"
         failures = failures + 1
@@ -84,20 +80,12 @@ Sub Main()
         Call copyDb.Recycle()
     Else
         Print "CreateCopy=" & copyDb.FilePath
-
-        ' Sign and RemoveFTIndex are mutating operations. Exercise them on the temporary
-        ' copy so the source runtime fixture is not modified by this focused regression.
         errCode = 0
         On Error Resume Next
         Call copyDb.Sign()
         errCode = Err
         On Error GoTo 0
-        If errCode <> 0 Then
-            Print "FAIL Sign Err=" & CStr(errCode)
-            failures = failures + 1
-        Else
-            Print "Sign=PASS"
-        End If
+        If errCode <> 0 Then Print "FAIL Sign Err=" & CStr(errCode): failures = failures + 1 Else Print "Sign=PASS"
 
         errCode = 0
         On Error Resume Next
@@ -119,19 +107,11 @@ Sub Main()
         Call copyDb.Remove()
         errCode = Err
         On Error GoTo 0
-        If errCode <> 0 Then
-            Print "FAIL temporary copy cleanup Err=" & CStr(errCode)
-            failures = failures + 1
-        End If
+        If errCode <> 0 Then Print "FAIL temporary copy cleanup Err=" & CStr(errCode): failures = failures + 1
         Call copyDb.Recycle()
     End If
 
     Call db.Recycle()
     Call session.Recycle()
-
-    If failures = 0 Then
-        Print "NOTES-DATABASE-FULL=PASS"
-    Else
-        Print "NOTES-DATABASE-FULL=FAIL COUNT=" & CStr(failures)
-    End If
+    If failures = 0 Then Print "NOTES-DATABASE-FULL=PASS" Else Print "NOTES-DATABASE-FULL=FAIL COUNT=" & CStr(failures)
 End Sub
