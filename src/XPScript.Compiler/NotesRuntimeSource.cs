@@ -27,6 +27,7 @@ internal static class NotesRuntimeSource
         source = NotesViewNavigatorCachePostProcessor.Apply(source);
         source = NotesViewNavigatorBufferMaxEntriesPostProcessor.Apply(source);
         source = NotesViewNavigatorHistoryCapPostProcessor.Apply(source);
+        source = NotesViewDocumentNavigationPostProcessor.Apply(source);
         source = NotesDatabaseCreateCompatibilityPostProcessor.Apply(source);
         source = NotesSessionEnvironmentPostProcessor.Apply(source);
         source = NotesDocumentRemovePostProcessor.Apply(source);
