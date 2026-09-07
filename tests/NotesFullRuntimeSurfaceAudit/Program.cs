@@ -47,7 +47,10 @@ var classes = new[]
     // Notes classes (for example NotesAgent) that also expose a public NoteID property.
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
-    (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null)
+    (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null)
 };
 
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
