@@ -174,7 +174,7 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     }
 
     public XPScriptNotesDocumentCollection GetAllDocumentsByKey(object? keyValue)
-        => GetAllDocumentsByKey(keyValue, true);
+        => GetAllDocumentsByKey(keyValue, false);
 
     public XPScriptNotesDocumentCollection GetAllDocumentsByKey(object? keyValue, object? exactMatchValue)
     {
