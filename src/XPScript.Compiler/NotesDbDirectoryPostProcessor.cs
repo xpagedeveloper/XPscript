@@ -78,6 +78,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         const ushort FileDbDesign = 2;
         const ushort FileDbAny = 4;
         const ushort FileFtAny = 5;
+        const ushort FileRecurse = 8192;
         var fileType = type switch
         {
             1245 => FileDbRepl,
@@ -101,8 +102,13 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
         try
         {
+            // NotesDBDirectory enumerates databases below the server/data directory, not
+            // only files at its root. FILE_RECURSE is the native C API directory-search
+            // flag for descending into subdirectories while preserving the requested
+            // FILE_DBxxx/FILE_FTxxx type filter.
+            var searchMask = (ushort)(fileType | FileRecurse);
             Check(Resolve<NSFSearchDirectoryDelegate>("NSFSearch")(
-                directory, 0, 0, SearchFileType | SearchSummary, fileType, 0, callback, 0, 0), "NSFSearch");
+                directory, 0, 0, SearchFileType | SearchSummary, searchMask, 0, callback, 0, 0), "NSFSearch");
             GC.KeepAlive(callback);
         }
         finally { CloseDatabase(directory); }
