@@ -13,6 +13,7 @@ internal static class NotesRuntimeSource
                      NotesRuntimeIndexedValueSource.Code + "\n\n" +
                      NotesNativeApiSource.Code;
 
+        source = NotesConstPostProcessor.Apply(source);
         source = NotesDocumentCollectionPostProcessor.Apply(source);
         source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
         source = NotesDatabaseLifecyclePostProcessor.Apply(source);
