@@ -60,6 +60,13 @@ internal sealed partial class XPScriptNotesNativeApi
         return parent;
     }
 
+    internal nint IterateMimeNext(nint directory, nint topEntity, nint previousEntity)
+    {
+        EnsureInitialized();
+        Check(Resolve<MIMEIterateNextDelegate>("MIMEIterateNext")(directory, topEntity, previousEntity, out var entity), "MIMEIterateNext");
+        return entity;
+    }
+
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEOpenDirectoryDelegate(uint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
@@ -74,6 +81,8 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate ushort MIMEGetPrevSiblingDelegate(nint directory, nint entity, out nint sibling);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEGetParentDelegate(nint directory, nint entity, out nint parent);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MIMEIterateNextDelegate(nint directory, nint topEntity, nint previousEntity, out nint entity);
 }
 """;
 }
