@@ -26,7 +26,9 @@ Sub Main()
 End Sub
 ```
 
-The browser copy of `DatabaseTitle` is replaced by the existing browser/server bridge stub. Its scalar arguments cross the HTTP boundary, the real function executes on the server, and only its serializable result is returned to WebAssembly.
+The browser copy of `DatabaseTitle` is replaced by the browser/server bridge stub. Its scalar arguments cross the HTTP boundary, the real function executes on the server, and only its serializable result is returned to WebAssembly. XPscript source remains sequential: the statement following `DatabaseTitle(...)` executes after the server call has returned.
+
+A UI button normally calls a browser-side callback, and that callback may call the `[ServerSide]` Notes function directly. See [Server-side functions in Browser WebAssembly](browser-wasm-server-side.md) for the button pattern, continuation semantics and current busy-indicator behavior.
 
 ## Compiler verification
 
