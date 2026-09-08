@@ -36,17 +36,23 @@ internal static class NotesDxlImportResultPostProcessor
             ImportOptionValidation + "\n\n    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
             "importer-option-validation");
 
-        source = ReplaceRequired(source,
-            "    internal uint CreateDxlExporter()",
-            NativeDxlSupport + "\n\n    internal uint CreateDxlExporter()",
-            "native-dxl-support");
+        // NotesNativeApiDxlSource now contains the native DXL delegates and helpers
+        // directly. Only inject the legacy support block for older generated sources.
+        const string nativeDxlMarker = "internal delegate ushort DXLCreateImporterDelegate";
+        if (!source.Contains(nativeDxlMarker, StringComparison.Ordinal))
+        {
+            source = ReplaceRequired(source,
+                "    internal uint CreateDxlExporter()",
+                NativeDxlSupport + "\n\n    internal uint CreateDxlExporter()",
+                "native-dxl-support");
+        }
 
         // Relative DXL paths are now resolved centrally by ResolveDxlFilePath against
         // _applicationDirectory. Older generated runtime used DataDirectory here and
         // required this post-processing patch; the current runtime no longer does.
         const string legacyDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);";
         const string patchedDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);";
-        const string currentDxlPath = "var fullPath = Path.GetFullPath(filePath, _applicationDirectory);";
+        const string currentDxlPath = "Path.GetFullPath(filePath, _applicationDirectory)";
         if (source.Contains(legacyDxlPath, StringComparison.Ordinal))
             source = source.Replace(legacyDxlPath, patchedDxlPath, StringComparison.Ordinal);
         else if (!source.Contains(patchedDxlPath, StringComparison.Ordinal) && !source.Contains(currentDxlPath, StringComparison.Ordinal))
