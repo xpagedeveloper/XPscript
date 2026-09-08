@@ -79,6 +79,7 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE=" & db.FilePath
+        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-OPENED-DATABASE"
         Call db.Recycle()
     Else
         Print "REPLICA-CANDIDATE=NONE"
@@ -86,6 +87,7 @@ Sub Main()
     Set db = directory.GetNextDatabase()
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE-NEXT=" & db.FilePath
+        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-NEXT-OPENED-DATABASE"
         Call db.Recycle()
     Else
         Print "REPLICA-CANDIDATE-NEXT=NONE"
@@ -94,6 +96,7 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
     If Not db Is Nothing Then
         Print "TEMPLATE-CANDIDATE=" & db.FilePath
+        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-CANDIDATE-OPENED-DATABASE"
         Call db.Recycle()
     Else
         Print "TEMPLATE-CANDIDATE=NONE"
@@ -102,6 +105,7 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE)
     If Not db Is Nothing Then
         Print "TEMPLATE=" & db.FilePath
+        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-OPENED-DATABASE"
         Call db.Recycle()
     Else
         Print "TEMPLATE=NONE"
