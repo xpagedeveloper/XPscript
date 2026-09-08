@@ -1,49 +1,76 @@
-' Runtime probe for MIME on the first ten documents in the mail inbox.
+' Runtime probe for native MIME create, save and reopen.
 Sub Main()
     Dim session As New NotesSession()
     Dim db As NotesDatabase
-    Dim view As NotesView
     Dim doc As NotesDocument
+    Dim reopened As NotesDocument
     Dim mime As NotesMIMEEntity
-    Dim count As Integer
+    Dim unid As String
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
-    Set view = db.GetView("($Inbox)")
 
-    If view Is Nothing Then
-        Print "MIME probe: ($Inbox) view not found"
+    Print "MIME create/reopen probe: creating document"
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "Memo")
+    Call doc.ReplaceItemValue("Subject", "XPScript native MIME create/reopen probe")
+    Call doc.ReplaceItemValue("XPScriptMarker", "notes-mime-entity-surface")
+
+    Set mime = doc.CreateMIMEEntity("Body")
+    If mime Is Nothing Then
+        Print "FAIL: CreateMIMEEntity returned Nothing"
     Else
-        Set doc = view.GetFirstDocument()
-        count = 0
+        Print "Created MIME ContentType: " & mime.ContentType
+        Print "Created MIME ContentSubType: " & mime.ContentSubType
+        Print "Created MIME Charset: " & mime.Charset
+    End If
 
-        Do While Not(doc Is Nothing) And count < 10
-            count = count + 1
-            Print "Document " & count & ": " & doc.UniversalID
+    Call doc.CloseMIMEEntities()
+    Set mime = Nothing
 
-            Set mime = doc.GetMIMEEntity("Body")
-            If mime Is Nothing Then
-                Print "  Body: not MIME"
+    Call doc.Save()
+    unid = doc.UniversalID
+    Print "Saved MIME document: " & unid
+
+    Call doc.Recycle()
+    Set doc = Nothing
+
+    Print "MIME create/reopen probe: reopening document"
+    Set reopened = db.GetDocumentByUNID(unid)
+    If reopened Is Nothing Then
+        Print "FAIL: saved document could not be reopened"
+    Else
+        Set mime = reopened.GetMIMEEntity("Body")
+        If mime Is Nothing Then
+            Print "FAIL: reopened Body is not MIME"
+        Else
+            Print "Reopened MIME ContentType: " & mime.ContentType
+            Print "Reopened MIME ContentSubType: " & mime.ContentSubType
+            Print "Reopened MIME Charset: " & mime.Charset
+
+            If mime.ContentType = "text" Then
+                Print "PASS: ContentType is text"
             Else
-                Print "  Body: MIME"
-                Print "  ContentType: " & mime.ContentType
-                Print "  ContentSubType: " & mime.ContentSubType
-                Print "  Charset: " & mime.Charset
+                Print "FAIL: ContentType is " & mime.ContentType
             End If
 
-            Call doc.CloseMIMEEntities()
-            Set mime = Nothing
+            If mime.ContentSubType = "plain" Then
+                Print "PASS: ContentSubType is plain"
+            Else
+                Print "FAIL: ContentSubType is " & mime.ContentSubType
+            End If
 
-            ' GetNextDocument advances the view navigation state. Do not recycle the
-            ' current document here because the returned navigation object can share
-            ' the same runtime wrapper/handle lifecycle.
-            Set doc = view.GetNextDocument(doc)
-        Loop
+            If mime.Charset = "UTF-8" Then
+                Print "PASS: Charset is UTF-8"
+            Else
+                Print "FAIL: Charset is " & mime.Charset
+            End If
+        End If
 
-        Print "MIME probe: inspected " & count & " inbox documents"
-        Set doc = Nothing
-        Call view.Recycle()
-        Set view = Nothing
+        Call reopened.CloseMIMEEntities()
+        Set mime = Nothing
+        Call reopened.Recycle()
+        Set reopened = Nothing
     End If
 
     Call db.Recycle()
@@ -53,5 +80,5 @@ Sub Main()
     Call session.Recycle()
     Set session = Nothing
 
-    Print "MIME probe: completed"
+    Print "MIME create/reopen probe: completed"
 End Sub
