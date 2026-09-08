@@ -4,6 +4,7 @@ Option Declare
 Sub Main()
     Dim session As NotesSession
     Dim directory As NotesDBDirectory
+    Dim parentSession As NotesSession
     Dim db As NotesDatabase
     Dim firstPath As String
     Dim firstTemplateCandidatePath As String
@@ -11,6 +12,7 @@ Sub Main()
     Dim constantFailures As Integer
     Dim typeFailures As Integer
     Dim openFailures As Integer
+    Dim propertyFailures As Integer
     Dim errCode As Integer
 
     Set session = New NotesSession()
@@ -18,7 +20,27 @@ Sub Main()
 
     Print "NOTES-DBDIRECTORY-BEGIN"
     Print "Name=" & directory.Name
-    Print "ParentUser=" & directory.Parent.UserName
+    Set parentSession = directory.Parent
+    If parentSession Is Nothing Then
+        Print "NOTES-DBDIRECTORY=FAIL PARENT-NOTHING"
+        propertyFailures = propertyFailures + 1
+    ElseIf parentSession.UserName <> session.UserName Then
+        Print "NOTES-DBDIRECTORY=FAIL PARENT-USERNAME=" & parentSession.UserName
+        propertyFailures = propertyFailures + 1
+    Else
+        Print "PARENT=PASS"
+    End If
+    If directory.Name <> "" Then
+        Print "NOTES-DBDIRECTORY=FAIL LOCAL-NAME=" & directory.Name
+        propertyFailures = propertyFailures + 1
+    Else
+        Print "LOCAL-NAME=PASS"
+    End If
+    If propertyFailures = 0 Then
+        Print "PROPERTIES=PASS"
+    Else
+        Print "PROPERTIES=FAIL " & CStr(propertyFailures)
+    End If
 
     If NotesConst.REPLICA_CANDIDATE <> 1245 Then
         Print "NOTES-DBDIRECTORY=FAIL REPLICA_CANDIDATE"
