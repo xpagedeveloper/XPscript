@@ -55,7 +55,7 @@ internal static class NotesDxlImportResultPostProcessor
 
     private static void AppendDelegateIfMissing(string source, System.Text.StringBuilder target, string delegateName, string declaration)
     {
-        if (!source.Contains(delegateName, StringComparison.Ordinal)) target.Append(declaration);
+        if (!source.Contains(" delegate " + delegateName + "(", StringComparison.Ordinal)) target.Append(declaration);
     }
 
     private const string ImportOptionValidation = """
