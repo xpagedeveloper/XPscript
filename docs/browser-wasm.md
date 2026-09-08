@@ -90,9 +90,11 @@ End Sub
 
 Use local callbacks for UI-only work such as validation, enabling or disabling controls, changing labels, filtering already-loaded data and other state that is safe to execute in the browser. Callback failures are surfaced to browser code as a generic `xpscript:form-error` event rather than exposing runtime exception details.
 
-Operations that require server authority must cross an HTTP boundary. This includes secrets, XPAi credentials, privileged database access and other server-only state. A local UI callback can use the normal browser-wasm `XPHttpClient` to call an explicit server API for that work.
+Operations that require server authority must cross an HTTP boundary. This includes secrets, Notes/Domino access, XPAi credentials, privileged database access and other server-only state. Browser-WASM supports explicit `[ServerSide]` module procedures for this boundary. A local button or change callback calls the `[ServerSide]` procedure like an ordinary XPscript call; the statement after that call runs after the server result returns. See [Server-side functions in Browser WebAssembly](browser-wasm-server-side.md) for the call model, sequential semantics and busy indicator, and [Notes runtime in Browser WebAssembly](browser-wasm-notes.md) for Notes-specific restrictions.
 
-UI event objects provide `ToJson()` and `ToJsonObject()` for this boundary. These methods create a snapshot that deliberately excludes live runtime references. `UIFormEvent` serializes only `eventType`, `controlName`, `value` and `values`. `UIListViewEvent` serializes only `eventType`, `rowIndex`, `key` and `row`.
+For application-defined HTTP APIs, a local UI callback can also use the normal browser-wasm `XPHttpClient` explicitly.
+
+UI event objects provide `ToJson()` and `ToJsonObject()` for explicit HTTP boundaries. These methods create a snapshot that deliberately excludes live runtime references. `UIFormEvent` serializes only `eventType`, `controlName`, `value` and `values`. `UIListViewEvent` serializes only `eventType`, `rowIndex`, `key` and `row`.
 
 For example, a browser callback can explicitly post its event snapshot to an application API route:
 
@@ -108,13 +110,11 @@ Sub NameChanged(evt As Variant, context As String)
 End Sub
 ```
 
-The route is selected by application code. The browser never sends an XPScript callback/function name to the server. This keeps authorization attached to normal server routes and avoids exposing a generic remote function dispatcher.
+The route is selected by application code. Generic client-supplied function-name dispatch must not be used for arbitrary server APIs. `[ServerSide]` procedures are compiler-generated, allowlisted bridge entries rather than an unrestricted remote dispatcher.
 
-XPScript must not implement browser-to-server callbacks as a generic endpoint that accepts an arbitrary function name from the client. If a dedicated server-callback facility is added, the browser request must use a server-issued opaque registration identifier or an explicit application route. The server must map that identifier to an allowlisted callback and must not trust a callback name supplied by the browser.
+A server request must have bounded payloads and responses, preserve same-origin and session protections, and use the existing CSRF challenge flow when Session cookies are present. Only serializable values may cross the boundary. Runtime object references such as a live `UIForm`, `UIListView`, `NotesDatabase` or `NotesDocument` cannot be transferred between browser and server.
 
-A server callback request must use a same-origin unsafe HTTP method such as `POST`, have a bounded payload, apply normal route authorization and use the existing CSRF challenge flow when Session cookies are present. Only serializable event data and caller context may cross this boundary. Runtime object references such as a live `UIForm` or `UIListView` instance cannot be transferred to the server.
-
-This split is intentional: local UI events stay low latency, while privileged work remains server-side and is reached through an authenticated and CSRF-protected API boundary.
+This split is intentional: local UI events stay in WebAssembly, while privileged work remains server-side and is reached through an explicit server boundary.
 
 ## CSRF protection
 
