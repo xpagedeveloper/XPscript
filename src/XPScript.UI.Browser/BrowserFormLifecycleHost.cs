@@ -5,17 +5,29 @@ namespace XPScript.UI.Browser;
 
 public static partial class BrowserFormLifecycleHost
 {
-    public static string ShowDialog(string requestJson) => Show(requestJson, null, null);
-    public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback) => Show(requestJson, eventCallback, null);
-    public static string ShowDialog(string requestJson, Func<string, string, Task<string>> asyncEventCallback) => Show(requestJson, null, asyncEventCallback);
-    public static string Show(string requestJson) => Show(requestJson, null, null);
-    public static string Show(string requestJson, Func<string, string, string>? eventCallback) => Show(requestJson, eventCallback, null);
-    public static string Show(string requestJson, Func<string, string, Task<string>> asyncEventCallback) => Show(requestJson, null, asyncEventCallback);
+    public static string ShowDialog(string requestJson) => Show(requestJson, (Func<string, string, string>?)null);
+    public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback) => Show(requestJson, eventCallback);
+    public static string ShowDialog(string requestJson, Func<string, string, Task<string>>? eventCallback) => Show(requestJson, eventCallback);
+    public static string Show(string requestJson) => Show(requestJson, (Func<string, string, string>?)null);
 
-    private static string Show(
-        string requestJson,
-        Func<string, string, string>? eventCallback,
-        Func<string, string, Task<string>>? asyncEventCallback)
+    public static string Show(string requestJson, Func<string, string, string>? eventCallback)
+    {
+        if (eventCallback is not null)
+        {
+            BrowserFormHost.SetEventDispatcher(eventCallback);
+            BrowserFormHost.SetAsyncEventDispatcher((eventToken, submittedValue) =>
+                Task.FromResult(eventCallback(eventToken, submittedValue) ?? string.Empty));
+        }
+        return ShowCore(requestJson);
+    }
+
+    public static string Show(string requestJson, Func<string, string, Task<string>>? eventCallback)
+    {
+        if (eventCallback is not null) BrowserFormHost.SetAsyncEventDispatcher(eventCallback);
+        return ShowCore(requestJson);
+    }
+
+    private static string ShowCore(string requestJson)
     {
         ArgumentNullException.ThrowIfNull(requestJson);
         using var document = JsonDocument.Parse(requestJson);
@@ -25,8 +37,6 @@ public static partial class BrowserFormLifecycleHost
         if (instanceId.Length == 0) throw new ArgumentException("UIForm instance id is required.", nameof(requestJson));
         if (IsVisible(instanceId)) return "{\"result\":\"Pending\",\"values\":{}}";
 
-        if (asyncEventCallback is not null) BrowserFormHost.SetAsyncEventDispatcher(asyncEventCallback);
-        else if (eventCallback is not null) BrowserFormHost.SetEventDispatcher(eventCallback);
         using var baseRoot = GetElementById("xpscript-app") ?? throw new InvalidOperationException("XPScript browser root element was not found.");
         baseRoot.SetProperty("id", "xpscript-app-base");
 
