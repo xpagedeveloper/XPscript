@@ -83,7 +83,14 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         EnsureInitialized();
         var status = Resolve<MIMEEntityGetTypeParamDelegate>("MIMEEntityGetTypeParam")(entity, symbol, out var valueHandle, out var valueLength);
-        if (status != 0) return string.Empty;
+        if (status != 0)
+        {
+            // Do not collapse native failures into an apparently absent MIME parameter.
+            // ERR_MIME_NO_DATA is intentionally not special-cased until its toolkit
+            // constant is available from a verified HCL header/source.
+            Check(status, "MIMEEntityGetTypeParam");
+            return string.Empty;
+        }
         if (valueHandle == 0 || valueLength == 0)
         {
             if (valueHandle != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(valueHandle);
@@ -94,7 +101,7 @@ internal sealed partial class XPScriptNotesNativeApi
         try
         {
             value = Resolve<OSLockObjectDelegate>("OSLockObject")(valueHandle);
-            if (value == 0) return string.Empty;
+            if (value == 0) throw new XPScriptRuntimeException(5, "Unable to lock MIME type parameter data.");
             var bytes = new byte[checked((int)valueLength)];
             System.Runtime.InteropServices.Marshal.Copy(value, bytes, 0, bytes.Length);
             return System.Text.Encoding.Latin1.GetString(bytes).TrimEnd('\0');
@@ -102,7 +109,7 @@ internal sealed partial class XPScriptNotesNativeApi
         finally
         {
             if (value != 0) Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(valueHandle);
-            Resolve<OSMemFreeDelegate>("OSMemFree")(valueHandle);
+            Check(Resolve<OSMemFreeDelegate>("OSMemFree")(valueHandle), "OSMemFree(MIMEEntityGetTypeParam)");
         }
     }
 
