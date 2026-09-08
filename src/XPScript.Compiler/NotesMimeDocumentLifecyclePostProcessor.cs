@@ -27,8 +27,8 @@ internal static class NotesMimeDocumentLifecyclePostProcessor
             "item-get-mime-body-only");
 
         source = ReplaceRequired(source,
-            "    public void Save()\n    {\n        EnsureAlive();\n        Session.Api.SaveNote(_handle);",
-            "    public void Save()\n    {\n        EnsureAlive();\n        ReleaseMimeDirectory();\n        Session.Api.SaveNote(_handle);",
+            "    public void Save()\n    {\n        EnsureAlive();\n        RequireOpenNoteHandle();\n        Session.Api.SaveNote(_handle);",
+            "    public void Save()\n    {\n        EnsureAlive();\n        RequireOpenNoteHandle();\n        ReleaseMimeDirectory();\n        Session.Api.SaveNote(_handle);",
             "document-save-closes-mime-entities");
 
         source = ReplaceRequired(source,
