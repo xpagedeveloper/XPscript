@@ -51,13 +51,13 @@ button -> browser callback -> [ServerSide] Function/Sub -> server -> result -> c
 
 Helpers may also call `[ServerSide]` procedures. Browser-WASM compilation is responsible for preserving the sequential XPscript execution order across the server boundary: statements that depend on the result must not execute before the response has returned.
 
-## Browser responsiveness and busy indicator
+## Current transport and busy indicator
 
-A server call is a network operation and may take noticeable time. The browser bridge must not expose a synchronous browser request as the XPscript programming model. The intended runtime contract is transparent suspension: XPscript source remains sequential, while the browser event loop remains available while the server operation is running.
+The current bridge preserves sequential XPscript semantics with a synchronous browser request: the XPscript statement following a `[ServerSide]` call runs only after the server response has returned. This also means the current transport blocks the browser execution thread while that request is in progress.
 
-For a slow `[ServerSide]` request, Browser-WASM displays a shared busy overlay/spinner automatically after a short delay. Fast requests complete before the delay and therefore do not flash the spinner. The busy state is reference-counted so overlapping server requests keep the indicator visible until the last outstanding request completes. Error and cancellation paths must release the busy state as well.
+The bridge includes a reference-counted busy indicator with a 300 ms delay. This is the standard busy UI for server bridge traffic and application code does not need to show or hide it manually. The delay avoids flashing the indicator for fast requests, and cleanup runs on success and failure.
 
-Application code does not need to show or hide this standard spinner.
+Because the current transport is synchronous, browser rendering of the delayed indicator is platform/event-loop dependent while the request is blocking. The intended end-state is a non-blocking bridge that retains the same sequential XPscript source semantics. Until that continuation work is implemented and verified, the documentation must not describe the transport itself as asynchronous.
 
 ## Sequential source semantics
 
@@ -68,7 +68,7 @@ result = LoadCustomer(id)
 Call RenderCustomer(result)
 ```
 
-when `LoadCustomer` is `[ServerSide]`, `RenderCustomer` runs only after `LoadCustomer` has completed successfully and `result` contains the returned value. The compiler/runtime may implement this using asynchronous continuations internally, but that mechanism is not exposed in ordinary XPscript source.
+when `LoadCustomer` is `[ServerSide]`, `RenderCustomer` runs only after `LoadCustomer` has completed successfully and `result` contains the returned value. A future non-blocking implementation may use asynchronous continuations internally without changing this XPscript source contract.
 
 If the server operation fails, the continuation after the call must not run as though a successful value was returned. The server error is surfaced through the normal XPscript/browser error path.
 
