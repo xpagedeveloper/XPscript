@@ -12,6 +12,21 @@ internal static class NotesMimeDocumentLifecyclePostProcessor
             "document-close-mime-entities");
 
         source = ReplaceRequired(source,
+            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!Session.Api.IsMimeItem(_handle, itemName)) return null;\n        return XPScriptNotesMIMEEntity.Open(Session, this, itemName);",
+            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"NotesDocument.GetMIMEEntity currently supports the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.\");\n        if (!Session.Api.IsMimeItem(_handle, itemName)) return null;\n        return XPScriptNotesMIMEEntity.Open(Session, this, itemName);",
+            "document-get-mime-body-only");
+
+        source = ReplaceRequired(source,
+            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
+            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"NotesDocument.CreateMIMEEntity currently supports the Body item only; native PMIMEENTITY access is note-level.\");\n        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        InvalidateMimeDirectory();\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
+            "mime-create-body-only-and-invalidates-directory");
+
+        source = ReplaceRequired(source,
+            "        if (info.DataType != XPScriptNotesNativeApi.NotesTypeMimePart) return null;\n        return XPScriptNotesMIMEEntity.Open(Session, Document, ItemName);",
+            "        if (info.DataType != XPScriptNotesNativeApi.NotesTypeMimePart) return null;\n        if (!string.Equals(ItemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"NotesItem.GetMIMEEntity currently supports the Body item only; native PMIMEENTITY access is note-level.\");\n        return XPScriptNotesMIMEEntity.Open(Session, Document, ItemName);",
+            "item-get-mime-body-only");
+
+        source = ReplaceRequired(source,
             "    public void Save()\n    {\n        EnsureAlive();\n        Session.Api.SaveNote(_handle);",
             "    public void Save()\n    {\n        EnsureAlive();\n        ReleaseMimeDirectory();\n        Session.Api.SaveNote(_handle);",
             "document-save-closes-mime-entities");
@@ -20,11 +35,6 @@ internal static class NotesMimeDocumentLifecyclePostProcessor
             "    protected override void ReleaseOwnedNative()\n    {\n        var handle = Interlocked.Exchange(ref _handle, 0);\n        if (handle != 0) Session.Api.CloseNote(handle);\n    }",
             "    protected override void ReleaseOwnedNative()\n    {\n        ReleaseMimeDirectory();\n        var handle = Interlocked.Exchange(ref _handle, 0);\n        if (handle != 0) Session.Api.CloseNote(handle);\n    }",
             "document-recycle-closes-mime-entities");
-
-        source = ReplaceRequired(source,
-            "        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
-            "        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        InvalidateMimeDirectory();\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
-            "mime-create-invalidates-directory");
 
         source = ReplaceRequired(source,
             "    public void Remove()\n    {\n        EnsureEntityAlive();\n        _document.RemoveItem(_itemName);\n        Recycle();\n    }",
