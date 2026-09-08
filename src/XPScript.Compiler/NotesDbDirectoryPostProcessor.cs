@@ -28,7 +28,7 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     {
         EnsureAlive();
         _paths = Session.Api.ListDatabases(_server, NormalizeType(typeValue));
-        _position = 0;
+        _position = _paths.Length == 0 ? -1 : 0;
         return CurrentDatabase();
     }
 
@@ -37,6 +37,11 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         EnsureAlive();
         if (_position < 0) return null;
         _position++;
+        if (_position >= _paths.Length)
+        {
+            _position = -1;
+            return null;
+        }
         return CurrentDatabase();
     }
 
