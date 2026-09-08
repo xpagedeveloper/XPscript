@@ -10,6 +10,7 @@ Sub Main()
     Dim count As Integer
     Dim constantFailures As Integer
     Dim typeFailures As Integer
+    Dim openFailures As Integer
     Dim errCode As Integer
 
     Set session = New NotesSession()
@@ -167,8 +168,25 @@ Sub Main()
     End If
 
     Set db = directory.OpenDatabase("names.nsf")
-    Print "OPEN-NAMES=" & CStr(db.IsOpen)
-    Call db.Recycle()
+    If db Is Nothing Then
+        Print "NOTES-DBDIRECTORY=FAIL OPEN-NAMES-NOTHING"
+        openFailures = openFailures + 1
+    Else
+        If Not db.IsOpen Then
+            Print "NOTES-DBDIRECTORY=FAIL OPEN-NAMES-CLOSED"
+            openFailures = openFailures + 1
+        End If
+        If db.FilePath <> "names.nsf" Then
+            Print "NOTES-DBDIRECTORY=FAIL OPEN-NAMES-PATH=" & db.FilePath
+            openFailures = openFailures + 1
+        End If
+        Call db.Recycle()
+    End If
+    If openFailures = 0 Then
+        Print "OPEN-DATABASE=PASS"
+    Else
+        Print "OPEN-DATABASE=FAIL " & CStr(openFailures)
+    End If
 
     errCode = 0
     On Error Resume Next
