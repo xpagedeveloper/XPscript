@@ -163,13 +163,20 @@ internal static partial class XPScriptBrowserServerBridgeTransport
 
 globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJson, body) {
     const parsedHeaders = headersJson ? JSON.parse(headersJson) : {};
+    let spinnerDelayMs = 300;
+    for (const name of Object.keys(parsedHeaders)) {
+        if (name.toLowerCase() !== 'x-xps-wasm-spinner-delay') continue;
+        const parsedDelay = Number(parsedHeaders[name]);
+        if (Number.isInteger(parsedDelay) && parsedDelay >= 0) spinnerDelayMs = parsedDelay;
+        delete parsedHeaders[name];
+    }
     const safeMethod = String(method || '').toUpperCase();
     if (safeMethod !== 'GET' && safeMethod !== 'POST') throw new Error('Unsupported bridge method.');
     const url = String(relativeUrl || '');
     if (url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')) throw new Error('Invalid bridge URL.');
 
     const busy = globalThis.__xpscriptWasmBridgeBusy;
-    const busyToken = busy.begin();
+    const busyToken = busy.begin(spinnerDelayMs);
     try {
         const perform = (csrfToken) => {
             const xhr = new XMLHttpRequest();
