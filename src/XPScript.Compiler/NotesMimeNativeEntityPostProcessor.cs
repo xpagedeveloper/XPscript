@@ -42,6 +42,21 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-encoding-only");
 
         source = ReplaceRequired(source,
+            "    public string Headers { get { EnsureEntityAlive(); return _message.HeadersText; } }",
+            "    public string Headers { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Headers requires verified Domino MIME entity header access; managed root-stream header parsing is intentionally not used.\"); } }",
+            "mime-native-headers-only");
+
+        source = ReplaceRequired(source,
+            "            var headers = _message.Headers.Select((h, i) => (object)new XPScriptNotesMIMEHeader(this, i)).ToArray();\n            return LSOperatorArrayRuntime.CreateArray(headers);",
+            "            throw new System.NotSupportedException(\"NotesMIMEEntity.HeaderObjects requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "mime-native-header-objects-only");
+
+        source = ReplaceRequired(source,
+            "        get { EnsureEntityAlive(); return _message.Preamble; }\n        set { EnsureEntityAlive(); _message.Preamble = value ?? \"\"; Commit(); }",
+            "        get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart parsing is intentionally not used.\"); }\n        set { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart serialization is intentionally not used.\"); }",
+            "mime-native-preamble-only");
+
+        source = ReplaceRequired(source,
             "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }",
             "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }\n\n    public XPScriptNotesMIMEEntity? GetFirstChildEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.FirstSubpart(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetParentEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.Parent(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.NextSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetPrevSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.PrevSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.IterateNext(_mimeDirectoryOwner.RootEntity, _nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity(object? searchValue)\n    {\n        EnsureEntityAlive();\n        var search = XPScriptRuntime.CInt(searchValue);\n        if (search != XPScriptNotesConst.SEARCH_DEPTH)\n            throw new System.NotSupportedException(\"NotesMIMEEntity.GetNextEntity currently supports SEARCH_DEPTH only; Domino MIMEIterateNext is depth-first.\");\n        return GetNextEntity();\n    }",
             "mime-native-navigation");
