@@ -36,20 +36,16 @@ internal static class NotesDxlImportResultPostProcessor
             ImportOptionValidation + "\n\n    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
             "importer-option-validation");
 
-        // NotesNativeApiDxlSource now contains the native DXL delegates and helpers
-        // directly. Only inject the legacy support block for older generated sources.
-        const string nativeDxlMarker = "internal delegate ushort DXLCreateImporterDelegate";
-        if (!source.Contains(nativeDxlMarker, StringComparison.Ordinal))
+        // Current NotesNativeApiDxlSource already owns the DXL delegates. The result
+        // helpers are still supplied here until they are moved into that source too.
+        if (!source.Contains("internal string GetDxlImporterLog(uint importer)", StringComparison.Ordinal))
         {
             source = ReplaceRequired(source,
                 "    internal uint CreateDxlExporter()",
-                NativeDxlSupport + "\n\n    internal uint CreateDxlExporter()",
-                "native-dxl-support");
+                DxlResultHelpers + "\n\n    internal uint CreateDxlExporter()",
+                "dxl-result-helpers");
         }
 
-        // Relative DXL paths are now resolved centrally by ResolveDxlFilePath against
-        // _applicationDirectory. Older generated runtime used DataDirectory here and
-        // required this post-processing patch; the current runtime no longer does.
         const string legacyDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);";
         const string patchedDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);";
         const string currentDxlPath = "Path.GetFullPath(filePath, _applicationDirectory)";
@@ -61,25 +57,7 @@ internal static class NotesDxlImportResultPostProcessor
         return source;
     }
 
-    private const string NativeDxlSupport = """
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XMLReadFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XMLWriteFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateImporterDelegate(out uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteImporterDelegate(uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetImporterPropertyDelegate(uint importer, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetImporterPropertyDelegate(uint importer, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLImportDelegate(uint importer, XMLReadFunctionDelegate reader, uint database, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateExporterDelegate(out uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteExporterDelegate(uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetExporterPropertyDelegate(uint exporter, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetExporterPropertyDelegate(uint exporter, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportNoteDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint note, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportIDTableDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint database, uint idTable, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint OSMemoryGetSizeDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSMemoryLockDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSMemoryUnlockDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint IDEntriesDelegate(uint table);
-
+    private const string DxlResultHelpers = """
     internal string GetDxlImporterLog(uint importer)
     {
         EnsureInitialized();
@@ -90,12 +68,12 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 11, value), "DXLGetImporterProperty(iResultLog)");
             var handle = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (handle == 0) return string.Empty;
-            var size = Resolve<OSMemoryGetSizeDelegate>("OSMemoryGetSize")(handle);
+            var size = Resolve<OSMemGetSizeDelegate>("OSMemGetSize")(handle);
             if (size == 0) return string.Empty;
-            var pointer = Resolve<OSMemoryLockDelegate>("OSMemoryLock")(handle);
+            var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(handle);
             if (pointer == 0) return string.Empty;
             try { return FromLmbcsZeroTerminated(pointer, checked((int)Math.Min(size, int.MaxValue))); }
-            finally { Resolve<OSMemoryUnlockDelegate>("OSMemoryUnlock")(handle); }
+            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(handle); }
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }
