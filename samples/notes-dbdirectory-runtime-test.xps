@@ -7,6 +7,7 @@ Sub Main()
     Dim db As NotesDatabase
     Dim firstPath As String
     Dim count As Integer
+    Dim constantFailures As Integer
     Dim errCode As Integer
 
     Set session = New NotesSession()
@@ -16,11 +17,27 @@ Sub Main()
     Print "Name=" & directory.Name
     Print "ParentUser=" & directory.Parent.UserName
 
-    If NotesConst.REPLICA_CANDIDATE <> 1245 Then Print "NOTES-DBDIRECTORY=FAIL REPLICA_CANDIDATE"
-    If NotesConst.TEMPLATE_CANDIDATE <> 1246 Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE_CANDIDATE"
-    If NotesConst.DATABASE <> 1247 Then Print "NOTES-DBDIRECTORY=FAIL DATABASE"
-    If NotesConst.TEMPLATE <> 1248 Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE"
-    Print "TYPE-CONSTANTS=PASS"
+    If NotesConst.REPLICA_CANDIDATE <> 1245 Then
+        Print "NOTES-DBDIRECTORY=FAIL REPLICA_CANDIDATE"
+        constantFailures = constantFailures + 1
+    End If
+    If NotesConst.TEMPLATE_CANDIDATE <> 1246 Then
+        Print "NOTES-DBDIRECTORY=FAIL TEMPLATE_CANDIDATE"
+        constantFailures = constantFailures + 1
+    End If
+    If NotesConst.DATABASE <> 1247 Then
+        Print "NOTES-DBDIRECTORY=FAIL DATABASE"
+        constantFailures = constantFailures + 1
+    End If
+    If NotesConst.TEMPLATE <> 1248 Then
+        Print "NOTES-DBDIRECTORY=FAIL TEMPLATE"
+        constantFailures = constantFailures + 1
+    End If
+    If constantFailures = 0 Then
+        Print "TYPE-CONSTANTS=PASS"
+    Else
+        Print "TYPE-CONSTANTS=FAIL " & CStr(constantFailures)
+    End If
 
     Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
     If Not db Is Nothing Then firstPath = db.FilePath
