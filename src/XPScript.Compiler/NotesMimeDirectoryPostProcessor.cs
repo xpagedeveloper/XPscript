@@ -67,6 +67,18 @@ internal sealed partial class XPScriptNotesNativeApi
         return entity;
     }
 
+    internal int GetMimeEntityContentTypeSymbol(nint entity)
+    {
+        EnsureInitialized();
+        return Resolve<MIMEEntityContentTypeDelegate>("MIMEEntityContentType")(entity);
+    }
+
+    internal int GetMimeEntityContentSubtypeSymbol(nint entity)
+    {
+        EnsureInitialized();
+        return Resolve<MIMEEntityContentSubtypeDelegate>("MIMEEntityContentSubtype")(entity);
+    }
+
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEOpenDirectoryDelegate(uint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
@@ -83,6 +95,10 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate ushort MIMEGetParentDelegate(nint directory, nint entity, out nint parent);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEIterateNextDelegate(nint directory, nint topEntity, nint previousEntity, out nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate int MIMEEntityContentTypeDelegate(nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate int MIMEEntityContentSubtypeDelegate(nint entity);
 }
 """;
 }
