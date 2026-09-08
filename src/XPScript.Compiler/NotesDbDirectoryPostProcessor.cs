@@ -101,7 +101,17 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
                 // scans do not need SEARCH_MATCH fields here; $Path comes from ITEM_TABLE.
                 if (summaryBuffer == 0) return 0;
                 if (TryGetSummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
-                    paths.Add(path.Replace('\\', '/'));
+                {
+                    var relativePath = path.Replace('\\', '/').Trim();
+                    // DirectorySearch returns paths relative to the Domino data directory.
+                    // Reject rooted/network paths so enumerated NotesDatabase objects always
+                    // retain the same server + relative FilePath contract as OpenDatabase.
+                    if (relativePath.StartsWith('/') || relativePath.StartsWith("//", StringComparison.Ordinal) ||
+                        (relativePath.Length >= 2 && char.IsLetter(relativePath[0]) && relativePath[1] == ':'))
+                        throw new XPScriptRuntimeException(5, "NotesDBDirectory returned a non-relative database path: " + relativePath);
+                    if (relativePath.Length != 0)
+                        paths.Add(relativePath);
+                }
             }
             catch (Exception ex)
             {
