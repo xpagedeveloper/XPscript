@@ -89,13 +89,24 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
         var directory = OpenDatabase(server, "");
         var paths = new List<string>();
+        Exception? callbackError = null;
         NSFSearchDirectoryCallback callback = (parameter, searchMatch, summaryBuffer) =>
         {
-            // NSFSEARCHPROC receives pointers to SEARCH_MATCH and ITEM_TABLE. Directory
-            // scans do not need SEARCH_MATCH fields here; $Path comes from ITEM_TABLE.
-            if (summaryBuffer == 0) return 0;
-            if (TryGetSummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
-                paths.Add(path.Replace('\\', '/'));
+            // Never let a managed exception cross the unmanaged NSFSEARCHPROC boundary.
+            // Capture it and rethrow after NSFSearch has returned to managed code.
+            if (callbackError is not null) return 0;
+            try
+            {
+                // NSFSEARCHPROC receives pointers to SEARCH_MATCH and ITEM_TABLE. Directory
+                // scans do not need SEARCH_MATCH fields here; $Path comes from ITEM_TABLE.
+                if (summaryBuffer == 0) return 0;
+                if (TryGetSummaryText(summaryBuffer, "$Path", out var path) && path.Length != 0)
+                    paths.Add(path.Replace('\\', '/'));
+            }
+            catch (Exception ex)
+            {
+                callbackError = ex;
+            }
             return 0;
         };
 
@@ -109,6 +120,8 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
             Check(Resolve<NSFSearchDirectoryDelegate>("NSFSearch")(
                 directory, 0, 0, SearchFileType | SearchSummary, searchMask, 0, callback, 0, 0), "NSFSearch");
             GC.KeepAlive(callback);
+            if (callbackError is not null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(callbackError).Throw();
         }
         finally { CloseDatabase(directory); }
 
