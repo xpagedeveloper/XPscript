@@ -4,7 +4,6 @@ Sub Main()
     Dim db As NotesDatabase
     Dim view As NotesView
     Dim doc As NotesDocument
-    Dim nextDoc As NotesDocument
     Dim mime As NotesMIMEEntity
     Dim count As Integer
 
@@ -35,13 +34,14 @@ Sub Main()
             Call doc.CloseMIMEEntities()
             Set mime = Nothing
 
-            Set nextDoc = view.GetNextDocument(doc)
-            Call doc.Recycle()
-            Set doc = nextDoc
-            Set nextDoc = Nothing
+            ' GetNextDocument advances the view navigation state. Do not recycle the
+            ' current document here because the returned navigation object can share
+            ' the same runtime wrapper/handle lifecycle.
+            Set doc = view.GetNextDocument(doc)
         Loop
 
         Print "MIME probe: inspected " & count & " inbox documents"
+        Set doc = Nothing
         Call view.Recycle()
         Set view = Nothing
     End If
