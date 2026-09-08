@@ -2,7 +2,7 @@ name: Documentation site
 
 on:
   push:
-    branches: [main, docs/astro-foundation]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'docs-site/**'
@@ -44,8 +44,8 @@ jobs:
       - name: Verify generated links
         run: npm run docs:links
 
-      - name: Publish branch preview files
-        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/astro-foundation'
+      - name: Publish documentation preview files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: .
         run: |
           rm -rf docs-preview
@@ -55,9 +55,9 @@ jobs:
           cat > docs-preview/README.md <<'EOF'
           # Generated documentation preview
 
-          This directory is generated from `docs/` by the Astro documentation build on the `docs/astro-foundation` branch.
+          This directory is generated from `docs/` by the Astro documentation build on `main`.
 
-          Do not edit these files manually. They are temporary review output and should be removed before the documentation-site migration is merged.
+          Do not edit these files manually. They are regenerated automatically when documentation sources change.
 
           Useful generated pages:
 
@@ -74,9 +74,9 @@ jobs:
           git add -f docs-preview
 
           if git diff --cached --quiet; then
-            echo "Generated preview is already current."
+            echo "Generated documentation is already current."
             exit 0
           fi
 
           git commit -m "Update generated documentation preview"
-          git push origin HEAD:docs/astro-foundation
+          git push origin HEAD:main
