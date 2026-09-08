@@ -55,6 +55,12 @@ internal sealed class XPScriptNotesMimeDirectoryOwner : System.IDisposable
         return _api!.GetMimeParent(_directory, entity);
     }
 
+    internal nint IterateNext(nint topEntity, nint previousEntity)
+    {
+        EnsureAlive();
+        return _api!.IterateMimeNext(_directory, topEntity, previousEntity);
+    }
+
     public void Dispose()
     {
         var directory = _directory;
