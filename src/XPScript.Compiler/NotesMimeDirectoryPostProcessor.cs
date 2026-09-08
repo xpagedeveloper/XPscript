@@ -79,6 +79,33 @@ internal sealed partial class XPScriptNotesNativeApi
         return Resolve<MIMEEntityContentSubtypeDelegate>("MIMEEntityContentSubtype")(entity);
     }
 
+    internal string GetMimeEntityTypeParam(nint entity, int symbol)
+    {
+        EnsureInitialized();
+        var status = Resolve<MIMEEntityGetTypeParamDelegate>("MIMEEntityGetTypeParam")(entity, symbol, out var valueHandle, out var valueLength);
+        if (status != 0) return string.Empty;
+        if (valueHandle == 0 || valueLength == 0)
+        {
+            if (valueHandle != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(valueHandle);
+            return string.Empty;
+        }
+
+        nint value = 0;
+        try
+        {
+            value = Resolve<OSLockObjectDelegate>("OSLockObject")(valueHandle);
+            if (value == 0) return string.Empty;
+            var bytes = new byte[checked((int)valueLength)];
+            System.Runtime.InteropServices.Marshal.Copy(value, bytes, 0, bytes.Length);
+            return System.Text.Encoding.Latin1.GetString(bytes).TrimEnd('\0');
+        }
+        finally
+        {
+            if (value != 0) Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(valueHandle);
+            Resolve<OSMemFreeDelegate>("OSMemFree")(valueHandle);
+        }
+    }
+
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEOpenDirectoryDelegate(uint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
@@ -99,6 +126,14 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate int MIMEEntityContentTypeDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int MIMEEntityContentSubtypeDelegate(nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MIMEEntityGetTypeParamDelegate(nint entity, int symbol, out nint valueHandle, out uint valueLength);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate nint OSLockObjectDelegate(nint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate void OSUnlockObjectDelegate(nint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort OSMemFreeDelegate(nint handle);
 }
 """;
 }
