@@ -1,9 +1,14 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
 public sealed class ServerSideMetadataPreprocessor
 {
+    private static readonly Regex ServerSideAttribute = new(
+        @"^\[ServerSide(?:\s*\(.*\))?\s*\]$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     public string Transform(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -11,7 +16,11 @@ public sealed class ServerSideMetadataPreprocessor
         var output = new StringBuilder(source.Length);
         foreach (var line in lines)
         {
-            if (line.Trim().Equals("[ServerSide]", StringComparison.OrdinalIgnoreCase))
+            // [ServerSide] is compiler metadata. Outside the browser-WASM bridge
+            // it is deliberately inert, including parameterized forms such as
+            // [ServerSide(SpinnerDelay=1000)]. Browser-WASM reads and validates
+            // the raw attribute before this generic preprocessing step.
+            if (ServerSideAttribute.IsMatch(line.Trim()))
                 output.AppendLine();
             else
                 output.AppendLine(line);
