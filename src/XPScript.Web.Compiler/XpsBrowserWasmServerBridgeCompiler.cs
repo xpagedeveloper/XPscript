@@ -36,7 +36,7 @@ internal sealed class XpsBrowserWasmServerBridgeBundle
 internal static class XpsBrowserWasmServerBridgeCompiler
 {
     private const string Platform = "browser-wasm";
-    private const string BridgeCompilerVersion = "3";
+    private const string BridgeCompilerVersion = "4";
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
@@ -62,9 +62,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion)));
-        var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
+        var serverSideOptions = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
+        var annotatedProcedures = serverSideOptions.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
-        var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, annotatedProcedures);
+        var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, new ServerSideProcedureSet(serverSideOptions));
         var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash);
         BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotatedProcedures);
 
@@ -85,15 +86,8 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             return new XpsBrowserWasmServerBridgeBundle(bundle, plan, serverAssembly);
 
         var gate = RentBuildGate(cacheRoot);
-        try
-        {
-            await gate.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            ReturnBuildGate(cacheRoot, gate);
-            throw;
-        }
+        try { await gate.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false); }
+        catch { ReturnBuildGate(cacheRoot, gate); throw; }
 
         string? workspace = null;
         try
@@ -111,10 +105,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
             var browserSource = EnsureEntryPoint(NormalizeVariantSetAssignments(plan.BrowserSource), parsed.Routes);
             var browserGenerated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [webRoot]);
-            browserGenerated = browserGenerated.Replace(
-                "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop",
-                "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser",
-                StringComparison.Ordinal);
+            browserGenerated = browserGenerated.Replace("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", StringComparison.Ordinal);
             browserGenerated = BrowserWasmServerBridgeTransportInstaller.TransformGenerated(browserGenerated);
             var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
 
@@ -134,26 +125,20 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
-            var serverGenerated = new XPScriptTranspiler().TranspileRestricted(
-                serverSource,
-                sourcePath,
-                CompilerDriver.CurrentRuntimeIdentifier(),
-                [webRoot]);
+            var serverGenerated = new XPScriptTranspiler().TranspileRestricted(serverSource, sourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [webRoot]);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerGenerated.cs"), serverGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerCompanion.csproj"), BuildServerProject(serverGenerated), cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["restore", "ServerCompanion.csproj", "--nologo"], "server companion restore", cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["build", "ServerCompanion.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", serverOutputRoot], "server companion build", cancellationToken).ConfigureAwait(false);
 
             var builtServerAssembly = Path.Combine(serverOutputRoot, "XPScript.BrowserServer.dll");
-            if (!File.Exists(builtServerAssembly))
-                throw new XpsWebCompilationException("browser-wasm server companion build completed without producing an assembly.");
+            if (!File.Exists(builtServerAssembly)) throw new XpsWebCompilationException("browser-wasm server companion build completed without producing an assembly.");
             Directory.CreateDirectory(serverRoot);
             File.Copy(builtServerAssembly, serverAssembly, true);
             var builtPdb = Path.Combine(serverOutputRoot, "XPScript.BrowserServer.pdb");
             if (File.Exists(builtPdb)) File.Copy(builtPdb, Path.Combine(serverRoot, "XPScript.BrowserServer.pdb"), true);
 
-            if (!IsValidAppRoot(appRoot))
-                throw new XpsWebCompilationException("browser-wasm bridge persisted app bundle is incomplete.");
+            if (!IsValidAppRoot(appRoot)) throw new XpsWebCompilationException("browser-wasm bridge persisted app bundle is incomplete.");
             await File.WriteAllTextAsync(marker, sourceHash, cancellationToken).ConfigureAwait(false);
             return new XpsBrowserWasmServerBridgeBundle(bundle, plan, serverAssembly);
         }
@@ -165,31 +150,31 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         }
     }
 
+    private sealed class ServerSideProcedureSet : IReadOnlySet<string>
+    {
+        private readonly IReadOnlyDictionary<string, BrowserWasmServerSideOptions> _options;
+        private readonly HashSet<string> _names;
+        public ServerSideProcedureSet(IReadOnlyDictionary<string, BrowserWasmServerSideOptions> options) { _options = options; _names = options.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase); }
+        public int Count => _names.Count;
+        public bool Contains(string item) => _names.Contains(item);
+        public IEnumerator<string> GetEnumerator() => _names.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+        public bool IsProperSubsetOf(IEnumerable<string> other) => _names.IsProperSubsetOf(other);
+        public bool IsProperSupersetOf(IEnumerable<string> other) => _names.IsProperSupersetOf(other);
+        public bool IsSubsetOf(IEnumerable<string> other) => _names.IsSubsetOf(other);
+        public bool IsSupersetOf(IEnumerable<string> other) => _names.IsSupersetOf(other);
+        public bool Overlaps(IEnumerable<string> other) => _names.Overlaps(other);
+        public bool SetEquals(IEnumerable<string> other) => _names.SetEquals(other);
+    }
+
     private static BuildGate RentBuildGate(string key)
     {
-        lock (BuildGateSync)
-        {
-            if (!BuildGates.TryGetValue(key, out var gate))
-            {
-                gate = new BuildGate();
-                BuildGates.Add(key, gate);
-            }
-            gate.Users++;
-            return gate;
-        }
+        lock (BuildGateSync) { if (!BuildGates.TryGetValue(key, out var gate)) { gate = new BuildGate(); BuildGates.Add(key, gate); } gate.Users++; return gate; }
     }
 
     private static void ReturnBuildGate(string key, BuildGate gate)
     {
-        lock (BuildGateSync)
-        {
-            if (gate.Users <= 0) return;
-            gate.Users--;
-            if (gate.Users != 0) return;
-            if (!BuildGates.TryGetValue(key, out var current) || !ReferenceEquals(current, gate)) return;
-            BuildGates.Remove(key);
-            gate.Semaphore.Dispose();
-        }
+        lock (BuildGateSync) { if (gate.Users <= 0) return; gate.Users--; if (gate.Users != 0) return; if (!BuildGates.TryGetValue(key, out var current) || !ReferenceEquals(current, gate)) return; BuildGates.Remove(key); gate.Semaphore.Dispose(); }
     }
 
     private static string BuildBrowserProject(string browserRuntimeAssemblyPath)
@@ -198,34 +183,16 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         return $$"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <OutputType>Exe</OutputType>
-    <StartupObject>Program</StartupObject>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <WasmMainJSPath>main.js</WasmMainJSPath>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>XPScript.BrowserApp</AssemblyName>
+    <TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>XPScript.BrowserApp</AssemblyName>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="XPScript.UI.Browser">
-      <HintPath>{{escaped}}</HintPath>
-      <Private>true</Private>
-    </Reference>
-    <TrimmerRootAssembly Include="XPScript.UI.Browser" />
-    <Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-  </ItemGroup>
+  <ItemGroup><Reference Include="XPScript.UI.Browser"><HintPath>{{escaped}}</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include="XPScript.UI.Browser" /><Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /><Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
 </Project>
 """;
     }
 
     private static string BuildServerProject(string generated)
     {
-        var usesUi = generated.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-                     generated.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
-                     generated.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        var usesUi = generated.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) || generated.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) || generated.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = generated.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
         var items = new StringBuilder();
@@ -243,18 +210,8 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var itemGroup = items.Length == 0 ? string.Empty : $"  <ItemGroup>\n{items}  </ItemGroup>\n";
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <OutputType>Library</OutputType>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <AssemblyName>XPScript.BrowserServer</AssemblyName>
-  </PropertyGroup>
-{itemGroup}  <ItemGroup>
-    <Compile Include="ServerGenerated.cs" />
-  </ItemGroup>
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Library</OutputType><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AllowUnsafeBlocks>true</AllowUnsafeBlocks><EnableDefaultCompileItems>false</EnableDefaultCompileItems><AssemblyName>XPScript.BrowserServer</AssemblyName></PropertyGroup>
+{itemGroup}  <ItemGroup><Compile Include="ServerGenerated.cs" /></ItemGroup>
 </Project>
 """;
     }
@@ -263,8 +220,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     {
         if (Regex.IsMatch(source, @"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+Main\b")) return source;
         var entry = routes.ContainsKey("Index") ? "Index" : routes.Count == 1 ? routes.Keys.Single() : null;
-        if (entry is null)
-            throw new XpsWebCompilationException("browser-wasm source must define Main, Index, or exactly one exported route.");
+        if (entry is null) throw new XpsWebCompilationException("browser-wasm source must define Main, Index, or exactly one exported route.");
         return source + Environment.NewLine + Environment.NewLine + "Public Sub Main()" + Environment.NewLine + "    Call " + entry + "()" + Environment.NewLine + "End Sub" + Environment.NewLine;
     }
 
@@ -272,105 +228,39 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     {
         var variantNames = VariantDeclaration.Matches(source).Select(match => match.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var normalized = source;
-        foreach (var name in variantNames)
-            normalized = Regex.Replace(normalized, $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$", $"$1{name} = $2", RegexOptions.CultureInvariant);
+        foreach (var name in variantNames) normalized = Regex.Replace(normalized, $@"(?im)^(\s*)Set\s+{Regex.Escape(name)}\s*=\s*(.+)$", $"$1{name} = $2", RegexOptions.CultureInvariant);
         return normalized;
     }
 
     private static string BrowserRuntimeConstant(string name)
     {
-        var field = typeof(XpsBrowserWasmCompiler).GetField(name, BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new XpsWebCompilationException("browser-wasm runtime template was not found: " + name);
-        return field.GetRawConstantValue() as string
-            ?? throw new XpsWebCompilationException("browser-wasm runtime template has an invalid value: " + name);
+        var field = typeof(XpsBrowserWasmCompiler).GetField(name, BindingFlags.Static | BindingFlags.NonPublic) ?? throw new XpsWebCompilationException("browser-wasm runtime template was not found: " + name);
+        return field.GetRawConstantValue() as string ?? throw new XpsWebCompilationException("browser-wasm runtime template has an invalid value: " + name);
     }
 
-    private static string BuildIndexHtml(string sourcePath)
-    {
-        var template = BrowserRuntimeConstant("IndexHtml");
-        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath));
-        return template.Replace("__XPSCRIPT_BASE_HREF__", scriptName + "/", StringComparison.Ordinal);
-    }
+    private static string BuildIndexHtml(string sourcePath) => BrowserRuntimeConstant("IndexHtml").Replace("__XPSCRIPT_BASE_HREF__", Uri.EscapeDataString(Path.GetFileName(sourcePath)) + "/", StringComparison.Ordinal);
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, string operation, CancellationToken cancellationToken)
     {
         var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for " + operation + ".");
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-        try
-        {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            TryKillProcessTree(process);
-            try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
-            throw;
-        }
-        var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false);
-        if (process.ExitCode != 0)
-            throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + Redact(output, workingDirectory));
+        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken); var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        try { await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); }
+        catch (OperationCanceledException) { try { process.Kill(true); } catch { } throw; }
+        var output = (await stdout.ConfigureAwait(false)).Trim(); var error = (await stderr.ConfigureAwait(false)).Trim();
+        if (process.ExitCode != 0) throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + (string.IsNullOrWhiteSpace(error) ? output : error));
     }
 
-    private static void TryKillProcessTree(Process process)
+    private static string CreateBuildWorkspace() { var root = Path.Combine(Path.GetTempPath(), "xpscript-browser-wasm-bridge", Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root); return root; }
+    private static bool IsValidAppRoot(string path) => Directory.Exists(path) && File.Exists(Path.Combine(path, "index.html")) && File.Exists(Path.Combine(path, "main.js")) && File.Exists(Path.Combine(path, "xpscript-browser.js")) && Directory.Exists(Path.Combine(path, "_framework"));
+    private static string ResolveBuiltAppRoot(string publishRoot, string workspace)
     {
-        try
-        {
-            if (!process.HasExited) process.Kill(entireProcessTree: true);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
-        {
-        }
+        var direct = Path.Combine(publishRoot, "wwwroot"); if (IsValidAppRoot(direct)) return direct;
+        var nested = Directory.EnumerateDirectories(publishRoot, "wwwroot", SearchOption.AllDirectories).FirstOrDefault(IsValidAppRoot); if (nested is not null) return nested;
+        if (IsValidAppRoot(publishRoot)) return publishRoot;
+        throw new XpsWebCompilationException("browser-wasm publish completed without a usable wwwroot. Workspace: " + workspace);
     }
-
-    private static string CreateBuildWorkspace()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "xwb" + Guid.NewGuid().ToString("N")[..10]);
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
-
-    private static string ResolveBuiltAppRoot(params string[] searchRoots)
-    {
-        foreach (var searchRoot in searchRoots)
-        {
-            if (!Directory.Exists(searchRoot)) continue;
-            var fullSearchRoot = Path.GetFullPath(searchRoot);
-            if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js"))) return fullSearchRoot;
-            var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories)
-                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
-            if (frameworkEntry is null) continue;
-            var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
-            return Directory.GetParent(frameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
-        }
-        throw new XpsWebCompilationException("browser-wasm build output did not contain _framework/dotnet.js.");
-    }
-
-    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
-    {
-        var sourceRoot = Path.GetFullPath(sourceDirectory);
-        var destinationRoot = Path.GetFullPath(destinationDirectory);
-        if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
-        Directory.CreateDirectory(destinationRoot);
-        foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories))
-            Directory.CreateDirectory(Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, directory)));
-        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
-        {
-            var destination = Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination, true);
-        }
-    }
-
-    private static string Redact(string value, string workspace)
-    {
-        var result = value.Replace(workspace, "<wasm-bridge-build>", StringComparison.OrdinalIgnoreCase);
-        return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>";
-    }
-
-    private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }
+    private static void CopyDirectory(string source, string destination) { Directory.CreateDirectory(destination); foreach (var file in Directory.EnumerateFiles(source)) File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), true); foreach (var directory in Directory.EnumerateDirectories(source)) CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory))); }
+    private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); else if (File.Exists(path)) File.Delete(path); } catch { } }
 }
