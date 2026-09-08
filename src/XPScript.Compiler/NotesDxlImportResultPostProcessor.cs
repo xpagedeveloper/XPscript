@@ -41,10 +41,16 @@ internal static class NotesDxlImportResultPostProcessor
             NativeDxlSupport + "\n\n    internal uint CreateDxlExporter()",
             "native-dxl-support");
 
-        source = ReplaceRequired(source,
-            "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);",
-            "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);",
-            "dxl-relative-path");
+        // Relative DXL paths are now resolved centrally by ResolveDxlFilePath against
+        // _applicationDirectory. Older generated runtime used DataDirectory here and
+        // required this post-processing patch; the current runtime no longer does.
+        const string legacyDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);";
+        const string patchedDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);";
+        const string currentDxlPath = "var fullPath = Path.GetFullPath(filePath, _applicationDirectory);";
+        if (source.Contains(legacyDxlPath, StringComparison.Ordinal))
+            source = source.Replace(legacyDxlPath, patchedDxlPath, StringComparison.Ordinal);
+        else if (!source.Contains(patchedDxlPath, StringComparison.Ordinal) && !source.Contains(currentDxlPath, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply Notes DXL import result patch (dxl-relative-path).");
 
         return source;
     }
