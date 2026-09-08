@@ -6,7 +6,6 @@ namespace XPScript.Web.Compiler;
 internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds)
 {
     public const int DefaultSpinnerDelayMilliseconds = 300;
-    public const int MaxSpinnerDelayMilliseconds = 60_000;
 }
 
 internal static class BrowserWasmServerSideMetadata
@@ -49,9 +48,8 @@ internal static class BrowserWasmServerSideMetadata
                 if (pending is not null)
                     throw new XpsWebCompilationException("[ServerSide] may only be declared once immediately before a Sub or Function.");
                 var delay = BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds;
-                if (attribute.Groups[1].Success &&
-                    (!int.TryParse(attribute.Groups[1].Value, out delay) || delay > BrowserWasmServerSideOptions.MaxSpinnerDelayMilliseconds))
-                    throw new XpsWebCompilationException($"[ServerSide] SpinnerDelay must be between 0 and {BrowserWasmServerSideOptions.MaxSpinnerDelayMilliseconds} milliseconds.");
+                if (attribute.Groups[1].Success && !int.TryParse(attribute.Groups[1].Value, out delay))
+                    throw new XpsWebCompilationException("[ServerSide] SpinnerDelay must be a non-negative 32-bit integer number of milliseconds.");
                 pending = new BrowserWasmServerSideOptions(delay);
                 continue;
             }
@@ -152,7 +150,7 @@ internal static class BrowserWasmServerSideMetadata
             if (header.Success)
             {
                 currentProcedure = header.Groups[2].Value;
-                if (NotesRuntimeType.IsMatch(clean)) ValidateNotesUse(classDepth, currentProcedure, annotatedProcedures);
+                if (NotesRuntimeType.IsMatch(BlankStringLiterals(clean))) ValidateNotesUse(classDepth, currentProcedure, annotatedProcedures);
                 continue;
             }
             if (Regex.IsMatch(clean, @"^End\s+(?:Sub|Function)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) { currentProcedure = null; continue; }
