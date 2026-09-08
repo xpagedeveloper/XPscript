@@ -1,6 +1,6 @@
-' Compile/runtime surface probe for the currently native-backed NotesMIMEEntity surface.
+' Runtime probe for the currently native-backed NotesMIMEEntity surface.
 Sub Main()
-    Dim session As New NotesSession(".")
+    Dim session As New NotesSession()
     Dim db As NotesDatabase
     Dim doc As NotesDocument
     Dim item As NotesItem
@@ -12,37 +12,74 @@ Sub Main()
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
-    Set doc = db.GetDocumentByNoteId("00000000")
-    If Not(doc Is Nothing) Then
+    Set doc = db.GetDocumentByUNID("100EC86E73301B37C1258BB20034683C")
+
+    If doc Is Nothing Then
+        Print "MIME probe: document not found"
+    Else
+        Print "MIME probe: document " & doc.UniversalID
+
         Set mime = doc.GetMIMEEntity("Body")
-        If Not(mime Is Nothing) Then
-            Print mime.ContentType
-            Print mime.ContentSubType
-            Print mime.Charset
-            Print mime.BoundaryStart
-            Print mime.BoundaryEnd
+        If mime Is Nothing Then
+            Print "MIME probe: Body is not a MIME item"
+        Else
+            Print "MIME ContentType: " & mime.ContentType
+            Print "MIME ContentSubType: " & mime.ContentSubType
+            Print "MIME Charset: " & mime.Charset
+            Print "MIME BoundaryStart: " & mime.BoundaryStart
+            Print "MIME BoundaryEnd: " & mime.BoundaryEnd
 
             Set child = mime.GetFirstChildEntity()
             If Not(child Is Nothing) Then
-                Print child.ContentType
-                Print child.ContentSubType
-                Print child.Charset
+                Print "First child ContentType: " & child.ContentType
+                Print "First child ContentSubType: " & child.ContentSubType
+                Print "First child Charset: " & child.Charset
                 Set sibling = child.GetNextSibling()
-                Set child = child.GetNextEntity(NotesConst.SEARCH_DEPTH)
+                If Not(sibling Is Nothing) Then
+                    Print "Next sibling ContentType: " & sibling.ContentType
+                    Print "Next sibling ContentSubType: " & sibling.ContentSubType
+                End If
             End If
         End If
 
         Set item = doc.GetFirstItem("Body")
-        If Not(item Is Nothing) Then
+        If item Is Nothing Then
+            Print "MIME probe: Body item not found"
+        Else
             Set itemMime = item.GetMIMEEntity()
+            If itemMime Is Nothing Then
+                Print "MIME probe: NotesItem.GetMIMEEntity returned Nothing"
+            Else
+                Print "Item MIME ContentType: " & itemMime.ContentType
+                Print "Item MIME ContentSubType: " & itemMime.ContentSubType
+            End If
         End If
-        Call doc.CloseMIMEEntities()
 
         ' CreateMIMEEntity is currently Body-only because MIMEOpenDirectory is note-level.
-        ' Keep this compile-only because a real document may already contain Body.
+        ' Keep this compile-only because this probe must not modify the real document.
         If False Then
             Set createdMime = doc.CreateMIMEEntity("Body")
         End If
+
+        Call doc.CloseMIMEEntities()
+
+        If Not(item Is Nothing) Then Call item.Recycle()
+        Set item = Nothing
+        Set itemMime = Nothing
+        Set sibling = Nothing
+        Set child = Nothing
+        Set mime = Nothing
+
+        Call doc.Recycle()
+        Set doc = Nothing
     End If
+
+    Call db.Recycle()
+    Set db = Nothing
+
     session.ConvertMIME = True
+    Call session.Recycle()
+    Set session = Nothing
+
+    Print "MIME probe: completed"
 End Sub
