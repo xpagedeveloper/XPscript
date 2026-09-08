@@ -64,8 +64,7 @@ internal static class NotesMimeStreamAbiPostProcessor
     {
         EnsureInitialized();
         // HCL nsfmime.h: MIME_PART_BODY = 2, MIME_PART_HAS_HEADERS = 2.
-        // NSFMimePartCloseStream(..., TRUE) is the call that flushes the context
-        // and creates the TYPE_MIME_PART item on the note.
+        // Closing with bUpdate=TRUE flushes the context and creates TYPE_MIME_PART.
         const ushort mimePartBody = 2;
         const uint mimePartHasHeaders = 2u;
         using var name = ToLmbcs(itemName);
@@ -109,15 +108,18 @@ internal static class NotesMimeStreamAbiPostProcessor
             throw new CompilerException("Unable to replace MIME stream writer with native NSF MIME part writer.");
 
         const string delegateAnchor = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate void MIMEStreamCloseDelegate(nint stream);";
+        const string createDelegate = "private delegate ushort NSFMimePartCreateStreamDelegate";
         const string delegateReplacement = delegateAnchor + "\n" +
             "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartCreateStreamDelegate(nint note, nint itemName, ushort itemNameLength, ushort partType, uint flags, out uint context);\n" +
             "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartAppendStreamDelegate(uint context, nint data, ushort dataLength);\n" +
             "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartCloseStreamDelegate(uint context, int update);";
 
-        if (source.Contains(delegateAnchor, StringComparison.Ordinal) && !source.Contains("NSFMimePartCreateStreamDelegate", StringComparison.Ordinal))
+        if (!source.Contains(createDelegate, StringComparison.Ordinal))
+        {
+            if (!source.Contains(delegateAnchor, StringComparison.Ordinal))
+                throw new CompilerException("Unable to inject NSF MIME part stream delegates.");
             source = source.Replace(delegateAnchor, delegateReplacement, StringComparison.Ordinal);
-        else if (!source.Contains("private delegate ushort NSFMimePartCreateStreamDelegate", StringComparison.Ordinal))
-            throw new CompilerException("Unable to inject NSF MIME part stream delegates.");
+        }
 
         return source;
     }
