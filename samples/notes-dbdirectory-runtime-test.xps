@@ -58,12 +58,20 @@ Sub Main()
     End If
     If Not db Is Nothing Then Call db.Recycle()
 
+    ' Starting a different type must replace the previous result set, not continue it.
     Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE=" & db.FilePath
         Call db.Recycle()
     Else
         Print "REPLICA-CANDIDATE=NONE"
+    End If
+    Set db = directory.GetNextDatabase()
+    If Not db Is Nothing Then
+        Print "REPLICA-CANDIDATE-NEXT=" & db.FilePath
+        Call db.Recycle()
+    Else
+        Print "REPLICA-CANDIDATE-NEXT=NONE"
     End If
 
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
@@ -81,6 +89,7 @@ Sub Main()
     Else
         Print "TEMPLATE=NONE"
     End If
+    Print "TYPE-SWITCH-RESET=PASS"
     Print "TYPE-ENUMERATION=PASS"
 
     Set db = directory.OpenDatabase("names.nsf")
