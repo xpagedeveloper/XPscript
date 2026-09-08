@@ -57,6 +57,21 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-preamble-only");
 
         source = ReplaceRequired(source,
+            "        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        var occurrence = Math.Max(1, XPScriptRuntime.CInt(occurrenceValue));\n        var found = 0;\n        for (var i = 0; i < _message.Headers.Count; i++)\n            if (_message.Headers[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase) && ++found == occurrence)\n                return new XPScriptNotesMIMEHeader(this, i);\n        return null;",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetNthHeader requires verified Domino MIME entity header lookup; managed root-stream header parsing is intentionally not used.\");",
+            "mime-native-get-nth-header-only");
+
+        source = ReplaceRequired(source,
+            "        var name = XPScriptRuntime.CStr(nameValue).Trim();\n        if (name.Length == 0 || name.Contains(':') || name.Contains('\\r') || name.Contains('\\n'))\n            throw new XPScriptRuntimeException(5, \"Invalid MIME header name.\");\n        _message.Headers.Add(new XPScriptMimeHeaderValue(name, \"\"));\n        Commit();\n        return new XPScriptNotesMIMEHeader(this, _message.Headers.Count - 1);",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.CreateHeader requires verified Domino MIME entity header mutation support; managed MIME header serialization is intentionally not used.\");",
+            "mime-native-create-header-only");
+
+        source = ReplaceRequired(source,
+            "        var names = XPScriptRuntime.CStr(headerNamesValue).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);\n        if (names.Length == 0) return Headers;\n        var wanted = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);\n        return string.Join(\"\\r\\n\", _message.Headers.Where(h => wanted.Contains(h.Name)).Select(h => h.Name + \": \" + h.Value));",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetSomeHeaders requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "mime-native-get-some-headers-only");
+
+        source = ReplaceRequired(source,
             "        stream.Write(_message.GetDecodedBytes());",
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetContentAsBytes requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\");",
             "mime-native-content-bytes-only");
