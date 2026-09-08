@@ -15,10 +15,6 @@ internal static class NotesDbDirectoryPostProcessor
 
 internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 {
-    private const int ReplicaCandidate = 1245;
-    private const int TemplateCandidate = 1246;
-    private const int Database = 1247;
-    private const int Template = 1248;
     private readonly string _server;
     private string[] _paths = [];
     private int _position = -1;
@@ -59,7 +55,10 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
     private static int NormalizeType(object? value)
     {
         var type = XPScriptRuntime.CInt(value);
-        if (type == ReplicaCandidate || type == TemplateCandidate || type == Database || type == Template) return type;
+        if (type == XPScriptNotesConst.REPLICA_CANDIDATE ||
+            type == XPScriptNotesConst.TEMPLATE_CANDIDATE ||
+            type == XPScriptNotesConst.DATABASE ||
+            type == XPScriptNotesConst.TEMPLATE) return type;
         throw new XPScriptRuntimeException(5, "NotesDBDirectory database type must be REPLICA_CANDIDATE (1245), TEMPLATE_CANDIDATE (1246), DATABASE (1247), or TEMPLATE (1248).");
     }
 
@@ -81,10 +80,10 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
         const ushort FileRecurse = 8192;
         var fileType = type switch
         {
-            1245 => FileDbRepl,
-            1246 => FileDbDesign,
-            1247 => FileDbAny,
-            1248 => FileFtAny,
+            XPScriptNotesConst.REPLICA_CANDIDATE => FileDbRepl,
+            XPScriptNotesConst.TEMPLATE_CANDIDATE => FileDbDesign,
+            XPScriptNotesConst.DATABASE => FileDbAny,
+            XPScriptNotesConst.TEMPLATE => FileFtAny,
             _ => throw new XPScriptRuntimeException(5, "Invalid NotesDBDirectory database type.")
         };
 
