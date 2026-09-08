@@ -13,7 +13,7 @@ internal static class NotesMimeNativeEntityPostProcessor
 
         source = ReplaceRequired(source,
             "        _document = document;\n        _itemName = itemName;\n        _raw = raw;\n        _message = XPScriptMimeMessage.Parse(raw);",
-            "        _document = document;\n        _itemName = itemName;\n        _raw = raw;\n        _message = XPScriptMimeMessage.Parse(raw);\n        _mimeDirectoryOwner = document.GetMimeDirectoryOwner();\n        _nativeEntity = _mimeDirectoryOwner.RootEntity;",
+            "        _document = document;\n        _itemName = itemName;\n        _raw = raw;\n        _message = XPScriptMimeMessage.Parse(raw);\n        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"Native NotesMIMEEntity directory access is currently supported for the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.\");\n        _mimeDirectoryOwner = document.GetMimeDirectoryOwner();\n        _nativeEntity = _mimeDirectoryOwner.RootEntity;",
             "mime-native-open");
 
         source = ReplaceRequired(source,
