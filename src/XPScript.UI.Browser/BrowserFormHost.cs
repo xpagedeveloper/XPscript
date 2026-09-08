@@ -10,9 +10,9 @@ public static partial class BrowserFormHost
     private const int NavigationStateLifetimeMilliseconds = 60_000;
     private const int MaxEventTokenLength = 260;
     private const int MaxEventPayloadLength = 1024 * 1024;
-    private const int MaxDownloadBase64Length = 96 * 1024 * 1024;
     private static readonly object EventDispatcherSync = new();
     private static Func<string, string, string>? _eventDispatcher;
+    private static Func<string, string, Task<string>>? _asyncEventDispatcher;
 
     public static string ShowDialog(string requestJson)
     {
@@ -28,8 +28,43 @@ public static partial class BrowserFormHost
         lock (EventDispatcherSync) _eventDispatcher = dispatcher;
     }
 
+    public static void SetAsyncEventDispatcher(Func<string, string, Task<string>> dispatcher)
+    {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+        lock (EventDispatcherSync) _asyncEventDispatcher = dispatcher;
+    }
+
     [JSExport]
     public static string DispatchEvent(string eventToken, string submittedValue)
+    {
+        ValidateEvent(eventToken, submittedValue);
+        Func<string, string, string>? dispatcher;
+        lock (EventDispatcherSync) dispatcher = _eventDispatcher;
+        if (dispatcher is null)
+            throw new InvalidOperationException("Browser UI event dispatcher is not registered.");
+        return dispatcher(eventToken, submittedValue) ?? string.Empty;
+    }
+
+    [JSExport]
+    public static async Task<string> DispatchEventAsync(string eventToken, string submittedValue)
+    {
+        ValidateEvent(eventToken, submittedValue);
+        Func<string, string, Task<string>>? asyncDispatcher;
+        Func<string, string, string>? dispatcher;
+        lock (EventDispatcherSync)
+        {
+            asyncDispatcher = _asyncEventDispatcher;
+            dispatcher = _eventDispatcher;
+        }
+
+        if (asyncDispatcher is not null)
+            return await asyncDispatcher(eventToken, submittedValue).ConfigureAwait(false) ?? string.Empty;
+        if (dispatcher is not null)
+            return dispatcher(eventToken, submittedValue) ?? string.Empty;
+        throw new InvalidOperationException("Browser UI event dispatcher is not registered.");
+    }
+
+    private static void ValidateEvent(string eventToken, string submittedValue)
     {
         if (string.IsNullOrWhiteSpace(eventToken) || eventToken.Length > MaxEventTokenLength)
             throw new ArgumentException("Browser UI event token is invalid.", nameof(eventToken));
@@ -38,12 +73,6 @@ public static partial class BrowserFormHost
             throw new ArgumentException("Browser UI event type is unsupported.", nameof(eventToken));
         if (submittedValue is null || submittedValue.Length > MaxEventPayloadLength)
             throw new ArgumentOutOfRangeException(nameof(submittedValue), "Browser UI event payload exceeds the 1 MiB limit.");
-
-        Func<string, string, string>? dispatcher;
-        lock (EventDispatcherSync) dispatcher = _eventDispatcher;
-        if (dispatcher is null)
-            throw new InvalidOperationException("Browser UI event dispatcher is not registered.");
-        return dispatcher(eventToken, submittedValue) ?? string.Empty;
     }
 
     public static void DownloadFile(string base64, string fileName, string contentType)
