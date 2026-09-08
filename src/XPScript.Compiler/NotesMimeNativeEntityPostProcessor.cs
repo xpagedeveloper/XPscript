@@ -72,8 +72,28 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-entity-text-only");
 
         source = ReplaceRequired(source,
+            "        var data = (byte[])stream.Read();\n        SetContent(data, XPScriptRuntime.CStr(contentTypeValue), XPScriptRuntime.CInt(encodingValue));",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.SetContentFromText requires verified Domino per-entity content mutation support; managed MIME serialization is intentionally not used.\");",
+            "mime-native-set-content-text-only");
+
+        source = ReplaceRequired(source,
+            "        SetContent((byte[])stream.Read(), XPScriptRuntime.CStr(contentTypeValue), XPScriptRuntime.CInt(encodingValue));",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.SetContentFromBytes requires verified Domino per-entity content mutation support; managed MIME serialization is intentionally not used.\");",
+            "mime-native-set-content-bytes-only");
+
+        source = ReplaceRequired(source,
+            "        _message.SetDecodedContent(_message.GetDecodedBytes(), XPScriptRuntime.CInt(encodingValue));\n        Commit();",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.EncodeContent requires verified Domino MIME entity encoding support; managed transfer encoding is intentionally not used.\");",
+            "mime-native-encode-content-only");
+
+        source = ReplaceRequired(source,
+            "        _message.SetDecodedContent(_message.GetDecodedBytes(), 1725);\n        Commit();",
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.DecodeContent requires verified Domino MIME entity decoding support; managed transfer decoding is intentionally not used.\");",
+            "mime-native-decode-content-only");
+
+        source = ReplaceRequired(source,
             "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }",
-            "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }\n\n    public XPScriptNotesMIMEEntity? GetFirstChildEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.FirstSubpart(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetParentEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.Parent(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.NextSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetPrevSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.PrevSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.IterateNext(_mimeDirectoryOwner.RootEntity, _nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity(object? searchValue)\n    {\n        EnsureEntityAlive();\n        var search = XPScriptRuntime.CInt(searchValue);\n        if (search != XPScriptNotesConst.SEARCH_DEPTH)\n            throw new System.NotSupportedException(\"NotesMIMEEntity.GetNextEntity currently supports SEARCH_DEPTH only; Domino MIMEIterateNext is depth-first.\");\n        return GetNextEntity();\n    }",
+            "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; }\n    }\n\n    public XPScriptNotesMIMEEntity? GetFirstChildEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.FirstSubpart(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetParentEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.Parent(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.NextSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetPrevSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.PrevSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.IterateNext(_mimeDirectoryOwner.RootEntity, _nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity(object? searchValue)\n    {\n        EnsureEntityAlive();\n        var search = XPScriptRuntime.CInt(searchValue);\n        if (search != XPScriptNotesConst.SEARCH_DEPTH)\n            throw new System.NotSupportedException(\"NotesMIMEEntity.GetNextEntity currently supports SEARCH_DEPTH only; Domino MIMEIterateNext is depth-first.\");\n        return GetNextEntity();\n    }",
             "mime-native-navigation");
 
         source = ReplaceRequired(source,
