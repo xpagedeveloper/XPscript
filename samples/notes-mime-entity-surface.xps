@@ -1,4 +1,4 @@
-' Compile/runtime surface probe for NotesMIMEEntity and NotesMIMEHeader.
+' Compile/runtime surface probe for the currently native-backed NotesMIMEEntity surface.
 Sub Main()
     Dim session As New NotesSession(".")
     Dim db As NotesDatabase
@@ -7,8 +7,8 @@ Sub Main()
     Dim mime As NotesMIMEEntity
     Dim itemMime As NotesMIMEEntity
     Dim createdMime As NotesMIMEEntity
-    Dim header As NotesMIMEHeader
-    Dim stream As NotesStream
+    Dim child As NotesMIMEEntity
+    Dim sibling As NotesMIMEEntity
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -19,31 +19,29 @@ Sub Main()
             Print mime.ContentType
             Print mime.ContentSubType
             Print mime.Charset
-            Print mime.Encoding
-            Print mime.Headers
-            Print mime.ContentAsText
             Print mime.BoundaryStart
             Print mime.BoundaryEnd
-            Print mime.Preamble
-            Set header = mime.GetNthHeader("Content-Type")
-            If Not(header Is Nothing) Then
-                Print header.HeaderName
-                Print header.GetHeaderVal()
-                Print header.GetHeaderValAndParams()
-                Print header.GetParamVal("charset")
+
+            Set child = mime.GetFirstChildEntity()
+            If Not(child Is Nothing) Then
+                Print child.ContentType
+                Print child.ContentSubType
+                Print child.Charset
+                Set sibling = child.GetNextSibling()
+                Set child = child.GetNextEntity(NotesConst.SEARCH_DEPTH)
             End If
-            Set stream = session.CreateStream()
-            Call mime.GetContentAsBytes(stream)
         End If
+
         Set item = doc.GetFirstItem("Body")
         If Not(item Is Nothing) Then
             Set itemMime = item.GetMIMEEntity()
         End If
         Call doc.CloseMIMEEntities()
 
-        ' Creation of a top-level MIME entity is backed by Domino MIMEStream APIs.
+        ' CreateMIMEEntity is currently Body-only because MIMEOpenDirectory is note-level.
+        ' Keep this compile-only because a real document may already contain Body.
         If False Then
-            Set createdMime = doc.CreateMIMEEntity("Body2")
+            Set createdMime = doc.CreateMIMEEntity("Body")
         End If
     End If
     session.ConvertMIME = True
