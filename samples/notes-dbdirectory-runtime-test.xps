@@ -8,6 +8,7 @@ Sub Main()
     Dim firstPath As String
     Dim count As Integer
     Dim constantFailures As Integer
+    Dim typeFailures As Integer
     Dim errCode As Integer
 
     Set session = New NotesSession()
@@ -45,6 +46,7 @@ Sub Main()
         Print "DATABASE=" & db.FilePath
         If db.IsOpen Then
             Print "NOTES-DBDIRECTORY=FAIL ENUMERATION-OPENED-DATABASE"
+            typeFailures = typeFailures + 1
         End If
         count = count + 1
         Call db.Recycle()
@@ -56,6 +58,7 @@ Sub Main()
     Set db = directory.GetNextDatabase()
     If Not db Is Nothing Then
         Print "NOTES-DBDIRECTORY=FAIL NEXT-AFTER-END"
+        typeFailures = typeFailures + 1
         Call db.Recycle()
     Else
         Print "NEXT-AFTER-END=PASS"
@@ -65,8 +68,10 @@ Sub Main()
     If firstPath <> "" Then
         If db Is Nothing Then
             Print "NOTES-DBDIRECTORY=FAIL RESET-NOTHING"
+            typeFailures = typeFailures + 1
         ElseIf db.FilePath <> firstPath Then
             Print "NOTES-DBDIRECTORY=FAIL RESET-PATH=" & db.FilePath
+            typeFailures = typeFailures + 1
         Else
             Print "ENUMERATION-RESET=PASS"
         End If
@@ -75,6 +80,7 @@ Sub Main()
             Print "ENUMERATION-RESET=PASS"
         Else
             Print "NOTES-DBDIRECTORY=FAIL RESET-UNEXPECTED-DATABASE=" & db.FilePath
+            typeFailures = typeFailures + 1
         End If
     End If
     If Not db Is Nothing Then Call db.Recycle()
@@ -83,7 +89,10 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE=" & db.FilePath
-        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-OPENED-DATABASE"
+        If db.IsOpen Then
+            Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-OPENED-DATABASE"
+            typeFailures = typeFailures + 1
+        End If
         Call db.Recycle()
     Else
         Print "REPLICA-CANDIDATE=NONE"
@@ -91,7 +100,10 @@ Sub Main()
     Set db = directory.GetNextDatabase()
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE-NEXT=" & db.FilePath
-        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-NEXT-OPENED-DATABASE"
+        If db.IsOpen Then
+            Print "NOTES-DBDIRECTORY=FAIL REPLICA-CANDIDATE-NEXT-OPENED-DATABASE"
+            typeFailures = typeFailures + 1
+        End If
         Call db.Recycle()
     Else
         Print "REPLICA-CANDIDATE-NEXT=NONE"
@@ -100,7 +112,10 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
     If Not db Is Nothing Then
         Print "TEMPLATE-CANDIDATE=" & db.FilePath
-        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-CANDIDATE-OPENED-DATABASE"
+        If db.IsOpen Then
+            Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-CANDIDATE-OPENED-DATABASE"
+            typeFailures = typeFailures + 1
+        End If
         Call db.Recycle()
     Else
         Print "TEMPLATE-CANDIDATE=NONE"
@@ -109,13 +124,19 @@ Sub Main()
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE)
     If Not db Is Nothing Then
         Print "TEMPLATE=" & db.FilePath
-        If db.IsOpen Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-OPENED-DATABASE"
+        If db.IsOpen Then
+            Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-OPENED-DATABASE"
+            typeFailures = typeFailures + 1
+        End If
         Call db.Recycle()
     Else
         Print "TEMPLATE=NONE"
     End If
-    Print "TYPE-SWITCH-RESET=PASS"
-    Print "TYPE-ENUMERATION=PASS"
+    If typeFailures = 0 Then
+        Print "TYPE-ENUMERATION=PASS"
+    Else
+        Print "TYPE-ENUMERATION=FAIL " & CStr(typeFailures)
+    End If
 
     Set db = directory.OpenDatabase("names.nsf")
     Print "OPEN-NAMES=" & CStr(db.IsOpen)
