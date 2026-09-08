@@ -70,8 +70,12 @@ Sub Main()
         Else
             Print "ENUMERATION-RESET=PASS"
         End If
-    ElseIf db Is Nothing Then
-        Print "ENUMERATION-RESET=PASS"
+    Else
+        If db Is Nothing Then
+            Print "ENUMERATION-RESET=PASS"
+        Else
+            Print "NOTES-DBDIRECTORY=FAIL RESET-UNEXPECTED-DATABASE=" & db.FilePath
+        End If
     End If
     If Not db Is Nothing Then Call db.Recycle()
 
