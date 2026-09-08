@@ -22,9 +22,9 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-wrapper-constructor");
 
         source = ReplaceRequired(source,
-            "    public string Charset { get { EnsureEntityAlive(); return _message.Charset; } }",
-            "    public string Charset { get { EnsureEntityAlive(); return _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_CHARSET); } }",
-            "mime-native-charset-property");
+            "    public string BoundaryStart { get { EnsureEntityAlive(); return _message.Boundary.Length == 0 ? \"\" : \"--\" + _message.Boundary; } }\n    public string BoundaryEnd { get { EnsureEntityAlive(); return _message.Boundary.Length == 0 ? \"\" : \"--\" + _message.Boundary + \"--\"; } }\n    public string Charset { get { EnsureEntityAlive(); return _message.Charset; } }",
+            "    public string BoundaryStart { get { EnsureEntityAlive(); var boundary = _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY); return boundary.Length == 0 ? \"\" : \"--\" + boundary; } }\n    public string BoundaryEnd { get { EnsureEntityAlive(); var boundary = _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY); return boundary.Length == 0 ? \"\" : \"--\" + boundary + \"--\"; } }\n    public string Charset { get { EnsureEntityAlive(); return _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_CHARSET); } }",
+            "mime-native-type-parameters");
 
         source = ReplaceRequired(source,
             "    public string ContentType { get { EnsureEntityAlive(); return _message.ContentType; } }\n    public string ContentSubType { get { EnsureEntityAlive(); return _message.ContentSubType; } }",
