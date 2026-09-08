@@ -22,6 +22,11 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-wrapper-constructor");
 
         source = ReplaceRequired(source,
+            "    public string Charset { get { EnsureEntityAlive(); return _message.Charset; } }",
+            "    public string Charset { get { EnsureEntityAlive(); return _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_CHARSET); } }",
+            "mime-native-charset-property");
+
+        source = ReplaceRequired(source,
             "    public string ContentType { get { EnsureEntityAlive(); return _message.ContentType; } }\n    public string ContentSubType { get { EnsureEntityAlive(); return _message.ContentSubType; } }",
             "    public string ContentType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentTypeSymbol(_nativeEntity)); } }\n    public string ContentSubType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentSubtypeSymbol(_nativeEntity)); } }",
             "mime-native-content-properties");
