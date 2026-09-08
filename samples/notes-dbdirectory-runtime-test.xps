@@ -10,6 +10,7 @@ Sub Main()
     Dim firstTemplateCandidatePath As String
     Dim recycledName As String
     Dim count As Integer
+    Dim failures As Integer
     Dim constantFailures As Integer
     Dim typeFailures As Integer
     Dim openFailures As Integer
@@ -20,7 +21,6 @@ Sub Main()
     Set directory = session.GetDbDirectory("")
 
     Print "NOTES-DBDIRECTORY-BEGIN"
-    Print "Name=" & directory.Name
     Set parentSession = directory.Parent
     If parentSession Is Nothing Then
         Print "NOTES-DBDIRECTORY=FAIL PARENT-NOTHING"
@@ -41,6 +41,7 @@ Sub Main()
         Print "PROPERTIES=PASS"
     Else
         Print "PROPERTIES=FAIL " & CStr(propertyFailures)
+        failures = failures + propertyFailures
     End If
 
     If NotesConst.REPLICA_CANDIDATE <> 1245 Then
@@ -63,6 +64,7 @@ Sub Main()
         Print "TYPE-CONSTANTS=PASS"
     Else
         Print "TYPE-CONSTANTS=FAIL " & CStr(constantFailures)
+        failures = failures + constantFailures
     End If
 
     Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
@@ -79,7 +81,6 @@ Sub Main()
     Loop
     Print "DATABASE-COUNT=" & CStr(count)
 
-    ' A completed enumeration must stay exhausted until GetFirstDatabase starts a new one.
     Set db = directory.GetNextDatabase()
     If Not db Is Nothing Then
         Print "NOTES-DBDIRECTORY=FAIL NEXT-AFTER-END"
@@ -133,7 +134,6 @@ Sub Main()
         Print "REPLICA-CANDIDATE-NEXT=NONE"
     End If
 
-    ' Capture the target type, switch away, then require GetFirstDatabase to restart it.
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
     If Not db Is Nothing Then
         firstTemplateCandidatePath = db.FilePath
@@ -188,6 +188,7 @@ Sub Main()
         Print "TYPE-ENUMERATION=PASS"
     Else
         Print "TYPE-ENUMERATION=FAIL " & CStr(typeFailures)
+        failures = failures + typeFailures
     End If
 
     Set db = directory.OpenDatabase("names.nsf")
@@ -209,6 +210,7 @@ Sub Main()
         Print "OPEN-DATABASE=PASS"
     Else
         Print "OPEN-DATABASE=FAIL " & CStr(openFailures)
+        failures = failures + openFailures
     End If
 
     errCode = 0
@@ -218,6 +220,7 @@ Sub Main()
     On Error GoTo 0
     If errCode <> 5 Then
         Print "NOTES-DBDIRECTORY=FAIL INVALID-TYPE=" & CStr(errCode)
+        failures = failures + 1
     Else
         Print "INVALID-TYPE=PASS"
     End If
@@ -230,10 +233,16 @@ Sub Main()
     On Error GoTo 0
     If errCode <> 91 Then
         Print "NOTES-DBDIRECTORY=FAIL RECYCLED-NAME=" & CStr(errCode)
+        failures = failures + 1
     Else
         Print "RECYCLE=PASS"
     End If
 
     Call session.Recycle()
+    If failures = 0 Then
+        Print "NOTES-DBDIRECTORY=PASS"
+    Else
+        Print "NOTES-DBDIRECTORY=FAILURES " & CStr(failures)
+    End If
     Print "NOTES-DBDIRECTORY-END"
 End Sub
