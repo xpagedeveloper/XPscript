@@ -148,14 +148,19 @@ internal sealed class XPScriptNotesDbDirectory : XPScriptNotesObject
 
     private bool TryGetSummaryText(nint summaryBuffer, string itemName, out string value)
     {
+        // $Path is a Domino database path. C API path functions document MAXPATH-sized
+        // buffers; use a WORD-sized buffer here so NSFGetSummaryValue cannot truncate a
+        // valid path at the previous arbitrary 4095-byte boundary.
+        const int PathBufferLength = ushort.MaxValue;
         using var name = ToLmbcs(itemName);
-        var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(4096);
+        var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(PathBufferLength);
         try
         {
-            Zero(buffer, 4096);
-            // NSFGetSummaryValue returns Domino BOOL (32-bit int), not STATUS.
-            var found = Resolve<NSFGetSummaryValueDelegate>("NSFGetSummaryValue")(summaryBuffer, name.Pointer, buffer, 4095);
-            value = found == 0 ? "" : FromLmbcsZeroTerminated(buffer, 4095);
+            Zero(buffer, PathBufferLength);
+            // NSFGetSummaryValue returns Domino BOOL (32-bit int), not STATUS. Its
+            // max_buffer_len argument is a WORD containing the total supplied length.
+            var found = Resolve<NSFGetSummaryValueDelegate>("NSFGetSummaryValue")(summaryBuffer, name.Pointer, buffer, ushort.MaxValue);
+            value = found == 0 ? "" : FromLmbcsZeroTerminated(buffer, PathBufferLength);
             return found != 0;
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
