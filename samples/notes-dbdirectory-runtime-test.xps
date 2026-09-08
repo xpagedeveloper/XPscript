@@ -33,6 +33,31 @@ Sub Main()
     Loop
     Print "DATABASE-COUNT=" & CStr(count)
 
+    Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
+    If Not db Is Nothing Then
+        Print "REPLICA-CANDIDATE=" & db.FilePath
+        Call db.Recycle()
+    Else
+        Print "REPLICA-CANDIDATE=NONE"
+    End If
+
+    Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
+    If Not db Is Nothing Then
+        Print "TEMPLATE-CANDIDATE=" & db.FilePath
+        Call db.Recycle()
+    Else
+        Print "TEMPLATE-CANDIDATE=NONE"
+    End If
+
+    Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE)
+    If Not db Is Nothing Then
+        Print "TEMPLATE=" & db.FilePath
+        Call db.Recycle()
+    Else
+        Print "TEMPLATE=NONE"
+    End If
+    Print "TYPE-ENUMERATION=PASS"
+
     Set db = directory.OpenDatabase("names.nsf")
     Print "OPEN-NAMES=" & CStr(db.IsOpen)
     Call db.Recycle()
