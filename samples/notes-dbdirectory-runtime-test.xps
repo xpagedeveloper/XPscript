@@ -15,6 +15,12 @@ Sub Main()
     Print "Name=" & directory.Name
     Print "ParentUser=" & directory.Parent.UserName
 
+    If NotesConst.REPLICA_CANDIDATE <> 1245 Then Print "NOTES-DBDIRECTORY=FAIL REPLICA_CANDIDATE"
+    If NotesConst.TEMPLATE_CANDIDATE <> 1246 Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE_CANDIDATE"
+    If NotesConst.DATABASE <> 1247 Then Print "NOTES-DBDIRECTORY=FAIL DATABASE"
+    If NotesConst.TEMPLATE <> 1248 Then Print "NOTES-DBDIRECTORY=FAIL TEMPLATE"
+    Print "TYPE-CONSTANTS=PASS"
+
     Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
     Do While Not db Is Nothing
         Print "DATABASE=" & db.FilePath
