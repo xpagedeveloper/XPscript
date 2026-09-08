@@ -45,7 +45,8 @@ End Sub
         File.WriteAllText(path, source);
         try
         {
-            using var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
+            var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
+            unit.DisposeAsync().AsTask().GetAwaiter().GetResult();
             throw new Exception($"Browser-WASM Notes boundary verification unexpectedly compiled {fileName}.");
         }
         catch (XpsWebCompilationException ex) when (
