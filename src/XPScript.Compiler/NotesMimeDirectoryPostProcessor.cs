@@ -134,7 +134,7 @@ internal sealed partial class XPScriptNotesNativeApi
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int MIMEEntityContentSubtypeDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEEntityGetTypeParamDelegate(nint entity, int symbol, out nint valueHandle, out uint valueLength);
+    private delegate ushort MIMEEntityGetTypeParamDelegate(nint entity, int symbol, out uint valueHandle, out uint valueLength);
 }
 """;
 }
