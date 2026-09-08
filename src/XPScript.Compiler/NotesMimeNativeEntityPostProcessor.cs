@@ -32,6 +32,16 @@ internal static class NotesMimeNativeEntityPostProcessor
             "mime-native-content-properties");
 
         source = ReplaceRequired(source,
+            "    public string ContentAsText { get { EnsureEntityAlive(); return _message.GetDecodedText(); } }",
+            "    public string ContentAsText { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.ContentAsText requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\"); } }",
+            "mime-native-content-as-text-only");
+
+        source = ReplaceRequired(source,
+            "    public int Encoding { get { EnsureEntityAlive(); return XPScriptMimeMessage.EncodingConstant(_message.TransferEncoding); } }",
+            "    public int Encoding { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Encoding requires a verified Domino MIME header/entity API mapping; managed header parsing is intentionally not used.\"); } }",
+            "mime-native-encoding-only");
+
+        source = ReplaceRequired(source,
             "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }",
             "    public XPScriptNotesDocument Parent { get { EnsureEntityAlive(); return _document; } }\n\n    public XPScriptNotesMIMEEntity? GetFirstChildEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.FirstSubpart(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetParentEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.Parent(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.NextSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetPrevSibling()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.PrevSibling(_nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity()\n    {\n        EnsureEntityAlive();\n        return WrapNativeEntity(_mimeDirectoryOwner.IterateNext(_mimeDirectoryOwner.RootEntity, _nativeEntity));\n    }\n\n    public XPScriptNotesMIMEEntity? GetNextEntity(object? searchValue)\n    {\n        EnsureEntityAlive();\n        var search = XPScriptRuntime.CInt(searchValue);\n        if (search != XPScriptNotesConst.SEARCH_DEPTH)\n            throw new System.NotSupportedException(\"NotesMIMEEntity.GetNextEntity currently supports SEARCH_DEPTH only; Domino MIMEIterateNext is depth-first.\");\n        return GetNextEntity();\n    }",
             "mime-native-navigation");
