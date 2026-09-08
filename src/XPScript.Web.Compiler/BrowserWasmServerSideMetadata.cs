@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -10,7 +11,7 @@ internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds
 
 internal static class BrowserWasmServerSideMetadata
 {
-    private const string Marker = "' XPAi __XPSCRIPT_SERVERSIDE__";
+    private const string MarkerPrefix = "' XPAi __XPSCRIPT_SERVERSIDE__ SpinnerDelay=";
 
     private static readonly Regex ServerSideAttribute = new(
         @"^\[ServerSide(?:\s*\(\s*SpinnerDelay\s*=\s*(\d+)\s*\))?\s*\]$",
@@ -28,8 +29,32 @@ internal static class BrowserWasmServerSideMetadata
         @"\bNotes(?!Const\b)[A-Za-z_]\w*\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private sealed class AnnotatedProcedureSet : IReadOnlySet<string>
+    {
+        private readonly IReadOnlyDictionary<string, BrowserWasmServerSideOptions> _options;
+        private readonly HashSet<string> _names;
+
+        public AnnotatedProcedureSet(IReadOnlyDictionary<string, BrowserWasmServerSideOptions> options)
+        {
+            _options = options;
+            _names = options.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public IReadOnlyDictionary<string, BrowserWasmServerSideOptions> Options => _options;
+        public int Count => _names.Count;
+        public bool Contains(string item) => _names.Contains(item);
+        public IEnumerator<string> GetEnumerator() => _names.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        public bool IsProperSubsetOf(IEnumerable<string> other) => _names.IsProperSubsetOf(other);
+        public bool IsProperSupersetOf(IEnumerable<string> other) => _names.IsProperSupersetOf(other);
+        public bool IsSubsetOf(IEnumerable<string> other) => _names.IsSubsetOf(other);
+        public bool IsSupersetOf(IEnumerable<string> other) => _names.IsSupersetOf(other);
+        public bool Overlaps(IEnumerable<string> other) => _names.Overlaps(other);
+        public bool SetEquals(IEnumerable<string> other) => _names.SetEquals(other);
+    }
+
     public static IReadOnlySet<string> ReadAnnotatedProcedures(string source) =>
-        ReadAnnotatedProcedureOptions(source).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        new AnnotatedProcedureSet(ReadAnnotatedProcedureOptions(source));
 
     public static IReadOnlyDictionary<string, BrowserWasmServerSideOptions> ReadAnnotatedProcedureOptions(string source)
     {
@@ -101,9 +126,15 @@ internal static class BrowserWasmServerSideMetadata
         ArgumentNullException.ThrowIfNull(annotatedProcedures);
         if (annotatedProcedures.Count == 0) return parsedSource;
 
+        var options = annotatedProcedures is AnnotatedProcedureSet metadata
+            ? metadata.Options
+            : annotatedProcedures.ToDictionary(
+                name => name,
+                _ => new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds),
+                StringComparer.OrdinalIgnoreCase);
         var lines = NormalizeLines(parsedSource);
         var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var output = new StringBuilder(parsedSource.Length + annotatedProcedures.Count * 40);
+        var output = new StringBuilder(parsedSource.Length + annotatedProcedures.Count * 64);
 
         foreach (var line in lines)
         {
@@ -114,7 +145,7 @@ internal static class BrowserWasmServerSideMetadata
             if (!annotatedProcedures.Contains(name)) continue;
             if (!found.Add(name))
                 throw new XpsWebCompilationException($"[ServerSide] procedure '{name}' is ambiguous after web metadata parsing.");
-            output.AppendLine("    " + Marker);
+            output.AppendLine("    " + MarkerPrefix + options[name].SpinnerDelayMilliseconds);
         }
 
         foreach (var name in annotatedProcedures)
