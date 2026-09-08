@@ -6,6 +6,7 @@ Sub Main()
     Dim directory As NotesDBDirectory
     Dim db As NotesDatabase
     Dim firstPath As String
+    Dim firstTemplateCandidatePath As String
     Dim count As Integer
     Dim constantFailures As Integer
     Dim typeFailures As Integer
@@ -85,7 +86,6 @@ Sub Main()
     End If
     If Not db Is Nothing Then Call db.Recycle()
 
-    ' Starting a different type must replace the previous result set, not continue it.
     Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
     If Not db Is Nothing Then
         Print "REPLICA-CANDIDATE=" & db.FilePath
@@ -109,8 +109,10 @@ Sub Main()
         Print "REPLICA-CANDIDATE-NEXT=NONE"
     End If
 
+    ' Capture the target type, switch away, then require GetFirstDatabase to restart it.
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
     If Not db Is Nothing Then
+        firstTemplateCandidatePath = db.FilePath
         Print "TEMPLATE-CANDIDATE=" & db.FilePath
         If db.IsOpen Then
             Print "NOTES-DBDIRECTORY=FAIL TEMPLATE-CANDIDATE-OPENED-DATABASE"
@@ -120,6 +122,32 @@ Sub Main()
     Else
         Print "TEMPLATE-CANDIDATE=NONE"
     End If
+
+    Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
+    If Not db Is Nothing Then Call db.Recycle()
+    Set db = directory.GetNextDatabase()
+    If Not db Is Nothing Then Call db.Recycle()
+
+    Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE_CANDIDATE)
+    If firstTemplateCandidatePath <> "" Then
+        If db Is Nothing Then
+            Print "NOTES-DBDIRECTORY=FAIL TYPE-SWITCH-RESET-NOTHING"
+            typeFailures = typeFailures + 1
+        ElseIf db.FilePath <> firstTemplateCandidatePath Then
+            Print "NOTES-DBDIRECTORY=FAIL TYPE-SWITCH-RESET-PATH=" & db.FilePath
+            typeFailures = typeFailures + 1
+        Else
+            Print "TYPE-SWITCH-RESET=PASS"
+        End If
+    Else
+        If db Is Nothing Then
+            Print "TYPE-SWITCH-RESET=PASS"
+        Else
+            Print "NOTES-DBDIRECTORY=FAIL TYPE-SWITCH-RESET-UNEXPECTED=" & db.FilePath
+            typeFailures = typeFailures + 1
+        End If
+    End If
+    If Not db Is Nothing Then Call db.Recycle()
 
     Set db = directory.GetFirstDatabase(NotesConst.TEMPLATE)
     If Not db Is Nothing Then
