@@ -51,7 +51,7 @@ internal static partial class XPScriptBrowserServerBridgeTransport
         string responseJson;
         try
         {
-            responseJson = RequestAsync(method.Method, relativeUrl, headerJson, body).GetAwaiter().GetResult();
+            responseJson = Request(method.Method, relativeUrl, headerJson, body);
         }
         catch (Exception ex)
         {
@@ -94,7 +94,7 @@ internal static partial class XPScriptBrowserServerBridgeTransport
     }
 
     [System.Runtime.InteropServices.JavaScript.JSImport("globalThis.__xpscriptWasmBridgeRequest")]
-    private static partial System.Threading.Tasks.Task<string> RequestAsync(string method, string relativeUrl, string headersJson, string body);
+    private static partial string Request(string method, string relativeUrl, string headersJson, string body);
 }
 """;
 
@@ -161,7 +161,7 @@ internal static partial class XPScriptBrowserServerBridgeTransport
     globalThis.__xpscriptWasmBridgeBusy = { begin: beginBusy, end: endBusy };
 })();
 
-globalThis.__xpscriptWasmBridgeRequest = async function(method, relativeUrl, headersJson, body) {
+globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJson, body) {
     const parsedHeaders = headersJson ? JSON.parse(headersJson) : {};
     let spinnerDelayMs = 300;
     for (const name of Object.keys(parsedHeaders)) {
@@ -178,36 +178,34 @@ globalThis.__xpscriptWasmBridgeRequest = async function(method, relativeUrl, hea
     const busy = globalThis.__xpscriptWasmBridgeBusy;
     const busyToken = busy.begin(spinnerDelayMs);
     try {
-        const perform = async (csrfToken) => {
-            const headers = new Headers();
-            for (const [name, value] of Object.entries(parsedHeaders)) headers.set(name, String(value));
-            if (csrfToken) headers.set('X-XPS-CSRF-Token', csrfToken);
-            return await fetch(url, {
-                method: safeMethod,
-                headers,
-                body: safeMethod === 'GET' ? undefined : String(body || ''),
-                credentials: 'same-origin',
-                cache: 'no-store'
-            });
+        const perform = (csrfToken) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(safeMethod, url, false);
+            for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
+            if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
+            xhr.send(safeMethod === 'GET' ? null : String(body || ''));
+            return xhr;
         };
 
-        let response = await perform(null);
-        if (safeMethod === 'POST' && response.status === 403) {
-            const csrf = response.headers.get('X-XPS-CSRF-Token') || '';
-            if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) response = await perform(csrf);
+        let xhr = perform(null);
+        if (safeMethod === 'POST' && xhr.status === 403) {
+            const csrf = xhr.getResponseHeader('X-XPS-CSRF-Token') || '';
+            if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) xhr = perform(csrf);
         }
 
-        const responseBody = await response.text();
         const headers = {};
-        response.headers.forEach((value, name) => {
-            headers[name] = value;
-        });
+        const rawHeaders = xhr.getAllResponseHeaders() || '';
+        for (const line of rawHeaders.split(/\r?\n/)) {
+            const separator = line.indexOf(':');
+            if (separator <= 0) continue;
+            headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+        }
 
         return JSON.stringify({
-            status: response.status,
-            statusText: response.statusText || '',
-            body: responseBody || '',
-            contentType: response.headers.get('Content-Type') || '',
+            status: xhr.status,
+            statusText: xhr.statusText || '',
+            body: xhr.responseText || '',
+            contentType: xhr.getResponseHeader('Content-Type') || '',
             headers
         });
     } finally {
