@@ -99,6 +99,53 @@ internal static partial class XPScriptBrowserServerBridgeTransport
 """;
 
     private const string BrowserModuleCode = """
+(() => {
+    const spinnerDelayMs = 300;
+    let pendingRequests = 0;
+    let spinnerTimer = 0;
+
+    const ensureBusyOverlay = () => {
+        let overlay = document.getElementById('xpscript-server-busy');
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'xpscript-server-busy';
+        overlay.setAttribute('role', 'status');
+        overlay.setAttribute('aria-live', 'polite');
+        overlay.setAttribute('aria-label', 'Server request in progress');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.42);backdrop-filter:blur(1px);';
+        const spinner = document.createElement('div');
+        spinner.style.cssText = 'width:2.75rem;height:2.75rem;border:.32rem solid rgba(0,0,0,.18);border-top-color:currentColor;border-radius:50%;animation:xpscript-server-spin .8s linear infinite;';
+        const style = document.createElement('style');
+        style.textContent = '@keyframes xpscript-server-spin{to{transform:rotate(360deg)}}';
+        overlay.appendChild(spinner);
+        document.head.appendChild(style);
+        document.body.appendChild(overlay);
+        return overlay;
+    };
+
+    const beginBusy = () => {
+        pendingRequests++;
+        if (pendingRequests !== 1) return;
+        spinnerTimer = window.setTimeout(() => {
+            spinnerTimer = 0;
+            if (pendingRequests > 0) ensureBusyOverlay().style.display = 'flex';
+        }, spinnerDelayMs);
+    };
+
+    const endBusy = () => {
+        pendingRequests = Math.max(0, pendingRequests - 1);
+        if (pendingRequests !== 0) return;
+        if (spinnerTimer) {
+            window.clearTimeout(spinnerTimer);
+            spinnerTimer = 0;
+        }
+        const overlay = document.getElementById('xpscript-server-busy');
+        if (overlay) overlay.style.display = 'none';
+    };
+
+    globalThis.__xpscriptWasmBridgeBusy = { begin: beginBusy, end: endBusy };
+})();
+
 globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJson, body) {
     const parsedHeaders = headersJson ? JSON.parse(headersJson) : {};
     const safeMethod = String(method || '').toUpperCase();
@@ -106,36 +153,42 @@ globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJs
     const url = String(relativeUrl || '');
     if (url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')) throw new Error('Invalid bridge URL.');
 
-    const perform = (csrfToken) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open(safeMethod, url, false);
-        for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
-        if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
-        xhr.send(safeMethod === 'GET' ? null : String(body || ''));
-        return xhr;
-    };
+    const busy = globalThis.__xpscriptWasmBridgeBusy;
+    busy.begin();
+    try {
+        const perform = (csrfToken) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(safeMethod, url, false);
+            for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
+            if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
+            xhr.send(safeMethod === 'GET' ? null : String(body || ''));
+            return xhr;
+        };
 
-    let xhr = perform(null);
-    if (safeMethod === 'POST' && xhr.status === 403) {
-        const csrf = xhr.getResponseHeader('X-XPS-CSRF-Token') || '';
-        if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) xhr = perform(csrf);
+        let xhr = perform(null);
+        if (safeMethod === 'POST' && xhr.status === 403) {
+            const csrf = xhr.getResponseHeader('X-XPS-CSRF-Token') || '';
+            if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) xhr = perform(csrf);
+        }
+
+        const headers = {};
+        const rawHeaders = xhr.getAllResponseHeaders() || '';
+        for (const line of rawHeaders.split(/\r?\n/)) {
+            const separator = line.indexOf(':');
+            if (separator <= 0) continue;
+            headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+        }
+
+        return JSON.stringify({
+            status: xhr.status,
+            statusText: xhr.statusText || '',
+            body: xhr.responseText || '',
+            contentType: xhr.getResponseHeader('Content-Type') || '',
+            headers
+        });
+    } finally {
+        busy.end();
     }
-
-    const headers = {};
-    const rawHeaders = xhr.getAllResponseHeaders() || '';
-    for (const line of rawHeaders.split(/\r?\n/)) {
-        const separator = line.indexOf(':');
-        if (separator <= 0) continue;
-        headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
-    }
-
-    return JSON.stringify({
-        status: xhr.status,
-        statusText: xhr.statusText || '',
-        body: xhr.responseText || '',
-        contentType: xhr.getResponseHeader('Content-Type') || '',
-        headers
-    });
 };
 """;
 }
