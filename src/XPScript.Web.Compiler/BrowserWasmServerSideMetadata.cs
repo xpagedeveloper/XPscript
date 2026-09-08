@@ -15,6 +15,10 @@ internal static class BrowserWasmServerSideMetadata
         @"^(?:(?:Public|Private)\s+)?Class\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex NotesRuntimeType = new(
+        @"\bNotes(?!Const\b)[A-Za-z_]\w*\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static IReadOnlySet<string> ReadAnnotatedProcedures(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -68,6 +72,8 @@ internal static class BrowserWasmServerSideMetadata
 
         if (pending)
             throw new XpsWebCompilationException("[ServerSide] is not followed by a Sub or Function declaration.");
+
+        ValidateNotesBoundary(lines, result);
         return result;
     }
 
@@ -118,6 +124,54 @@ internal static class BrowserWasmServerSideMetadata
         {
             if (!plan.Procedures.Values.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 throw new XpsWebCompilationException($"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.");
+        }
+    }
+
+    private static void ValidateNotesBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)
+    {
+        string? currentProcedure = null;
+        var classDepth = 0;
+
+        foreach (var line in lines)
+        {
+            var clean = StripComment(line).Trim();
+            if (clean.Length == 0) continue;
+
+            if (ClassHeader.IsMatch(clean))
+            {
+                classDepth++;
+                continue;
+            }
+            if (clean.Equals("End Class", StringComparison.OrdinalIgnoreCase))
+            {
+                classDepth = Math.Max(0, classDepth - 1);
+                continue;
+            }
+
+            var header = ProcedureHeader.Match(clean);
+            if (header.Success)
+            {
+                currentProcedure = header.Groups[2].Value;
+                continue;
+            }
+
+            if (Regex.IsMatch(clean, @"^End\s+(?:Sub|Function)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                currentProcedure = null;
+                continue;
+            }
+
+            if (!NotesRuntimeType.IsMatch(clean)) continue;
+
+            if (classDepth != 0)
+                throw new XpsWebCompilationException("browser-wasm Notes runtime access is not supported inside class methods. Move Notes work to a module Sub or Function marked [ServerSide].");
+
+            if (currentProcedure is null)
+                throw new XpsWebCompilationException("browser-wasm Notes runtime objects cannot be module-level state. Create and use Notes objects inside a module Sub or Function marked [ServerSide].");
+
+            if (!annotatedProcedures.Contains(currentProcedure))
+                throw new XpsWebCompilationException(
+                    $"browser-wasm procedure '{currentProcedure}' uses Notes runtime state but is not marked [ServerSide]. Notes objects and functions must execute on the web server, never in the client WebAssembly runtime.");
         }
     }
 
