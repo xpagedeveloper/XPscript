@@ -10,6 +10,7 @@ public static partial class BrowserFormHost
     private const int NavigationStateLifetimeMilliseconds = 60_000;
     private const int MaxEventTokenLength = 260;
     private const int MaxEventPayloadLength = 1024 * 1024;
+    private const int MaxDownloadBase64Length = 96 * 1024 * 1024;
     private static readonly object EventDispatcherSync = new();
     private static Func<string, string, string>? _eventDispatcher;
     private static Func<string, string, Task<string>>? _asyncEventDispatcher;
