@@ -11,6 +11,8 @@ internal static class NotesMimeDirectoryPostProcessor
     private const string NativeRuntime = """
 internal sealed partial class XPScriptNotesNativeApi
 {
+    private const ushort ErrMimeNoData = 0x3AF9;
+
     internal nint OpenMimeDirectory(uint note)
     {
         EnsureInitialized();
@@ -83,11 +85,10 @@ internal sealed partial class XPScriptNotesNativeApi
     {
         EnsureInitialized();
         var status = Resolve<MIMEEntityGetTypeParamDelegate>("MIMEEntityGetTypeParam")(entity, symbol, out var valueHandle, out var valueLength);
+        if (status == ErrMimeNoData)
+            return string.Empty;
         if (status != 0)
         {
-            // Do not collapse native failures into an apparently absent MIME parameter.
-            // ERR_MIME_NO_DATA is intentionally not special-cased until its toolkit
-            // constant is available from a verified HCL header/source.
             Check(status, "MIMEEntityGetTypeParam");
             return string.Empty;
         }
