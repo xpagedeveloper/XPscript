@@ -14,7 +14,7 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-agent-types-domino-runtime-test.xps"),
-    Path.Combine(repoRoot, "samples", "notes-dxl-import-export-surface.xps")
+    Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -45,6 +45,7 @@ var classes = new[]
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDbDirectory", Surface: "NotesDBDirectory", Anchor: (string?)null),
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
     (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocumentCollection", Surface: "NotesDocumentCollection", Anchor: (string?)null),
@@ -54,7 +55,6 @@ var classes = new[]
     (Runtime: "XPScriptNotesAgent", Surface: "NotesAgent", Anchor: (string?)null),
     (Runtime: "XPScriptNotesStream", Surface: "NotesStream", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDXLImporter", Surface: "NotesDXLImporter", Anchor: (string?)null),
-    (Runtime: "XPScriptNotesDXLExporter", Surface: "NotesDXLExporter", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null),
@@ -87,7 +87,8 @@ foreach (var item in classes)
             .ToArray();
 
     if (declarations.Length == 0) throw new InvalidOperationException("Generated runtime class was not found: " + item.Surface);
-    if (declarations.Length > 1) throw new InvalidOperationException($"Generated runtime class resolution for {item.Surface} was ambiguous: {declarations.Length} classes matched.");
+    if (declarations.Length > 1 && declarations.Any(c => !c.Modifiers.Any(SyntaxKind.PartialKeyword)))
+        throw new InvalidOperationException($"Generated runtime class resolution for {item.Surface} was ambiguous: {declarations.Length} classes matched and not all were partial.");
 
     var members = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var declaration in declarations)

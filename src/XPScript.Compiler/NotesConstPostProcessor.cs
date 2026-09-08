@@ -13,6 +13,12 @@ internal static class NotesConstPostProcessor
 
 internal static class XPScriptNotesConst
 {
+    // NotesDBDirectory.GetFirstDatabase database types.
+    public const int REPLICA_CANDIDATE = 1245;
+    public const int TEMPLATE_CANDIDATE = 1246;
+    public const int DATABASE = 1247;
+    public const int TEMPLATE = 1248;
+
     // NotesDatabase.GetModifiedDocuments NOTE_CLASS values.
     public const int DBMOD_DOC_DATA = 0x0001;
     public const int FORM = 0x0004;
