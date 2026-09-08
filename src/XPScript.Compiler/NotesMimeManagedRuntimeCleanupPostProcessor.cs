@@ -11,40 +11,45 @@ internal static class NotesMimeManagedRuntimeCleanupPostProcessor
             "    private readonly XPScriptNotesMimeDirectoryOwner _mimeDirectoryOwner;\n    private readonly nint _nativeEntity;",
             "native-only MIME entity fields");
 
+        var constructors = string.Join('\n', new[]
+        {
+            "    private XPScriptNotesMIMEEntity(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName)",
+            "        : base(session)",
+            "    {",
+            "        _document = document;",
+            "        _itemName = itemName;",
+            "        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))",
+            "            throw new System.NotSupportedException(\"Native NotesMIMEEntity directory access is currently supported for the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.\");",
+            "        _mimeDirectoryOwner = document.GetMimeDirectoryOwner();",
+            "        _nativeEntity = _mimeDirectoryOwner.RootEntity;",
+            "    }",
+            "",
+            "    private XPScriptNotesMIMEEntity(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName, XPScriptNotesMimeDirectoryOwner owner, nint nativeEntity)",
+            "        : base(session)",
+            "    {",
+            "        _document = document;",
+            "        _itemName = itemName;",
+            "        _mimeDirectoryOwner = owner;",
+            "        _nativeEntity = nativeEntity;",
+            "    }",
+            "",
+            "    internal static XPScriptNotesMIMEEntity Open(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName)",
+            "        => new(session, document, itemName);",
+            "",
+            "    private XPScriptNotesMIMEEntity? WrapNativeEntity(nint nativeEntity)",
+            "    {",
+            "        EnsureEntityAlive();",
+            "        if (nativeEntity == 0) return null;",
+            "        return new XPScriptNotesMIMEEntity(Session, _document, _itemName, _mimeDirectoryOwner, nativeEntity);",
+            "    }",
+            "",
+            ""
+        });
+
         source = ReplaceRangeRequired(source,
             "    private XPScriptNotesMIMEEntity(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName, byte[] raw)",
             "    public XPScriptNotesDocument Parent",
-            """    private XPScriptNotesMIMEEntity(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName)
-        : base(session)
-    {
-        _document = document;
-        _itemName = itemName;
-        if (!string.Equals(itemName, "Body", System.StringComparison.OrdinalIgnoreCase))
-            throw new System.NotSupportedException("Native NotesMIMEEntity directory access is currently supported for the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.");
-        _mimeDirectoryOwner = document.GetMimeDirectoryOwner();
-        _nativeEntity = _mimeDirectoryOwner.RootEntity;
-    }
-
-    private XPScriptNotesMIMEEntity(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName, XPScriptNotesMimeDirectoryOwner owner, nint nativeEntity)
-        : base(session)
-    {
-        _document = document;
-        _itemName = itemName;
-        _mimeDirectoryOwner = owner;
-        _nativeEntity = nativeEntity;
-    }
-
-    internal static XPScriptNotesMIMEEntity Open(XPScriptNotesSession session, XPScriptNotesDocument document, string itemName)
-        => new(session, document, itemName);
-
-    private XPScriptNotesMIMEEntity? WrapNativeEntity(nint nativeEntity)
-    {
-        EnsureEntityAlive();
-        if (nativeEntity == 0) return null;
-        return new XPScriptNotesMIMEEntity(Session, _document, _itemName, _mimeDirectoryOwner, nativeEntity);
-    }
-
-""",
+            constructors,
             "native-only MIME constructors");
 
         source = ReplaceRangeRequired(source,
@@ -64,37 +69,42 @@ internal static class NotesMimeManagedRuntimeCleanupPostProcessor
             "    protected override void ReleaseNative() { }",
             "managed MIME release state");
 
+        var header = string.Join('\n', new[]
+        {
+            "internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject",
+            "{",
+            "    private readonly XPScriptNotesMIMEEntity _entity;",
+            "",
+            "    internal XPScriptNotesMIMEHeader(XPScriptNotesMIMEEntity entity, int index) : base(entity.Parent.SessionForItem)",
+            "        => _entity = entity;",
+            "",
+            "    public XPScriptNotesMIMEEntity Parent { get { EnsureAlive(); return _entity; } }",
+            "    public string HeaderName { get { EnsureAlive(); return Unsupported<string>(\"HeaderName\"); } }",
+            "    public string GetHeaderVal() { EnsureAlive(); return Unsupported<string>(\"GetHeaderVal\"); }",
+            "    public string GetHeaderValAndParams() { EnsureAlive(); return Unsupported<string>(\"GetHeaderValAndParams\"); }",
+            "    public string GetParamVal(object? nameValue) { EnsureAlive(); return Unsupported<string>(\"GetParamVal\"); }",
+            "    public void SetHeaderVal(object? value) { EnsureAlive(); Unsupported(\"SetHeaderVal\"); }",
+            "    public void SetHeaderValAndParams(object? value) { EnsureAlive(); Unsupported(\"SetHeaderValAndParams\"); }",
+            "    public void AddValText(object? value) { EnsureAlive(); Unsupported(\"AddValText\"); }",
+            "    public void SetParamVal(object? nameValue, object? value) { EnsureAlive(); Unsupported(\"SetParamVal\"); }",
+            "    public void Remove() { EnsureAlive(); Unsupported(\"Remove\"); }",
+            "",
+            "    private static T Unsupported<T>(string member)",
+            "        => throw new System.NotSupportedException(\"NotesMIMEHeader.\" + member + \" requires verified Domino MIME entity header support; managed MIME header parsing and serialization are intentionally not used.\");",
+            "",
+            "    private static void Unsupported(string member)",
+            "        => throw new System.NotSupportedException(\"NotesMIMEHeader.\" + member + \" requires verified Domino MIME entity header support; managed MIME header parsing and serialization are intentionally not used.\");",
+            "",
+            "    protected override void ReleaseNative() { }",
+            "}",
+            "",
+            ""
+        });
+
         source = ReplaceRangeRequired(source,
             "internal sealed class XPScriptNotesMIMEHeader",
             "internal sealed class XPScriptMimeHeaderValue",
-            """internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject
-{
-    private readonly XPScriptNotesMIMEEntity _entity;
-
-    internal XPScriptNotesMIMEHeader(XPScriptNotesMIMEEntity entity, int index) : base(entity.Parent.SessionForItem)
-        => _entity = entity;
-
-    public XPScriptNotesMIMEEntity Parent { get { EnsureAlive(); return _entity; } }
-    public string HeaderName { get { EnsureAlive(); return Unsupported<string>("HeaderName"); } }
-    public string GetHeaderVal() { EnsureAlive(); return Unsupported<string>("GetHeaderVal"); }
-    public string GetHeaderValAndParams() { EnsureAlive(); return Unsupported<string>("GetHeaderValAndParams"); }
-    public string GetParamVal(object? nameValue) { EnsureAlive(); return Unsupported<string>("GetParamVal"); }
-    public void SetHeaderVal(object? value) { EnsureAlive(); Unsupported("SetHeaderVal"); }
-    public void SetHeaderValAndParams(object? value) { EnsureAlive(); Unsupported("SetHeaderValAndParams"); }
-    public void AddValText(object? value) { EnsureAlive(); Unsupported("AddValText"); }
-    public void SetParamVal(object? nameValue, object? value) { EnsureAlive(); Unsupported("SetParamVal"); }
-    public void Remove() { EnsureAlive(); Unsupported("Remove"); }
-
-    private static T Unsupported<T>(string member)
-        => throw new System.NotSupportedException("NotesMIMEHeader." + member + " requires verified Domino MIME entity header support; managed MIME header parsing and serialization are intentionally not used.");
-
-    private static void Unsupported(string member)
-        => throw new System.NotSupportedException("NotesMIMEHeader." + member + " requires verified Domino MIME entity header support; managed MIME header parsing and serialization are intentionally not used.");
-
-    protected override void ReleaseNative() { }
-}
-
-""",
+            header,
             "unsupported native-only MIME header surface");
 
         source = ReplaceRangeRequired(source,
