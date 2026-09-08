@@ -1,77 +1,49 @@
-' Runtime probe for the currently native-backed NotesMIMEEntity surface.
+' Runtime probe for MIME on the first ten documents in the mail inbox.
 Sub Main()
     Dim session As New NotesSession()
     Dim db As NotesDatabase
+    Dim view As NotesView
     Dim doc As NotesDocument
-    Dim item As NotesItem
+    Dim nextDoc As NotesDocument
     Dim mime As NotesMIMEEntity
-    Dim itemMime As NotesMIMEEntity
-    Dim createdMime As NotesMIMEEntity
-    Dim child As NotesMIMEEntity
-    Dim sibling As NotesMIMEEntity
+    Dim count As Integer
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
-    Set doc = db.GetDocumentByUNID("100EC86E73301B37C1258BB20034683C")
+    Set view = db.GetView("($Inbox)")
 
-    If doc Is Nothing Then
-        Print "MIME probe: document not found"
+    If view Is Nothing Then
+        Print "MIME probe: ($Inbox) view not found"
     Else
-        Print "MIME probe: document " & doc.UniversalID
+        Set doc = view.GetFirstDocument()
+        count = 0
 
-        Set mime = doc.GetMIMEEntity("Body")
-        If mime Is Nothing Then
-            Print "MIME probe: Body is not a MIME item"
-        Else
-            Print "MIME ContentType: " & mime.ContentType
-            Print "MIME ContentSubType: " & mime.ContentSubType
-            Print "MIME Charset: " & mime.Charset
-            Print "MIME BoundaryStart: " & mime.BoundaryStart
-            Print "MIME BoundaryEnd: " & mime.BoundaryEnd
+        Do While Not(doc Is Nothing) And count < 10
+            count = count + 1
+            Print "Document " & count & ": " & doc.UniversalID
 
-            Set child = mime.GetFirstChildEntity()
-            If Not(child Is Nothing) Then
-                Print "First child ContentType: " & child.ContentType
-                Print "First child ContentSubType: " & child.ContentSubType
-                Print "First child Charset: " & child.Charset
-                Set sibling = child.GetNextSibling()
-                If Not(sibling Is Nothing) Then
-                    Print "Next sibling ContentType: " & sibling.ContentType
-                    Print "Next sibling ContentSubType: " & sibling.ContentSubType
-                End If
-            End If
-        End If
-
-        Set item = doc.GetFirstItem("Body")
-        If item Is Nothing Then
-            Print "MIME probe: Body item not found"
-        Else
-            Set itemMime = item.GetMIMEEntity()
-            If itemMime Is Nothing Then
-                Print "MIME probe: NotesItem.GetMIMEEntity returned Nothing"
+            Set mime = doc.GetMIMEEntity("Body")
+            If mime Is Nothing Then
+                Print "  Body: not MIME"
             Else
-                Print "Item MIME ContentType: " & itemMime.ContentType
-                Print "Item MIME ContentSubType: " & itemMime.ContentSubType
+                Print "  Body: MIME"
+                Print "  ContentType: " & mime.ContentType
+                Print "  ContentSubType: " & mime.ContentSubType
+                Print "  Charset: " & mime.Charset
             End If
-        End If
 
-        ' CreateMIMEEntity is currently Body-only because MIMEOpenDirectory is note-level.
-        ' Keep this compile-only because this probe must not modify the real document.
-        If False Then
-            Set createdMime = doc.CreateMIMEEntity("Body")
-        End If
+            Call doc.CloseMIMEEntities()
+            Set mime = Nothing
 
-        Call doc.CloseMIMEEntities()
+            Set nextDoc = view.GetNextDocument(doc)
+            Call doc.Recycle()
+            Set doc = nextDoc
+            Set nextDoc = Nothing
+        Loop
 
-        If Not(item Is Nothing) Then Call item.Recycle()
-        Set item = Nothing
-        Set itemMime = Nothing
-        Set sibling = Nothing
-        Set child = Nothing
-        Set mime = Nothing
-
-        Call doc.Recycle()
-        Set doc = Nothing
+        Print "MIME probe: inspected " & count & " inbox documents"
+        Call view.Recycle()
+        Set view = Nothing
     End If
 
     Call db.Recycle()
