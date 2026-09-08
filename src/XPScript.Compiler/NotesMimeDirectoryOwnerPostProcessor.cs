@@ -73,6 +73,12 @@ internal sealed class XPScriptNotesMimeDirectoryOwner : System.IDisposable
         return _api!.GetMimeEntityContentSubtypeSymbol(entity);
     }
 
+    internal string TypeParam(nint entity, int symbol)
+    {
+        EnsureAlive();
+        return _api!.GetMimeEntityTypeParam(entity, symbol);
+    }
+
     public void Dispose()
     {
         var directory = _directory;
