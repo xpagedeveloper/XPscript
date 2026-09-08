@@ -100,9 +100,9 @@ internal static partial class XPScriptBrowserServerBridgeTransport
 
     private const string BrowserModuleCode = """
 (() => {
-    const spinnerDelayMs = 300;
-    let pendingRequests = 0;
-    let spinnerTimer = 0;
+    const defaultSpinnerDelayMs = 300;
+    const activeRequests = new Map();
+    let nextBusyToken = 1;
 
     const ensureBusyOverlay = () => {
         let overlay = document.getElementById('xpscript-server-busy');
@@ -123,24 +123,39 @@ internal static partial class XPScriptBrowserServerBridgeTransport
         return overlay;
     };
 
-    const beginBusy = () => {
-        pendingRequests++;
-        if (pendingRequests !== 1) return;
-        spinnerTimer = window.setTimeout(() => {
-            spinnerTimer = 0;
-            if (pendingRequests > 0) ensureBusyOverlay().style.display = 'flex';
-        }, spinnerDelayMs);
+    const refreshBusy = () => {
+        const visible = Array.from(activeRequests.values()).some(request => request.matured);
+        const overlay = document.getElementById('xpscript-server-busy');
+        if (visible) ensureBusyOverlay().style.display = 'flex';
+        else if (overlay) overlay.style.display = 'none';
+        document.documentElement.setAttribute('aria-busy', visible ? 'true' : 'false');
     };
 
-    const endBusy = () => {
-        pendingRequests = Math.max(0, pendingRequests - 1);
-        if (pendingRequests !== 0) return;
-        if (spinnerTimer) {
-            window.clearTimeout(spinnerTimer);
-            spinnerTimer = 0;
+    const beginBusy = (delayMs = defaultSpinnerDelayMs) => {
+        const token = nextBusyToken++;
+        const delay = Number.isFinite(Number(delayMs)) && Number(delayMs) >= 0 ? Number(delayMs) : defaultSpinnerDelayMs;
+        const request = { matured: delay === 0, timer: 0 };
+        activeRequests.set(token, request);
+        if (request.matured) {
+            refreshBusy();
+        } else {
+            request.timer = window.setTimeout(() => {
+                const active = activeRequests.get(token);
+                if (!active) return;
+                active.timer = 0;
+                active.matured = true;
+                refreshBusy();
+            }, delay);
         }
-        const overlay = document.getElementById('xpscript-server-busy');
-        if (overlay) overlay.style.display = 'none';
+        return token;
+    };
+
+    const endBusy = (token) => {
+        const request = activeRequests.get(token);
+        if (!request) return;
+        if (request.timer) window.clearTimeout(request.timer);
+        activeRequests.delete(token);
+        refreshBusy();
     };
 
     globalThis.__xpscriptWasmBridgeBusy = { begin: beginBusy, end: endBusy };
@@ -154,7 +169,7 @@ globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJs
     if (url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')) throw new Error('Invalid bridge URL.');
 
     const busy = globalThis.__xpscriptWasmBridgeBusy;
-    busy.begin();
+    const busyToken = busy.begin();
     try {
         const perform = (csrfToken) => {
             const xhr = new XMLHttpRequest();
@@ -187,7 +202,7 @@ globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJs
             headers
         });
     } finally {
-        busy.end();
+        busy.end(busyToken);
     }
 };
 """;
