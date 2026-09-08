@@ -83,7 +83,7 @@ internal static class XPScriptNotesConst
     public const int MIME_SYMBOL_AUDIO = 6;
     public const int MIME_SYMBOL_VIDEO = 7;
     public const int MIME_SYMBOL_NONE = 8;
-    public const int MIME_SYMBOL_PLAIN = 15;
+    public const int MIME_SYMBOL_PLAIN = 16;
     public const int MIME_SYMBOL_OCTET_STREAM = 19;
     public const int MIME_SYMBOL_HTML = 21;
     public const int MIME_SYMBOL_ALTERNATIVE = 27;
