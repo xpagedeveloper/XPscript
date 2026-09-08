@@ -6,13 +6,11 @@ internal static class NotesServerBoundaryVerification
     [ModuleInitializer]
     internal static void Verify()
     {
-        VerifyUnannotatedNotesIsRejected();
-        VerifyModuleNotesStateIsRejected();
-    }
-
-    private static void VerifyUnannotatedNotesIsRejected()
-    {
-        const string source = """
+        var root = Path.Combine(Path.GetTempPath(), "xps-wasm-notes-boundary-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            VerifyRejected(root, "unannotated-notes.xps", """
 [Platform:browser-wasm]
 
 Function ReadServerName() As String
@@ -23,23 +21,9 @@ End Function
 Sub Main()
     Print ReadServerName()
 End Sub
-""";
+""", "Notes runtime state");
 
-        try
-        {
-            _ = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
-            throw new Exception("Unannotated Notes browser-WASM code passed the server-boundary verifier.");
-        }
-        catch (XpsWebCompilationException ex) when (
-            ex.Message.Contains("Notes runtime state", StringComparison.OrdinalIgnoreCase) &&
-            ex.Message.Contains("[ServerSide]", StringComparison.OrdinalIgnoreCase))
-        {
-        }
-    }
-
-    private static void VerifyModuleNotesStateIsRejected()
-    {
-        const string source = """
+            VerifyRejected(root, "module-notes.xps", """
 [Platform:browser-wasm]
 
 Dim session As NotesSession
@@ -47,14 +31,26 @@ Dim session As NotesSession
 Sub Main()
     Print "browser"
 End Sub
-""";
+""", "module-level state");
+        }
+        finally
+        {
+            try { Directory.Delete(root, true); } catch { }
+        }
+    }
 
+    private static void VerifyRejected(string root, string fileName, string source, string expectedMessage)
+    {
+        var path = Path.Combine(root, fileName);
+        File.WriteAllText(path, source);
         try
         {
-            _ = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
-            throw new Exception("Module-level Notes state passed the browser-WASM server-boundary verifier.");
+            using var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
+            throw new Exception($"Browser-WASM Notes boundary verification unexpectedly compiled {fileName}.");
         }
-        catch (XpsWebCompilationException ex) when (ex.Message.Contains("module-level state", StringComparison.OrdinalIgnoreCase))
+        catch (XpsWebCompilationException ex) when (
+            ex.Message.Contains(expectedMessage, StringComparison.OrdinalIgnoreCase) &&
+            ex.Message.Contains("server", StringComparison.OrdinalIgnoreCase))
         {
         }
     }
