@@ -8,6 +8,7 @@ Sub Main()
     Dim db As NotesDatabase
     Dim firstPath As String
     Dim firstTemplateCandidatePath As String
+    Dim recycledName As String
     Dim count As Integer
     Dim constantFailures As Integer
     Dim typeFailures As Integer
@@ -222,6 +223,17 @@ Sub Main()
     End If
 
     Call directory.Recycle()
+    errCode = 0
+    On Error Resume Next
+    recycledName = directory.Name
+    errCode = Err
+    On Error GoTo 0
+    If errCode <> 91 Then
+        Print "NOTES-DBDIRECTORY=FAIL RECYCLED-NAME=" & CStr(errCode)
+    Else
+        Print "RECYCLE=PASS"
+    End If
+
     Call session.Recycle()
     Print "NOTES-DBDIRECTORY-END"
 End Sub
