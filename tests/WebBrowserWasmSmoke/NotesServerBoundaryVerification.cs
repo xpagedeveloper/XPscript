@@ -32,6 +32,62 @@ Sub Main()
     Print "browser"
 End Sub
 """, "module-level state");
+
+            VerifyRejected(root, "invalid-spinner-delay.xps", """
+[Platform:browser-wasm]
+
+[ServerSide(SpinnerDelay=-1)]
+Function ReadServerName() As String
+    Dim session As New NotesSession
+    ReadServerName = session.ServerName
+End Function
+
+Sub Main()
+    Print ReadServerName()
+End Sub
+""", "Invalid [ServerSide] syntax");
+
+            VerifyRejected(root, "unknown-server-side-option.xps", """
+[Platform:browser-wasm]
+
+[ServerSide(Delay=1000)]
+Function ReadServerName() As String
+    Dim session As New NotesSession
+    ReadServerName = session.ServerName
+End Function
+
+Sub Main()
+    Print ReadServerName()
+End Sub
+""", "Invalid [ServerSide] syntax");
+
+            VerifyAccepted(root, "spinner-delay-zero.xps", """
+[Platform:browser-wasm]
+
+[ServerSide(SpinnerDelay=0)]
+Function ReadServerName() As String
+    Dim session As New NotesSession
+    ReadServerName = session.ServerName
+End Function
+
+Sub Main()
+    Print ReadServerName()
+End Sub
+""");
+
+            VerifyAccepted(root, "spinner-delay-custom.xps", """
+[Platform:browser-wasm]
+
+[ServerSide(SpinnerDelay=1000)]
+Function ReadServerName() As String
+    Dim session As New NotesSession
+    ReadServerName = session.ServerName
+End Function
+
+Sub Main()
+    Print ReadServerName()
+End Sub
+""");
         }
         finally
         {
@@ -54,5 +110,13 @@ End Sub
             ex.Message.Contains("server", StringComparison.OrdinalIgnoreCase))
         {
         }
+    }
+
+    private static void VerifyAccepted(string root, string fileName, string source)
+    {
+        var path = Path.Combine(root, fileName);
+        File.WriteAllText(path, source);
+        var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
+        unit.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }
