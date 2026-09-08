@@ -22,6 +22,16 @@ internal static class NotesMimeDocumentLifecyclePostProcessor
             "document-recycle-closes-mime-entities");
 
         source = ReplaceRequired(source,
+            "        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
+            "        if (Session.Api.HasItem(_handle, itemName)) throw new XPScriptRuntimeException(5, \"Notes item '\" + itemName + \"' already exists.\");\n        InvalidateMimeDirectory();\n        Session.Api.WriteMimeStream(_handle, itemName, System.Text.Encoding.UTF8.GetBytes(\"Content-Type: text/plain; charset=UTF-8\\r\\nContent-Transfer-Encoding: 8bit\\r\\n\\r\\n\"));",
+            "mime-create-invalidates-directory");
+
+        source = ReplaceRequired(source,
+            "    public void Remove()\n    {\n        EnsureEntityAlive();\n        _document.RemoveItem(_itemName);\n        Recycle();\n    }",
+            "    public void Remove()\n    {\n        EnsureEntityAlive();\n        _document.InvalidateMimeDirectory();\n        _document.RemoveItem(_itemName);\n        Recycle();\n    }",
+            "mime-remove-invalidates-directory");
+
+        source = ReplaceRequired(source,
             "    private void Commit()\n    {\n        _raw = _message.Serialize();\n        Session.Api.WriteMimeStream(_document.NativeHandle, _itemName, _raw);\n        _message = XPScriptMimeMessage.Parse(_raw);\n    }",
             "    private void Commit()\n    {\n        _raw = _message.Serialize();\n        _document.InvalidateMimeDirectory();\n        Session.Api.WriteMimeStream(_document.NativeHandle, _itemName, _raw);\n        _message = XPScriptMimeMessage.Parse(_raw);\n    }",
             "mime-write-invalidates-directory");
