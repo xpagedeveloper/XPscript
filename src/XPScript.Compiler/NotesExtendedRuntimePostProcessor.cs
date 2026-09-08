@@ -22,6 +22,7 @@ internal static class NotesExtendedRuntimePostProcessor
             source = NotesMimeItemAnchorPostProcessor.Cleanup(source);
             source = NotesMimeStreamAbiPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeDirectoryPostProcessor.ApplyBuiltSurface(source);
+            source = NotesMimeDirectoryOwnerPostProcessor.ApplyBuiltSurface(source);
         }
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
