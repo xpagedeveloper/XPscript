@@ -24,6 +24,7 @@ internal static class NotesExtendedRuntimePostProcessor
             source = NotesMimeDirectoryPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeDirectoryOwnerPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeDocumentLifecyclePostProcessor.ApplyBuiltSurface(source);
+            source = NotesMimeNativeEntityPostProcessor.ApplyBuiltSurface(source);
         }
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
