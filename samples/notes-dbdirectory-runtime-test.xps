@@ -5,6 +5,7 @@ Sub Main()
     Dim session As NotesSession
     Dim directory As NotesDBDirectory
     Dim db As NotesDatabase
+    Dim firstPath As String
     Dim count As Integer
     Dim errCode As Integer
 
@@ -22,6 +23,7 @@ Sub Main()
     Print "TYPE-CONSTANTS=PASS"
 
     Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
+    If Not db Is Nothing Then firstPath = db.FilePath
     Do While Not db Is Nothing
         Print "DATABASE=" & db.FilePath
         If db.IsOpen Then
@@ -32,6 +34,29 @@ Sub Main()
         Set db = directory.GetNextDatabase()
     Loop
     Print "DATABASE-COUNT=" & CStr(count)
+
+    ' A completed enumeration must stay exhausted until GetFirstDatabase starts a new one.
+    Set db = directory.GetNextDatabase()
+    If Not db Is Nothing Then
+        Print "NOTES-DBDIRECTORY=FAIL NEXT-AFTER-END"
+        Call db.Recycle()
+    Else
+        Print "NEXT-AFTER-END=PASS"
+    End If
+
+    Set db = directory.GetFirstDatabase(NotesConst.DATABASE)
+    If firstPath <> "" Then
+        If db Is Nothing Then
+            Print "NOTES-DBDIRECTORY=FAIL RESET-NOTHING"
+        ElseIf db.FilePath <> firstPath Then
+            Print "NOTES-DBDIRECTORY=FAIL RESET-PATH=" & db.FilePath
+        Else
+            Print "ENUMERATION-RESET=PASS"
+        End If
+    ElseIf db Is Nothing Then
+        Print "ENUMERATION-RESET=PASS"
+    End If
+    If Not db Is Nothing Then Call db.Recycle()
 
     Set db = directory.GetFirstDatabase(NotesConst.REPLICA_CANDIDATE)
     If Not db Is Nothing Then
