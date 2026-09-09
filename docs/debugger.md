@@ -115,11 +115,15 @@ VS Code exposes two filters:
 
 Continuing from an exception stop does not alter XPscript error semantics. Existing handlers still run normally after the debugger resumes.
 
-## Pause
+## Pause and command transport
 
-Pause is cooperative at XPscript statement boundaries. While the program is running, the runtime non-blockingly polls the debugger channel at each mapped XPscript statement. A Pause request therefore stops execution at the next executable XPscript source location rather than suspending an arbitrary CLR instruction.
+The native runtime uses a single-reader command transport. Exactly one dedicated background thread owns all reads from the debugger TCP stream. It authenticates incoming commands and places ordinary requests into a thread-safe command queue.
 
-This avoids a competing socket reader and keeps the source location deterministic.
+`Pause` is handled as an atomic signal by that reader thread. The XPscript execution thread never reads or polls the socket. At each mapped XPscript statement it only checks the atomic pause flag and processes already queued debugger configuration requests.
+
+When execution is stopped, the XPscript thread waits on a command signal and consumes queued Continue, Step and inspection requests. This guarantees that there is never more than one socket reader while still allowing Pause and Disconnect to arrive asynchronously.
+
+Pause remains cooperative at XPscript statement boundaries, so the program stops at the next executable XPscript source location rather than at an arbitrary CLR instruction.
 
 ## Targets
 
@@ -151,7 +155,7 @@ Debugger hooks use the same source mapping markers as compiler diagnostics. Incl
 
 ## CI
 
-`tests/DebuggerCoreProbe` validates debugger source mapping, scalar instrumentation, disabled-debug guards, protocol capabilities, Pause support, exception hooks, bounded history and the rule that complex internal objects are not automatically inspected.
+`tests/DebuggerCoreProbe` validates debugger source mapping, scalar instrumentation, disabled-debug guards, protocol capabilities, the single-reader Pause transport, exception hooks, bounded history and the rule that complex internal objects are not automatically inspected.
 
 The repository Compile workflow runs this probe on Linux. The VS Code extension branch also contains a Compile workflow that runs its TypeScript build on pull requests.
 
