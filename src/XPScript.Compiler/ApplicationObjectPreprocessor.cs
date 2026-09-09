@@ -6,9 +6,17 @@ internal sealed class ApplicationObjectPreprocessor
 {
     private const string TitleStateKey = "__xps_application_title";
     private const string IconStateKey = "__xps_application_icon";
+    private const string ProductStateKey = "__xps_application_executable_product";
+    private const string CompanyStateKey = "__xps_application_executable_company";
+    private const string VersionStateKey = "__xps_application_executable_version";
+    private const string CopyrightStateKey = "__xps_application_executable_copyright";
     private const string WidthStateKey = "__xps_application_width";
     private const string HeightStateKey = "__xps_application_height";
     internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
+    internal const string BuildProductMarker = "__XPSCRIPT_APPLICATION_PRODUCT_BUILD__=";
+    internal const string BuildCompanyMarker = "__XPSCRIPT_APPLICATION_COMPANY_BUILD__=";
+    internal const string BuildVersionMarker = "__XPSCRIPT_APPLICATION_VERSION_BUILD__=";
+    internal const string BuildCopyrightMarker = "__XPSCRIPT_APPLICATION_COPYRIGHT_BUILD__=";
     private static readonly string[] FeatureMarkers =
     [
         "Application.", "Process.State", "Session.State", "Request.State",
@@ -21,10 +29,15 @@ internal sealed class ApplicationObjectPreprocessor
 
         RejectWrites(source);
 
-        source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey, false);
-        source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, true);
-        source = RewriteWritableApplicationProperty(source, "Width", WidthStateKey, false);
-        source = RewriteWritableApplicationProperty(source, "Height", HeightStateKey, false);
+        source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey);
+        source = RewriteWritableApplicationProperty(source, "Executable.Icon", IconStateKey, BuildIconMarker, resolvePath: true);
+        source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, BuildIconMarker, resolvePath: true);
+        source = RewriteWritableApplicationProperty(source, "Executable.Product", ProductStateKey, BuildProductMarker);
+        source = RewriteWritableApplicationProperty(source, "Executable.Company", CompanyStateKey, BuildCompanyMarker);
+        source = RewriteWritableApplicationProperty(source, "Executable.Version", VersionStateKey, BuildVersionMarker);
+        source = RewriteWritableApplicationProperty(source, "Executable.Copyright", CopyrightStateKey, BuildCopyrightMarker);
+        source = RewriteWritableApplicationProperty(source, "Width", WidthStateKey);
+        source = RewriteWritableApplicationProperty(source, "Height", HeightStateKey);
         source = RewriteExitCode(source);
 
         source = Regex.Replace(source, @"\bApplication\.Registry\.User\b", "XPScriptApplicationRegistryRuntime.User", RegexOptions.IgnoreCase);
@@ -76,7 +89,12 @@ internal sealed class ApplicationObjectPreprocessor
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    private static string RewriteWritableApplicationProperty(string source, string propertyName, string stateKey, bool emitBuildIconMarker)
+    private static string RewriteWritableApplicationProperty(
+        string source,
+        string propertyName,
+        string stateKey,
+        string? buildMarker = null,
+        bool resolvePath = false)
     {
         source = Regex.Replace(
             source,
@@ -86,29 +104,34 @@ internal sealed class ApplicationObjectPreprocessor
                 var indent = m.Groups["indent"].Value;
                 var value = m.Groups["value"].Value;
                 var assignment = indent + $"Call XPScriptApplicationRuntime.State.Set(\"{stateKey}\", " + value + ")";
-                if (!emitBuildIconMarker) return assignment;
+                if (buildMarker is null) return assignment;
 
                 var literal = TryReadStringLiteral(value);
-                if (literal is null || literal.Length == 0) return assignment;
-                var sourcePath = ExpandedSourceContext.Current?.SourcePath;
-                if (string.IsNullOrWhiteSpace(sourcePath)) return assignment;
+                if (literal is null) return assignment;
+                var markerValue = literal;
 
-                try
+                if (resolvePath && literal.Length > 0)
                 {
-                    var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
-                    var resolved = Path.IsPathRooted(literal) ? Path.GetFullPath(literal) : Path.GetFullPath(literal, baseDirectory);
-                    if (Path.GetExtension(resolved).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(resolved))
-                        throw new CompilerException($"Application.Icon file was not found: {literal}");
-                    return indent + "' " + BuildIconMarker + resolved + Environment.NewLine + assignment;
+                    var sourcePath = ExpandedSourceContext.Current?.SourcePath;
+                    if (string.IsNullOrWhiteSpace(sourcePath)) return assignment;
+                    try
+                    {
+                        var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+                        markerValue = Path.IsPathRooted(literal) ? Path.GetFullPath(literal) : Path.GetFullPath(literal, baseDirectory);
+                        if (Path.GetExtension(markerValue).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(markerValue))
+                            throw new CompilerException($"Application.Executable.Icon file was not found: {literal}");
+                    }
+                    catch (CompilerException)
+                    {
+                        throw;
+                    }
+                    catch
+                    {
+                        return assignment;
+                    }
                 }
-                catch (CompilerException)
-                {
-                    throw;
-                }
-                catch
-                {
-                    return assignment;
-                }
+
+                return indent + "' " + buildMarker + markerValue + Environment.NewLine + assignment;
             },
             RegexOptions.CultureInvariant);
 
