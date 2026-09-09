@@ -61,20 +61,20 @@ Branch: `feature/notes-mime-entity`
 - [x] Existing known multipart HTML traversal remains green after attachment changes
 - [x] Added direct-child `GetNthHeader(name[, occurrence])`
 - [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
-- [x] Domino runtime showed the bounded root-stream child header reader cannot see itemized child headers after save/reopen
-- [x] Added native `MIMEGetEntityData` ABI and directory-owner bridge for per-entity readback
-- [x] Routed direct-child `GetNthHeader` and `NotesMIMEHeader` value access through native entity data
-- [x] Domino reruns confirmed hard-coded entity-data selectors still returned no matching child headers
-- [x] HCL public C API docs confirm four `MIME_ENTITY_DATA_*` modes but do not expose their numeric values
-- [x] Native child-header readback now probes the bounded selector range and selects only entity data containing actual MIME header fields
+- [x] Domino runtime showed bounded root-stream and `MIMEGetEntityData` child-header readback did not expose the expected headers after save/reopen
+- [x] Verified HCL `MIMESYMBOL` values: `CONTENT_TYPE=39`, `CONTENT_TRANSFER_ENCODING=40`, `CONTENT_DISPOSITION=41`
+- [x] Replaced heuristic `MIMEGetEntityData` child-header readback with native `MIMEEntityGetHeader(PMIMEENTITY, MIMESYMBOL)`
+- [x] Native `GetNthHeader` now targets the actual child entity and the verified HCL header symbols
+- [x] Documentation now states the verified direct-child header lookup boundary
 
 ## In progress
 
-- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through selector-probed native direct-child `GetNthHeader`
-- [ ] Confirm `Content-Disposition` and filename after save/reopen through selector-probed native direct-child `GetNthHeader`
-- [ ] Confirm selector-probed native entity-header reader compiles in branch CI
+- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through `MIMEEntityGetHeader`
+- [ ] Confirm `Content-Disposition` and filename after save/reopen through `MIMEEntityGetHeader`
+- [ ] Confirm the new native header ABI compiles in branch CI
 
 ## Remaining
 
 - [ ] Add nested child-parent mutation beyond direct children of the root entity
+- [ ] Broaden native `GetNthHeader` beyond the currently verified content-header symbols when needed
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
