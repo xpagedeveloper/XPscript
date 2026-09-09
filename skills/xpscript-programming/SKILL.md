@@ -144,7 +144,9 @@ stream.Position = 0
 Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
 ```
 
-Treat child-entity mutation and unverified per-entity content/header members as unsupported. Do not fall back to managed MIME parsing or invent behavior for unsupported members. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The root wrapper performing a successful root content mutation is rebound to the new native root so its metadata can be read immediately.
+Root content readback supports `ContentAsText`, `GetContentAsText`, `GetContentAsBytes`, and `GetEntityAsText`. Use `ContentAsText` for decoded root text. Use the stream methods when callers need `NotesStream` output. Use `GetEntityAsText` only when the complete root RFC822 entity including headers is needed.
+
+Treat child-entity content readback/mutation and unverified header members as unsupported. Do not fall back to managed MIME parsing or invent behavior for unsupported members. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The root wrapper performing a successful root content mutation is rebound to the new native root so its metadata and root content can be read immediately.
 
 ## HTTP client security
 
