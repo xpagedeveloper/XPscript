@@ -31,19 +31,24 @@ internal static class XPScriptDebugRuntime
 {
     private sealed record DebugFrame(int id, string name, string source, int line, int column);
     private sealed record ValueChange(long Sequence, string Name, string OldValue, string NewValue, string Source, int Line, string Procedure, string TimestampUtc);
+    private sealed record PendingCommand(string Name, global::System.Text.Json.JsonDocument Document);
 
     private static readonly object Gate = new();
+    private static readonly object WriteGate = new();
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, int> ValueHistoryChars = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Concurrent.ConcurrentQueue<PendingCommand> PendingCommands = new();
+    private static readonly global::System.Threading.AutoResetEvent CommandSignal = new(false);
 
     private static global::System.Net.Sockets.TcpListener? _listener;
     private static global::System.Net.Sockets.TcpClient? _client;
     private static global::System.IO.StreamReader? _reader;
     private static global::System.IO.StreamWriter? _writer;
+    private static global::System.Threading.Thread? _readerThread;
     private static bool _initialized;
     private static bool _enabled;
     private static bool _stopOnEntry = true;
@@ -53,6 +58,7 @@ internal static class XPScriptDebugRuntime
     private static string _stepMode = "";
     private static int _stepDepth;
     private static int _pauseRequested;
+    private static int _disconnectRequested;
     private static long _changeSequence;
 
     private const int ProtocolVersion = 5;
@@ -78,8 +84,14 @@ internal static class XPScriptDebugRuntime
         lock (Gate)
         {
             EnsureConnected();
-            if (_writer is null || _reader is null) return;
-            PollRunningCommand();
+            if (!_enabled || _writer is null) return;
+            if (global::System.Threading.Volatile.Read(ref _disconnectRequested) != 0)
+            {
+                Disconnect();
+                return;
+            }
+
+            DrainRunningCommands();
             if (!_enabled) return;
 
             var frames = CaptureFrames(sourcePath, line);
@@ -100,7 +112,7 @@ internal static class XPScriptDebugRuntime
             _stopOnEntry = false;
             _stepMode = "";
             Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1, frames });
-            CommandLoop(depth);
+            StopLoop(depth);
         }
     }
 
@@ -108,13 +120,16 @@ internal static class XPScriptDebugRuntime
     {
         EnsureInitialized();
         if (!_enabled) return;
-        var shouldBreak = handled ? _breakOnHandledException : _breakOnUnhandledException;
-        if (!shouldBreak) return;
 
         lock (Gate)
         {
             EnsureConnected();
-            if (_writer is null || _reader is null) return;
+            DrainRunningCommands();
+            if (!_enabled || _writer is null) return;
+
+            var shouldBreak = handled ? _breakOnHandledException : _breakOnUnhandledException;
+            if (!shouldBreak) return;
+
             var source = XPSourceLineRuntime.CurrentSource;
             var line = sourceLine > 0 ? sourceLine : XPSourceLineRuntime.Current;
             var frames = CaptureFrames(source, line);
@@ -131,7 +146,7 @@ internal static class XPScriptDebugRuntime
                 breakMode = handled ? "always" : "unhandled",
                 description = exception.Message
             });
-            CommandLoop(frames.Count);
+            StopLoop(frames.Count);
         }
     }
 
@@ -200,10 +215,10 @@ internal static class XPScriptDebugRuntime
             ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
         }
 
-        if (!DataBreakpoints.Contains(name) || _reader is null || _writer is null) return;
+        if (!DataBreakpoints.Contains(name) || _writer is null) return;
         _stepMode = "";
         Send(new { type = "stopped", reason = "data breakpoint", source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1, frames, dataId = name, description = name + " changed from " + oldValue + " to " + rendered });
-        CommandLoop(frames.Count);
+        StopLoop(frames.Count);
     }
 
     private static int EstimateHistoryChars(ValueChange change) => change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
@@ -287,64 +302,148 @@ internal static class XPScriptDebugRuntime
         var stream = _client.GetStream();
         _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
         _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true) { AutoFlush = true };
-        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true });
+        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true, commandTransport = "single-reader" });
+        _readerThread = new global::System.Threading.Thread(ReaderLoop) { IsBackground = true, Name = "XPscript Debugger Command Reader" };
+        _readerThread.Start();
     }
 
-    private static void PollRunningCommand()
+    private static void ReaderLoop()
     {
-        if (_client is null || _reader is null || _client.Available <= 0) return;
-        var raw = _reader.ReadLine();
-        if (raw is null) { Disconnect(); return; }
-        if (!TryParseAuthenticatedCommand(raw, out var command, out _)) return;
-        if (command == "pause") global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 1);
-        else if (command == "disconnect") Disconnect();
-    }
-
-    private static void CommandLoop(int currentDepth)
-    {
-        while (_reader is not null)
+        try
         {
-            var raw = _reader.ReadLine();
-            if (raw is null) { Disconnect(); return; }
-            if (!TryParseAuthenticatedCommand(raw, out var command, out var root)) continue;
-            using (root)
+            while (_reader is not null && global::System.Threading.Volatile.Read(ref _disconnectRequested) == 0)
             {
-                switch (command)
+                var raw = _reader.ReadLine();
+                if (raw is null) break;
+
+                global::System.Text.Json.JsonDocument document;
+                try { document = global::System.Text.Json.JsonDocument.Parse(raw); }
+                catch { continue; }
+
+                var root = document.RootElement;
+                if (!Authenticate(root))
                 {
-                    case "setBreakpoints": SetBreakpoints(root.RootElement); Send(new { type = "breakpoints", ok = true }); break;
-                    case "setDataBreakpoints": SetDataBreakpoints(root.RootElement); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
-                    case "setExceptionBreakpoints": SetExceptionBreakpoints(root.RootElement); Send(new { type = "exceptionBreakpoints", ok = true }); break;
-                    case "stackTrace": Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) }); break;
-                    case "valueHistory": SendValueHistory(root.RootElement); break;
-                    case "debuggerVariables": SendDebuggerVariables(); break;
-                    case "continue": _stepMode = ""; Send(new { type = "continued", threadId = 1 }); return;
-                    case "next": _stepMode = "over"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
-                    case "stepIn": _stepMode = "into"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
-                    case "stepOut": _stepMode = "out"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
-                    case "disconnect": Disconnect(); return;
-                    case "pause": global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 1); break;
+                    document.Dispose();
+                    global::System.Threading.Interlocked.Exchange(ref _disconnectRequested, 1);
+                    CommandSignal.Set();
+                    break;
                 }
+
+                var command = root.TryGetProperty("command", out var commandElement) ? commandElement.GetString() ?? "" : "";
+                if (command == "pause")
+                {
+                    global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 1);
+                    document.Dispose();
+                    CommandSignal.Set();
+                    continue;
+                }
+                if (command == "disconnect")
+                {
+                    global::System.Threading.Interlocked.Exchange(ref _disconnectRequested, 1);
+                    document.Dispose();
+                    CommandSignal.Set();
+                    break;
+                }
+
+                PendingCommands.Enqueue(new PendingCommand(command, document));
+                CommandSignal.Set();
+            }
+        }
+        catch { }
+        finally
+        {
+            if (_enabled)
+            {
+                global::System.Threading.Interlocked.Exchange(ref _disconnectRequested, 1);
+                CommandSignal.Set();
             }
         }
     }
 
-    private static bool TryParseAuthenticatedCommand(string raw, out string command, out global::System.Text.Json.JsonDocument document)
+    private static bool Authenticate(global::System.Text.Json.JsonElement root)
     {
-        command = "";
-        try { document = global::System.Text.Json.JsonDocument.Parse(raw); }
-        catch { document = global::System.Text.Json.JsonDocument.Parse("{}"); return false; }
-        var root = document.RootElement;
+        if (_token.Length == 0) return true;
         var suppliedToken = root.TryGetProperty("token", out var tokenElement) ? tokenElement.GetString() ?? "" : "";
-        if (_token.Length > 0 && !global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(global::System.Text.Encoding.UTF8.GetBytes(_token), global::System.Text.Encoding.UTF8.GetBytes(suppliedToken)))
+        var expected = global::System.Text.Encoding.UTF8.GetBytes(_token);
+        var supplied = global::System.Text.Encoding.UTF8.GetBytes(suppliedToken);
+        if (expected.Length == supplied.Length && global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expected, supplied)) return true;
+        Send(new { type = "error", message = "Debugger authentication failed." });
+        return false;
+    }
+
+    private static void DrainRunningCommands()
+    {
+        while (PendingCommands.TryDequeue(out var pending))
         {
-            Send(new { type = "error", message = "Debugger authentication failed." });
-            document.Dispose();
-            document = global::System.Text.Json.JsonDocument.Parse("{}");
-            Disconnect();
-            return false;
+            using (pending.Document)
+            {
+                ProcessNonResumeCommand(pending.Name, pending.Document.RootElement);
+            }
         }
-        command = root.TryGetProperty("command", out var commandElement) ? commandElement.GetString() ?? "" : "";
-        return true;
+    }
+
+    private static void StopLoop(int currentDepth)
+    {
+        for (;;)
+        {
+            if (global::System.Threading.Volatile.Read(ref _disconnectRequested) != 0)
+            {
+                Disconnect();
+                return;
+            }
+
+            while (PendingCommands.TryDequeue(out var pending))
+            {
+                using (pending.Document)
+                {
+                    if (ProcessStoppedCommand(pending.Name, pending.Document.RootElement, currentDepth)) return;
+                }
+            }
+
+            CommandSignal.WaitOne();
+        }
+    }
+
+    private static bool ProcessStoppedCommand(string command, global::System.Text.Json.JsonElement root, int currentDepth)
+    {
+        switch (command)
+        {
+            case "continue":
+                _stepMode = "";
+                Send(new { type = "continued", threadId = 1 });
+                return true;
+            case "next":
+                _stepMode = "over";
+                _stepDepth = currentDepth;
+                Send(new { type = "continued", threadId = 1 });
+                return true;
+            case "stepIn":
+                _stepMode = "into";
+                _stepDepth = currentDepth;
+                Send(new { type = "continued", threadId = 1 });
+                return true;
+            case "stepOut":
+                _stepMode = "out";
+                _stepDepth = currentDepth;
+                Send(new { type = "continued", threadId = 1 });
+                return true;
+            default:
+                ProcessNonResumeCommand(command, root);
+                return false;
+        }
+    }
+
+    private static void ProcessNonResumeCommand(string command, global::System.Text.Json.JsonElement root)
+    {
+        switch (command)
+        {
+            case "setBreakpoints": SetBreakpoints(root); Send(new { type = "breakpoints", ok = true }); break;
+            case "setDataBreakpoints": SetDataBreakpoints(root); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
+            case "setExceptionBreakpoints": SetExceptionBreakpoints(root); Send(new { type = "exceptionBreakpoints", ok = true }); break;
+            case "stackTrace": Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) }); break;
+            case "valueHistory": SendValueHistory(root); break;
+            case "debuggerVariables": SendDebuggerVariables(); break;
+        }
     }
 
     private static void SendValueHistory(global::System.Text.Json.JsonElement root)
@@ -398,24 +497,42 @@ internal static class XPScriptDebugRuntime
         foreach (var item in filters.EnumerateArray())
         {
             var filter = item.GetString() ?? "";
-            if (string.Equals(filter, "all", global::System.StringComparison.OrdinalIgnoreCase)) { _breakOnHandledException = true; _breakOnUnhandledException = true; }
-            if (string.Equals(filter, "uncaught", global::System.StringComparison.OrdinalIgnoreCase)) _breakOnUnhandledException = true;
+            if (string.Equals(filter, "all", global::System.StringComparison.OrdinalIgnoreCase))
+            {
+                _breakOnHandledException = true;
+                _breakOnUnhandledException = true;
+            }
+            else if (string.Equals(filter, "uncaught", global::System.StringComparison.OrdinalIgnoreCase))
+            {
+                _breakOnUnhandledException = true;
+            }
         }
     }
 
     private static void Send(object payload)
     {
-        if (_writer is null) return;
-        _writer.WriteLine(global::System.Text.Json.JsonSerializer.Serialize(payload));
+        lock (WriteGate)
+        {
+            if (_writer is null) return;
+            try { _writer.WriteLine(global::System.Text.Json.JsonSerializer.Serialize(payload)); }
+            catch { global::System.Threading.Interlocked.Exchange(ref _disconnectRequested, 1); CommandSignal.Set(); }
+        }
     }
 
     private static void Disconnect()
     {
+        _enabled = false;
+        global::System.Threading.Interlocked.Exchange(ref _disconnectRequested, 1);
+        CommandSignal.Set();
         try { _reader?.Dispose(); } catch { }
         try { _writer?.Dispose(); } catch { }
         try { _client?.Dispose(); } catch { }
         try { _listener?.Stop(); } catch { }
-        _reader = null; _writer = null; _client = null; _listener = null; _enabled = false;
+        _reader = null;
+        _writer = null;
+        _client = null;
+        _listener = null;
+        while (PendingCommands.TryDequeue(out var pending)) pending.Document.Dispose();
         DataBreakpoints.Clear();
         CustomDebuggerVariables.Clear();
         global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0);
