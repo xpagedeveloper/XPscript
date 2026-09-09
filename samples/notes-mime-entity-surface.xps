@@ -1,9 +1,12 @@
-' Runtime probe for native MIME create, save and reopen.
+' Runtime probe for native MIME create, save, reopen, and a known HTML MIME document.
 Sub Main()
+    Const KNOWN_HTML_MIME_UNID = "100EC86E73301B37C1258BB20034683C"
+
     Dim session As New NotesSession()
     Dim db As NotesDatabase
     Dim doc As NotesDocument
     Dim reopened As NotesDocument
+    Dim knownHtml As NotesDocument
     Dim mime As NotesMIMEEntity
     Dim unid As String
 
@@ -71,6 +74,38 @@ Sub Main()
         Set mime = Nothing
         Call reopened.Recycle()
         Set reopened = Nothing
+    End If
+
+    Print "Known HTML MIME probe: " & KNOWN_HTML_MIME_UNID
+    Set knownHtml = db.GetDocumentByUNID(KNOWN_HTML_MIME_UNID)
+    If knownHtml Is Nothing Then
+        Print "FAIL: known HTML MIME document could not be opened"
+    Else
+        Set mime = knownHtml.GetMIMEEntity("Body")
+        If mime Is Nothing Then
+            Print "FAIL: known HTML Body is not MIME"
+        Else
+            Print "Known HTML MIME ContentType: " & mime.ContentType
+            Print "Known HTML MIME ContentSubType: " & mime.ContentSubType
+            Print "Known HTML MIME Charset: " & mime.Charset
+
+            If mime.ContentType = "text" Then
+                Print "PASS: known HTML ContentType is text"
+            Else
+                Print "FAIL: known HTML ContentType is " & mime.ContentType
+            End If
+
+            If mime.ContentSubType = "html" Then
+                Print "PASS: known HTML ContentSubType is html"
+            Else
+                Print "FAIL: known HTML ContentSubType is " & mime.ContentSubType
+            End If
+        End If
+
+        Call knownHtml.CloseMIMEEntities()
+        Set mime = Nothing
+        Call knownHtml.Recycle()
+        Set knownHtml = Nothing
     End If
 
     Call db.Recycle()
