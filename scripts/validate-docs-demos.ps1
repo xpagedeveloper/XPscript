@@ -110,7 +110,12 @@ foreach ($name in $requiredCli) {
 }
 
 $application = Get-Content -LiteralPath (Join-Path $root 'docs/application-reference.md') -Raw
-foreach ($name in @('Application.ArgCount','Application.ExecutablePath','Application.ExecutableFileName','Application.TempFolder','Application.Path','Application.FileName','Application.State','Process.State','Session.State','Request.State')) {
+foreach ($name in @(
+    'Application.ArgCount','Application.ExecutablePath','Application.ExecutableFileName','Application.TempFolder',
+    'Application.Path','Application.FileName','Application.Executable.Icon','Application.Executable.Product',
+    'Application.Executable.Company','Application.Executable.Version','Application.Executable.Copyright',
+    'Application.State','Process.State','Session.State','Request.State'
+)) {
     if ($application -notmatch [regex]::Escape($name)) {
         $errors.Add("Application reference is missing required member: $name")
     }
