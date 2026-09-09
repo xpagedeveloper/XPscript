@@ -18,6 +18,7 @@ The runtime protocol currently supports:
 
 - entry stops
 - source breakpoints
+- data breakpoints on observed scalar writes
 - continue
 - step into
 - step over
@@ -37,6 +38,14 @@ The VS Code adapter exposes tracked scalar values in the Variables panel. These 
 Each observed variable can be expanded to show its recorded value changes. The same tracked value can also be evaluated from hover or the Debug Console.
 
 The compiler currently instruments conservative simple scalar assignments. Complex assignments, indexed array writes, property setters, object mutation and ByRef mutation are intentionally not instrumented yet because they require dedicated semantic hooks.
+
+## Data breakpoints
+
+The runtime supports write data breakpoints for values that are already tracked by the scalar assignment instrumentation. VS Code advertises standard DAP `dataBreakpointInfo` and `setDataBreakpoints` support, so an observed value can be configured to pause the target the next time it changes.
+
+When a tracked value changes, the runtime records the history entry first and then checks whether the variable has an active data breakpoint. A matching write pauses execution on the mapped XPscript source line immediately after the assignment and sends the variable name together with the old and new rendered values in the stop description.
+
+Data breakpoints are case-insensitive and are replaced as a set whenever VS Code sends a new `setDataBreakpoints` request. Read and read/write access modes are not supported yet. Only writes generated through the current conservative scalar instrumentation can trigger a data breakpoint.
 
 ## Value history
 
