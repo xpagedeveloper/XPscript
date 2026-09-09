@@ -36,8 +36,6 @@ internal static class NotesDxlImportResultPostProcessor
             ImportOptionValidation + "\n\n    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
             "importer-option-validation");
 
-        // Current NotesNativeApiDxlSource already owns the DXL delegates. The result
-        // helpers are still supplied here until they are moved into that source too.
         if (!source.Contains("internal string GetDxlImporterLog(uint importer)", StringComparison.Ordinal))
         {
             source = ReplaceRequired(source,
@@ -58,6 +56,9 @@ internal static class NotesDxlImportResultPostProcessor
     }
 
     private const string DxlResultHelpers = """
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlOSMemGetSizeDelegate(uint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlIDEntriesDelegate(uint table);
+
     internal string GetDxlImporterLog(uint importer)
     {
         EnsureInitialized();
@@ -68,7 +69,7 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 11, value), "DXLGetImporterProperty(iResultLog)");
             var handle = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (handle == 0) return string.Empty;
-            var size = Resolve<OSMemGetSizeDelegate>("OSMemGetSize")(handle);
+            var size = Resolve<XPScriptDxlOSMemGetSizeDelegate>("OSMemGetSize")(handle);
             if (size == 0) return string.Empty;
             var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(handle);
             if (pointer == 0) return string.Empty;
@@ -88,7 +89,7 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 12, value), "DXLGetImporterProperty(iImportedNoteList)");
             var table = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (table == 0) return 0;
-            return checked((int)Resolve<IDEntriesDelegate>("IDEntries")(table));
+            return checked((int)Resolve<XPScriptDxlIDEntriesDelegate>("IDEntries")(table));
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }
