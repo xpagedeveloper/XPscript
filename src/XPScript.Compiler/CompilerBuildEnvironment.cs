@@ -180,7 +180,7 @@ internal static class CompilerBuildEnvironment
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
-        if (version is not null) propertyEntries += $"    <Version>{EscapeMsBuild(version)}</Version>\n";
+        if (version is not null) propertyEntries += $"    <Version>{EscapeMsBuild(version)}</Version>\n    <FileVersion>{EscapeMsBuild(version)}</FileVersion>\n    <AssemblyVersion>{EscapeMsBuild(version)}</AssemblyVersion>\n";
         if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
         if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
@@ -191,6 +191,24 @@ internal static class CompilerBuildEnvironment
         if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{MySqlConnectorVersion}\" />\n";
         if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{NpgsqlVersion}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
+
+        // Put metadata directly in Generated.csproj. The .NET SDK creates the Windows apphost
+        // from the intermediate managed assembly and copies its Win32 resources into the PE host.
+        // Keeping these values in the project itself makes that resource-copy path deterministic.
+        var projectPath = Path.Combine(root, "Generated.csproj");
+        if (File.Exists(projectPath))
+        {
+            var projectText = File.ReadAllText(projectPath);
+            var projectMetadata = propertyGroup + itemGroup;
+            var closingProject = projectText.LastIndexOf("</Project>", StringComparison.OrdinalIgnoreCase);
+            if (closingProject < 0) throw new CompilerException("Generated project is invalid: closing Project element was not found.");
+            projectText = projectText.Insert(closingProject, projectMetadata);
+            File.WriteAllText(projectPath, projectText);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
+        }
+
+        // Retain Directory.Build.props for the transient run-build path and compatibility with
+        // existing generated-project behavior.
         var propsPath = Path.Combine(root, "Directory.Build.props");
         File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
         CompilerPathSecurity.HardenTemporaryFile(propsPath);
