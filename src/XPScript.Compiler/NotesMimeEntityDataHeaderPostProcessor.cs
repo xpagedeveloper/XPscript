@@ -81,10 +81,24 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     internal byte[] GetMimeEntityHeaders(uint note, nint entity)
     {
         EnsureInitialized();
-        // HCL mimedir.h MIME_ENTITY_DATA_HEADERS selects the entity headers.
-        // MIMEGetEntityData returns the selected entity data in original MIME
-        // encoding and allocates a DHANDLE for each requested chunk.
-        const ushort mimeEntityDataHeaders = 2;
+        // HCL documents four MIME_ENTITY_DATA_* selectors but the public reference
+        // does not expose their numeric values. Probe the bounded selector range and
+        // choose the successful entity-data buffer that actually contains MIME headers.
+        for (ushort selector = 0; selector < 4; selector++)
+        {
+            var candidate = ReadMimeEntityData(note, entity, selector);
+            if (candidate.Length == 0) continue;
+            var text = System.Text.Encoding.Latin1.GetString(candidate);
+            if (text.IndexOf("Content-Type:", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                text.IndexOf("Content-Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                text.IndexOf("Content-Disposition:", StringComparison.OrdinalIgnoreCase) >= 0)
+                return candidate;
+        }
+        return [];
+    }
+
+    private byte[] ReadMimeEntityData(uint note, nint entity, ushort selector)
+    {
         const uint chunkSize = 60000;
         using var output = new MemoryStream();
         uint offset = 0;
@@ -92,16 +106,17 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         while (true)
         {
             var status = Resolve<MIMEGetEntityDataDelegate>("MIMEGetEntityData")(
-                note, entity, mimeEntityDataHeaders, offset, chunkSize, out var dataHandle, out var dataLength);
+                note, entity, selector, offset, chunkSize, out var dataHandle, out var dataLength);
             if (status == ErrMimeNoData)
-            {
-                if (offset == 0) return [];
                 break;
+            if (status != 0)
+            {
+                if (dataHandle != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle);
+                return [];
             }
-            Check(status, "MIMEGetEntityData(headers)");
             if (dataLength == 0)
             {
-                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData headers)");
+                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData probe)");
                 break;
             }
 
@@ -109,7 +124,7 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
             try
             {
                 data = Resolve<OSLockObjectDelegate>("OSLockObject")(dataHandle);
-                if (data == 0) throw new XPScriptRuntimeException(5, "Unable to lock MIME entity header data.");
+                if (data == 0) throw new XPScriptRuntimeException(5, "Unable to lock MIME entity data.");
                 var bytes = new byte[checked((int)dataLength)];
                 System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
                 output.Write(bytes);
@@ -117,7 +132,7 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
             finally
             {
                 if (data != 0) Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(dataHandle);
-                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData headers)");
+                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData probe)");
             }
 
             offset += dataLength;
