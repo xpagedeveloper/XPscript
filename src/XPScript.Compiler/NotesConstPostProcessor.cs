@@ -74,8 +74,8 @@ internal static class XPScriptNotesConst
     public const int FindPitchInsensitive = RT_FIND_PITCHINSENSITIVE;
 
     // NotesMIMEEntity traversal constants.
-    public const int SEARCH_DEPTH = 1723;
-    public const int SEARCH_BREADTH = 1724;
+    public const int SEARCH_BREADTH = 1723;
+    public const int SEARCH_DEPTH = 1724;
     public const int SearchDepth = SEARCH_DEPTH;
     public const int SearchBreadth = SEARCH_BREADTH;
 
