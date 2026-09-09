@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    If Application.IsDebugging Then
+        Print "DEBUGGING=True"
+        Debugger.Print("Application.IsDebugging is True")
+    Else
+        Print "DEBUGGING=False"
+    End If
+End Sub
