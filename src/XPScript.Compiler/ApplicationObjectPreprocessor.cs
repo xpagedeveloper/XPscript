@@ -10,6 +10,7 @@ internal sealed class ApplicationObjectPreprocessor
     private const string CompanyStateKey = "__xps_application_executable_company";
     private const string VersionStateKey = "__xps_application_executable_version";
     private const string CopyrightStateKey = "__xps_application_executable_copyright";
+    private const string FileDescriptionStateKey = "__xps_application_executable_file_description";
     private const string WidthStateKey = "__xps_application_width";
     private const string HeightStateKey = "__xps_application_height";
     internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
@@ -17,6 +18,7 @@ internal sealed class ApplicationObjectPreprocessor
     internal const string BuildCompanyMarker = "__XPSCRIPT_APPLICATION_COMPANY_BUILD__=";
     internal const string BuildVersionMarker = "__XPSCRIPT_APPLICATION_VERSION_BUILD__=";
     internal const string BuildCopyrightMarker = "__XPSCRIPT_APPLICATION_COPYRIGHT_BUILD__=";
+    internal const string BuildFileDescriptionMarker = "__XPSCRIPT_APPLICATION_FILE_DESCRIPTION_BUILD__=";
     private static readonly string[] FeatureMarkers =
     [
         "Application.", "Process.State", "Session.State", "Request.State",
@@ -36,6 +38,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = RewriteWritableApplicationProperty(source, "Executable.Company", CompanyStateKey, BuildCompanyMarker);
         source = RewriteWritableApplicationProperty(source, "Executable.Version", VersionStateKey, BuildVersionMarker);
         source = RewriteWritableApplicationProperty(source, "Executable.Copyright", CopyrightStateKey, BuildCopyrightMarker);
+        source = RewriteWritableApplicationProperty(source, "Executable.FileDescription", FileDescriptionStateKey, BuildFileDescriptionMarker);
         source = RewriteWritableApplicationProperty(source, "Width", WidthStateKey);
         source = RewriteWritableApplicationProperty(source, "Height", HeightStateKey);
         source = RewriteExitCode(source);

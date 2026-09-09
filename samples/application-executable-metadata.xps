@@ -8,9 +8,12 @@ Sub Main()
     Application.Executable.Company = "Pelle AB"
     Application.Executable.Version = "1.2.3.99"
     Application.Executable.Copyright = "Copyright 2026 Pelle"
+    Application.Executable.FileDescription = "XPScript executable metadata test"
+
 
     Print "ICON=" & CStr(Application.Executable.Icon)
     Print "ICON_ALIAS=" & CStr(Application.Icon)
+    Print "FILEDESCRIPTION=" & CStr(Application.Executable.FileDescription)
     Print "PRODUCT=" & CStr(Application.Executable.Product)
     Print "COMPANY=" & CStr(Application.Executable.Company)
     Print "VERSION=" & CStr(Application.Executable.Version)

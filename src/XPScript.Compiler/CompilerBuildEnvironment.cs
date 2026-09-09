@@ -163,6 +163,7 @@ internal static class CompilerBuildEnvironment
         var company = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCompanyMarker);
         var version = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildVersionMarker);
         var copyright = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCopyrightMarker);
+        var fileDescription = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildFileDescriptionMarker);
         if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
@@ -172,7 +173,8 @@ internal static class CompilerBuildEnvironment
             if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly)) throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
             escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly)) ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
         }
-        var propertyEntries = "    <Description>Application compiled with XPScript</Description>\n";
+        var description = fileDescription ?? "Application compiled with XPScript";
+        var propertyEntries = $"    <Description>{EscapeMsBuild(description)}</Description>\n";
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
@@ -180,7 +182,7 @@ internal static class CompilerBuildEnvironment
         if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
         if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
-        var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
+        var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n    <AssemblyMetadata Include=\"Compiled With\" Value=\"XPScript - XPageDeveloper.com\" />\n";
         if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{AvaloniaWebViewVersion}\" />\n";
         if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />\n";
         if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />\n";
