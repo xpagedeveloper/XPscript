@@ -37,6 +37,8 @@ Sub Main()
     Dim answer As Integer
     answer = 41
     answer = 42
+    Debugger.Print("answer=" & CStr(answer))
+    Debugger.UpdateVar("DocName", "Example")
 End Sub
 """,
     source,
@@ -46,6 +48,14 @@ if (!generated.Contains("XPScriptDebugRuntime.TrackValue(\"answer\", answer);", 
     throw new Exception("Simple scalar assignments were not instrumented for debugger value history.");
 if (!generated.Contains("XPSourceLineRuntime.Set(", StringComparison.Ordinal))
     throw new Exception("Debugger source-line mapping was not emitted.");
+if (!generated.Contains("internal static class Debugger", StringComparison.Ordinal))
+    throw new Exception("Debugger API class was not emitted.");
+if (!generated.Contains("public static void Print(object? value)", StringComparison.Ordinal))
+    throw new Exception("Debugger.Print API was not emitted.");
+if (!generated.Contains("public static void UpdateVar(string name, object? value)", StringComparison.Ordinal))
+    throw new Exception("Debugger.UpdateVar API was not emitted.");
+if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal))
+    throw new Exception("Debugger protocol does not advertise the explicit debugger API.");
 if (!generated.Contains("MaxTrackedValueChars = 2048", StringComparison.Ordinal))
     throw new Exception("Debugger value snapshots are not bounded.");
 if (!generated.Contains("MaxHistoryCharsPerVariable = 32768", StringComparison.Ordinal))
@@ -53,11 +63,11 @@ if (!generated.Contains("MaxHistoryCharsPerVariable = 32768", StringComparison.O
 if (!generated.Contains("<byte[", StringComparison.Ordinal))
     throw new Exception("Debugger byte arrays are not represented without retaining their contents.");
 
-VerifyMutationPostProcessor();
+VerifyComplexObjectsAreNotAutoTracked();
 
 Console.WriteLine("DebuggerCoreProbe passed.");
 
-static void VerifyMutationPostProcessor()
+static void VerifyComplexObjectsAreNotAutoTracked()
 {
     var compilerAssembly = typeof(XPScriptTranspiler).Assembly;
     var processorType = compilerAssembly.GetType("XPScript.Compiler.CompilerSourceLineDirectivePostProcessor", throwOnError: true)!;
@@ -89,20 +99,14 @@ internal static class LSControlRuntime
     var transformed = (string)(transform.Invoke(processor, [input])
         ?? throw new Exception("Debugger source-line postprocessor returned null."));
 
-    if (!transformed.Contains(
-            "XPScriptDebugArrayMutationRuntime.Set(\"values\", values, ComputeValue(), NextIndex());",
-            StringComparison.Ordinal))
-        throw new Exception("Array writes were not routed through debugger mutation tracking.");
+    if (transformed.Contains("XPScriptDebugArrayMutationRuntime", StringComparison.Ordinal))
+        throw new Exception("Internal array mutations must not be exposed as debugger variables.");
+    if (transformed.Contains("XPScriptDebugByRefMutationRuntime", StringComparison.Ordinal))
+        throw new Exception("Internal ByRef wrappers must not be exposed as debugger variables.");
+    if (transformed.Contains("TrackValue(\"box.Value\"", StringComparison.Ordinal))
+        throw new Exception("Object member/property writes must not be auto-inspected by the debugger.");
     if (Count(transformed, "NextIndex()") != 1)
-        throw new Exception("Array index expressions were duplicated by debugger instrumentation.");
-    if (Count(transformed, "ComputeValue()") != 3)
-        throw new Exception("Mutation right-hand expressions were duplicated by debugger instrumentation.");
-    if (!transformed.Contains("XPScriptDebugRuntime.TrackValue(\"box.Value\"", StringComparison.Ordinal))
-        throw new Exception("Simple member/property writes were not tracked.");
-    if (!transformed.Contains("XPScriptDebugRuntime.TrackValue(\"parameter\", parameter.Value);", StringComparison.Ordinal))
-        throw new Exception("ByRef parameter writes were not tracked.");
-    if (!transformed.Contains("XPScriptDebugByRefMutationRuntime.Create(\"answer\"", StringComparison.Ordinal))
-        throw new Exception("ByRef callers do not retain their caller variable name for data breakpoints.");
+        throw new Exception("Debugger postprocessing changed array index evaluation.");
 }
 
 static int Count(string text, string value)
