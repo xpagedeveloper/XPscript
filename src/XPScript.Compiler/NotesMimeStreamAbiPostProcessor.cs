@@ -59,7 +59,7 @@ internal static class NotesMimeStreamAbiPostProcessor
     }
 """;
 
-        const string newWriteMimeStream = """
+        const string nsfMimePartWriter = """
     internal void WriteMimeStream(nint note, string itemName, byte[] data)
     {
         EnsureInitialized();
@@ -100,26 +100,55 @@ internal static class NotesMimeStreamAbiPostProcessor
     }
 """;
 
-        if (source.Contains(oldWriteMimeStreamWithItemizeBody, StringComparison.Ordinal))
-            source = source.Replace(oldWriteMimeStreamWithItemizeBody, newWriteMimeStream, StringComparison.Ordinal);
-        else if (source.Contains(oldWriteMimeStream, StringComparison.Ordinal))
-            source = source.Replace(oldWriteMimeStream, newWriteMimeStream, StringComparison.Ordinal);
-        else if (!source.Contains(newWriteMimeStream, StringComparison.Ordinal))
-            throw new CompilerException("Unable to replace MIME stream writer with native NSF MIME part writer.");
-
-        const string delegateAnchor = "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate void MIMEStreamCloseDelegate(nint stream);";
-        const string createDelegate = "private delegate ushort NSFMimePartCreateStreamDelegate";
-        const string delegateReplacement = delegateAnchor + "\n" +
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartCreateStreamDelegate(nint note, nint itemName, ushort itemNameLength, ushort partType, uint flags, out uint context);\n" +
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartAppendStreamDelegate(uint context, nint data, ushort dataLength);\n" +
-            "    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] private delegate ushort NSFMimePartCloseStreamDelegate(uint context, int update);";
-
-        if (!source.Contains(createDelegate, StringComparison.Ordinal))
+        // JNX's JNAMimeWriter is our executable cross-check for the native ABI.
+        // For BODY-only writes it deliberately itemizes MIME_STREAM_ITEMIZE_FULL on
+        // a temporary note and copies the resulting MIME_PART items to the target.
+        // XPscript currently has no safe native item-copy helper here, but its
+        // CreateMIMEEntity payload contains only MIME body headers/body, so use the
+        // same FULL itemization on the target note. This is preferable to the
+        // NSFMimePartCreateStream experiment, which returned success but produced no
+        // reopenable Body item in the runtime probe.
+        const string jnxAlignedWriter = """
+    internal void WriteMimeStream(nint note, string itemName, byte[] data)
+    {
+        EnsureInitialized();
+        const uint openWrite = 0x00000002u;
+        const uint itemizeFull = 0x00000006u;
+        Check(Resolve<MIMEStreamOpenDelegate>("MIMEStreamOpen")(note, 0, 0, openWrite, out var stream), "MIMEStreamOpen(write)");
+        try
         {
-            if (!source.Contains(delegateAnchor, StringComparison.Ordinal))
-                throw new CompilerException("Unable to inject NSF MIME part stream delegates.");
-            source = source.Replace(delegateAnchor, delegateReplacement, StringComparison.Ordinal);
+            var offset = 0;
+            while (offset < data.Length)
+            {
+                var count = Math.Min(60000, data.Length - offset);
+                var buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal(Math.Max(1, count));
+                try
+                {
+                    if (count > 0) System.Runtime.InteropServices.Marshal.Copy(data, offset, buffer, count);
+                    if (Resolve<MIMEStreamWriteDelegate>("MIMEStreamWrite")(buffer, checked((uint)count), stream) != 0)
+                        throw new XPScriptRuntimeException(5, "MIMEStreamWrite failed.");
+                }
+                finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(buffer); }
+                offset += count;
+            }
+
+            using var name = ToLmbcs(itemName);
+            Check(Resolve<MIMEStreamItemizeDelegate>("MIMEStreamItemize")(
+                note, name.Pointer, checked((ushort)name.Length), itemizeFull, stream),
+                "MIMEStreamItemize(full)");
         }
+        finally { Resolve<MIMEStreamCloseDelegate>("MIMEStreamClose")(stream); }
+    }
+""";
+
+        if (source.Contains(nsfMimePartWriter, StringComparison.Ordinal))
+            source = source.Replace(nsfMimePartWriter, jnxAlignedWriter, StringComparison.Ordinal);
+        else if (source.Contains(oldWriteMimeStreamWithItemizeBody, StringComparison.Ordinal))
+            source = source.Replace(oldWriteMimeStreamWithItemizeBody, jnxAlignedWriter, StringComparison.Ordinal);
+        else if (source.Contains(oldWriteMimeStream, StringComparison.Ordinal))
+            source = source.Replace(oldWriteMimeStream, jnxAlignedWriter, StringComparison.Ordinal);
+        else if (!source.Contains(jnxAlignedWriter, StringComparison.Ordinal))
+            throw new CompilerException("Unable to align MIME stream writer with JNX native itemization flow.");
 
         return source;
     }
