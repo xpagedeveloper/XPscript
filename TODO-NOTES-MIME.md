@@ -59,15 +59,17 @@ Branch: `feature/notes-mime-entity`
 - [x] Domino runtime verifies the attachment direct child as `application/octet-stream`
 - [x] Domino runtime verifies the attachment child survives save/reopen traversal
 - [x] Existing known multipart HTML traversal remains green after attachment changes
-- [x] Added direct-child `GetNthHeader(name[, occurrence])` using the bounded child header reader
+- [x] Added direct-child `GetNthHeader(name[, occurrence])`
 - [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
-- [x] Updated Notes MIME documentation with semantic child-header verification guidance
+- [x] Domino runtime showed the bounded root-stream child header reader cannot see itemized child headers after save/reopen
+- [x] Added native `MIMEGetEntityData(..., MIME_ENTITY_DATA_HEADERS, ...)` ABI and directory-owner bridge for per-entity header readback
+- [x] Routed direct-child `GetNthHeader` and `NotesMIMEHeader` value access through native entity header data
 
 ## In progress
 
-- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through direct-child `GetNthHeader`
-- [ ] Confirm `Content-Disposition` and filename after save/reopen through direct-child `GetNthHeader`
-- [ ] Confirm the updated Notes MIME sample compiles in branch CI
+- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through native direct-child `GetNthHeader`
+- [ ] Confirm `Content-Disposition` and filename after save/reopen through native direct-child `GetNthHeader`
+- [ ] Confirm the native entity-header reader compiles in branch CI
 
 ## Remaining
 
