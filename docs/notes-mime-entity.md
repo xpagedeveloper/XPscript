@@ -45,6 +45,29 @@ Tree navigation uses the native MIME directory:
 
 `SEARCH_DEPTH` is the supported traversal mode for `GetNextEntity(search)`.
 
+## Root content readback
+
+The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`.
+
+XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRead`. `ContentAsText` and `GetContentAsText` decode the transfer encoding and then decode text with the root entity's native charset. `GetContentAsBytes` returns decoded body bytes. `GetEntityAsText` returns the complete root RFC822 MIME stream including headers.
+
+Supported transfer decoding includes `base64`, `quoted-printable`, `7bit`, `8bit` and `binary` content. A root entity with no charset is decoded as UTF-8.
+
+Example:
+
+```xpscript
+Print mime.ContentAsText
+
+Dim stream As NotesStream
+Set stream = session.CreateStream()
+stream.Charset = "UTF-8"
+Call mime.GetContentAsText(stream)
+stream.Position = 0
+Print stream.ReadText()
+```
+
+These readback members are root-only. Child entity content access remains unsupported until verified Domino per-entity data access is implemented.
+
 ## Root mutation
 
 `SetContentFromText(stream, contentType, encoding)` and `SetContentFromBytes(stream, contentType, encoding)` support the root entity.
@@ -66,6 +89,7 @@ Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
 Print mime.ContentType
 Print mime.ContentSubType
 Print mime.Charset
+Print mime.ContentAsText
 ```
 
 `SetContentFromText` reads from the stream's current position. Rewind the stream when the content was just written to it.
@@ -83,14 +107,14 @@ The currently supported transfer-encoding mappings are:
 
 A write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before root writeback. Existing child and sibling wrappers that reference the old directory become invalid immediately.
 
-The root wrapper that performs `SetContentFromText` or `SetContentFromBytes` reopens the MIME directory after a successful write and rebinds itself to the new root entity. Its metadata properties therefore reflect the new MIME content immediately.
+The root wrapper that performs `SetContentFromText` or `SetContentFromBytes` reopens the MIME directory after a successful write and rebinds itself to the new root entity. Its metadata and root readback members therefore observe the new MIME content immediately.
 
 `NotesDocument.CloseMIMEEntities()` closes the current MIME directory explicitly. `NotesDocument.Save()` and document recycle also release the directory before their native operation.
 
-## Current mutation boundary
+## Current boundary
 
-Child-entity mutation is intentionally unsupported until verified Domino per-entity mutation support is implemented. Calling `SetContentFromText` or `SetContentFromBytes` on a child entity raises `NotSupportedException`.
+Child-entity content readback and mutation are intentionally unsupported until verified Domino per-entity data and mutation support is implemented. Root header mutation and other unverified per-entity header members also remain unsupported.
 
-Native per-entity content/header read and mutation members that have not been verified remain unsupported. Do not assume the managed MIME parser behavior from earlier prototypes.
+Do not assume the managed MIME parser behavior from earlier prototypes. Root readback performs only the bounded RFC822 framing and transfer decoding required for the native root MIME stream.
 
-See `samples/notes-mime-entity-surface.xps` for the executable create, mutate, save/reopen, metadata, charset and traversal regression probe.
+See `samples/notes-mime-entity-surface.xps` for the executable create, mutate, readback, save/reopen, metadata, charset and traversal regression probe.
