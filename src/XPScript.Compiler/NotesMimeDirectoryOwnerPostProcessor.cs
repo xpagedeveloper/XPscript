@@ -14,7 +14,7 @@ internal sealed class XPScriptNotesMimeDirectoryOwner : System.IDisposable
     private XPScriptNotesNativeApi? _api;
     private nint _directory;
 
-    internal XPScriptNotesMimeDirectoryOwner(XPScriptNotesNativeApi api, uint note)
+    internal XPScriptNotesMimeDirectoryOwner(XPScriptNotesNativeApi api, nint note)
     {
         _api = api ?? throw new System.ArgumentNullException(nameof(api));
         _directory = api.OpenMimeDirectory(note);
