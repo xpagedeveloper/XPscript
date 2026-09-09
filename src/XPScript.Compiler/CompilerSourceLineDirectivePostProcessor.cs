@@ -70,10 +70,14 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
             var sourceLine = match.Groups["line"].Value;
             var sourceId = DecodeSourceId(match.Groups["source"].Value);
             var directiveSource = EscapeDirectiveString(sourceId);
+            var sourceLiteral = EscapeCSharpString(sourceId);
 
             output.Add(markerIndent + "// XPSOURCE|" + sourceId + "|" + sourceLine);
             output.Add(markerIndent + "#line " + sourceLine + " \"" + directiveSource + "\"");
-            output.Add(MarkerPattern.Replace(rawLine, "XPSourceLineRuntime.Set(" + sourceLine + ")", 1));
+            output.Add(MarkerPattern.Replace(
+                rawLine,
+                "XPSourceLineRuntime.Set(" + sourceLine + ", \"" + sourceLiteral + "\")",
+                1));
         }
 
         if (foundMarker && !runtimeBoundaryInserted)
@@ -97,4 +101,10 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
     private static string EscapeDirectiveString(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    private static string EscapeCSharpString(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
 }
