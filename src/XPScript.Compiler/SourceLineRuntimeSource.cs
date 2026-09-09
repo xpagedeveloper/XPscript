@@ -11,10 +11,7 @@ internal static class XPSourceLineRuntime
     public static int Current => _current;
     public static string CurrentSource => _currentSource;
 
-    public static void Set(int line)
-    {
-        Set(line, _currentSource);
-    }
+    public static void Set(int line) => Set(line, _currentSource);
 
     public static void Set(int line, string? sourcePath)
     {
@@ -33,29 +30,16 @@ internal static class XPSourceLineRuntime
 internal static class XPScriptDebugRuntime
 {
     private sealed record DebugFrame(int id, string name, string source, int line, int column);
-    private sealed record ValueChange(
-        long Sequence,
-        string Name,
-        string OldValue,
-        string NewValue,
-        string Source,
-        int Line,
-        string Procedure,
-        string TimestampUtc);
+    private sealed record ValueChange(long Sequence, string Name, string OldValue, string NewValue, string Source, int Line, string Procedure, string TimestampUtc);
 
     private static readonly object Gate = new();
-    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
-    private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
-    private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
-    private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
-    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
-    private static readonly global::System.Collections.Generic.Dictionary<string, int> ValueHistoryChars =
-        new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, int> ValueHistoryChars = new(global::System.StringComparer.OrdinalIgnoreCase);
+
     private static global::System.Net.Sockets.TcpListener? _listener;
     private static global::System.Net.Sockets.TcpClient? _client;
     private static global::System.IO.StreamReader? _reader;
@@ -63,10 +47,15 @@ internal static class XPScriptDebugRuntime
     private static bool _initialized;
     private static bool _enabled;
     private static bool _stopOnEntry = true;
+    private static bool _breakOnHandledException;
+    private static bool _breakOnUnhandledException = true;
     private static string _token = "";
     private static string _stepMode = "";
     private static int _stepDepth;
+    private static int _pauseRequested;
     private static long _changeSequence;
+
+    private const int ProtocolVersion = 5;
     private const int ValueHistoryLimit = 20;
     private const int MaxTrackedValueChars = 2048;
     private const int MaxHistoryCharsPerVariable = 32768;
@@ -90,9 +79,12 @@ internal static class XPScriptDebugRuntime
         {
             EnsureConnected();
             if (_writer is null || _reader is null) return;
+            PollRunningCommand();
+            if (!_enabled) return;
 
             var frames = CaptureFrames(sourcePath, line);
             var depth = frames.Count;
+            var pauseHit = global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0) != 0;
             var hitBreakpoint = Breakpoints.TryGetValue(sourcePath, out var lines) && lines.Contains(line);
             var stepHit = _stepMode switch
             {
@@ -102,13 +94,44 @@ internal static class XPScriptDebugRuntime
                 _ => false
             };
 
-            if (!_stopOnEntry && !stepHit && !hitBreakpoint) return;
+            if (!_stopOnEntry && !pauseHit && !stepHit && !hitBreakpoint) return;
 
-            var reason = _stopOnEntry ? "entry" : hitBreakpoint ? "breakpoint" : "step";
+            var reason = _stopOnEntry ? "entry" : pauseHit ? "pause" : hitBreakpoint ? "breakpoint" : "step";
             _stopOnEntry = false;
             _stepMode = "";
             Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1, frames });
             CommandLoop(depth);
+        }
+    }
+
+    public static void Exception(global::System.Exception exception, int sourceLine, bool handled)
+    {
+        EnsureInitialized();
+        if (!_enabled) return;
+        var shouldBreak = handled ? _breakOnHandledException : _breakOnUnhandledException;
+        if (!shouldBreak) return;
+
+        lock (Gate)
+        {
+            EnsureConnected();
+            if (_writer is null || _reader is null) return;
+            var source = XPSourceLineRuntime.CurrentSource;
+            var line = sourceLine > 0 ? sourceLine : XPSourceLineRuntime.Current;
+            var frames = CaptureFrames(source, line);
+            _stepMode = "";
+            Send(new
+            {
+                type = "stopped",
+                reason = "exception",
+                source,
+                line,
+                threadId = 1,
+                frames,
+                exceptionId = exception.GetType().Name,
+                breakMode = handled ? "always" : "unhandled",
+                description = exception.Message
+            });
+            CommandLoop(frames.Count);
         }
     }
 
@@ -117,7 +140,6 @@ internal static class XPScriptDebugRuntime
         if (string.IsNullOrWhiteSpace(name)) return;
         EnsureInitialized();
         if (!_enabled) return;
-
         lock (Gate)
         {
             if (CustomDebuggerVariables.Contains(name)) return;
@@ -136,7 +158,6 @@ internal static class XPScriptDebugRuntime
         {
             if (!CustomDebuggerVariables.Contains(name) && LastValues.ContainsKey(name))
                 throw new XPScriptRuntimeException(5, "Debugger variable name is already used by an observed application variable: " + name);
-
             CustomDebuggerVariables.Add(name);
             RecordValueLocked(name, value);
         }
@@ -146,27 +167,18 @@ internal static class XPScriptDebugRuntime
     {
         EnsureInitialized();
         if (!_enabled) return;
-
         lock (Gate)
         {
             EnsureConnected();
             if (_writer is null) return;
-            Send(new
-            {
-                type = "debugOutput",
-                output = RenderValue(value),
-                source = XPSourceLineRuntime.CurrentSource,
-                line = XPSourceLineRuntime.Current,
-                threadId = 1
-            });
+            Send(new { type = "debugOutput", output = RenderValue(value), source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1 });
         }
     }
 
     private static void RecordValueLocked(string name, object? value)
     {
         var rendered = RenderValue(value);
-        if (LastValues.TryGetValue(name, out var previous) && string.Equals(previous, rendered, global::System.StringComparison.Ordinal))
-            return;
+        if (LastValues.TryGetValue(name, out var previous) && string.Equals(previous, rendered, global::System.StringComparison.Ordinal)) return;
 
         var oldValue = LastValues.TryGetValue(name, out previous) ? previous : "<unobserved>";
         LastValues[name] = rendered;
@@ -179,18 +191,9 @@ internal static class XPScriptDebugRuntime
 
         var frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current);
         var procedure = frames.Count > 0 ? frames[0].name : "XPscript";
-        var change = new ValueChange(
-            ++_changeSequence,
-            name,
-            oldValue,
-            rendered,
-            XPSourceLineRuntime.CurrentSource,
-            XPSourceLineRuntime.Current,
-            procedure,
-            global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture));
+        var change = new ValueChange(++_changeSequence, name, oldValue, rendered, XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current, procedure, global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture));
         history.Enqueue(change);
         ValueHistoryChars[name] = ValueHistoryChars.GetValueOrDefault(name) + EstimateHistoryChars(change);
-
         while (history.Count > ValueHistoryLimit || ValueHistoryChars[name] > MaxHistoryCharsPerVariable)
         {
             var removed = history.Dequeue();
@@ -198,25 +201,12 @@ internal static class XPScriptDebugRuntime
         }
 
         if (!DataBreakpoints.Contains(name) || _reader is null || _writer is null) return;
-
-        var depth = frames.Count;
         _stepMode = "";
-        Send(new
-        {
-            type = "stopped",
-            reason = "data breakpoint",
-            source = XPSourceLineRuntime.CurrentSource,
-            line = XPSourceLineRuntime.Current,
-            threadId = 1,
-            frames,
-            dataId = name,
-            description = name + " changed from " + oldValue + " to " + rendered
-        });
-        CommandLoop(depth);
+        Send(new { type = "stopped", reason = "data breakpoint", source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1, frames, dataId = name, description = name + " changed from " + oldValue + " to " + rendered });
+        CommandLoop(frames.Count);
     }
 
-    private static int EstimateHistoryChars(ValueChange change) =>
-        change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
+    private static int EstimateHistoryChars(ValueChange change) => change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
 
     private static string RenderValue(object? value)
     {
@@ -226,20 +216,13 @@ internal static class XPScriptDebugRuntime
             if (value is string text) return LimitRenderedValue(text);
             if (value is byte[] bytes) return $"<byte[{bytes.LongLength}]>";
             if (value is char[] chars) return LimitRenderedValue(new string(chars));
-            if (value is global::System.IO.Stream stream)
-                return $"<Stream {stream.GetType().Name} CanRead={stream.CanRead} CanSeek={stream.CanSeek}>";
-            if (value is global::System.Text.StringBuilder builder)
-                return LimitRenderedValue(builder.ToString());
-            if (value is global::System.DateTime date)
-                return date.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture);
-            if (value is global::System.IFormattable formattable)
-                return LimitRenderedValue(formattable.ToString(null, global::System.Globalization.CultureInfo.InvariantCulture) ?? "");
+            if (value is global::System.IO.Stream stream) return $"<Stream {stream.GetType().Name} CanRead={stream.CanRead} CanSeek={stream.CanSeek}>";
+            if (value is global::System.Text.StringBuilder builder) return LimitRenderedValue(builder.ToString());
+            if (value is global::System.DateTime date) return date.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture);
+            if (value is global::System.IFormattable formattable) return LimitRenderedValue(formattable.ToString(null, global::System.Globalization.CultureInfo.InvariantCulture) ?? "");
             return LimitRenderedValue(value.ToString() ?? "");
         }
-        catch
-        {
-            return "<unavailable>";
-        }
+        catch { return "<unavailable>"; }
     }
 
     private static string LimitRenderedValue(string value)
@@ -266,8 +249,7 @@ internal static class XPScriptDebugRuntime
                 if (declaring is "XPScriptDebugRuntime" or "XPSourceLineRuntime") continue;
                 var source = frame.GetFileName() ?? "";
                 var line = frame.GetFileLineNumber();
-                var isMappedScript = source.EndsWith(".xps", global::System.StringComparison.OrdinalIgnoreCase) ||
-                    source.EndsWith(".xpscript", global::System.StringComparison.OrdinalIgnoreCase);
+                var isMappedScript = source.EndsWith(".xps", global::System.StringComparison.OrdinalIgnoreCase) || source.EndsWith(".xpscript", global::System.StringComparison.OrdinalIgnoreCase);
                 if (!isMappedScript && result.Count > 0) continue;
                 if (!isMappedScript && declaring != "Script") continue;
                 if (source.Length == 0) source = fallbackSource;
@@ -275,12 +257,8 @@ internal static class XPScriptDebugRuntime
                 result.Add(new DebugFrame(id++, method?.Name ?? "XPscript", source, line, 1));
             }
         }
-        catch
-        {
-        }
-
-        if (result.Count == 0)
-            result.Add(new DebugFrame(1, "XPscript", fallbackSource, fallbackLine, 1));
+        catch { }
+        if (result.Count == 0) result.Add(new DebugFrame(1, "XPscript", fallbackSource, fallbackLine, 1));
         return result;
     }
 
@@ -291,19 +269,11 @@ internal static class XPScriptDebugRuntime
         {
             if (_initialized) return;
             _initialized = true;
-
-            if (global::System.OperatingSystem.IsBrowser())
-                return;
-
+            if (global::System.OperatingSystem.IsBrowser()) return;
             var portText = global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_PORT");
-            if (!int.TryParse(portText, out var port) || port <= 0 || port > 65535)
-                return;
-
+            if (!int.TryParse(portText, out var port) || port <= 0 || port > 65535) return;
             _token = global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_TOKEN") ?? "";
-            _stopOnEntry = !string.Equals(
-                global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_STOP_ON_ENTRY"),
-                "0",
-                global::System.StringComparison.Ordinal);
+            _stopOnEntry = !string.Equals(global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_STOP_ON_ENTRY"), "0", global::System.StringComparison.Ordinal);
             _listener = new global::System.Net.Sockets.TcpListener(global::System.Net.IPAddress.Loopback, port);
             _listener.Start(1);
             _enabled = true;
@@ -316,22 +286,18 @@ internal static class XPScriptDebugRuntime
         _client = _listener.AcceptTcpClient();
         var stream = _client.GetStream();
         _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
-        _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true)
-        {
-            AutoFlush = true
-        };
-        Send(new
-        {
-            type = "hello",
-            protocol = 4,
-            runtime = "xpscript",
-            pid = global::System.Environment.ProcessId,
-            valueHistoryLimit = ValueHistoryLimit,
-            maxTrackedValueChars = MaxTrackedValueChars,
-            maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable,
-            supportsDataBreakpoints = true,
-            supportsDebuggerApi = true
-        });
+        _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true) { AutoFlush = true };
+        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true });
+    }
+
+    private static void PollRunningCommand()
+    {
+        if (_client is null || _reader is null || _client.Available <= 0) return;
+        var raw = _reader.ReadLine();
+        if (raw is null) { Disconnect(); return; }
+        if (!TryParseAuthenticatedCommand(raw, out var command, out _)) return;
+        if (command == "pause") global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 1);
+        else if (command == "disconnect") Disconnect();
     }
 
     private static void CommandLoop(int currentDepth)
@@ -339,87 +305,46 @@ internal static class XPScriptDebugRuntime
         while (_reader is not null)
         {
             var raw = _reader.ReadLine();
-            if (raw is null)
+            if (raw is null) { Disconnect(); return; }
+            if (!TryParseAuthenticatedCommand(raw, out var command, out var root)) continue;
+            using (root)
             {
-                Disconnect();
-                return;
-            }
-
-            global::System.Text.Json.JsonDocument message;
-            try
-            {
-                message = global::System.Text.Json.JsonDocument.Parse(raw);
-            }
-            catch
-            {
-                continue;
-            }
-
-            using (message)
-            {
-                var root = message.RootElement;
-                var suppliedToken = root.TryGetProperty("token", out var tokenElement)
-                    ? tokenElement.GetString() ?? ""
-                    : "";
-                if (_token.Length > 0 &&
-                    !global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-                        global::System.Text.Encoding.UTF8.GetBytes(_token),
-                        global::System.Text.Encoding.UTF8.GetBytes(suppliedToken)))
-                {
-                    Send(new { type = "error", message = "Debugger authentication failed." });
-                    Disconnect();
-                    return;
-                }
-
-                var command = root.TryGetProperty("command", out var commandElement)
-                    ? commandElement.GetString() ?? ""
-                    : "";
-
                 switch (command)
                 {
-                    case "setBreakpoints":
-                        SetBreakpoints(root);
-                        Send(new { type = "breakpoints", ok = true });
-                        break;
-                    case "setDataBreakpoints":
-                        SetDataBreakpoints(root);
-                        Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() });
-                        break;
-                    case "stackTrace":
-                        Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) });
-                        break;
-                    case "valueHistory":
-                        SendValueHistory(root);
-                        break;
-                    case "continue":
-                        _stepMode = "";
-                        Send(new { type = "continued", threadId = 1 });
-                        return;
-                    case "next":
-                        _stepMode = "over";
-                        _stepDepth = currentDepth;
-                        Send(new { type = "continued", threadId = 1 });
-                        return;
-                    case "stepIn":
-                        _stepMode = "into";
-                        _stepDepth = currentDepth;
-                        Send(new { type = "continued", threadId = 1 });
-                        return;
-                    case "stepOut":
-                        _stepMode = "out";
-                        _stepDepth = currentDepth;
-                        Send(new { type = "continued", threadId = 1 });
-                        return;
-                    case "disconnect":
-                        Disconnect();
-                        return;
-                    case "pause":
-                        _stepMode = "into";
-                        _stepDepth = currentDepth;
-                        break;
+                    case "setBreakpoints": SetBreakpoints(root.RootElement); Send(new { type = "breakpoints", ok = true }); break;
+                    case "setDataBreakpoints": SetDataBreakpoints(root.RootElement); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
+                    case "setExceptionBreakpoints": SetExceptionBreakpoints(root.RootElement); Send(new { type = "exceptionBreakpoints", ok = true }); break;
+                    case "stackTrace": Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) }); break;
+                    case "valueHistory": SendValueHistory(root.RootElement); break;
+                    case "debuggerVariables": SendDebuggerVariables(); break;
+                    case "continue": _stepMode = ""; Send(new { type = "continued", threadId = 1 }); return;
+                    case "next": _stepMode = "over"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
+                    case "stepIn": _stepMode = "into"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
+                    case "stepOut": _stepMode = "out"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return;
+                    case "disconnect": Disconnect(); return;
+                    case "pause": global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 1); break;
                 }
             }
         }
+    }
+
+    private static bool TryParseAuthenticatedCommand(string raw, out string command, out global::System.Text.Json.JsonDocument document)
+    {
+        command = "";
+        try { document = global::System.Text.Json.JsonDocument.Parse(raw); }
+        catch { document = global::System.Text.Json.JsonDocument.Parse("{}"); return false; }
+        var root = document.RootElement;
+        var suppliedToken = root.TryGetProperty("token", out var tokenElement) ? tokenElement.GetString() ?? "" : "";
+        if (_token.Length > 0 && !global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(global::System.Text.Encoding.UTF8.GetBytes(_token), global::System.Text.Encoding.UTF8.GetBytes(suppliedToken)))
+        {
+            Send(new { type = "error", message = "Debugger authentication failed." });
+            document.Dispose();
+            document = global::System.Text.Json.JsonDocument.Parse("{}");
+            Disconnect();
+            return false;
+        }
+        command = root.TryGetProperty("command", out var commandElement) ? commandElement.GetString() ?? "" : "";
+        return true;
     }
 
     private static void SendValueHistory(global::System.Text.Json.JsonElement root)
@@ -431,40 +356,50 @@ internal static class XPScriptDebugRuntime
             Send(new { type = "valueHistory", name, items });
             return;
         }
-
         var all = new global::System.Collections.Generic.List<ValueChange>();
         foreach (var history in ValueHistory.Values) all.AddRange(history);
         Send(new { type = "valueHistory", name = "", items = all.OrderByDescending(item => item.Sequence).Take(ValueHistoryLimit).ToArray() });
     }
 
+    private static void SendDebuggerVariables()
+    {
+        var items = new global::System.Collections.Generic.List<object>();
+        foreach (var name in CustomDebuggerVariables)
+            items.Add(new { name, value = LastValues.TryGetValue(name, out var value) ? value : "<unobserved>" });
+        Send(new { type = "debuggerVariables", items });
+    }
+
     private static void SetBreakpoints(global::System.Text.Json.JsonElement root)
     {
-        var source = root.TryGetProperty("source", out var sourceElement)
-            ? sourceElement.GetString() ?? ""
-            : "";
+        var source = root.TryGetProperty("source", out var sourceElement) ? sourceElement.GetString() ?? "" : "";
         if (source.Length == 0) return;
-
         var values = new global::System.Collections.Generic.HashSet<int>();
         if (root.TryGetProperty("lines", out var linesElement) && linesElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
-        {
-            foreach (var item in linesElement.EnumerateArray())
-            {
-                if (item.TryGetInt32(out var line) && line > 0) values.Add(line);
-            }
-        }
+            foreach (var item in linesElement.EnumerateArray()) if (item.TryGetInt32(out var line) && line > 0) values.Add(line);
         Breakpoints[source] = values;
     }
 
     private static void SetDataBreakpoints(global::System.Text.Json.JsonElement root)
     {
         DataBreakpoints.Clear();
-        if (!root.TryGetProperty("names", out var namesElement) || namesElement.ValueKind != global::System.Text.Json.JsonValueKind.Array)
-            return;
-
+        if (!root.TryGetProperty("names", out var namesElement) || namesElement.ValueKind != global::System.Text.Json.JsonValueKind.Array) return;
         foreach (var item in namesElement.EnumerateArray())
         {
             var name = item.GetString() ?? "";
             if (!string.IsNullOrWhiteSpace(name)) DataBreakpoints.Add(name);
+        }
+    }
+
+    private static void SetExceptionBreakpoints(global::System.Text.Json.JsonElement root)
+    {
+        _breakOnHandledException = false;
+        _breakOnUnhandledException = false;
+        if (!root.TryGetProperty("filters", out var filters) || filters.ValueKind != global::System.Text.Json.JsonValueKind.Array) return;
+        foreach (var item in filters.EnumerateArray())
+        {
+            var filter = item.GetString() ?? "";
+            if (string.Equals(filter, "all", global::System.StringComparison.OrdinalIgnoreCase)) { _breakOnHandledException = true; _breakOnUnhandledException = true; }
+            if (string.Equals(filter, "uncaught", global::System.StringComparison.OrdinalIgnoreCase)) _breakOnUnhandledException = true;
         }
     }
 
@@ -480,40 +415,30 @@ internal static class XPScriptDebugRuntime
         try { _writer?.Dispose(); } catch { }
         try { _client?.Dispose(); } catch { }
         try { _listener?.Stop(); } catch { }
-        _reader = null;
-        _writer = null;
-        _client = null;
-        _listener = null;
-        _enabled = false;
+        _reader = null; _writer = null; _client = null; _listener = null; _enabled = false;
         DataBreakpoints.Clear();
         CustomDebuggerVariables.Clear();
+        global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0);
     }
 }
 
 internal static class Debugger
 {
     public static void Print(object? value) => XPScriptDebugRuntime.Print(value);
-
-    public static void UpdateVar(string name, object? value) =>
-        XPScriptDebugRuntime.UpdateDebuggerVar(name, value);
+    public static void UpdateVar(string name, object? value) => XPScriptDebugRuntime.UpdateDebuggerVar(name, value);
 }
 
 internal static class Console
 {
-    // Compatibility members are intentionally exposed because generated runtime code
-    // historically referenced System.Console through the unqualified name Console.
     public static global::System.IO.TextReader In => global::System.Console.In;
     public static global::System.IO.TextWriter Out => global::System.Console.Out;
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
-
     public static int Read() => global::System.Console.Read();
     public static string ReadLine() => global::System.Console.ReadLine() ?? string.Empty;
-
     public static void Write(object? value) => global::System.Console.Write(XPScriptRuntime.PrintText(value));
     public static void WriteLine() => global::System.Console.WriteLine();
     public static void WriteLine(object? value) => global::System.Console.WriteLine(XPScriptRuntime.PrintText(value));
     public static void WriteError(object? value) => global::System.Console.Error.WriteLine(XPScriptRuntime.PrintText(value));
-
     public static void Clear() => global::System.Console.Clear();
 
     public static void ClearLine()
@@ -528,69 +453,28 @@ internal static class Console
         global::System.Console.SetCursorPosition(global::System.Math.Min(left, width - 1), top);
     }
 
-    public static string ForegroundColor
-    {
-        get => global::System.Console.ForegroundColor.ToString();
-        set => global::System.Console.ForegroundColor = ParseColor(value);
-    }
-
-    public static string BackgroundColor
-    {
-        get => global::System.Console.BackgroundColor.ToString();
-        set => global::System.Console.BackgroundColor = ParseColor(value);
-    }
-
+    public static string ForegroundColor { get => global::System.Console.ForegroundColor.ToString(); set => global::System.Console.ForegroundColor = ParseColor(value); }
+    public static string BackgroundColor { get => global::System.Console.BackgroundColor.ToString(); set => global::System.Console.BackgroundColor = ParseColor(value); }
     public static void ResetColor() => global::System.Console.ResetColor();
     public static void SetCursorPosition(int left, int top) => global::System.Console.SetCursorPosition(left, top);
-
-    public static int CursorLeft
-    {
-        get => global::System.Console.CursorLeft;
-        set => global::System.Console.CursorLeft = value;
-    }
-
-    public static int CursorTop
-    {
-        get => global::System.Console.CursorTop;
-        set => global::System.Console.CursorTop = value;
-    }
-
-    public static bool CursorVisible
-    {
-        get => global::System.Console.CursorVisible;
-        set => global::System.Console.CursorVisible = value;
-    }
-
+    public static int CursorLeft { get => global::System.Console.CursorLeft; set => global::System.Console.CursorLeft = value; }
+    public static int CursorTop { get => global::System.Console.CursorTop; set => global::System.Console.CursorTop = value; }
+    public static bool CursorVisible { get => global::System.Console.CursorVisible; set => global::System.Console.CursorVisible = value; }
     public static int WindowWidth => global::System.Console.WindowWidth;
     public static int WindowHeight => global::System.Console.WindowHeight;
-
-    public static string Title
-    {
-        get => global::System.Console.Title;
-        set => global::System.Console.Title = value ?? string.Empty;
-    }
-
+    public static string Title { get => global::System.Console.Title; set => global::System.Console.Title = value ?? string.Empty; }
     public static ConsoleKeyInfoValue ReadKey() => ReadKey(false);
-
-    public static ConsoleKeyInfoValue ReadKey(bool intercept)
-    {
-        var key = global::System.Console.ReadKey(intercept);
-        return new ConsoleKeyInfoValue(key);
-    }
-
+    public static ConsoleKeyInfoValue ReadKey(bool intercept) => new(global::System.Console.ReadKey(intercept));
     public static bool KeyAvailable => global::System.Console.KeyAvailable;
     public static bool IsInputRedirected => global::System.Console.IsInputRedirected;
     public static bool IsOutputRedirected => global::System.Console.IsOutputRedirected;
     public static bool IsErrorRedirected => global::System.Console.IsErrorRedirected;
-
     public static void Beep() => global::System.Console.Beep();
     public static void Beep(int frequency, int duration) => global::System.Console.Beep(frequency, duration);
 
     private static global::System.ConsoleColor ParseColor(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value) ||
-            !global::System.Enum.TryParse<global::System.ConsoleColor>(value, true, out var color) ||
-            !global::System.Enum.IsDefined(color))
+        if (string.IsNullOrWhiteSpace(value) || !global::System.Enum.TryParse<global::System.ConsoleColor>(value, true, out var color) || !global::System.Enum.IsDefined(color))
             throw new XPScriptRuntimeException(5, "Invalid console color: " + (value ?? string.Empty));
         return color;
     }
@@ -599,9 +483,7 @@ internal static class Console
 internal sealed class ConsoleKeyInfoValue
 {
     private readonly global::System.ConsoleKeyInfo _value;
-
     public ConsoleKeyInfoValue(global::System.ConsoleKeyInfo value) => _value = value;
-
     public string Key => _value.Key.ToString();
     public string Char => _value.KeyChar == '\0' ? string.Empty : _value.KeyChar.ToString();
     public bool Control => (_value.Modifiers & global::System.ConsoleModifiers.Control) != 0;
