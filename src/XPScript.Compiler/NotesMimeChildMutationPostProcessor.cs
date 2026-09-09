@@ -27,14 +27,15 @@ internal static class NotesMimeChildMutationPostProcessor
             "MIME child CreateHeader");
 
         source = ReplaceRequired(source,
-            "    internal XPScriptMimeHeaderValue HeaderAt(int index) { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEHeader requires verified Domino MIME entity header access; managed root-stream headers are intentionally not used.\"); }\n    internal void SetHeader(int index, string value) { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEHeader mutation requires verified Domino MIME entity header support; managed MIME serialization is intentionally not used.\"); }\n    internal void RemoveHeader(int index) { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEHeader.Remove requires verified Domino MIME entity header mutation support; managed MIME serialization is intentionally not used.\"); }",
-            "    internal XPScriptMimeHeaderValue HeaderAt(int index) { EnsureEntityAlive(); return ReadEntityHeaderAt(index); }\n    internal void SetHeader(int index, string value) { EnsureEntityAlive(); SetEntityHeader(index, value); }\n    internal void RemoveHeader(int index) { EnsureEntityAlive(); RemoveEntityHeader(index); }",
-            "MIME child header bridge");
-
-        source = ReplaceRequired(source,
             "    private static string MimeSymbolText(int symbol) => symbol switch",
             ChildHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
             "MIME child mutation helpers");
+
+        source = ReplaceRangeRequired(source,
+            "internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject",
+            "internal sealed partial class XPScriptNotesNativeApi",
+            HeaderRuntime + "\n\n",
+            "MIME child header runtime");
 
         return source;
     }
@@ -58,7 +59,7 @@ internal static class NotesMimeChildMutationPostProcessor
         {
             if (nextSiblingValue is not XPScriptNotesMIMEEntity sibling)
                 throw new XPScriptRuntimeException(13, "CreateChildEntity nextSibling must be a NotesMIMEEntity.");
-            if (!ReferenceEquals(sibling._mimeDirectoryOwner, _mimeDirectoryOwner))
+            if (!object.ReferenceEquals(sibling._mimeDirectoryOwner, _mimeDirectoryOwner))
                 throw new XPScriptRuntimeException(5, "CreateChildEntity nextSibling belongs to another MIME directory.");
             insertAt = sibling.GetDirectChildIndex("CreateChildEntity");
         }
@@ -74,6 +75,24 @@ internal static class NotesMimeChildMutationPostProcessor
 """;
 
     private const string ChildHelpers = """
+    internal XPScriptNotesMimeHeaderValue HeaderAt(int index)
+    {
+        EnsureEntityAlive();
+        return ReadEntityHeaderAt(index);
+    }
+
+    internal void SetHeader(int index, string value)
+    {
+        EnsureEntityAlive();
+        SetEntityHeader(index, value);
+    }
+
+    internal void RemoveHeader(int index)
+    {
+        EnsureEntityAlive();
+        RemoveEntityHeader(index);
+    }
+
     private void WriteEntityContent(byte[] data, string contentType, int encoding, string member)
     {
         EnsureEntityAlive();
@@ -101,7 +120,7 @@ internal static class NotesMimeChildMutationPostProcessor
         var preserved = existingHeaders.Where(h =>
             !h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) &&
             !h.Name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase)).ToList();
-        preserved.Insert(0, new XPScriptMimeHeaderValue("Content-Type", contentType));
+        preserved.Insert(0, new XPScriptNotesMimeHeaderValue("Content-Type", contentType));
 
         var transfer = "8bit";
         byte[] body = data;
@@ -119,7 +138,7 @@ internal static class NotesMimeChildMutationPostProcessor
                 transfer = "binary";
                 break;
         }
-        preserved.Insert(1, new XPScriptMimeHeaderValue("Content-Transfer-Encoding", transfer));
+        preserved.Insert(1, new XPScriptNotesMimeHeaderValue("Content-Transfer-Encoding", transfer));
         children[childIndex] = BuildEntity(preserved, body);
 
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
@@ -143,13 +162,13 @@ internal static class NotesMimeChildMutationPostProcessor
         var child = children[childIndex];
         var bodyOffset = FindRootBodyOffset(child);
         var headers = ParseEntityHeaders(child, bodyOffset);
-        headers.Add(new XPScriptMimeHeaderValue(name, ""));
+        headers.Add(new XPScriptNotesMimeHeaderValue(name, ""));
         children[childIndex] = BuildEntity(headers, bodyOffset >= child.Length ? [] : child[bodyOffset..]);
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
         return new XPScriptNotesMIMEHeader(this, headers.Count - 1);
     }
 
-    private XPScriptMimeHeaderValue ReadEntityHeaderAt(int index)
+    private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
     {
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
@@ -249,13 +268,13 @@ internal static class NotesMimeChildMutationPostProcessor
         return contentType;
     }
 
-    private static List<XPScriptMimeHeaderValue> ParseEntityHeaders(byte[] raw, int bodyOffset)
+    private static List<XPScriptNotesMimeHeaderValue> ParseEntityHeaders(byte[] raw, int bodyOffset)
     {
-        var result = new List<XPScriptMimeHeaderValue>();
+        var result = new List<XPScriptNotesMimeHeaderValue>();
         var headerLength = Math.Max(0, Math.Min(raw.Length, bodyOffset));
         var text = System.Text.Encoding.Latin1.GetString(raw, 0, headerLength)
             .Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        XPScriptMimeHeaderValue? current = null;
+        XPScriptNotesMimeHeaderValue? current = null;
         foreach (var line in text.Split('\n'))
         {
             if ((line.StartsWith(' ') || line.StartsWith('\t')) && current is not null)
@@ -265,7 +284,7 @@ internal static class NotesMimeChildMutationPostProcessor
             }
             var colon = line.IndexOf(':');
             if (colon <= 0) continue;
-            current = new XPScriptMimeHeaderValue(line[..colon].Trim(), line[(colon + 1)..].Trim());
+            current = new XPScriptNotesMimeHeaderValue(line[..colon].Trim(), line[(colon + 1)..].Trim());
             result.Add(current);
         }
         return result;
@@ -309,12 +328,12 @@ internal static class NotesMimeChildMutationPostProcessor
         return -1;
     }
 
-    private static byte[] BuildMultipartRoot(List<XPScriptMimeHeaderValue> rootHeaders, string boundary, List<byte[]> children)
+    private static byte[] BuildMultipartRoot(List<XPScriptNotesMimeHeaderValue> rootHeaders, string boundary, List<byte[]> children)
     {
         var headers = rootHeaders.Where(h =>
             !h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) &&
             !h.Name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase)).ToList();
-        headers.Insert(0, new XPScriptMimeHeaderValue("Content-Type", "multipart/mixed; boundary=\"" + boundary + "\""));
+        headers.Insert(0, new XPScriptNotesMimeHeaderValue("Content-Type", "multipart/mixed; boundary=\"" + boundary + "\""));
 
         using var output = new MemoryStream();
         var head = System.Text.Encoding.Latin1.GetBytes(string.Join("\r\n", headers.Select(h => h.Name + ": " + h.Value)) + "\r\n\r\n");
@@ -330,7 +349,7 @@ internal static class NotesMimeChildMutationPostProcessor
         return output.ToArray();
     }
 
-    private static byte[] BuildEntity(List<XPScriptMimeHeaderValue> headers, byte[] body)
+    private static byte[] BuildEntity(List<XPScriptNotesMimeHeaderValue> headers, byte[] body)
     {
         var head = System.Text.Encoding.Latin1.GetBytes(string.Join("\r\n", headers.Select(h => h.Name + ": " + h.Value)) + "\r\n\r\n");
         var result = new byte[head.Length + body.Length];
@@ -340,10 +359,57 @@ internal static class NotesMimeChildMutationPostProcessor
     }
 """;
 
+    private const string HeaderRuntime = """
+internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject
+{
+    private readonly XPScriptNotesMIMEEntity _entity;
+    private int _index;
+
+    internal XPScriptNotesMIMEHeader(XPScriptNotesMIMEEntity entity, int index) : base(entity.Parent.SessionForItem)
+    {
+        _entity = entity;
+        _index = index;
+    }
+
+    public XPScriptNotesMIMEEntity Parent { get { EnsureAlive(); return _entity; } }
+    public string HeaderName { get { EnsureAlive(); return _entity.HeaderAt(_index).Name; } }
+    public string GetHeaderVal() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
+    public string GetHeaderValAndParams() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
+    public string GetParamVal(object? nameValue) { EnsureAlive(); throw new System.NotSupportedException("NotesMIMEHeader.GetParamVal is not yet supported for bounded child headers."); }
+    public void SetHeaderVal(object? value) { EnsureAlive(); _entity.SetHeader(_index, XPScriptRuntime.CStr(value)); }
+    public void SetHeaderValAndParams(object? value) { SetHeaderVal(value); }
+    public void AddValText(object? value) { EnsureAlive(); _entity.SetHeader(_index, _entity.HeaderAt(_index).Value + XPScriptRuntime.CStr(value)); }
+    public void SetParamVal(object? nameValue, object? value) { EnsureAlive(); throw new System.NotSupportedException("NotesMIMEHeader.SetParamVal is not yet supported for bounded child headers."); }
+    public void Remove() { EnsureAlive(); _entity.RemoveHeader(_index); Recycle(); }
+    protected override void ReleaseNative() { _index = -1; }
+}
+
+internal sealed class XPScriptNotesMimeHeaderValue
+{
+    internal XPScriptNotesMimeHeaderValue(string name, string value)
+    {
+        Name = name;
+        Value = value;
+    }
+
+    internal string Name { get; }
+    internal string Value { get; set; }
+}
+""";
+
     private static string ReplaceRequired(string source, string oldValue, string newValue, string label)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException($"Unable to inject {label}.");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
+    }
+
+    private static string ReplaceRangeRequired(string source, string startMarker, string endMarker, string replacement, string label)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        if (start < 0) throw new CompilerException($"Unable to locate start of {label}.");
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        if (end < 0) throw new CompilerException($"Unable to locate end of {label}.");
+        return source[..start] + replacement + source[end..];
     }
 }
