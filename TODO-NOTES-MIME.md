@@ -55,10 +55,19 @@ Branch: `feature/notes-mime-entity`
 - [x] Updated Notes MIME attachment sample passes macOS `Compile Notes MIME surface`
 - [x] Domino attachment probe identified `MIMEStreamOpen(read)` status `0x3AF9` on a newly-created empty `TYPE_MIME_PART`
 - [x] `CreateChildEntity` now treats `ERR_MIME_NO_DATA (0x3AF9)` on a non-multipart new root as an empty bootstrap state and promotes it to `multipart/mixed`
+- [x] Domino runtime verifies empty-root bootstrap and promotion to `multipart/mixed`
+- [x] Domino runtime verifies the attachment direct child as `application/octet-stream`
+- [x] Domino runtime verifies the attachment child survives save/reopen traversal
+- [x] Existing known multipart HTML traversal remains green after attachment changes
+- [x] Added direct-child `GetNthHeader(name[, occurrence])` using the bounded child header reader
+- [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
+- [x] Updated Notes MIME documentation with semantic child-header verification guidance
 
 ## In progress
 
-- [ ] Re-run the multipart attachment regression against Domino and verify child creation, base64 attachment headers and save/reopen traversal
+- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through direct-child `GetNthHeader`
+- [ ] Confirm `Content-Disposition` and filename after save/reopen through direct-child `GetNthHeader`
+- [ ] Confirm the updated Notes MIME sample compiles in branch CI
 
 ## Remaining
 
