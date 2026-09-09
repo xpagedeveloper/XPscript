@@ -1,0 +1,29 @@
+Option Declare
+
+Sub Main()
+    Console.Title = "XPScript Console API"
+    Console.Clear()
+
+    Console.ForegroundColor = "Cyan"
+    Console.WriteLine("XPScript Console API")
+    Console.ResetColor()
+
+    Console.Write("Progress: ")
+    Dim row As Integer
+    row = Console.CursorTop
+
+    Dim i As Integer
+    For i = 0 To 100 Step 10
+        Console.SetCursorPosition(10, row)
+        Console.ForegroundColor = "Green"
+        Console.Write(CStr(i) & "%   ")
+        Console.ResetColor()
+    Next
+
+    Console.WriteLine()
+    Console.WriteError("Example stderr message")
+
+    Print "Width=" & CStr(Console.WindowWidth)
+    Print "Height=" & CStr(Console.WindowHeight)
+    Print "OutputRedirected=" & CStr(Console.IsOutputRedirected)
+End Sub
