@@ -9,13 +9,29 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         const string oldLookup = """
         var child = ReadCurrentDirectChild("GetNthHeader");
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
+        var found = 0;
+        for (var i = 0; i < headers.Count; i++)
+        {
+            if (!headers[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
+            found++;
+            if (found == occurrence) return new XPScriptNotesMIMEHeader(this, i);
+        }
+        return null;
 """;
+
         const string newLookup = """
-        var rawHeaders = _mimeDirectoryOwner.EntityHeaders(_document.NativeHandle, _nativeEntity);
-        var headers = ParseEntityHeaders(rawHeaders, rawHeaders.Length);
+        if (occurrence != 1)
+            throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports occurrence 1 for native direct-child headers.");
+        var symbol = HeaderSymbol(name);
+        if (symbol == 0)
+            throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports Content-Type, Content-Transfer-Encoding and Content-Disposition on direct child entities.");
+        var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
+        if (value is null) return null;
+        return new XPScriptNotesMIMEHeader(this, -(symbol + 1));
 """;
+
         if (!source.Contains(oldLookup, StringComparison.Ordinal))
-            throw new CompilerException("Unable to replace direct-child MIME header lookup with MIMEGetEntityData.");
+            throw new CompilerException("Unable to replace direct-child MIME header lookup with MIMEEntityGetHeader.");
         source = source.Replace(oldLookup, newLookup, StringComparison.Ordinal);
 
         const string oldReader = """
@@ -23,18 +39,6 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
-        var child = ReadCurrentDirectChild("NotesMIMEHeader");
-        var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
-        if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
-        return headers[index];
-    }
-""";
-
-        const string newReader = """
-    private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
-    {
-        if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
-            throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
         var rawHeaders = _mimeDirectoryOwner.EntityHeaders(_document.NativeHandle, _nativeEntity);
         var headers = ParseEntityHeaders(rawHeaders, rawHeaders.Length);
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
@@ -42,8 +46,47 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     }
 """;
 
+        const string newReader = """
+    private static int HeaderSymbol(string name)
+    {
+        if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)) return 39;
+        if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase)) return 40;
+        if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase)) return 41;
+        return 0;
+    }
+
+    private static string HeaderNameFromSymbol(int symbol) => symbol switch
+    {
+        39 => "Content-Type",
+        40 => "Content-Transfer-Encoding",
+        41 => "Content-Disposition",
+        _ => throw new XPScriptRuntimeException(5, "Unsupported native MIME header symbol: " + symbol)
+    };
+
+    private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
+    {
+        if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
+            throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
+
+        if (index < 0)
+        {
+            var symbol = -index - 1;
+            var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
+            if (value is null) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+            return new XPScriptNotesMimeHeaderValue(HeaderNameFromSymbol(symbol), value);
+        }
+
+        // Mutation-created header wrappers retain their serialized child-header index.
+        // Keep that path for SetHeaderVal/AddValText/Remove before a reopen.
+        var child = ReadCurrentDirectChild("NotesMIMEHeader");
+        var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
+        if (index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
+        return headers[index];
+    }
+""";
+
         if (!source.Contains(oldReader, StringComparison.Ordinal))
-            throw new CompilerException("Unable to replace bounded child MIME header reader with MIMEGetEntityData.");
+            throw new CompilerException("Unable to replace child MIME header reader with MIMEEntityGetHeader.");
         source = source.Replace(oldReader, newReader, StringComparison.Ordinal);
 
         const string ownerMarker = """
@@ -61,10 +104,10 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return _api!.GetMimeEntityTypeParam(entity, symbol);
     }
 
-    internal byte[] EntityHeaders(uint note, nint entity)
+    internal string? EntityHeader(nint entity, int symbol)
     {
         EnsureAlive();
-        return _api!.GetMimeEntityHeaders(note, entity);
+        return _api!.GetMimeEntityHeader(entity, symbol);
     }
 """;
 
@@ -78,86 +121,23 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 """;
 
         const string nativeReplacement = """
-    internal byte[] GetMimeEntityHeaders(uint note, nint entity)
+    internal string? GetMimeEntityHeader(nint entity, int symbol)
     {
         EnsureInitialized();
-        // HCL documents four MIME_ENTITY_DATA_* selectors but the public reference
-        // does not expose their numeric values. Probe the bounded selector range and
-        // choose the successful entity-data buffer that actually contains MIME headers.
-        for (ushort selector = 0; selector < 4; selector++)
-        {
-            var candidate = ReadMimeEntityData(note, entity, selector);
-            if (candidate.Length == 0) continue;
-            var text = System.Text.Encoding.Latin1.GetString(candidate);
-            if (text.IndexOf("Content-Type:", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                text.IndexOf("Content-Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                text.IndexOf("Content-Disposition:", StringComparison.OrdinalIgnoreCase) >= 0)
-                return candidate;
-        }
-        return [];
-    }
-
-    private byte[] ReadMimeEntityData(uint note, nint entity, ushort selector)
-    {
-        const uint chunkSize = 60000;
-        using var output = new MemoryStream();
-        uint offset = 0;
-
-        while (true)
-        {
-            var status = Resolve<MIMEGetEntityDataDelegate>("MIMEGetEntityData")(
-                note, entity, selector, offset, chunkSize, out var dataHandle, out var dataLength);
-            if (status == ErrMimeNoData)
-                break;
-            if (status != 0)
-            {
-                if (dataHandle != 0) Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle);
-                return [];
-            }
-            if (dataLength == 0)
-            {
-                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData probe)");
-                break;
-            }
-
-            nint data = 0;
-            try
-            {
-                data = Resolve<OSLockObjectDelegate>("OSLockObject")(dataHandle);
-                if (data == 0) throw new XPScriptRuntimeException(5, "Unable to lock MIME entity data.");
-                var bytes = new byte[checked((int)dataLength)];
-                System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
-                output.Write(bytes);
-            }
-            finally
-            {
-                if (data != 0) Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(dataHandle);
-                if (dataHandle != 0) Check(Resolve<OSMemFreeDelegate>("OSMemFree")(dataHandle), "OSMemFree(MIMEGetEntityData probe)");
-            }
-
-            offset += dataLength;
-            if (dataLength < chunkSize) break;
-        }
-
-        return output.ToArray();
+        var value = Resolve<MIMEEntityGetHeaderDelegate>("MIMEEntityGetHeader")(entity, symbol);
+        if (value == 0) return null;
+        return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(value);
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEGetEntityDataDelegate(
-        uint note,
-        nint entity,
-        ushort dataType,
-        uint offset,
-        uint requestedLength,
-        out uint dataHandle,
-        out uint dataLength);
+    private delegate nint MIMEEntityGetHeaderDelegate(nint entity, int symbol);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int NSFNoteHasMIMEPartDelegate(nint note);
 """;
 
         if (!source.Contains(nativeMarker, StringComparison.Ordinal))
-            throw new CompilerException("Unable to inject MIMEGetEntityData native ABI.");
+            throw new CompilerException("Unable to inject MIMEEntityGetHeader native ABI.");
         return source.Replace(nativeMarker, nativeReplacement, StringComparison.Ordinal);
     }
 }
