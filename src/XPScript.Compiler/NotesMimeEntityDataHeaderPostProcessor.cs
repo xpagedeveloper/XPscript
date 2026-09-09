@@ -39,8 +39,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
-        var rawHeaders = _mimeDirectoryOwner.EntityHeaders(_document.NativeHandle, _nativeEntity);
-        var headers = ParseEntityHeaders(rawHeaders, rawHeaders.Length);
+        var child = ReadCurrentDirectChild("NotesMIMEHeader");
+        var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
     }
