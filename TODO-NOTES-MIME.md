@@ -52,10 +52,10 @@ Branch: `feature/notes-mime-entity`
 - [x] Updated Notes MIME documentation and XPscript programming skill for child attachment creation
 - [x] Added bounded post-cleanup child-header bridge without restoring the old managed MIME parser
 - [x] Regression refreshes the root wrapper after child writeback before further root operations
+- [x] Updated Notes MIME attachment sample passes macOS `Compile Notes MIME surface`
 
 ## In progress
 
-- [ ] Confirm the updated Notes MIME attachment sample compiles in branch CI
 - [ ] Run the multipart attachment regression against Domino and verify save/reopen traversal
 
 ## Remaining
