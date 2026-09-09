@@ -46,6 +46,8 @@ internal static class XPScriptDebugRuntime
     private static readonly object Gate = new();
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints =
         new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues =
         new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory =
@@ -139,6 +141,23 @@ internal static class XPScriptDebugRuntime
                 var removed = history.Dequeue();
                 ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
             }
+
+            if (!DataBreakpoints.Contains(name) || _reader is null || _writer is null) return;
+
+            var depth = frames.Count;
+            _stepMode = "";
+            Send(new
+            {
+                type = "stopped",
+                reason = "data breakpoint",
+                source = XPSourceLineRuntime.CurrentSource,
+                line = XPSourceLineRuntime.Current,
+                threadId = 1,
+                frames,
+                dataId = name,
+                description = name + " changed from " + oldValue + " to " + rendered
+            });
+            CommandLoop(depth);
         }
     }
 
@@ -250,12 +269,13 @@ internal static class XPScriptDebugRuntime
         Send(new
         {
             type = "hello",
-            protocol = 2,
+            protocol = 3,
             runtime = "xpscript",
             pid = global::System.Environment.ProcessId,
             valueHistoryLimit = ValueHistoryLimit,
             maxTrackedValueChars = MaxTrackedValueChars,
-            maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable
+            maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable,
+            supportsDataBreakpoints = true
         });
     }
 
@@ -305,6 +325,10 @@ internal static class XPScriptDebugRuntime
                     case "setBreakpoints":
                         SetBreakpoints(root);
                         Send(new { type = "breakpoints", ok = true });
+                        break;
+                    case "setDataBreakpoints":
+                        SetDataBreakpoints(root);
+                        Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() });
                         break;
                     case "stackTrace":
                         Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) });
@@ -376,6 +400,19 @@ internal static class XPScriptDebugRuntime
         Breakpoints[source] = values;
     }
 
+    private static void SetDataBreakpoints(global::System.Text.Json.JsonElement root)
+    {
+        DataBreakpoints.Clear();
+        if (!root.TryGetProperty("names", out var namesElement) || namesElement.ValueKind != global::System.Text.Json.JsonValueKind.Array)
+            return;
+
+        foreach (var item in namesElement.EnumerateArray())
+        {
+            var name = item.GetString() ?? "";
+            if (!string.IsNullOrWhiteSpace(name)) DataBreakpoints.Add(name);
+        }
+    }
+
     private static void Send(object payload)
     {
         if (_writer is null) return;
@@ -393,6 +430,7 @@ internal static class XPScriptDebugRuntime
         _client = null;
         _listener = null;
         _enabled = false;
+        DataBreakpoints.Clear();
     }
 }
 
