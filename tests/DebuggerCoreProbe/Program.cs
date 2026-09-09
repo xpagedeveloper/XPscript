@@ -58,8 +58,21 @@ if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.Print", St
     throw new Exception("Debugger.Print arguments are not guarded when debugging is disabled.");
 if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar", StringComparison.Ordinal))
     throw new Exception("Debugger.UpdateVar arguments are not guarded when debugging is disabled.");
-if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal))
-    throw new Exception("Debugger protocol does not advertise the explicit debugger API.");
+if (!generated.Contains("ProtocolVersion = 5", StringComparison.Ordinal))
+    throw new Exception("Debugger protocol v1 version is not emitted.");
+if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsDebuggerVariables = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsExceptionBreakpoints = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsPause = true", StringComparison.Ordinal))
+    throw new Exception("Debugger v1 capabilities are incomplete.");
+if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ordinal))
+    throw new Exception("Exception breakpoint protocol command is missing.");
+if (!generated.Contains("case \"debuggerVariables\"", StringComparison.Ordinal))
+    throw new Exception("Debugger variable scope protocol command is missing.");
+if (!generated.Contains("PollRunningCommand", StringComparison.Ordinal) || !generated.Contains("_pauseRequested", StringComparison.Ordinal))
+    throw new Exception("Cooperative asynchronous Pause support is missing.");
+if (!generated.Contains("XPScriptDebugRuntime.Exception(normalized", StringComparison.Ordinal))
+    throw new Exception("XPscript runtime exceptions are not connected to debugger breakpoints.");
 if (!generated.Contains("MaxTrackedValueChars = 2048", StringComparison.Ordinal))
     throw new Exception("Debugger value snapshots are not bounded.");
 if (!generated.Contains("MaxHistoryCharsPerVariable = 32768", StringComparison.Ordinal))
@@ -68,7 +81,6 @@ if (!generated.Contains("<byte[", StringComparison.Ordinal))
     throw new Exception("Debugger byte arrays are not represented without retaining their contents.");
 
 VerifyComplexObjectsAreNotAutoTracked();
-
 Console.WriteLine("DebuggerCoreProbe passed.");
 
 static void VerifyComplexObjectsAreNotAutoTracked()
