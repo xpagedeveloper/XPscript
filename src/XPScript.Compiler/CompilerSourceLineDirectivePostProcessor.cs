@@ -17,6 +17,10 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         @"^\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=\s*(?!=).+;\s*$",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex DebuggerCallPattern = new(
+        @"^(?<indent>\s*)Debugger\.(?:Print|UpdateVar)\s*\(.*\);\s*$",
+        RegexOptions.CultureInvariant);
+
     private const string RuntimeBoundary = "internal static class LSControlRuntime";
     private const string ScriptBoundary = "internal static class Script";
     private const string NoInliningAttribute = "[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]";
@@ -68,7 +72,15 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                     output.Add(indent + NoInliningAttribute);
                 }
 
-                output.Add(rawLine);
+                if (inScript && DebuggerCallPattern.IsMatch(rawLine))
+                {
+                    var indent = DebuggerCallPattern.Match(rawLine).Groups["indent"].Value;
+                    output.Add(indent + "if (XPScriptDebugRuntime.IsEnabled) " + rawLine.TrimStart());
+                }
+                else
+                {
+                    output.Add(rawLine);
+                }
 
                 if (trackNextSimpleAssignment && inScript)
                 {
