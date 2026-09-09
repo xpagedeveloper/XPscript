@@ -74,7 +74,7 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. `GetNthHeader(name)` and `GetNthHeader(name, occurrence)` provide bounded lookup on direct child entities and are the preferred way to verify attachment headers after save/reopen. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Native direct-child `GetNthHeader` currently supports occurrence `1` for `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition`; lookup is backed by Domino `MIMEEntityGetHeader` on the selected native child entity. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
 
 Example creating a base64 attachment from `NotesStream`:
 
@@ -120,7 +120,7 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 ## Current boundary
 
-Root content readback, direct-root-child mutation, and direct-child `GetNthHeader` lookup are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
+Root content readback, direct-root-child mutation, and native direct-child lookup of `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition` are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
 
 Do not assume the managed MIME parser behavior from earlier prototypes. Multipart mutation uses bounded RFC822 header/boundary framing around the Domino-native MIME directory and the established MIME stream/itemize writeback path.
 
