@@ -32,6 +32,7 @@ internal static class XPSourceLineRuntime
 
 internal static class XPScriptDebugRuntime
 {
+    private sealed record DebugFrame(int id, string name, string source, int line, int column);
     private sealed record ValueChange(
         long Sequence,
         string Name,
@@ -146,9 +147,9 @@ internal static class XPScriptDebugRuntime
         }
     }
 
-    private static global::System.Collections.Generic.List<object> CaptureFrames(string fallbackSource, int fallbackLine)
+    private static global::System.Collections.Generic.List<DebugFrame> CaptureFrames(string fallbackSource, int fallbackLine)
     {
-        var result = new global::System.Collections.Generic.List<object>();
+        var result = new global::System.Collections.Generic.List<DebugFrame>();
         try
         {
             var trace = new global::System.Diagnostics.StackTrace(true);
@@ -166,14 +167,7 @@ internal static class XPScriptDebugRuntime
                 if (!isMappedScript && declaring != "Script") continue;
                 if (source.Length == 0) source = fallbackSource;
                 if (line <= 0) line = fallbackLine;
-                result.Add(new
-                {
-                    id = id++,
-                    name = method?.Name ?? "XPscript",
-                    source,
-                    line,
-                    column = 1
-                });
+                result.Add(new DebugFrame(id++, method?.Name ?? "XPscript", source, line, 1));
             }
         }
         catch
@@ -181,7 +175,7 @@ internal static class XPScriptDebugRuntime
         }
 
         if (result.Count == 0)
-            result.Add(new { id = 1, name = "XPscript", source = fallbackSource, line = fallbackLine, column = 1 });
+            result.Add(new DebugFrame(1, "XPscript", fallbackSource, fallbackLine, 1));
         return result;
     }
 
