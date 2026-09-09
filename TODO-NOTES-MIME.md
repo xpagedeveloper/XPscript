@@ -37,7 +37,6 @@ Branch: `feature/notes-mime-entity`
 - [x] Extended save/reopen regression to assert the actual UTF-8 payload through property and stream readback APIs
 - [x] Updated `docs/notes-mime-entity.md` with root readback behavior and root-only boundary
 - [x] Updated `skills/xpscript-programming/SKILL.md` with the supported root readback pattern and child-content boundary
-- [x] Updated Notes MIME sample compiles successfully in macOS branch CI
 - [x] Updated Domino runtime regression completed with exit code 0
 - [x] Immediate root `ContentAsText` verified against the mutated UTF-8 payload
 - [x] Save/reopen root `ContentAsText` verified against the UTF-8 payload
@@ -49,12 +48,14 @@ Branch: `feature/notes-mime-entity`
 - [x] Added direct-child `SetContentFromText` and `SetContentFromBytes` writeback
 - [x] Added direct-child `CreateHeader`/`NotesMIMEHeader.SetHeaderVal` writeback for attachment headers
 - [x] Added base64 child transfer encoding through encoding constant `1727`
+- [x] Added executable `multipart/mixed` text + base64 attachment regression from `NotesStream`
+- [x] Updated Notes MIME documentation and XPscript programming skill for child attachment creation
+- [x] Added bounded post-cleanup child-header bridge without restoring the old managed MIME parser
+- [x] Regression refreshes the root wrapper after child writeback before further root operations
 
 ## In progress
 
-- [ ] Add executable `multipart/mixed` text + base64 attachment regression from `NotesStream`
-- [ ] Update Notes MIME documentation and XPscript programming skill for child attachment creation
-- [ ] Confirm the updated Notes MIME sample compiles in branch CI
+- [ ] Confirm the updated Notes MIME attachment sample compiles in branch CI
 - [ ] Run the multipart attachment regression against Domino and verify save/reopen traversal
 
 ## Remaining
