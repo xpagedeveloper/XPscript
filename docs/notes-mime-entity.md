@@ -74,7 +74,7 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, and `NotesMIMEHeader.SetHeaderVal`. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. `GetNthHeader(name)` and `GetNthHeader(name, occurrence)` provide bounded lookup on direct child entities and are the preferred way to verify attachment headers after save/reopen. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
 
 Example creating a base64 attachment from `NotesStream`:
 
@@ -95,6 +95,7 @@ stream.Position = 0
 Call textPart.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
 Call stream.Truncate()
 
+Set body = doc.GetMIMEEntity("Body")
 Set attachment = body.CreateChildEntity()
 Call stream.WriteText("attachment bytes")
 stream.Position = 0
@@ -105,7 +106,9 @@ Call disposition.SetHeaderVal("attachment; filename=""probe.txt""")
 
 Encoding `1727` writes the child body using MIME base64 transfer encoding. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
 
-The current mutation implementation supports direct children of the root entity. Nested child-parent mutation is not yet implemented.
+Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use `GetNthHeader("Content-Disposition")` or `GetNthHeader("Content-Transfer-Encoding")` when header semantics matter.
+
+The current mutation and child-header lookup implementation supports direct children of the root entity. Nested child-parent mutation and nested child-header lookup are not yet implemented.
 
 ## MIME directory lifetime
 
@@ -117,7 +120,7 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 ## Current boundary
 
-Root content readback and direct-root-child mutation are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
+Root content readback, direct-root-child mutation, and direct-child `GetNthHeader` lookup are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
 
 Do not assume the managed MIME parser behavior from earlier prototypes. Multipart mutation uses bounded RFC822 header/boundary framing around the Domino-native MIME directory and the established MIME stream/itemize writeback path.
 
