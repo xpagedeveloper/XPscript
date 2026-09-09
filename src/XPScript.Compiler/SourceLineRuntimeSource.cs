@@ -6,17 +6,206 @@ internal static class SourceLineRuntimeSource
 internal static class XPSourceLineRuntime
 {
     [ThreadStatic] private static int _current;
+    [ThreadStatic] private static string _currentSource = "";
 
     public static int Current => _current;
+    public static string CurrentSource => _currentSource;
 
     public static void Set(int line)
     {
+        Set(line, _currentSource);
+    }
+
+    public static void Set(int line, string? sourcePath)
+    {
         _current = line < 0 ? 0 : line;
+        _currentSource = sourcePath ?? "";
+        XPScriptDebugRuntime.Statement(_currentSource, _current);
     }
 
     public static void Clear()
     {
         _current = 0;
+        _currentSource = "";
+    }
+}
+
+internal static class XPScriptDebugRuntime
+{
+    private static readonly object Gate = new();
+    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static global::System.Net.Sockets.TcpListener? _listener;
+    private static global::System.Net.Sockets.TcpClient? _client;
+    private static global::System.IO.StreamReader? _reader;
+    private static global::System.IO.StreamWriter? _writer;
+    private static bool _initialized;
+    private static bool _enabled;
+    private static bool _step;
+    private static bool _stopOnEntry = true;
+    private static string _token = "";
+
+    public static void Statement(string sourcePath, int line)
+    {
+        if (line <= 0) return;
+        EnsureInitialized();
+        if (!_enabled) return;
+
+        lock (Gate)
+        {
+            EnsureConnected();
+            if (_writer is null || _reader is null) return;
+
+            var hitBreakpoint = Breakpoints.TryGetValue(sourcePath, out var lines) && lines.Contains(line);
+            if (!_stopOnEntry && !_step && !hitBreakpoint) return;
+
+            var reason = _stopOnEntry ? "entry" : hitBreakpoint ? "breakpoint" : "step";
+            _stopOnEntry = false;
+            _step = false;
+            Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1 });
+            CommandLoop();
+        }
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (_initialized) return;
+        lock (Gate)
+        {
+            if (_initialized) return;
+            _initialized = true;
+
+            if (global::System.OperatingSystem.IsBrowser())
+                return;
+
+            var portText = global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_PORT");
+            if (!int.TryParse(portText, out var port) || port <= 0 || port > 65535)
+                return;
+
+            _token = global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_TOKEN") ?? "";
+            _stopOnEntry = !string.Equals(
+                global::System.Environment.GetEnvironmentVariable("XPSCRIPT_DEBUG_STOP_ON_ENTRY"),
+                "0",
+                global::System.StringComparison.Ordinal);
+            _listener = new global::System.Net.Sockets.TcpListener(global::System.Net.IPAddress.Loopback, port);
+            _listener.Start(1);
+            _enabled = true;
+        }
+    }
+
+    private static void EnsureConnected()
+    {
+        if (_client is not null || _listener is null) return;
+        _client = _listener.AcceptTcpClient();
+        var stream = _client.GetStream();
+        _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
+        _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true)
+        {
+            AutoFlush = true
+        };
+        Send(new { type = "hello", protocol = 1, runtime = "xpscript", pid = global::System.Environment.ProcessId });
+    }
+
+    private static void CommandLoop()
+    {
+        while (_reader is not null)
+        {
+            var raw = _reader.ReadLine();
+            if (raw is null)
+            {
+                Disconnect();
+                return;
+            }
+
+            global::System.Text.Json.JsonDocument message;
+            try
+            {
+                message = global::System.Text.Json.JsonDocument.Parse(raw);
+            }
+            catch
+            {
+                continue;
+            }
+
+            using (message)
+            {
+                var root = message.RootElement;
+                if (root.TryGetProperty("token", out var tokenElement) &&
+                    _token.Length > 0 &&
+                    !global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                        global::System.Text.Encoding.UTF8.GetBytes(_token),
+                        global::System.Text.Encoding.UTF8.GetBytes(tokenElement.GetString() ?? "")))
+                {
+                    Send(new { type = "error", message = "Debugger authentication failed." });
+                    Disconnect();
+                    return;
+                }
+
+                var command = root.TryGetProperty("command", out var commandElement)
+                    ? commandElement.GetString() ?? ""
+                    : "";
+
+                switch (command)
+                {
+                    case "setBreakpoints":
+                        SetBreakpoints(root);
+                        Send(new { type = "breakpoints", ok = true });
+                        break;
+                    case "continue":
+                        Send(new { type = "continued", threadId = 1 });
+                        return;
+                    case "next":
+                    case "stepIn":
+                    case "stepOut":
+                        _step = true;
+                        Send(new { type = "continued", threadId = 1 });
+                        return;
+                    case "disconnect":
+                        Disconnect();
+                        return;
+                    case "pause":
+                        _step = true;
+                        break;
+                }
+            }
+        }
+    }
+
+    private static void SetBreakpoints(global::System.Text.Json.JsonElement root)
+    {
+        var source = root.TryGetProperty("source", out var sourceElement)
+            ? sourceElement.GetString() ?? ""
+            : "";
+        if (source.Length == 0) return;
+
+        var values = new global::System.Collections.Generic.HashSet<int>();
+        if (root.TryGetProperty("lines", out var linesElement) && linesElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in linesElement.EnumerateArray())
+            {
+                if (item.TryGetInt32(out var line) && line > 0) values.Add(line);
+            }
+        }
+        Breakpoints[source] = values;
+    }
+
+    private static void Send(object payload)
+    {
+        if (_writer is null) return;
+        _writer.WriteLine(global::System.Text.Json.JsonSerializer.Serialize(payload));
+    }
+
+    private static void Disconnect()
+    {
+        try { _reader?.Dispose(); } catch { }
+        try { _writer?.Dispose(); } catch { }
+        try { _client?.Dispose(); } catch { }
+        try { _listener?.Stop(); } catch { }
+        _reader = null;
+        _writer = null;
+        _client = null;
+        _listener = null;
+        _enabled = false;
     }
 }
 
