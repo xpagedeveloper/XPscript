@@ -26,9 +26,14 @@ Branch: `feature/notes-mime-entity`
 - [x] Runtime Placeholder Guard CI passes
 - [x] Documentation site CI passes
 - [x] Reviewed branch CI status after the source/doc updates
+- [x] Domino runtime regression completed with exit code 0
+- [x] `CreateMIMEEntity("Body")` verified at runtime as `TYPE_MIME_PART` (`BodyType=25`, `NSFNoteHasMIMEPart=True`)
+- [x] `SetContentFromText` verified to refresh root metadata immediately to `text/plain`
+- [x] UTF-8 charset verified after save/reopen
+- [x] MIME Body verified to remain MIME after save/reopen
+- [x] Native MIME tree traversal verified on an existing `multipart/mixed` document containing a `text/html; charset=UTF-8` child
 
 ## Remaining
 
 - [ ] Add root content readback support before asserting written body bytes/text after save/reopen
-- [ ] Run the MIME runtime sample against an installed Domino runtime and confirm every PASS/FAIL assertion
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
