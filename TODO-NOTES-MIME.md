@@ -18,7 +18,6 @@ Branch: `feature/notes-mime-entity`
 - [x] Save/reopen regression coverage calls `SetContentFromText` with UTF-8 text
 - [x] Regression checks immediate content type/subtype and charset metadata after mutation
 - [x] Regression checks content type/subtype and charset after save/reopen
-- [x] Child-entity mutation remains explicitly unsupported
 - [x] Added `docs/notes-mime-entity.md` for native MIME behavior, mutation and lifecycle
 - [x] Updated `skills/xpscript-programming/SKILL.md` with the supported Notes MIME coding pattern
 - [x] Compiler project builds successfully with the new postprocessor stage
@@ -46,7 +45,19 @@ Branch: `feature/notes-mime-entity`
 - [x] Save/reopen `GetContentAsBytes` verified against the UTF-8 payload
 - [x] Save/reopen `GetEntityAsText` verified to return root RFC822 data with MIME headers
 - [x] Existing multipart MIME traversal still verifies `text/html; charset=UTF-8` after the readback changes
+- [x] Added `CreateChildEntity` root surface for direct multipart children
+- [x] Added direct-child `SetContentFromText` and `SetContentFromBytes` writeback
+- [x] Added direct-child `CreateHeader`/`NotesMIMEHeader.SetHeaderVal` writeback for attachment headers
+- [x] Added base64 child transfer encoding through encoding constant `1727`
+
+## In progress
+
+- [ ] Add executable `multipart/mixed` text + base64 attachment regression from `NotesStream`
+- [ ] Update Notes MIME documentation and XPscript programming skill for child attachment creation
+- [ ] Confirm the updated Notes MIME sample compiles in branch CI
+- [ ] Run the multipart attachment regression against Domino and verify save/reopen traversal
 
 ## Remaining
 
+- [ ] Add nested child-parent mutation beyond direct children of the root entity
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
