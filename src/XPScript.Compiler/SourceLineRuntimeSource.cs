@@ -118,11 +118,10 @@ internal static class XPScriptDebugRuntime
 
     public static void UpdateDebuggerVar(string name, object? value)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new XPScriptRuntimeException(5, "Debugger variable name cannot be empty.");
-
         EnsureInitialized();
         if (!_enabled) return;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new XPScriptRuntimeException(5, "Debugger variable name cannot be empty.");
 
         lock (Gate)
         {
