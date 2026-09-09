@@ -1,3 +1,4 @@
+using XPScript.Compiler;
 using XPScript.Compiler.Debugger;
 
 var session = new DebugSession();
@@ -28,5 +29,21 @@ session.UpdateFrame(
 
 if (session.GetStackTrace().Count != 1) throw new Exception("Stack frame was not recorded.");
 if (session.GetVariables(1).Count != 1) throw new Exception("Frame variables were not recorded.");
+
+var generated = new XPScriptTranspiler().Transpile(
+    """
+Sub Main()
+    Dim answer As Integer
+    answer = 41
+    answer = 42
+End Sub
+""",
+    source,
+    CompilerDriver.CurrentRuntimeIdentifier());
+
+if (!generated.Contains("XPScriptDebugRuntime.TrackValue(\"answer\", answer);", StringComparison.Ordinal))
+    throw new Exception("Simple scalar assignments were not instrumented for debugger value history.");
+if (!generated.Contains("XPSourceLineRuntime.Set(", StringComparison.Ordinal))
+    throw new Exception("Debugger source-line mapping was not emitted.");
 
 Console.WriteLine("DebuggerCoreProbe passed.");
