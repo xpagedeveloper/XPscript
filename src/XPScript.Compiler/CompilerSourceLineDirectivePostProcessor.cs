@@ -40,6 +40,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
     private const string ArrayMutationRuntime = """
 internal static class XPScriptDebugArrayMutationRuntime
 {
+    private static long _mutationSequence;
+
     public static void Set(string name, object? array, object? newValue, params object?[] indices)
     {
         LSArrayRuntime.Set(array, newValue, indices);
@@ -47,7 +49,8 @@ internal static class XPScriptDebugArrayMutationRuntime
         var indexText = string.Join(",", indices.Select(RenderIndex));
         var elementName = name + "[" + indexText + "]";
         XPScriptDebugRuntime.TrackValue(elementName, actual);
-        XPScriptDebugRuntime.TrackValue(name, "<array mutation " + elementName + ">");
+        var sequence = global::System.Threading.Interlocked.Increment(ref _mutationSequence);
+        XPScriptDebugRuntime.TrackValue(name, "<array mutation #" + sequence + " " + elementName + ">");
     }
 
     private static string RenderIndex(object? value)
