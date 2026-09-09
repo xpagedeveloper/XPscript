@@ -22,13 +22,19 @@ internal static class XPSourceLineRuntime
 
 internal static class Console
 {
+    // Compatibility members are intentionally exposed because generated runtime code
+    // historically referenced System.Console through the unqualified name Console.
+    public static global::System.IO.TextReader In => global::System.Console.In;
+    public static global::System.IO.TextWriter Out => global::System.Console.Out;
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
+
+    public static int Read() => global::System.Console.Read();
+    public static string ReadLine() => global::System.Console.ReadLine() ?? string.Empty;
 
     public static void Write(object? value) => global::System.Console.Write(XPScriptRuntime.PrintText(value));
     public static void WriteLine() => global::System.Console.WriteLine();
     public static void WriteLine(object? value) => global::System.Console.WriteLine(XPScriptRuntime.PrintText(value));
     public static void WriteError(object? value) => global::System.Console.Error.WriteLine(XPScriptRuntime.PrintText(value));
-    public static string ReadLine() => global::System.Console.ReadLine() ?? string.Empty;
 
     public static void Clear() => global::System.Console.Clear();
 
