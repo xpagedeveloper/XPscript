@@ -19,14 +19,16 @@ Branch: `feature/notes-mime-entity`
 - [x] Regression checks immediate content type/subtype and charset metadata after mutation
 - [x] Regression checks content type/subtype and charset after save/reopen
 - [x] Child-entity mutation remains explicitly unsupported
-
-## In progress
-
-- [ ] Review and update API/LLM guidance for the newly supported root mutation behavior
-- [ ] Verify compiler source generation still builds after the new postprocessor stage
+- [x] Added `docs/notes-mime-entity.md` for native MIME behavior, mutation and lifecycle
+- [x] Updated `skills/xpscript-programming/SKILL.md` with the supported Notes MIME coding pattern
+- [x] Compiler project builds successfully with the new postprocessor stage
+- [x] macOS CI passes `Compile Notes MIME surface`
+- [x] Runtime Placeholder Guard CI passes
+- [x] Documentation site CI passes
+- [x] Reviewed branch CI status after the source/doc updates
 
 ## Remaining
 
 - [ ] Add root content readback support before asserting written body bytes/text after save/reopen
-- [ ] Run the MIME runtime sample against Domino and confirm every PASS/FAIL assertion
-- [ ] Check branch CI status after the final source/doc updates
+- [ ] Run the MIME runtime sample against an installed Domino runtime and confirm every PASS/FAIL assertion
+- [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
