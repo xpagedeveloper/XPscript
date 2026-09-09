@@ -176,7 +176,7 @@ internal static class CompilerBuildEnvironment
         }
         var fileDescriptionValue = fileDescription ?? "Application compiled with XPScript";
         var commentsValue = comments ?? "XPScript by XPageDeveloper.com";
-        var propertyEntries = $"    <Description>{EscapeMsBuild(commentsValue)}</Description>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
+        var propertyEntries = $"    <Description>{EscapeMsBuild(commentsValue)}</Description>\n    <Trademark>{EscapeMsBuild(commentsValue)}</Trademark>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
@@ -184,7 +184,7 @@ internal static class CompilerBuildEnvironment
         if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
         if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
-        var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n    <AssemblyMetadata Include=\"Compiled With\" Value=\"XPScript - XPageDeveloper.com\" />\n";
+        var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
         if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{AvaloniaWebViewVersion}\" />\n";
         if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />\n";
         if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />\n";
@@ -192,9 +192,6 @@ internal static class CompilerBuildEnvironment
         if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{NpgsqlVersion}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
-        // Put metadata directly in Generated.csproj. The .NET SDK creates the Windows apphost
-        // from the intermediate managed assembly and copies its Win32 resources into the PE host.
-        // Keeping these values in the project itself makes that resource-copy path deterministic.
         var projectPath = Path.Combine(root, "Generated.csproj");
         if (File.Exists(projectPath))
         {
@@ -207,8 +204,6 @@ internal static class CompilerBuildEnvironment
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
         }
 
-        // Retain Directory.Build.props for the transient run-build path and compatibility with
-        // existing generated-project behavior.
         var propsPath = Path.Combine(root, "Directory.Build.props");
         File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
         CompilerPathSecurity.HardenTemporaryFile(propsPath);
@@ -248,11 +243,9 @@ internal static class CompilerBuildEnvironment
         return string.Empty;
     }
 
-    private static string CreatePrivateDirectory(string root, string name)
+    private static string CreatePrivateDirectory(string root, string relative)
     {
-        Directory.CreateDirectory(root);
-        CompilerPathSecurity.HardenTemporaryDirectory(root);
-        var path = Path.Combine(root, name);
+        var path = Path.Combine(root, relative);
         Directory.CreateDirectory(path);
         CompilerPathSecurity.HardenTemporaryDirectory(path);
         return path;
