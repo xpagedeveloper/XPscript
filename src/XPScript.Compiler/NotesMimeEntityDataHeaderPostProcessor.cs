@@ -6,6 +6,18 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        const string oldLookup = """
+        var child = ReadCurrentDirectChild("GetNthHeader");
+        var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
+""";
+        const string newLookup = """
+        var rawHeaders = _mimeDirectoryOwner.EntityHeaders(_document.NativeHandle, _nativeEntity);
+        var headers = ParseEntityHeaders(rawHeaders, rawHeaders.Length);
+""";
+        if (!source.Contains(oldLookup, StringComparison.Ordinal))
+            throw new CompilerException("Unable to replace direct-child MIME header lookup with MIMEGetEntityData.");
+        source = source.Replace(oldLookup, newLookup, StringComparison.Ordinal);
+
         const string oldReader = """
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
     {
@@ -70,8 +82,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         EnsureInitialized();
         // HCL mimedir.h MIME_ENTITY_DATA_HEADERS. MIMEGetEntityData returns the
-        // entity headers in their original MIME encoding and allocates a DHANDLE
-        // for each requested chunk.
+        // selected entity's headers in original MIME encoding and allocates a
+        // DHANDLE for each requested chunk.
         const ushort mimeEntityDataHeaders = 1;
         const uint chunkSize = 60000;
         using var output = new MemoryStream();
