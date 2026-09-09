@@ -146,7 +146,24 @@ Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
 
 Root content readback supports `ContentAsText`, `GetContentAsText`, `GetContentAsBytes`, and `GetEntityAsText`. Use `ContentAsText` for decoded root text. Use the stream methods when callers need `NotesStream` output. Use `GetEntityAsText` only when the complete root RFC822 entity including headers is needed.
 
-Treat child-entity content readback/mutation and unverified header members as unsupported. Do not fall back to managed MIME parsing or invent behavior for unsupported members. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The root wrapper performing a successful root content mutation is rebound to the new native root so its metadata and root content can be read immediately.
+For a normal `multipart/mixed` message, call `CreateChildEntity()` on the root. The first call promotes a non-multipart root to `multipart/mixed`. Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, and `NotesMIMEHeader.SetHeaderVal`.
+
+Use encoding `1727` for a base64 attachment and set `Content-Disposition` explicitly:
+
+```xpscript
+Dim attachment As NotesMIMEEntity
+Dim disposition As NotesMIMEHeader
+
+Set attachment = mime.CreateChildEntity()
+stream.Position = 0
+Call attachment.SetContentFromBytes(stream, "application/octet-stream; name=""file.pdf""", 1727)
+Set disposition = attachment.CreateHeader("Content-Disposition")
+Call disposition.SetHeaderVal("attachment; filename=""file.pdf""")
+```
+
+For real binary attachments, load the binary bytes into the `NotesStream`, rewind it, then use `SetContentFromBytes`. Do not pre-base64 the stream when using encoding `1727`; XPscript performs the MIME base64 transfer encoding.
+
+Direct-child mutation is currently the supported multipart mutation boundary. Nested child-parent mutation remains unsupported. Do not fall back to the old general managed MIME parser or invent behavior for unsupported members. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The wrapper performing a successful supported MIME mutation is rebound to the corresponding native entity so metadata can be read immediately.
 
 ## HTTP client security
 
