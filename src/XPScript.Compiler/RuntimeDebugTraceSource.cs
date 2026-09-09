@@ -28,7 +28,7 @@ internal static class XPScriptRuntimeDebugTrace
     public static void TraceHandled(Exception original, Exception normalized, int sourceLine)
     {
         if (!Enabled) return;
-        if (IsExpectedComputeWithFormValidation(normalized)) return;
+        if (IsExpectedHandledRuntimeError(normalized)) return;
 
         Console.Error.WriteLine(sourceLine > 0
             ? "DEBUG runtime exception trapped at XPScript line " + sourceLine.ToString(System.Globalization.CultureInfo.InvariantCulture) + " (handled by On Error):"
@@ -42,12 +42,15 @@ internal static class XPScriptRuntimeDebugTrace
         }
     }
 
-    private static bool IsExpectedComputeWithFormValidation(Exception exception) =>
-        exception is XPScriptRuntimeException
+    private static bool IsExpectedHandledRuntimeError(Exception exception) =>
+        exception is XPScriptRuntimeException runtimeException &&
+        (runtimeException is
         {
             Number: 5,
             Message: "ComputeWithForm validation failed."
-        };
+        } ||
+        (runtimeException.Number == 5 &&
+         runtimeException.Message.StartsWith("NotesDBDirectory database type must be ", StringComparison.Ordinal)));
 
     private sealed class NoopDisposable : IDisposable
     {
