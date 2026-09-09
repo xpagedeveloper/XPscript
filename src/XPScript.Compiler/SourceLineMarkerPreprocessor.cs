@@ -5,8 +5,8 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceLineMarkerPreprocessor
 {
-    private static readonly Regex ApplicationIconPattern = new(
-        @"^\s*Application\.Icon\s*=\s*""(?<path>(?:""""|[^""])*)""\s*$",
+    private static readonly Regex ApplicationExecutableMetadataPattern = new(
+        @"^\s*Application\.(?<property>Icon|Executable\.(?:Icon|FileDescription|Comments|Product|Company|Version|Copyright))\s*=\s*""(?<value>(?:""""|[^""])*)""\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public string Transform(string source) => Transform(source, null, "input.xps");
@@ -42,12 +42,12 @@ internal sealed class SourceLineMarkerPreprocessor
             if (inProcedure)
             {
                 var indent = Regex.Match(raw, @"^\s*").Value;
-                var iconMetadata = BuildApplicationIconMetadata(code, sourceName, i + 1);
-                if (iconMetadata is not null)
+                var executableMetadata = BuildApplicationExecutableMetadata(code, sourceName, i + 1);
+                if (executableMetadata is not null)
                 {
-                    var variableName = "XpsCompilerGeneratedIconMarker_" + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    var variableName = "XpsCompilerGeneratedExecutableMetadataMarker_" + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
                     output.Add(indent + "Dim " + variableName + " As String");
-                    output.Add(indent + variableName + " = \"" + EscapeXpsString(iconMetadata) + "\"");
+                    output.Add(indent + variableName + " = \"" + EscapeXpsString(executableMetadata) + "\"");
                 }
 
                 if (!continuation && code.Length > 0)
@@ -71,33 +71,43 @@ internal sealed class SourceLineMarkerPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private static string? BuildApplicationIconMetadata(string code, string sourceName, int lineNumber)
+    private static string? BuildApplicationExecutableMetadata(string code, string sourceName, int lineNumber)
     {
-        var match = ApplicationIconPattern.Match(code);
+        var match = ApplicationExecutableMetadataPattern.Match(code);
         if (!match.Success) return null;
 
-        var declared = match.Groups["path"].Value.Replace("\"\"", "\"", StringComparison.Ordinal).Trim();
-        if (declared.Length == 0) return null;
-
-        try
+        var property = match.Groups["property"].Value;
+        var value = match.Groups["value"].Value.Replace("\"\"", "\"", StringComparison.Ordinal).Trim();
+        if (property.Equals("Icon", StringComparison.OrdinalIgnoreCase) ||
+            property.Equals("Executable.Icon", StringComparison.OrdinalIgnoreCase))
         {
-            var sourcePath = Path.GetFullPath(sourceName);
-            var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
-            var resolved = Path.IsPathRooted(declared) ? Path.GetFullPath(declared) : Path.GetFullPath(declared, baseDirectory);
+            if (value.Length == 0) return null;
+            try
+            {
+                var sourcePath = Path.GetFullPath(sourceName);
+                var baseDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+                var resolved = Path.IsPathRooted(value) ? Path.GetFullPath(value) : Path.GetFullPath(value, baseDirectory);
+                if (Path.GetExtension(resolved).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(resolved))
+                    throw new CompilerException($"{sourceName}({lineNumber},1): Application.Executable.Icon file was not found: {value}");
+                return ApplicationObjectPreprocessor.BuildIconMarker + resolved;
+            }
+            catch (CompilerException) { throw; }
+            catch { return null; }
+        }
 
-            if (Path.GetExtension(resolved).Equals(".ico", StringComparison.OrdinalIgnoreCase) && !File.Exists(resolved))
-                throw new CompilerException($"{sourceName}({lineNumber},1): Application.Icon file was not found: {declared}");
-
-            return ApplicationObjectPreprocessor.BuildIconMarker + resolved;
-        }
-        catch (CompilerException)
-        {
-            throw;
-        }
-        catch
-        {
-            return null;
-        }
+        if (property.Equals("Executable.FileDescription", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildFileDescriptionMarker + value;
+        if (property.Equals("Executable.Comments", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildCommentsMarker + value;
+        if (property.Equals("Executable.Product", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildProductMarker + value;
+        if (property.Equals("Executable.Company", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildCompanyMarker + value;
+        if (property.Equals("Executable.Version", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildVersionMarker + value;
+        if (property.Equals("Executable.Copyright", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildCopyrightMarker + value;
+        return null;
     }
 
     private static string EscapeXpsString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
@@ -114,10 +124,7 @@ internal sealed class SourceLineMarkerPreprocessor
                 !relative.Equals("..", StringComparison.Ordinal) &&
                 !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
                 !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
-            {
                 return relative.Replace('\\', '/');
-            }
-
             var name = Path.GetFileName(sourceFull);
             return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
         }
@@ -128,17 +135,12 @@ internal sealed class SourceLineMarkerPreprocessor
                 var name = Path.GetFileName(sourcePath);
                 return string.IsNullOrWhiteSpace(name) ? "input.xps" : name;
             }
-            catch
-            {
-                return "input.xps";
-            }
+            catch { return "input.xps"; }
         }
     }
 
     private static bool IsProcedureStart(string code) =>
-        Regex.IsMatch(code,
-            @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\b",
-            RegexOptions.IgnoreCase);
+        Regex.IsMatch(code, @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\b", RegexOptions.IgnoreCase);
 
     private static bool IsProcedureEnd(string code) =>
         Regex.IsMatch(code, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase);

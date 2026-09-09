@@ -18,35 +18,22 @@ internal static class CompilerBuildEnvironment
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
-
         var root = Path.GetFullPath(workspace);
         var usePersistentRunCache = IsTransientRunBuild(startInfo);
         var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
-        var environmentRoot = usePersistentRunCache
-            ? CreatePrivateDirectory(cacheRoot, "environment")
-            : root;
-
-        // Process temp remains invocation-local. The dotnet user/profile state is safe to
-        // reuse for transient run builds because the persistent cache is owner-only.
-        // Keeping DOTNET_CLI_HOME and the profile stable avoids paying a fresh CLI/tooling
-        // cold-start on every edit-run cycle while release compile remains one-shot isolated.
+        var environmentRoot = usePersistentRunCache ? CreatePrivateDirectory(cacheRoot, "environment") : root;
         var processTemp = CreatePrivateDirectory(root, "process-temp");
         var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
         var profile = CreatePrivateDirectory(environmentRoot, "profile");
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
-
         var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
         var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
-
         ConfigureGeneratedDependencies(startInfo, root);
-        if (usePersistentRunCache)
-            ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
-
+        if (usePersistentRunCache) ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
-
         startInfo.Environment["TEMP"] = processTemp;
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
@@ -58,13 +45,10 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["HOME"] = profile;
         startInfo.Environment["APPDATA"] = appData;
         startInfo.Environment["LOCALAPPDATA"] = localAppData;
-
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
-        if (usePersistentRunCache)
-            startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
-
+        if (usePersistentRunCache) startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
         startInfo.Environment.Remove("MSBuildSDKsPath");
@@ -72,18 +56,13 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
     }
 
-    private static bool IsTransientRunBuild(ProcessStartInfo startInfo)
-    {
-        if (startInfo.ArgumentList.Count == 0) return false;
-        return string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsTransientRunBuild(ProcessStartInfo startInfo) =>
+        startInfo.ArgumentList.Count > 0 && string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
 
     private static string PersistentRunCacheRoot()
     {
         var baseDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(baseDirectory))
-            baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
-
+        if (string.IsNullOrWhiteSpace(baseDirectory)) baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
         var compilerIdentity = typeof(CompilerBuildEnvironment).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var root = Path.Combine(baseDirectory, "XPScript", "run-build-cache", compilerIdentity);
         Directory.CreateDirectory(root);
@@ -94,16 +73,12 @@ internal static class CompilerBuildEnvironment
     private static void ConfigurePersistentRunBuild(ProcessStartInfo startInfo, string workspace, string cacheRoot)
     {
         if (startInfo.ArgumentList.Count < 2) return;
-
         var projectPath = startInfo.ArgumentList[1];
         if (string.IsNullOrWhiteSpace(projectPath)) return;
         projectPath = Path.GetFullPath(projectPath);
         if (!File.Exists(projectPath)) return;
-
         var projectText = File.ReadAllText(projectPath);
-        if (projectText.Contains("<HintPath>", StringComparison.OrdinalIgnoreCase))
-            return;
-
+        if (projectText.Contains("<HintPath>", StringComparison.OrdinalIgnoreCase)) return;
         var propsPath = Path.Combine(workspace, "Directory.Build.props");
         var propsText = File.Exists(propsPath) ? File.ReadAllText(propsPath) : string.Empty;
         var generatedPath = Path.Combine(workspace, "Program.cs");
@@ -112,45 +87,25 @@ internal static class CompilerBuildEnvironment
         var rid = ReadRuntimeIdentifier(startInfo);
         var identity = sourceIdentity + "\0" + projectText + "\0" + propsText + "\0" + rid;
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
-
         var restoreBase = CreatePrivateDirectory(cacheRoot, "restore");
         var restoreRoot = CreatePrivateDirectory(restoreBase, hash[..32]);
         var assetsPath = Path.Combine(restoreRoot, "project.assets.json");
         var propsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.props");
         var targetsGeneratedPath = Path.Combine(restoreRoot, "Generated.csproj.nuget.g.targets");
-
         startInfo.ArgumentList.Add("-p:MSBuildProjectExtensionsPath=" + EnsureTrailingSeparator(restoreRoot));
-        if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath))
-            startInfo.ArgumentList.Add("--no-restore");
-
-        // Reuse obj state only when this process can claim the cache entry. Concurrent
-        // builds of the same script fall back to their invocation-local obj directory.
-        // This preserves compiler isolation while allowing normal edit-run cycles to reuse
-        // generated MSBuild/Roslyn state across separate xpscript invocations.
+        if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath)) startInfo.ArgumentList.Add("--no-restore");
         var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
         var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
-        if (TryClaimIntermediateCache(intermediateRoot))
-            startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+        if (TryClaimIntermediateCache(intermediateRoot)) startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
     }
 
     private static string ExtractSourceIdentity(string generatedSource)
     {
         if (generatedSource.Length == 0) return "generated-empty";
-
-        var lineDirective = Regex.Match(
-            generatedSource,
-            "#line\\s+\\d+\\s+\"([^\"]+\\.xps)\"",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (lineDirective.Success)
-            return lineDirective.Groups[1].Value;
-
-        var quotedSource = Regex.Match(
-            generatedSource,
-            "\"([^\"\\r\\n]+\\.xps)\"",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (quotedSource.Success)
-            return quotedSource.Groups[1].Value;
-
+        var lineDirective = Regex.Match(generatedSource, "#line\\s+\\d+\\s+\"([^\"]+\\.xps)\"", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (lineDirective.Success) return lineDirective.Groups[1].Value;
+        var quotedSource = Regex.Match(generatedSource, "\"([^\"\\r\\n]+\\.xps)\"", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (quotedSource.Success) return quotedSource.Groups[1].Value;
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(generatedSource))).ToLowerInvariant();
     }
 
@@ -162,24 +117,13 @@ internal static class CompilerBuildEnvironment
             try
             {
                 using (var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize: 1024, leaveOpen: false))
-                    writer.Write(Environment.ProcessId);
-
+                using (var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize: 1024, leaveOpen: false)) writer.Write(Environment.ProcessId);
                 CompilerPathSecurity.HardenTemporaryFile(lockPath);
-                AppDomain.CurrentDomain.ProcessExit += (_, _) =>
-                {
-                    try { File.Delete(lockPath); } catch { }
-                };
+                AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { File.Delete(lockPath); } catch { } };
                 return true;
             }
-            catch (IOException)
-            {
-                if (!TryRemoveStaleIntermediateLock(lockPath)) return false;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return false;
-            }
+            catch (IOException) { if (!TryRemoveStaleIntermediateLock(lockPath)) return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
         return false;
     }
@@ -189,38 +133,22 @@ internal static class CompilerBuildEnvironment
         try
         {
             var text = File.ReadAllText(lockPath).Trim();
-            if (!int.TryParse(text, out var processId) || processId <= 0)
-                return false;
-
-            try
-            {
-                using var process = Process.GetProcessById(processId);
-                if (!process.HasExited) return false;
-            }
-            catch (ArgumentException)
-            {
-                // Process no longer exists.
-            }
-
+            if (!int.TryParse(text, out var processId) || processId <= 0) return false;
+            try { using var process = Process.GetProcessById(processId); if (!process.HasExited) return false; }
+            catch (ArgumentException) { }
             File.Delete(lockPath);
             return true;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
     private static string EnsureTrailingSeparator(string path) =>
-        path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
+        path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar) ? path : path + Path.DirectorySeparatorChar;
 
     private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
     {
         var generatedSource = Path.Combine(root, "Program.cs");
         if (!File.Exists(generatedSource)) return;
-
         var source = File.ReadAllText(generatedSource);
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
@@ -231,140 +159,93 @@ internal static class CompilerBuildEnvironment
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
-
-        if (usesMySql)
-        {
-            File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine);
-            CompilerPathSecurity.HardenTemporaryFile(generatedSource);
-        }
-        if (usesSupabaseDb)
-        {
-            File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine);
-            CompilerPathSecurity.HardenTemporaryFile(generatedSource);
-        }
-
-        if (!usesUiForm && !usesUiListView && !usesDesktopDialog && !usesSqlite && !usesMsSql && !usesMySql && !usesSupabaseDb && stagedIconName is null) return;
-
+        var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
+        var company = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCompanyMarker);
+        var version = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildVersionMarker);
+        var copyright = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCopyrightMarker);
+        var fileDescription = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildFileDescriptionMarker);
+        var comments = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCommentsMarker);
+        if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
+        if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
         {
             var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
-            if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly))
-                throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
+            if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly)) throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
+            escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly)) ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
+        }
+        var fileDescriptionValue = fileDescription ?? "Application compiled with XPScript";
+        var commentsValue = comments ?? "XPScript by XPageDeveloper.com";
+        var propertyEntries = $"    <Description>{EscapeMsBuild(commentsValue)}</Description>\n    <Trademark>{EscapeMsBuild(commentsValue)}</Trademark>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
+        if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
+        if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
+        if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
+        if (version is not null) propertyEntries += $"    <Version>{EscapeMsBuild(version)}</Version>\n    <FileVersion>{EscapeMsBuild(version)}</FileVersion>\n    <AssemblyVersion>{EscapeMsBuild(version)}</AssemblyVersion>\n";
+        if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
+        if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
+        var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
+        var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
+        if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{AvaloniaWebViewVersion}\" />\n";
+        if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />\n";
+        if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />\n";
+        if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{MySqlConnectorVersion}\" />\n";
+        if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{NpgsqlVersion}\" />\n";
+        var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
-            escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly))
-                ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
-        }
-
-        var propertyEntries = stagedIconName is null
-            ? string.Empty
-            : $"""
-    <ApplicationIcon>{SecurityElement.Escape(stagedIconName)}</ApplicationIcon>
-""";
-        if (usesSqlite || usesMsSql)
+        var projectPath = Path.Combine(root, "Generated.csproj");
+        if (File.Exists(projectPath))
         {
-            propertyEntries += """
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-""";
+            var projectText = File.ReadAllText(projectPath);
+            var projectMetadata = propertyGroup + itemGroup;
+            var closingProject = projectText.LastIndexOf("</Project>", StringComparison.OrdinalIgnoreCase);
+            if (closingProject < 0) throw new CompilerException("Generated project is invalid: closing Project element was not found.");
+            projectText = projectText.Insert(closingProject, projectMetadata);
+            File.WriteAllText(projectPath, projectText);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
         }
-
-        var propertyGroup = propertyEntries.Length == 0
-            ? string.Empty
-            : $"""
-  <PropertyGroup>
-{propertyEntries}  </PropertyGroup>
-""";
-
-        var itemEntries = escapedAssembly is null
-            ? string.Empty
-            : $"""
-    <Reference Include="XPScript.UI.Desktop">
-      <HintPath>{escapedAssembly}</HintPath>
-      <Private>true</Private>
-    </Reference>
-    <PackageReference Include="Avalonia" Version="{AvaloniaVersion}" />
-    <PackageReference Include="Avalonia.Desktop" Version="{AvaloniaVersion}" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="{AvaloniaVersion}" />
-    <PackageReference Include="Avalonia.Controls.WebView" Version="{AvaloniaWebViewVersion}" />
-""";
-        if (usesSqlite)
-        {
-            itemEntries += $"""
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="{MicrosoftDataSqliteVersion}" />
-""";
-        }
-        if (usesMsSql)
-        {
-            itemEntries += $"""
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="{MicrosoftDataSqlClientVersion}" />
-""";
-        }
-        if (usesMySql)
-        {
-            itemEntries += $"""
-    <PackageReference Include="MySqlConnector" Version="{MySqlConnectorVersion}" />
-""";
-        }
-        if (usesSupabaseDb)
-        {
-            itemEntries += $"""
-    <PackageReference Include="Npgsql" Version="{NpgsqlVersion}" />
-""";
-        }
-
-        var itemGroup = itemEntries.Length == 0
-            ? string.Empty
-            : $"""
-  <ItemGroup>
-{itemEntries}  </ItemGroup>
-""";
 
         var propsPath = Path.Combine(root, "Directory.Build.props");
-        var props = $"""
-<Project>
-{propertyGroup}{itemGroup}</Project>
-""";
-        File.WriteAllText(propsPath, props);
+        File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
         CompilerPathSecurity.HardenTemporaryFile(propsPath);
     }
+
+    private static string? ReadBuildMarker(string generatedSource, string marker)
+    {
+        var markerIndex = generatedSource.IndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex < 0) return null;
+        var valueStart = markerIndex + marker.Length;
+        var valueEnd = generatedSource.IndexOfAny(['\r', '\n'], valueStart);
+        return (valueEnd < 0 ? generatedSource[valueStart..] : generatedSource[valueStart..valueEnd]).Trim().TrimEnd('"', '\'', '/', '*', ' ', ';', ')');
+    }
+
+    private static string EscapeMsBuild(string value) => SecurityElement.Escape(value) ?? string.Empty;
 
     private static string? StageApplicationIcon(string generatedSource, string root, string runtimeIdentifier)
     {
         if (!runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase)) return null;
-
         var markerIndex = generatedSource.IndexOf(ApplicationObjectPreprocessor.BuildIconMarker, StringComparison.Ordinal);
         if (markerIndex < 0) return null;
         var valueStart = markerIndex + ApplicationObjectPreprocessor.BuildIconMarker.Length;
         var valueEnd = generatedSource.IndexOfAny(['\r', '\n'], valueStart);
-        var path = (valueEnd < 0 ? generatedSource[valueStart..] : generatedSource[valueStart..valueEnd]).Trim();
-        path = path.TrimEnd('"', '\'', '/', '*', ' ', ';', ')');
+        var path = (valueEnd < 0 ? generatedSource[valueStart..] : generatedSource[valueStart..valueEnd]).Trim().TrimEnd('"', '\'', '/', '*', ' ', ';', ')');
         if (path.Length == 0) return null;
-        if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException("Application.Icon must reference an .ico file when building a Windows executable.");
-        if (!File.Exists(path))
-            throw new CompilerException("Application.Icon file was not found: " + Path.GetFileName(path));
-
+        if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Application.Executable.Icon must reference an .ico file when building a Windows executable.");
+        if (!File.Exists(path)) throw new CompilerException("Application.Executable.Icon file was not found: " + Path.GetFileName(path));
         var staged = Path.Combine(root, "application.ico");
-        CompilerSecureFileCopy.CopyValidatedRegularFile(path, staged, "Application.Icon");
+        CompilerSecureFileCopy.CopyValidatedRegularFile(path, staged, "Application.Executable.Icon");
         CompilerPathSecurity.HardenTemporaryFile(staged);
         return Path.GetFileName(staged);
     }
 
     private static string ReadRuntimeIdentifier(ProcessStartInfo startInfo)
     {
-        for (var i = 0; i + 1 < startInfo.ArgumentList.Count; i++)
-        {
-            if (startInfo.ArgumentList[i] is "-r" or "--runtime")
-                return startInfo.ArgumentList[i + 1] ?? string.Empty;
-        }
+        for (var i = 0; i + 1 < startInfo.ArgumentList.Count; i++) if (startInfo.ArgumentList[i] is "-r" or "--runtime") return startInfo.ArgumentList[i + 1] ?? string.Empty;
         return string.Empty;
     }
 
-    private static string CreatePrivateDirectory(string root, string name)
+    private static string CreatePrivateDirectory(string root, string relative)
     {
-        Directory.CreateDirectory(root);
-        CompilerPathSecurity.HardenTemporaryDirectory(root);
-        var path = Path.Combine(root, name);
+        var path = Path.Combine(root, relative);
         Directory.CreateDirectory(path);
         CompilerPathSecurity.HardenTemporaryDirectory(path);
         return path;

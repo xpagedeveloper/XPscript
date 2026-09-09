@@ -39,9 +39,28 @@ These properties are writable. Their values are stored in the application state 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `Application.Title` | `Application.Title = value` | `value`: application/window title. | Gets or sets the application title metadata. | [application-object.xps](../samples/application-object.xps) |
-| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. A literal `.ico` path is build-validated when the compiler can resolve it. | Gets or sets application icon metadata. | [application-object.xps](../samples/application-object.xps) |
+| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. | Compatibility alias for `Application.Executable.Icon`. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 | `Application.Width` | `Application.Width = value` | `value`: preferred application/window width. | Gets or sets width metadata. | [application-object.xps](../samples/application-object.xps) |
 | `Application.Height` | `Application.Height = value` | `value`: preferred application/window height. | Gets or sets height metadata. | [application-object.xps](../samples/application-object.xps) |
+
+## Executable metadata
+
+`Application.Executable` exposes metadata that the compiler writes into the generated application. Assign string literals when you want the values embedded in the build output. The same values are also readable through the XPScript application state during execution.
+
+`Application.Icon` and `Application.Executable.Icon` address the same icon value. `Application.Icon` remains available as a compatibility alias.
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.Executable.Icon` | `Application.Executable.Icon = path` | `path`: icon path. Windows executable icons must use an `.ico` file. | Sets executable icon metadata. On Windows the compiler stages the `.ico` file and supplies it as the generated project's application icon. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.FileDescription` | `Application.Executable.FileDescription = value` | `value`: file description. | Sets the generated executable/assembly description. If omitted, the default is `Application compiled with XPScript`. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Product` | `Application.Executable.Product = value` | `value`: product name. | Sets the generated executable/assembly product metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Company` | `Application.Executable.Company = value` | `value`: company name. | Sets the generated executable/assembly company metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Version` | `Application.Executable.Version = value` | `value`: version string. | Sets version metadata used for the generated assembly and file version. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Copyright` | `Application.Executable.Copyright = value` | `value`: copyright text. | Sets the generated executable/assembly copyright metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+
+Generated applications receive fixed compiler identification metadata. Assembly metadata contains `XPScriptCompiler = XPScript`, `XPScriptWebsite = https://xpagedeveloper.com` and `Compiled With = XPScript - XPageDeveloper.com`. If `Application.Executable.FileDescription` is not set, the file description defaults to `Application compiled with XPScript`.
+
+Executable metadata is emitted through the generated MSBuild project, so assembly metadata is retained for Windows, Linux and macOS targets. The native Windows executable icon is Windows-specific and requires an `.ico` source file. Custom assembly metadata such as `Compiled With` is embedded metadata and is not guaranteed to appear as a custom row in Windows Explorer's Details tab.
 
 ## State scopes
 
@@ -75,10 +94,10 @@ All four state proxies expose the same member set below.
 | `Application.Registry.System.Get` | `Application.Registry.System.Get(path, name)` | registry/config path and value name | Reads a machine-wide persistent setting. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Registry.System.Set` | `Application.Registry.System.Set(path, name, value [, type])` | registry/config path, name, value and optional registry type | Writes a machine-wide persistent setting and may require elevated OS permissions. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Secrets.Get` | `Application.Secrets.Get(service, account)` | service/application identifier and account | Reads a secret from Credential Manager, Keychain or Linux Secret Service. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
-| `Application.Secrets.Set` | `Application.Secrets.Set(service, account, secret)` | service/application identifier, account and secret | Adds or replaces a secret in the operating-system credential store. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
+| `Application.Secrets.Set` | `Application.Secrets.Set(service, account, secret)` | service/application identifier and account and secret. | Adds or replaces a secret in the operating-system credential store. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 
 Windows registry values support `String`, `ExpandString`, `Binary`, `DWord`, `MultiString` and `QWord`. Linux and macOS preserve equivalent type metadata in their file-backed application settings. See [Application Registry and Secrets](application-registry-secrets.md) for the platform paths, type mapping, Linux Secret Service requirements and security details.
 
 ## Read-only runtime properties
 
-`Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Title`, `Icon`, `Width` and `Height` are intentionally writable metadata properties.
+`Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Title`, `Icon`, `Executable.Icon`, `Executable.FileDescription`, `Executable.Product`, `Executable.Company`, `Executable.Version`, `Executable.Copyright`, `Width` and `Height` are intentionally writable metadata properties.

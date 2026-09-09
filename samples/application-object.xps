@@ -8,11 +8,20 @@ Sub Main()
     iconPath = "app.ico"
     Application.Title = "XPScript application reference"
     Application.Icon = iconPath
+    Application.Executable.Product = "XPScript Sample"
+    Application.Executable.Company = "XPageDeveloper"
+    Application.Executable.Version = "1.0.0"
+    Application.Executable.Copyright = "Copyright (c) 2026 XPageDeveloper"
     Application.Width = 1024
     Application.Height = 768
 
     Print "TITLE=" & CStr(Application.Title)
     Print "ICON=" & CStr(Application.Icon)
+    Print "EXECUTABLE_ICON=" & CStr(Application.Executable.Icon)
+    Print "PRODUCT=" & CStr(Application.Executable.Product)
+    Print "COMPANY=" & CStr(Application.Executable.Company)
+    Print "VERSION=" & CStr(Application.Executable.Version)
+    Print "COPYRIGHT=" & CStr(Application.Executable.Copyright)
     Print "WIDTH=" & CStr(Application.Width)
     Print "HEIGHT=" & CStr(Application.Height)
 
