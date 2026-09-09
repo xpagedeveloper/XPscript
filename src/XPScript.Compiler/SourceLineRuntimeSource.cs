@@ -130,11 +130,13 @@ internal static class XPScriptDebugRuntime
             using (message)
             {
                 var root = message.RootElement;
-                if (root.TryGetProperty("token", out var tokenElement) &&
-                    _token.Length > 0 &&
+                var suppliedToken = root.TryGetProperty("token", out var tokenElement)
+                    ? tokenElement.GetString() ?? ""
+                    : "";
+                if (_token.Length > 0 &&
                     !global::System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
                         global::System.Text.Encoding.UTF8.GetBytes(_token),
-                        global::System.Text.Encoding.UTF8.GetBytes(tokenElement.GetString() ?? "")))
+                        global::System.Text.Encoding.UTF8.GetBytes(suppliedToken)))
                 {
                     Send(new { type = "error", message = "Debugger authentication failed." });
                     Disconnect();
