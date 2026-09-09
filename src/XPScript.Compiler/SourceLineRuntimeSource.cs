@@ -50,6 +50,8 @@ internal static class XPScriptDebugRuntime
         new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory =
         new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, int> ValueHistoryChars =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
     private static global::System.Net.Sockets.TcpListener? _listener;
     private static global::System.Net.Sockets.TcpClient? _client;
     private static global::System.IO.StreamReader? _reader;
@@ -62,8 +64,8 @@ internal static class XPScriptDebugRuntime
     private static int _stepDepth;
     private static long _changeSequence;
     private const int ValueHistoryLimit = 20;
-    private const int ValueSnapshotCharacterLimit = 1024;
-    private const int TotalHistoryCharacterBudget = 262144;
+    private const int MaxTrackedValueChars = 2048;
+    private const int MaxHistoryCharsPerVariable = 32768;
 
     public static void Statement(string sourcePath, int line)
     {
@@ -115,11 +117,12 @@ internal static class XPScriptDebugRuntime
             {
                 history = new global::System.Collections.Generic.Queue<ValueChange>(ValueHistoryLimit);
                 ValueHistory[name] = history;
+                ValueHistoryChars[name] = 0;
             }
 
             var frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current);
             var procedure = frames.Count > 0 ? frames[0].name : "XPscript";
-            history.Enqueue(new ValueChange(
+            var change = new ValueChange(
                 ++_changeSequence,
                 name,
                 oldValue,
@@ -127,29 +130,38 @@ internal static class XPScriptDebugRuntime
                 XPSourceLineRuntime.CurrentSource,
                 XPSourceLineRuntime.Current,
                 procedure,
-                global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture)));
-            while (history.Count > ValueHistoryLimit) history.Dequeue();
-            TrimTotalHistoryBudget();
+                global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture));
+            history.Enqueue(change);
+            ValueHistoryChars[name] = ValueHistoryChars.GetValueOrDefault(name) + EstimateHistoryChars(change);
+
+            while (history.Count > ValueHistoryLimit || ValueHistoryChars[name] > MaxHistoryCharsPerVariable)
+            {
+                var removed = history.Dequeue();
+                ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
+            }
         }
     }
+
+    private static int EstimateHistoryChars(ValueChange change) =>
+        change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
 
     private static string RenderValue(object? value)
     {
         if (value is null) return "Nothing";
         try
         {
-            string rendered;
-            if (value is string text) rendered = text;
-            else if (value is byte[] bytes)
-                return $"<byte[{bytes.Length}] sha256={HashBytes(bytes)}>";
-            else if (value is global::System.DateTime date)
-                rendered = date.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture);
-            else if (value is global::System.IFormattable formattable)
-                rendered = formattable.ToString(null, global::System.Globalization.CultureInfo.InvariantCulture) ?? "";
-            else
-                rendered = value.ToString() ?? "";
-
-            return BoundedSnapshot(rendered, value.GetType().Name);
+            if (value is string text) return LimitRenderedValue(text);
+            if (value is byte[] bytes) return $"<byte[{bytes.LongLength}]>";
+            if (value is char[] chars) return LimitRenderedValue(new string(chars));
+            if (value is global::System.IO.Stream stream)
+                return $"<Stream {stream.GetType().Name} CanRead={stream.CanRead} CanSeek={stream.CanSeek}>";
+            if (value is global::System.Text.StringBuilder builder)
+                return LimitRenderedValue(builder.ToString());
+            if (value is global::System.DateTime date)
+                return date.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture);
+            if (value is global::System.IFormattable formattable)
+                return LimitRenderedValue(formattable.ToString(null, global::System.Globalization.CultureInfo.InvariantCulture) ?? "");
+            return LimitRenderedValue(value.ToString() ?? "");
         }
         catch
         {
@@ -157,51 +169,14 @@ internal static class XPScriptDebugRuntime
         }
     }
 
-    private static string BoundedSnapshot(string rendered, string typeName)
+    private static string LimitRenderedValue(string value)
     {
-        if (rendered.Length <= ValueSnapshotCharacterLimit) return rendered;
-        var bytes = global::System.Text.Encoding.UTF8.GetBytes(rendered);
-        var hash = HashBytes(bytes);
-        var prefixLength = global::System.Math.Min(ValueSnapshotCharacterLimit, rendered.Length);
-        return rendered[..prefixLength] + $"… <truncated type={typeName} chars={rendered.Length} sha256={hash}>";
-    }
-
-    private static string HashBytes(byte[] bytes)
-    {
-        var hash = global::System.Security.Cryptography.SHA256.HashData(bytes);
-        return global::System.Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private static void TrimTotalHistoryBudget()
-    {
-        static int Cost(ValueChange item) =>
-            item.Name.Length + item.OldValue.Length + item.NewValue.Length + item.Source.Length + item.Procedure.Length + item.TimestampUtc.Length + 64;
-
-        var total = 0;
-        foreach (var history in ValueHistory.Values)
-            foreach (var item in history)
-                total += Cost(item);
-
-        while (total > TotalHistoryCharacterBudget)
-        {
-            string? oldestName = null;
-            ValueChange? oldest = null;
-            foreach (var pair in ValueHistory)
-            {
-                if (pair.Value.Count == 0) continue;
-                var candidate = pair.Value.Peek();
-                if (oldest is null || candidate.Sequence < oldest.Sequence)
-                {
-                    oldest = candidate;
-                    oldestName = pair.Key;
-                }
-            }
-
-            if (oldest is null || oldestName is null) break;
-            var removed = ValueHistory[oldestName].Dequeue();
-            total -= Cost(removed);
-            if (ValueHistory[oldestName].Count == 0) ValueHistory.Remove(oldestName);
-        }
+        if (value.Length <= MaxTrackedValueChars) return value;
+        var marker = $"<truncated length={value.Length}>";
+        var available = global::System.Math.Max(0, MaxTrackedValueChars - marker.Length - 5);
+        var headLength = available / 2;
+        var tailLength = available - headLength;
+        return value[..headLength] + " ... " + value[(value.Length - tailLength)..] + marker;
     }
 
     private static global::System.Collections.Generic.List<DebugFrame> CaptureFrames(string fallbackSource, int fallbackLine)
@@ -272,14 +247,15 @@ internal static class XPScriptDebugRuntime
         {
             AutoFlush = true
         };
-        Send(new {
+        Send(new
+        {
             type = "hello",
             protocol = 2,
             runtime = "xpscript",
             pid = global::System.Environment.ProcessId,
             valueHistoryLimit = ValueHistoryLimit,
-            valueSnapshotCharacterLimit = ValueSnapshotCharacterLimit,
-            totalHistoryCharacterBudget = TotalHistoryCharacterBudget
+            maxTrackedValueChars = MaxTrackedValueChars,
+            maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable
         });
     }
 
@@ -422,6 +398,8 @@ internal static class XPScriptDebugRuntime
 
 internal static class Console
 {
+    // Compatibility members are intentionally exposed because generated runtime code
+    // historically referenced System.Console through the unqualified name Console.
     public static global::System.IO.TextReader In => global::System.Console.In;
     public static global::System.IO.TextWriter Out => global::System.Console.Out;
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
