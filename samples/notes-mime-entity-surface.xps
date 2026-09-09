@@ -1,6 +1,7 @@
-' Runtime probe for native MIME create, root mutation, save/reopen, and a known HTML MIME document.
+' Runtime probe for native MIME create, root mutation/readback, save/reopen, and a known HTML MIME document.
 Sub Main()
     Const KNOWN_HTML_MIME_UNID = "100EC86E73301B37C1258BB20034683C"
+    Const EXPECTED_TEXT = "XPscript NotesMIMEEntity root mutation UTF-8: åäö"
 
     Dim session As New NotesSession()
     Dim db As NotesDatabase
@@ -10,16 +11,17 @@ Sub Main()
     Dim mime As NotesMIMEEntity
     Dim currentEntity As NotesMIMEEntity
     Dim contentStream As NotesStream
+    Dim readStream As NotesStream
     Dim unid As String
     Dim foundHtml As Boolean
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
 
-    Print "MIME create/mutate/reopen probe: creating document"
+    Print "MIME create/mutate/read/reopen probe: creating document"
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "Memo")
-    Call doc.ReplaceItemValue("Subject", "XPScript native MIME create/mutate/reopen probe")
+    Call doc.ReplaceItemValue("Subject", "XPScript native MIME create/mutate/read/reopen probe")
     Call doc.ReplaceItemValue("XPScriptMarker", "notes-mime-entity-surface")
 
     Set mime = doc.CreateMIMEEntity("Body")
@@ -33,7 +35,7 @@ Sub Main()
 
         Set contentStream = session.CreateStream()
         contentStream.Charset = "UTF-8"
-        Call contentStream.WriteText("XPscript NotesMIMEEntity root mutation UTF-8: åäö")
+        Call contentStream.WriteText(EXPECTED_TEXT)
         contentStream.Position = 0
         Call mime.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
 
@@ -41,6 +43,12 @@ Sub Main()
             Print "PASS: SetContentFromText refreshed root metadata immediately"
         Else
             Print "FAIL: SetContentFromText root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType & " charset=" & mime.Charset
+        End If
+
+        If mime.ContentAsText = EXPECTED_TEXT Then
+            Print "PASS: ContentAsText reads the mutated root payload immediately"
+        Else
+            Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
         End If
 
         Call contentStream.Recycle()
@@ -57,7 +65,7 @@ Sub Main()
     Call doc.Recycle()
     Set doc = Nothing
 
-    Print "MIME create/mutate/reopen probe: reopening document"
+    Print "MIME create/mutate/read/reopen probe: reopening document"
     Set reopened = db.GetDocumentByUNID(unid)
     If reopened Is Nothing Then
         Print "FAIL: saved document could not be reopened"
@@ -75,6 +83,46 @@ Sub Main()
             Else
                 Print "FAIL: save/reopen MIME metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType & " charset=" & mime.Charset
             End If
+
+            If mime.ContentAsText = EXPECTED_TEXT Then
+                Print "PASS: ContentAsText payload survived save/reopen"
+            Else
+                Print "FAIL: reopened ContentAsText mismatch: " & mime.ContentAsText
+            End If
+
+            Set readStream = session.CreateStream()
+            readStream.Charset = "UTF-8"
+            Call mime.GetContentAsText(readStream)
+            readStream.Position = 0
+            If readStream.ReadText() = EXPECTED_TEXT Then
+                Print "PASS: GetContentAsText payload survived save/reopen"
+            Else
+                Print "FAIL: GetContentAsText payload mismatch"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
+
+            Set readStream = session.CreateStream()
+            readStream.Charset = "UTF-8"
+            Call mime.GetContentAsBytes(readStream)
+            readStream.Position = 0
+            If readStream.ReadText() = EXPECTED_TEXT Then
+                Print "PASS: GetContentAsBytes payload survived save/reopen"
+            Else
+                Print "FAIL: GetContentAsBytes payload mismatch"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
+
+            Set readStream = session.CreateStream()
+            Call mime.GetEntityAsText(readStream)
+            If readStream.Bytes > Len(EXPECTED_TEXT) Then
+                Print "PASS: GetEntityAsText returned root RFC822 data with headers"
+            Else
+                Print "FAIL: GetEntityAsText did not return a complete root entity"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
         End If
 
         Call reopened.CloseMIMEEntities()
@@ -127,5 +175,5 @@ Sub Main()
     Call session.Recycle()
     Set session = Nothing
 
-    Print "MIME create/mutate/reopen probe: completed"
+    Print "MIME create/mutate/read/reopen probe: completed"
 End Sub
