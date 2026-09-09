@@ -54,6 +54,10 @@ if (!generated.Contains("public static void Print(object? value)", StringCompari
     throw new Exception("Debugger.Print API was not emitted.");
 if (!generated.Contains("public static void UpdateVar(string name, object? value)", StringComparison.Ordinal))
     throw new Exception("Debugger.UpdateVar API was not emitted.");
+if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.Print", StringComparison.Ordinal))
+    throw new Exception("Debugger.Print arguments are not guarded when debugging is disabled.");
+if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar", StringComparison.Ordinal))
+    throw new Exception("Debugger.UpdateVar arguments are not guarded when debugging is disabled.");
 if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal))
     throw new Exception("Debugger protocol does not advertise the explicit debugger API.");
 if (!generated.Contains("MaxTrackedValueChars = 2048", StringComparison.Ordinal))
