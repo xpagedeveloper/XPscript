@@ -64,12 +64,14 @@ Branch: `feature/notes-mime-entity`
 - [x] Domino runtime showed the bounded root-stream child header reader cannot see itemized child headers after save/reopen
 - [x] Added native `MIMEGetEntityData(..., MIME_ENTITY_DATA_HEADERS, ...)` ABI and directory-owner bridge for per-entity header readback
 - [x] Routed direct-child `GetNthHeader` and `NotesMIMEHeader` value access through native entity header data
+- [x] Domino rerun confirmed native child-header lookup still returned no matching headers
+- [x] Corrected the `MIMEGetEntityData` selector from `1` to `2` for `MIME_ENTITY_DATA_HEADERS`; selector `1` was reading entity body data instead of headers
 
 ## In progress
 
-- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through native direct-child `GetNthHeader`
-- [ ] Confirm `Content-Disposition` and filename after save/reopen through native direct-child `GetNthHeader`
-- [ ] Confirm the native entity-header reader compiles in branch CI
+- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through corrected native direct-child `GetNthHeader`
+- [ ] Confirm `Content-Disposition` and filename after save/reopen through corrected native direct-child `GetNthHeader`
+- [ ] Confirm the corrected native entity-header reader compiles in branch CI
 
 ## Remaining
 
