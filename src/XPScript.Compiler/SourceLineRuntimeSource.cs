@@ -48,6 +48,8 @@ internal static class XPScriptDebugRuntime
         new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints =
         new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues =
         new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory =
@@ -109,56 +111,100 @@ internal static class XPScriptDebugRuntime
 
         lock (Gate)
         {
-            var rendered = RenderValue(value);
-            if (LastValues.TryGetValue(name, out var previous) && string.Equals(previous, rendered, global::System.StringComparison.Ordinal))
-                return;
+            if (CustomDebuggerVariables.Contains(name)) return;
+            RecordValueLocked(name, value);
+        }
+    }
 
-            var oldValue = LastValues.TryGetValue(name, out previous) ? previous : "<unobserved>";
-            LastValues[name] = rendered;
-            if (!ValueHistory.TryGetValue(name, out var history))
-            {
-                history = new global::System.Collections.Generic.Queue<ValueChange>(ValueHistoryLimit);
-                ValueHistory[name] = history;
-                ValueHistoryChars[name] = 0;
-            }
+    public static void UpdateDebuggerVar(string name, object? value)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new XPScriptRuntimeException(5, "Debugger variable name cannot be empty.");
 
-            var frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current);
-            var procedure = frames.Count > 0 ? frames[0].name : "XPscript";
-            var change = new ValueChange(
-                ++_changeSequence,
-                name,
-                oldValue,
-                rendered,
-                XPSourceLineRuntime.CurrentSource,
-                XPSourceLineRuntime.Current,
-                procedure,
-                global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture));
-            history.Enqueue(change);
-            ValueHistoryChars[name] = ValueHistoryChars.GetValueOrDefault(name) + EstimateHistoryChars(change);
+        EnsureInitialized();
+        if (!_enabled) return;
 
-            while (history.Count > ValueHistoryLimit || ValueHistoryChars[name] > MaxHistoryCharsPerVariable)
-            {
-                var removed = history.Dequeue();
-                ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
-            }
+        lock (Gate)
+        {
+            if (!CustomDebuggerVariables.Contains(name) && LastValues.ContainsKey(name))
+                throw new XPScriptRuntimeException(5, "Debugger variable name is already used by an observed application variable: " + name);
 
-            if (!DataBreakpoints.Contains(name) || _reader is null || _writer is null) return;
+            CustomDebuggerVariables.Add(name);
+            RecordValueLocked(name, value);
+        }
+    }
 
-            var depth = frames.Count;
-            _stepMode = "";
+    public static void Print(object? value)
+    {
+        EnsureInitialized();
+        if (!_enabled) return;
+
+        lock (Gate)
+        {
+            EnsureConnected();
+            if (_writer is null) return;
             Send(new
             {
-                type = "stopped",
-                reason = "data breakpoint",
+                type = "debugOutput",
+                output = RenderValue(value),
                 source = XPSourceLineRuntime.CurrentSource,
                 line = XPSourceLineRuntime.Current,
-                threadId = 1,
-                frames,
-                dataId = name,
-                description = name + " changed from " + oldValue + " to " + rendered
+                threadId = 1
             });
-            CommandLoop(depth);
         }
+    }
+
+    private static void RecordValueLocked(string name, object? value)
+    {
+        var rendered = RenderValue(value);
+        if (LastValues.TryGetValue(name, out var previous) && string.Equals(previous, rendered, global::System.StringComparison.Ordinal))
+            return;
+
+        var oldValue = LastValues.TryGetValue(name, out previous) ? previous : "<unobserved>";
+        LastValues[name] = rendered;
+        if (!ValueHistory.TryGetValue(name, out var history))
+        {
+            history = new global::System.Collections.Generic.Queue<ValueChange>(ValueHistoryLimit);
+            ValueHistory[name] = history;
+            ValueHistoryChars[name] = 0;
+        }
+
+        var frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current);
+        var procedure = frames.Count > 0 ? frames[0].name : "XPscript";
+        var change = new ValueChange(
+            ++_changeSequence,
+            name,
+            oldValue,
+            rendered,
+            XPSourceLineRuntime.CurrentSource,
+            XPSourceLineRuntime.Current,
+            procedure,
+            global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture));
+        history.Enqueue(change);
+        ValueHistoryChars[name] = ValueHistoryChars.GetValueOrDefault(name) + EstimateHistoryChars(change);
+
+        while (history.Count > ValueHistoryLimit || ValueHistoryChars[name] > MaxHistoryCharsPerVariable)
+        {
+            var removed = history.Dequeue();
+            ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
+        }
+
+        if (!DataBreakpoints.Contains(name) || _reader is null || _writer is null) return;
+
+        var depth = frames.Count;
+        _stepMode = "";
+        Send(new
+        {
+            type = "stopped",
+            reason = "data breakpoint",
+            source = XPSourceLineRuntime.CurrentSource,
+            line = XPSourceLineRuntime.Current,
+            threadId = 1,
+            frames,
+            dataId = name,
+            description = name + " changed from " + oldValue + " to " + rendered
+        });
+        CommandLoop(depth);
     }
 
     private static int EstimateHistoryChars(ValueChange change) =>
@@ -269,13 +315,14 @@ internal static class XPScriptDebugRuntime
         Send(new
         {
             type = "hello",
-            protocol = 3,
+            protocol = 4,
             runtime = "xpscript",
             pid = global::System.Environment.ProcessId,
             valueHistoryLimit = ValueHistoryLimit,
             maxTrackedValueChars = MaxTrackedValueChars,
             maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable,
-            supportsDataBreakpoints = true
+            supportsDataBreakpoints = true,
+            supportsDebuggerApi = true
         });
     }
 
@@ -431,7 +478,16 @@ internal static class XPScriptDebugRuntime
         _listener = null;
         _enabled = false;
         DataBreakpoints.Clear();
+        CustomDebuggerVariables.Clear();
     }
+}
+
+internal static class Debugger
+{
+    public static void Print(object? value) => XPScriptDebugRuntime.Print(value);
+
+    public static void UpdateVar(string name, object? value) =>
+        XPScriptDebugRuntime.UpdateDebuggerVar(name, value);
 }
 
 internal static class Console
