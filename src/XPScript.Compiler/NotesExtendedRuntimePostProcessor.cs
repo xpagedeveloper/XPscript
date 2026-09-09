@@ -30,6 +30,7 @@ internal static class NotesExtendedRuntimePostProcessor
             source = NotesMimeManagedRuntimeCleanupPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeRootMutationPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeChildMutationPostProcessor.ApplyBuiltSurface(source);
+            source = NotesMimeEmptyChildBootstrapPostProcessor.ApplyBuiltSurface(source);
         }
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
