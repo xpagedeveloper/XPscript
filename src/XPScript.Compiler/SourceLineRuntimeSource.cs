@@ -32,8 +32,22 @@ internal static class XPSourceLineRuntime
 
 internal static class XPScriptDebugRuntime
 {
+    private sealed record ValueChange(
+        long Sequence,
+        string Name,
+        string OldValue,
+        string NewValue,
+        string Source,
+        int Line,
+        string Procedure,
+        string TimestampUtc);
+
     private static readonly object Gate = new();
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues =
+        new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory =
         new(global::System.StringComparer.OrdinalIgnoreCase);
     private static global::System.Net.Sockets.TcpListener? _listener;
     private static global::System.Net.Sockets.TcpClient? _client;
@@ -41,9 +55,12 @@ internal static class XPScriptDebugRuntime
     private static global::System.IO.StreamWriter? _writer;
     private static bool _initialized;
     private static bool _enabled;
-    private static bool _step;
     private static bool _stopOnEntry = true;
     private static string _token = "";
+    private static string _stepMode = "";
+    private static int _stepDepth;
+    private static long _changeSequence;
+    private const int ValueHistoryLimit = 20;
 
     public static void Statement(string sourcePath, int line)
     {
@@ -56,15 +73,116 @@ internal static class XPScriptDebugRuntime
             EnsureConnected();
             if (_writer is null || _reader is null) return;
 
+            var frames = CaptureFrames(sourcePath, line);
+            var depth = frames.Count;
             var hitBreakpoint = Breakpoints.TryGetValue(sourcePath, out var lines) && lines.Contains(line);
-            if (!_stopOnEntry && !_step && !hitBreakpoint) return;
+            var stepHit = _stepMode switch
+            {
+                "into" => true,
+                "over" => depth <= _stepDepth,
+                "out" => depth < _stepDepth,
+                _ => false
+            };
+
+            if (!_stopOnEntry && !stepHit && !hitBreakpoint) return;
 
             var reason = _stopOnEntry ? "entry" : hitBreakpoint ? "breakpoint" : "step";
             _stopOnEntry = false;
-            _step = false;
-            Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1 });
-            CommandLoop();
+            _stepMode = "";
+            Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1, frames });
+            CommandLoop(depth);
         }
+    }
+
+    public static void TrackValue(string name, object? value)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+        EnsureInitialized();
+        if (!_enabled) return;
+
+        lock (Gate)
+        {
+            var rendered = RenderValue(value);
+            if (LastValues.TryGetValue(name, out var previous) && string.Equals(previous, rendered, global::System.StringComparison.Ordinal))
+                return;
+
+            var oldValue = LastValues.TryGetValue(name, out previous) ? previous : "<unobserved>";
+            LastValues[name] = rendered;
+            if (!ValueHistory.TryGetValue(name, out var history))
+            {
+                history = new global::System.Collections.Generic.Queue<ValueChange>(ValueHistoryLimit);
+                ValueHistory[name] = history;
+            }
+
+            var frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current);
+            var procedure = frames.Count > 0 ? frames[0].name : "XPscript";
+            history.Enqueue(new ValueChange(
+                ++_changeSequence,
+                name,
+                oldValue,
+                rendered,
+                XPSourceLineRuntime.CurrentSource,
+                XPSourceLineRuntime.Current,
+                procedure,
+                global::System.DateTime.UtcNow.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture)));
+            while (history.Count > ValueHistoryLimit) history.Dequeue();
+        }
+    }
+
+    private static string RenderValue(object? value)
+    {
+        if (value is null) return "Nothing";
+        try
+        {
+            if (value is string text) return text;
+            if (value is global::System.DateTime date) return date.ToString("O", global::System.Globalization.CultureInfo.InvariantCulture);
+            if (value is global::System.IFormattable formattable)
+                return formattable.ToString(null, global::System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            return value.ToString() ?? "";
+        }
+        catch
+        {
+            return "<unavailable>";
+        }
+    }
+
+    private static global::System.Collections.Generic.List<object> CaptureFrames(string fallbackSource, int fallbackLine)
+    {
+        var result = new global::System.Collections.Generic.List<object>();
+        try
+        {
+            var trace = new global::System.Diagnostics.StackTrace(true);
+            var id = 1;
+            foreach (var frame in trace.GetFrames())
+            {
+                var method = frame.GetMethod();
+                var declaring = method?.DeclaringType?.Name ?? "";
+                if (declaring is "XPScriptDebugRuntime" or "XPSourceLineRuntime") continue;
+                var source = frame.GetFileName() ?? "";
+                var line = frame.GetFileLineNumber();
+                var isMappedScript = source.EndsWith(".xps", global::System.StringComparison.OrdinalIgnoreCase) ||
+                    source.EndsWith(".xpscript", global::System.StringComparison.OrdinalIgnoreCase);
+                if (!isMappedScript && result.Count > 0) continue;
+                if (!isMappedScript && declaring != "Script") continue;
+                if (source.Length == 0) source = fallbackSource;
+                if (line <= 0) line = fallbackLine;
+                result.Add(new
+                {
+                    id = id++,
+                    name = method?.Name ?? "XPscript",
+                    source,
+                    line,
+                    column = 1
+                });
+            }
+        }
+        catch
+        {
+        }
+
+        if (result.Count == 0)
+            result.Add(new { id = 1, name = "XPscript", source = fallbackSource, line = fallbackLine, column = 1 });
+        return result;
     }
 
     private static void EnsureInitialized()
@@ -103,10 +221,10 @@ internal static class XPScriptDebugRuntime
         {
             AutoFlush = true
         };
-        Send(new { type = "hello", protocol = 1, runtime = "xpscript", pid = global::System.Environment.ProcessId });
+        Send(new { type = "hello", protocol = 2, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit });
     }
 
-    private static void CommandLoop()
+    private static void CommandLoop(int currentDepth)
     {
         while (_reader is not null)
         {
@@ -153,24 +271,56 @@ internal static class XPScriptDebugRuntime
                         SetBreakpoints(root);
                         Send(new { type = "breakpoints", ok = true });
                         break;
+                    case "stackTrace":
+                        Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) });
+                        break;
+                    case "valueHistory":
+                        SendValueHistory(root);
+                        break;
                     case "continue":
+                        _stepMode = "";
                         Send(new { type = "continued", threadId = 1 });
                         return;
                     case "next":
+                        _stepMode = "over";
+                        _stepDepth = currentDepth;
+                        Send(new { type = "continued", threadId = 1 });
+                        return;
                     case "stepIn":
+                        _stepMode = "into";
+                        _stepDepth = currentDepth;
+                        Send(new { type = "continued", threadId = 1 });
+                        return;
                     case "stepOut":
-                        _step = true;
+                        _stepMode = "out";
+                        _stepDepth = currentDepth;
                         Send(new { type = "continued", threadId = 1 });
                         return;
                     case "disconnect":
                         Disconnect();
                         return;
                     case "pause":
-                        _step = true;
+                        _stepMode = "into";
+                        _stepDepth = currentDepth;
                         break;
                 }
             }
         }
+    }
+
+    private static void SendValueHistory(global::System.Text.Json.JsonElement root)
+    {
+        var name = root.TryGetProperty("name", out var nameElement) ? nameElement.GetString() ?? "" : "";
+        if (name.Length > 0)
+        {
+            var items = ValueHistory.TryGetValue(name, out var history) ? history.ToArray() : global::System.Array.Empty<ValueChange>();
+            Send(new { type = "valueHistory", name, items });
+            return;
+        }
+
+        var all = new global::System.Collections.Generic.List<ValueChange>();
+        foreach (var history in ValueHistory.Values) all.AddRange(history);
+        Send(new { type = "valueHistory", name = "", items = all.OrderByDescending(item => item.Sequence).Take(ValueHistoryLimit).ToArray() });
     }
 
     private static void SetBreakpoints(global::System.Text.Json.JsonElement root)
