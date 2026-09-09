@@ -53,13 +53,14 @@ The debugger contains a bounded value-history recorder. It keeps at most the lat
 
 Value snapshots are explicitly memory bounded:
 
-- a rendered snapshot is limited to 1,024 characters
-- larger values keep a prefix plus type, original character count and SHA-256 fingerprint
-- byte arrays are stored only as byte length plus SHA-256 fingerprint
-- all history entries share a global character budget of 262,144 characters
-- when the total budget is exceeded, the oldest history entries are evicted first
+- each rendered value is limited to 2,048 characters
+- oversized text keeps only a bounded prefix and suffix together with its original character length
+- byte arrays are represented by byte length rather than retaining their contents
+- streams are represented only by stream metadata and are never read into debugger history
+- each variable has a maximum history budget of 32,768 characters in addition to the maximum of 20 entries
+- the oldest entries are evicted whenever either limit is exceeded
 
-This means a large file or payload is not retained 20 times merely because the tracked variable changes repeatedly. The debugger records enough metadata to identify that the value changed without retaining the complete content.
+This prevents a large file, response body or document value from being retained repeatedly merely because the variable changes many times. `LastValues` also stores only the bounded representation, not the original payload.
 
 In the VS Code Debug Console, use either form while execution is stopped:
 
