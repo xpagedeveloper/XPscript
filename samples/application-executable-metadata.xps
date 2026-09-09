@@ -4,10 +4,10 @@ Sub Main()
     ' Application.Icon remains a compatibility alias for Application.Executable.Icon.
     ' Use a real .ico file when compiling this sample for Windows.
     Application.Executable.Icon = "app.ico"
-    Application.Executable.Product = "XPScript Metadata Sample"
-    Application.Executable.Company = "XPPageDeveloper"
-    Application.Executable.Version = "1.2.3.4"
-    Application.Executable.Copyright = "Copyright 2026 XPPageDeveloper"
+    Application.Executable.Product = "XPScript Metadata idea"
+    Application.Executable.Company = "Pelle AB"
+    Application.Executable.Version = "1.2.3.99"
+    Application.Executable.Copyright = "Copyright 2026 Pelle"
 
     Print "ICON=" & CStr(Application.Executable.Icon)
     Print "ICON_ALIAS=" & CStr(Application.Icon)
