@@ -2,7 +2,7 @@ name: Documentation site
 
 on:
   push:
-    branches: [main, docs/astro-foundation]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'docs-site/**'
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   docs-site:
@@ -44,8 +44,8 @@ jobs:
       - name: Verify generated links
         run: npm run docs:links
 
-      - name: Publish branch preview files
-        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/astro-foundation'
+      - name: Prepare documentation preview artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: .
         run: |
           rm -rf docs-preview
@@ -55,9 +55,9 @@ jobs:
           cat > docs-preview/README.md <<'EOF'
           # Generated documentation preview
 
-          This directory is generated from `docs/` by the Astro documentation build on the `docs/astro-foundation` branch.
+          This directory is generated from `docs/` by the Astro documentation build on `main`.
 
-          Do not edit these files manually. They are temporary review output and should be removed before the documentation-site migration is merged.
+          Do not edit these files manually. They are regenerated automatically when documentation sources change.
 
           Useful generated pages:
 
@@ -69,14 +69,10 @@ jobs:
           - `functions/string/strtoken/index.html`
           EOF
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f docs-preview
-
-          if git diff --cached --quiet; then
-            echo "Generated preview is already current."
-            exit 0
-          fi
-
-          git commit -m "Update generated documentation preview"
-          git push origin HEAD:docs/astro-foundation
+      - name: Upload documentation preview artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-preview
+          path: docs-preview
+          if-no-files-found: error

@@ -198,7 +198,7 @@ internal static class NotesDocumentLotusScriptSurfacePostProcessor
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
-            throw new CompilerException("Unable to apply NotesDocument LotusScript surface (" + stage + ").");
+            throw new CompilerException("Unable to apply NotesDocument compatibility surface (" + stage + ").");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }

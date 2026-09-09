@@ -8,7 +8,6 @@ Sub Main()
     Dim db As NotesDatabase
     Dim firstPath As String
     Dim firstTemplateCandidatePath As String
-    Dim recycledName As String
     Dim count As Integer
     Dim failures As Integer
     Dim constantFailures As Integer
@@ -225,17 +224,13 @@ Sub Main()
         Print "INVALID-TYPE=PASS"
     End If
 
+    ' XPscript Recycle follows LotusScript object-variable semantics: the variable becomes Nothing.
     Call directory.Recycle()
-    errCode = 0
-    On Error Resume Next
-    recycledName = directory.Name
-    errCode = Err
-    On Error GoTo 0
-    If errCode <> 91 Then
-        Print "NOTES-DBDIRECTORY=FAIL RECYCLED-NAME=" & CStr(errCode)
-        failures = failures + 1
-    Else
+    If directory Is Nothing Then
         Print "RECYCLE=PASS"
+    Else
+        Print "NOTES-DBDIRECTORY=FAIL RECYCLE-NOT-NOTHING"
+        failures = failures + 1
     End If
 
     Call session.Recycle()

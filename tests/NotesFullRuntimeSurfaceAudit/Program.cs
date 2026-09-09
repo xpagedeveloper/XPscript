@@ -14,6 +14,7 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-agent-types-domino-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-dxl-import-export-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps")
 };
 foreach (var samplePath in samplePaths)
@@ -55,6 +56,7 @@ var classes = new[]
     (Runtime: "XPScriptNotesAgent", Surface: "NotesAgent", Anchor: (string?)null),
     (Runtime: "XPScriptNotesStream", Surface: "NotesStream", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDXLImporter", Surface: "NotesDXLImporter", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDXLExporter", Surface: "NotesDXLExporter", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewNavigator", Surface: "NotesViewNavigator", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntry", Surface: "NotesViewEntry", Anchor: (string?)null),
     (Runtime: "XPScriptNotesViewEntryCollection", Surface: "NotesViewEntryCollection", Anchor: (string?)null),
