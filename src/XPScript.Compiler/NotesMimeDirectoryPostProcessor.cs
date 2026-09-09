@@ -13,6 +13,12 @@ internal sealed partial class XPScriptNotesNativeApi
 {
     private const ushort ErrMimeNoData = 0x3AF9;
 
+    internal bool NoteHasMimePart(nint note)
+    {
+        EnsureInitialized();
+        return Resolve<NSFNoteHasMIMEPartDelegate>("NSFNoteHasMIMEPart")(note) != 0;
+    }
+
     internal nint OpenMimeDirectory(nint note)
     {
         EnsureInitialized();
@@ -114,6 +120,8 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate int NSFNoteHasMIMEPartDelegate(nint note);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEOpenDirectoryDelegate(nint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
