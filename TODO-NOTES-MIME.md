@@ -11,21 +11,22 @@ Branch: `feature/notes-mime-entity`
 - [x] MIME stream writer mirrors the JNX BODY flow through a temporary note, `MIMEStreamItemize(full)`, then copies `Body` and `$file` items
 - [x] Body-only guards for note-level MIME directory access
 - [x] Compile-time Notes MIME surface sample
+- [x] Root-entity `SetContentFromText` writes through the MIME stream/itemize writer
+- [x] Root-entity `SetContentFromBytes` uses the same writeback path
+- [x] Cached MIME directory is invalidated before root itemization so stale native entity handles are closed immediately
+- [x] The mutating root wrapper rebinds to a fresh MIME directory/root entity after successful writeback
+- [x] Save/reopen regression coverage calls `SetContentFromText` with UTF-8 text
+- [x] Regression checks immediate content type/subtype and charset metadata after mutation
+- [x] Regression checks content type/subtype and charset after save/reopen
+- [x] Child-entity mutation remains explicitly unsupported
 
 ## In progress
 
-- [ ] Enable root-entity `SetContentFromText` through the MIME stream/itemize writer
-- [ ] Enable root-entity `SetContentFromBytes` through the same writer
-- [ ] Invalidate the document MIME directory immediately after successful root writeback
-- [ ] Refresh the live root entity after writeback so metadata and charset reads use the new native directory
+- [ ] Review and update API/LLM guidance for the newly supported root mutation behavior
+- [ ] Verify compiler source generation still builds after the new postprocessor stage
 
 ## Remaining
 
-- [ ] Add save/reopen regression coverage for `SetContentFromText`
-- [ ] Verify content type/subtype metadata survives save/reopen
-- [ ] Verify charset survives save/reopen
-- [ ] Verify written text survives save/reopen
-- [ ] Keep child-entity mutation explicitly unsupported until verified per-entity Domino mutation support exists
-- [ ] Update API/LLM guidance if the implemented mutation changes recommended XPscript usage
-- [ ] Run compiler build and MIME sample compile checks
-- [ ] Check branch CI status
+- [ ] Add root content readback support before asserting written body bytes/text after save/reopen
+- [ ] Run the MIME runtime sample against Domino and confirm every PASS/FAIL assertion
+- [ ] Check branch CI status after the final source/doc updates
