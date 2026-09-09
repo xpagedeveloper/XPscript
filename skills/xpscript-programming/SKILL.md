@@ -14,7 +14,7 @@ When syntax or behavior is uncertain, consult these files in this order:
 2. `docs/api-reference.md` — runtime objects and higher-level APIs.
 3. `docs/forall-iteration.md` — the common `ForAll` iterable contract.
 4. `docs/file-io-reference.md` — filesystem and file I/O.
-5. Feature references such as `docs/native-xml.md`, `docs/sqlite.md` and `docs/mssql.md`.
+5. Feature references such as `docs/native-xml.md`, `docs/notes-mime-entity.md`, `docs/sqlite.md` and `docs/mssql.md`.
 6. `samples/*.xps` and `demo/**/*.xps` — executable examples.
 7. Compiler/runtime implementation only when documentation is ambiguous.
 
@@ -123,6 +123,28 @@ Call attr.Delete()
 `XPXmlNodeCollection`, `XPXmlAttributeCollection` and `XPXmlValidationErrorCollection` support `ForAll`. XML collection indexes are zero-based.
 
 Normal XML parsing prohibits DTD processing and external entity resolution. Do not weaken that boundary. Internal DTD validation is available through `ValidateDTD`/`IsValidDTD`, but external `SYSTEM` and `PUBLIC` identifiers remain unsupported.
+
+## Notes MIME
+
+Use `NotesMIMEEntity` only with the currently documented native MIME subset in `docs/notes-mime-entity.md`.
+
+Set `NotesSession.ConvertMIME = False` before opening documents whose MIME `Body` must remain a native MIME item. The current document-level native MIME implementation supports the `Body` item only.
+
+For root content mutation, create or open the root entity, write content to a `NotesStream`, rewind the stream, and call `SetContentFromText` or `SetContentFromBytes` with an explicit content type and charset when text encoding matters:
+
+```xpscript
+Dim stream As NotesStream
+Dim mime As NotesMIMEEntity
+
+Set mime = doc.CreateMIMEEntity("Body")
+Set stream = session.CreateStream()
+stream.Charset = "UTF-8"
+Call stream.WriteText("Hello")
+stream.Position = 0
+Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
+```
+
+Treat child-entity mutation and unverified per-entity content/header members as unsupported. Do not fall back to managed MIME parsing or invent behavior for unsupported members. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The root wrapper performing a successful root content mutation is rebound to the new native root so its metadata can be read immediately.
 
 ## HTTP client security
 
