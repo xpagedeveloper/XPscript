@@ -164,6 +164,7 @@ internal static class CompilerBuildEnvironment
         var version = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildVersionMarker);
         var copyright = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCopyrightMarker);
         var fileDescription = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildFileDescriptionMarker);
+        var comments = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCommentsMarker);
         if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
@@ -174,7 +175,8 @@ internal static class CompilerBuildEnvironment
             escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly)) ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
         }
         var fileDescriptionValue = fileDescription ?? "Application compiled with XPScript";
-        var propertyEntries = $"    <Description>XPScript by XPageDeveloper.com</Description>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
+        var commentsValue = comments ?? "XPScript by XPageDeveloper.com";
+        var propertyEntries = $"    <Description>{EscapeMsBuild(commentsValue)}</Description>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
