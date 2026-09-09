@@ -37,12 +37,12 @@ Branch: `feature/notes-mime-entity`
 - [x] Root readback decodes base64 and quoted-printable transfer encodings and uses the native root charset for text
 - [x] Extended save/reopen regression to assert the actual UTF-8 payload through property and stream readback APIs
 - [x] Updated `docs/notes-mime-entity.md` with root readback behavior and root-only boundary
+- [x] Updated `skills/xpscript-programming/SKILL.md` with the supported root readback pattern and child-content boundary
+- [x] Updated Notes MIME sample compiles successfully in macOS branch CI
 
 ## In progress
 
-- [ ] Confirm the updated Notes MIME sample compiles in branch CI
 - [ ] Run the updated MIME runtime sample against Domino and confirm all new readback PASS assertions
-- [ ] Update the XPscript programming skill with the newly supported root readback pattern
 
 ## Remaining
 
