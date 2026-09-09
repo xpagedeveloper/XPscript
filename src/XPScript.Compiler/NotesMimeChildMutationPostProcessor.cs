@@ -68,7 +68,7 @@ internal static class NotesMimeChildMutationPostProcessor
             "Content-Transfer-Encoding: 8bit\r\n\r\n"));
 
         var multipart = BuildMultipartRoot(rootHeaders, boundary, children);
-        RewriteMimeTree(multipart, insertAt);
+        RewriteMimeTree(multipart, -1);
         return WrapDirectChild(insertAt);
     }
 """;
