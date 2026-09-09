@@ -62,16 +62,17 @@ Branch: `feature/notes-mime-entity`
 - [x] Added direct-child `GetNthHeader(name[, occurrence])`
 - [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
 - [x] Domino runtime showed the bounded root-stream child header reader cannot see itemized child headers after save/reopen
-- [x] Added native `MIMEGetEntityData(..., MIME_ENTITY_DATA_HEADERS, ...)` ABI and directory-owner bridge for per-entity header readback
-- [x] Routed direct-child `GetNthHeader` and `NotesMIMEHeader` value access through native entity header data
-- [x] Domino rerun confirmed native child-header lookup still returned no matching headers
-- [x] Corrected the `MIMEGetEntityData` selector from `1` to `2` for `MIME_ENTITY_DATA_HEADERS`; selector `1` was reading entity body data instead of headers
+- [x] Added native `MIMEGetEntityData` ABI and directory-owner bridge for per-entity readback
+- [x] Routed direct-child `GetNthHeader` and `NotesMIMEHeader` value access through native entity data
+- [x] Domino reruns confirmed hard-coded entity-data selectors still returned no matching child headers
+- [x] HCL public C API docs confirm four `MIME_ENTITY_DATA_*` modes but do not expose their numeric values
+- [x] Native child-header readback now probes the bounded selector range and selects only entity data containing actual MIME header fields
 
 ## In progress
 
-- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through corrected native direct-child `GetNthHeader`
-- [ ] Confirm `Content-Disposition` and filename after save/reopen through corrected native direct-child `GetNthHeader`
-- [ ] Confirm the corrected native entity-header reader compiles in branch CI
+- [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through selector-probed native direct-child `GetNthHeader`
+- [ ] Confirm `Content-Disposition` and filename after save/reopen through selector-probed native direct-child `GetNthHeader`
+- [ ] Confirm selector-probed native entity-header reader compiles in branch CI
 
 ## Remaining
 
