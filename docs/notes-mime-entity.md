@@ -53,46 +53,13 @@ XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRea
 
 Supported transfer decoding includes `base64`, `quoted-printable`, `7bit`, `8bit` and `binary` content. A root entity with no charset is decoded as UTF-8.
 
-Example:
-
-```xpscript
-Print mime.ContentAsText
-
-Dim stream As NotesStream
-Set stream = session.CreateStream()
-stream.Charset = "UTF-8"
-Call mime.GetContentAsText(stream)
-stream.Position = 0
-Print stream.ReadText()
-```
-
-These readback members are root-only. Child entity content access remains unsupported until verified Domino per-entity data access is implemented.
-
 ## Root mutation
 
 `SetContentFromText(stream, contentType, encoding)` and `SetContentFromBytes(stream, contentType, encoding)` support the root entity.
 
 The runtime writes a complete MIME stream to a temporary note, itemizes it with the Domino MIME stream API, removes the previous target items, then copies the generated `Body` and `$file` items to the destination note. This follows the existing JNX-style BODY writeback path used by XPscript.
 
-Example:
-
-```xpscript
-Dim stream As NotesStream
-
-Set stream = session.CreateStream()
-stream.Charset = "UTF-8"
-Call stream.WriteText("Hello from XPscript")
-stream.Position = 0
-
-Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
-
-Print mime.ContentType
-Print mime.ContentSubType
-Print mime.Charset
-Print mime.ContentAsText
-```
-
-`SetContentFromText` reads from the stream's current position. Rewind the stream when the content was just written to it.
+`SetContentFromText` and `SetContentFromBytes` read from the stream's current position. Rewind the stream when the content was just written to it.
 
 The content type value must not contain CR or LF characters. An empty content type falls back to `application/octet-stream`.
 
@@ -103,18 +70,55 @@ The currently supported transfer-encoding mappings are:
 - `1727`: `base64`
 - `1730`: `binary`
 
+## Multipart/mixed and attachments
+
+The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
+
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, and `NotesMIMEHeader.SetHeaderVal`. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
+
+Example creating a base64 attachment from `NotesStream`:
+
+```xpscript
+Dim body As NotesMIMEEntity
+Dim textPart As NotesMIMEEntity
+Dim attachment As NotesMIMEEntity
+Dim disposition As NotesMIMEHeader
+Dim stream As NotesStream
+
+Set body = doc.CreateMIMEEntity("Body")
+
+Set textPart = body.CreateChildEntity()
+Set stream = session.CreateStream()
+stream.Charset = "UTF-8"
+Call stream.WriteText("Message body")
+stream.Position = 0
+Call textPart.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
+Call stream.Truncate()
+
+Set attachment = body.CreateChildEntity()
+Call stream.WriteText("attachment bytes")
+stream.Position = 0
+Call attachment.SetContentFromBytes(stream, "application/octet-stream; name=""probe.txt""", 1727)
+Set disposition = attachment.CreateHeader("Content-Disposition")
+Call disposition.SetHeaderVal("attachment; filename=""probe.txt""")
+```
+
+Encoding `1727` writes the child body using MIME base64 transfer encoding. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
+
+The current mutation implementation supports direct children of the root entity. Nested child-parent mutation is not yet implemented.
+
 ## MIME directory lifetime
 
-A write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before root writeback. Existing child and sibling wrappers that reference the old directory become invalid immediately.
+Any MIME write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before writeback. Existing wrappers that reference the old directory become invalid immediately.
 
-The root wrapper that performs `SetContentFromText` or `SetContentFromBytes` reopens the MIME directory after a successful write and rebinds itself to the new root entity. Its metadata and root readback members therefore observe the new MIME content immediately.
+The wrapper performing a successful root or direct-child content/header mutation reopens the MIME directory and rebinds itself to the corresponding native entity so metadata reads immediately observe the new MIME content.
 
 `NotesDocument.CloseMIMEEntities()` closes the current MIME directory explicitly. `NotesDocument.Save()` and document recycle also release the directory before their native operation.
 
 ## Current boundary
 
-Child-entity content readback and mutation are intentionally unsupported until verified Domino per-entity data and mutation support is implemented. Root header mutation and other unverified per-entity header members also remain unsupported.
+Root content readback and direct-root-child mutation are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
 
-Do not assume the managed MIME parser behavior from earlier prototypes. Root readback performs only the bounded RFC822 framing and transfer decoding required for the native root MIME stream.
+Do not assume the managed MIME parser behavior from earlier prototypes. Multipart mutation uses bounded RFC822 header/boundary framing around the Domino-native MIME directory and the established MIME stream/itemize writeback path.
 
-See `samples/notes-mime-entity-surface.xps` for the executable create, mutate, readback, save/reopen, metadata, charset and traversal regression probe.
+See `samples/notes-mime-entity-surface.xps` for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.
