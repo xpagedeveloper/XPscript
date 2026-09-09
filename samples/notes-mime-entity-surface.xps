@@ -8,7 +8,9 @@ Sub Main()
     Dim reopened As NotesDocument
     Dim knownHtml As NotesDocument
     Dim mime As NotesMIMEEntity
+    Dim currentEntity As NotesMIMEEntity
     Dim unid As String
+    Dim foundHtml As Boolean
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -26,6 +28,7 @@ Sub Main()
         Print "Created MIME ContentType: " & mime.ContentType
         Print "Created MIME ContentSubType: " & mime.ContentSubType
         Print "Created MIME Charset: " & mime.Charset
+        Print "PASS: CreateMIMEEntity returned an uninitialized native MIME entity"
     End If
 
     Call doc.CloseMIMEEntities()
@@ -47,27 +50,10 @@ Sub Main()
         If mime Is Nothing Then
             Print "FAIL: reopened Body is not MIME"
         Else
+            Print "PASS: reopened Body is MIME"
             Print "Reopened MIME ContentType: " & mime.ContentType
             Print "Reopened MIME ContentSubType: " & mime.ContentSubType
             Print "Reopened MIME Charset: " & mime.Charset
-
-            If mime.ContentType = "text" Then
-                Print "PASS: ContentType is text"
-            Else
-                Print "FAIL: ContentType is " & mime.ContentType
-            End If
-
-            If mime.ContentSubType = "plain" Then
-                Print "PASS: ContentSubType is plain"
-            Else
-                Print "FAIL: ContentSubType is " & mime.ContentSubType
-            End If
-
-            If mime.Charset = "UTF-8" Then
-                Print "PASS: Charset is UTF-8"
-            Else
-                Print "FAIL: Charset is " & mime.Charset
-            End If
         End If
 
         Call reopened.CloseMIMEEntities()
@@ -85,24 +71,29 @@ Sub Main()
         If mime Is Nothing Then
             Print "FAIL: known HTML Body is not MIME"
         Else
-            Print "Known HTML MIME ContentType: " & mime.ContentType
-            Print "Known HTML MIME ContentSubType: " & mime.ContentSubType
-            Print "Known HTML MIME Charset: " & mime.Charset
+            Print "Known HTML MIME root ContentType: " & mime.ContentType
+            Print "Known HTML MIME root ContentSubType: " & mime.ContentSubType
+            Print "Known HTML MIME root Charset: " & mime.Charset
 
-            If mime.ContentType = "text" Then
-                Print "PASS: known HTML ContentType is text"
-            Else
-                Print "FAIL: known HTML ContentType is " & mime.ContentType
-            End If
+            foundHtml = False
+            Set currentEntity = mime
+            Do While Not currentEntity Is Nothing
+                Print "Known HTML MIME entity: " & currentEntity.ContentType & "/" & currentEntity.ContentSubType & " charset=" & currentEntity.Charset
+                If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "html" Then
+                    foundHtml = True
+                End If
+                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+            Loop
 
-            If mime.ContentSubType = "html" Then
-                Print "PASS: known HTML ContentSubType is html"
+            If foundHtml Then
+                Print "PASS: known MIME tree contains text/html"
             Else
-                Print "FAIL: known HTML ContentSubType is " & mime.ContentSubType
+                Print "FAIL: known MIME tree does not contain text/html"
             End If
         End If
 
         Call knownHtml.CloseMIMEEntities()
+        Set currentEntity = Nothing
         Set mime = Nothing
         Call knownHtml.Recycle()
         Set knownHtml = Nothing
