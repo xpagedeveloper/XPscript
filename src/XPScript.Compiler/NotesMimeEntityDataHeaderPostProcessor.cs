@@ -81,10 +81,10 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     internal byte[] GetMimeEntityHeaders(uint note, nint entity)
     {
         EnsureInitialized();
-        // HCL mimedir.h MIME_ENTITY_DATA_HEADERS. MIMEGetEntityData returns the
-        // selected entity's headers in original MIME encoding and allocates a
-        // DHANDLE for each requested chunk.
-        const ushort mimeEntityDataHeaders = 1;
+        // HCL mimedir.h MIME_ENTITY_DATA_HEADERS selects the entity headers.
+        // MIMEGetEntityData returns the selected entity data in original MIME
+        // encoding and allocates a DHANDLE for each requested chunk.
+        const ushort mimeEntityDataHeaders = 2;
         const uint chunkSize = 60000;
         using var output = new MemoryStream();
         uint offset = 0;
