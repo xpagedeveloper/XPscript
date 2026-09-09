@@ -13,7 +13,7 @@ internal static class NotesMimeDocumentLifecyclePostProcessor
 
         source = ReplaceRequired(source,
             "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!Session.Api.IsMimeItem(_handle, itemName)) return null;\n        return XPScriptNotesMIMEEntity.Open(Session, this, itemName);",
-            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"NotesDocument.GetMIMEEntity currently supports the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.\");\n        if (!Session.Api.IsMimeItem(_handle, itemName)) return null;\n        return XPScriptNotesMIMEEntity.Open(Session, this, itemName);",
+            "        if (itemName.Length == 0) itemName = \"Body\";\n        if (!string.Equals(itemName, \"Body\", System.StringComparison.OrdinalIgnoreCase))\n            throw new System.NotSupportedException(\"NotesDocument.GetMIMEEntity currently supports the Body item only; MIMEOpenDirectory is note-level and does not accept an item name.\");\n        var mimeItem = GetFirstItem(itemName);\n        if (mimeItem is null) return null;\n        return mimeItem.GetMIMEEntity();",
             "document-get-mime-body-only");
 
         source = ReplaceRequired(source,
