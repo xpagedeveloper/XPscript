@@ -88,11 +88,13 @@ internal static class LSControlRuntime
         // statement and therefore must not leave an explicit Resume frame.
         if (context.ResumeNext)
         {
+            XPScriptDebugRuntime.Exception(normalized, sourceLine, handled: true);
             XPScriptRuntimeDebugTrace.TraceHandled(exception, normalized, sourceLine);
             return -1;
         }
 
         var handler = context.SpecificHandlers.TryGetValue(number, out var specific) ? specific : context.GeneralHandler;
+        XPScriptDebugRuntime.Exception(normalized, sourceLine, handled: handler != 0);
         if (handler != 0)
         {
             XPScriptRuntimeDebugTrace.TraceHandled(exception, normalized, sourceLine);
