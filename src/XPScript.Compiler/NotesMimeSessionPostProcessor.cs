@@ -11,10 +11,20 @@ internal static class NotesMimeSessionPostProcessor
             "    public string Platform { get; }\n    public bool ConvertMIME { get; set; } = true;\n    public bool IsRecycled => _recycled;",
             "session-convert-mime");
 
+        // JNX does not open a note normally and then convert MIME afterwards.
+        // It controls conversion at NSFNoteOpen time: when MIME should remain MIME,
+        // OPEN_RAW_MIME_PART (0x02000000) is passed to NSFNoteOpenExt / the UNID
+        // equivalent. Without that flag Domino may convert TYPE_MIME_PART to
+        // TYPE_COMPOSITE before the caller ever sees the Body item.
         source = ReplaceRequired(source,
-            "        _handle = handle;\n        NoteId = noteId;",
-            "        _handle = handle;\n        NoteId = noteId;\n        if (handle != 0 && session.ConvertMIME)\n            Session.Api.ConvertMimePartsToComposite(checked((uint)handle));",
-            "document-open-convert-mime");
+            "        var note = Session.Api.TryOpenNote(_handle, noteId);",
+            "        var note = Session.Api.TryOpenNote(_handle, noteId, !Session.ConvertMIME);",
+            "document-open-by-noteid-mime-mode");
+
+        source = ReplaceRequired(source,
+            "        var note = Session.Api.TryOpenNoteByUnid(_handle, unid);",
+            "        var note = Session.Api.TryOpenNoteByUnid(_handle, unid, !Session.ConvertMIME);",
+            "document-open-by-unid-mime-mode");
 
         return source + "\n\n" + NativeRuntime;
     }
@@ -22,25 +32,42 @@ internal static class NotesMimeSessionPostProcessor
     private const string NativeRuntime = """
 internal sealed partial class XPScriptNotesNativeApi
 {
-    internal void ConvertMimePartsToComposite(uint note)
+    private const uint OpenRawMimePart = 0x02000000u;
+
+    internal nint TryOpenNote(nint db, uint noteId, bool rawMime)
     {
         EnsureInitialized();
-        if (!HasMimePart(note)) return;
-        Check(Resolve<MIMEConvertMIMEPartsCCDelegate>("MIMEConvertMIMEPartsCC")(note, 0, 0), "MIMEConvertMIMEPartsCC");
+        if (!rawMime) return TryOpenNote(db, noteId);
+
+        var status = Resolve<NSFNoteOpenExtMimeDelegate>("NSFNoteOpenExt")(
+            db, noteId, OpenRawMimePart, out var note);
+        if (status == 0) return note;
+        var message = LoadStatusText(status);
+        if (IsMissingNoteStatus(message)) return 0;
+        Check(status, "NSFNoteOpenExt(OPEN_RAW_MIME_PART)");
+        return 0;
     }
 
-    private bool HasMimePart(uint note)
+    internal nint TryOpenNoteByUnid(nint db, string text, bool rawMime)
     {
-        foreach (var name in GetItemNames(note))
-        {
-            if (!TryGetFirstItemInfo(note, name, out var info)) continue;
-            if (info.DataType == NotesTypeMimePart) return true;
-        }
-        return false;
+        EnsureInitialized();
+        if (!rawMime) return TryOpenNoteByUnid(db, text);
+
+        var unid = ParseUnid(text);
+        var status = Resolve<NSFNoteOpenByUnidExtendedMimeDelegate>("NSFNoteOpenByUNIDExtended")(
+            db, ref unid, OpenRawMimePart, out var note);
+        if (status == 0) return note;
+        var message = LoadStatusText(status);
+        if (IsMissingNoteStatus(message)) return 0;
+        Check(status, "NSFNoteOpenByUNIDExtended(OPEN_RAW_MIME_PART)");
+        return 0;
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEConvertMIMEPartsCCDelegate(uint note, int canonical, nint conversionControls);
+    private delegate ushort NSFNoteOpenExtMimeDelegate(nint db, uint noteId, uint flags, out nint note);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort NSFNoteOpenByUnidExtendedMimeDelegate(nint db, ref XPScriptNotesUnid unid, uint flags, out nint note);
 }
 """;
 
