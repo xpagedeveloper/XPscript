@@ -71,6 +71,15 @@ internal static class XPScriptDebugRuntime
     private const int MaxTrackedValueChars = 2048;
     private const int MaxHistoryCharsPerVariable = 32768;
 
+    public static bool IsEnabled
+    {
+        get
+        {
+            EnsureInitialized();
+            return _enabled;
+        }
+    }
+
     public static void Statement(string sourcePath, int line)
     {
         if (line <= 0) return;
