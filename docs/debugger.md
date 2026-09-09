@@ -25,13 +25,22 @@ The runtime protocol currently supports:
 - mapped call stack frames
 - disconnect
 - source path and line reporting
+- observed values for the Variables view
 - bounded value-change history
 
 Stepping is call-depth aware. The runtime derives mapped XPscript stack frames from portable PDB sequence points and source directives. `StepOver` stops when execution returns to the same or a shallower XPscript call depth. `StepOut` stops after the current XPscript procedure has returned.
 
+## Observed locals
+
+The VS Code adapter exposes tracked scalar values in the Variables panel. These are debugger-observed values rather than CLR reflection over generated implementation details.
+
+Each observed variable can be expanded to show its recorded value changes. The same tracked value can also be evaluated from hover or the Debug Console.
+
+The compiler currently instruments conservative simple scalar assignments. Complex assignments, indexed array writes, property setters, object mutation and ByRef mutation are intentionally not instrumented yet because they require dedicated semantic hooks.
+
 ## Value history
 
-The debugger contains a bounded value-history recorder. It keeps the latest 20 observed changes for each tracked variable. Each entry contains:
+The debugger contains a bounded value-history recorder. It keeps at most the latest 20 observed changes for each tracked variable. Each entry contains:
 
 - variable name
 - previous rendered value
@@ -42,7 +51,15 @@ The debugger contains a bounded value-history recorder. It keeps the latest 20 o
 - UTC timestamp
 - monotonic change sequence
 
-The compiler currently instruments conservative simple scalar assignments. Complex assignments, indexed array writes, property setters, object mutation and ByRef mutation are intentionally not instrumented yet because they require dedicated semantic hooks.
+Value snapshots are explicitly memory bounded:
+
+- a rendered snapshot is limited to 1,024 characters
+- larger values keep a prefix plus type, original character count and SHA-256 fingerprint
+- byte arrays are stored only as byte length plus SHA-256 fingerprint
+- all history entries share a global character budget of 262,144 characters
+- when the total budget is exceeded, the oldest history entries are evicted first
+
+This means a large file or payload is not retained 20 times merely because the tracked variable changes repeatedly. The debugger records enough metadata to identify that the value changed without retaining the complete content.
 
 In the VS Code Debug Console, use either form while execution is stopped:
 
