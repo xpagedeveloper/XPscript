@@ -174,7 +174,7 @@ internal static class CompilerBuildEnvironment
             escapedAssembly = SecurityElement.Escape(Path.GetFullPath(desktopAssembly)) ?? throw new CompilerException("Desktop UI runtime assembly path could not be encoded.");
         }
         var description = fileDescription ?? "Application compiled with XPScript";
-        var propertyEntries = $"    <Description>{EscapeMsBuild(description)}</Description>\n";
+        var propertyEntries = $"    <Description>{EscapeMsBuild(description)}</Description>\n    <AssemblyTitle>{EscapeMsBuild(description)}</AssemblyTitle>\n";
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
