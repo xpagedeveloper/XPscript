@@ -66,9 +66,11 @@ Branch: `feature/notes-mime-entity`
 - [x] Replaced heuristic `MIMEGetEntityData` child-header readback with native `MIMEEntityGetHeader(PMIMEENTITY, MIMESYMBOL)`
 - [x] Native `GetNthHeader` now targets the actual child entity and the verified HCL header symbols
 - [x] Documentation now states the verified direct-child header lookup boundary
+- [x] Fixed `MIMEEntityGetHeader` postprocessor compile anchor so it matches the actual bounded child-header reader present at that stage
 
 ## In progress
 
+- [ ] Confirm the Notes MIME surface sample compiles after the postprocessor anchor fix
 - [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through `MIMEEntityGetHeader`
 - [ ] Confirm `Content-Disposition` and filename after save/reopen through `MIMEEntityGetHeader`
 - [ ] Confirm the new native header ABI compiles in branch CI
