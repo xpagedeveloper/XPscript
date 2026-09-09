@@ -13,7 +13,7 @@ internal sealed partial class XPScriptNotesNativeApi
 {
     private const ushort ErrMimeNoData = 0x3AF9;
 
-    internal nint OpenMimeDirectory(uint note)
+    internal nint OpenMimeDirectory(nint note)
     {
         EnsureInitialized();
         Check(Resolve<MIMEOpenDirectoryDelegate>("MIMEOpenDirectory")(note, out var directory), "MIMEOpenDirectory");
@@ -115,7 +115,7 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    private delegate ushort MIMEOpenDirectoryDelegate(uint note, out nint directory);
+    private delegate ushort MIMEOpenDirectoryDelegate(nint note, out nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEFreeDirectoryDelegate(nint directory);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
