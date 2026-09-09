@@ -12,6 +12,26 @@ internal static class NotesMimeRootMutationPostProcessor
             "mutable root MIME directory binding");
 
         source = ReplaceRequired(source,
+            "    public string ContentAsText { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.ContentAsText requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\"); } }",
+            "    public string ContentAsText { get { EnsureEntityAlive(); return ReadRootText(\"ContentAsText\"); } }",
+            "root ContentAsText");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetContentAsBytes requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\");",
+            "        stream.Write(ReadRootContent(\"GetContentAsBytes\"));",
+            "root GetContentAsBytes");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetContentAsText requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\");",
+            "        stream.WriteText(ReadRootText(\"GetContentAsText\"));",
+            "root GetContentAsText");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetEntityAsText requires verified Domino per-entity RFC822 data access; the root MIME stream is intentionally not returned for child entities.\");",
+            "        stream.Write(ReadRootEntity(\"GetEntityAsText\"));",
+            "root GetEntityAsText");
+
+        source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.SetContentFromText requires verified Domino per-entity content mutation support; managed MIME serialization is intentionally not used.\");",
             "        WriteRootContent((byte[])stream.Read(), XPScriptRuntime.CStr(contentTypeValue), XPScriptRuntime.CInt(encodingValue), \"SetContentFromText\");",
             "root SetContentFromText");
@@ -30,11 +50,132 @@ internal static class NotesMimeRootMutationPostProcessor
     }
 
     private const string RootMutationHelpers = """
-    private void WriteRootContent(byte[] data, string contentType, int encoding, string member)
+    private void EnsureRootEntity(string member)
     {
         EnsureEntityAlive();
         if (_nativeEntity != _mimeDirectoryOwner.RootEntity)
-            throw new System.NotSupportedException("NotesMIMEEntity." + member + " currently supports the root entity only; verified Domino child-entity mutation support is not available.");
+            throw new System.NotSupportedException("NotesMIMEEntity." + member + " currently supports the root entity only; verified Domino child-entity content access is not available.");
+    }
+
+    private byte[] ReadRootEntity(string member)
+    {
+        EnsureRootEntity(member);
+        return Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+    }
+
+    private byte[] ReadRootContent(string member)
+    {
+        var raw = ReadRootEntity(member);
+        var bodyOffset = FindRootBodyOffset(raw);
+        var body = bodyOffset >= raw.Length ? [] : raw[bodyOffset..];
+        var transferEncoding = GetRootHeader(raw, bodyOffset, "Content-Transfer-Encoding").Trim();
+
+        if (transferEncoding.Equals("base64", StringComparison.OrdinalIgnoreCase))
+        {
+            try { return Convert.FromBase64String(System.Text.Encoding.ASCII.GetString(body)); }
+            catch (FormatException ex) { throw new XPScriptRuntimeException(5, "Invalid base64 MIME root content: " + ex.Message); }
+        }
+
+        if (transferEncoding.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase))
+            return DecodeRootQuotedPrintable(body);
+
+        return body;
+    }
+
+    private string ReadRootText(string member)
+    {
+        var content = ReadRootContent(member);
+        var charset = _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_CHARSET).Trim();
+        if (charset.Length == 0) return System.Text.Encoding.UTF8.GetString(content);
+        try { return System.Text.Encoding.GetEncoding(charset).GetString(content); }
+        catch (ArgumentException ex) { throw new XPScriptRuntimeException(5, "Unsupported MIME root charset '" + charset + "': " + ex.Message); }
+    }
+
+    private static int FindRootBodyOffset(byte[] raw)
+    {
+        for (var i = 0; i + 3 < raw.Length; i++)
+            if (raw[i] == 13 && raw[i + 1] == 10 && raw[i + 2] == 13 && raw[i + 3] == 10)
+                return i + 4;
+
+        for (var i = 0; i + 1 < raw.Length; i++)
+            if (raw[i] == 10 && raw[i + 1] == 10)
+                return i + 2;
+
+        return raw.Length;
+    }
+
+    private static string GetRootHeader(byte[] raw, int bodyOffset, string name)
+    {
+        var headerLength = Math.Max(0, Math.Min(raw.Length, bodyOffset));
+        var text = System.Text.Encoding.Latin1.GetString(raw, 0, headerLength)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        var currentName = "";
+        var currentValue = new System.Text.StringBuilder();
+
+        foreach (var line in text.Split('\n'))
+        {
+            if ((line.StartsWith(' ') || line.StartsWith('\t')) && currentName.Length > 0)
+            {
+                currentValue.Append(' ').Append(line.Trim());
+                continue;
+            }
+
+            if (currentName.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return currentValue.ToString();
+
+            var colon = line.IndexOf(':');
+            if (colon <= 0)
+            {
+                currentName = "";
+                currentValue.Clear();
+                continue;
+            }
+
+            currentName = line[..colon].Trim();
+            currentValue.Clear();
+            currentValue.Append(line[(colon + 1)..].Trim());
+        }
+
+        return currentName.Equals(name, StringComparison.OrdinalIgnoreCase) ? currentValue.ToString() : "";
+    }
+
+    private static byte[] DecodeRootQuotedPrintable(byte[] input)
+    {
+        using var output = new MemoryStream();
+        for (var i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '=' && i + 1 < input.Length && (input[i + 1] == '\r' || input[i + 1] == '\n'))
+            {
+                if (input[i + 1] == '\r' && i + 2 < input.Length && input[i + 2] == '\n') i += 2;
+                else i++;
+                continue;
+            }
+
+            if (input[i] == '=' && i + 2 < input.Length && TryRootHex(input[i + 1], out var hi) && TryRootHex(input[i + 2], out var lo))
+            {
+                output.WriteByte((byte)((hi << 4) | lo));
+                i += 2;
+                continue;
+            }
+
+            output.WriteByte(input[i]);
+        }
+        return output.ToArray();
+    }
+
+    private static bool TryRootHex(byte value, out int result)
+    {
+        if (value >= '0' && value <= '9') { result = value - '0'; return true; }
+        if (value >= 'A' && value <= 'F') { result = value - 'A' + 10; return true; }
+        if (value >= 'a' && value <= 'f') { result = value - 'a' + 10; return true; }
+        result = 0;
+        return false;
+    }
+
+    private void WriteRootContent(byte[] data, string contentType, int encoding, string member)
+    {
+        EnsureRootEntity(member);
 
         contentType = contentType.Trim();
         if (contentType.Length == 0) contentType = "application/octet-stream";
