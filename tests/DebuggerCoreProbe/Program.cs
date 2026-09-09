@@ -69,8 +69,15 @@ if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ord
     throw new Exception("Exception breakpoint protocol command is missing.");
 if (!generated.Contains("case \"debuggerVariables\"", StringComparison.Ordinal))
     throw new Exception("Debugger variable scope protocol command is missing.");
-if (!generated.Contains("PollRunningCommand", StringComparison.Ordinal) || !generated.Contains("_pauseRequested", StringComparison.Ordinal))
-    throw new Exception("Cooperative asynchronous Pause support is missing.");
+if (!generated.Contains("XPscript Debugger Command Reader", StringComparison.Ordinal) ||
+    !generated.Contains("ConcurrentQueue<PendingCommand>", StringComparison.Ordinal) ||
+    !generated.Contains("CommandSignal", StringComparison.Ordinal) ||
+    !generated.Contains("_pauseRequested", StringComparison.Ordinal))
+    throw new Exception("Single-reader asynchronous debugger command transport is missing.");
+if (generated.Contains("PollRunningCommand", StringComparison.Ordinal))
+    throw new Exception("Debugger runtime must not poll/read the socket from the XPscript execution thread.");
+if (!generated.Contains("commandTransport = \"single-reader\"", StringComparison.Ordinal))
+    throw new Exception("Debugger hello frame does not identify the single-reader command transport.");
 if (!generated.Contains("XPScriptDebugRuntime.Exception(normalized", StringComparison.Ordinal))
     throw new Exception("XPscript runtime exceptions are not connected to debugger breakpoints.");
 if (!generated.Contains("MaxTrackedValueChars = 2048", StringComparison.Ordinal))
