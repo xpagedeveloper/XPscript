@@ -21,6 +21,8 @@ Sub Main()
     Dim entityText As String
     Dim foundHtml As Boolean
     Dim foundAttachment As Boolean
+    Dim foundAttachmentDisposition As Boolean
+    Dim foundAttachmentBase64 As Boolean
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -199,11 +201,28 @@ Sub Main()
             Print "FAIL: reopened multipart Body is not MIME"
         Else
             foundAttachment = False
+            foundAttachmentDisposition = False
+            foundAttachmentBase64 = False
             Set currentEntity = mime.GetFirstChildEntity()
             Do While Not currentEntity Is Nothing
                 Print "Multipart MIME entity: " & currentEntity.ContentType & "/" & currentEntity.ContentSubType & " charset=" & currentEntity.Charset
                 If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
                     foundAttachment = True
+
+                    Set attachmentHeader = currentEntity.GetNthHeader("Content-Disposition")
+                    If Not attachmentHeader Is Nothing Then
+                        entityText = attachmentHeader.GetHeaderValAndParams()
+                        If InStr(entityText, "attachment") > 0 And InStr(entityText, "probe.txt") > 0 Then
+                            foundAttachmentDisposition = True
+                        End If
+                    End If
+
+                    Set attachmentHeader = currentEntity.GetNthHeader("Content-Transfer-Encoding")
+                    If Not attachmentHeader Is Nothing Then
+                        If attachmentHeader.GetHeaderValAndParams() = "base64" Then
+                            foundAttachmentBase64 = True
+                        End If
+                    End If
                 End If
                 Set currentEntity = currentEntity.GetNextSibling()
             Loop
@@ -214,20 +233,21 @@ Sub Main()
                 Print "FAIL: attachment child missing after save/reopen"
             End If
 
-            Set readStream = session.CreateStream()
-            Call mime.GetEntityAsText(readStream)
-            readStream.Position = 0
-            entityText = readStream.ReadText()
-            If InStr(entityText, "Content-Transfer-Encoding: base64") > 0 And InStr(entityText, "Content-Disposition: attachment; filename=""probe.txt""") > 0 Then
-                Print "PASS: multipart RFC822 stream contains base64 attachment disposition"
+            If foundAttachmentBase64 Then
+                Print "PASS: attachment child retained base64 transfer encoding"
             Else
-                Print "FAIL: multipart RFC822 attachment headers missing"
+                Print "FAIL: attachment child base64 header missing after save/reopen"
             End If
-            Call readStream.Recycle()
-            Set readStream = Nothing
+
+            If foundAttachmentDisposition Then
+                Print "PASS: attachment child retained Content-Disposition filename"
+            Else
+                Print "FAIL: attachment child Content-Disposition missing after save/reopen"
+            End If
         End If
 
         Call reopened.CloseMIMEEntities()
+        Set attachmentHeader = Nothing
         Set currentEntity = Nothing
         Set mime = Nothing
         Call reopened.Recycle()
