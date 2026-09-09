@@ -45,5 +45,11 @@ if (!generated.Contains("XPScriptDebugRuntime.TrackValue(\"answer\", answer);", 
     throw new Exception("Simple scalar assignments were not instrumented for debugger value history.");
 if (!generated.Contains("XPSourceLineRuntime.Set(", StringComparison.Ordinal))
     throw new Exception("Debugger source-line mapping was not emitted.");
+if (!generated.Contains("ValueSnapshotCharacterLimit = 1024", StringComparison.Ordinal))
+    throw new Exception("Debugger value snapshots are not bounded.");
+if (!generated.Contains("TotalHistoryCharacterBudget = 262144", StringComparison.Ordinal))
+    throw new Exception("Debugger value history does not expose a total memory budget.");
+if (!generated.Contains("sha256=", StringComparison.Ordinal))
+    throw new Exception("Large debugger values do not retain a compact content fingerprint.");
 
 Console.WriteLine("DebuggerCoreProbe passed.");
