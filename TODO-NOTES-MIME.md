@@ -39,10 +39,13 @@ Branch: `feature/notes-mime-entity`
 - [x] Updated `docs/notes-mime-entity.md` with root readback behavior and root-only boundary
 - [x] Updated `skills/xpscript-programming/SKILL.md` with the supported root readback pattern and child-content boundary
 - [x] Updated Notes MIME sample compiles successfully in macOS branch CI
-
-## In progress
-
-- [ ] Run the updated MIME runtime sample against Domino and confirm all new readback PASS assertions
+- [x] Updated Domino runtime regression completed with exit code 0
+- [x] Immediate root `ContentAsText` verified against the mutated UTF-8 payload
+- [x] Save/reopen root `ContentAsText` verified against the UTF-8 payload
+- [x] Save/reopen `GetContentAsText` verified against the UTF-8 payload
+- [x] Save/reopen `GetContentAsBytes` verified against the UTF-8 payload
+- [x] Save/reopen `GetEntityAsText` verified to return root RFC822 data with MIME headers
+- [x] Existing multipart MIME traversal still verifies `text/html; charset=UTF-8` after the readback changes
 
 ## Remaining
 
