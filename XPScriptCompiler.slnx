@@ -13,4 +13,5 @@
   <Project Path="tests/WebRestApiSmoke/WebRestApiSmoke.csproj" />
   <Project Path="tests/CompileFolderProbe/CompileFolderProbe.csproj" />
   <Project Path="tests/StateScopeObjectProbe/StateScopeObjectProbe.csproj" />
+  <Project Path="tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj" />
 </Solution>
