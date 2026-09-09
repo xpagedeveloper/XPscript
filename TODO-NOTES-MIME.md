@@ -53,10 +53,12 @@ Branch: `feature/notes-mime-entity`
 - [x] Added bounded post-cleanup child-header bridge without restoring the old managed MIME parser
 - [x] Regression refreshes the root wrapper after child writeback before further root operations
 - [x] Updated Notes MIME attachment sample passes macOS `Compile Notes MIME surface`
+- [x] Domino attachment probe identified `MIMEStreamOpen(read)` status `0x3AF9` on a newly-created empty `TYPE_MIME_PART`
+- [x] `CreateChildEntity` now treats `ERR_MIME_NO_DATA (0x3AF9)` on a non-multipart new root as an empty bootstrap state and promotes it to `multipart/mixed`
 
 ## In progress
 
-- [ ] Run the multipart attachment regression against Domino and verify save/reopen traversal
+- [ ] Re-run the multipart attachment regression against Domino and verify child creation, base64 attachment headers and save/reopen traversal
 
 ## Remaining
 
