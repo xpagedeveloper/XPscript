@@ -1,0 +1,99 @@
+Option Declare
+
+Sub Main()
+    Console.Title = "XPScript Console API v1 test"
+    Console.Clear()
+
+    Console.ForegroundColor = "Cyan"
+    Console.BackgroundColor = "Black"
+    Console.WriteLine("XPScript Console API v1")
+    Console.WriteLine("========================")
+    Console.ResetColor()
+
+    Console.WriteLine("Console properties:")
+    Console.WriteLine("  ForegroundColor=" & Console.ForegroundColor)
+    Console.WriteLine("  BackgroundColor=" & Console.BackgroundColor)
+    Console.WriteLine("  CursorLeft=" & CStr(Console.CursorLeft))
+    Console.WriteLine("  CursorTop=" & CStr(Console.CursorTop))
+    Console.WriteLine("  CursorVisible=" & CStr(Console.CursorVisible))
+    Console.WriteLine("  WindowWidth=" & CStr(Console.WindowWidth))
+    Console.WriteLine("  WindowHeight=" & CStr(Console.WindowHeight))
+    Console.WriteLine("  Title=" & Console.Title)
+    Console.WriteLine("  KeyAvailable=" & CStr(Console.KeyAvailable))
+    Console.WriteLine("  IsInputRedirected=" & CStr(Console.IsInputRedirected))
+    Console.WriteLine("  IsOutputRedirected=" & CStr(Console.IsOutputRedirected))
+    Console.WriteLine("  IsErrorRedirected=" & CStr(Console.IsErrorRedirected))
+    Console.WriteLine()
+
+    Console.WriteLine("Color test:")
+    Console.ForegroundColor = "Yellow"
+    Console.BackgroundColor = "DarkBlue"
+    Console.WriteLine("  Yellow on DarkBlue")
+    Console.ResetColor()
+    Console.WriteLine("  Colors reset")
+    Console.WriteLine()
+
+    Console.WriteLine("Cursor test:")
+    Dim cursorRow As Integer
+    cursorRow = Console.CursorTop
+    Console.Write("  This text will be replaced")
+    Console.SetCursorPosition(2, cursorRow)
+    Console.ClearLine()
+    Console.SetCursorPosition(2, cursorRow)
+    Console.WriteLine("Cursor positioning and ClearLine OK")
+    Console.WriteLine()
+
+    Console.WriteLine("Cursor visibility test:")
+    Console.CursorVisible = False
+    Console.WriteLine("  Cursor hidden for one second")
+    Call Sleep(1)
+    Console.CursorVisible = True
+    Console.WriteLine("  Cursor visible again")
+    Console.WriteLine()
+
+    Console.WriteLine("Progress bar, 10% every 0.5 seconds:")
+    Dim row As Integer
+    row = Console.CursorTop
+
+    Dim i As Integer
+    For i = 0 To 100 Step 10
+        Console.SetCursorPosition(0, row)
+        Console.ClearLine()
+        Console.SetCursorPosition(0, row)
+        Console.ForegroundColor = "Green"
+        Console.Write("Progress: " & CStr(i) & "%")
+        Console.ResetColor()
+        If i < 100 Then
+            Call Sleep(0.5)
+        End If
+    Next
+
+    Console.SetCursorPosition(0, row + 1)
+    Console.WriteLine("Progress complete")
+    Console.WriteLine()
+
+    Console.WriteError("Example stderr message")
+    Console.WriteLine("stderr test written")
+    Console.WriteLine()
+
+    Console.WriteLine("ReadKey test:")
+    Console.WriteLine("  Press a key to test Console.ReadKey(True)")
+    Dim key
+    key = Console.ReadKey(True)
+    Console.WriteLine("  Key=" & key.Key)
+    Console.WriteLine("  Char=" & key.Char)
+    Console.WriteLine("  Control=" & CStr(key.Control))
+    Console.WriteLine("  Alt=" & CStr(key.Alt))
+    Console.WriteLine("  Shift=" & CStr(key.Shift))
+    Console.WriteLine()
+
+    Console.WriteLine("Beep test:")
+    Console.Beep()
+    Console.Beep(800, 150)
+    Console.WriteLine("  Beep calls completed")
+
+    Console.ResetColor()
+    Console.CursorVisible = True
+    Console.WriteLine()
+    Console.WriteLine("Console API v1 test complete")
+End Sub
