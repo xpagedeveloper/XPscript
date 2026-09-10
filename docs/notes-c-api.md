@@ -131,10 +131,10 @@ Set view = db.OpenView("People")
 | --- | --- | --- |
 | `GetFirstDocumentByKey(key)` | `NotesDocument` or `Nothing` | Finds the first matching document using an exact text-key match. A scalar key targets the first sorted text column. |
 | `GetFirstDocumentByKey(key, exactMatch)` | `NotesDocument` or `Nothing` | Finds the first document by text key and controls exact versus partial matching. |
-| `GetFirstDocumentByKey(keys, exactMatch)` | `NotesDocument` or `Nothing` | When `keys` is an XPScript array, matches the supplied text keys against successive view columns, including multi-valued column results. |
+| `GetFirstDocumentByKey(keys, exactMatch)` | `NotesDocument` or `Nothing` | When `keys` is an XPScript array, matches the supplied keys against successive sorted view columns. Arrays containing numeric or `NotesDateTime` values use native `NIFFindByKey`; text-only arrays use the managed comparison path. |
 | `GetAllDocumentsByKey(key)` | `NotesDocumentCollection` | Returns all exact text-key matches. |
 | `GetAllDocumentsByKey(key, exactMatch)` | `NotesDocumentCollection` | Returns text-key matches and controls exact versus partial matching. |
-| `GetAllDocumentsByKey(keys, exactMatch)` | `NotesDocumentCollection` | When `keys` is an XPScript array, returns documents matching all supplied text keys across successive view columns. |
+| `GetAllDocumentsByKey(keys, exactMatch)` | `NotesDocumentCollection` | When `keys` is an XPScript array, returns documents matching all supplied keys across successive sorted view columns. Arrays containing numeric or `NotesDateTime` values use native `NIFFindByKey`; text-only arrays use the managed comparison path. |
 | `FTSearch(query)` | `NotesDocumentCollection` | Runs a full-text search scoped to the view. |
 | `FTSearch(query, maxResults)` | `NotesDocumentCollection` | Runs a view full-text search with a result limit. |
 | `GetFirstDocument()` | `NotesDocument` or `Nothing` | Starts navigation from the beginning of the view and returns the first document. |
