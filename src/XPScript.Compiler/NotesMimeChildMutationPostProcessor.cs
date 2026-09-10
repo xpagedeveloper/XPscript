@@ -247,7 +247,14 @@ internal static class NotesMimeChildMutationPostProcessor
         }
         if (transferEncoding.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase)) return DecodeEntityQuotedPrintable(body);
         if (body.Length == 0 && _nativeEntity != _mimeDirectoryOwner.RootEntity)
+        {
+            // Some Notes versions itemize a nested entity without returning its
+            // body in the root MIME stream. Ask the entity-data API for the
+            // encoded body first, then use its decoded form when necessary.
+            var nativeBody = _mimeDirectoryOwner.EntityBody(_document.NativeDatabaseHandle, _nativeEntity);
+            if (nativeBody.Length > 0) return nativeBody;
             return _mimeDirectoryOwner.EntityDecodedBody(_document.NativeDatabaseHandle, _nativeEntity);
+        }
         return body;
     }
 
