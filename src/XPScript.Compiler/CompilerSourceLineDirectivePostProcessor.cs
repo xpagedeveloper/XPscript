@@ -13,6 +13,22 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         @"^\s*(?:public|private)\s+(?:static\s+)?(?:override\s+)?(?:[A-Za-z_]\w*(?:<[^>]+>)?(?:\[\])?\??\s+)?[A-Za-z_]\w*\s*\(",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex SimpleAssignmentPattern = new(
+        @"^\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=\s*(?!=).+;\s*$",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex ForRangeLoopPattern = new(
+        @"^\s*foreach\s*\(\s*var\s+__forValue\s+in\s+XPScriptRuntime\.Range\(",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex ForRangeAssignmentPattern = new(
+        @"^(?<indent>\s*)(?<name>[A-Za-z_]\w*)\s*=\s*.+__forValue.+;\s*$",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex DebuggerCallPattern = new(
+        @"^(?<indent>\s*)Debugger\.(?:Print|UpdateVar)\s*\(.*\);\s*$",
+        RegexOptions.CultureInvariant);
+
     private const string RuntimeBoundary = "internal static class LSControlRuntime";
     private const string ScriptBoundary = "internal static class Script";
     private const string NoInliningAttribute = "[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]";
@@ -27,6 +43,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         var runtimeBoundaryInserted = false;
         var scriptDeclarationSeen = false;
         var inScript = false;
+        var trackNextSimpleAssignment = false;
+        var insideGeneratedForRangeHeader = false;
 
         foreach (var rawLine in lines)
         {
@@ -34,6 +52,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
             {
                 if (foundMarker) output.Add("#line default");
                 runtimeBoundaryInserted = true;
+                trackNextSimpleAssignment = false;
+                insideGeneratedForRangeHeader = false;
             }
 
             if (!scriptDeclarationSeen && rawLine.Trim().Equals(ScriptBoundary, StringComparison.Ordinal))
@@ -61,19 +81,72 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                     var indent = Regex.Match(rawLine, @"^\s*").Value;
                     output.Add(indent + NoInliningAttribute);
                 }
-                output.Add(rawLine);
+
+                if (inScript && ForRangeLoopPattern.IsMatch(rawLine))
+                    insideGeneratedForRangeHeader = true;
+
+                if (inScript && DebuggerCallPattern.IsMatch(rawLine))
+                {
+                    var indent = DebuggerCallPattern.Match(rawLine).Groups["indent"].Value;
+                    output.Add(indent + "if (XPScriptDebugRuntime.IsEnabled) " + rawLine.TrimStart());
+                }
+                else
+                {
+                    output.Add(rawLine);
+                }
+
+                if (insideGeneratedForRangeHeader && inScript)
+                {
+                    var loopAssignment = ForRangeAssignmentPattern.Match(rawLine);
+                    if (loopAssignment.Success)
+                    {
+                        var name = loopAssignment.Groups["name"].Value;
+                        if (!name.StartsWith("__", StringComparison.Ordinal))
+                        {
+                            var indent = loopAssignment.Groups["indent"].Value;
+                            output.Add(indent + "XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(name) + "\", " + name + ");");
+                        }
+                        insideGeneratedForRangeHeader = false;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawLine) && !rawLine.Trim().Equals("{", StringComparison.Ordinal) && !ForRangeLoopPattern.IsMatch(rawLine))
+                    {
+                        insideGeneratedForRangeHeader = false;
+                    }
+                }
+
+                if (trackNextSimpleAssignment && inScript)
+                {
+                    var assignment = SimpleAssignmentPattern.Match(rawLine);
+                    if (assignment.Success)
+                    {
+                        var name = assignment.Groups["name"].Value;
+                        if (!name.StartsWith("__", StringComparison.Ordinal))
+                        {
+                            var indent = Regex.Match(rawLine, @"^\s*").Value;
+                            output.Add(indent + "XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(name) + "\", " + name + ");");
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(rawLine) && !rawLine.TrimStart().StartsWith("#", StringComparison.Ordinal))
+                        trackNextSimpleAssignment = false;
+                }
                 continue;
             }
 
             foundMarker = true;
+            trackNextSimpleAssignment = true;
             var markerIndent = Regex.Match(rawLine, @"^\s*").Value;
             var sourceLine = match.Groups["line"].Value;
             var sourceId = DecodeSourceId(match.Groups["source"].Value);
             var directiveSource = EscapeDirectiveString(sourceId);
+            var sourceLiteral = EscapeCSharpString(sourceId);
 
             output.Add(markerIndent + "// XPSOURCE|" + sourceId + "|" + sourceLine);
             output.Add(markerIndent + "#line " + sourceLine + " \"" + directiveSource + "\"");
-            output.Add(MarkerPattern.Replace(rawLine, "XPSourceLineRuntime.Set(" + sourceLine + ")", 1));
+            output.Add(MarkerPattern.Replace(
+                rawLine,
+                "XPSourceLineRuntime.Set(" + sourceLine + ", \"" + sourceLiteral + "\")",
+                1));
         }
 
         if (foundMarker && !runtimeBoundaryInserted)
@@ -97,4 +170,10 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
     private static string EscapeDirectiveString(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    private static string EscapeCSharpString(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
 }

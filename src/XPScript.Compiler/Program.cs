@@ -9,7 +9,7 @@ var buildDate = Assembly.GetExecutingAssembly()
 ConfigureRuntimeDiagnosticEnvironment(args);
 
 if (ShouldWriteBanner(args))
-    Console.WriteLine($"XPScript version 0.9.1 Beta - build {buildDate} - XPageDeveloper.com (c)");
+    Console.WriteLine($"XPScript version 0.9.3 Beta - build {buildDate} - XPageDeveloper.com (c)");
 
 return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
 

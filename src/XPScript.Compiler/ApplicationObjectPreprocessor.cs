@@ -77,6 +77,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.TempFolder\b", "XPScriptApplicationRuntime.TempPath", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Path\b", "XPScriptApplicationRuntime.Path", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.FileName\b", "XPScriptApplicationRuntime.FileName", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.IsDebugging\b", "XPScriptDebugRuntime.IsEnabled", RegexOptions.IgnoreCase);
         return source;
     }
 
@@ -162,7 +163,7 @@ internal sealed class ApplicationObjectPreprocessor
         {
             var line = StripComment(lines[i]);
             if (Regex.IsMatch(line, @"\bApplication\.Args\s*\([^)]*\)\s*=", RegexOptions.IgnoreCase) ||
-                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName)\s*=", RegexOptions.IgnoreCase))
+                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName|IsDebugging)\s*=", RegexOptions.IgnoreCase))
                 throw new CompilerException($"input.xps({i + 1},1): Application is read-only runtime state.");
         }
     }
