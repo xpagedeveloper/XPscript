@@ -115,13 +115,12 @@ Missing / future:
 
 ## Agents
 
-Implemented synchronous agent execution with optional document context and stdout capture.
+Implemented synchronous agent lookup, enumeration, execution with optional document context, server execution, state properties, save/remove, and stdout capture.
 
 Missing / future:
 
 - Validate redirect constants/signatures on supported Notes versions.
-- Additional run flags/security options.
-- More detailed result/status information.
+- Additional run flags/security options and detailed result/status information.
 - Agent timeout/cancellation strategy if needed.
 
 ## Search and FT search
