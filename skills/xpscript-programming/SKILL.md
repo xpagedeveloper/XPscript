@@ -124,6 +124,26 @@ Call attr.Delete()
 
 Normal XML parsing prohibits DTD processing and external entity resolution. Do not weaken that boundary. Internal DTD validation is available through `ValidateDTD`/`IsValidDTD`, but external `SYSTEM` and `PUBLIC` identifiers remain unsupported.
 
+## Native Notes/Domino
+
+For native Notes/Domino code, use `docs/notes-c-api.md` as the primary object-model reference and `docs/notes-mime-entity.md` for MIME. Do not infer undocumented LotusScript compatibility merely because a method has the same name.
+
+Only `NotesSession` is constructed with `New`. Obtain databases, views, documents, items, names, date/time values, MIME entities, collections and agent results from their owning Notes objects.
+
+`NotesDocument.Save()` is a void native save that raises failures. Boolean overloads are also available:
+
+```xpscript
+If Not doc.Save(True, False, True) Then
+    Error 5, "Document was not saved"
+End If
+```
+
+For these overloads, `force` applies native force-update behavior. `markRead=True` marks the successfully saved document read for the current Notes user. `createResponse` is currently accepted for compatibility but does not create a conflict response document; do not write code that depends on that side effect.
+
+View key lookup supports scalar keys and one-dimensional arrays. An array key targets successive sorted columns. Arrays containing numeric values or `NotesDateTime` use native `NIFFindByKey`; text-only arrays use the managed comparison path. Use the documented `exactMatch` overload rather than inventing a different search mode.
+
+`NotesName` exposes canonical/abbreviated forms, hierarchical components, RFC821/RFC822 address fields and comments. `NotesDateTime` supports wildcard date/time values, `SetNow`, adjustments, `TimeDifference`/`TimeDifferenceDouble`, and `ConvertToZone`. Do not call `TimeDifference` with wildcard date/time values.
+
 ## Notes MIME
 
 Use `NotesMIMEEntity` only with the currently documented native MIME subset in `docs/notes-mime-entity.md`.
@@ -146,7 +166,7 @@ Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
 
 Root content readback supports `ContentAsText`, `GetContentAsText`, `GetContentAsBytes`, and `GetEntityAsText`. Use `ContentAsText` for decoded root text. Use the stream methods when callers need `NotesStream` output. Use `GetEntityAsText` only when the complete root RFC822 entity including headers is needed.
 
-For a normal `multipart/mixed` message, call `CreateChildEntity()` on the root. The first call promotes a non-multipart root to `multipart/mixed`. Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, and `NotesMIMEHeader.SetHeaderVal`.
+For a normal `multipart/mixed` message, call `CreateChildEntity()` on the root. The first call promotes a non-multipart root to `multipart/mixed`. Multipart child entities can create nested children as well. Root, direct-child and nested entities support the documented content read/write, navigation, header and parameter surfaces. `CreateChildEntity(nextSibling)` requires `nextSibling` to share the same parent.
 
 Use encoding `1727` for a base64 attachment and set `Content-Disposition` explicitly:
 
@@ -163,7 +183,7 @@ Call disposition.SetHeaderVal("attachment; filename=""file.pdf""")
 
 For real binary attachments, load the binary bytes into the `NotesStream`, rewind it, then use `SetContentFromBytes`. Do not pre-base64 the stream when using encoding `1727`; XPscript performs the MIME base64 transfer encoding.
 
-Direct-child and nested `GetNthHeader(name, occurrence)` support the three standard content headers and arbitrary header names. `NotesMIMEHeader.GetParamVal` and `SetParamVal` support MIME parameters such as `name`, `charset`, and `filename`. Values resolve through the native MIME directory and serialized child headers, so callers can read and update `base64`, `attachment; filename="file.pdf"`, and nested custom headers after mutation and directory reopen. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The wrapper performing a successful supported MIME mutation is rebound to the corresponding native entity so metadata can be read immediately.
+Root, direct-child and nested `GetNthHeader(name, occurrence)` support standard content headers and arbitrary header names; occurrence is one-based. `NotesMIMEHeader.GetParamVal` and `SetParamVal` support MIME parameters such as `name`, `charset`, and `filename`. Values resolve through native MIME-directory state and serialized entity headers, so callers can read and update transfer encodings, dispositions and nested custom headers after mutation and directory reopen. `Headers`, `HeaderObjects`, `GetSomeHeaders`, `GetHeaders` and `RemoveHeaders` are part of the documented header surface. `InputStream`, `GetInputStream`, `Reader`, `Preamble`, `EncodeContent` and `DecodeContent` are also available as documented. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The wrapper performing a successful supported MIME mutation is rebound to the corresponding native entity so metadata can be read immediately.
 
 ## HTTP client security
 
