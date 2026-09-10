@@ -18,6 +18,7 @@ Sub Main()
     Dim attachmentPart As NotesMIMEEntity
     Dim insertedPart As NotesMIMEEntity
     Dim attachmentHeader As NotesMIMEHeader
+    Dim headerObjects As Variant
     Dim contentStream As NotesStream
     Dim readStream As NotesStream
     Dim unid As String
@@ -397,6 +398,12 @@ Sub Main()
         Print "PASS: MIME header text readback"
     Else
         Print "FAIL: MIME header text readback"
+    End If
+    headerObjects = attachmentPart.HeaderObjects
+    If UBound(headerObjects) >= LBound(headerObjects) And headerObjects(LBound(headerObjects)).HeaderName = "Content-Type" Then
+        Print "PASS: MIME HeaderObjects readback"
+    Else
+        Print "FAIL: MIME HeaderObjects readback"
     End If
     Set attachmentHeader = attachmentPart.CreateHeader("Content-ID")
     Call attachmentHeader.SetHeaderVal("<probe-id>")

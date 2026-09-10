@@ -101,6 +101,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement and verify native MIME entity classification properties
 - [x] Implement and verify native MIME Content-ID and Content-Location readback
 - [x] Implement and verify MIME `Headers` and `GetSomeHeaders` readback
+- [x] Add regression coverage for `HeaderObjects`
 - [x] Implement raw entity stream access for child entities
 - [x] Implement decoded content stream access for native entities
 - [ ] Implement text reader access using the entity charset
