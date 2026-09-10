@@ -409,6 +409,8 @@ Print value.LocalTime
 | `AdjustMonth(amount)` | Void | Adds or subtracts months. |
 | `AdjustYear(amount)` | Void | Adds or subtracts years. |
 | `SetNow()` | Void | Replaces the value with the current native Notes time/date. |
+| `TimeDifference(other)` | Double | Returns this value minus another `NotesDateTime` in seconds. |
+| `TimeDifferenceDouble(other)` | Double | Alias returning the time difference in seconds as a double. |
 | `Recycle()` | Void | Invalidates the wrapper. |
 
 ## NotesAgent

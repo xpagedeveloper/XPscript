@@ -168,6 +168,23 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     public void AdjustMonth(object? amount) => Adjust(0, 0, 0, 0, XPScriptRuntime.CInt(amount), 0);
     public void AdjustYear(object? amount) => Adjust(0, 0, 0, 0, 0, XPScriptRuntime.CInt(amount));
 
+    public double TimeDifference(object? other)
+    {
+        EnsureAlive();
+        if (other is not XPScriptNotesDateTime dateTime)
+            throw new XPScriptRuntimeException(13, "TimeDifference requires another NotesDateTime.");
+        dateTime.EnsureAlive();
+        var left = Session.Api.ExpandTimeDateGmt(_value);
+        var right = Session.Api.ExpandTimeDateGmt(dateTime._value);
+        if (left.Year < 1 || right.Year < 1 || left.Month < 1 || right.Month < 1)
+            throw new XPScriptRuntimeException(5, "TimeDifference cannot be used with wildcard NotesDateTime values.");
+        var leftUtc = new DateTime(left.Year, left.Month, left.Day, left.Hour, left.Minute, left.Second, DateTimeKind.Utc);
+        var rightUtc = new DateTime(right.Year, right.Month, right.Day, right.Hour, right.Minute, right.Second, DateTimeKind.Utc);
+        return (leftUtc - rightUtc).TotalSeconds;
+    }
+
+    public double TimeDifferenceDouble(object? other) => TimeDifference(other);
+
     private void Adjust(int seconds, int minutes, int hours, int days, int months, int years)
     {
         EnsureAlive();

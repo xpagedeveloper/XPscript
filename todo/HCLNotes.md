@@ -100,7 +100,7 @@ Implemented name parsing, canonical/abbreviated values, hierarchical components,
 
 Missing / future:
 
-- Verify every property against LotusScript `NotesName`, including RFC822-specific fields and multi-OU behavior.
+- Verify remaining native name semantics, including language-specific parsing and multi-OU behavior.
 
 ## NotesDateTime
 
@@ -110,7 +110,7 @@ Missing / future:
 
 - Validate `TimeZone` sign/semantics against LotusScript on actual Notes clients.
 - Wildcard date/time behavior is implemented through `SetAnyDate`, `SetAnyTime`, and empty-value construction.
-- Additional LotusScript methods and locale-specific parsing/formatting compatibility.
+- `ConvertToZone` and locale-specific parsing/formatting compatibility.
 
 ## Agents
 
