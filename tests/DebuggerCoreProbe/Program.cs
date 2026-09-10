@@ -92,6 +92,14 @@ if (!generated.Contains("MaxHistoryCharsPerVariable = 32768", StringComparison.O
     throw new Exception("Debugger value history does not expose a per-variable memory budget.");
 if (!generated.Contains("<byte[", StringComparison.Ordinal))
     throw new Exception("Debugger byte arrays are not represented without retaining their contents.");
+if (!generated.Contains("XPScriptDebugRuntime.Complete();", StringComparison.Ordinal))
+    throw new Exception("Generated programs do not complete the debugger transport in a finally block.");
+if (!generated.Contains("type = \"complete\"", StringComparison.Ordinal) ||
+    !generated.Contains("supportsGracefulCompletion = true", StringComparison.Ordinal))
+    throw new Exception("Debugger graceful completion protocol is missing.");
+if (!generated.Contains("NormalizeSource(sourcePath)", StringComparison.Ordinal) ||
+    !generated.Contains("NormalizeSource(sourceElement.GetString()", StringComparison.Ordinal))
+    throw new Exception("Debugger breakpoint source identifiers are not normalized consistently.");
 
 VerifyComplexObjectsAreNotAutoTracked();
 Console.WriteLine("DebuggerCoreProbe passed.");
