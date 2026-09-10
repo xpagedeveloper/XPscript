@@ -10,6 +10,7 @@ Every row contains the member title, accepted syntax, parameters and their purpo
 - [Native HTTP client](#native-http-client)
 - [HTTP response](#http-response)
 - [Native JSON](#native-json)
+- [Native Notes/Domino](#native-notesdomino)
 - [SQLite](#sqlite)
 - [SQL Server](#sql-server)
 - [Supabase HTTP database](#supabase-http-database)
@@ -100,6 +101,26 @@ See the runnable [native HTTP/JSON sample](../samples/native-http-json.xps).
 | `JsonStringify` | `JsonStringify(value)` | JSON-compatible `value`. | Serializes a value as JSON. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonEncode` | `JsonEncode(value)` | JSON-compatible `value`. | Serializes with native JSON conversion rules. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `JsonDecode` | `JsonDecode(text)` | JSON `text`. | Parses JSON and returns `XPJsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
+
+## Native Notes/Domino
+
+See [Native Notes C API runtime](notes-c-api.md) for the complete Notes object model and [NotesMIMEEntity](notes-mime-entity.md) for MIME-specific behavior, lifecycle and attachment handling.
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `NotesSession.OpenDatabase` | `session.OpenDatabase(server, filePath)` | Notes server and NSF path. | Opens a native Notes/Domino database. Use an empty server for a local NSF. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
+| `NotesView.GetFirstDocumentByKey` | `view.GetFirstDocumentByKey(key [, exactMatch])` | Scalar key or one-dimensional key array; optional exact/partial mode. | Scalar text keys search the first sorted column. Array keys match successive sorted columns. Arrays containing numeric or `NotesDateTime` keys use native `NIFFindByKey`; text-only arrays use the managed comparison path. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
+| `NotesView.GetAllDocumentsByKey` | `view.GetAllDocumentsByKey(key [, exactMatch])` | Same key forms as above. | Returns all documents matching the supplied scalar or multi-column key. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
+| `NotesDocument.Save` | `doc.Save()` | none | Saves through the normal native update path and raises native failures as XPscript runtime errors. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
+| `NotesDocument.Save` | `doc.Save(force [, createResponse [, markRead]])` | Boolean-compatible flags. | Boolean overloads apply force-update semantics and optionally mark the saved document read. `createResponse` is currently accepted for call-shape compatibility but does not create a conflict response document. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
+| `NotesSession.CreateName` | `session.CreateName(value)` | Notes hierarchical or Internet/RFC822-style name. | Returns `NotesName` with canonical/abbreviated forms, hierarchical components, RFC821/RFC822 address parts and comments. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
+| `NotesDateTime.TimeDifference` | `value.TimeDifference(other)` | another `NotesDateTime`. | Returns this value minus the other value in seconds. Wildcard values are rejected. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
+| `NotesDateTime.ConvertToZone` | `value.ConvertToZone(zone)` | Domino zone integer. | Reinterprets the local date/time in the supplied Domino zone and stores the resulting GMT value. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
+| `NotesDocument.GetMIMEEntity` | `doc.GetMIMEEntity("Body")` | MIME item name. | Opens the native MIME root. The document-level implementation currently supports the `Body` item. | [notes-mime-entity-surface.xps](../samples/notes-mime-entity-surface.xps) |
+| `NotesMIMEEntity.CreateChildEntity` | `entity.CreateChildEntity([nextSibling])` | optional sibling entity. | Creates direct or nested multipart children within the currently supported MIME tree mutation surface. | [notes-mime-entity-surface.xps](../samples/notes-mime-entity-surface.xps) |
+| `NotesMIMEEntity.GetNthHeader` | `entity.GetNthHeader(name [, occurrence])` | header name and one-based occurrence. | Finds standard or arbitrary MIME headers on root/direct/nested entities using native and serialized entity state. | [notes-mime-entity-surface.xps](../samples/notes-mime-entity-surface.xps) |
+| `NotesMIMEHeader.GetParamVal` | `header.GetParamVal(name)` | MIME parameter name. | Reads parameters such as `charset`, `name` and `filename`. | [notes-mime-entity-surface.xps](../samples/notes-mime-entity-surface.xps) |
+| `NotesMIMEHeader.SetParamVal` | `header.SetParamVal(name, value)` | parameter name and value. | Replaces or adds a MIME header parameter on the supported entity mutation path. | [notes-mime-entity-surface.xps](../samples/notes-mime-entity-surface.xps) |
 
 ## SQLite
 
