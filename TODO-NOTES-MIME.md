@@ -87,7 +87,7 @@ Branch: `feature/notes-mime-entity`
 ## Remaining
 
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
-- [ ] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
+- [x] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
 - [x] Add nested child creation and content mutation beyond direct children of the root entity
 - [x] Add regression coverage for nested parent and first-child traversal
 - [x] Add regression coverage for nested depth-first and sibling traversal after save/reopen
