@@ -181,6 +181,13 @@ Sub Main()
     Else
         Print "FAIL: nested child creation and mutation"
     End If
+    Set readStream = session.CreateStream()
+    Call nestedPart.GetEntityAsText(readStream)
+    If readStream.Bytes > 0 Then
+        Print "PASS: nested child raw entity readback"
+    Else
+        Print "FAIL: nested child raw entity readback"
+    End If
     Set attachmentHeader = nestedPart.CreateHeader("X-Nested-Probe")
     Call attachmentHeader.SetHeaderVal("nested")
     Set attachmentHeader = nestedPart.GetNthHeader("X-Nested-Probe")

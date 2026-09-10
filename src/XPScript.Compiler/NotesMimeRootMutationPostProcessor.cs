@@ -33,7 +33,7 @@ internal static class NotesMimeRootMutationPostProcessor
 
         source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetEntityAsText requires verified Domino per-entity RFC822 data access; the root MIME stream is intentionally not returned for child entities.\");",
-            "        stream.Write(ReadRootEntity(\"GetEntityAsText\"));",
+            "        stream.Write(_nativeEntity == _mimeDirectoryOwner.RootEntity ? ReadRootEntity(\"GetEntityAsText\") : ReadEntityRaw(\"GetEntityAsText\"));",
             "root GetEntityAsText");
 
         source = ReplaceRequired(source,

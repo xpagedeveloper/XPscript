@@ -249,6 +249,13 @@ internal static class NotesMimeChildMutationPostProcessor
         return body;
     }
 
+    private byte[] ReadEntityRaw(string member)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        return _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+    }
+
     private string ReadEntityPreamble(string member)
     {
         EnsureEntityAlive();
