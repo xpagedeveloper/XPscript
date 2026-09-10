@@ -117,7 +117,12 @@ public sealed class CompilerDriver
             var publishDir = Path.Combine(tempRoot, "publish");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
-            var csproj = BuildGeneratedProject(rid, selfContained, stagedManagedReferences, publishSingleFile: true);
+            var csproj = BuildGeneratedProject(
+                rid,
+                selfContained,
+                stagedManagedReferences,
+                publishSingleFile: true,
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -197,7 +202,12 @@ public sealed class CompilerDriver
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
-            var csproj = BuildGeneratedProject(rid, selfContained: false, stagedManagedReferences, publishSingleFile: false);
+            var csproj = BuildGeneratedProject(
+                rid,
+                selfContained: false,
+                stagedManagedReferences,
+                publishSingleFile: false,
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -398,7 +408,8 @@ public sealed class CompilerDriver
         string runtimeIdentifier,
         bool selfContained,
         IReadOnlyList<StagedManagedReference> references,
-        bool publishSingleFile)
+        bool publishSingleFile,
+        bool usesMimeKit)
     {
         var itemGroup = new StringBuilder();
         if (references.Count > 0)
@@ -413,9 +424,12 @@ public sealed class CompilerDriver
             }
             itemGroup.AppendLine("  </ItemGroup>");
         }
-        itemGroup.AppendLine("  <ItemGroup>");
-        itemGroup.Append("    <PackageReference Include=\"MimeKit\" Version=\"").Append(MimeKitVersion).AppendLine("\" />");
-        itemGroup.AppendLine("  </ItemGroup>");
+        if (usesMimeKit)
+        {
+            itemGroup.AppendLine("  <ItemGroup>");
+            itemGroup.Append("    <PackageReference Include=\"MimeKit\" Version=\"").Append(MimeKitVersion).AppendLine("\" />");
+            itemGroup.AppendLine("  </ItemGroup>");
+        }
 
         var publishProperties = publishSingleFile
             ? $"""
