@@ -100,7 +100,7 @@ Implemented name parsing, canonical/abbreviated values, hierarchical components,
 
 Missing / future:
 
-- Verify remaining native name semantics, including language-specific parsing and multi-OU behavior.
+- Language-specific parsing and full native multi-OU semantics remain to be validated on additional Notes locales.
 
 ## NotesDateTime
 
