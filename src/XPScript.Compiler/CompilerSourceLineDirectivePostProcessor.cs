@@ -17,8 +17,12 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         @"^\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=\s*(?!=).+;\s*$",
         RegexOptions.CultureInvariant);
 
-    private static readonly Regex ForLoopPattern = new(
-        @"^(?<indent>\s*)for\s*\(\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=.*\)\s*(?<brace>\{)?\s*$",
+    private static readonly Regex ForRangeLoopPattern = new(
+        @"^\s*foreach\s*\(\s*var\s+__forValue\s+in\s+XPScriptRuntime\.Range\(",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex ForRangeAssignmentPattern = new(
+        @"^(?<indent>\s*)(?<name>[A-Za-z_]\w*)\s*=\s*.+__forValue.+;\s*$",
         RegexOptions.CultureInvariant);
 
     private static readonly Regex DebuggerCallPattern = new(
@@ -40,8 +44,7 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         var scriptDeclarationSeen = false;
         var inScript = false;
         var trackNextSimpleAssignment = false;
-        string? pendingForVariable = null;
-        string? pendingForIndent = null;
+        var insideGeneratedForRangeHeader = false;
 
         foreach (var rawLine in lines)
         {
@@ -50,8 +53,7 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                 if (foundMarker) output.Add("#line default");
                 runtimeBoundaryInserted = true;
                 trackNextSimpleAssignment = false;
-                pendingForVariable = null;
-                pendingForIndent = null;
+                insideGeneratedForRangeHeader = false;
             }
 
             if (!scriptDeclarationSeen && rawLine.Trim().Equals(ScriptBoundary, StringComparison.Ordinal))
@@ -80,7 +82,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                     output.Add(indent + NoInliningAttribute);
                 }
 
-                var forLoop = inScript ? ForLoopPattern.Match(rawLine) : Match.Empty;
+                if (inScript && ForRangeLoopPattern.IsMatch(rawLine))
+                    insideGeneratedForRangeHeader = true;
 
                 if (inScript && DebuggerCallPattern.IsMatch(rawLine))
                 {
@@ -92,36 +95,23 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                     output.Add(rawLine);
                 }
 
-                if (forLoop.Success)
+                if (insideGeneratedForRangeHeader && inScript)
                 {
-                    var name = forLoop.Groups["name"].Value;
-                    if (!name.StartsWith("__", StringComparison.Ordinal))
+                    var loopAssignment = ForRangeAssignmentPattern.Match(rawLine);
+                    if (loopAssignment.Success)
                     {
-                        var indent = forLoop.Groups["indent"].Value;
-                        if (forLoop.Groups["brace"].Success)
+                        var name = loopAssignment.Groups["name"].Value;
+                        if (!name.StartsWith("__", StringComparison.Ordinal))
                         {
-                            output.Add(indent + "    XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(name) + "\", " + name + ");");
+                            var indent = loopAssignment.Groups["indent"].Value;
+                            output.Add(indent + "XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(name) + "\", " + name + ");");
                         }
-                        else
-                        {
-                            pendingForVariable = name;
-                            pendingForIndent = indent;
-                        }
+                        insideGeneratedForRangeHeader = false;
                     }
-                }
-                else if (pendingForVariable is not null && rawLine.Trim().Equals("{", StringComparison.Ordinal))
-                {
-                    var indent = Regex.Match(rawLine, @"^\s*").Value;
-                    if (indent.Length == 0 && pendingForIndent is not null)
-                        indent = pendingForIndent;
-                    output.Add(indent + "    XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(pendingForVariable) + "\", " + pendingForVariable + ");");
-                    pendingForVariable = null;
-                    pendingForIndent = null;
-                }
-                else if (pendingForVariable is not null && !string.IsNullOrWhiteSpace(rawLine) && !rawLine.TrimStart().StartsWith("#", StringComparison.Ordinal))
-                {
-                    pendingForVariable = null;
-                    pendingForIndent = null;
+                    else if (!string.IsNullOrWhiteSpace(rawLine) && !rawLine.Trim().Equals("{", StringComparison.Ordinal) && !ForRangeLoopPattern.IsMatch(rawLine))
+                    {
+                        insideGeneratedForRangeHeader = false;
+                    }
                 }
 
                 if (trackNextSimpleAssignment && inScript)
