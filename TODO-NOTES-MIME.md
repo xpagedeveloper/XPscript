@@ -86,6 +86,23 @@ Branch: `feature/notes-mime-entity`
 
 ## Remaining
 
+### JNX and Domino JNA parity
+
+- [ ] Implement `CreateChildEntity(sibling)` to insert a child before an existing sibling
+- [ ] Implement `AppendChildEntity`
+- [ ] Implement `RemoveChildEntity`
+- [ ] Implement child enumeration equivalent to JNX `getChildren`
+- [ ] Implement full header enumeration equivalent to JNX `getHeaders()`
+- [ ] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
+- [ ] Implement `CreateHeader(name, value)` convenience overload
+- [ ] Implement `RemoveHeaders(name)` to remove all matching headers
+- [ ] Implement MIME preamble read and write
+- [ ] Implement explicit MIME encoding readback
+- [ ] Implement decoded and raw content stream access
+- [ ] Implement text reader access using the entity charset
+- [ ] Add regression coverage for every parity item against the Notes client
+- [ ] Review Domino JNA MIME4J features for applicable HTML and rich-text conversion APIs
+
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
 - [x] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
 - [x] Add nested child creation and content mutation beyond direct children of the root entity
