@@ -68,6 +68,13 @@ Sub Main()
         Else
             Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
         End If
+        Set readStream = mime.Reader
+        If readStream.ReadText() = EXPECTED_TEXT Then
+            Print "PASS: MIME Reader charset readback"
+        Else
+            Print "FAIL: MIME Reader charset readback"
+        End If
+        Call readStream.Recycle()
 
         Call contentStream.Recycle()
         Set contentStream = Nothing

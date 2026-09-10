@@ -106,7 +106,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement decoded content stream access for native entities
 - [x] Implement and verify decoded MIME `InputStream` access
 - [x] Implement and verify raw MIME `InputStream(False)` access
-- [ ] Implement text reader access using the entity charset
+- [x] Implement and verify `Reader` access using the entity charset
 - [ ] Add regression coverage for remaining parity items against the Notes client
 - [x] Add regression coverage for `AppendChildEntity`
 - [x] Add regression coverage for full and filtered MIME header enumeration

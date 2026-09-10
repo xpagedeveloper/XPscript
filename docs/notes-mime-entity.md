@@ -51,6 +51,8 @@ Multipart entities support `Preamble` read and write. Child entities also suppor
 
 `InputStream` returns a new `NotesStream` containing decoded entity bytes. `GetInputStream(False)` returns the stored transport representation, while `GetInputStream(True)` returns decoded bytes. Each returned stream is positioned at zero and must be recycled by the caller.
 
+`Reader` returns a `NotesStream` containing decoded text and applies the entity's `charset` parameter when present. The returned stream is positioned at zero and must be recycled by the caller.
+
 XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRead`. `ContentAsText` and `GetContentAsText` decode the transfer encoding and then decode text with the root entity's native charset. `GetContentAsBytes` returns decoded body bytes. `GetEntityAsText` returns the complete root RFC822 MIME stream including headers.
 
 Supported transfer decoding includes `base64`, `quoted-printable`, `7bit`, `8bit` and `binary` content. A root entity with no charset is decoded as UTF-8.

@@ -276,6 +276,17 @@ internal static class NotesMimeChildMutationPostProcessor
         return stream;
     }
 
+    private object ReadEntityReader(string member)
+    {
+        EnsureEntityAlive();
+        var stream = Session.CreateStream();
+        var charset = _mimeDirectoryOwner.TypeParam(_nativeEntity, XPScriptNotesConst.MIME_SYMBOL_CHARSET).Trim();
+        if (charset.Length > 0) stream.Charset = charset;
+        stream.WriteText(ReadEntityText(member));
+        stream.Position = 0;
+        return stream;
+    }
+
     private byte[] ReadEntityRawContent(string member)
     {
         var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);

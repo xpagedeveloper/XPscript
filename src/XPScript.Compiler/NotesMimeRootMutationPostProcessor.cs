@@ -73,7 +73,7 @@ internal static class NotesMimeRootMutationPostProcessor
 
         source = ReplaceRequired(source,
             "    private static string MimeSymbolText(int symbol) => symbol switch",
-            "    public object InputStream { get { EnsureEntityAlive(); return ReadEntityInputStream(\"InputStream\", true); } }\n    public object GetInputStream(object? decodeValue) { EnsureEntityAlive(); return ReadEntityInputStream(\"GetInputStream\", XPScriptRuntime.CBool(decodeValue)); }\n\n" + RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
+            "    public object InputStream { get { EnsureEntityAlive(); return ReadEntityInputStream(\"InputStream\", true); } }\n    public object GetInputStream(object? decodeValue) { EnsureEntityAlive(); return ReadEntityInputStream(\"GetInputStream\", XPScriptRuntime.CBool(decodeValue)); }\n    public object Reader { get { EnsureEntityAlive(); return ReadEntityReader(\"Reader\"); } }\n\n" + RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
             "root MIME mutation helpers");
 
         return source;
