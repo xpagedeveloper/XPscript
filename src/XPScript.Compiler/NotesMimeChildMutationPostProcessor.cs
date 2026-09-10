@@ -43,6 +43,13 @@ internal static class NotesMimeChildMutationPostProcessor
     private const string ChildSurface = """
     public XPScriptNotesMIMEEntity CreateChildEntity() => CreateChildEntity(null);
 
+    public XPScriptNotesMIMEHeader CreateHeader(object? nameValue, object? valueValue)
+    {
+        var header = CreateEntityHeader(XPScriptRuntime.CStr(nameValue));
+        header.SetHeaderVal(valueValue);
+        return header;
+    }
+
     public object?[] GetHeaders() => GetHeaders(null);
 
     public object?[] GetHeaders(object? nameValue)

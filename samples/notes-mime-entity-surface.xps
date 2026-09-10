@@ -237,7 +237,7 @@ Sub Main()
     Print "PARAM_NAME=" & attachmentHeader.GetParamVal("name")
     Call attachmentHeader.SetParamVal("charset", "UTF-8")
     Print "PARAM_CHARSET=" & attachmentHeader.GetParamVal("charset")
-    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe")
+    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe", "probe-one")
     Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe", 1)
     If attachmentHeader Is Nothing Then
         Print "FAIL: arbitrary MIME header lookup"
