@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Restore projects for license metadata
+        run: dotnet restore ./XPScriptCompiler.slnx
       - name: Validate direct package notices
         shell: pwsh
         run: ./scripts/validate-license-notices.ps1
