@@ -100,6 +100,10 @@ Sub Main()
     Print "DT2_ANY_DATE=" & dt2.DateOnly
     Call dt1.SetNow()
     Print "DT1_SET_NOW=" & dt1.IsValidDate
+    Set dt2 = session.CreateDateTime("")
+    Print "DT_WILDCARD_LOCAL=" & dt2.LocalTime
+    Print "DT_WILDCARD_GMT=" & dt2.GMTTime
+    Print "DT_WILDCARD_ZONE=" & dt2.ZoneTime
 
     Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
     Print "LOCAL_DB=" & localDb.FilePath

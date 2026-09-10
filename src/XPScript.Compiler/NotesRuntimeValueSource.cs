@@ -144,9 +144,9 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     }
     public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
     public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
-    public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }
-    public string GMTTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDateGmt(_value)); } }
-    public string ZoneTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDate(_value)); } }
+    public string LocalTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatTimeDate(_value); } }
+    public string GMTTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDateGmt(_value)); } }
+    public string ZoneTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDate(_value)); } }
     public string DateOnly
     {
         get
@@ -167,6 +167,13 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
             if (_value.Innards0 == Session.Api.TimeDateWildcard().Innards0) return "AllDay";
             return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
+    }
+
+    private bool IsWildcard()
+    {
+        var wildcard = Session.Api.TimeDateWildcard();
+        return _value.Innards0 == wildcard.Innards0 &&
+            (_value.Innards1 & 0x00FFFFFFu) == (wildcard.Innards1 & 0x00FFFFFFu);
     }
 
     public void AdjustSecond(object? amount) => Adjust(XPScriptRuntime.CInt(amount), 0, 0, 0, 0, 0);
