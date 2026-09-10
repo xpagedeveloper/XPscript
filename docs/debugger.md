@@ -28,11 +28,43 @@ See `samples/application-is-debugging.xps` for a complete runnable example.
 
 ## Version 1 capabilities
 
-Protocol version 5 is the first complete native debugger contract. The runtime advertises and the VS Code adapter validates the protocol version during handshake.
+Protocol version 6 is the current native debugger contract. The runtime advertises and the VS Code adapter validates the protocol version during handshake.
 
-Version 1 supports source breakpoints, write data breakpoints, Continue, cooperative Pause, Step Into/Over/Out, mapped XPscript call stacks, observed scalar Locals, Debugger Variables, bounded value history, Debug Console output, exception breakpoints, and disconnect/target-exit handling.
+Version 1 supports source breakpoints, conditional breakpoints, hit-count breakpoints, log points, write data breakpoints, Continue, cooperative Pause, Step Into/Over/Out, mapped XPscript call stacks, observed scalar Locals, Debugger Variables, bounded value history, Debug Console output, exception breakpoints, graceful completion, and disconnect/target-exit handling.
 
 Stepping is call-depth aware. Portable PDB sequence points and XPscript source directives are used to recover mapped XPscript stack frames.
+
+## Breakpoint behavior
+
+Breakpoint rules are evaluated inside the XPscript runtime before a `stopped` event is sent to the editor. This avoids a stop/query/continue round trip for every false condition.
+
+A conditional breakpoint can reference automatically observed scalar variables and names published with `Debugger.UpdateVar`:
+
+```text
+Counter == 10
+Counter >= 25
+Ready == true
+Name == "Example"
+```
+
+Supported comparison operators are `=`, `==`, `!=`, `<`, `<=`, `>` and `>=`. Bare variable names are treated as Boolean/truthy conditions.
+
+Hit-count breakpoints support forms such as:
+
+```text
+10
+== 10
+>= 10
+> 20
+```
+
+Log points write to the Debug Console without stopping. Braced variable names are expanded from the runtime's latest observed values, for example:
+
+```text
+Counter is {Counter}
+```
+
+Breakpoint source identifiers are normalized to their source file name for matching, while the editor keeps the full source path for navigation.
 
 ## Locals and internal objects
 
@@ -58,7 +90,7 @@ Publishes an application-defined debugger variable:
 Debugger.UpdateVar("DocName", doc.GetItemValue("DocName")(0))
 ```
 
-The variable appears under `Debugger Variables` in VS Code and participates in value history and write data breakpoints. The supplied name must not collide with an automatically observed application scalar. When debugging is disabled, the entire call is skipped and the value expression is not evaluated.
+The variable appears under `Debugger Variables` in VS Code and participates in value history, conditional breakpoints and write data breakpoints. The supplied name must not collide with an automatically observed application scalar. When debugging is disabled, the entire call is skipped and the value expression is not evaluated.
 
 ## Value history
 
@@ -76,6 +108,8 @@ Exception breakpoints hook XPscript's normal runtime error capture path. VS Code
 
 The native runtime uses a single-reader command transport. One dedicated background thread owns debugger TCP reads. `Pause` is an atomic signal and execution stops at the next mapped XPscript statement. The XPscript execution thread never polls or reads the socket while running.
 
+When the script finishes, the generated entry point calls the debugger runtime's completion hook from `finally`. The runtime sends a `complete` frame, flushes the writer, and performs a graceful socket shutdown so late Debug Console output is not lost.
+
 ## Targets
 
 CLI and desktop applications use the native runtime debugger hook. Server-side web processes can use the loopback transport when explicitly enabled. Browser WASM does not open the native TCP listener; its debugger bridge remains future work.
@@ -86,7 +120,7 @@ Debugger hooks use the same source mapping markers as compiler diagnostics. Incl
 
 ## CI
 
-`tests/DebuggerCoreProbe` validates debugger source mapping, scalar instrumentation, disabled-debug guards, protocol capabilities, Pause transport, exception hooks, bounded history and the rule that complex internal objects are not automatically inspected.
+`tests/DebuggerCoreProbe` validates debugger source mapping, scalar instrumentation, disabled-debug guards, protocol capabilities, runtime conditional breakpoint support, Pause transport, exception hooks, graceful completion, bounded history and the rule that complex internal objects are not automatically inspected.
 
 ## Security
 
