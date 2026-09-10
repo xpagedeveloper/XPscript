@@ -116,6 +116,20 @@ internal static class NotesMimeChildMutationPostProcessor
         children.RemoveAt(childPath[^1]);
         RewriteMimeTree(ReplaceSerializedEntity(raw, parentPath, BuildMultipartRoot(headers, boundary, children)), parentPath);
     }
+
+    public void RemoveHeaders(object? nameValue)
+    {
+        EnsureEntityAlive();
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        if (name.Length == 0) throw new XPScriptRuntimeException(5, "MIME header name is required.");
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var path = GetEntityPath();
+        var entity = GetSerializedEntity(raw, path);
+        var bodyOffset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, bodyOffset);
+        headers.RemoveAll(h => h.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, BuildEntity(headers, bodyOffset >= entity.Length ? [] : entity[bodyOffset..])), path);
+    }
 """;
 
     private const string ChildHelpers = """
