@@ -10,6 +10,8 @@ Primary source for native Domino API signatures, constants, structures, flags, o
 
 Use the C API documentation as the primary authority before adding or changing native Notes/Domino interop. Do not infer signatures, flags, structure layouts, ownership semantics, or behavior when the C API documentation can verify them.
 
+The HCL open source catalog lists `domino-c-api-docs` under the Apache License, Version 2.0. XPscript uses the documentation as a reference and does not redistribute the documentation or the HCL C API toolkit. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for the project attribution and license handling.
+
 ## HCL Domino JNX
 
 HCL's Java/JNI implementation over the Domino native API, useful as an implementation reference for how HCL maps higher-level Notes/Domino behavior onto the native C API:

@@ -2,6 +2,14 @@
 
 XPscript uses the following open source projects as implementation references when mapping the HCL Notes/Domino API. Their source code is not copied into XPscript and neither project is a runtime dependency of an XPscript application.
 
+HCL's open source catalog identifies the Domino C API documentation, Domino JNX, and related Domino open source repositories as Apache License 2.0 projects. XPscript keeps the attribution below and links to the full license text. The HCL Notes and Domino products and native runtime libraries remain commercial HCL software and are not redistributed by XPscript.
+
+## HCL Domino C API documentation
+
+Copyright HCL Software.
+
+The [HCL Domino C API documentation](https://opensource.hcltechsw.com/domino-c-api-docs/) is the primary reference for native function signatures, constants, flags, and MIME API behavior. The HCL open source catalog lists the `domino-c-api-docs` repository under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). XPscript does not copy the documentation or HCL C API toolkit binaries into its distribution.
+
 ## HCL Domino JNX
 
 Copyright 2019-2021 HCL.

@@ -8,6 +8,8 @@ Nested entity content mutation uses MimeKit 4.17.0 to parse and serialize the co
 
 The MIME implementation also uses [HCL Domino JNX](https://github.com/HCL-TECH-SOFTWARE/domino-jnx) and [Domino JNA](https://github.com/klehmann/domino-jna) as implementation references for native Notes API mapping and MIME stream writeback. Both reference projects are licensed under the Apache License, Version 2.0. XPscript does not distribute their source code or binaries. The attribution and future copying requirements are recorded in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
 
+The [HCL Domino C API documentation](https://opensource.hcltechsw.com/domino-c-api-docs/) is the primary source for the native MIME ABI and is listed by HCL under the Apache License, Version 2.0. XPscript does not redistribute the HCL C API toolkit or the commercial Notes/Domino runtime. Its attribution and license handling are recorded in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
+
 ## Open or create the root entity
 
 The current native implementation supports the `Body` item for document-level MIME access:
