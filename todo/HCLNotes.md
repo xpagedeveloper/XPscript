@@ -57,11 +57,10 @@ Missing / future:
 
 ## NotesDocumentCollection
 
-Implemented as a lightweight NOTEID collection. `docs(i)`, `Get(i)` and `For Each` return NOTEID strings; `Count`, `UBound`, `LBound` are supported.
+Implemented as a lightweight NOTEID collection. `GetFirstDocument`, `GetNextDocument`, `GetDocument`, `For Each`, `Count`, `Clone`, `RemoveAll`, `Merge`, `Intersect`, `Subtract`, folder operations, and full-text filtering are supported.
 
 Missing / future:
 
-- Additional collection operations if needed (contains, remove, intersect/merge, sorting).
 - Optional lazy paging for extremely large result sets if retaining all NOTEIDs becomes material.
 
 ## NotesDocument
