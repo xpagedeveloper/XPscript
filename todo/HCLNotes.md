@@ -78,7 +78,7 @@ Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceIte
 Missing / future:
 
 - Response/parent document relationships.
-- Additional note metadata (created, last modified, signer, encrypt-on-send, etc.).
+- Encrypt-on-send and additional note metadata.
 - MIME support is implemented for native `Body` entities, direct and nested child traversal, MIME content read/write, standard header parameters, arbitrary header enumeration, and MIME directory lifecycle. See [notes-mime-entity.md](../docs/notes-mime-entity.md) and `samples/notes-mime-entity-surface.xps`. Named MIME items other than `Body` remain unsupported.
 - Embedded object APIs beyond attachment extraction.
 - Full LotusScript-compatible `GetItemValue` semantics for all native item types.
