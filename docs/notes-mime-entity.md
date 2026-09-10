@@ -74,9 +74,9 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` and `GetNthHeader(name, occurrence)` read the selected entity's RFC822 header block through Domino `MIMEGetEntityData` and then perform semantic header-name lookup. This preserves complete header values such as `Content-Disposition: attachment; filename="probe.txt"` and avoids depending on Domino-version-specific numeric `MIMESYMBOL` positions.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` reads the selected entity through Domino `MIMEEntityGetHeader` and scans the documented `MIMESYMBOL` range, accepting only a value whose semantics match the requested header. This avoids depending on the published numeric positions used by a particular Domino installation.
 
-HCL documents `MIME_ENTITY_DATA_BODY`, `MIME_ENTITY_DATA_HEADERS`, `MIME_ENTITY_DATA_RFC822TEXT`, and `MIME_ENTITY_DATA_BOUNDARY` as flag arguments. XPscript probes the four single-bit flag positions and accepts only entity data that actually contains MIME header fields, so the implementation does not depend on undocumented numeric constants.
+The native header API returns the main header value. On the tested Domino installation, `Content-Disposition` is returned as `attachment`; filename parameter readback remains a separate implementation item.
 
 Example creating a base64 attachment from `NotesStream`:
 

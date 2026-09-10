@@ -61,10 +61,10 @@ Branch: `feature/notes-mime-entity`
 - [x] Existing known multipart HTML traversal remains green after attachment changes
 - [x] Added direct-child `GetNthHeader(name[, occurrence])`
 - [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
-- [x] Tested bounded root-stream, hard-coded `MIMEGetEntityData`, `MIMEEntityGetHeader`, and single-bit entity-data flag probes for child-header readback
+- [x] Tested bounded root-stream and `MIMEEntityGetHeader` for child-header readback
 - [x] Runtime diagnostics prove `Content-Disposition: attachment` exists immediately after mutation and after MIME-directory reopen
 - [x] Runtime diagnostics prove fixed published `MIMESYMBOL` positions do not match the installed Domino runtime
-- [x] Runtime diagnostics also disprove the single-bit `MIMEGetEntityData` heuristic: the selected buffer associated `Content-Disposition` with the CTE lookup
+- [x] Removed the disproven single-bit `MIMEGetEntityData` header-selection heuristic
 - [x] Removed selector guessing from direct-child `GetNthHeader` again
 - [x] Direct-child native header lookup now scans only the documented `MIMESYMBOL` range `0..124` through `MIMEEntityGetHeader` and validates returned values by header semantics
 

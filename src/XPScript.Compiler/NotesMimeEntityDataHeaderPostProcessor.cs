@@ -113,7 +113,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
             var symbol = ResolveNativeHeaderSymbol(name);
             if (symbol < 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
             var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
-            if (value is null) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+            if (value is null || !MatchesNativeHeader(name, value))
+                throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
             return new XPScriptNotesMimeHeaderValue(name, value);
         }
 
@@ -123,6 +124,16 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
+    }
+
+    private static bool MatchesNativeHeader(string name, string value)
+    {
+        var trimmed = value.Trim();
+        if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+            return trimmed.Equals("7bit", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("8bit", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("base64", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("binary", StringComparison.OrdinalIgnoreCase);
+        if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase))
+            return trimmed.Equals("attachment", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("inline", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("inline;", StringComparison.OrdinalIgnoreCase);
+        return trimmed.Contains('/');
     }
 """;
 
@@ -150,6 +161,7 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         EnsureAlive();
         return _api!.GetMimeEntityHeader(entity, symbol);
     }
+
 """;
 
         if (!source.Contains(ownerMarker, StringComparison.Ordinal))
