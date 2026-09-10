@@ -198,6 +198,15 @@ Sub Main()
     Else
         Print "FAIL: nested MIME header parameter lookup"
     End If
+    Set attachmentHeader = nestedPart.CreateHeader("Content-Disposition")
+    Call attachmentHeader.SetHeaderVal("inline")
+    Call attachmentHeader.SetParamVal("filename", "nested.txt")
+    Set attachmentHeader = nestedPart.GetNthHeader("Content-Disposition")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetParamVal("filename") = "nested.txt" Then
+        Print "PASS: nested Content-Disposition filename parameter"
+    Else
+        Print "FAIL: nested Content-Disposition filename parameter"
+    End If
     Set nestedParent = nestedPart.GetParentEntity()
     Set firstNested = nestedParent.GetFirstChildEntity()
     If Not nestedParent Is Nothing And nestedParent.ContentSubType = "mixed" And _
