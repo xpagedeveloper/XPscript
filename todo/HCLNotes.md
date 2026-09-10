@@ -73,11 +73,10 @@ Missing / future:
 
 ## NotesDocument
 
-Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceItemValue`, `CreateNotesItem`, `SaveAttachment`, `Save`, `Recycle`, UNID/NOTEID properties.
+Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceItemValue`, `CreateNotesItem`, `SaveAttachment`, `Save`, `Recycle`, UNID/NOTEID properties, response/parent relations, document metadata, and copy/folder/read-state operations.
 
 Missing / future:
 
-- Response/parent document relationships.
 - Encrypt-on-send and additional note metadata.
 - MIME support is implemented for native `Body` entities, direct and nested child traversal, MIME content read/write, standard header parameters, arbitrary header enumeration, and MIME directory lifecycle. See [notes-mime-entity.md](../docs/notes-mime-entity.md) and `samples/notes-mime-entity-surface.xps`. Named MIME items other than `Body` remain unsupported.
 - Embedded object APIs beyond attachment extraction.
