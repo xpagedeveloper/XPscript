@@ -186,6 +186,18 @@ Sub Main()
     Else
         Print "FAIL: nested custom header mutation"
     End If
+    Set attachmentHeader = nestedPart.GetNthHeader("Content-Type")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetParamVal("charset") = "UTF-8" Then
+        Call attachmentHeader.SetParamVal("charset", "UTF-8")
+        Set attachmentHeader = nestedPart.GetNthHeader("Content-Type")
+        If attachmentHeader.GetParamVal("charset") = "UTF-8" Then
+            Print "PASS: nested MIME header parameter mutation"
+        Else
+            Print "FAIL: nested MIME header parameter readback"
+        End If
+    Else
+        Print "FAIL: nested MIME header parameter lookup"
+    End If
     Set nestedParent = nestedPart.GetParentEntity()
     Set firstNested = nestedParent.GetFirstChildEntity()
     If Not nestedParent Is Nothing And nestedParent.ContentSubType = "mixed" And _
