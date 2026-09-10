@@ -91,4 +91,5 @@ Branch: `feature/notes-mime-entity`
 - [x] Add nested child creation and content mutation beyond direct children of the root entity
 - [x] Add regression coverage for nested parent and first-child traversal
 - [x] Add regression coverage for nested depth-first and sibling traversal after save/reopen
+- [x] Verify nested custom header create, mutation and readback
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step

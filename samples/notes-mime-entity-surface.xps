@@ -178,6 +178,14 @@ Sub Main()
     Else
         Print "FAIL: nested child creation and mutation"
     End If
+    Set attachmentHeader = nestedPart.CreateHeader("X-Nested-Probe")
+    Call attachmentHeader.SetHeaderVal("nested")
+    Set attachmentHeader = nestedPart.GetNthHeader("X-Nested-Probe")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetHeaderValAndParams() = "nested" Then
+        Print "PASS: nested custom header mutation"
+    Else
+        Print "FAIL: nested custom header mutation"
+    End If
     Set nestedParent = nestedPart.GetParentEntity()
     Set firstNested = nestedParent.GetFirstChildEntity()
     If Not nestedParent Is Nothing And nestedParent.ContentSubType = "mixed" And _

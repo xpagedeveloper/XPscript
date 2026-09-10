@@ -107,9 +107,31 @@ internal static class NotesMimeChildMutationPostProcessor
         return ReadEntityHeaderAt(index);
     }
 
+    internal XPScriptNotesMimeHeaderValue HeaderAt(string name)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var headers = ParseEntityHeaders(entity, FindRootBodyOffset(entity));
+        var header = headers.FirstOrDefault(h => h.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (header is null) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+        return header;
+    }
+
     internal void SetHeader(int index, string value)
     {
         EnsureEntityAlive();
+        SetEntityHeader(index, value);
+    }
+
+    internal void SetHeader(string name, string value)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var headers = ParseEntityHeaders(entity, FindRootBodyOffset(entity));
+        var index = headers.FindIndex(h => h.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (index < 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
         SetEntityHeader(index, value);
     }
 
@@ -267,7 +289,7 @@ internal static class NotesMimeChildMutationPostProcessor
             : name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ? -1002
             : name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ? -1003
             : headers.Count - 1;
-        return new XPScriptNotesMIMEHeader(this, nativeIndex);
+        return new XPScriptNotesMIMEHeader(this, nativeIndex, nativeIndex >= 0 ? name : null);
     }
 
     private XPScriptNotesMIMEHeader CreateNestedEntityHeader(string name)
@@ -284,7 +306,7 @@ internal static class NotesMimeChildMutationPostProcessor
             : name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ? -1002
             : name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ? -1003
             : headers.Count - 1;
-        return new XPScriptNotesMIMEHeader(this, nativeIndex);
+        return new XPScriptNotesMIMEHeader(this, nativeIndex, nativeIndex >= 0 ? name : null);
     }
 
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
@@ -541,23 +563,25 @@ internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject
 {
     private readonly XPScriptNotesMIMEEntity _entity;
     private int _index;
+    private readonly string? _name;
 
-    internal XPScriptNotesMIMEHeader(XPScriptNotesMIMEEntity entity, int index) : base(entity.Parent.SessionForItem)
+    internal XPScriptNotesMIMEHeader(XPScriptNotesMIMEEntity entity, int index, string? name = null) : base(entity.Parent.SessionForItem)
     {
         _entity = entity;
         _index = index;
+        _name = name;
     }
 
     public XPScriptNotesMIMEEntity Parent { get { EnsureAlive(); return _entity; } }
-    public string HeaderName { get { EnsureAlive(); return _entity.HeaderAt(_index).Name; } }
-    public string GetHeaderVal() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
-    public string GetHeaderValAndParams() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
+    public string HeaderName { get { EnsureAlive(); return (_name is null ? _entity.HeaderAt(_index) : _entity.HeaderAt(_name)).Name; } }
+    public string GetHeaderVal() { EnsureAlive(); return (_name is null ? _entity.HeaderAt(_index) : _entity.HeaderAt(_name)).Value; }
+    public string GetHeaderValAndParams() { EnsureAlive(); return (_name is null ? _entity.HeaderAt(_index) : _entity.HeaderAt(_name)).Value; }
     public string GetParamVal(object? nameValue)
     {
         EnsureAlive();
         var parameterName = XPScriptRuntime.CStr(nameValue).Trim();
         if (parameterName.Length == 0) return "";
-        foreach (var part in _entity.HeaderAt(_index).Value.Split(';').Skip(1))
+        foreach (var part in (_name is null ? _entity.HeaderAt(_index) : _entity.HeaderAt(_name)).Value.Split(';').Skip(1))
         {
             var equals = part.IndexOf('=');
             if (equals <= 0 || !part[..equals].Trim().Equals(parameterName, StringComparison.OrdinalIgnoreCase)) continue;
@@ -565,7 +589,7 @@ internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject
         }
         return "";
     }
-    public void SetHeaderVal(object? value) { EnsureAlive(); _entity.SetHeader(_index, XPScriptRuntime.CStr(value)); }
+    public void SetHeaderVal(object? value) { EnsureAlive(); if (_name is null) _entity.SetHeader(_index, XPScriptRuntime.CStr(value)); else _entity.SetHeader(_name, XPScriptRuntime.CStr(value)); }
     public void SetHeaderValAndParams(object? value) { SetHeaderVal(value); }
     public void AddValText(object? value) { EnsureAlive(); _entity.SetHeader(_index, _entity.HeaderAt(_index).Value + XPScriptRuntime.CStr(value)); }
     public void SetParamVal(object? nameValue, object? value)
