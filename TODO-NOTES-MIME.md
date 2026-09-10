@@ -96,9 +96,10 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
 - [x] Implement and verify `CreateHeader(name, value)` convenience overload
 - [x] Implement and verify `RemoveHeaders(name)` to remove all matching headers
-- [ ] Implement MIME preamble read and write
+- [x] Implement and verify MIME preamble read and write for multipart entities
 - [x] Implement and verify explicit MIME encoding readback
-- [ ] Implement decoded and raw content stream access
+- [x] Implement raw entity stream access for child entities
+- [x] Implement decoded content stream access for native entities
 - [ ] Implement text reader access using the entity charset
 - [ ] Add regression coverage for remaining parity items against the Notes client
 - [x] Add regression coverage for `AppendChildEntity`

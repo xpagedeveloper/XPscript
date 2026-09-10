@@ -45,6 +45,8 @@ Tree navigation uses the native MIME directory:
 
 The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`.
 
+Multipart entities support `Preamble` read and write. Child entities also support raw `GetEntityAsText(stream)` access and decoded content stream access. `EncodeContent` and `DecodeContent` rewrite the entity transfer encoding while preserving its content type.
+
 XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRead`. `ContentAsText` and `GetContentAsText` decode the transfer encoding and then decode text with the root entity's native charset. `GetContentAsBytes` returns decoded body bytes. `GetEntityAsText` returns the complete root RFC822 MIME stream including headers.
 
 Supported transfer decoding includes `base64`, `quoted-printable`, `7bit`, `8bit` and `binary` content. A root entity with no charset is decoded as UTF-8.
