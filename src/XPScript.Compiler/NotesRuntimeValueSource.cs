@@ -79,9 +79,15 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
         if (lt >= 0 && gt > lt)
         {
             _parts["PHRASE"] = before[..lt].Trim().Trim('"');
-            _parts["LOCALPART"] = source[(lt + 1)..gt].Split('@')[0];
+            var address = source[(lt + 1)..gt].Trim();
+            _parts["ADDR821"] = address;
+            _parts["LOCALPART"] = address.Split('@')[0];
         }
-        else _parts["LOCALPART"] = before;
+        else
+        {
+            _parts["ADDR821"] = source.Trim();
+            _parts["LOCALPART"] = before;
+        }
 
         var comments = System.Text.RegularExpressions.Regex.Matches(source[(at + 1)..], @"\(([^)]*)\)");
         for (var index = 0; index < comments.Count && index < 3; index++)
