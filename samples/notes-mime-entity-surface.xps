@@ -26,6 +26,8 @@ Sub Main()
     Dim foundAttachment As Boolean
     Dim foundAttachmentDisposition As Boolean
     Dim foundAttachmentBase64 As Boolean
+    Dim foundNestedAfterReopen As Boolean
+    Dim foundSiblingAfterReopen As Boolean
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -320,6 +322,24 @@ Sub Main()
                 Set currentEntity = currentEntity.GetNextSibling()
             Loop
 
+            Set currentEntity = mime.GetFirstChildEntity()
+            If Not currentEntity Is Nothing Then
+                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                Do While Not currentEntity Is Nothing
+                    If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
+                        foundNestedAfterReopen = True
+                    End If
+                    Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                Loop
+            End If
+            Set currentEntity = mime.GetFirstChildEntity()
+            If Not currentEntity Is Nothing Then
+                Set currentEntity = currentEntity.GetNextSibling()
+                If Not currentEntity Is Nothing And currentEntity.ContentType = "application" Then
+                    foundSiblingAfterReopen = True
+                End If
+            End If
+
             If foundAttachment Then
                 Print "PASS: base64 attachment child survived save/reopen traversal"
             Else
@@ -336,6 +356,16 @@ Sub Main()
                 Print "PASS: attachment child retained Content-Disposition filename"
             Else
                 Print "FAIL: attachment child Content-Disposition missing after save/reopen"
+            End If
+            If foundNestedAfterReopen Then
+                Print "PASS: depth-first nested traversal survived save/reopen"
+            Else
+                Print "FAIL: depth-first nested traversal after save/reopen"
+            End If
+            If foundSiblingAfterReopen Then
+                Print "PASS: sibling traversal survived save/reopen"
+            Else
+                Print "FAIL: sibling traversal after save/reopen"
             End If
         End If
 
