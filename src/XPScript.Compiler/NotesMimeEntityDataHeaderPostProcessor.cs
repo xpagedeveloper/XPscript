@@ -25,7 +25,6 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         var nativeIndex = NativeHeaderIndex(name);
         if (nativeIndex == 0)
             throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports Content-Type, Content-Transfer-Encoding and Content-Disposition on direct child entities.");
-        if (ResolveNativeHeaderSymbol(name) < 0) return null;
         return new XPScriptNotesMIMEHeader(this, nativeIndex);
 """;
 
@@ -111,20 +110,20 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         {
             var name = NativeHeaderName(index);
             var symbol = ResolveNativeHeaderSymbol(name);
-            if (symbol < 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
-            var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
+            var value = symbol < 0 ? null : _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
             if (value is null || !MatchesNativeHeader(name, value))
             {
                 var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
                 var boundary = _mimeDirectoryOwner.TypeParam(_mimeDirectoryOwner.RootEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY).Trim();
-                var nativeType = _mimeDirectoryOwner.EntityHeader(_nativeEntity, ResolveNativeHeaderSymbol("Content-Type"))?.Trim() ?? "";
+                var contentTypeSymbol = ResolveNativeHeaderSymbol("Content-Type");
+                var nativeType = contentTypeSymbol < 0 ? "" : _mimeDirectoryOwner.EntityHeader(_nativeEntity, contentTypeSymbol)?.Trim() ?? "";
                 foreach (var candidate in SplitDirectChildren(raw, boundary))
                 {
                     var candidateHeaders = ParseEntityHeaders(candidate, FindRootBodyOffset(candidate));
                     var candidateType = candidateHeaders.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value.Trim() ?? "";
                     if (nativeType.Length > 0 && !candidateType.StartsWith(nativeType.Split(';')[0].Trim(), StringComparison.OrdinalIgnoreCase)) continue;
                     foreach (var header in candidateHeaders)
-                        if (header.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                        if (header.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && MatchesNativeHeader(name, header.Value))
                             return header;
                 }
                 throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
