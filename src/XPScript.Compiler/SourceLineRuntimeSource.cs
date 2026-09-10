@@ -97,7 +97,8 @@ internal static class XPScriptDebugRuntime
             var frames = CaptureFrames(sourcePath, line);
             var depth = frames.Count;
             var pauseHit = global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0) != 0;
-            var hitBreakpoint = Breakpoints.TryGetValue(sourcePath, out var lines) && lines.Contains(line);
+            var breakpointSource = NormalizeSource(sourcePath);
+            var hitBreakpoint = Breakpoints.TryGetValue(breakpointSource, out var lines) && lines.Contains(line);
             var stepHit = _stepMode switch
             {
                 "into" => true,
@@ -190,6 +191,20 @@ internal static class XPScriptDebugRuntime
         }
     }
 
+    public static void Complete()
+    {
+        EnsureInitialized();
+        if (!_enabled) return;
+        lock (Gate)
+        {
+            if (_writer is null) return;
+            Send(new { type = "complete", source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1 });
+            try { _writer.Flush(); } catch { }
+            try { _client?.Client.Shutdown(global::System.Net.Sockets.SocketShutdown.Send); } catch { }
+            _enabled = false;
+        }
+    }
+
     private static void RecordValueLocked(string name, object? value)
     {
         var rendered = RenderValue(value);
@@ -277,6 +292,14 @@ internal static class XPScriptDebugRuntime
         return result;
     }
 
+    private static string NormalizeSource(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath)) return "";
+        var normalized = sourcePath.Replace('\\', '/');
+        var slash = normalized.LastIndexOf('/');
+        return slash >= 0 ? normalized[(slash + 1)..] : normalized;
+    }
+
     private static void EnsureInitialized()
     {
         if (_initialized) return;
@@ -302,7 +325,7 @@ internal static class XPScriptDebugRuntime
         var stream = _client.GetStream();
         _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
         _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true) { AutoFlush = true };
-        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true, commandTransport = "single-reader" });
+        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true, supportsGracefulCompletion = true, commandTransport = "single-reader" });
         _readerThread = new global::System.Threading.Thread(ReaderLoop) { IsBackground = true, Name = "XPscript Debugger Command Reader" };
         _readerThread.Start();
     }
@@ -470,7 +493,7 @@ internal static class XPScriptDebugRuntime
 
     private static void SetBreakpoints(global::System.Text.Json.JsonElement root)
     {
-        var source = root.TryGetProperty("source", out var sourceElement) ? sourceElement.GetString() ?? "" : "";
+        var source = root.TryGetProperty("source", out var sourceElement) ? NormalizeSource(sourceElement.GetString() ?? "") : "";
         if (source.Length == 0) return;
         var values = new global::System.Collections.Generic.HashSet<int>();
         if (root.TryGetProperty("lines", out var linesElement) && linesElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
