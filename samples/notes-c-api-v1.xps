@@ -6,7 +6,7 @@ Option Declare
 
 Sub Main()
     Dim NOTES_RUNTIME As String
-    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    NOTES_RUNTIME = "D:\Program Files\HCL\Notes"
     Dim NOTES_INI As String
     NOTES_INI = ""
     Dim LOCAL_DATABASE As String
@@ -89,9 +89,10 @@ Sub Main()
         If VIEW_KEY <> "" And view Is Not Nothing Then
             Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
             Print "VIEW_MATCHES=" & CStr(docs.Count)
-            Print "VIEW_UBOUND=" & CStr(UBound(docs))
+            Print "VIEW_COUNT=" & CStr(docs.Count)
             If docs.Count > 0 Then
-                noteId = docs(0)
+                Set doc = docs.GetFirstDocument()
+                noteId = doc.NoteID
                 Print "VIEW_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
                 If doc Is Not Nothing Then
@@ -122,9 +123,10 @@ Sub Main()
         Set docs = localDb.Search("@All", 10)
         If docs Is Not Nothing Then
             Print "FORMULA_MATCHES=" & CStr(docs.Count)
-            Print "FORMULA_UBOUND=" & CStr(UBound(docs))
+            Print "FORMULA_COUNT=" & CStr(docs.Count)
             If docs.Count > 0 Then
-                noteId = docs(0)
+                Set doc = docs.GetFirstDocument()
+                noteId = doc.NoteID
                 Print "SEARCH_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
                 If doc Is Not Nothing Then
@@ -143,7 +145,7 @@ Sub Main()
         ' If docs Is Not Nothing Then
         '     Print "FT_MATCHES=" & CStr(docs.Count)
         '     If docs.Count > 0 Then
-        '         noteId = docs(0)
+        '         noteId = docs.GetFirstDocument().NoteID
         '         Set doc = localDb.GetDocumentByNoteId(noteId)
         '     End If
         '     Call docs.Recycle()

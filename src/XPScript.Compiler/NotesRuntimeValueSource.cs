@@ -132,6 +132,8 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
+            var wildcard = Session.Api.TimeDateWildcard();
+            if ((_value.Innards1 & 0x00FFFFFFu) == (wildcard.Innards1 & 0x00FFFFFFu)) return "AnyDay";
             return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
@@ -141,6 +143,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
+            if (_value.Innards0 == Session.Api.TimeDateWildcard().Innards0) return "AllDay";
             return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
