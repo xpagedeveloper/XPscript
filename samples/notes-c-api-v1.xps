@@ -83,6 +83,9 @@ Sub Main()
     Set name2 = session.CreateName("ada@example.com (Engineering)")
     Print "NAME_SIMPLE_ADDR821=" & name2.Addr821
     Print "NAME_SIMPLE_LOCALPART=" & name2.Addr822LocalPart
+    Set name2 = session.CreateName("CN=Åsa Öberg/O=Företag/C=SE")
+    Print "NAME_UNICODE_COMMON=" & name2.Common
+    Print "NAME_UNICODE_ORGANIZATION=" & name2.Organization
 
     Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
     Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
