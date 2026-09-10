@@ -104,6 +104,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Add regression coverage for `HeaderObjects`
 - [x] Implement raw entity stream access for child entities
 - [x] Implement decoded content stream access for native entities
+- [x] Implement and verify decoded MIME `InputStream` access
 - [ ] Implement text reader access using the entity charset
 - [ ] Add regression coverage for remaining parity items against the Notes client
 - [x] Add regression coverage for `AppendChildEntity`

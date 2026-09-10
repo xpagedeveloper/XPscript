@@ -267,6 +267,15 @@ internal static class NotesMimeChildMutationPostProcessor
         return string.Join("\r\n", headers.Select(h => h.Name + ": " + h.Value));
     }
 
+    private object ReadEntityInputStream(string member)
+    {
+        EnsureEntityAlive();
+        var stream = Session.CreateStream();
+        stream.Write(ReadEntityContent(member));
+        stream.Position = 0;
+        return stream;
+    }
+
     private void EncodeEntityContent(int encoding, string member)
     {
         EnsureEntityAlive();

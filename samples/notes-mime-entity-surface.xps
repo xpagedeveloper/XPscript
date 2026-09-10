@@ -399,6 +399,13 @@ Sub Main()
     Else
         Print "FAIL: MIME header text readback"
     End If
+    Set readStream = attachmentPart.InputStream
+    If readStream.Bytes > 0 Then
+        Print "PASS: decoded MIME InputStream readback"
+    Else
+        Print "FAIL: decoded MIME InputStream readback"
+    End If
+    Call readStream.Recycle()
     headerObjects = attachmentPart.HeaderObjects
     If UBound(headerObjects) >= LBound(headerObjects) And headerObjects(LBound(headerObjects)).HeaderName = "Content-Type" Then
         Print "PASS: MIME HeaderObjects readback"
