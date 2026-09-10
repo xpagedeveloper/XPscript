@@ -232,9 +232,21 @@ A `NotesDocument` owns an open native note handle and is created from a database
 | `SetDateTime(itemName, value)` | Void | Writes a `NotesDateTime`. Other value types raise runtime error 13. |
 | `RemoveItem(itemName)` | Void | Removes an item by name. |
 | `SaveAttachment(attachmentName, path)` | Boolean | Extracts an attachment from the document to `path`. Returns `False` when it cannot be saved. |
-| `Save()` | Void | Saves the note and refreshes its Note ID. |
-| `Save(force, createResponse [, markRead])` | Boolean | Matches LotusScript `NotesDocument.Save`: force controls conflict overwrite, `createResponse` controls conflict response behavior, and `markRead` marks the saved document read. Returns `True` when the native update succeeds. |
+| `Save()` | Void | Saves the note with the normal native update path and refreshes its Note ID. Native update errors are raised as XPscript runtime errors. |
+| `Save(force)` | Boolean | Saves with optional native force/update-conflict overwrite semantics. Returns `False` for a non-forced update conflict that the runtime can identify; other native errors are raised. |
+| `Save(force, createResponse)` | Boolean | Signature-compatible overload. `force` is applied. `createResponse` is currently accepted for compatibility but does not yet create a conflict response document. |
+| `Save(force, createResponse, markRead)` | Boolean | Same as the two-argument overload; when `markRead` is `True`, the saved document is marked read for the current Notes user after a successful save. |
 | `Recycle()` | Void | Closes the native note handle. |
+
+### Save overload semantics
+
+The Boolean overloads mirror the LotusScript call shape, but not every LotusScript conflict-handling side effect is implemented yet. `force` maps to the native force-update flag. `markRead=True` clears the unread mark for the current user after a successful update. `createResponse` is accepted so existing call sites compile, but XPscript currently does not synthesize a conflict response document from that argument. Do not rely on `createResponse=True` for response-document creation until that behavior is explicitly implemented and covered by a runtime regression.
+
+```xpscript
+If Not doc.Save(True, False, True) Then
+    Error 5, "Document was not saved"
+End If
+```
 
 ### Item-name rules
 
