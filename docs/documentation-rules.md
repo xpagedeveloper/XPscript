@@ -75,13 +75,13 @@ Examples:
 - XPAi/AITool/session memory: `ai.md`, `ai-tools-sessions.md` and `api-reference.md`.
 - UIForm/UIListView: `uiform.md`, `uiform-fields.md` and `api-reference.md`.
 - Web/REST/Session/Application/RequestScope: `web.md`, `rest-api.md` and `api-reference.md`.
-- Native Notes/Domino: `notes-c-api.md` plus `api-reference.md`; MIME changes also require `notes-mime-entity.md`.
+- Native Notes/Domino: `notes-c-api.md` plus `api-reference.md`; MIME changes also require `notes-mime-entity.md`. The VS Code extension synchronizes native Notes IntelliSense from `notes-c-api.md`, so each public Notes property or method must occupy its own machine-readable table row. Do not group several member names into one cell.
 
 ## XPscript programming skill synchronization
 
 When a change affects how an LLM should write XPscript — including public runtime classes, constructors, member signatures, lifecycle rules, supported overloads, native Notes/Domino behavior, filesystem APIs, database/AI/XML APIs, iteration semantics, or recommended idioms — review `skills/xpscript-programming/SKILL.md` in the same change. Update it when the new behavior changes valid generated XPscript. The skill is operational guidance, not the exhaustive reference; it must point to the authoritative documentation and must not claim behavior that is only planned or partially implemented.
 
-A TODO/checklist update is not a substitute for reference documentation or skill synchronization.
+A TODO/checklist update is not a substitute for reference documentation or skill synchronization. The separate `XPScript-visual-code-plugin` repository also consumes the canonical documentation; its scheduled sync/release workflow is expected to publish a new patch release when generated IntelliSense metadata changes.
 
 ## When a web feature changes
 
