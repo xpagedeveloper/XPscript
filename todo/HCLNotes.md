@@ -42,8 +42,6 @@ Implemented methods: `OpenView`, `GetDocumentByNoteId`, `GetDocumentByUNID`, `Se
 
 Missing / future:
 
-- Create new documents.
-- Delete documents.
 - Additional ACL/database access properties and ACL manipulation.
 - Database modified time, created time and additional database metadata.
 - Database compact/fixup/replication/admin operations.
@@ -79,8 +77,6 @@ Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceIte
 
 Missing / future:
 
-- Create a new document from `NotesDatabase`.
-- Delete document.
 - Response/parent document relationships.
 - Additional note metadata (created, last modified, signer, encrypt-on-send, etc.).
 - MIME support is implemented for native `Body` entities, direct and nested child traversal, MIME content read/write, standard header parameters, arbitrary header enumeration, and MIME directory lifecycle. See [notes-mime-entity.md](../docs/notes-mime-entity.md) and `samples/notes-mime-entity-surface.xps`. Named MIME items other than `Body` remain unsupported.
