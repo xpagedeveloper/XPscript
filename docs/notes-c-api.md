@@ -233,6 +233,7 @@ A `NotesDocument` owns an open native note handle and is created from a database
 | `RemoveItem(itemName)` | Void | Removes an item by name. |
 | `SaveAttachment(attachmentName, path)` | Boolean | Extracts an attachment from the document to `path`. Returns `False` when it cannot be saved. |
 | `Save()` | Void | Saves the note and refreshes its Note ID. |
+| `Save(force, createResponse [, markRead])` | Boolean | Matches LotusScript `NotesDocument.Save`: force controls conflict overwrite, `createResponse` controls conflict response behavior, and `markRead` marks the saved document read. Returns `True` when the native update succeeds. |
 | `Recycle()` | Void | Closes the native note handle. |
 
 ### Item-name rules

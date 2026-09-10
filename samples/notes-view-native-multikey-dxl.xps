@@ -29,7 +29,7 @@ Sub Main()
     Call doc.ReplaceItemValue("XPScriptGroup", "Native MultiKey Group")
     Call doc.ReplaceItemValue("XPScriptNumber", 42)
     Call doc.ReplaceItemValue("XPScriptMarker", "native-multikey-dxl")
-    Call doc.Save()
+    If Not doc.Save(True, True) Then Error 5, "NotesDocument.Save(True, True) returned False"
 
     Set view = db.OpenView("XPScriptNativeMultiKeyView")
     If view Is Nothing Then Error 5, "DXL-created multi-key view was not found"
