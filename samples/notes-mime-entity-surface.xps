@@ -361,6 +361,23 @@ Sub Main()
         Print "FAIL: multipart root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType
     End If
 
+    mime.Preamble = "root preamble"
+    If mime.Preamble = "root preamble" Then
+        Print "PASS: MIME root preamble readback"
+    Else
+        Print "FAIL: MIME root preamble readback"
+    End If
+    Call doc.CloseMIMEEntities()
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+
     If attachmentPart.ContentType = "application" And attachmentPart.ContentSubType = "octet-stream" Then
         Print "PASS: attachment child metadata refreshed after base64 writeback"
     Else
