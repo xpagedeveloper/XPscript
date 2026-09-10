@@ -11,13 +11,15 @@ internal static class NotesMimeChildHeaderReadPostProcessor
 """;
 
         const string newValue = """
-        if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
-            throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader is currently supported for direct child entities only.");
-
         var name = XPScriptRuntime.CStr(nameValue).Trim();
         if (name.Length == 0) return null;
         var occurrence = Math.Max(1, XPScriptRuntime.CInt(occurrenceValue));
-        var child = ReadCurrentDirectChild("GetNthHeader");
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var child = _nativeEntity == _mimeDirectoryOwner.RootEntity
+            ? raw
+            : _mimeDirectoryOwner.Parent(_nativeEntity) == _mimeDirectoryOwner.RootEntity
+                ? ReadCurrentDirectChild("GetNthHeader")
+                : GetSerializedEntity(raw, GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         var found = 0;
         for (var i = 0; i < headers.Count; i++)
