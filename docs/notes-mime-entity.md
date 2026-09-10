@@ -74,7 +74,9 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Native direct-child `GetNthHeader` currently supports occurrence `1` for `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition`; lookup is backed by Domino `MIMEEntityGetHeader` on the selected native child entity. This is sufficient for the normal multipart mail pattern with a text body and one or more attachments.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Native direct-child `GetNthHeader` currently supports occurrence `1` for `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition`; lookup is backed by Domino `MIMEEntityGetHeader` on the selected native child entity.
+
+The HCL documentation publishes the `MIMESYMBOL` ordering, but runtime diagnostics showed that at least one installed Domino runtime maps the content-header symbol IDs differently from the published positions. XPscript therefore resolves the narrow content-header symbol neighborhood at runtime by validating the returned MIME header value rather than assuming fixed numeric IDs. This avoids treating a valid `Content-Disposition: attachment` value as the transfer-encoding header.
 
 Example creating a base64 attachment from `NotesStream`:
 
@@ -114,7 +116,7 @@ The current mutation and child-header lookup implementation supports direct chil
 
 Any MIME write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before writeback. Existing wrappers that reference the old directory become invalid immediately.
 
-The wrapper performing a successful root or direct-child content/header mutation reopens the MIME directory and rebinds itself to the corresponding native entity so metadata reads immediately observe the new MIME content.
+The wrapper performing a successful root or direct-child content/header mutation reopens the MIME directory and rebinds itself to the corresponding native entity so metadata reads immediately observe the new MIME content. Reacquire the root with `doc.GetMIMEEntity("Body")` before subsequent root operations after mutating a child.
 
 `NotesDocument.CloseMIMEEntities()` closes the current MIME directory explicitly. `NotesDocument.Save()` and document recycle also release the directory before their native operation.
 
