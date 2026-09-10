@@ -61,26 +61,18 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
 
     private void ParseInternet(string source)
     {
-        var text = source.Trim();
-        var lt = text.LastIndexOf('<');
-        var gt = text.LastIndexOf('>');
-        string address;
-
+        var at = source.LastIndexOf('@');
+        if (at <= 0 || at >= source.Length - 1) return;
+        _parts["ADDR821"] = source;
+        var before = source[..at].Trim();
+        var lt = before.LastIndexOf('<');
+        var gt = before.LastIndexOf('>');
         if (lt >= 0 && gt > lt)
         {
-            address = text[(lt + 1)..gt].Trim();
-            var phrase = text[..lt].Trim().Trim('"');
-            if (phrase.Length != 0) _parts["PHRASE"] = phrase;
+            _parts["PHRASE"] = before[..lt].Trim().Trim('"');
+            _parts["LOCALPART"] = before[(lt + 1)..gt].Split('@')[0];
         }
-        else
-        {
-            address = text;
-        }
-
-        var at = address.LastIndexOf('@');
-        if (at <= 0 || at >= address.Length - 1) return;
-        _parts["ADDR821"] = address;
-        _parts["LOCALPART"] = address[..at].Trim();
+        else _parts["LOCALPART"] = before;
     }
 
     protected override void ReleaseNative() => _parts.Clear();
@@ -112,17 +104,7 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     internal static object FromNativeObject(XPScriptNotesTimeDate value) => throw new XPScriptRuntimeException(13, "Use NotesDocument.GetDateTime for Notes time/date fields.");
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
-    public bool IsValidDate
-    {
-        get
-        {
-            EnsureAlive();
-            var value = Session.Api.ExpandTimeDate(_value);
-            if (value.Year < 1 || value.Year > 9999 || value.Month < 1 || value.Month > 12 || value.Day < 1)
-                return false;
-            return value.Day <= DateTime.DaysInMonth(value.Year, value.Month);
-        }
-    }
+    public bool IsValidDate { get { EnsureAlive(); return true; } }
     public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
     public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
     public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }

@@ -47,8 +47,8 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
     public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue)
     {
         EnsureAlive();
-        if (!IsOpen) return null;
-        return OpenByNoteId(XPScriptNotesConvert.NoteId(noteIdValue));
+        if (!IsOpen || !XPScriptNotesConvert.TryNoteId(noteIdValue, out var noteId)) return null;
+        return OpenByNoteId(noteId);
     }
 
     public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByNoteId(noteIdValue);
@@ -65,7 +65,9 @@ internal sealed class XPScriptNotesDatabase : XPScriptNotesObject
     {
         EnsureAlive();
         if (!IsOpen) return null;
-        var note = Session.Api.TryOpenNoteByUnid(_handle, XPScriptRuntime.CStr(unidValue).Trim());
+        var unid = XPScriptRuntime.CStr(unidValue).Trim();
+        if (!XPScriptNotesConvert.IsUnid(unid)) return null;
+        var note = Session.Api.TryOpenNoteByUnid(_handle, unid);
         return note == 0 ? null : new XPScriptNotesDocument(Session, this, note, Session.Api.GetNoteId(note));
     }
 
@@ -367,13 +369,24 @@ internal static class XPScriptNotesConvert
         return number;
     }
 
-    public static uint NoteId(object? value)
+    public static bool TryNoteId(object? value, out uint id)
     {
         var text = XPScriptRuntime.CStr(value).Trim();
         if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) text = text[2..];
-        if (uint.TryParse(text, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var id)) return id;
-        if (uint.TryParse(text, out id)) return id;
+        if (text.Length == 0 || text.Length > 8) { id = 0; return false; }
+        return uint.TryParse(text, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out id);
+    }
+
+    public static uint NoteId(object? value)
+    {
+        if (TryNoteId(value, out var id)) return id;
         throw new XPScriptRuntimeException(13, "Notes NoteID must be numeric or hexadecimal.");
+    }
+
+    public static bool IsUnid(string text)
+    {
+        text = text.Replace("-", "", StringComparison.Ordinal).Replace(":", "", StringComparison.Ordinal).Trim();
+        return text.Length == 32 && text.All(Uri.IsHexDigit);
     }
 }
 """;

@@ -72,6 +72,35 @@ internal static class XPScriptNotesConst
     public const int FindCaseSensitive = RT_FIND_CASESENSITIVE;
     public const int FindAccentInsensitive = RT_FIND_ACCENTINSENSITIVE;
     public const int FindPitchInsensitive = RT_FIND_PITCHINSENSITIVE;
+
+    // NotesMIMEEntity traversal constants.
+    public const int SEARCH_BREADTH = 1723;
+    public const int SEARCH_DEPTH = 1724;
+    public const int SearchDepth = SEARCH_DEPTH;
+    public const int SearchBreadth = SEARCH_BREADTH;
+
+    // Domino C API MIMESYMBOL values used by the native MIME surface.
+    public const int MIME_SYMBOL_UNKNOWN = 0;
+    public const int MIME_SYMBOL_TEXT = 1;
+    public const int MIME_SYMBOL_MULTIPART = 2;
+    public const int MIME_SYMBOL_MESSAGE = 3;
+    public const int MIME_SYMBOL_APPLICATION = 4;
+    public const int MIME_SYMBOL_IMAGE = 5;
+    public const int MIME_SYMBOL_AUDIO = 6;
+    public const int MIME_SYMBOL_VIDEO = 7;
+    public const int MIME_SYMBOL_NONE = 8;
+    public const int MIME_SYMBOL_PLAIN = 16;
+    public const int MIME_SYMBOL_OCTET_STREAM = 19;
+    public const int MIME_SYMBOL_HTML = 21;
+    public const int MIME_SYMBOL_ALTERNATIVE = 27;
+    public const int MIME_SYMBOL_MIXED = 28;
+    public const int MIME_SYMBOL_7BIT = 29;
+    public const int MIME_SYMBOL_8BIT = 30;
+    public const int MIME_SYMBOL_QUOTED_PRINTABLE = 31;
+    public const int MIME_SYMBOL_BASE64 = 32;
+    public const int MIME_SYMBOL_BINARY = 33;
+    public const int MIME_SYMBOL_CHARSET = 35;
+    public const int MIME_SYMBOL_BOUNDARY = 36;
 }
 """;
     }

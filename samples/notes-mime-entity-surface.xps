@@ -1,0 +1,340 @@
+' Runtime probe for native MIME create, root mutation/readback, multipart attachments, save/reopen, and a known HTML MIME document.
+Sub Main()
+    Const KNOWN_HTML_MIME_UNID = "100EC86E73301B37C1258BB20034683C"
+    Const EXPECTED_TEXT = "XPscript NotesMIMEEntity root mutation UTF-8: åäö"
+    Const ATTACHMENT_TEXT = "XPscript MIME attachment payload"
+
+    Dim session As New NotesSession()
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim reopened As NotesDocument
+    Dim knownHtml As NotesDocument
+    Dim mime As NotesMIMEEntity
+    Dim currentEntity As NotesMIMEEntity
+    Dim textPart As NotesMIMEEntity
+    Dim attachmentPart As NotesMIMEEntity
+    Dim attachmentHeader As NotesMIMEHeader
+    Dim contentStream As NotesStream
+    Dim readStream As NotesStream
+    Dim unid As String
+    Dim multipartUnid As String
+    Dim entityText As String
+    Dim foundHtml As Boolean
+    Dim foundAttachment As Boolean
+    Dim foundAttachmentDisposition As Boolean
+    Dim foundAttachmentBase64 As Boolean
+
+    session.ConvertMIME = False
+    Set db = session.OpenDatabase("", "mail.nsf")
+
+    Print "MIME create/mutate/read/reopen probe: creating document"
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "Memo")
+    Call doc.ReplaceItemValue("Subject", "XPScript native MIME create/mutate/read/reopen probe")
+    Call doc.ReplaceItemValue("XPScriptMarker", "notes-mime-entity-surface")
+
+    Set mime = doc.CreateMIMEEntity("Body")
+    If mime Is Nothing Then
+        Print "FAIL: CreateMIMEEntity returned Nothing"
+    Else
+        Print "Created MIME ContentType: " & mime.ContentType
+        Print "Created MIME ContentSubType: " & mime.ContentSubType
+        Print "Created MIME Charset: " & mime.Charset
+        Print "PASS: CreateMIMEEntity returned an uninitialized native MIME entity"
+
+        Set contentStream = session.CreateStream()
+        contentStream.Charset = "UTF-8"
+        Call contentStream.WriteText(EXPECTED_TEXT)
+        contentStream.Position = 0
+        Call mime.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+
+        If mime.ContentType = "text" And mime.ContentSubType = "plain" And mime.Charset = "UTF-8" Then
+            Print "PASS: SetContentFromText refreshed root metadata immediately"
+        Else
+            Print "FAIL: SetContentFromText root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType & " charset=" & mime.Charset
+        End If
+
+        If mime.ContentAsText = EXPECTED_TEXT Then
+            Print "PASS: ContentAsText reads the mutated root payload immediately"
+        Else
+            Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
+        End If
+
+        Call contentStream.Recycle()
+        Set contentStream = Nothing
+    End If
+
+    Call doc.CloseMIMEEntities()
+    Set mime = Nothing
+
+    Call doc.Save()
+    unid = doc.UniversalID
+    Print "Saved MIME document: " & unid
+
+    Call doc.Recycle()
+    Set doc = Nothing
+
+    Print "MIME create/mutate/read/reopen probe: reopening document"
+    Set reopened = db.GetDocumentByUNID(unid)
+    If reopened Is Nothing Then
+        Print "FAIL: saved document could not be reopened"
+    Else
+        Set mime = reopened.GetMIMEEntity("Body")
+        If mime Is Nothing Then
+            Print "FAIL: reopened Body is not MIME"
+        Else
+            Print "Reopened MIME ContentType: " & mime.ContentType
+            Print "Reopened MIME ContentSubType: " & mime.ContentSubType
+            Print "Reopened MIME Charset: " & mime.Charset
+
+            If mime.ContentType = "text" And mime.ContentSubType = "plain" And mime.Charset = "UTF-8" Then
+                Print "PASS: SetContentFromText metadata and charset survived save/reopen"
+            Else
+                Print "FAIL: save/reopen MIME metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType & " charset=" & mime.Charset
+            End If
+
+            If mime.ContentAsText = EXPECTED_TEXT Then
+                Print "PASS: ContentAsText payload survived save/reopen"
+            Else
+                Print "FAIL: reopened ContentAsText mismatch: " & mime.ContentAsText
+            End If
+
+            Set readStream = session.CreateStream()
+            readStream.Charset = "UTF-8"
+            Call mime.GetContentAsText(readStream)
+            readStream.Position = 0
+            If readStream.ReadText() = EXPECTED_TEXT Then
+                Print "PASS: GetContentAsText payload survived save/reopen"
+            Else
+                Print "FAIL: GetContentAsText payload mismatch"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
+
+            Set readStream = session.CreateStream()
+            readStream.Charset = "UTF-8"
+            Call mime.GetContentAsBytes(readStream)
+            readStream.Position = 0
+            If readStream.ReadText() = EXPECTED_TEXT Then
+                Print "PASS: GetContentAsBytes payload survived save/reopen"
+            Else
+                Print "FAIL: GetContentAsBytes payload mismatch"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
+
+            Set readStream = session.CreateStream()
+            Call mime.GetEntityAsText(readStream)
+            If readStream.Bytes > Len(EXPECTED_TEXT) Then
+                Print "PASS: GetEntityAsText returned root RFC822 data with headers"
+            Else
+                Print "FAIL: GetEntityAsText did not return a complete root entity"
+            End If
+            Call readStream.Recycle()
+            Set readStream = Nothing
+        End If
+
+        Call reopened.CloseMIMEEntities()
+        Set mime = Nothing
+        Call reopened.Recycle()
+        Set reopened = Nothing
+    End If
+
+    Print "MIME multipart/base64 attachment probe: creating document"
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "Memo")
+    Call doc.ReplaceItemValue("Subject", "XPScript multipart MIME attachment probe")
+    Call doc.ReplaceItemValue("XPScriptMarker", "notes-mime-attachment-surface")
+    Set mime = doc.CreateMIMEEntity("Body")
+
+    Set textPart = mime.CreateChildEntity()
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText("Multipart body text")
+    contentStream.Position = 0
+    Call textPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+
+    Set mime = doc.GetMIMEEntity("Body")
+    Set attachmentPart = mime.CreateChildEntity()
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText(ATTACHMENT_TEXT)
+    contentStream.Position = 0
+    Call attachmentPart.SetContentFromBytes(contentStream, "application/octet-stream; name=""probe.txt""", 1727)
+    Set attachmentHeader = attachmentPart.CreateHeader("Content-Disposition")
+    Call attachmentHeader.SetHeaderVal("attachment; filename=""probe.txt""")
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+
+    ' Stage 1: verify the native child immediately after the final header mutation.
+    Set attachmentHeader = attachmentPart.GetNthHeader("Content-Transfer-Encoding")
+    If attachmentHeader Is Nothing Then
+        Print "DIAG: immediate native attachment CTE missing after mutation"
+    Else
+        Print "DIAG: immediate native attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+    End If
+    Set attachmentHeader = attachmentPart.GetNthHeader("Content-Disposition")
+    If attachmentHeader Is Nothing Then
+        Print "DIAG: immediate native attachment Content-Disposition missing after mutation"
+    Else
+        Print "DIAG: immediate native attachment Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+    End If
+
+    Set mime = doc.GetMIMEEntity("Body")
+    If mime.ContentType = "multipart" And mime.ContentSubType = "mixed" Then
+        Print "PASS: CreateChildEntity promoted root to multipart/mixed"
+    Else
+        Print "FAIL: multipart root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType
+    End If
+
+    If attachmentPart.ContentType = "application" And attachmentPart.ContentSubType = "octet-stream" Then
+        Print "PASS: attachment child metadata refreshed after base64 writeback"
+    Else
+        Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
+    End If
+
+    ' Stage 2: close/reopen the MIME directory on the same unsaved note.
+    Call doc.CloseMIMEEntities()
+    Set textPart = Nothing
+    Set attachmentPart = Nothing
+    Set attachmentHeader = Nothing
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentHeader = currentEntity.GetNthHeader("Content-Transfer-Encoding")
+            If attachmentHeader Is Nothing Then
+                Print "DIAG: pre-save reopened-directory attachment CTE missing"
+            Else
+                Print "DIAG: pre-save reopened-directory attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+            End If
+            Set attachmentHeader = currentEntity.GetNthHeader("Content-Disposition")
+            If attachmentHeader Is Nothing Then
+                Print "DIAG: pre-save reopened-directory Content-Disposition missing"
+            Else
+                Print "DIAG: pre-save reopened-directory Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+            End If
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Call doc.CloseMIMEEntities()
+    Set attachmentHeader = Nothing
+    Set currentEntity = Nothing
+    Set mime = Nothing
+
+    Call doc.Save()
+    multipartUnid = doc.UniversalID
+    Print "Saved multipart MIME document: " & multipartUnid
+    Call doc.Recycle()
+    Set doc = Nothing
+
+    Set reopened = db.GetDocumentByUNID(multipartUnid)
+    If reopened Is Nothing Then
+        Print "FAIL: multipart MIME document could not be reopened"
+    Else
+        Set mime = reopened.GetMIMEEntity("Body")
+        If mime Is Nothing Then
+            Print "FAIL: reopened multipart Body is not MIME"
+        Else
+            foundAttachment = False
+            foundAttachmentDisposition = False
+            foundAttachmentBase64 = False
+            Set currentEntity = mime.GetFirstChildEntity()
+            Do While Not currentEntity Is Nothing
+                Print "Multipart MIME entity: " & currentEntity.ContentType & "/" & currentEntity.ContentSubType & " charset=" & currentEntity.Charset
+                If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+                    foundAttachment = True
+
+                    Set attachmentHeader = currentEntity.GetNthHeader("Content-Disposition")
+                    If Not attachmentHeader Is Nothing Then
+                        entityText = attachmentHeader.GetHeaderValAndParams()
+                        If InStr(entityText, "attachment") > 0 And InStr(entityText, "probe.txt") > 0 Then
+                            foundAttachmentDisposition = True
+                        End If
+                    End If
+
+                    Set attachmentHeader = currentEntity.GetNthHeader("Content-Transfer-Encoding")
+                    If Not attachmentHeader Is Nothing Then
+                        If attachmentHeader.GetHeaderValAndParams() = "base64" Then
+                            foundAttachmentBase64 = True
+                        End If
+                    End If
+                End If
+                Set currentEntity = currentEntity.GetNextSibling()
+            Loop
+
+            If foundAttachment Then
+                Print "PASS: base64 attachment child survived save/reopen traversal"
+            Else
+                Print "FAIL: attachment child missing after save/reopen"
+            End If
+
+            If foundAttachmentBase64 Then
+                Print "PASS: attachment child retained base64 transfer encoding"
+            Else
+                Print "FAIL: attachment child base64 header missing after save/reopen"
+            End If
+
+            If foundAttachmentDisposition Then
+                Print "PASS: attachment child retained Content-Disposition filename"
+            Else
+                Print "FAIL: attachment child Content-Disposition missing after save/reopen"
+            End If
+        End If
+
+        Call reopened.CloseMIMEEntities()
+        Set attachmentHeader = Nothing
+        Set currentEntity = Nothing
+        Set mime = Nothing
+        Call reopened.Recycle()
+        Set reopened = Nothing
+    End If
+
+    Print "Known HTML MIME probe: " & KNOWN_HTML_MIME_UNID
+    Set knownHtml = db.GetDocumentByUNID(KNOWN_HTML_MIME_UNID)
+    If knownHtml Is Nothing Then
+        Print "FAIL: known HTML MIME document could not be opened"
+    Else
+        Set mime = knownHtml.GetMIMEEntity("Body")
+        If mime Is Nothing Then
+            Print "FAIL: known HTML Body is not MIME"
+        Else
+            Print "Known HTML MIME root ContentType: " & mime.ContentType
+            Print "Known HTML MIME root ContentSubType: " & mime.ContentSubType
+            Print "Known HTML MIME root Charset: " & mime.Charset
+
+            foundHtml = False
+            Set currentEntity = mime
+            Do While Not currentEntity Is Nothing
+                Print "Known HTML MIME entity: " & currentEntity.ContentType & "/" & currentEntity.ContentSubType & " charset=" & currentEntity.Charset
+                If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "html" Then
+                    foundHtml = True
+                End If
+                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+            Loop
+
+            If foundHtml Then
+                Print "PASS: known MIME tree contains text/html"
+            Else
+                Print "FAIL: known MIME tree does not contain text/html"
+            End If
+        End If
+
+        Call knownHtml.CloseMIMEEntities()
+        Set currentEntity = Nothing
+        Set mime = Nothing
+        Call knownHtml.Recycle()
+        Set knownHtml = Nothing
+    End If
+
+    Call db.Recycle()
+    Set db = Nothing
+
+    session.ConvertMIME = True
+    Call session.Recycle()
+    Set session = Nothing
+
+    Print "MIME create/mutate/read/reopen probe: completed"
+End Sub

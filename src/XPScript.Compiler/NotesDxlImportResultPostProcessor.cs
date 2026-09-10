@@ -36,37 +36,28 @@ internal static class NotesDxlImportResultPostProcessor
             ImportOptionValidation + "\n\n    public void Import(object? filePathValue, XPScriptNotesDatabase database)",
             "importer-option-validation");
 
-        source = ReplaceRequired(source,
-            "    internal uint CreateDxlExporter()",
-            NativeDxlSupport + "\n\n    internal uint CreateDxlExporter()",
-            "native-dxl-support");
+        if (!source.Contains("internal string GetDxlImporterLog(uint importer)", StringComparison.Ordinal))
+        {
+            source = ReplaceRequired(source,
+                "    internal uint CreateDxlExporter()",
+                DxlResultHelpers + "\n\n    internal uint CreateDxlExporter()",
+                "dxl-result-helpers");
+        }
 
-        source = ReplaceRequired(source,
-            "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);",
-            "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);",
-            "dxl-relative-path");
+        const string legacyDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(DataDirectory, filePath);";
+        const string patchedDxlPath = "if (!Path.IsPathRooted(filePath)) filePath = Path.Combine(_applicationDirectory, filePath);";
+        const string currentDxlPath = "Path.GetFullPath(filePath, _applicationDirectory)";
+        if (source.Contains(legacyDxlPath, StringComparison.Ordinal))
+            source = source.Replace(legacyDxlPath, patchedDxlPath, StringComparison.Ordinal);
+        else if (!source.Contains(patchedDxlPath, StringComparison.Ordinal) && !source.Contains(currentDxlPath, StringComparison.Ordinal))
+            throw new CompilerException("Unable to apply Notes DXL import result patch (dxl-relative-path).");
 
         return source;
     }
 
-    private const string NativeDxlSupport = """
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XMLReadFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XMLWriteFunctionDelegate(nint buffer, uint length, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateImporterDelegate(out uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteImporterDelegate(uint importer);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetImporterPropertyDelegate(uint importer, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetImporterPropertyDelegate(uint importer, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLImportDelegate(uint importer, XMLReadFunctionDelegate reader, uint database, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLCreateExporterDelegate(out uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void DXLDeleteExporterDelegate(uint exporter);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLGetExporterPropertyDelegate(uint exporter, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLSetExporterPropertyDelegate(uint exporter, ushort property, nint value);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportNoteDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint note, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort DXLExportIDTableDelegate(uint exporter, XMLWriteFunctionDelegate writer, uint database, uint idTable, nint action);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint OSMemoryGetSizeDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSMemoryLockDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSMemoryUnlockDelegate(uint handle);
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint IDEntriesDelegate(uint table);
+    private const string DxlResultHelpers = """
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlOSMemGetSizeDelegate(uint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlIDEntriesDelegate(uint table);
 
     internal string GetDxlImporterLog(uint importer)
     {
@@ -78,12 +69,12 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 11, value), "DXLGetImporterProperty(iResultLog)");
             var handle = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (handle == 0) return string.Empty;
-            var size = Resolve<OSMemoryGetSizeDelegate>("OSMemoryGetSize")(handle);
+            var size = Resolve<XPScriptDxlOSMemGetSizeDelegate>("OSMemGetSize")(handle);
             if (size == 0) return string.Empty;
-            var pointer = Resolve<OSMemoryLockDelegate>("OSMemoryLock")(handle);
+            var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(handle);
             if (pointer == 0) return string.Empty;
             try { return FromLmbcsZeroTerminated(pointer, checked((int)Math.Min(size, int.MaxValue))); }
-            finally { Resolve<OSMemoryUnlockDelegate>("OSMemoryUnlock")(handle); }
+            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(handle); }
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }
@@ -98,7 +89,7 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 12, value), "DXLGetImporterProperty(iImportedNoteList)");
             var table = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (table == 0) return 0;
-            return checked((int)Resolve<IDEntriesDelegate>("IDEntries")(table));
+            return checked((int)Resolve<XPScriptDxlIDEntriesDelegate>("IDEntries")(table));
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }
