@@ -45,7 +45,9 @@ internal static class NotesMimeChildMutationPostProcessor
 
     public XPScriptNotesMIMEEntity CreateChildEntity(object? nextSiblingValue)
     {
-        EnsureRootEntity("CreateChildEntity");
+        EnsureEntityAlive();
+        if (_nativeEntity != _mimeDirectoryOwner.RootEntity)
+            return CreateNestedChildEntity(nextSiblingValue);
 
         var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
         var rootHeaders = ParseEntityHeaders(raw, FindRootBodyOffset(raw));
@@ -71,6 +73,30 @@ internal static class NotesMimeChildMutationPostProcessor
         var multipart = BuildMultipartRoot(rootHeaders, boundary, children);
         RewriteMimeTree(multipart, -1);
         return WrapDirectChild(insertAt);
+    }
+
+    private XPScriptNotesMIMEEntity CreateNestedChildEntity(object? nextSiblingValue)
+    {
+        var path = GetEntityPath();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var target = GetSerializedEntity(raw, path);
+        var targetBodyOffset = FindRootBodyOffset(target);
+        var targetHeaders = ParseEntityHeaders(target, targetBodyOffset);
+        var contentType = targetHeaders.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+        var boundary = contentType.Split(';').Skip(1).FirstOrDefault(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+        if (boundary.Length == 0) throw new XPScriptRuntimeException(5, "CreateChildEntity requires a multipart target entity.");
+        var children = SplitDirectChildren(target, boundary);
+        var insertAt = children.Count;
+        if (nextSiblingValue is XPScriptNotesMIMEEntity sibling)
+        {
+            var siblingPath = sibling.GetEntityPath();
+            if (siblingPath.Length != path.Length || !siblingPath[..^1].SequenceEqual(path)) throw new XPScriptRuntimeException(5, "CreateChildEntity nextSibling must share the same parent.");
+            insertAt = siblingPath[^1];
+        }
+        children.Insert(insertAt, System.Text.Encoding.Latin1.GetBytes("Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"));
+        var updated = BuildMultipartRoot(targetHeaders, boundary, children);
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, updated), path);
+        return WrapNativeEntity(ResolvePath(path.Concat(new[] { insertAt }).ToArray()))!;
     }
 """;
 
@@ -99,6 +125,12 @@ internal static class NotesMimeChildMutationPostProcessor
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
         {
             WriteRootContent(data, contentType, encoding, member);
+            return;
+        }
+
+        if (_mimeDirectoryOwner.Parent(_nativeEntity) != _mimeDirectoryOwner.RootEntity)
+        {
+            WriteNestedEntityContent(data, contentType, encoding, member);
             return;
         }
 
@@ -144,6 +176,69 @@ internal static class NotesMimeChildMutationPostProcessor
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
     }
 
+    private void WriteNestedEntityContent(byte[] data, string contentType, int encoding, string member)
+    {
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var path = GetEntityPath();
+        var entity = GetSerializedEntity(raw, path);
+        var bodyOffset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, bodyOffset);
+        contentType = NormalizeChildContentType(contentType);
+        headers.RemoveAll(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) || h.Name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase));
+        headers.Insert(0, new XPScriptNotesMimeHeaderValue("Content-Type", contentType));
+        var transfer = "8bit";
+        var body = data;
+        if (encoding == 1726) { transfer = "quoted-printable"; body = EncodeRootQuotedPrintable(data); }
+        else if (encoding == 1727) { transfer = "base64"; body = System.Text.Encoding.ASCII.GetBytes(Convert.ToBase64String(data, Base64FormattingOptions.InsertLineBreaks)); }
+        else if (encoding == 1730) transfer = "binary";
+        headers.Insert(1, new XPScriptNotesMimeHeaderValue("Content-Transfer-Encoding", transfer));
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, BuildEntity(headers, body)), path);
+    }
+
+    private int[] GetEntityPath()
+    {
+        var root = _mimeDirectoryOwner.RootEntity;
+        var current = _nativeEntity;
+        var parts = new List<int>();
+        while (current != root)
+        {
+            var parent = _mimeDirectoryOwner.Parent(current);
+            if (parent == 0) throw new XPScriptRuntimeException(5, "MIME entity is no longer present in the directory.");
+            var sibling = _mimeDirectoryOwner.FirstSubpart(parent);
+            var index = 0;
+            while (sibling != current && sibling != 0) { sibling = _mimeDirectoryOwner.NextSibling(sibling); index++; }
+            if (sibling == 0) throw new XPScriptRuntimeException(5, "MIME entity is no longer present in its parent.");
+            parts.Insert(0, index);
+            current = parent;
+        }
+        return parts.ToArray();
+    }
+
+    private static byte[] GetSerializedEntity(byte[] raw, int[] path)
+    {
+        if (path.Length == 0) return raw;
+        var current = raw;
+        for (var depth = 0; depth < path.Length; depth++)
+        {
+            var headers = ParseEntityHeaders(current, FindRootBodyOffset(current));
+            var boundary = headers.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value.Split(';').Skip(1).FirstOrDefault(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+            current = SplitDirectChildren(current, boundary)[path[depth]];
+        }
+        return current;
+    }
+
+    private static byte[] ReplaceSerializedEntity(byte[] raw, int[] path, byte[] replacement)
+    {
+        if (path.Length == 0) return replacement;
+        var bodyOffset = FindRootBodyOffset(raw);
+        var rootHeaders = ParseEntityHeaders(raw, bodyOffset);
+        var contentType = rootHeaders.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+        var boundary = contentType.Split(';').Skip(1).FirstOrDefault(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+        var children = SplitDirectChildren(raw, boundary);
+        children[path[0]] = ReplaceSerializedEntity(children[path[0]], path[1..], replacement);
+        return BuildMultipartRoot(rootHeaders, boundary, children);
+    }
+
     private XPScriptNotesMIMEHeader CreateEntityHeader(string name)
     {
         EnsureEntityAlive();
@@ -153,6 +248,9 @@ internal static class NotesMimeChildMutationPostProcessor
 
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEEntity.CreateHeader is currently supported for direct child entities only.");
+
+        if (_mimeDirectoryOwner.Parent(_nativeEntity) != _mimeDirectoryOwner.RootEntity)
+            return CreateNestedEntityHeader(name);
 
         var childIndex = GetDirectChildIndex("CreateHeader");
         var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
@@ -165,6 +263,23 @@ internal static class NotesMimeChildMutationPostProcessor
         headers.Add(new XPScriptNotesMimeHeaderValue(name, ""));
         children[childIndex] = BuildEntity(headers, bodyOffset >= child.Length ? [] : child[bodyOffset..]);
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
+        var nativeIndex = name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) ? -1001
+            : name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ? -1002
+            : name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ? -1003
+            : headers.Count - 1;
+        return new XPScriptNotesMIMEHeader(this, nativeIndex);
+    }
+
+    private XPScriptNotesMIMEHeader CreateNestedEntityHeader(string name)
+    {
+        var path = GetEntityPath();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = GetSerializedEntity(raw, path);
+        var bodyOffset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, bodyOffset);
+        headers.Add(new XPScriptNotesMimeHeaderValue(name, ""));
+        var replacement = BuildEntity(headers, bodyOffset >= entity.Length ? [] : entity[bodyOffset..]);
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, replacement), path);
         var nativeIndex = name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) ? -1001
             : name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ? -1002
             : name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ? -1003
@@ -196,6 +311,11 @@ internal static class NotesMimeChildMutationPostProcessor
     {
         if (value.Contains('\r') || value.Contains('\n'))
             throw new XPScriptRuntimeException(5, "Invalid MIME header value.");
+        if (_mimeDirectoryOwner.Parent(_nativeEntity) != _mimeDirectoryOwner.RootEntity)
+        {
+            RewriteNestedEntityHeader(index, value, remove);
+            return;
+        }
         var childIndex = GetDirectChildIndex("NotesMIMEHeader");
         var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
         var boundary = _mimeDirectoryOwner.TypeParam(_mimeDirectoryOwner.RootEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY).Trim();
@@ -227,6 +347,23 @@ internal static class NotesMimeChildMutationPostProcessor
         if (remove) headers.RemoveAt(index); else headers[index].Value = value;
         children[childIndex] = BuildEntity(headers, bodyOffset >= child.Length ? [] : child[bodyOffset..]);
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
+    }
+
+    private void RewriteNestedEntityHeader(int index, string value, bool remove)
+    {
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var path = GetEntityPath();
+        var entity = GetSerializedEntity(raw, path);
+        var bodyOffset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, bodyOffset);
+        if (index <= -1001)
+        {
+            var name = index switch { -1001 => "Content-Type", -1002 => "Content-Transfer-Encoding", -1003 => "Content-Disposition", _ => throw new XPScriptRuntimeException(5, "Unsupported native MIME header index.") };
+            index = headers.FindIndex(h => h.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+        if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+        if (remove) headers.RemoveAt(index); else headers[index].Value = value;
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, BuildEntity(headers, bodyOffset >= entity.Length ? [] : entity[bodyOffset..])), path);
     }
 
     private byte[] ReadCurrentDirectChild(string member)
@@ -268,11 +405,26 @@ internal static class NotesMimeChildMutationPostProcessor
     }
 
     private void RewriteMimeTree(byte[] raw, int mutatingChildIndex)
+        => RewriteMimeTree(raw, mutatingChildIndex < 0 ? [] : new[] { mutatingChildIndex });
+
+    private void RewriteMimeTree(byte[] raw, int[] mutatingPath)
     {
         _document.InvalidateMimeDirectory();
         Session.Api.WriteMimeStream(_document.NativeDatabaseHandle, _document.NativeHandle, _itemName, raw);
         _mimeDirectoryOwner = _document.GetMimeDirectoryOwner();
-        _nativeEntity = mutatingChildIndex < 0 ? _mimeDirectoryOwner.RootEntity : ResolveDirectChild(mutatingChildIndex);
+        _nativeEntity = ResolvePath(mutatingPath);
+    }
+
+    private nint ResolvePath(int[] path)
+    {
+        var entity = _mimeDirectoryOwner.RootEntity;
+        foreach (var index in path)
+        {
+            entity = _mimeDirectoryOwner.FirstSubpart(entity);
+            for (var i = 0; i < index && entity != 0; i++) entity = _mimeDirectoryOwner.NextSibling(entity);
+            if (entity == 0) throw new XPScriptRuntimeException(5, "Unable to rebind the mutated MIME entity.");
+        }
+        return entity;
     }
 
     private nint ResolveDirectChild(int index)

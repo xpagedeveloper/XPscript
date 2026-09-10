@@ -88,5 +88,5 @@ Branch: `feature/notes-mime-entity`
 
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
 - [ ] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
-- [ ] Add nested child-parent mutation beyond direct children of the root entity
+- [x] Add nested child creation and content mutation beyond direct children of the root entity
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step

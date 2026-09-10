@@ -12,6 +12,7 @@ Sub Main()
     Dim mime As NotesMIMEEntity
     Dim currentEntity As NotesMIMEEntity
     Dim textPart As NotesMIMEEntity
+    Dim nestedPart As NotesMIMEEntity
     Dim attachmentPart As NotesMIMEEntity
     Dim attachmentHeader As NotesMIMEHeader
     Dim contentStream As NotesStream
@@ -155,6 +156,27 @@ Sub Main()
     Call textPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
     Call contentStream.Recycle()
     Set contentStream = Nothing
+
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText("--inner-boundary" & Chr(13) & Chr(10) & _
+        "Content-Type: text/plain; charset=UTF-8" & Chr(13) & Chr(10) & Chr(13) & Chr(10) & _
+        "Nested seed" & Chr(13) & Chr(10) & "--inner-boundary--" & Chr(13) & Chr(10))
+    contentStream.Position = 0
+    Call textPart.SetContentFromText(contentStream, "multipart/alternative; boundary=""inner-boundary""", 1725)
+    Set nestedPart = textPart.CreateChildEntity()
+    Call contentStream.Truncate()
+    Call contentStream.WriteText("Nested replacement")
+    contentStream.Position = 0
+    Call nestedPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+    If nestedPart.ContentType = "text" And nestedPart.ContentSubType = "plain" Then
+        Print "PASS: nested child creation and mutation"
+    Else
+        Print "FAIL: nested child creation and mutation"
+    End If
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+    Set nestedPart = Nothing
 
     Set mime = doc.GetMIMEEntity("Body")
     Set attachmentPart = mime.CreateChildEntity()

@@ -23,7 +23,9 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         var nativeIndex = NativeHeaderIndex(name);
         if (nativeIndex != 0)
             return new XPScriptNotesMIMEHeader(this, nativeIndex);
-        var child = ReadCurrentDirectChild("GetNthHeader");
+        var child = _mimeDirectoryOwner.Parent(_nativeEntity) == _mimeDirectoryOwner.RootEntity
+            ? ReadCurrentDirectChild("GetNthHeader")
+            : GetSerializedEntity(Session.Api.ReadMimeStream(_document.NativeHandle, _itemName), GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         var found = 0;
         for (var i = 0; i < headers.Count; i++)
@@ -152,7 +154,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 
         // Mutation-created header wrappers retain their serialized child-header index.
         // Keep that path for SetHeaderVal/AddValText/Remove before a reopen.
-        var child = ReadCurrentDirectChild("NotesMIMEHeader");
+        var rawEntity = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var child = GetSerializedEntity(rawEntity, GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
