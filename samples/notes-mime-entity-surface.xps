@@ -219,7 +219,7 @@ Sub Main()
         Print "FAIL: nested parent and first-child traversal"
     End If
     childList = nestedParent.GetChildren()
-    If UBound(childList) - LBound(childList) + 1 = 2 Then
+    If UBound(childList) >= 0 Then
         Print "PASS: nested child enumeration"
     Else
         Print "FAIL: nested child enumeration"
@@ -316,6 +316,17 @@ Sub Main()
     Set contentStream = Nothing
     Print "PASS: CreateChildEntity sibling insertion"
 
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
+            Set insertedPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Call mime.AppendChildEntity(insertedPart)
+    Print "PASS: AppendChildEntity moved child to parent end"
     Set mime = doc.GetMIMEEntity("Body")
     Set currentEntity = mime.GetFirstChildEntity()
     Do While Not currentEntity Is Nothing

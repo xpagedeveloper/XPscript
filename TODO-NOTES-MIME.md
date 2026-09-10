@@ -101,6 +101,7 @@ Branch: `feature/notes-mime-entity`
 - [ ] Implement decoded and raw content stream access
 - [ ] Implement text reader access using the entity charset
 - [ ] Add regression coverage for remaining parity items against the Notes client
+- [x] Add regression coverage for `AppendChildEntity`
 - [x] Add regression coverage for full and filtered MIME header enumeration
 - [ ] Review Domino JNA MIME4J features for applicable HTML and rich-text conversion APIs
 
