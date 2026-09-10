@@ -1,0 +1,7 @@
+Include "lib/helper.xps"
+
+Sub Main()
+    Dim value As Integer
+    value = HelperValue()
+    Print "VALUE=" & CStr(value)
+End Sub
