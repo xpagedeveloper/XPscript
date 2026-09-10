@@ -22,12 +22,12 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         const string newLookup = """
         if (occurrence != 1)
             throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports occurrence 1 for native direct-child headers.");
-        var symbol = HeaderSymbol(name);
-        if (symbol == 0)
+        var nativeIndex = NativeHeaderIndex(name);
+        if (nativeIndex == 0)
             throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports Content-Type, Content-Transfer-Encoding and Content-Disposition on direct child entities.");
-        var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
-        if (value is null) return null;
-        return new XPScriptNotesMIMEHeader(this, -(symbol + 1));
+        var symbol = ResolveNativeHeaderSymbol(name);
+        if (symbol == 0) return null;
+        return new XPScriptNotesMIMEHeader(this, nativeIndex);
 """;
 
         if (!source.Contains(oldLookup, StringComparison.Ordinal))
@@ -47,40 +47,77 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 """;
 
         const string newReader = """
-    private static int HeaderSymbol(string name)
+    private static int NativeHeaderIndex(string name)
     {
-        if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)) return 39;
-        if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase)) return 40;
-        if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase)) return 41;
+        if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)) return -1001;
+        if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase)) return -1002;
+        if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase)) return -1003;
         return 0;
     }
 
-    private static string HeaderNameFromSymbol(int symbol) => symbol switch
+    private static string NativeHeaderName(int index) => index switch
     {
-        39 => "Content-Type",
-        40 => "Content-Transfer-Encoding",
-        41 => "Content-Disposition",
-        _ => throw new XPScriptRuntimeException(5, "Unsupported native MIME header symbol: " + symbol)
+        -1001 => "Content-Type",
+        -1002 => "Content-Transfer-Encoding",
+        -1003 => "Content-Disposition",
+        _ => throw new XPScriptRuntimeException(5, "Unsupported native MIME header index: " + index)
     };
+
+    private int ResolveNativeHeaderSymbol(string name)
+    {
+        // HCL publishes the MIMESYMBOL ordering, but Domino runtimes can expose a
+        // different numeric layout. Probe only the narrow content-header neighborhood
+        // and identify the requested header by the returned value's MIME semantics.
+        for (var symbol = 36; symbol <= 44; symbol++)
+        {
+            var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
+            if (value is null) continue;
+            var trimmed = value.Trim();
+            if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+            {
+                if (trimmed.Equals("7bit", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.Equals("8bit", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.Equals("base64", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.Equals("binary", StringComparison.OrdinalIgnoreCase))
+                    return symbol;
+                continue;
+            }
+            if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase))
+            {
+                if (trimmed.Equals("attachment", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.Equals("inline", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.StartsWith("inline;", StringComparison.OrdinalIgnoreCase))
+                    return symbol;
+                continue;
+            }
+            if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && trimmed.Contains('/'))
+                return symbol;
+        }
+        return 0;
+    }
 
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
     {
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
 
-        if (index < 0)
+        if (index <= -1001)
         {
-            var symbol = -index - 1;
+            var name = NativeHeaderName(index);
+            var symbol = ResolveNativeHeaderSymbol(name);
+            if (symbol == 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
             var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
             if (value is null) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
-            return new XPScriptNotesMimeHeaderValue(HeaderNameFromSymbol(symbol), value);
+            return new XPScriptNotesMimeHeaderValue(name, value);
         }
 
         // Mutation-created header wrappers retain their serialized child-header index.
         // Keep that path for SetHeaderVal/AddValText/Remove before a reopen.
         var child = ReadCurrentDirectChild("NotesMIMEHeader");
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
-        if (index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
+        if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
     }
 """;
