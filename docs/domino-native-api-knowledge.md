@@ -18,6 +18,12 @@ HCL's Java/JNI implementation over the Domino native API, useful as an implement
 
 JNX is a reference implementation, not a substitute for the C API contract. When implementing XPscript Notes classes, use it to cross-check native calls, flag combinations, memory/resource handling, data conversion, and higher-level behavior. If JNX and assumptions in XPscript differ, verify the behavior against the C API documentation and the relevant HCL LotusScript/Designer documentation before implementing.
 
+JNX is an Apache License, Version 2.0 project. XPscript uses it as a reference and does not distribute JNX source or binaries. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for attribution and the requirements that apply if reference code is copied in the future.
+
+## Domino JNA
+
+[Domino JNA](https://github.com/klehmann/domino-jna) is an Apache License, Version 2.0 implementation reference used to compare native Notes API calls and MIME stream serialization. It is not a dependency of XPscript. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for attribution and future copying requirements.
+
 ## NotesDocument.ComputeWithForm
 
 XPscript implements the normal LotusScript-compatible two-argument form and adds an XPscript-specific third ByRef Variant parameter:

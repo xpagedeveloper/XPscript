@@ -6,6 +6,8 @@ Set `NotesSession.ConvertMIME = False` before opening documents when MIME items 
 
 Nested entity content mutation uses MimeKit 4.17.0 to parse and serialize the complete MIME tree before writing it through the Notes MIME stream. MimeKit is distributed under the MIT License. `MimeKit.dll` is staged beside the compiled application only when its source uses `NotesMIMEEntity`.
 
+The MIME implementation also uses [HCL Domino JNX](https://github.com/HCL-TECH-SOFTWARE/domino-jnx) and [Domino JNA](https://github.com/klehmann/domino-jna) as implementation references for native Notes API mapping and MIME stream writeback. Both reference projects are licensed under the Apache License, Version 2.0. XPscript does not distribute their source code or binaries. The attribution and future copying requirements are recorded in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
+
 ## Open or create the root entity
 
 The current native implementation supports the `Body` item for document-level MIME access:
