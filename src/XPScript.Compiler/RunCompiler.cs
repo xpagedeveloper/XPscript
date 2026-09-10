@@ -130,6 +130,8 @@ internal static class RunCompiler
                 throw new CompilerException("Run compilation succeeded, but Generated.dll was not produced.");
 
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
+            if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
+                StageMimeKit(outputRoot);
             return assemblyPath;
         }
         finally
@@ -250,10 +252,26 @@ internal static class RunCompiler
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <UseAppHost>false</UseAppHost>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MimeKit" Version="4.17.0" />
+  </ItemGroup>
 {items}</Project>
 """;
+    }
+
+    private static void StageMimeKit(string outputRoot)
+    {
+        var source = Path.Combine(Path.GetDirectoryName(typeof(RunCompiler).Assembly.Location) ?? "", "MimeKit.dll");
+        if (!File.Exists(source)) throw new CompilerException("Required MimeKit runtime assembly was not found: " + source);
+        var target = Path.Combine(outputRoot, "MimeKit.dll");
+        var targetInfo = new FileInfo(target);
+        if (targetInfo.LinkTarget is not null || (targetInfo.Exists && (targetInfo.Attributes & FileAttributes.ReparsePoint) != 0))
+            throw new CompilerException("MimeKit runtime dependency target may not be a link: " + target);
+        if (targetInfo.Exists) File.Delete(target);
+        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Managed runtime dependency");
     }
 
     private static void StageNativeDependencies(

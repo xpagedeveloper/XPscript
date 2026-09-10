@@ -461,19 +461,30 @@ internal static class NotesMimeChildMutationPostProcessor
     {
         var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
         var path = GetEntityPath();
-        var entity = GetSerializedEntity(raw, path);
-        var bodyOffset = FindRootBodyOffset(entity);
-        var headers = ParseEntityHeaders(entity, bodyOffset);
         contentType = NormalizeChildContentType(contentType);
-        headers.RemoveAll(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) || h.Name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase));
-        headers.Insert(0, new XPScriptNotesMimeHeaderValue("Content-Type", contentType));
-        var transfer = "8bit";
-        var body = data;
-        if (encoding == 1726) { transfer = "quoted-printable"; body = EncodeRootQuotedPrintable(data); }
-        else if (encoding == 1727) { transfer = "base64"; body = System.Text.Encoding.ASCII.GetBytes(Convert.ToBase64String(data, Base64FormattingOptions.InsertLineBreaks)); }
-        else if (encoding == 1730) transfer = "binary";
-        headers.Insert(1, new XPScriptNotesMimeHeaderValue("Content-Transfer-Encoding", transfer));
-        RewriteMimeTree(ReplaceSerializedEntity(raw, path, BuildEntity(headers, body)), path);
+        using var input = new System.IO.MemoryStream(raw, writable: false);
+        var message = MimeKit.MimeMessage.Load(input);
+        MimeKit.MimeEntity target = message.Body;
+        foreach (var index in path)
+        {
+            if (target is not MimeKit.Multipart multipart || index < 0 || index >= multipart.Count)
+                throw new XPScriptRuntimeException(5, "MIME entity path is invalid.");
+            target = multipart[index];
+        }
+        if (target is not MimeKit.MimePart part)
+            throw new XPScriptRuntimeException(5, "MIME entity content can only be set on a discrete MIME part.");
+        part.Headers.Replace(MimeKit.HeaderId.ContentType, contentType);
+        part.ContentTransferEncoding = encoding switch
+        {
+            1726 => MimeKit.ContentEncoding.QuotedPrintable,
+            1727 => MimeKit.ContentEncoding.Base64,
+            1730 => MimeKit.ContentEncoding.Binary,
+            _ => MimeKit.ContentEncoding.SevenBit
+        };
+        part.Content = new MimeKit.MimeContent(new System.IO.MemoryStream(data, writable: false));
+        using var output = new System.IO.MemoryStream();
+        message.WriteTo(output);
+        RewriteMimeTree(output.ToArray(), path);
     }
 
     private int[] GetEntityPath()

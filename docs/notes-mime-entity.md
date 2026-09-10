@@ -4,6 +4,8 @@ XPscript exposes `NotesMIMEEntity` through the native HCL Notes/Domino MIME dire
 
 Set `NotesSession.ConvertMIME = False` before opening documents when MIME items must remain native `TYPE_MIME_PART` items.
 
+Nested entity content mutation uses MimeKit 4.17.0 to parse and serialize the complete MIME tree before writing it through the Notes MIME stream. MimeKit is distributed under the MIT License. `MimeKit.dll` is staged beside the compiled application only when its source uses `NotesMIMEEntity`.
+
 ## Open or create the root entity
 
 The current native implementation supports the `Body` item for document-level MIME access:

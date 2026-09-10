@@ -6,6 +6,7 @@ namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
+    private const string MimeKitVersion = "4.17.0";
     private sealed record StagedManagedReference(string Name, string Path);
 
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
@@ -227,6 +228,8 @@ public sealed class CompilerDriver
             }
 
             StageRunNativeDependencies(sourcePath, runOutputDirectory, nativeDependencies, managedReferences.Native);
+            if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
+                StageRunManagedDependency(Path.Combine(Path.GetDirectoryName(typeof(CompilerDriver).Assembly.Location) ?? "", "MimeKit.dll"), runOutputDirectory);
 
             var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid);
             if (generatedExecutable is null)
@@ -280,6 +283,15 @@ public sealed class CompilerDriver
 
         var target = Path.Combine(outputDirectory, fileName);
         CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native dependency");
+        CompilerPathSecurity.HardenTemporaryFile(target);
+    }
+
+    private static void StageRunManagedDependency(string source, string outputDirectory)
+    {
+        if (!File.Exists(source))
+            throw new CompilerException("Required MimeKit runtime assembly was not found: " + source);
+        var target = Path.Combine(outputDirectory, "MimeKit.dll");
+        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Managed runtime dependency");
         CompilerPathSecurity.HardenTemporaryFile(target);
     }
 
@@ -401,6 +413,9 @@ public sealed class CompilerDriver
             }
             itemGroup.AppendLine("  </ItemGroup>");
         }
+        itemGroup.AppendLine("  <ItemGroup>");
+        itemGroup.Append("    <PackageReference Include=\"MimeKit\" Version=\"").Append(MimeKitVersion).AppendLine("\" />");
+        itemGroup.AppendLine("  </ItemGroup>");
 
         var publishProperties = publishSingleFile
             ? $"""
@@ -417,6 +432,7 @@ public sealed class CompilerDriver
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
 {publishProperties}  </PropertyGroup>
