@@ -232,6 +232,72 @@ internal static class NotesMimeChildMutationPostProcessor
         RemoveEntityHeader(index);
     }
 
+    private byte[] ReadEntityContent(string member)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var bodyOffset = FindRootBodyOffset(entity);
+        var body = bodyOffset >= entity.Length ? [] : entity[bodyOffset..];
+        var transferEncoding = GetEntityHeaderValue(entity, bodyOffset, "Content-Transfer-Encoding").Trim();
+        if (transferEncoding.Equals("base64", StringComparison.OrdinalIgnoreCase))
+        {
+            try { return Convert.FromBase64String(System.Text.Encoding.ASCII.GetString(body)); }
+            catch (FormatException ex) { throw new XPScriptRuntimeException(5, "Invalid base64 MIME entity content: " + ex.Message); }
+        }
+        if (transferEncoding.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase)) return DecodeEntityQuotedPrintable(body);
+        return body;
+    }
+
+    private string ReadEntityText(string member)
+    {
+        var content = ReadEntityContent(member);
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var bodyOffset = FindRootBodyOffset(entity);
+        var contentType = GetEntityHeaderValue(entity, bodyOffset, "Content-Type");
+        var charset = contentType.Split(';').Skip(1).Select(p => p.Trim()).FirstOrDefault(p => p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+        if (charset.Length == 0) return System.Text.Encoding.UTF8.GetString(content);
+        try { return System.Text.Encoding.GetEncoding(charset).GetString(content); }
+        catch (ArgumentException ex) { throw new XPScriptRuntimeException(5, "Unsupported MIME entity charset '" + charset + "': " + ex.Message); }
+    }
+
+    private static string GetEntityHeaderValue(byte[] raw, int bodyOffset, string name)
+    {
+        var text = System.Text.Encoding.Latin1.GetString(raw, 0, Math.Max(0, Math.Min(raw.Length, bodyOffset))).Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var currentName = "";
+        var value = new System.Text.StringBuilder();
+        foreach (var line in text.Split('\n'))
+        {
+            if ((line.StartsWith(' ') || line.StartsWith('\t')) && currentName.Length > 0) { value.Append(' ').Append(line.Trim()); continue; }
+            if (currentName.Equals(name, StringComparison.OrdinalIgnoreCase)) return value.ToString();
+            var colon = line.IndexOf(':');
+            if (colon <= 0) { currentName = ""; value.Clear(); continue; }
+            currentName = line[..colon].Trim(); value.Clear(); value.Append(line[(colon + 1)..].Trim());
+        }
+        return currentName.Equals(name, StringComparison.OrdinalIgnoreCase) ? value.ToString() : "";
+    }
+
+    private static byte[] DecodeEntityQuotedPrintable(byte[] input)
+    {
+        using var output = new MemoryStream();
+        for (var i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '=' && i + 1 < input.Length && (input[i + 1] == '\r' || input[i + 1] == '\n')) { if (input[i + 1] == '\r' && i + 2 < input.Length && input[i + 2] == '\n') i += 2; else i++; continue; }
+            if (input[i] == '=' && i + 2 < input.Length && TryEntityHex(input[i + 1], out var hi) && TryEntityHex(input[i + 2], out var lo)) { output.WriteByte((byte)((hi << 4) | lo)); i += 2; continue; }
+            output.WriteByte(input[i]);
+        }
+        return output.ToArray();
+    }
+
+    private static bool TryEntityHex(byte value, out int result)
+    {
+        if (value >= '0' && value <= '9') { result = value - '0'; return true; }
+        if (value >= 'A' && value <= 'F') { result = value - 'A' + 10; return true; }
+        if (value >= 'a' && value <= 'f') { result = value - 'a' + 10; return true; }
+        result = 0; return false;
+    }
+
     private void WriteEntityContent(byte[] data, string contentType, int encoding, string member)
     {
         EnsureEntityAlive();
