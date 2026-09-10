@@ -17,6 +17,10 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         @"^\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=\s*(?!=).+;\s*$",
         RegexOptions.CultureInvariant);
 
+    private static readonly Regex ForLoopPattern = new(
+        @"^(?<indent>\s*)for\s*\(\s*(?:(?:var|dynamic|bool|byte|short|int|long|float|double|decimal|string|object|DateTime)\s+)?(?<name>[A-Za-z_]\w*)\s*=.*\)\s*(?<brace>\{)?\s*$",
+        RegexOptions.CultureInvariant);
+
     private static readonly Regex DebuggerCallPattern = new(
         @"^(?<indent>\s*)Debugger\.(?:Print|UpdateVar)\s*\(.*\);\s*$",
         RegexOptions.CultureInvariant);
@@ -36,6 +40,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         var scriptDeclarationSeen = false;
         var inScript = false;
         var trackNextSimpleAssignment = false;
+        string? pendingForVariable = null;
+        string? pendingForIndent = null;
 
         foreach (var rawLine in lines)
         {
@@ -44,6 +50,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                 if (foundMarker) output.Add("#line default");
                 runtimeBoundaryInserted = true;
                 trackNextSimpleAssignment = false;
+                pendingForVariable = null;
+                pendingForIndent = null;
             }
 
             if (!scriptDeclarationSeen && rawLine.Trim().Equals(ScriptBoundary, StringComparison.Ordinal))
@@ -72,6 +80,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                     output.Add(indent + NoInliningAttribute);
                 }
 
+                var forLoop = inScript ? ForLoopPattern.Match(rawLine) : Match.Empty;
+
                 if (inScript && DebuggerCallPattern.IsMatch(rawLine))
                 {
                     var indent = DebuggerCallPattern.Match(rawLine).Groups["indent"].Value;
@@ -80,6 +90,38 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
                 else
                 {
                     output.Add(rawLine);
+                }
+
+                if (forLoop.Success)
+                {
+                    var name = forLoop.Groups["name"].Value;
+                    if (!name.StartsWith("__", StringComparison.Ordinal))
+                    {
+                        var indent = forLoop.Groups["indent"].Value;
+                        if (forLoop.Groups["brace"].Success)
+                        {
+                            output.Add(indent + "    XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(name) + "\", " + name + ");");
+                        }
+                        else
+                        {
+                            pendingForVariable = name;
+                            pendingForIndent = indent;
+                        }
+                    }
+                }
+                else if (pendingForVariable is not null && rawLine.Trim().Equals("{", StringComparison.Ordinal))
+                {
+                    var indent = Regex.Match(rawLine, @"^\s*").Value;
+                    if (indent.Length == 0 && pendingForIndent is not null)
+                        indent = pendingForIndent;
+                    output.Add(indent + "    XPScriptDebugRuntime.TrackValue(\"" + EscapeCSharpString(pendingForVariable) + "\", " + pendingForVariable + ");");
+                    pendingForVariable = null;
+                    pendingForIndent = null;
+                }
+                else if (pendingForVariable is not null && !string.IsNullOrWhiteSpace(rawLine) && !rawLine.TrimStart().StartsWith("#", StringComparison.Ordinal))
+                {
+                    pendingForVariable = null;
+                    pendingForIndent = null;
                 }
 
                 if (trackNextSimpleAssignment && inScript)
