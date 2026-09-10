@@ -267,13 +267,21 @@ internal static class NotesMimeChildMutationPostProcessor
         return string.Join("\r\n", headers.Select(h => h.Name + ": " + h.Value));
     }
 
-    private object ReadEntityInputStream(string member)
+    private object ReadEntityInputStream(string member, bool decode)
     {
         EnsureEntityAlive();
         var stream = Session.CreateStream();
-        stream.Write(ReadEntityContent(member));
+        stream.Write(decode ? ReadEntityContent(member) : ReadEntityRawContent(member));
         stream.Position = 0;
         return stream;
+    }
+
+    private byte[] ReadEntityRawContent(string member)
+    {
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var bodyOffset = FindRootBodyOffset(entity);
+        return bodyOffset >= entity.Length ? [] : entity[bodyOffset..];
     }
 
     private void EncodeEntityContent(int encoding, string member)
