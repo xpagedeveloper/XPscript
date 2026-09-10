@@ -88,7 +88,7 @@ Branch: `feature/notes-mime-entity`
 
 ### JNX and Domino JNA parity
 
-- [ ] Implement `CreateChildEntity(sibling)` to insert a child before an existing sibling
+- [x] Implement and verify `CreateChildEntity(sibling)` to insert a child before an existing sibling
 - [ ] Implement `AppendChildEntity`
 - [ ] Implement `RemoveChildEntity`
 - [ ] Implement child enumeration equivalent to JNX `getChildren`

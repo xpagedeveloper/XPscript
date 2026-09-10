@@ -16,6 +16,7 @@ Sub Main()
     Dim nestedParent As NotesMIMEEntity
     Dim firstNested As NotesMIMEEntity
     Dim attachmentPart As NotesMIMEEntity
+    Dim insertedPart As NotesMIMEEntity
     Dim attachmentHeader As NotesMIMEHeader
     Dim contentStream As NotesStream
     Dim readStream As NotesStream
@@ -268,7 +269,35 @@ Sub Main()
         If InStr(attachmentHeader.GetHeaderValAndParams(), "attachment") > 0 Then Print "PASS: immediate attachment disposition readback" Else Print "FAIL: immediate attachment disposition readback"
     End If
 
+    Call doc.CloseMIMEEntities()
     Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Set insertedPart = mime.CreateChildEntity(attachmentPart)
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText("Inserted before attachment")
+    contentStream.Position = 0
+    Call insertedPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+    Print "PASS: CreateChildEntity sibling insertion"
+
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
     If mime.ContentType = "multipart" And mime.ContentSubType = "mixed" Then
         Print "PASS: CreateChildEntity promoted root to multipart/mixed"
     Else
@@ -364,9 +393,13 @@ Sub Main()
             Set currentEntity = mime.GetFirstChildEntity()
             If Not currentEntity Is Nothing Then
                 Set currentEntity = currentEntity.GetNextSibling()
-                If Not currentEntity Is Nothing And currentEntity.ContentType = "application" Then
-                    foundSiblingAfterReopen = True
-                End If
+                Do While Not currentEntity Is Nothing
+                    If currentEntity.ContentType = "application" Then
+                        foundSiblingAfterReopen = True
+                        Exit Do
+                    End If
+                    Set currentEntity = currentEntity.GetNextSibling()
+                Loop
             End If
 
             If foundAttachment Then
