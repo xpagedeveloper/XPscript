@@ -36,18 +36,14 @@ Missing / future:
 
 ## NotesDatabase
 
-Implemented properties: `Parent`, `Server`, `FilePath`, `FileName`, `IsOpen`, `Title`, `Categories`, `TemplateName`, `DesignTemplateName`, `ReplicaID`, `Size`, `PercentUsed`, `CurrentAccessLevel`.
+Implemented properties: `Parent`, `Server`, `FilePath`, `FileName`, `IsOpen`, `Title`, `Categories`, `TemplateName`, `DesignTemplateName`, `ReplicaID`, `Size`, `PercentUsed`, `CurrentAccessLevel`, `Created`, `LastModified`, `FileFormat`, `IsFTIndexed`, and `LastFTIndexed`.
 
-Implemented methods: `OpenView`, `GetDocumentByNoteId`, `GetDocumentByUNID`, `Search`, `FTSearch`, `RunAgent`, `Recycle`.
+Implemented methods: `OpenView`, `GetDocumentByNoteId`, `GetDocumentByUNID`, `CreateDocument`, `CreateDocumentCollection`, `GetProfileDocument`, `Search`, `FTSearch`, `GetModifiedDocuments`, `RunAgent`, `Create`, `Remove`, `CreateCopy`, `SetReplicaId`, `RemoveFTIndex`, and `Recycle`.
 
 Missing / future:
 
 - Additional ACL/database access properties and ACL manipulation.
-- Database modified time, created time and additional database metadata.
 - Database compact/fixup/replication/admin operations.
-- Profile documents.
-- Folder operations.
-- Additional full-text index management and FT options.
 - More complete agent options and execution context handling.
 
 ## NotesView
