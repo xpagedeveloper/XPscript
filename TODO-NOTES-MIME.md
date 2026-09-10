@@ -61,24 +61,23 @@ Branch: `feature/notes-mime-entity`
 - [x] Existing known multipart HTML traversal remains green after attachment changes
 - [x] Added direct-child `GetNthHeader(name[, occurrence])`
 - [x] Replaced exact root RFC822 serialization assertion with semantic child-header assertions because Domino may normalize MIME quoting/folding
-- [x] Domino runtime showed bounded root-stream and `MIMEGetEntityData` child-header readback did not expose the expected headers after save/reopen
-- [x] Verified HCL's published `MIMESYMBOL` ordering for content headers
-- [x] Replaced heuristic `MIMEGetEntityData` child-header readback with native `MIMEEntityGetHeader(PMIMEENTITY, MIMESYMBOL)`
-- [x] Fixed the `MIMEEntityGetHeader` postprocessor compile anchor
-- [x] Added staged attachment diagnostics immediately after mutation and after reopening the MIME directory
-- [x] Runtime diagnostics proved the attachment headers survive mutation and MIME-directory reopen; the wrong header was returned because the runtime symbol layout differs from the published enum positions (`CTE` lookup returned `attachment`)
-- [x] Native child-header lookup now resolves the small content-header symbol neighborhood by MIME value semantics instead of assuming fixed numeric IDs
+- [x] Tested bounded root-stream, hard-coded `MIMEGetEntityData`, and `MIMEEntityGetHeader` child-header readback paths
+- [x] Runtime diagnostics proved `Content-Disposition: attachment` exists immediately after mutation and after MIME-directory reopen
+- [x] Runtime diagnostics also proved fixed `MIMESYMBOL` content-header positions are not portable to the installed Domino runtime
+- [x] HCL documents `MIME_ENTITY_DATA_*` as flag arguments; corrected child-header discovery to probe single-bit flag values `1,2,4,8` rather than ordinal values `0,1,2,3`
+- [x] Direct-child `GetNthHeader` now parses the native per-entity RFC822 header block returned by `MIMEGetEntityData`, preserving complete values and occurrence semantics
+- [x] Updated Notes MIME documentation for native entity-data header lookup
 
 ## In progress
 
-- [ ] Confirm immediate native attachment CTE resolves to `base64`
-- [ ] Confirm immediate/pre-save native Content-Disposition resolves to `attachment` and preserves filename parameters
-- [ ] Confirm both headers survive save/reopen through the runtime-resolved native symbol lookup
+- [ ] Confirm `Content-Transfer-Encoding: base64` is returned immediately and after MIME-directory reopen through corrected entity-data flag probing
+- [ ] Confirm `Content-Disposition: attachment; filename="probe.txt"` is returned as a complete native entity header
+- [ ] Confirm both headers survive save/reopen through corrected native direct-child `GetNthHeader`
 - [ ] Confirm the updated Notes MIME surface compiles in branch CI
+- [ ] Update `skills/xpscript-programming/SKILL.md` with the final verified direct-child `GetNthHeader` behavior after the Domino runtime probe is green
 
 ## Remaining
 
-- [ ] If Content-Disposition returns only `attachment`, read the filename through the entity/type parameter API rather than treating it as header loss
+- [ ] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
 - [ ] Add nested child-parent mutation beyond direct children of the root entity
-- [ ] Broaden native `GetNthHeader` beyond the currently verified content-header symbols when needed
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
