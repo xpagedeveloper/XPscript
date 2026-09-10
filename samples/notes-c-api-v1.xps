@@ -72,6 +72,13 @@ Sub Main()
     Print "NAME2_COMMENT1=" & name2.Addr822Comment1
     Print "NAME2_COMMENT2=" & name2.Addr822Comment2
     Print "NAME2_COMMENT3=" & name2.Addr822Comment3
+    Set name2 = session.CreateName("CN=John Q Public/G=Jr/GIVEN=John/INITIALS=JQ/SURNAME=Public/A=Admin/P=Private/O=Example/C=SE")
+    Print "NAME_HIER_GENERATION=" & name2.Generation
+    Print "NAME_HIER_GIVEN=" & name2.Given
+    Print "NAME_HIER_INITIALS=" & name2.Initials
+    Print "NAME_HIER_SURNAME=" & name2.Surname
+    Print "NAME_HIER_ADMD=" & name2.ADMD
+    Print "NAME_HIER_PRMD=" & name2.PRMD
 
     Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
     Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
