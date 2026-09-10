@@ -249,6 +249,51 @@ internal static class NotesMimeChildMutationPostProcessor
         return body;
     }
 
+    private string ReadEntityPreamble(string member)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var offset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, offset);
+        var boundary = headers.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value.Split(';').Skip(1).FirstOrDefault(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+        if (boundary.Length == 0) return "";
+        var marker = System.Text.Encoding.Latin1.GetBytes("--" + boundary);
+        var markerAt = IndexOfBytes(entity, marker, offset);
+        return markerAt <= offset ? "" : System.Text.Encoding.Latin1.GetString(entity, offset, markerAt - offset).TrimEnd('\r', '\n');
+    }
+
+    private void WriteEntityPreamble(string value, string member)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var path = GetEntityPath();
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, path);
+        var offset = FindRootBodyOffset(entity);
+        var headers = ParseEntityHeaders(entity, offset);
+        var boundary = headers.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value.Split(';').Skip(1).FirstOrDefault(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase))?.Split('=', 2).ElementAtOrDefault(1)?.Trim().Trim('"') ?? "";
+        if (boundary.Length == 0) throw new XPScriptRuntimeException(5, "NotesMIMEEntity.Preamble requires a multipart entity.");
+        var markerAt = IndexOfBytes(entity, System.Text.Encoding.Latin1.GetBytes("--" + boundary), offset);
+        if (markerAt < 0) throw new XPScriptRuntimeException(5, "MIME multipart boundary is missing.");
+        var prefix = System.Text.Encoding.Latin1.GetBytes(value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\n', '\r') + "\r\n");
+        var replacement = new byte[offset + prefix.Length + entity.Length - markerAt];
+        Buffer.BlockCopy(entity, 0, replacement, 0, offset);
+        Buffer.BlockCopy(prefix, 0, replacement, offset, prefix.Length);
+        Buffer.BlockCopy(entity, markerAt, replacement, offset + prefix.Length, entity.Length - markerAt);
+        RewriteMimeTree(ReplaceSerializedEntity(raw, path, replacement), path);
+    }
+
+    private static int IndexOfBytes(byte[] source, byte[] value, int start)
+    {
+        for (var i = Math.Max(0, start); i <= source.Length - value.Length; i++)
+        {
+            var match = true;
+            for (var j = 0; j < value.Length; j++) if (source[i + j] != value[j]) { match = false; break; }
+            if (match) return i;
+        }
+        return -1;
+    }
+
     private string ReadEntityText(string member)
     {
         var content = ReadEntityContent(member);

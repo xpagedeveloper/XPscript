@@ -27,6 +27,11 @@ internal static class NotesMimeRootMutationPostProcessor
             "root GetContentAsText");
 
         source = ReplaceRequired(source,
+            "        get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart parsing is intentionally not used.\"); }\n        set { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart serialization is intentionally not used.\"); }",
+            "        get { EnsureEntityAlive(); return ReadEntityPreamble(\"Preamble\"); }\n        set { EnsureEntityAlive(); WriteEntityPreamble(value ?? \"\", \"Preamble\"); }",
+            "MIME entity Preamble");
+
+        source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetEntityAsText requires verified Domino per-entity RFC822 data access; the root MIME stream is intentionally not returned for child entities.\");",
             "        stream.Write(ReadRootEntity(\"GetEntityAsText\"));",
             "root GetEntityAsText");
