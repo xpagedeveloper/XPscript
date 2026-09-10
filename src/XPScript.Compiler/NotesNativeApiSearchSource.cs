@@ -75,6 +75,47 @@ internal sealed partial class XPScriptNotesNativeApi
         return ReadNoteIds(collection, ref position, requested);
     }
 
+    internal IReadOnlyList<uint> FindViewByTypedKey(nint collection, object key, int maximum, bool exactMatch)
+    {
+        EnsureInitialized();
+        ushort type;
+        byte[] data;
+        if (key is XPScriptNotesDateTime date)
+        {
+            type = NotesTypeTime;
+            data = new byte[8];
+            BitConverter.GetBytes(date.NativeValue.Innards0).CopyTo(data, 0);
+            BitConverter.GetBytes(date.NativeValue.Innards1).CopyTo(data, 4);
+        }
+        else
+        {
+            type = NotesTypeNumber;
+            data = BitConverter.GetBytes(Convert.ToDouble(key, System.Globalization.CultureInfo.InvariantCulture));
+        }
+        var valueLength = checked((ushort)(sizeof(ushort) + data.Length));
+        var totalLength = checked(4 + 4 + valueLength);
+        var native = System.Runtime.InteropServices.Marshal.AllocHGlobal(totalLength);
+        try
+        {
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 0, checked((short)totalLength));
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 2, 1);
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 4, 0);
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 6, checked((short)valueLength));
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 8, checked((short)type));
+            System.Runtime.InteropServices.Marshal.Copy(data, 0, native + 10, data.Length);
+            var position = XPScriptNotesCollectionPosition.Create();
+            var flags = exactMatch ? (ushort)0 : FindPartial;
+            var status = Resolve<NIFFindByKeyDelegate>("NIFFindByKey")(collection, native, flags, ref position, out var matches);
+            if (status != 0)
+            {
+                if (LoadStatusText(status).Contains("not found", StringComparison.OrdinalIgnoreCase)) return Array.Empty<uint>();
+                Check(status, "NIFFindByKey");
+            }
+            return matches == 0 ? Array.Empty<uint>() : ReadNoteIds(collection, ref position, maximum > 0 ? Math.Min(matches, (uint)maximum) : matches);
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(native); }
+    }
+
     private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)
     {
         var ids = new List<uint>(checked((int)Math.Min(requested, int.MaxValue)));
@@ -278,6 +319,7 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFFindByKeyDelegate(nint collection, nint key, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint OSLockObjectDelegate(nint handle);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSUnlockObjectDelegate(nint handle);

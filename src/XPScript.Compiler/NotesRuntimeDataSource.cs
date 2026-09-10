@@ -176,6 +176,11 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
             var matches = FindArrayKeyMatches(keyValue, exactMatch, 1);
             return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
         }
+        if (keyValue is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte)
+        {
+            var matches = Session.Api.FindViewByTypedKey(_handle, keyValue, 1, exactMatch);
+            return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
+        }
         var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, exactMatch);
         return ids.Count == 0 ? null : Database.OpenByNoteId(ids[0]);
     }
@@ -189,6 +194,8 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
         if (keyValue is LSArray)
             return new XPScriptNotesDocumentCollection(Session, Database, FindArrayKeyMatches(keyValue, exactMatch, 0));
+        if (keyValue is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte)
+            return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTypedKey(_handle, keyValue, 0, exactMatch));
         return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, exactMatch));
     }
 

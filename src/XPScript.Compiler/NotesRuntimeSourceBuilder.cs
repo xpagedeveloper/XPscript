@@ -63,6 +63,10 @@ internal static class NotesRuntimeSourceBuilder
             "internal IReadOnlyList<uint> FindViewByTextKey(ushort collection, string key, int maximum, bool exactMatch)",
             "find-view-key");
         source = ReplaceRequired(source,
+            "internal IReadOnlyList<uint> FindViewByTypedKey(nint collection, object key, int maximum, bool exactMatch)",
+            "internal IReadOnlyList<uint> FindViewByTypedKey(ushort collection, object key, int maximum, bool exactMatch)",
+            "find-view-typed-key");
+        source = ReplaceRequired(source,
             "private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)",
             "private IReadOnlyList<uint> ReadNoteIds(ushort collection, ref XPScriptNotesCollectionPosition position, uint requested)",
             "read-view-ids");
@@ -74,6 +78,10 @@ internal static class NotesRuntimeSourceBuilder
             "internal delegate ushort NIFFindByNameDelegate(nint collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
             "internal delegate ushort NIFFindByNameDelegate(ushort collection, nint name, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
             "nif-find-name");
+        source = ReplaceRequired(source,
+            "internal delegate ushort NIFFindByKeyDelegate(nint collection, nint key, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
+            "internal delegate ushort NIFFindByKeyDelegate(ushort collection, nint key, ushort flags, ref XPScriptNotesCollectionPosition position, out uint matches);",
+            "nif-find-key");
         source = ReplaceRequired(source,
             "internal delegate ushort NIFReadEntriesDelegate(nint collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",
             "internal delegate ushort NIFReadEntriesDelegate(ushort collection, ref XPScriptNotesCollectionPosition position, ushort skipNavigator, uint skipCount, ushort returnNavigator, uint returnCount, uint readMask, out nint buffer, out ushort bufferLength, out uint entriesSkipped, out uint entriesReturned, out ushort signalFlags);",

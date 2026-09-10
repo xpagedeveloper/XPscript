@@ -23,6 +23,8 @@ Sub Main()
     VIEW_NAME = "People"
     Dim VIEW_KEY As String
     VIEW_KEY = ""
+    Dim TYPED_KEY_VIEW As String
+    TYPED_KEY_VIEW = ""
     Dim AGENT_NAME As String
     AGENT_NAME = ""
     Dim RICH_TEXT_ITEM As String
@@ -133,6 +135,14 @@ Sub Main()
             End If
             Call docs.Recycle()
             Set docs = Nothing
+        End If
+        If TYPED_KEY_VIEW <> "" Then
+            Set groupView = localDb.OpenView(TYPED_KEY_VIEW)
+            If groupView Is Not Nothing Then
+                Set doc = groupView.GetDocumentByKey(0, True)
+                Print "TYPED_NUMERIC_KEY_TEST=" & CStr(doc Is Nothing)
+                Call groupView.Recycle()
+            End If
         End If
 
         Set groupView = localDb.OpenView("($VIMGroups)")
