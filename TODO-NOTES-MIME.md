@@ -123,3 +123,5 @@ Branch: `feature/notes-mime-entity`
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
 
 The remaining nested decoded-body issue is tracked separately: Notes preserves the nested RFC822 entity headers but drops its body during the current full MIME itemization writeback path. Direct-child decoded and raw streams are verified.
+
+JNX parity note: the JNX `MimeEntity` type is an API interface; the current `domino-jnx-jna` module does not provide a concrete MIME entity tree implementation. Domino JNA's related MIME support uses MIME4J to build or parse a complete message and then writes it through `MIMEStream`. It therefore confirms the whole-message serialization strategy, but does not provide a native nested-entity mutation sequence to copy.
