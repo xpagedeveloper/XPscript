@@ -66,6 +66,11 @@ Sub Main()
     Print "NAME1_ABBREVIATED=" & name1.Abbreviated
     Print "NAME2_COMMON=" & name2.Common
     Print "NAME2_ORGANIZATION=" & name2.Organization
+    Set name2 = session.CreateName("\"Ada Lovelace\" <ada@example.com> (Engineering) (Platform) (North)")
+    Print "NAME2_LOCALPART=" & name2.Addr822LocalPart
+    Print "NAME2_COMMENT1=" & name2.Addr822Comment1
+    Print "NAME2_COMMENT2=" & name2.Addr822Comment2
+    Print "NAME2_COMMENT3=" & name2.Addr822Comment3
 
     Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
     Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")

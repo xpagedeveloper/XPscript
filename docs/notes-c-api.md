@@ -357,6 +357,11 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 | `Addr821` | String | read-only | Parsed Internet/RFC821-style address when present. |
 | `Addr822LocalPart` | String | read-only | Parsed local part of an Internet address. |
 | `Addr822Phrase` | String | read-only | Parsed display phrase from an Internet address. |
+| `Addr822Comment1` | String | read-only | First parenthesized RFC 822 comment. |
+| `Addr822Comment2` | String | read-only | Second parenthesized RFC 822 comment. |
+| `Addr822Comment3` | String | read-only | Third parenthesized RFC 822 comment. |
+| `Generation`, `Given`, `Initials`, `Surname` | String | read-only | Parsed hierarchical name components. |
+| `Keyword`, `Language` | String | read-only | Parsed name metadata components when supplied by Domino. |
 | `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
 
 ### Methods
