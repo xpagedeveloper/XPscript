@@ -64,13 +64,26 @@ if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.Print", St
     throw new Exception("Debugger.Print arguments are not guarded when debugging is disabled.");
 if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar", StringComparison.Ordinal))
     throw new Exception("Debugger.UpdateVar arguments are not guarded when debugging is disabled.");
-if (!generated.Contains("ProtocolVersion = 5", StringComparison.Ordinal))
-    throw new Exception("Debugger protocol v1 version is not emitted.");
+if (!generated.Contains("ProtocolVersion = 6", StringComparison.Ordinal))
+    throw new Exception("Debugger protocol v6 is not emitted.");
 if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsDebuggerVariables = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsExceptionBreakpoints = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsConditionalBreakpoints = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsHitConditionalBreakpoints = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsLogPoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsPause = true", StringComparison.Ordinal))
-    throw new Exception("Debugger v1 capabilities are incomplete.");
+    throw new Exception("Debugger protocol capabilities are incomplete.");
+if (!generated.Contains("BreakpointRule", StringComparison.Ordinal) ||
+    !generated.Contains("EvaluateCondition", StringComparison.Ordinal) ||
+    !generated.Contains("EvaluateHitCondition", StringComparison.Ordinal) ||
+    !generated.Contains("ExpandLogMessage", StringComparison.Ordinal))
+    throw new Exception("Runtime conditional breakpoint evaluation is missing.");
+if (!generated.Contains("TryGetProperty(\"breakpoints\"", StringComparison.Ordinal) ||
+    !generated.Contains("TryGetProperty(\"condition\"", StringComparison.Ordinal) ||
+    !generated.Contains("TryGetProperty(\"hitCondition\"", StringComparison.Ordinal) ||
+    !generated.Contains("TryGetProperty(\"logMessage\"", StringComparison.Ordinal))
+    throw new Exception("Runtime breakpoint rule payload parsing is incomplete.");
 if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ordinal))
     throw new Exception("Exception breakpoint protocol command is missing.");
 if (!generated.Contains("case \"debuggerVariables\"", StringComparison.Ordinal))
