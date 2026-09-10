@@ -67,15 +67,19 @@ Branch: `feature/notes-mime-entity`
 - [x] Removed the disproven single-bit `MIMEGetEntityData` header-selection heuristic
 - [x] Removed selector guessing from direct-child `GetNthHeader` again
 - [x] Direct-child native header lookup now scans only the documented `MIMESYMBOL` range `0..124` through `MIMEEntityGetHeader` and validates returned values by header semantics
+- [x] Runtime verifies direct-child CTE readback as `base64` immediately and after MIME-directory reopen
+- [x] Runtime verifies `Content-Disposition` readback as `attachment; filename="probe.txt"` immediately and after MIME-directory reopen
+- [x] Corrected direct-child header mutation when Domino reorders headers during directory reopen
+- [x] Corrected 64-bit `MIMEGetEntityData` ABI declarations for native header fallback
 
 ## In progress
 
-- [ ] Confirm the full-range native symbol scan resolves `Content-Transfer-Encoding` to `base64` immediately and after MIME-directory reopen
-- [ ] Confirm `Content-Disposition` remains `attachment` through save/reopen
-- [ ] Implement and verify `Content-Disposition` filename parameter readback separately; `MIMEEntityGetHeader` on the tested runtime returns only the main value `attachment`
-- [ ] Confirm both supported header semantics after save/reopen
+- [x] Confirm the full-range native symbol scan and serialized fallback resolve `Content-Transfer-Encoding` to `base64` immediately and after MIME-directory reopen
+- [x] Confirm `Content-Disposition` remains `attachment` through save/reopen
+- [x] Implement and verify `Content-Disposition` filename parameter readback separately
+- [x] Confirm both supported header semantics after save/reopen
 - [ ] Confirm the updated Notes MIME surface compiles in branch CI
-- [ ] Update `docs/notes-mime-entity.md` and `skills/xpscript-programming/SKILL.md` with the final verified direct-child `GetNthHeader`/parameter behavior after the Domino runtime probe is green
+- [x] Update `docs/notes-mime-entity.md` and `skills/xpscript-programming/SKILL.md` with the final verified direct-child `GetNthHeader`/parameter behavior
 
 ## Remaining
 

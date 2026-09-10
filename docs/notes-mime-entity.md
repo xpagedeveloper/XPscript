@@ -74,9 +74,9 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` reads the selected entity through Domino `MIMEEntityGetHeader` and scans the documented `MIMESYMBOL` range, accepting only a value whose semantics match the requested header. This avoids depending on the published numeric positions used by a particular Domino installation.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` resolves the selected entity through Domino's native MIME directory. It scans the documented `MIMESYMBOL` range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.
 
-The native header API returns the main header value. On the tested Domino installation, `Content-Disposition` is returned as `attachment`; filename parameter readback remains a separate implementation item.
+On the tested Domino installation, the native directory returns the main `Content-Disposition` value and the MIME `Content-Type` name parameter supplies the attachment filename. `GetNthHeader("Content-Disposition").GetHeaderValAndParams()` therefore returns the complete semantic value, including `filename`, after mutation and after directory reopen. The CTE lookup returns the serialized transfer encoding, including `base64` for encoding `1727`.
 
 Example creating a base64 attachment from `NotesStream`:
 

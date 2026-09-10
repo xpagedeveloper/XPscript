@@ -201,6 +201,13 @@ internal static class NotesMimeChildMutationPostProcessor
         var bodyOffset = FindRootBodyOffset(child);
         var headers = ParseEntityHeaders(child, bodyOffset);
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
+        // Domino can reorder the documented MIME headers when the directory is
+        // reopened. Preserve the header identity for disposition updates.
+        if (!remove && (value.StartsWith("attachment", StringComparison.OrdinalIgnoreCase) || value.StartsWith("inline", StringComparison.OrdinalIgnoreCase)))
+        {
+            var dispositionIndex = headers.FindIndex(h => h.Name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase));
+            if (dispositionIndex >= 0) index = dispositionIndex;
+        }
         if (remove) headers.RemoveAt(index); else headers[index].Value = value;
         children[childIndex] = BuildEntity(headers, bodyOffset >= child.Length ? [] : child[bodyOffset..]);
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);

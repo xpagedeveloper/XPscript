@@ -111,7 +111,7 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
             var name = NativeHeaderName(index);
             var symbol = ResolveNativeHeaderSymbol(name);
             var value = symbol < 0 ? null : _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
-            if (value is null || !MatchesNativeHeader(name, value))
+            if (name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) || value is null || !MatchesNativeHeader(name, value))
             {
                 var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
                 var boundary = _mimeDirectoryOwner.TypeParam(_mimeDirectoryOwner.RootEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY).Trim();
@@ -126,7 +126,20 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
                         if (header.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && MatchesNativeHeader(name, header.Value))
                             return header;
                 }
-                throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+                if (value is null) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+            }
+            if (name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) && value.IndexOf(';') < 0)
+            {
+                var typeSymbol = ResolveNativeHeaderSymbol("Content-Type");
+                var typeValue = typeSymbol < 0 ? "" : _mimeDirectoryOwner.EntityHeader(_nativeEntity, typeSymbol) ?? "";
+                foreach (var parameter in typeValue.Split(';').Skip(1))
+                {
+                    var equals = parameter.IndexOf('=');
+                    if (equals <= 0 || !parameter[..equals].Trim().Equals("name", StringComparison.OrdinalIgnoreCase)) continue;
+                    var filename = parameter[(equals + 1)..].Trim().Trim('"');
+                    if (filename.Length > 0) value += "; filename=\"" + filename + "\"";
+                    break;
+                }
             }
             return new XPScriptNotesMimeHeaderValue(name, value);
         }
