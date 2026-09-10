@@ -85,8 +85,10 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
         }
         else
         {
-            _parts["ADDR821"] = source.Trim();
-            _parts["LOCALPART"] = before;
+            var end = source.IndexOfAny([' ', '\t', '(']);
+            var address = (end < 0 ? source : source[..end]).Trim();
+            _parts["ADDR821"] = address;
+            _parts["LOCALPART"] = address.Split('@')[0];
         }
 
         var comments = System.Text.RegularExpressions.Regex.Matches(source[(at + 1)..], @"\(([^)]*)\)");

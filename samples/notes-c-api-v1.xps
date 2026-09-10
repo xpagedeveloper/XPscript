@@ -79,6 +79,9 @@ Sub Main()
     Print "NAME_HIER_SURNAME=" & name2.Surname
     Print "NAME_HIER_ADMD=" & name2.ADMD
     Print "NAME_HIER_PRMD=" & name2.PRMD
+    Set name2 = session.CreateName("ada@example.com (Engineering)")
+    Print "NAME_SIMPLE_ADDR821=" & name2.Addr821
+    Print "NAME_SIMPLE_LOCALPART=" & name2.Addr822LocalPart
 
     Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
     Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
