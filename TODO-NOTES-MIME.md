@@ -110,7 +110,7 @@ Branch: `feature/notes-mime-entity`
 - [ ] Add regression coverage for remaining parity items against the Notes client
 - [x] Add regression coverage for `AppendChildEntity`
 - [x] Add regression coverage for full and filtered MIME header enumeration
-- [ ] Review Domino JNA MIME4J features for applicable HTML and rich-text conversion APIs
+- [x] Review Domino JNA MIME4J features: HTML and rich-text conversion belongs to `NotesRichTextItem.ConvertToHTML`, outside the `NotesMIMEEntity` parity surface
 
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
 - [x] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
@@ -121,3 +121,5 @@ Branch: `feature/notes-mime-entity`
 - [x] Verify nested standard MIME header parameter lookup and mutation
 - [x] Verify nested Content-Disposition filename parameter mutation and readback
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
+
+The remaining nested decoded-body issue is tracked separately: Notes preserves the nested RFC822 entity headers but drops its body during the current full MIME itemization writeback path. Direct-child decoded and raw streams are verified.
