@@ -67,16 +67,18 @@ Branch: `feature/notes-mime-entity`
 - [x] Native `GetNthHeader` now targets the actual child entity and the verified HCL header symbols
 - [x] Documentation now states the verified direct-child header lookup boundary
 - [x] Fixed `MIMEEntityGetHeader` postprocessor compile anchor so it matches the actual bounded child-header reader present at that stage
+- [x] Added staged attachment diagnostics immediately after header mutation and after closing/reopening the MIME directory on the same unsaved note
 
 ## In progress
 
-- [ ] Confirm the Notes MIME surface sample compiles after the postprocessor anchor fix
+- [ ] Determine whether attachment CTE and Content-Disposition disappear during mutation/writeback, MIME directory reopen, or document save
+- [ ] Confirm the staged Notes MIME surface sample compiles in branch CI
 - [ ] Confirm `Content-Transfer-Encoding: base64` after save/reopen through `MIMEEntityGetHeader`
 - [ ] Confirm `Content-Disposition` and filename after save/reopen through `MIMEEntityGetHeader`
-- [ ] Confirm the new native header ABI compiles in branch CI
 
 ## Remaining
 
+- [ ] If native headers are already absent immediately after mutation, replace the RFC822 child-header rebuild path rather than changing readback again
 - [ ] Add nested child-parent mutation beyond direct children of the root entity
 - [ ] Broaden native `GetNthHeader` beyond the currently verified content-header symbols when needed
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
