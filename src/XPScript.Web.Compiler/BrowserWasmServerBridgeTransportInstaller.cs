@@ -99,43 +99,118 @@ internal static partial class XPScriptBrowserServerBridgeTransport
 """;
 
     private const string BrowserModuleCode = """
+(() => {
+    const defaultSpinnerDelayMs = 300;
+    const activeRequests = new Map();
+    let nextBusyToken = 1;
+
+    const ensureBusyOverlay = () => {
+        let overlay = document.getElementById('xpscript-server-busy');
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'xpscript-server-busy';
+        overlay.setAttribute('role', 'status');
+        overlay.setAttribute('aria-live', 'polite');
+        overlay.setAttribute('aria-label', 'Server request in progress');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.42);backdrop-filter:blur(1px);';
+        const spinner = document.createElement('div');
+        spinner.style.cssText = 'width:2.75rem;height:2.75rem;border:.32rem solid rgba(0,0,0,.18);border-top-color:currentColor;border-radius:50%;animation:xpscript-server-spin .8s linear infinite;';
+        const style = document.createElement('style');
+        style.textContent = '@keyframes xpscript-server-spin{to{transform:rotate(360deg)}}';
+        overlay.appendChild(spinner);
+        document.head.appendChild(style);
+        document.body.appendChild(overlay);
+        return overlay;
+    };
+
+    const refreshBusy = () => {
+        const visible = Array.from(activeRequests.values()).some(request => request.matured);
+        const overlay = document.getElementById('xpscript-server-busy');
+        if (visible) ensureBusyOverlay().style.display = 'flex';
+        else if (overlay) overlay.style.display = 'none';
+        document.documentElement.setAttribute('aria-busy', visible ? 'true' : 'false');
+    };
+
+    const beginBusy = (delayMs = defaultSpinnerDelayMs) => {
+        const token = nextBusyToken++;
+        const delay = Number.isFinite(Number(delayMs)) && Number(delayMs) >= 0 ? Number(delayMs) : defaultSpinnerDelayMs;
+        const request = { matured: delay === 0, timer: 0 };
+        activeRequests.set(token, request);
+        if (request.matured) {
+            refreshBusy();
+        } else {
+            request.timer = window.setTimeout(() => {
+                const active = activeRequests.get(token);
+                if (!active) return;
+                active.timer = 0;
+                active.matured = true;
+                refreshBusy();
+            }, delay);
+        }
+        return token;
+    };
+
+    const endBusy = (token) => {
+        const request = activeRequests.get(token);
+        if (!request) return;
+        if (request.timer) window.clearTimeout(request.timer);
+        activeRequests.delete(token);
+        refreshBusy();
+    };
+
+    globalThis.__xpscriptWasmBridgeBusy = { begin: beginBusy, end: endBusy };
+})();
+
 globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJson, body) {
     const parsedHeaders = headersJson ? JSON.parse(headersJson) : {};
+    let spinnerDelayMs = 300;
+    for (const name of Object.keys(parsedHeaders)) {
+        if (name.toLowerCase() !== 'x-xps-wasm-spinner-delay') continue;
+        const parsedDelay = Number(parsedHeaders[name]);
+        if (Number.isInteger(parsedDelay) && parsedDelay >= 0) spinnerDelayMs = parsedDelay;
+        delete parsedHeaders[name];
+    }
     const safeMethod = String(method || '').toUpperCase();
     if (safeMethod !== 'GET' && safeMethod !== 'POST') throw new Error('Unsupported bridge method.');
     const url = String(relativeUrl || '');
     if (url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')) throw new Error('Invalid bridge URL.');
 
-    const perform = (csrfToken) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open(safeMethod, url, false);
-        for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
-        if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
-        xhr.send(safeMethod === 'GET' ? null : String(body || ''));
-        return xhr;
-    };
+    const busy = globalThis.__xpscriptWasmBridgeBusy;
+    const busyToken = busy.begin(spinnerDelayMs);
+    try {
+        const perform = (csrfToken) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(safeMethod, url, false);
+            for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
+            if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
+            xhr.send(safeMethod === 'GET' ? null : String(body || ''));
+            return xhr;
+        };
 
-    let xhr = perform(null);
-    if (safeMethod === 'POST' && xhr.status === 403) {
-        const csrf = xhr.getResponseHeader('X-XPS-CSRF-Token') || '';
-        if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) xhr = perform(csrf);
+        let xhr = perform(null);
+        if (safeMethod === 'POST' && xhr.status === 403) {
+            const csrf = xhr.getResponseHeader('X-XPS-CSRF-Token') || '';
+            if (/^[A-Za-z0-9_-]{1,128}$/.test(csrf)) xhr = perform(csrf);
+        }
+
+        const headers = {};
+        const rawHeaders = xhr.getAllResponseHeaders() || '';
+        for (const line of rawHeaders.split(/\r?\n/)) {
+            const separator = line.indexOf(':');
+            if (separator <= 0) continue;
+            headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+        }
+
+        return JSON.stringify({
+            status: xhr.status,
+            statusText: xhr.statusText || '',
+            body: xhr.responseText || '',
+            contentType: xhr.getResponseHeader('Content-Type') || '',
+            headers
+        });
+    } finally {
+        busy.end(busyToken);
     }
-
-    const headers = {};
-    const rawHeaders = xhr.getAllResponseHeaders() || '';
-    for (const line of rawHeaders.split(/\r?\n/)) {
-        const separator = line.indexOf(':');
-        if (separator <= 0) continue;
-        headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
-    }
-
-    return JSON.stringify({
-        status: xhr.status,
-        statusText: xhr.statusText || '',
-        body: xhr.responseText || '',
-        contentType: xhr.getResponseHeader('Content-Type') || '',
-        headers
-    });
 };
 """;
 }

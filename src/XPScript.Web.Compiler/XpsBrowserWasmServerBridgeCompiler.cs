@@ -36,7 +36,7 @@ internal sealed class XpsBrowserWasmServerBridgeBundle
 internal static class XpsBrowserWasmServerBridgeCompiler
 {
     private const string Platform = "browser-wasm";
-    private const string BridgeCompilerVersion = "3";
+    private const string BridgeCompilerVersion = "4";
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
