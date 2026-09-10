@@ -13,22 +13,27 @@ internal static class NotesMimeRootMutationPostProcessor
 
         source = ReplaceRequired(source,
             "    public string ContentAsText { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.ContentAsText requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\"); } }",
-            "    public string ContentAsText { get { EnsureEntityAlive(); return ReadRootText(\"ContentAsText\"); } }",
+            "    public string ContentAsText { get { EnsureEntityAlive(); return _nativeEntity == _mimeDirectoryOwner.RootEntity ? ReadRootText(\"ContentAsText\") : ReadEntityText(\"ContentAsText\"); } }",
             "root ContentAsText");
 
         source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetContentAsBytes requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\");",
-            "        stream.Write(ReadRootContent(\"GetContentAsBytes\"));",
+            "        stream.Write(_nativeEntity == _mimeDirectoryOwner.RootEntity ? ReadRootContent(\"GetContentAsBytes\") : ReadEntityContent(\"GetContentAsBytes\"));",
             "root GetContentAsBytes");
 
         source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetContentAsText requires verified Domino MIME entity-data decoding support; managed MIME decoding is intentionally not used.\");",
-            "        stream.WriteText(ReadRootText(\"GetContentAsText\"));",
+            "        stream.WriteText(_nativeEntity == _mimeDirectoryOwner.RootEntity ? ReadRootText(\"GetContentAsText\") : ReadEntityText(\"GetContentAsText\"));",
             "root GetContentAsText");
 
         source = ReplaceRequired(source,
+            "        get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart parsing is intentionally not used.\"); }\n        set { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Preamble requires verified Domino MIME entity-data support; managed multipart serialization is intentionally not used.\"); }",
+            "        get { EnsureEntityAlive(); return ReadEntityPreamble(\"Preamble\"); }\n        set { EnsureEntityAlive(); WriteEntityPreamble(value ?? \"\", \"Preamble\"); }",
+            "MIME entity Preamble");
+
+        source = ReplaceRequired(source,
             "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetEntityAsText requires verified Domino per-entity RFC822 data access; the root MIME stream is intentionally not returned for child entities.\");",
-            "        stream.Write(ReadRootEntity(\"GetEntityAsText\"));",
+            "        stream.Write(_nativeEntity == _mimeDirectoryOwner.RootEntity ? ReadRootEntity(\"GetEntityAsText\") : ReadEntityRaw(\"GetEntityAsText\"));",
             "root GetEntityAsText");
 
         source = ReplaceRequired(source,
@@ -42,8 +47,33 @@ internal static class NotesMimeRootMutationPostProcessor
             "root SetContentFromBytes");
 
         source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.EncodeContent requires verified Domino MIME entity encoding support; managed transfer encoding is intentionally not used.\");",
+            "        EncodeEntityContent(XPScriptRuntime.CInt(encodingValue), \"EncodeContent\");",
+            "MIME entity EncodeContent");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.DecodeContent requires verified Domino MIME entity decoding support; managed transfer decoding is intentionally not used.\");",
+            "        EncodeEntityContent(1725, \"DecodeContent\");",
+            "MIME entity DecodeContent");
+
+        source = ReplaceRequired(source,
+            "    public string Headers { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Headers requires verified Domino MIME entity header access; managed root-stream header parsing is intentionally not used.\"); } }",
+            "    public string Headers { get { EnsureEntityAlive(); return ReadEntityHeadersText(\"Headers\", null); } }",
+            "MIME entity Headers");
+
+        source = ReplaceRequired(source,
+            "            throw new System.NotSupportedException(\"NotesMIMEEntity.HeaderObjects requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "            return GetHeaders();",
+            "MIME entity HeaderObjects");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetSomeHeaders requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "        return ReadEntityHeadersText(\"GetSomeHeaders\", XPScriptRuntime.CStr(headerNamesValue));",
+            "MIME entity GetSomeHeaders");
+
+        source = ReplaceRequired(source,
             "    private static string MimeSymbolText(int symbol) => symbol switch",
-            RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
+            "    public object InputStream { get { EnsureEntityAlive(); return ReadEntityInputStream(\"InputStream\", true); } }\n    public object GetInputStream(object? decodeValue) { EnsureEntityAlive(); return ReadEntityInputStream(\"GetInputStream\", XPScriptRuntime.CBool(decodeValue)); }\n    public object Reader { get { EnsureEntityAlive(); return ReadEntityReader(\"Reader\"); } }\n\n" + RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
             "root MIME mutation helpers");
 
         return source;

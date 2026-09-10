@@ -86,7 +86,42 @@ Branch: `feature/notes-mime-entity`
 
 ## Remaining
 
+### JNX and Domino JNA parity
+
+- [x] Implement and verify `CreateChildEntity(sibling)` to insert a child before an existing sibling
+- [x] Implement `AppendChildEntity` for children in the same MIME directory
+- [x] Implement and verify `RemoveChildEntity`
+- [x] Implement and verify child enumeration equivalent to JNX `getChildren`
+- [x] Implement full header enumeration equivalent to JNX `getHeaders()`
+- [x] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
+- [x] Implement and verify `CreateHeader(name, value)` convenience overload
+- [x] Implement and verify `RemoveHeaders(name)` to remove all matching headers
+- [x] Implement and verify MIME preamble read and write for multipart entities
+- [x] Implement and verify explicit MIME encoding readback
+- [x] Implement and verify native MIME entity classification properties
+- [x] Implement and verify native MIME Content-ID and Content-Location readback
+- [x] Implement and verify MIME `Headers` and `GetSomeHeaders` readback
+- [x] Add regression coverage for `HeaderObjects`
+- [x] Implement raw entity stream access for child entities
+- [x] Implement decoded content stream access for native entities
+- [x] Implement and verify decoded MIME `InputStream` access
+- [x] Implement and verify raw MIME `InputStream(False)` access
+- [x] Implement and verify `Reader` access using the entity charset
+- [ ] Add regression coverage for remaining parity items against the Notes client
+- [x] Add regression coverage for `AppendChildEntity`
+- [x] Add regression coverage for full and filtered MIME header enumeration
+- [x] Review Domino JNA MIME4J features: HTML and rich-text conversion belongs to `NotesRichTextItem.ConvertToHTML`, outside the `NotesMIMEEntity` parity surface
+
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
-- [ ] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
-- [ ] Add nested child-parent mutation beyond direct children of the root entity
+- [x] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
+- [x] Add nested child creation and content mutation beyond direct children of the root entity
+- [x] Add regression coverage for nested parent and first-child traversal
+- [x] Add regression coverage for nested depth-first and sibling traversal after save/reopen
+- [x] Verify nested custom header create, mutation and readback
+- [x] Verify nested standard MIME header parameter lookup and mutation
+- [x] Verify nested Content-Disposition filename parameter mutation and readback
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
+
+The remaining nested decoded-body issue is tracked separately: Notes preserves the nested RFC822 entity headers but drops its body during the current full MIME itemization writeback path. Direct-child decoded and raw streams are verified.
+
+JNX parity note: the JNX `MimeEntity` type is an API interface; the current `domino-jnx-jna` module does not provide a concrete MIME entity tree implementation. Domino JNA's related MIME support uses MIME4J to build or parse a complete message and then writes it through `MIMEStream`. It therefore confirms the whole-message serialization strategy, but does not provide a native nested-entity mutation sequence to copy.

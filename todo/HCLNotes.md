@@ -36,54 +36,41 @@ Missing / future:
 
 ## NotesDatabase
 
-Implemented properties: `Parent`, `Server`, `FilePath`, `FileName`, `IsOpen`, `Title`, `Categories`, `TemplateName`, `DesignTemplateName`, `ReplicaID`, `Size`, `PercentUsed`, `CurrentAccessLevel`.
+Implemented properties: `Parent`, `Server`, `FilePath`, `FileName`, `IsOpen`, `Title`, `Categories`, `TemplateName`, `DesignTemplateName`, `ReplicaID`, `Size`, `PercentUsed`, `CurrentAccessLevel`, `Created`, `LastModified`, `FileFormat`, `IsFTIndexed`, and `LastFTIndexed`.
 
-Implemented methods: `OpenView`, `GetDocumentByNoteId`, `GetDocumentByUNID`, `Search`, `FTSearch`, `RunAgent`, `Recycle`.
+Implemented methods: `OpenView`, `GetDocumentByNoteId`, `GetDocumentByUNID`, `CreateDocument`, `CreateDocumentCollection`, `GetProfileDocument`, `Search`, `FTSearch`, `GetModifiedDocuments`, `RunAgent`, `Create`, `Remove`, `CreateCopy`, `SetReplicaId`, `RemoveFTIndex`, and `Recycle`.
 
 Missing / future:
 
-- Create new documents.
-- Delete documents.
 - Additional ACL/database access properties and ACL manipulation.
-- Database modified time, created time and additional database metadata.
 - Database compact/fixup/replication/admin operations.
-- Profile documents.
-- Folder operations.
-- Additional full-text index management and FT options.
 - More complete agent options and execution context handling.
 
 ## NotesView
 
-Implemented: `Name`, `GetDocumentByKey`, `GetAllDocumentsByKey`, `FTSearch`, `Refresh`, `Recycle`.
+Implemented: `Name`, `ColumnNames`, `GetDocumentByKey`, `GetAllDocumentsByKey`, `GetFirstDocument`, `GetLastDocument`, `GetNextDocument`, `GetPrevDocument`, `FTSearch`, `Refresh`, `CreateViewEntryCollection`, `CreateViewNav`, view entry/category navigation, `AutoUpdate`, `MarkAllRead`, `MarkAllUnread`, and `Recycle`.
 
 Missing / future:
 
-- Column metadata and column values.
-- General view navigation (`GetFirstDocument`, next/previous, entries, categories).
-- Multi-column/multi-value key lookup compatible with LotusScript behavior.
+- Native multi-column key lookup and complete `NIFFindByKey` compatibility remain. Single numeric and `NotesDateTime` keys now use a native `ITEM_TABLE` buffer; managed array keys compare text, numeric, and `NotesDateTime` values across multiple columns and multi-valued column results. Multi-column native support still requires the sorted-column and `FIND_PARTIAL`/case-sensitivity validation described by the [HCL NIFFindByKey documentation](https://opensource.hcltechsw.com/domino-c-api-docs/reference/Func/NIFFindByKey/).
 - Exact validation of all `NIFFindByKey`/collation semantics.
-- View entry objects and category entries.
 
 ## NotesDocumentCollection
 
-Implemented as a lightweight NOTEID collection. `docs(i)`, `Get(i)` and `For Each` return NOTEID strings; `Count`, `UBound`, `LBound` are supported.
+Implemented as a lightweight NOTEID collection. `GetFirstDocument`, `GetNextDocument`, `GetDocument`, `For Each`, `Count`, `Clone`, `RemoveAll`, `Merge`, `Intersect`, `Subtract`, folder operations, and full-text filtering are supported.
 
 Missing / future:
 
-- Additional collection operations if needed (contains, remove, intersect/merge, sorting).
 - Optional lazy paging for extremely large result sets if retaining all NOTEIDs becomes material.
 
 ## NotesDocument
 
-Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceItemValue`, `CreateNotesItem`, `SaveAttachment`, `Save`, `Recycle`, UNID/NOTEID properties.
+Implemented: open by NOTEID/UNID, item reads/writes, `GetFirstItem`, `ReplaceItemValue`, `CreateNotesItem`, `SaveAttachment`, `Save`, `Recycle`, UNID/NOTEID properties, response/parent relations, document metadata, and copy/folder/read-state operations.
 
 Missing / future:
 
-- Create a new document from `NotesDatabase`.
-- Delete document.
-- Response/parent document relationships.
-- Additional note metadata (created, last modified, signer, encrypt-on-send, etc.).
-- MIME support.
+- Encrypt-on-send and additional note metadata.
+- MIME support is implemented for native `Body` entities, direct and nested child traversal, MIME content read/write, standard header parameters, arbitrary header enumeration, and MIME directory lifecycle. See [notes-mime-entity.md](../docs/notes-mime-entity.md) and `samples/notes-mime-entity-surface.xps`. Named MIME items other than `Body` remain unsupported.
 - Embedded object APIs beyond attachment extraction.
 - Full LotusScript-compatible `GetItemValue` semantics for all native item types.
 
@@ -94,52 +81,44 @@ Implemented: `DateTimeValue`, `IsAuthors`, `IsEncrypted`, `IsNames`, `IsProtecte
 Missing / future:
 
 - Full support for every Notes item datatype in `Values`.
-- Rich text/composite values beyond `NotesRichTextItem` operations.
-- MIME/object/signature/userdata-specific typed wrappers.
-- Validate all writable item flags against HCL runtime behavior.
+- Object, signature and userdata-specific typed wrappers.
+- Extend rich-text/composite value coverage beyond the currently supported wrapper operations.
 
 ## NotesRichTextItem
 
-Implemented: inherited `Text` property plus `SaveAttachment` for attachments referenced by that rich-text item.
+Implemented: inherited `NotesItem` surface, direct creation, `AppendText`, styled text and paragraph operations, table creation, attachment embedding/extraction, embedded-object enumeration, `ConvertToHTML`, navigator/range operations, and `SaveAttachment`.
 
 Missing / future:
 
-- Create rich-text items directly.
-- Append text, paragraphs, doclinks, tables and sections.
-- Embed/attach files.
-- Enumerate attachments/embedded objects.
-- Rich-text conversion/export APIs.
+- Append doclinks and sections.
+- Mutate existing table rows and table formatting through the high-level wrapper.
 - Full CD-record traversal exposed as higher-level XPscript objects if needed.
 
 ## NotesName
 
-Implemented V1 name parsing/canonical/abbreviated surface.
+Implemented name parsing, canonical/abbreviated values, hierarchical components, and RFC821/RFC822 address fields.
 
 Missing / future:
 
-- Verify every property against LotusScript `NotesName`, including RFC822-specific fields and multi-OU behavior.
-- Replace remaining managed approximations with native name services where that improves compatibility.
+- Language-specific parsing and full native multi-OU semantics remain to be validated on additional Notes locales.
 
 ## NotesDateTime
 
-Implemented V1 date/time properties and session creation.
+Implemented native date/time creation, formatting, zone expansion, adjustment, wildcard, difference, and zone-conversion methods.
 
 Missing / future:
 
 - Validate `TimeZone` sign/semantics against LotusScript on actual Notes clients.
-- AnyDate/AnyTime behavior.
-- Zone conversion and additional LotusScript methods.
 - Locale-specific parsing/formatting compatibility.
 
 ## Agents
 
-Implemented synchronous agent execution with optional document context and stdout capture.
+Implemented synchronous agent lookup, enumeration, execution with optional document context, server execution, state properties, save/remove, and stdout capture.
 
 Missing / future:
 
 - Validate redirect constants/signatures on supported Notes versions.
-- Additional run flags/security options.
-- More detailed result/status information.
+- Additional run flags/security options and detailed result/status information.
 - Agent timeout/cancellation strategy if needed.
 
 ## Search and FT search

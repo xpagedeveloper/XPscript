@@ -12,8 +12,13 @@ Sub Main()
     Dim mime As NotesMIMEEntity
     Dim currentEntity As NotesMIMEEntity
     Dim textPart As NotesMIMEEntity
+    Dim nestedPart As NotesMIMEEntity
+    Dim nestedParent As NotesMIMEEntity
+    Dim firstNested As NotesMIMEEntity
     Dim attachmentPart As NotesMIMEEntity
+    Dim insertedPart As NotesMIMEEntity
     Dim attachmentHeader As NotesMIMEHeader
+    Dim headerObjects As Variant
     Dim contentStream As NotesStream
     Dim readStream As NotesStream
     Dim unid As String
@@ -23,6 +28,10 @@ Sub Main()
     Dim foundAttachment As Boolean
     Dim foundAttachmentDisposition As Boolean
     Dim foundAttachmentBase64 As Boolean
+    Dim foundNestedAfterReopen As Boolean
+    Dim foundSiblingAfterReopen As Boolean
+    Dim headerList As Variant
+    Dim childList As Variant
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -59,6 +68,13 @@ Sub Main()
         Else
             Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
         End If
+        Set readStream = mime.Reader
+        If readStream.ReadText() = EXPECTED_TEXT Then
+            Print "PASS: MIME Reader charset readback"
+        Else
+            Print "FAIL: MIME Reader charset readback"
+        End If
+        Call readStream.Recycle()
 
         Call contentStream.Recycle()
         Set contentStream = Nothing
@@ -156,6 +172,77 @@ Sub Main()
     Call contentStream.Recycle()
     Set contentStream = Nothing
 
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText("--inner-boundary" & Chr(13) & Chr(10) & _
+        "Content-Type: text/plain; charset=UTF-8" & Chr(13) & Chr(10) & Chr(13) & Chr(10) & _
+        "Nested seed" & Chr(13) & Chr(10) & "--inner-boundary--" & Chr(13) & Chr(10))
+    contentStream.Position = 0
+    Call textPart.SetContentFromText(contentStream, "multipart/alternative; boundary=""inner-boundary""", 1725)
+    Set nestedPart = textPart.CreateChildEntity()
+    Call contentStream.Truncate()
+    Call contentStream.WriteText("Nested replacement")
+    contentStream.Position = 0
+    Call nestedPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+    If nestedPart.ContentType = "text" And nestedPart.ContentSubType = "plain" Then
+        Print "PASS: nested child creation and mutation"
+    Else
+        Print "FAIL: nested child creation and mutation"
+    End If
+    Set readStream = session.CreateStream()
+    Call nestedPart.GetEntityAsText(readStream)
+    If readStream.Bytes > 0 Then
+        Print "PASS: nested child raw entity readback"
+    Else
+        Print "FAIL: nested child raw entity readback"
+    End If
+    Set attachmentHeader = nestedPart.CreateHeader("X-Nested-Probe")
+    Call attachmentHeader.SetHeaderVal("nested")
+    Set attachmentHeader = nestedPart.GetNthHeader("X-Nested-Probe")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetHeaderValAndParams() = "nested" Then
+        Print "PASS: nested custom header mutation"
+    Else
+        Print "FAIL: nested custom header mutation"
+    End If
+    Set attachmentHeader = nestedPart.GetNthHeader("Content-Type")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetParamVal("charset") = "UTF-8" Then
+        Call attachmentHeader.SetParamVal("charset", "UTF-8")
+        Set attachmentHeader = nestedPart.GetNthHeader("Content-Type")
+        If attachmentHeader.GetParamVal("charset") = "UTF-8" Then
+            Print "PASS: nested MIME header parameter mutation"
+        Else
+            Print "FAIL: nested MIME header parameter readback"
+        End If
+    Else
+        Print "FAIL: nested MIME header parameter lookup"
+    End If
+    Set attachmentHeader = nestedPart.CreateHeader("Content-Disposition")
+    Call attachmentHeader.SetHeaderVal("inline")
+    Call attachmentHeader.SetParamVal("filename", "nested.txt")
+    Set attachmentHeader = nestedPart.GetNthHeader("Content-Disposition")
+    If Not attachmentHeader Is Nothing And attachmentHeader.GetParamVal("filename") = "nested.txt" Then
+        Print "PASS: nested Content-Disposition filename parameter"
+    Else
+        Print "FAIL: nested Content-Disposition filename parameter"
+    End If
+    Set nestedParent = nestedPart.GetParentEntity()
+    Set firstNested = nestedParent.GetFirstChildEntity()
+    If Not nestedParent Is Nothing And nestedParent.ContentSubType = "mixed" And _
+       Not firstNested Is Nothing And firstNested.ContentType = "text" Then
+        Print "PASS: nested parent and first-child traversal"
+    Else
+        Print "FAIL: nested parent and first-child traversal"
+    End If
+    childList = nestedParent.GetChildren()
+    If UBound(childList) >= 0 Then
+        Print "PASS: nested child enumeration"
+    Else
+        Print "FAIL: nested child enumeration"
+    End If
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+    Set nestedPart = Nothing
+
     Set mime = doc.GetMIMEEntity("Body")
     Set attachmentPart = mime.CreateChildEntity()
     Set contentStream = session.CreateStream()
@@ -172,7 +259,7 @@ Sub Main()
     Print "PARAM_NAME=" & attachmentHeader.GetParamVal("name")
     Call attachmentHeader.SetParamVal("charset", "UTF-8")
     Print "PARAM_CHARSET=" & attachmentHeader.GetParamVal("charset")
-    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe")
+    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe", "probe-one")
     Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe", 1)
     If attachmentHeader Is Nothing Then
         Print "FAIL: arbitrary MIME header lookup"
@@ -188,34 +275,180 @@ Sub Main()
     Else
         Print "PASS: arbitrary MIME header occurrence lookup"
     End If
+    headerList = attachmentPart.GetHeaders("X-XPscript-MIME-Probe")
+    If UBound(headerList) - LBound(headerList) + 1 = 2 Then
+        Print "PASS: filtered MIME header enumeration"
+    Else
+        Print "FAIL: filtered MIME header enumeration"
+    End If
+    headerList = attachmentPart.GetHeaders()
+    If UBound(headerList) >= 2 Then
+        Print "PASS: full MIME header enumeration"
+    Else
+        Print "FAIL: full MIME header enumeration"
+    End If
+    Call attachmentPart.RemoveHeaders("X-XPscript-MIME-Probe")
+    Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe")
+    If attachmentHeader Is Nothing Then
+        Print "PASS: RemoveHeaders removed all matching headers"
+    Else
+        Print "FAIL: RemoveHeaders left a matching header"
+    End If
     Call contentStream.Recycle()
     Set contentStream = Nothing
 
     ' Stage 1: verify the native child immediately after the final header mutation.
     Set attachmentHeader = attachmentPart.GetNthHeader("Content-Transfer-Encoding")
     If attachmentHeader Is Nothing Then
-        Print "DIAG: immediate native attachment CTE missing after mutation"
+        Print "FAIL: immediate native attachment CTE missing after mutation"
     Else
-        Print "DIAG: immediate native attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+        If attachmentHeader.GetHeaderValAndParams() = "base64" Then Print "PASS: immediate attachment CTE readback" Else Print "FAIL: immediate attachment CTE readback"
     End If
     Set attachmentHeader = attachmentPart.GetNthHeader("Content-Disposition")
     If attachmentHeader Is Nothing Then
-        Print "DIAG: immediate native attachment Content-Disposition missing after mutation"
+        Print "FAIL: immediate native attachment Content-Disposition missing after mutation"
     Else
-        Print "DIAG: immediate native attachment Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+        If InStr(attachmentHeader.GetHeaderValAndParams(), "attachment") > 0 Then Print "PASS: immediate attachment disposition readback" Else Print "FAIL: immediate attachment disposition readback"
     End If
 
+    Call doc.CloseMIMEEntities()
     Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Set insertedPart = mime.CreateChildEntity(attachmentPart)
+    Set contentStream = session.CreateStream()
+    contentStream.Charset = "UTF-8"
+    Call contentStream.WriteText("Inserted before attachment")
+    contentStream.Position = 0
+    Call insertedPart.SetContentFromText(contentStream, "text/plain; charset=UTF-8", 1725)
+    Call contentStream.Recycle()
+    Set contentStream = Nothing
+    Print "PASS: CreateChildEntity sibling insertion"
+
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
+            Set insertedPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Call mime.AppendChildEntity(insertedPart)
+    Print "PASS: AppendChildEntity moved child to parent end"
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Set insertedPart = mime.CreateChildEntity(attachmentPart)
+    Call mime.RemoveChildEntity(insertedPart)
+    Print "PASS: RemoveChildEntity removed inserted sibling"
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
     If mime.ContentType = "multipart" And mime.ContentSubType = "mixed" Then
         Print "PASS: CreateChildEntity promoted root to multipart/mixed"
     Else
         Print "FAIL: multipart root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType
     End If
+    If mime.IsMultipart Then
+        Print "PASS: root IsMultipart readback"
+    Else
+        Print "FAIL: root IsMultipart readback"
+    End If
+    If Not mime.IsDiscretePart And Not mime.IsMessagePart Then
+        Print "PASS: root MIME part classification readback"
+    Else
+        Print "FAIL: root MIME part classification readback"
+    End If
+
+    mime.Preamble = "root preamble"
+    If mime.Preamble = "root preamble" Then
+        Print "PASS: MIME root preamble readback"
+    Else
+        Print "FAIL: MIME root preamble readback"
+    End If
+    Call doc.CloseMIMEEntities()
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
 
     If attachmentPart.ContentType = "application" And attachmentPart.ContentSubType = "octet-stream" Then
         Print "PASS: attachment child metadata refreshed after base64 writeback"
     Else
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
+    End If
+    If InStr(attachmentPart.Headers, "Content-Type:") > 0 And InStr(attachmentPart.GetSomeHeaders("Content-Type"), "Content-Type:") > 0 Then
+        Print "PASS: MIME header text readback"
+    Else
+        Print "FAIL: MIME header text readback"
+    End If
+    Set readStream = attachmentPart.InputStream
+    If readStream.Bytes > 0 Then
+        Print "PASS: decoded MIME InputStream readback"
+    Else
+        Print "FAIL: decoded MIME InputStream readback"
+    End If
+    Call readStream.Recycle()
+    Set readStream = attachmentPart.GetInputStream(False)
+    If readStream.Bytes > 0 Then
+        Print "PASS: raw MIME InputStream readback"
+    Else
+        Print "FAIL: raw MIME InputStream readback"
+    End If
+    Call readStream.Recycle()
+    headerObjects = attachmentPart.HeaderObjects
+    If UBound(headerObjects) >= LBound(headerObjects) And headerObjects(LBound(headerObjects)).HeaderName = "Content-Type" Then
+        Print "PASS: MIME HeaderObjects readback"
+    Else
+        Print "FAIL: MIME HeaderObjects readback"
+    End If
+    Set attachmentHeader = attachmentPart.CreateHeader("Content-ID")
+    Call attachmentHeader.SetHeaderVal("<probe-id>")
+    Set attachmentHeader = attachmentPart.CreateHeader("Content-Location")
+    Call attachmentHeader.SetHeaderVal("probe.txt")
+    If attachmentPart.ContentID = "<probe-id>" And attachmentPart.ContentLocation = "probe.txt" Then
+        Print "PASS: attachment Content-ID and Content-Location readback"
+    Else
+        Print "FAIL: attachment Content-ID and Content-Location readback"
+    End If
+    If Not attachmentPart.IsMultipart Then
+        Print "PASS: attachment IsMultipart readback"
+    Else
+        Print "FAIL: attachment IsMultipart readback"
+    End If
+    If attachmentPart.IsDiscretePart And Not attachmentPart.IsMessagePart Then
+        Print "PASS: attachment MIME part classification readback"
+    Else
+        Print "FAIL: attachment MIME part classification readback"
+    End If
+    If attachmentPart.Encoding = 1727 Then
+        Print "PASS: attachment Encoding reports base64"
+    Else
+        Print "FAIL: attachment Encoding does not report base64"
     End If
 
     ' Stage 2: close/reopen the MIME directory on the same unsaved note.
@@ -229,15 +462,15 @@ Sub Main()
         If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
             Set attachmentHeader = currentEntity.GetNthHeader("Content-Transfer-Encoding")
             If attachmentHeader Is Nothing Then
-                Print "DIAG: pre-save reopened-directory attachment CTE missing"
+                Print "FAIL: pre-save reopened-directory attachment CTE missing"
             Else
-                Print "DIAG: pre-save reopened-directory attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+                If attachmentHeader.GetHeaderValAndParams() = "base64" Then Print "PASS: pre-save reopened attachment CTE readback" Else Print "FAIL: pre-save reopened attachment CTE readback"
             End If
             Set attachmentHeader = currentEntity.GetNthHeader("Content-Disposition")
             If attachmentHeader Is Nothing Then
-                Print "DIAG: pre-save reopened-directory Content-Disposition missing"
+                Print "FAIL: pre-save reopened-directory Content-Disposition missing"
             Else
-                Print "DIAG: pre-save reopened-directory Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+                If InStr(attachmentHeader.GetHeaderValAndParams(), "attachment") > 0 Then Print "PASS: pre-save reopened attachment disposition readback" Else Print "FAIL: pre-save reopened attachment disposition readback"
             End If
         End If
         Set currentEntity = currentEntity.GetNextSibling()
@@ -288,6 +521,28 @@ Sub Main()
                 Set currentEntity = currentEntity.GetNextSibling()
             Loop
 
+            Set currentEntity = mime.GetFirstChildEntity()
+            If Not currentEntity Is Nothing Then
+                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                Do While Not currentEntity Is Nothing
+                    If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
+                        foundNestedAfterReopen = True
+                    End If
+                    Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                Loop
+            End If
+            Set currentEntity = mime.GetFirstChildEntity()
+            If Not currentEntity Is Nothing Then
+                Set currentEntity = currentEntity.GetNextSibling()
+                Do While Not currentEntity Is Nothing
+                    If currentEntity.ContentType = "application" Then
+                        foundSiblingAfterReopen = True
+                        Exit Do
+                    End If
+                    Set currentEntity = currentEntity.GetNextSibling()
+                Loop
+            End If
+
             If foundAttachment Then
                 Print "PASS: base64 attachment child survived save/reopen traversal"
             Else
@@ -304,6 +559,16 @@ Sub Main()
                 Print "PASS: attachment child retained Content-Disposition filename"
             Else
                 Print "FAIL: attachment child Content-Disposition missing after save/reopen"
+            End If
+            If foundNestedAfterReopen Then
+                Print "PASS: depth-first nested traversal survived save/reopen"
+            Else
+                Print "FAIL: depth-first nested traversal after save/reopen"
+            End If
+            If foundSiblingAfterReopen Then
+                Print "PASS: sibling traversal survived save/reopen"
+            Else
+                Print "FAIL: sibling traversal after save/reopen"
             End If
         End If
 

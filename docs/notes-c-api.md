@@ -129,10 +129,12 @@ Set view = db.OpenView("People")
 
 | Member | Return type | Description |
 | --- | --- | --- |
-| `GetFirstDocumentByKey(key)` | `NotesDocument` or `Nothing` | Finds the first matching document using an exact text-key match. V1 lookup targets the first sorted text column. |
+| `GetFirstDocumentByKey(key)` | `NotesDocument` or `Nothing` | Finds the first matching document using an exact text-key match. A scalar key targets the first sorted text column. |
 | `GetFirstDocumentByKey(key, exactMatch)` | `NotesDocument` or `Nothing` | Finds the first document by text key and controls exact versus partial matching. |
+| `GetFirstDocumentByKey(keys, exactMatch)` | `NotesDocument` or `Nothing` | When `keys` is an XPScript array, matches the supplied text keys against successive view columns, including multi-valued column results. |
 | `GetAllDocumentsByKey(key)` | `NotesDocumentCollection` | Returns all exact text-key matches. |
 | `GetAllDocumentsByKey(key, exactMatch)` | `NotesDocumentCollection` | Returns text-key matches and controls exact versus partial matching. |
+| `GetAllDocumentsByKey(keys, exactMatch)` | `NotesDocumentCollection` | When `keys` is an XPScript array, returns documents matching all supplied text keys across successive view columns. |
 | `FTSearch(query)` | `NotesDocumentCollection` | Runs a full-text search scoped to the view. |
 | `FTSearch(query, maxResults)` | `NotesDocumentCollection` | Runs a view full-text search with a result limit. |
 | `GetFirstDocument()` | `NotesDocument` or `Nothing` | Starts navigation from the beginning of the view and returns the first document. |
@@ -355,6 +357,11 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 | `Addr821` | String | read-only | Parsed Internet/RFC821-style address when present. |
 | `Addr822LocalPart` | String | read-only | Parsed local part of an Internet address. |
 | `Addr822Phrase` | String | read-only | Parsed display phrase from an Internet address. |
+| `Addr822Comment1` | String | read-only | First parenthesized RFC 822 comment. |
+| `Addr822Comment2` | String | read-only | Second parenthesized RFC 822 comment. |
+| `Addr822Comment3` | String | read-only | Third parenthesized RFC 822 comment. |
+| `Generation`, `Given`, `Initials`, `Surname` | String | read-only | Parsed hierarchical name components. |
+| `Keyword`, `Language` | String | read-only | Parsed name metadata components when supplied by Domino. |
 | `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
 
 ### Methods
@@ -364,6 +371,8 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 ## NotesDateTime
 
 `NotesDateTime` stores the native C API `TIMEDATE` representation.
+
+An empty value creates the native wildcard date and time. `SetAnyDate` preserves the time while making the date match any date. `SetAnyTime` preserves the date while making the time match any time. These operations use the Domino `TIMEDATE_WILDCARD` representation.
 
 ```xpscript
 Dim value As NotesDateTime
@@ -378,6 +387,8 @@ Print value.LocalTime
 | --- | --- | --- | --- |
 | `Parent` | `NotesSession` | read-only | Owning session. |
 | `IsValidDate` | Boolean | read-only | Currently returns `True` for a successfully constructed Notes date/time. |
+| `SetAnyDate()` | Void | method | Sets the date component to the Domino wildcard date. |
+| `SetAnyTime()` | Void | method | Sets the time component to the Domino wildcard time. |
 | `IsDST` | Boolean | read-only | Daylight-saving indicator returned by native time expansion. |
 | `TimeZone` | Integer | read-only | Notes time-zone value returned by native time expansion. |
 | `LocalTime` | String | read-only | Native-formatted local date/time. |
@@ -397,6 +408,10 @@ Print value.LocalTime
 | `AdjustDay(amount)` | Void | Adds or subtracts days. |
 | `AdjustMonth(amount)` | Void | Adds or subtracts months. |
 | `AdjustYear(amount)` | Void | Adds or subtracts years. |
+| `SetNow()` | Void | Replaces the value with the current native Notes time/date. |
+| `TimeDifference(other)` | Double | Returns this value minus another `NotesDateTime` in seconds. |
+| `TimeDifferenceDouble(other)` | Double | Alias returning the time difference in seconds as a double. |
+| `ConvertToZone(zone)` | Void | Reinterprets the local date/time in the supplied Domino zone and stores the resulting GMT value. |
 | `Recycle()` | Void | Invalidates the wrapper. |
 
 ## NotesAgent

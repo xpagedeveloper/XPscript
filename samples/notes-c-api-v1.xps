@@ -6,7 +6,7 @@ Option Declare
 
 Sub Main()
     Dim NOTES_RUNTIME As String
-    NOTES_RUNTIME = "C:\Program Files\HCL\Notes"
+    NOTES_RUNTIME = "D:\Program Files\HCL\Notes"
     Dim NOTES_INI As String
     NOTES_INI = ""
     Dim LOCAL_DATABASE As String
@@ -23,6 +23,8 @@ Sub Main()
     VIEW_NAME = "People"
     Dim VIEW_KEY As String
     VIEW_KEY = ""
+    Dim TYPED_KEY_VIEW As String
+    TYPED_KEY_VIEW = ""
     Dim AGENT_NAME As String
     AGENT_NAME = ""
     Dim RICH_TEXT_ITEM As String
@@ -66,6 +68,26 @@ Sub Main()
     Print "NAME1_ABBREVIATED=" & name1.Abbreviated
     Print "NAME2_COMMON=" & name2.Common
     Print "NAME2_ORGANIZATION=" & name2.Organization
+    Set name2 = session.CreateName("\"Ada Lovelace\" <ada@example.com> (Engineering) (Platform) (North)")
+    Print "NAME2_LOCALPART=" & name2.Addr822LocalPart
+    Print "NAME2_ADDR821=" & name2.Addr821
+    Print "NAME2_PHRASE=" & name2.Addr822Phrase
+    Print "NAME2_COMMENT1=" & name2.Addr822Comment1
+    Print "NAME2_COMMENT2=" & name2.Addr822Comment2
+    Print "NAME2_COMMENT3=" & name2.Addr822Comment3
+    Set name2 = session.CreateName("CN=John Q Public/G=Jr/GIVEN=John/INITIALS=JQ/SURNAME=Public/A=Admin/P=Private/O=Example/C=SE")
+    Print "NAME_HIER_GENERATION=" & name2.Generation
+    Print "NAME_HIER_GIVEN=" & name2.Given
+    Print "NAME_HIER_INITIALS=" & name2.Initials
+    Print "NAME_HIER_SURNAME=" & name2.Surname
+    Print "NAME_HIER_ADMD=" & name2.ADMD
+    Print "NAME_HIER_PRMD=" & name2.PRMD
+    Set name2 = session.CreateName("ada@example.com (Engineering)")
+    Print "NAME_SIMPLE_ADDR821=" & name2.Addr821
+    Print "NAME_SIMPLE_LOCALPART=" & name2.Addr822LocalPart
+    Set name2 = session.CreateName("CN=Åsa Öberg/O=Företag/C=SE")
+    Print "NAME_UNICODE_COMMON=" & name2.Common
+    Print "NAME_UNICODE_ORGANIZATION=" & name2.Organization
 
     Set dt1 = session.CreateDateTime("2026-08-25 12:34:56")
     Set dt2 = session.CreateDateTime("2027-01-02 03:04:05")
@@ -73,6 +95,20 @@ Sub Main()
     Print "DT1_GMT=" & dt1.GMTTime
     Print "DT1_ZONE=" & CStr(dt1.TimeZone)
     Print "DT2_LOCAL=" & dt2.LocalTime
+    Print "DT_DIFFERENCE=" & CStr(dt2.TimeDifference(dt1))
+    Print "DT_DIFFERENCE_DOUBLE=" & CStr(dt2.TimeDifferenceDouble(dt1))
+    Call dt1.ConvertToZone(0)
+    Print "DT1_CONVERTED_GMT=" & dt1.GMTTime
+    Call dt1.SetAnyTime()
+    Print "DT1_ANY_TIME=" & dt1.TimeOnly
+    Call dt2.SetAnyDate()
+    Print "DT2_ANY_DATE=" & dt2.DateOnly
+    Call dt1.SetNow()
+    Print "DT1_SET_NOW=" & dt1.IsValidDate
+    Set dt2 = session.CreateDateTime("")
+    Print "DT_WILDCARD_LOCAL=" & dt2.LocalTime
+    Print "DT_WILDCARD_GMT=" & dt2.GMTTime
+    Print "DT_WILDCARD_ZONE=" & dt2.ZoneTime
 
     Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
     Print "LOCAL_DB=" & localDb.FilePath
@@ -83,9 +119,10 @@ Sub Main()
         If VIEW_KEY <> "" And view Is Not Nothing Then
             Set docs = view.GetAllDocumentsByKey(VIEW_KEY)
             Print "VIEW_MATCHES=" & CStr(docs.Count)
-            Print "VIEW_UBOUND=" & CStr(UBound(docs))
+            Print "VIEW_COUNT=" & CStr(docs.Count)
             If docs.Count > 0 Then
-                noteId = docs(0)
+                Set doc = docs.GetFirstDocument()
+                noteId = doc.NoteID
                 Print "VIEW_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
                 If doc Is Not Nothing Then
@@ -98,6 +135,14 @@ Sub Main()
             End If
             Call docs.Recycle()
             Set docs = Nothing
+        End If
+        If TYPED_KEY_VIEW <> "" Then
+            Set groupView = localDb.OpenView(TYPED_KEY_VIEW)
+            If groupView Is Not Nothing Then
+                Set doc = groupView.GetDocumentByKey(0, True)
+                Print "TYPED_NUMERIC_KEY_TEST=" & CStr(doc Is Nothing)
+                Call groupView.Recycle()
+            End If
         End If
 
         Set groupView = localDb.OpenView("($VIMGroups)")
@@ -116,9 +161,10 @@ Sub Main()
         Set docs = localDb.Search("@All", 10)
         If docs Is Not Nothing Then
             Print "FORMULA_MATCHES=" & CStr(docs.Count)
-            Print "FORMULA_UBOUND=" & CStr(UBound(docs))
+            Print "FORMULA_COUNT=" & CStr(docs.Count)
             If docs.Count > 0 Then
-                noteId = docs(0)
+                Set doc = docs.GetFirstDocument()
+                noteId = doc.NoteID
                 Print "SEARCH_NOTEID=" & noteId
                 Set doc = localDb.GetDocumentByNoteId(noteId)
                 If doc Is Not Nothing Then
@@ -137,7 +183,7 @@ Sub Main()
         ' If docs Is Not Nothing Then
         '     Print "FT_MATCHES=" & CStr(docs.Count)
         '     If docs.Count > 0 Then
-        '         noteId = docs(0)
+        '         noteId = docs.GetFirstDocument().NoteID
         '         Set doc = localDb.GetDocumentByNoteId(noteId)
         '     End If
         '     Call docs.Recycle()

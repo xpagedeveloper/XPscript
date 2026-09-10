@@ -4,6 +4,12 @@ XPscript exposes `NotesMIMEEntity` through the native HCL Notes/Domino MIME dire
 
 Set `NotesSession.ConvertMIME = False` before opening documents when MIME items must remain native `TYPE_MIME_PART` items.
 
+Nested entity content mutation uses MimeKit 4.17.0 to parse and serialize the complete MIME tree before writing it through the Notes MIME stream. MimeKit is distributed under the MIT License. `MimeKit.dll` is staged beside the compiled application only when its source uses `NotesMIMEEntity`.
+
+The MIME implementation also uses [HCL Domino JNX](https://github.com/HCL-TECH-SOFTWARE/domino-jnx) and [Domino JNA](https://github.com/klehmann/domino-jna) as implementation references for native Notes API mapping and MIME stream writeback. Both reference projects are licensed under the Apache License, Version 2.0. XPscript does not distribute their source code or binaries. The attribution and future copying requirements are recorded in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
+
+The [HCL Domino C API documentation](https://opensource.hcltechsw.com/domino-c-api-docs/) is the primary source for the native MIME ABI and is listed by HCL under the Apache License, Version 2.0. XPscript does not redistribute the HCL C API toolkit or the commercial Notes/Domino runtime. Its attribution and license handling are recorded in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
+
 ## Open or create the root entity
 
 The current native implementation supports the `Body` item for document-level MIME access:
@@ -43,7 +49,15 @@ Tree navigation uses the native MIME directory:
 
 ## Root content readback
 
-The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`.
+The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`. `ContentID` and `ContentLocation` expose the native entity values used by inline and related MIME parts. `IsMultipart`, `IsDiscretePart` and `IsMessagePart` report the native Domino MIME entity classification.
+
+`Headers`, `HeaderObjects`, and `GetSomeHeaders(names)` are available for the root and child entity surfaces. Header text is read from the current serialized entity and preserves repeated headers and their order.
+
+Multipart entities support `Preamble` read and write. Child entities also support raw `GetEntityAsText(stream)` access and decoded content stream access. `EncodeContent` and `DecodeContent` rewrite the entity transfer encoding while preserving its content type.
+
+`InputStream` returns a new `NotesStream` containing decoded entity bytes. `GetInputStream(False)` returns the stored transport representation, while `GetInputStream(True)` returns decoded bytes. Each returned stream is positioned at zero and must be recycled by the caller.
+
+`Reader` returns a `NotesStream` containing decoded text and applies the entity's `charset` parameter when present. The returned stream is positioned at zero and must be recycled by the caller.
 
 XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRead`. `ContentAsText` and `GetContentAsText` decode the transfer encoding and then decode text with the root entity's native charset. `GetContentAsBytes` returns decoded body bytes. `GetEntityAsText` returns the complete root RFC822 MIME stream including headers.
 
@@ -68,7 +82,7 @@ The currently supported transfer-encoding mappings are:
 
 ## Multipart/mixed and attachments
 
-The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
+The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model. A direct child that is multipart can also create and mutate its first nested child. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization. Nested entities support `GetChildren()` enumeration and also support custom `CreateHeader(name, value)`, `SetHeaderVal`, `GetNthHeader`, `GetHeaders`, and `RemoveHeaders` operations, including standard `Content-Type` and `Content-Disposition` parameter mutation and readback. The executable regression covers nested `GetParentEntity()`, `GetFirstChildEntity()`, depth-first traversal and sibling traversal after save/reopen.
 
 Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` resolves the selected entity through Domino's native MIME directory. It scans the documented `MIMESYMBOL` range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.
 
@@ -104,7 +118,7 @@ Set disposition = attachment.CreateHeader("Content-Disposition")
 Call disposition.SetHeaderVal("attachment; filename=""probe.txt""")
 ```
 
-Encoding `1727` writes the child body using MIME base64 transfer encoding. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
+Encoding `1727` writes the child body using MIME base64 transfer encoding, and the child `Encoding` property reports `1727` after readback. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
 
 Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use `GetNthHeader("Content-Disposition")` or `GetNthHeader("Content-Transfer-Encoding")` when header semantics matter.
 

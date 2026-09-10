@@ -34,6 +34,14 @@ internal static class CompilerOutputPublisher
             dependencies.Add(new Dependency(sourceFile, Path.GetFileName(sourceFile)));
         }
 
+        var sourceText = File.ReadAllText(sourceFullPath);
+        if (sourceText.Contains("NotesMIMEEntity", StringComparison.OrdinalIgnoreCase))
+        {
+            var mimeKit = Path.Combine(Path.GetDirectoryName(typeof(CompilerOutputPublisher).Assembly.Location) ?? "", "MimeKit.dll");
+            if (File.Exists(mimeKit))
+                dependencies.Add(new Dependency(mimeKit, "MimeKit.dll"));
+        }
+
         PublishStaged(generatedExecutable, outputFullPath, dependencies, makeExecutable);
     }
 

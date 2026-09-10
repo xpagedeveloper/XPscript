@@ -10,6 +10,8 @@ Primary source for native Domino API signatures, constants, structures, flags, o
 
 Use the C API documentation as the primary authority before adding or changing native Notes/Domino interop. Do not infer signatures, flags, structure layouts, ownership semantics, or behavior when the C API documentation can verify them.
 
+The HCL open source catalog lists `domino-c-api-docs` under the Apache License, Version 2.0. XPscript uses the documentation as a reference and does not redistribute the documentation or the HCL C API toolkit. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for the project attribution and license handling.
+
 ## HCL Domino JNX
 
 HCL's Java/JNI implementation over the Domino native API, useful as an implementation reference for how HCL maps higher-level Notes/Domino behavior onto the native C API:
@@ -17,6 +19,12 @@ HCL's Java/JNI implementation over the Domino native API, useful as an implement
 - [HCL Domino JNX](https://github.com/HCL-TECH-SOFTWARE/domino-jnx)
 
 JNX is a reference implementation, not a substitute for the C API contract. When implementing XPscript Notes classes, use it to cross-check native calls, flag combinations, memory/resource handling, data conversion, and higher-level behavior. If JNX and assumptions in XPscript differ, verify the behavior against the C API documentation and the relevant HCL LotusScript/Designer documentation before implementing.
+
+JNX is an Apache License, Version 2.0 project. XPscript uses it as a reference and does not distribute JNX source or binaries. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for attribution and the requirements that apply if reference code is copied in the future.
+
+## Domino JNA
+
+[Domino JNA](https://github.com/klehmann/domino-jna) is an Apache License, Version 2.0 implementation reference used to compare native Notes API calls and MIME stream serialization. It is not a dependency of XPscript. See [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for attribution and future copying requirements.
 
 ## NotesDocument.ComputeWithForm
 

@@ -28,7 +28,7 @@ internal static class NotesMimeNativeEntityPostProcessor
 
         source = ReplaceRequired(source,
             "    public string ContentType { get { EnsureEntityAlive(); return _message.ContentType; } }\n    public string ContentSubType { get { EnsureEntityAlive(); return _message.ContentSubType; } }",
-            "    public string ContentType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentTypeSymbol(_nativeEntity)); } }\n    public string ContentSubType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentSubtypeSymbol(_nativeEntity)); } }",
+            "    public string ContentType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentTypeSymbol(_nativeEntity)); } }\n    public string ContentSubType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentSubtypeSymbol(_nativeEntity)); } }\n    public string ContentID { get { EnsureEntityAlive(); return Session.Api.ContentId(_nativeEntity); } }\n    public string ContentLocation { get { EnsureEntityAlive(); return Session.Api.ContentLocation(_nativeEntity); } }\n    public bool IsMultipart { get { EnsureEntityAlive(); return Session.Api.IsMimeEntityMultipart(_nativeEntity); } }\n    public bool IsDiscretePart { get { EnsureEntityAlive(); return Session.Api.IsMimeEntityDiscrete(_nativeEntity); } }\n    public bool IsMessagePart { get { EnsureEntityAlive(); return Session.Api.IsMimeEntityMessage(_nativeEntity); } }",
             "mime-native-content-properties");
 
         source = ReplaceRequired(source,
@@ -38,7 +38,7 @@ internal static class NotesMimeNativeEntityPostProcessor
 
         source = ReplaceRequired(source,
             "    public int Encoding { get { EnsureEntityAlive(); return XPScriptMimeMessage.EncodingConstant(_message.TransferEncoding); } }",
-            "    public int Encoding { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Encoding requires a verified Domino MIME header/entity API mapping; managed header parsing is intentionally not used.\"); } }",
+            "    public int Encoding { get { EnsureEntityAlive(); var header = GetNthHeader(\"Content-Transfer-Encoding\"); var value = header is null ? \"\" : header.GetHeaderValAndParams(); return value.Equals(\"base64\", StringComparison.OrdinalIgnoreCase) ? 1727 : value.Equals(\"quoted-printable\", StringComparison.OrdinalIgnoreCase) ? 1726 : value.Equals(\"7bit\", StringComparison.OrdinalIgnoreCase) ? 1724 : value.Equals(\"8bit\", StringComparison.OrdinalIgnoreCase) ? 1725 : value.Equals(\"binary\", StringComparison.OrdinalIgnoreCase) ? 1728 : 1725; } }",
             "mime-native-encoding-only");
 
         source = ReplaceRequired(source,

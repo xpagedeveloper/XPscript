@@ -23,7 +23,9 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         var nativeIndex = NativeHeaderIndex(name);
         if (nativeIndex != 0)
             return new XPScriptNotesMIMEHeader(this, nativeIndex);
-        var child = ReadCurrentDirectChild("GetNthHeader");
+        var child = _mimeDirectoryOwner.Parent(_nativeEntity) == _mimeDirectoryOwner.RootEntity
+            ? ReadCurrentDirectChild("GetNthHeader")
+            : GetSerializedEntity(Session.Api.ReadMimeStream(_document.NativeHandle, _itemName), GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         var found = 0;
         for (var i = 0; i < headers.Count; i++)
@@ -43,7 +45,9 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
             throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
-        var child = ReadCurrentDirectChild("NotesMIMEHeader");
+        var child = _mimeDirectoryOwner.Parent(_nativeEntity) == _mimeDirectoryOwner.RootEntity
+            ? ReadCurrentDirectChild("NotesMIMEHeader")
+            : GetSerializedEntity(Session.Api.ReadMimeStream(_document.NativeHandle, _itemName), GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
@@ -152,7 +156,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 
         // Mutation-created header wrappers retain their serialized child-header index.
         // Keep that path for SetHeaderVal/AddValText/Remove before a reopen.
-        var child = ReadCurrentDirectChild("NotesMIMEHeader");
+        var rawEntity = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var child = GetSerializedEntity(rawEntity, GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
@@ -198,6 +203,18 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     {
         EnsureAlive();
         return _api!.GetMimeEntityHeaders(note, entity);
+    }
+
+    internal byte[] EntityBody(uint note, nint entity)
+    {
+        EnsureAlive();
+        return _api!.GetMimeEntityBody(note, entity);
+    }
+
+    internal byte[] EntityDecodedBody(uint note, nint entity)
+    {
+        EnsureAlive();
+        return _api!.GetMimeDecodedEntityBody(note, entity);
     }
 
 """;
@@ -260,8 +277,72 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return [];
     }
 
+    internal byte[] GetMimeEntityBody(uint note, nint entity)
+    {
+        EnsureInitialized();
+        const ushort mimeEntityDataBody = 2;
+        const uint chunkSize = 60000;
+        using var output = new MemoryStream();
+        uint offset = 0;
+        while (true)
+        {
+            var status = Resolve<MIMEGetEntityDataDelegate>("MIMEGetEntityData")((long)note, entity, mimeEntityDataBody, offset, chunkSize, out var dataHandle, out var dataLength);
+            if (status == ErrMimeNoData || status != 0 || dataLength == 0) break;
+            nint data = 0;
+            try
+            {
+                data = Resolve<MimeMemoryLockDelegate>("OSLockObject")(dataHandle);
+                if (data == 0) break;
+                var bytes = new byte[checked((int)dataLength)];
+                System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
+                output.Write(bytes);
+            }
+            finally
+            {
+                if (data != 0) Resolve<MimeMemoryUnlockDelegate>("OSUnlockObject")(dataHandle);
+                if (dataHandle != 0) Resolve<MimeMemoryFreeDelegate>("OSMemFree")(dataHandle);
+            }
+            offset += dataLength;
+            if (dataLength < chunkSize) break;
+        }
+        return output.ToArray();
+    }
+
+    internal byte[] GetMimeDecodedEntityBody(uint note, nint entity)
+    {
+        EnsureInitialized();
+        const uint chunkSize = 60000;
+        using var output = new MemoryStream();
+        uint encodedOffset = 0;
+        while (true)
+        {
+            var status = Resolve<MIMEGetDecodedEntityDataDelegate>("MIMEGetDecodedEntityData")((long)note, entity, encodedOffset, chunkSize, out var dataHandle, out var decodedLength, out var encodedLength);
+            if (status == ErrMimeNoData || status != 0 || decodedLength == 0) break;
+            nint data = 0;
+            try
+            {
+                data = Resolve<MimeMemoryLockDelegate>("OSLockObject")(dataHandle);
+                if (data == 0) break;
+                var bytes = new byte[checked((int)decodedLength)];
+                System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
+                output.Write(bytes);
+            }
+            finally
+            {
+                if (data != 0) Resolve<MimeMemoryUnlockDelegate>("OSUnlockObject")(dataHandle);
+                if (dataHandle != 0) Resolve<MimeMemoryFreeDelegate>("OSMemFree")(dataHandle);
+            }
+            if (encodedLength == 0) break;
+            encodedOffset += encodedLength;
+        }
+        return output.ToArray();
+    }
+
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEGetEntityDataDelegate(long note, nint entity, ushort dataType, uint offset, uint requestedLength, out long dataHandle, out uint dataLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MIMEGetDecodedEntityDataDelegate(long note, nint entity, uint encodedOffset, uint chunkLength, out long dataHandle, out uint decodedLength, out uint encodedLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate nint MimeMemoryLockDelegate(long handle);

@@ -30,7 +30,8 @@ global using System.Threading.Tasks;
                !generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) &&
                !generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal) &&
                !generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal) &&
-               !generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
+               !generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal) &&
+               !generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
     }
 
     public static async Task<string> CompileAsync(

@@ -171,6 +171,21 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     {
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        if (keyValue is LSArray)
+        {
+            if (ContainsTypedKey(keyValue))
+            {
+                var typedMatches = Session.Api.FindViewByTypedKeys(_handle, ArrayValues(keyValue), 1, exactMatch);
+                return typedMatches.Count == 0 ? null : Database.OpenByNoteId(typedMatches[0]);
+            }
+            var matches = FindArrayKeyMatches(keyValue, exactMatch, 1);
+            return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
+        }
+        if (keyValue is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte)
+        {
+            var matches = Session.Api.FindViewByTypedKey(_handle, keyValue, 1, exactMatch);
+            return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
+        }
         var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, exactMatch);
         return ids.Count == 0 ? null : Database.OpenByNoteId(ids[0]);
     }
@@ -182,7 +197,65 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     {
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        if (keyValue is LSArray)
+        {
+            if (ContainsTypedKey(keyValue))
+                return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTypedKeys(_handle, ArrayValues(keyValue), 0, exactMatch));
+            return new XPScriptNotesDocumentCollection(Session, Database, FindArrayKeyMatches(keyValue, exactMatch, 0));
+        }
+        if (keyValue is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte)
+            return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTypedKey(_handle, keyValue, 0, exactMatch));
         return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, exactMatch));
+    }
+
+    private IReadOnlyList<uint> FindArrayKeyMatches(object keyValue, bool exactMatch, int maximum)
+    {
+        var keys = keyValue as LSArray ?? throw new XPScriptRuntimeException(13, "View key must be a string or array.");
+        var keyValues = new object?[keys.UBound() - keys.LBound() + 1];
+        for (var i = keys.LBound(); i <= keys.UBound(); i++) keyValues[i - keys.LBound()] = keys.Get(i);
+        var result = new List<uint>();
+        foreach (var row in ReadRows().Where(row => row.IsDocument))
+        {
+            var columns = row.GetColumnValues();
+            if (keyValues.Length > columns.Length) continue;
+            var matched = true;
+            for (var i = 0; i < keyValues.Length; i++)
+            {
+                if (!ViewKeyValueMatches(columns[i], keyValues[i], exactMatch)) { matched = false; break; }
+            }
+            if (!matched) continue;
+            result.Add(row.NoteId);
+            if (maximum > 0 && result.Count >= maximum) break;
+        }
+        return result;
+    }
+
+    private static object?[] ArrayValues(object keyValue)
+    {
+        var keys = (LSArray)keyValue;
+        var result = new object?[keys.UBound() - keys.LBound() + 1];
+        for (var i = keys.LBound(); i <= keys.UBound(); i++) result[i - keys.LBound()] = keys.Get(i);
+        return result;
+    }
+
+    private static bool ContainsTypedKey(object keyValue) => ArrayValues(keyValue).Any(value => value is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte);
+
+    private static bool ViewKeyValueMatches(object? columnValue, object? keyValue, bool exactMatch)
+    {
+        if (columnValue is LSArray values)
+            for (var i = values.LBound(); i <= values.UBound(); i++)
+                if (ViewKeyValueMatches(values.Get(i), keyValue, exactMatch)) return true;
+        if (columnValue is XPScriptNotesDateTime columnDate && keyValue is XPScriptNotesDateTime keyDate)
+            return Math.Abs(columnDate.TimeDifference(keyDate)) < 0.01;
+        if (columnValue is double or float or decimal or int or long or short or byte &&
+            keyValue is double or float or decimal or int or long or short or byte)
+            return Convert.ToDouble(columnValue, System.Globalization.CultureInfo.InvariantCulture)
+                .Equals(Convert.ToDouble(keyValue, System.Globalization.CultureInfo.InvariantCulture));
+        var column = XPScriptRuntime.CStr(columnValue);
+        var key = XPScriptRuntime.CStr(keyValue);
+        return exactMatch
+            ? string.Equals(column, key, StringComparison.OrdinalIgnoreCase)
+            : column.StartsWith(key, StringComparison.OrdinalIgnoreCase);
     }
 
     public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);

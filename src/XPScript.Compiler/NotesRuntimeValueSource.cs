@@ -33,6 +33,15 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
     public string Addr821 => Part("ADDR821");
     public string Addr822LocalPart => Part("LOCALPART");
     public string Addr822Phrase => Part("PHRASE");
+    public string Addr822Comment1 => Part("COMMENT1");
+    public string Addr822Comment2 => Part("COMMENT2");
+    public string Addr822Comment3 => Part("COMMENT3");
+    public string Generation => Part("G");
+    public string Given => Part("GIVEN");
+    public string Initials => Part("INITIALS");
+    public string Surname => Part("SURNAME");
+    public string Keyword => Part("KEYWORD");
+    public string Language => Part("LANGUAGE");
 
     private string Part(string key)
     {
@@ -66,13 +75,25 @@ internal sealed class XPScriptNotesName : XPScriptNotesObject
         _parts["ADDR821"] = source;
         var before = source[..at].Trim();
         var lt = before.LastIndexOf('<');
-        var gt = before.LastIndexOf('>');
+        var gt = source.IndexOf('>', lt + 1);
         if (lt >= 0 && gt > lt)
         {
             _parts["PHRASE"] = before[..lt].Trim().Trim('"');
-            _parts["LOCALPART"] = before[(lt + 1)..gt].Split('@')[0];
+            var address = source[(lt + 1)..gt].Trim();
+            _parts["ADDR821"] = address;
+            _parts["LOCALPART"] = address.Split('@')[0];
         }
-        else _parts["LOCALPART"] = before;
+        else
+        {
+            var end = source.IndexOfAny([' ', '\t', '(']);
+            var address = (end < 0 ? source : source[..end]).Trim();
+            _parts["ADDR821"] = address;
+            _parts["LOCALPART"] = address.Split('@')[0];
+        }
+
+        var comments = System.Text.RegularExpressions.Regex.Matches(source[(at + 1)..], @"\(([^)]*)\)");
+        for (var index = 0; index < comments.Count && index < 3; index++)
+            _parts["COMMENT" + (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)] = comments[index].Groups[1].Value.Trim();
     }
 
     protected override void ReleaseNative() => _parts.Clear();
@@ -91,9 +112,9 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     internal XPScriptNotesDateTime(XPScriptNotesSession session, string value) : base(session)
     {
-        if (value.Trim().Length == 0)
-            throw new XPScriptRuntimeException(5, "NotesDateTime requires a date/time value.");
-        _value = session.Api.ParseTimeDate(value);
+        _value = value.Trim().Length == 0
+            ? session.Api.TimeDateWildcard()
+            : session.Api.ParseTimeDate(value);
     }
 
     private XPScriptNotesDateTime(XPScriptNotesSession session, XPScriptNotesTimeDate value) : base(session) => _value = value;
@@ -105,17 +126,35 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
+    public void SetNow()
+    {
+        EnsureAlive();
+        _value = Session.Api.CurrentTimeDate();
+    }
+    public void SetAnyDate()
+    {
+        EnsureAlive();
+        var wildcard = Session.Api.TimeDateWildcard();
+        _value.Innards1 = (_value.Innards1 & 0xFF000000u) | (wildcard.Innards1 & 0x00FFFFFFu);
+    }
+    public void SetAnyTime()
+    {
+        EnsureAlive();
+        _value.Innards0 = Session.Api.TimeDateWildcard().Innards0;
+    }
     public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
     public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
-    public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }
-    public string GMTTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDateGmt(_value)); } }
-    public string ZoneTime { get { EnsureAlive(); return Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDate(_value)); } }
+    public string LocalTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatTimeDate(_value); } }
+    public string GMTTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDateGmt(_value)); } }
+    public string ZoneTime { get { EnsureAlive(); return IsWildcard() ? "AnyDay AllDay" : Session.Api.FormatExpandedTime(Session.Api.ExpandTimeDate(_value)); } }
     public string DateOnly
     {
         get
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
+            var wildcard = Session.Api.TimeDateWildcard();
+            if ((_value.Innards1 & 0x00FFFFFFu) == (wildcard.Innards1 & 0x00FFFFFFu)) return "AnyDay";
             return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + "-" + value.Day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
@@ -125,8 +164,16 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
         {
             EnsureAlive();
             var value = Session.Api.ExpandTimeDate(_value);
+            if (_value.Innards0 == Session.Api.TimeDateWildcard().Innards0) return "AllDay";
             return value.Hour.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Minute.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) + ":" + value.Second.ToString("D2", System.Globalization.CultureInfo.InvariantCulture);
         }
+    }
+
+    private bool IsWildcard()
+    {
+        var wildcard = Session.Api.TimeDateWildcard();
+        return _value.Innards0 == wildcard.Innards0 &&
+            (_value.Innards1 & 0x00FFFFFFu) == (wildcard.Innards1 & 0x00FFFFFFu);
     }
 
     public void AdjustSecond(object? amount) => Adjust(XPScriptRuntime.CInt(amount), 0, 0, 0, 0, 0);
@@ -135,6 +182,29 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
     public void AdjustDay(object? amount) => Adjust(0, 0, 0, XPScriptRuntime.CInt(amount), 0, 0);
     public void AdjustMonth(object? amount) => Adjust(0, 0, 0, 0, XPScriptRuntime.CInt(amount), 0);
     public void AdjustYear(object? amount) => Adjust(0, 0, 0, 0, 0, XPScriptRuntime.CInt(amount));
+
+    public double TimeDifference(object? other)
+    {
+        EnsureAlive();
+        if (other is not XPScriptNotesDateTime dateTime)
+            throw new XPScriptRuntimeException(13, "TimeDifference requires another NotesDateTime.");
+        dateTime.EnsureAlive();
+        var left = Session.Api.ExpandTimeDateGmt(_value);
+        var right = Session.Api.ExpandTimeDateGmt(dateTime._value);
+        if (left.Year < 1 || right.Year < 1 || left.Month < 1 || right.Month < 1)
+            throw new XPScriptRuntimeException(5, "TimeDifference cannot be used with wildcard NotesDateTime values.");
+        var leftUtc = new DateTime(left.Year, left.Month, left.Day, left.Hour, left.Minute, left.Second, DateTimeKind.Utc);
+        var rightUtc = new DateTime(right.Year, right.Month, right.Day, right.Hour, right.Minute, right.Second, DateTimeKind.Utc);
+        return (leftUtc - rightUtc).TotalSeconds;
+    }
+
+    public double TimeDifferenceDouble(object? other) => TimeDifference(other);
+
+    public void ConvertToZone(object? zone)
+    {
+        EnsureAlive();
+        Session.Api.ConvertTimeDateToZone(ref _value, XPScriptRuntime.CInt(zone));
+    }
 
     private void Adjust(int seconds, int minutes, int hours, int days, int months, int years)
     {
