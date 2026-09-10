@@ -14,7 +14,9 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Database UI data sources](database-ui-datasources.md): `QueryArray`, `GetRow`, `SaveRow` and shared `XPJsonObject` binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.
 - [Native and managed interop reference](native-interop-reference.md): native declarations plus every OS/RID-specific `Lib`/`Alias` selector and managed/native dependency directive.
 - [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, Kestrel, FastCGI and WebIIS commands/options.
-- [Runtime API reference](api-reference.md): HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
+- [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
+- [Native Notes/Domino C API](notes-c-api.md): `NotesSession`, databases, views, documents, items, names, date/time values, agents and native lifecycle semantics.
+- [Notes MIME](notes-mime-entity.md): native `NotesMIMEEntity`/`NotesMIMEHeader` traversal, nested mutation, headers, parameters, streams and attachment handling.
 - [Compact command index](commands.md): the older compact overview. Use the references above for the complete searchable catalog.
 
 ## Documentation map
@@ -28,27 +30,29 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 7. [Database UI data sources](database-ui-datasources.md), complete list/row/document JSON binding and native save semantics for UIListView and shared UIForm data.
 8. [Native and managed interop reference](native-interop-reference.md), complete native target selectors and reference directives.
 9. [Compiler and host CLI reference](cli-reference.md), complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.
-10. [Runtime API reference](api-reference.md), HTTP/JSON/database/AI/UI/web runtime members with parameters and executable examples.
-11. [Compact command index](commands.md), a concise compatibility overview.
-12. [Core command examples](command-examples.md), minimal copy/paste examples for common language constructs.
-13. [Date and time](date-time.md), date functions, Date object enhancements and OS formatting metadata.
-14. [Evaluate](evaluate.md), dynamic XPScript evaluation.
-15. [Classes](classes.md), classes, constructors, properties, object references and module state.
-16. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
-17. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
-18. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
-19. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
-20. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
-21. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-22. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
-23. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
-24. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
-25. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
-26. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
-27. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
-28. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
-29. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
-30. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
+10. [Runtime API reference](api-reference.md), HTTP/JSON/native Notes/database/AI/UI/web runtime members with parameters and executable examples.
+11. [Native Notes/Domino C API](notes-c-api.md), Notes object model, native view lookup, document save semantics, names and date/time values.
+12. [Notes MIME](notes-mime-entity.md), root/direct/nested MIME entities, headers, parameters, streams, encoding and lifecycle.
+13. [Compact command index](commands.md), a concise compatibility overview.
+14. [Core command examples](command-examples.md), minimal copy/paste examples for common language constructs.
+15. [Date and time](date-time.md), date functions, Date object enhancements and OS formatting metadata.
+16. [Evaluate](evaluate.md), dynamic XPScript evaluation.
+17. [Classes](classes.md), classes, constructors, properties, object references and module state.
+18. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
+19. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
+20. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
+21. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
+22. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
+23. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+24. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
+25. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
+26. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
+27. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
+28. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
+29. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
+30. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
+31. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+32. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
 
 ## How XPScript runs
 
