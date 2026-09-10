@@ -16,6 +16,8 @@ The primary documentation entry points are:
 - `native-interop-reference.md`, complete native declaration selectors plus managed/native reference directives.
 - `cli-reference.md`, complete compiler, Kestrel, FastCGI and WebIIS command-line reference.
 - `api-reference.md`, complete searchable runtime-object API reference.
+- `notes-c-api.md`, authoritative native Notes/Domino object-model reference.
+- `notes-mime-entity.md`, authoritative Notes MIME traversal/mutation reference.
 - `commands.md`, compact compatibility/quick command index.
 - `command-examples.md`, small runnable examples for common core language commands.
 - `date-time.md`, Date/date-time command details.
@@ -54,7 +56,7 @@ Reference ownership is explicit:
 - `file-io-reference.md` owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands.
 - `native-interop-reference.md` owns `Declare ... Lib`, every OS/RID-specific `Lib`/`Alias` selector, `Reference` and `ReferenceNative`.
 - `cli-reference.md` owns compiler, Kestrel, FastCGI and WebIIS command-line commands/options.
-- `api-reference.md` owns runtime objects such as HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web state.
+- `api-reference.md` owns runtime objects such as HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web state.
 
 Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.
 
@@ -73,6 +75,13 @@ Examples:
 - XPAi/AITool/session memory: `ai.md`, `ai-tools-sessions.md` and `api-reference.md`.
 - UIForm/UIListView: `uiform.md`, `uiform-fields.md` and `api-reference.md`.
 - Web/REST/Session/Application/RequestScope: `web.md`, `rest-api.md` and `api-reference.md`.
+- Native Notes/Domino: `notes-c-api.md` plus `api-reference.md`; MIME changes also require `notes-mime-entity.md`.
+
+## XPscript programming skill synchronization
+
+When a change affects how an LLM should write XPscript — including public runtime classes, constructors, member signatures, lifecycle rules, supported overloads, native Notes/Domino behavior, filesystem APIs, database/AI/XML APIs, iteration semantics, or recommended idioms — review `skills/xpscript-programming/SKILL.md` in the same change. Update it when the new behavior changes valid generated XPscript. The skill is operational guidance, not the exhaustive reference; it must point to the authoritative documentation and must not claim behavior that is only planned or partially implemented.
+
+A TODO/checklist update is not a substitute for reference documentation or skill synchronization.
 
 ## When a web feature changes
 
@@ -115,4 +124,4 @@ Relevant standalone demos should also be compiler-checked in CI so documentation
 
 ## Review checklist
 
-Before merging a documentation change, verify that names and casing match source, examples compile where CI coverage exists, parameters match current CLI/runtime code, reference/example links resolve, obsolete behavior has been removed, and the documentation does not claim unimplemented compatibility.
+Before merging a documentation change, verify that names and casing match source, examples compile where CI coverage exists, parameters match current CLI/runtime code, reference/example links resolve, obsolete behavior has been removed, and the documentation does not claim unimplemented compatibility. For user-visible runtime changes, also verify that the relevant topical page, `api-reference.md`, executable regression/sample, and `skills/xpscript-programming/SKILL.md` have all been reviewed.
