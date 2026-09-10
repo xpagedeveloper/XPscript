@@ -104,7 +104,7 @@ Missing / future:
 
 ## NotesDateTime
 
-Implemented native date/time creation, formatting, zone expansion, and adjustment methods.
+Implemented native date/time creation, formatting, zone expansion, adjustment, wildcard, difference, and zone-conversion methods.
 
 Missing / future:
 
