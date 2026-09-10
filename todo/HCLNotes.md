@@ -48,15 +48,12 @@ Missing / future:
 
 ## NotesView
 
-Implemented: `Name`, `GetDocumentByKey`, `GetAllDocumentsByKey`, `FTSearch`, `Refresh`, `Recycle`.
+Implemented: `Name`, `ColumnNames`, `GetDocumentByKey`, `GetAllDocumentsByKey`, `GetFirstDocument`, `GetLastDocument`, `GetNextDocument`, `GetPrevDocument`, `FTSearch`, `Refresh`, `CreateViewEntryCollection`, `CreateViewNav`, view entry/category navigation, `AutoUpdate`, `MarkAllRead`, `MarkAllUnread`, and `Recycle`.
 
 Missing / future:
 
-- Column metadata and column values.
-- General view navigation (`GetFirstDocument`, next/previous, entries, categories).
 - Multi-column/multi-value key lookup compatible with LotusScript behavior.
 - Exact validation of all `NIFFindByKey`/collation semantics.
-- View entry objects and category entries.
 
 ## NotesDocumentCollection
 
