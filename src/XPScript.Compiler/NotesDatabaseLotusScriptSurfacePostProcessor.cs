@@ -14,8 +14,8 @@ internal static class NotesDatabaseLotusScriptSurfacePostProcessor
 
         source = ReplaceRequired(
             source,
-            "    public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        return OpenByNoteId(XPScriptNotesConvert.NoteId(noteIdValue));\n    }\n\n    public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByNoteId(noteIdValue);",
-            "    public XPScriptNotesDocument? GetDocumentByID(object? noteIdValue)\n    {\n        EnsureAlive();\n        if (!IsOpen) return null;\n        return OpenByNoteId(XPScriptNotesConvert.NoteId(noteIdValue));\n    }\n\n    // Backward-compatible XPscript aliases. LotusScript uses GetDocumentByID.\n    public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue) => GetDocumentByID(noteIdValue);\n    public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByID(noteIdValue);",
+            "    public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue)\n    {\n        EnsureAlive();\n        if (!IsOpen || !XPScriptNotesConvert.TryNoteId(noteIdValue, out var noteId)) return null;\n        return OpenByNoteId(noteId);\n    }\n\n    public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByNoteId(noteIdValue);",
+            "    public XPScriptNotesDocument? GetDocumentByID(object? noteIdValue)\n    {\n        EnsureAlive();\n        if (!IsOpen || !XPScriptNotesConvert.TryNoteId(noteIdValue, out var noteId)) return null;\n        return OpenByNoteId(noteId);\n    }\n\n    // Backward-compatible XPscript aliases. LotusScript uses GetDocumentByID.\n    public XPScriptNotesDocument? GetDocumentByNoteId(object? noteIdValue) => GetDocumentByID(noteIdValue);\n    public XPScriptNotesDocument? OpenDocumentByNoteId(object? noteIdValue) => GetDocumentByID(noteIdValue);",
             "database-getdocumentbyid-alias");
 
         source = ReplaceRequired(

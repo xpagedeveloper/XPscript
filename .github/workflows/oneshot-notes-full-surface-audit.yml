@@ -4,18 +4,12 @@ on:
   push:
     branches:
       - feat/richtext-structural-surface
-      - feature/notes-dbdirectory
     paths:
       - .github/workflows/oneshot-notes-full-surface-audit.yml
       - tests/NotesFullRuntimeSurfaceAudit/**
       - samples/notes-full-domino-runtime-test.xps
       - samples/notes-document-metadata-runtime-test.xps
       - samples/notes-session-database-open-runtime-test.xps
-      - samples/notes-session-full-runtime-test.xps
-      - samples/notes-database-full-runtime-test.xps
-      - samples/notes-richtext-linked-objects-surface.xps
-      - samples/notes-agent-types-domino-runtime-test.xps
-      - samples/notes-dbdirectory-runtime-test.xps
       - src/XPScript.Compiler/**
       - src/XPScript.Compiler.Core/**
 
@@ -30,5 +24,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Audit Notes runtime fulltest coverage
+      - name: Audit NotesSession NotesDocument NotesDatabase fulltest coverage
         run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release
+      # Temporary workflow; remove once all three Notes runtime classes are covered.
