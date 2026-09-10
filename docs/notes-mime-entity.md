@@ -20,7 +20,7 @@ Set doc = db.CreateDocument()
 Set mime = doc.CreateMIMEEntity("Body")
 ```
 
-`NotesDocument.GetMIMEEntity("Body")` returns the native MIME root entity when `Body` is MIME. `NotesItem.GetMIMEEntity()` provides the same root view for the `Body` MIME item.
+`NotesDocument.GetMIMEEntity("Body")` returns the native MIME root entity when `Body` is MIME.
 
 Named MIME items other than `Body` are currently unsupported because Domino `MIMEOpenDirectory` is note-level and does not accept an item name.
 
@@ -31,15 +31,11 @@ The following properties are backed by the Domino MIME directory:
 - `ContentType`
 - `ContentSubType`
 - `Charset`
-- `BoundaryStart`
-- `BoundaryEnd`
 
 Tree navigation uses the native MIME directory:
 
 - `GetFirstChildEntity()`
-- `GetParentEntity()`
 - `GetNextSibling()`
-- `GetPrevSibling()`
 - `GetNextEntity()`
 - `GetNextEntity(SEARCH_DEPTH)`
 
@@ -110,8 +106,6 @@ Encoding `1727` writes the child body using MIME base64 transfer encoding. `Cont
 
 Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use `GetNthHeader("Content-Disposition")` or `GetNthHeader("Content-Transfer-Encoding")` when header semantics matter.
 
-The current mutation and child-header lookup implementation supports direct children of the root entity. Nested child-parent mutation and nested child-header lookup are not yet implemented.
-
 ## MIME directory lifetime
 
 Any MIME write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before writeback. Existing wrappers that reference the old directory become invalid immediately.
@@ -120,10 +114,6 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 `NotesDocument.CloseMIMEEntities()` closes the current MIME directory explicitly. `NotesDocument.Save()` and document recycle also release the directory before their native operation.
 
-## Current boundary
-
-Root content readback, direct-root-child mutation, and direct-child header lookup are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary header enumeration through `HeaderObjects` remain outside the verified surface.
-
-Do not assume the managed MIME parser behavior from earlier prototypes. Multipart mutation uses bounded RFC822 header/boundary framing around the Domino-native MIME directory and the established MIME stream/itemize writeback path.
+The verified surface covers the root entity, direct root children, the content operations listed above, the three supported child headers, and MIME directory lifecycle operations.
 
 See `samples/notes-mime-entity-surface.xps` for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.
