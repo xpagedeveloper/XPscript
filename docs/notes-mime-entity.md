@@ -43,7 +43,7 @@ Tree navigation uses the native MIME directory:
 
 ## Root content readback
 
-The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`. `IsMultipart`, `IsDiscretePart` and `IsMessagePart` report the native Domino MIME entity classification.
+The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`. `ContentID` and `ContentLocation` expose the native entity values used by inline and related MIME parts. `IsMultipart`, `IsDiscretePart` and `IsMessagePart` report the native Domino MIME entity classification.
 
 Multipart entities support `Preamble` read and write. Child entities also support raw `GetEntityAsText(stream)` access and decoded content stream access. `EncodeContent` and `DecodeContent` rewrite the entity transfer encoding while preserving its content type.
 

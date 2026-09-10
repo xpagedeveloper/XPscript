@@ -393,6 +393,15 @@ Sub Main()
     Else
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
     End If
+    Set attachmentHeader = attachmentPart.CreateHeader("Content-ID")
+    Call attachmentHeader.SetHeaderVal("<probe-id>")
+    Set attachmentHeader = attachmentPart.CreateHeader("Content-Location")
+    Call attachmentHeader.SetHeaderVal("probe.txt")
+    If attachmentPart.ContentID = "<probe-id>" And attachmentPart.ContentLocation = "probe.txt" Then
+        Print "PASS: attachment Content-ID and Content-Location readback"
+    Else
+        Print "FAIL: attachment Content-ID and Content-Location readback"
+    End If
     If Not attachmentPart.IsMultipart Then
         Print "PASS: attachment IsMultipart readback"
     Else

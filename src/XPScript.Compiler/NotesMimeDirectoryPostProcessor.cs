@@ -105,6 +105,20 @@ internal sealed partial class XPScriptNotesNativeApi
         return Resolve<MIMEEntityIsMessageDelegate>("MIMEEntityIsMessagePart")(entity) != 0;
     }
 
+    internal string ContentId(nint entity)
+    {
+        EnsureInitialized();
+        var value = Resolve<MIMEEntityContentIdDelegate>("MIMEEntityContentID")(entity);
+        return value == 0 ? string.Empty : System.Runtime.InteropServices.Marshal.PtrToStringAnsi(value) ?? string.Empty;
+    }
+
+    internal string ContentLocation(nint entity)
+    {
+        EnsureInitialized();
+        var value = Resolve<MIMEEntityContentLocationDelegate>("MIMEEntityContentLocation")(entity);
+        return value == 0 ? string.Empty : System.Runtime.InteropServices.Marshal.PtrToStringAnsi(value) ?? string.Empty;
+    }
+
     internal string GetMimeEntityTypeParam(nint entity, int symbol)
     {
         EnsureInitialized();
@@ -166,6 +180,10 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate int MIMEEntityIsDiscreteDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int MIMEEntityIsMessageDelegate(nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate nint MIMEEntityContentIdDelegate(nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate nint MIMEEntityContentLocationDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEEntityGetTypeParamDelegate(nint entity, int symbol, out uint valueHandle, out uint valueLength);
 }

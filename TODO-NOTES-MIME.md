@@ -99,6 +99,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement and verify MIME preamble read and write for multipart entities
 - [x] Implement and verify explicit MIME encoding readback
 - [x] Implement and verify native MIME entity classification properties
+- [x] Implement and verify native MIME Content-ID and Content-Location readback
 - [x] Implement raw entity stream access for child entities
 - [x] Implement decoded content stream access for native entities
 - [ ] Implement text reader access using the entity charset
