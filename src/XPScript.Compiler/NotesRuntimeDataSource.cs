@@ -219,6 +219,12 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
         if (columnValue is LSArray values)
             for (var i = values.LBound(); i <= values.UBound(); i++)
                 if (ViewKeyValueMatches(values.Get(i), keyValue, exactMatch)) return true;
+        if (columnValue is XPScriptNotesDateTime columnDate && keyValue is XPScriptNotesDateTime keyDate)
+            return Math.Abs(columnDate.TimeDifference(keyDate)) < 0.01;
+        if (columnValue is double or float or decimal or int or long or short or byte &&
+            keyValue is double or float or decimal or int or long or short or byte)
+            return Convert.ToDouble(columnValue, System.Globalization.CultureInfo.InvariantCulture)
+                .Equals(Convert.ToDouble(keyValue, System.Globalization.CultureInfo.InvariantCulture));
         var column = XPScriptRuntime.CStr(columnValue);
         var key = XPScriptRuntime.CStr(keyValue);
         return exactMatch

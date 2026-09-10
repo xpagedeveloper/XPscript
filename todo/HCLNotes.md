@@ -52,7 +52,7 @@ Implemented: `Name`, `ColumnNames`, `GetDocumentByKey`, `GetAllDocumentsByKey`, 
 
 Missing / future:
 
-- Native numeric/date multi-column key lookup and complete `NIFFindByKey` compatibility remain. Array view keys now support managed text prefix/exact matching across multiple columns and multi-valued column results. The native completion still requires an `ITEM_TABLE` key buffer, sorted-column order, and the `FIND_PARTIAL`/case-sensitivity flags described by the [HCL NIFFindByKey documentation](https://opensource.hcltechsw.com/domino-c-api-docs/reference/Func/NIFFindByKey/).
+- Native numeric/date multi-column key lookup and complete `NIFFindByKey` compatibility remain. Managed array view keys now compare text, numeric, and `NotesDateTime` values across multiple columns and multi-valued column results. The native completion still requires an `ITEM_TABLE` key buffer, sorted-column order, and the `FIND_PARTIAL`/case-sensitivity flags described by the [HCL NIFFindByKey documentation](https://opensource.hcltechsw.com/domino-c-api-docs/reference/Func/NIFFindByKey/).
 - Exact validation of all `NIFFindByKey`/collation semantics.
 
 ## NotesDocumentCollection
