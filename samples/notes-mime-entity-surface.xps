@@ -365,6 +365,11 @@ Sub Main()
     Else
         Print "FAIL: root IsMultipart readback"
     End If
+    If Not mime.IsDiscretePart And Not mime.IsMessagePart Then
+        Print "PASS: root MIME part classification readback"
+    Else
+        Print "FAIL: root MIME part classification readback"
+    End If
 
     mime.Preamble = "root preamble"
     If mime.Preamble = "root preamble" Then
@@ -392,6 +397,11 @@ Sub Main()
         Print "PASS: attachment IsMultipart readback"
     Else
         Print "FAIL: attachment IsMultipart readback"
+    End If
+    If attachmentPart.IsDiscretePart And Not attachmentPart.IsMessagePart Then
+        Print "PASS: attachment MIME part classification readback"
+    Else
+        Print "FAIL: attachment MIME part classification readback"
     End If
     If attachmentPart.Encoding = 1727 Then
         Print "PASS: attachment Encoding reports base64"
