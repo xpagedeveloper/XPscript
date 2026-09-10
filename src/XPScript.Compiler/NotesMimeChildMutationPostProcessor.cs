@@ -43,6 +43,22 @@ internal static class NotesMimeChildMutationPostProcessor
     private const string ChildSurface = """
     public XPScriptNotesMIMEEntity CreateChildEntity() => CreateChildEntity(null);
 
+    public object?[] GetHeaders() => GetHeaders(null);
+
+    public object?[] GetHeaders(object? nameValue)
+    {
+        EnsureEntityAlive();
+        var name = nameValue is null ? "" : XPScriptRuntime.CStr(nameValue).Trim();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var headers = ParseEntityHeaders(entity, FindRootBodyOffset(entity));
+        return headers
+            .Select((header, index) => new { header, index })
+            .Where(item => name.Length == 0 || item.header.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            .Select(item => (object?)new XPScriptNotesMIMEHeader(this, item.index, item.header.Name))
+            .ToArray();
+    }
+
     public XPScriptNotesMIMEEntity CreateChildEntity(object? nextSiblingValue)
     {
         EnsureEntityAlive();

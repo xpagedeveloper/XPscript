@@ -92,8 +92,8 @@ Branch: `feature/notes-mime-entity`
 - [ ] Implement `AppendChildEntity`
 - [x] Implement and verify `RemoveChildEntity`
 - [ ] Implement child enumeration equivalent to JNX `getChildren`
-- [ ] Implement full header enumeration equivalent to JNX `getHeaders()`
-- [ ] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
+- [x] Implement full header enumeration equivalent to JNX `getHeaders()`
+- [x] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
 - [ ] Implement `CreateHeader(name, value)` convenience overload
 - [x] Implement and verify `RemoveHeaders(name)` to remove all matching headers
 - [ ] Implement MIME preamble read and write
