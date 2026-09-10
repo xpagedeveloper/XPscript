@@ -105,6 +105,11 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
+    public void SetNow()
+    {
+        EnsureAlive();
+        _value = Session.Api.CurrentTimeDate();
+    }
     public void SetAnyDate()
     {
         EnsureAlive();

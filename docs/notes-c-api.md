@@ -403,6 +403,7 @@ Print value.LocalTime
 | `AdjustDay(amount)` | Void | Adds or subtracts days. |
 | `AdjustMonth(amount)` | Void | Adds or subtracts months. |
 | `AdjustYear(amount)` | Void | Adds or subtracts years. |
+| `SetNow()` | Void | Replaces the value with the current native Notes time/date. |
 | `Recycle()` | Void | Invalidates the wrapper. |
 
 ## NotesAgent

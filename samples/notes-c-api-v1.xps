@@ -73,6 +73,12 @@ Sub Main()
     Print "DT1_GMT=" & dt1.GMTTime
     Print "DT1_ZONE=" & CStr(dt1.TimeZone)
     Print "DT2_LOCAL=" & dt2.LocalTime
+    Call dt1.SetAnyTime()
+    Print "DT1_ANY_TIME=" & dt1.TimeOnly
+    Call dt2.SetAnyDate()
+    Print "DT2_ANY_DATE=" & dt2.DateOnly
+    Call dt1.SetNow()
+    Print "DT1_SET_NOW=" & dt1.IsValidDate
 
     Set localDb = session.OpenDatabase("", LOCAL_DATABASE)
     Print "LOCAL_DB=" & localDb.FilePath
