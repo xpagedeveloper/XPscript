@@ -66,3 +66,9 @@ The Apache License 2.0 text is available at [apache.org/licenses/LICENSE-2.0](ht
 - [Microsoft.Data.SqlClient.SNI.runtime](https://github.com/dotnet/SqlClient) (`6.0.2`) is distributed with Microsoft's `LICENSE.txt` software license terms. Those terms and any accompanying `ThirdPartyNotices` file must be retained with any published application that contains the SNI native runtime.
 
 The complete package dependency graph can change when package versions are updated. Re-run `dotnet list <project>.csproj package --include-transitive` and refresh this section whenever dependencies change.
+
+## .NET runtime and SDK
+
+XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and uses the .NET SDK, runtime libraries, ASP.NET Core components, and standard library implementations supplied by Microsoft. These components are generally distributed under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT), with additional third-party notices included in the .NET installation and publish output. Self-contained applications must retain the notices shipped with the corresponding .NET runtime used to build them.
+
+The .NET runtime is supplied by the .NET distribution and is not source code copied into this repository. This notice does not grant rights to redistribute HCL Notes/Domino binaries, which remain subject to HCL's commercial product terms.
