@@ -165,7 +165,11 @@ internal static class NotesMimeChildMutationPostProcessor
         headers.Add(new XPScriptNotesMimeHeaderValue(name, ""));
         children[childIndex] = BuildEntity(headers, bodyOffset >= child.Length ? [] : child[bodyOffset..]);
         RewriteMimeTree(BuildMultipartRoot(rootHeaders, boundary, children), childIndex);
-        return new XPScriptNotesMIMEHeader(this, headers.Count - 1);
+        var nativeIndex = name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) ? -1001
+            : name.Equals("Content-Transfer-Encoding", StringComparison.OrdinalIgnoreCase) ? -1002
+            : name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ? -1003
+            : headers.Count - 1;
+        return new XPScriptNotesMIMEHeader(this, nativeIndex);
     }
 
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
@@ -200,6 +204,18 @@ internal static class NotesMimeChildMutationPostProcessor
         var child = children[childIndex];
         var bodyOffset = FindRootBodyOffset(child);
         var headers = ParseEntityHeaders(child, bodyOffset);
+        if (index <= -1001)
+        {
+            var nativeName = index switch
+            {
+                -1001 => "Content-Type",
+                -1002 => "Content-Transfer-Encoding",
+                -1003 => "Content-Disposition",
+                _ => throw new XPScriptRuntimeException(5, "Unsupported native MIME header index.")
+            };
+            index = headers.FindIndex(h => h.Name.Equals(nativeName, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+        }
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         // Domino can reorder the documented MIME headers when the directory is
         // reopened. Preserve the header identity for disposition updates.
@@ -382,11 +398,41 @@ internal sealed class XPScriptNotesMIMEHeader : XPScriptNotesObject
     public string HeaderName { get { EnsureAlive(); return _entity.HeaderAt(_index).Name; } }
     public string GetHeaderVal() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
     public string GetHeaderValAndParams() { EnsureAlive(); return _entity.HeaderAt(_index).Value; }
-    public string GetParamVal(object? nameValue) { EnsureAlive(); throw new System.NotSupportedException("NotesMIMEHeader.GetParamVal is not yet supported for bounded child headers."); }
+    public string GetParamVal(object? nameValue)
+    {
+        EnsureAlive();
+        var parameterName = XPScriptRuntime.CStr(nameValue).Trim();
+        if (parameterName.Length == 0) return "";
+        foreach (var part in _entity.HeaderAt(_index).Value.Split(';').Skip(1))
+        {
+            var equals = part.IndexOf('=');
+            if (equals <= 0 || !part[..equals].Trim().Equals(parameterName, StringComparison.OrdinalIgnoreCase)) continue;
+            return part[(equals + 1)..].Trim().Trim('"');
+        }
+        return "";
+    }
     public void SetHeaderVal(object? value) { EnsureAlive(); _entity.SetHeader(_index, XPScriptRuntime.CStr(value)); }
     public void SetHeaderValAndParams(object? value) { SetHeaderVal(value); }
     public void AddValText(object? value) { EnsureAlive(); _entity.SetHeader(_index, _entity.HeaderAt(_index).Value + XPScriptRuntime.CStr(value)); }
-    public void SetParamVal(object? nameValue, object? value) { EnsureAlive(); throw new System.NotSupportedException("NotesMIMEHeader.SetParamVal is not yet supported for bounded child headers."); }
+    public void SetParamVal(object? nameValue, object? value)
+    {
+        EnsureAlive();
+        var parameterName = XPScriptRuntime.CStr(nameValue).Trim();
+        if (parameterName.Length == 0 || parameterName.Contains('=') || parameterName.Contains(';')) throw new XPScriptRuntimeException(5, "Invalid MIME parameter name.");
+        var parameterValue = XPScriptRuntime.CStr(value).Replace("\"", "\\\"", StringComparison.Ordinal);
+        var header = _entity.HeaderAt(_index);
+        var parts = header.Value.Split(';').Select(part => part.Trim()).Where(part => part.Length > 0).ToList();
+        var replaced = false;
+        for (var i = 1; i < parts.Count; i++)
+        {
+            var equals = parts[i].IndexOf('=');
+            if (equals <= 0 || !parts[i][..equals].Trim().Equals(parameterName, StringComparison.OrdinalIgnoreCase)) continue;
+            parts[i] = parameterName + "=\"" + parameterValue + "\"";
+            replaced = true;
+        }
+        if (!replaced) parts.Add(parameterName + "=\"" + parameterValue + "\"");
+        _entity.SetHeader(_index, string.Join("; ", parts));
+    }
     public void Remove() { EnsureAlive(); _entity.RemoveHeader(_index); Recycle(); }
     protected override void ReleaseNative() { _index = -1; }
 }

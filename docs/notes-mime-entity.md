@@ -72,6 +72,8 @@ The root entity supports `CreateChildEntity()` for direct child entities. If the
 
 Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` resolves the selected entity through Domino's native MIME directory. It scans the documented `MIMESYMBOL` range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.
 
+Direct-child `GetNthHeader(name, occurrence)` also finds arbitrary MIME headers by case-insensitive name and occurrence. `NotesMIMEHeader.GetParamVal(name)` reads a semicolon-delimited parameter and `SetParamVal(name, value)` replaces or adds a quoted parameter. These parameter operations are verified for `Content-Type` parameters such as `name` and `charset`, and for the `Content-Disposition` `filename` parameter.
+
 On the tested Domino installation, the native directory returns the main `Content-Disposition` value and the MIME `Content-Type` name parameter supplies the attachment filename. `GetNthHeader("Content-Disposition").GetHeaderValAndParams()` therefore returns the complete semantic value, including `filename`, after mutation and after directory reopen. The CTE lookup returns the serialized transfer encoding, including `base64` for encoding `1727`.
 
 Example creating a base64 attachment from `NotesStream`:

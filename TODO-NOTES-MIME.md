@@ -80,10 +80,13 @@ Branch: `feature/notes-mime-entity`
 - [x] Confirm both supported header semantics after save/reopen
 - [ ] Confirm the updated Notes MIME surface compiles in branch CI
 - [x] Update `docs/notes-mime-entity.md` and `skills/xpscript-programming/SKILL.md` with the final verified direct-child `GetNthHeader`/parameter behavior
+- [x] Implement direct-child `GetParamVal` and `SetParamVal` for MIME header parameters
+- [x] Implement arbitrary direct-child `GetNthHeader(name, occurrence)` lookup
+- [x] Add regression coverage for `charset`, `name`, `filename`, arbitrary headers, and repeated header occurrences
 
 ## Remaining
 
-- [ ] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
+- [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter
 - [ ] Remove staged MIME attachment diagnostics after the child-header readback regression is fully green
 - [ ] Add nested child-parent mutation beyond direct children of the root entity
 - [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
