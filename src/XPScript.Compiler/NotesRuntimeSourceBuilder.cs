@@ -67,6 +67,10 @@ internal static class NotesRuntimeSourceBuilder
             "internal IReadOnlyList<uint> FindViewByTypedKey(ushort collection, object key, int maximum, bool exactMatch)",
             "find-view-typed-key");
         source = ReplaceRequired(source,
+            "internal IReadOnlyList<uint> FindViewByTypedKeys(nint collection, object?[] keys, int maximum, bool exactMatch)",
+            "internal IReadOnlyList<uint> FindViewByTypedKeys(ushort collection, object?[] keys, int maximum, bool exactMatch)",
+            "find-view-typed-keys");
+        source = ReplaceRequired(source,
             "private IReadOnlyList<uint> ReadNoteIds(nint collection, ref XPScriptNotesCollectionPosition position, uint requested)",
             "private IReadOnlyList<uint> ReadNoteIds(ushort collection, ref XPScriptNotesCollectionPosition position, uint requested)",
             "read-view-ids");

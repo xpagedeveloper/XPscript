@@ -173,6 +173,11 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
         if (keyValue is LSArray)
         {
+            if (ContainsTypedKey(keyValue))
+            {
+                var typedMatches = Session.Api.FindViewByTypedKeys(_handle, ArrayValues(keyValue), 1, exactMatch);
+                return typedMatches.Count == 0 ? null : Database.OpenByNoteId(typedMatches[0]);
+            }
             var matches = FindArrayKeyMatches(keyValue, exactMatch, 1);
             return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
         }
@@ -193,7 +198,11 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
         if (keyValue is LSArray)
+        {
+            if (ContainsTypedKey(keyValue))
+                return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTypedKeys(_handle, ArrayValues(keyValue), 0, exactMatch));
             return new XPScriptNotesDocumentCollection(Session, Database, FindArrayKeyMatches(keyValue, exactMatch, 0));
+        }
         if (keyValue is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte)
             return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTypedKey(_handle, keyValue, 0, exactMatch));
         return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, exactMatch));
@@ -220,6 +229,16 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
         }
         return result;
     }
+
+    private static object?[] ArrayValues(object keyValue)
+    {
+        var keys = (LSArray)keyValue;
+        var result = new object?[keys.UBound() - keys.LBound() + 1];
+        for (var i = keys.LBound(); i <= keys.UBound(); i++) result[i - keys.LBound()] = keys.Get(i);
+        return result;
+    }
+
+    private static bool ContainsTypedKey(object keyValue) => ArrayValues(keyValue).Any(value => value is XPScriptNotesDateTime or double or float or decimal or int or long or short or byte);
 
     private static bool ViewKeyValueMatches(object? columnValue, object? keyValue, bool exactMatch)
     {

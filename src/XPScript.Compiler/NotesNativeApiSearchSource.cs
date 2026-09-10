@@ -76,33 +76,56 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     internal IReadOnlyList<uint> FindViewByTypedKey(nint collection, object key, int maximum, bool exactMatch)
+        => FindViewByTypedKeys(collection, new object?[] { key }, maximum, exactMatch);
+
+    internal IReadOnlyList<uint> FindViewByTypedKeys(nint collection, object?[] keys, int maximum, bool exactMatch)
     {
         EnsureInitialized();
-        ushort type;
-        byte[] data;
-        if (key is XPScriptNotesDateTime date)
+        if (keys.Length == 0) return Array.Empty<uint>();
+        var values = new List<(ushort Type, byte[] Data)>();
+        foreach (var key in keys)
         {
-            type = NotesTypeTime;
-            data = new byte[8];
-            BitConverter.GetBytes(date.NativeValue.Innards0).CopyTo(data, 0);
-            BitConverter.GetBytes(date.NativeValue.Innards1).CopyTo(data, 4);
+            ushort type;
+            byte[] data;
+            if (key is XPScriptNotesDateTime date)
+            {
+                type = NotesTypeTime;
+                data = new byte[8];
+                BitConverter.GetBytes(date.NativeValue.Innards0).CopyTo(data, 0);
+                BitConverter.GetBytes(date.NativeValue.Innards1).CopyTo(data, 4);
+            }
+            else if (key is double or float or decimal or int or long or short or byte)
+            {
+                type = NotesTypeNumber;
+                data = BitConverter.GetBytes(Convert.ToDouble(key, System.Globalization.CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                type = NotesTypeText;
+                using var text = ToLmbcs(XPScriptRuntime.CStr(key));
+                data = new byte[text.Length];
+                System.Runtime.InteropServices.Marshal.Copy(text.Pointer, data, 0, data.Length);
+            }
+            values.Add((type, data));
         }
-        else
-        {
-            type = NotesTypeNumber;
-            data = BitConverter.GetBytes(Convert.ToDouble(key, System.Globalization.CultureInfo.InvariantCulture));
-        }
-        var valueLength = checked((ushort)(sizeof(ushort) + data.Length));
-        var totalLength = checked(4 + 4 + valueLength);
+        var totalLength = checked(4 + values.Count * 4 + values.Sum(value => 2 + value.Data.Length));
         var native = System.Runtime.InteropServices.Marshal.AllocHGlobal(totalLength);
         try
         {
             System.Runtime.InteropServices.Marshal.WriteInt16(native, 0, checked((short)totalLength));
-            System.Runtime.InteropServices.Marshal.WriteInt16(native, 2, 1);
-            System.Runtime.InteropServices.Marshal.WriteInt16(native, 4, 0);
-            System.Runtime.InteropServices.Marshal.WriteInt16(native, 6, checked((short)valueLength));
-            System.Runtime.InteropServices.Marshal.WriteInt16(native, 8, checked((short)type));
-            System.Runtime.InteropServices.Marshal.Copy(data, 0, native + 10, data.Length);
+            System.Runtime.InteropServices.Marshal.WriteInt16(native, 2, checked((short)values.Count));
+            var itemOffset = 4;
+            var valueOffset = 4 + values.Count * 4;
+            foreach (var value in values)
+            {
+                var valueLength = checked((ushort)(sizeof(ushort) + value.Data.Length));
+                System.Runtime.InteropServices.Marshal.WriteInt16(native, itemOffset, 0);
+                System.Runtime.InteropServices.Marshal.WriteInt16(native, itemOffset + 2, checked((short)valueLength));
+                System.Runtime.InteropServices.Marshal.WriteInt16(native, valueOffset, checked((short)value.Type));
+                System.Runtime.InteropServices.Marshal.Copy(value.Data, 0, native + valueOffset + 2, value.Data.Length);
+                itemOffset += 4;
+                valueOffset += valueLength;
+            }
             var position = XPScriptNotesCollectionPosition.Create();
             var flags = exactMatch ? (ushort)0 : FindPartial;
             var status = Resolve<NIFFindByKeyDelegate>("NIFFindByKey")(collection, native, flags, ref position, out var matches);
