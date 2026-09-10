@@ -97,7 +97,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement and verify `CreateHeader(name, value)` convenience overload
 - [x] Implement and verify `RemoveHeaders(name)` to remove all matching headers
 - [ ] Implement MIME preamble read and write
-- [ ] Implement explicit MIME encoding readback
+- [x] Implement and verify explicit MIME encoding readback
 - [ ] Implement decoded and raw content stream access
 - [ ] Implement text reader access using the entity charset
 - [ ] Add regression coverage for remaining parity items against the Notes client

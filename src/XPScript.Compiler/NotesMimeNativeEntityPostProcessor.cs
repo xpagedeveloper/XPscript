@@ -38,7 +38,7 @@ internal static class NotesMimeNativeEntityPostProcessor
 
         source = ReplaceRequired(source,
             "    public int Encoding { get { EnsureEntityAlive(); return XPScriptMimeMessage.EncodingConstant(_message.TransferEncoding); } }",
-            "    public int Encoding { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Encoding requires a verified Domino MIME header/entity API mapping; managed header parsing is intentionally not used.\"); } }",
+            "    public int Encoding { get { EnsureEntityAlive(); var header = GetNthHeader(\"Content-Transfer-Encoding\"); var value = header is null ? \"\" : header.GetHeaderValAndParams(); return value.Equals(\"base64\", StringComparison.OrdinalIgnoreCase) ? 1727 : value.Equals(\"quoted-printable\", StringComparison.OrdinalIgnoreCase) ? 1726 : value.Equals(\"7bit\", StringComparison.OrdinalIgnoreCase) ? 1724 : value.Equals(\"8bit\", StringComparison.OrdinalIgnoreCase) ? 1725 : value.Equals(\"binary\", StringComparison.OrdinalIgnoreCase) ? 1728 : 1725; } }",
             "mime-native-encoding-only");
 
         source = ReplaceRequired(source,

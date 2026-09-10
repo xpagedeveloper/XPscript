@@ -359,6 +359,11 @@ Sub Main()
     Else
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
     End If
+    If attachmentPart.Encoding = 1727 Then
+        Print "PASS: attachment Encoding reports base64"
+    Else
+        Print "FAIL: attachment Encoding does not report base64"
+    End If
 
     ' Stage 2: close/reopen the MIME directory on the same unsaved note.
     Call doc.CloseMIMEEntities()

@@ -104,7 +104,7 @@ Set disposition = attachment.CreateHeader("Content-Disposition")
 Call disposition.SetHeaderVal("attachment; filename=""probe.txt""")
 ```
 
-Encoding `1727` writes the child body using MIME base64 transfer encoding. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
+Encoding `1727` writes the child body using MIME base64 transfer encoding, and the child `Encoding` property reports `1727` after readback. `Content-Disposition: attachment` supplies attachment semantics and the filename. For real binary files, populate the `NotesStream` with the file bytes and rewind it before `SetContentFromBytes`.
 
 Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use `GetNthHeader("Content-Disposition")` or `GetNthHeader("Content-Transfer-Encoding")` when header semantics matter.
 
