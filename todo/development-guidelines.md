@@ -25,6 +25,8 @@ License review is required before merging any feature or dependency that uses ex
 - Record each applicable license, copyright holder, source URL, version and required attribution or notice in `THIRD-PARTY-NOTICES.md`.
 - Inspect package `LICENSE`, `NOTICE` and `ThirdPartyNotices` files, including files belonging to native runtime assets.
 - Check whether the license permits the planned source and binary distribution, and record any obligations such as retaining notices, publishing modifications, or providing source.
+- XPscript may only use licenses that permit commercial use, commercial distribution and the intended closed or open source distribution model. Licenses with a non-commercial restriction, evaluation-only terms, field-of-use restriction or incompatible redistribution requirement must be rejected before adoption.
+- If the license text, dual-license choice, dependency terms or commercial-use permission is unclear, do not add the dependency until the rights have been clarified and recorded.
 - Distinguish implementation references from code or binaries distributed by XPscript. References still require attribution; copied or packaged material also requires its license text and notices to be shipped as required.
 - Verify the final published output for the affected application or runtime and confirm that required notices are present and unrelated optional dependencies are not copied.
 - The feature change, documentation, regression coverage and license record must be reviewed together in the same pull request.
