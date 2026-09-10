@@ -33,9 +33,18 @@ internal static class XPScriptDebugRuntime
     private sealed record ValueChange(long Sequence, string Name, string OldValue, string NewValue, string Source, int Line, string Procedure, string TimestampUtc);
     private sealed record PendingCommand(string Name, global::System.Text.Json.JsonDocument Document);
 
+    private sealed class BreakpointRule
+    {
+        public int Line { get; init; }
+        public string Condition { get; init; } = "";
+        public string HitCondition { get; init; } = "";
+        public string LogMessage { get; init; } = "";
+        public int HitCount { get; set; }
+    }
+
     private static readonly object Gate = new();
     private static readonly object WriteGate = new();
-    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.HashSet<int>> Breakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.List<BreakpointRule>> Breakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues = new(global::System.StringComparer.OrdinalIgnoreCase);
@@ -61,7 +70,7 @@ internal static class XPScriptDebugRuntime
     private static int _disconnectRequested;
     private static long _changeSequence;
 
-    private const int ProtocolVersion = 5;
+    private const int ProtocolVersion = 6;
     private const int ValueHistoryLimit = 20;
     private const int MaxTrackedValueChars = 2048;
     private const int MaxHistoryCharsPerVariable = 32768;
@@ -97,8 +106,8 @@ internal static class XPScriptDebugRuntime
             var frames = CaptureFrames(sourcePath, line);
             var depth = frames.Count;
             var pauseHit = global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0) != 0;
-            var breakpointSource = NormalizeSource(sourcePath);
-            var hitBreakpoint = Breakpoints.TryGetValue(breakpointSource, out var lines) && lines.Contains(line);
+            var breakpointRule = FindBreakpoint(sourcePath, line);
+            var hitBreakpoint = breakpointRule is not null && EvaluateBreakpoint(breakpointRule, sourcePath, line);
             var stepHit = _stepMode switch
             {
                 "into" => true,
@@ -115,6 +124,207 @@ internal static class XPScriptDebugRuntime
             Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1, frames });
             StopLoop(depth);
         }
+    }
+
+    private static BreakpointRule? FindBreakpoint(string sourcePath, int line)
+    {
+        var source = NormalizeSource(sourcePath);
+        if (!Breakpoints.TryGetValue(source, out var rules)) return null;
+        foreach (var rule in rules)
+            if (rule.Line == line) return rule;
+        return null;
+    }
+
+    private static bool EvaluateBreakpoint(BreakpointRule rule, string sourcePath, int line)
+    {
+        rule.HitCount++;
+
+        if (rule.Condition.Length > 0)
+        {
+            var result = EvaluateCondition(rule.Condition, out var error);
+            if (error.Length > 0)
+            {
+                Send(new { type = "error", message = $"Conditional breakpoint {NormalizeSource(sourcePath)}:{line}: {error}" });
+                return true;
+            }
+            if (!result) return false;
+        }
+
+        if (rule.HitCondition.Length > 0)
+        {
+            var result = EvaluateHitCondition(rule.HitCondition, rule.HitCount, out var error);
+            if (error.Length > 0)
+            {
+                Send(new { type = "error", message = $"Hit count {NormalizeSource(sourcePath)}:{line}: {error}" });
+                return true;
+            }
+            if (!result) return false;
+        }
+
+        if (rule.LogMessage.Length > 0)
+        {
+            Send(new
+            {
+                type = "debugOutput",
+                output = ExpandLogMessage(rule.LogMessage),
+                source = sourcePath,
+                line,
+                threadId = 1
+            });
+            return false;
+        }
+
+        if (rule.Condition.Length > 0 || rule.HitCondition.Length > 0)
+        {
+            Send(new
+            {
+                type = "breakpointDiagnostic",
+                message = $"XPscript breakpoint matched {NormalizeSource(sourcePath)}:{line}" +
+                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
+                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCount}" : "")
+            });
+        }
+
+        return true;
+    }
+
+    private static bool EvaluateCondition(string condition, out string error)
+    {
+        error = "";
+        var text = condition.Trim();
+        var match = global::System.Text.RegularExpressions.Regex.Match(text, @"^([A-Za-z_]\w*)\s*(==|=|!=|<=|>=|<|>)\s*(.+)$");
+        if (!match.Success)
+        {
+            if (!global::System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Za-z_]\w*$"))
+            {
+                error = "Supported conditions are a variable name or variable ==, =, !=, <, <=, >, >= value.";
+                return false;
+            }
+            if (!LastValues.TryGetValue(text, out var value))
+            {
+                error = $"Variable '{text}' has not been observed yet.";
+                return false;
+            }
+            return IsTruthy(value);
+        }
+
+        var name = match.Groups[1].Value;
+        var op = match.Groups[2].Value;
+        var rawRight = match.Groups[3].Value.Trim();
+        if (!LastValues.TryGetValue(name, out var left))
+        {
+            error = $"Variable '{name}' has not been observed yet.";
+            return false;
+        }
+
+        if (!TryResolveOperand(rawRight, out var right, out error)) return false;
+        return CompareValues(left, right, op);
+    }
+
+    private static bool TryResolveOperand(string text, out string value, out string error)
+    {
+        value = "";
+        error = "";
+        if ((text.StartsWith('"') && text.EndsWith('"')) || (text.StartsWith('\'') && text.EndsWith('\'')))
+        {
+            value = text[1..^1];
+            return true;
+        }
+        if (global::System.Text.RegularExpressions.Regex.IsMatch(text, @"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$") ||
+            global::System.Text.RegularExpressions.Regex.IsMatch(text, @"^(true|false|nothing|null)$", global::System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            value = text;
+            return true;
+        }
+        if (global::System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Za-z_]\w*$"))
+        {
+            if (LastValues.TryGetValue(text, out var observed))
+            {
+                value = observed;
+                return true;
+            }
+            error = $"Variable '{text}' has not been observed yet.";
+            return false;
+        }
+        error = $"Unsupported right-hand value '{text}'.";
+        return false;
+    }
+
+    private static bool CompareValues(string left, string right, string op)
+    {
+        var numericLeft = double.TryParse(left, global::System.Globalization.NumberStyles.Float, global::System.Globalization.CultureInfo.InvariantCulture, out var a);
+        var numericRight = double.TryParse(right, global::System.Globalization.NumberStyles.Float, global::System.Globalization.CultureInfo.InvariantCulture, out var b);
+        if (numericLeft && numericRight)
+        {
+            return op switch
+            {
+                "=" or "==" => a == b,
+                "!=" => a != b,
+                "<" => a < b,
+                "<=" => a <= b,
+                ">" => a > b,
+                ">=" => a >= b,
+                _ => false
+            };
+        }
+
+        static string Normalize(string value) =>
+            string.Equals(value.Trim(), "Nothing", global::System.StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value.Trim(), "null", global::System.StringComparison.OrdinalIgnoreCase) ? "" : value;
+
+        var comparison = global::System.StringComparer.OrdinalIgnoreCase.Compare(Normalize(left), Normalize(right));
+        return op switch
+        {
+            "=" or "==" => comparison == 0,
+            "!=" => comparison != 0,
+            "<" => comparison < 0,
+            "<=" => comparison <= 0,
+            ">" => comparison > 0,
+            ">=" => comparison >= 0,
+            _ => false
+        };
+    }
+
+    private static bool IsTruthy(string value)
+    {
+        var text = value.Trim();
+        return text.Length > 0 &&
+            !string.Equals(text, "0", global::System.StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(text, "false", global::System.StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(text, "nothing", global::System.StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(text, "null", global::System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EvaluateHitCondition(string condition, int count, out string error)
+    {
+        error = "";
+        var text = condition.Trim();
+        if (int.TryParse(text, out var exact) && exact > 0) return count == exact;
+        var match = global::System.Text.RegularExpressions.Regex.Match(text, @"^(==|=|!=|<=|>=|<|>)\s*(\d+)$");
+        if (!match.Success || !int.TryParse(match.Groups[2].Value, out var target))
+        {
+            error = "Use a hit count such as 10, == 10, >= 10, or > 10.";
+            return false;
+        }
+        return match.Groups[1].Value switch
+        {
+            "=" or "==" => count == target,
+            "!=" => count != target,
+            "<" => count < target,
+            "<=" => count <= target,
+            ">" => count > target,
+            ">=" => count >= target,
+            _ => false
+        };
+    }
+
+    private static string ExpandLogMessage(string message)
+    {
+        return global::System.Text.RegularExpressions.Regex.Replace(message, @"\{([A-Za-z_]\w*)\}", match =>
+        {
+            var name = match.Groups[1].Value;
+            return LastValues.TryGetValue(name, out var value) ? value : $"<{name}:unobserved>";
+        });
     }
 
     public static void Exception(global::System.Exception exception, int sourceLine, bool handled)
@@ -325,7 +535,7 @@ internal static class XPScriptDebugRuntime
         var stream = _client.GetStream();
         _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
         _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true) { AutoFlush = true };
-        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsPause = true, supportsGracefulCompletion = true, commandTransport = "single-reader" });
+        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsConditionalBreakpoints = true, supportsHitConditionalBreakpoints = true, supportsLogPoints = true, supportsPause = true, supportsGracefulCompletion = true, commandTransport = "single-reader" });
         _readerThread = new global::System.Threading.Thread(ReaderLoop) { IsBackground = true, Name = "XPscript Debugger Command Reader" };
         _readerThread.Start();
     }
@@ -399,9 +609,7 @@ internal static class XPScriptDebugRuntime
         while (PendingCommands.TryDequeue(out var pending))
         {
             using (pending.Document)
-            {
                 ProcessNonResumeCommand(pending.Name, pending.Document.RootElement);
-            }
         }
     }
 
@@ -418,9 +626,7 @@ internal static class XPScriptDebugRuntime
             while (PendingCommands.TryDequeue(out var pending))
             {
                 using (pending.Document)
-                {
                     if (ProcessStoppedCommand(pending.Name, pending.Document.RootElement, currentDepth)) return;
-                }
             }
 
             CommandSignal.WaitOne();
@@ -431,28 +637,11 @@ internal static class XPScriptDebugRuntime
     {
         switch (command)
         {
-            case "continue":
-                _stepMode = "";
-                Send(new { type = "continued", threadId = 1 });
-                return true;
-            case "next":
-                _stepMode = "over";
-                _stepDepth = currentDepth;
-                Send(new { type = "continued", threadId = 1 });
-                return true;
-            case "stepIn":
-                _stepMode = "into";
-                _stepDepth = currentDepth;
-                Send(new { type = "continued", threadId = 1 });
-                return true;
-            case "stepOut":
-                _stepMode = "out";
-                _stepDepth = currentDepth;
-                Send(new { type = "continued", threadId = 1 });
-                return true;
-            default:
-                ProcessNonResumeCommand(command, root);
-                return false;
+            case "continue": _stepMode = ""; Send(new { type = "continued", threadId = 1 }); return true;
+            case "next": _stepMode = "over"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return true;
+            case "stepIn": _stepMode = "into"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return true;
+            case "stepOut": _stepMode = "out"; _stepDepth = currentDepth; Send(new { type = "continued", threadId = 1 }); return true;
+            default: ProcessNonResumeCommand(command, root); return false;
         }
     }
 
@@ -495,10 +684,40 @@ internal static class XPScriptDebugRuntime
     {
         var source = root.TryGetProperty("source", out var sourceElement) ? NormalizeSource(sourceElement.GetString() ?? "") : "";
         if (source.Length == 0) return;
-        var values = new global::System.Collections.Generic.HashSet<int>();
-        if (root.TryGetProperty("lines", out var linesElement) && linesElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
-            foreach (var item in linesElement.EnumerateArray()) if (item.TryGetInt32(out var line) && line > 0) values.Add(line);
-        Breakpoints[source] = values;
+
+        var rules = new global::System.Collections.Generic.List<BreakpointRule>();
+        if (root.TryGetProperty("breakpoints", out var breakpointsElement) && breakpointsElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in breakpointsElement.EnumerateArray())
+            {
+                if (!item.TryGetProperty("line", out var lineElement) || !lineElement.TryGetInt32(out var line) || line <= 0) continue;
+                rules.Add(new BreakpointRule
+                {
+                    Line = line,
+                    Condition = item.TryGetProperty("condition", out var condition) ? condition.GetString() ?? "" : "",
+                    HitCondition = item.TryGetProperty("hitCondition", out var hitCondition) ? hitCondition.GetString() ?? "" : "",
+                    LogMessage = item.TryGetProperty("logMessage", out var logMessage) ? logMessage.GetString() ?? "" : ""
+                });
+            }
+        }
+        else if (root.TryGetProperty("lines", out var linesElement) && linesElement.ValueKind == global::System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in linesElement.EnumerateArray())
+                if (item.TryGetInt32(out var line) && line > 0) rules.Add(new BreakpointRule { Line = line });
+        }
+
+        Breakpoints[source] = rules;
+        foreach (var rule in rules)
+        {
+            Send(new
+            {
+                type = "breakpointDiagnostic",
+                message = $"XPscript runtime breakpoint {source}:{rule.Line}" +
+                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
+                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCondition}" : "") +
+                    (rule.LogMessage.Length > 0 ? $" logMessage={rule.LogMessage}" : "")
+            });
+        }
     }
 
     private static void SetDataBreakpoints(global::System.Text.Json.JsonElement root)
@@ -526,9 +745,7 @@ internal static class XPScriptDebugRuntime
                 _breakOnUnhandledException = true;
             }
             else if (string.Equals(filter, "uncaught", global::System.StringComparison.OrdinalIgnoreCase))
-            {
                 _breakOnUnhandledException = true;
-            }
         }
     }
 
@@ -558,6 +775,7 @@ internal static class XPScriptDebugRuntime
         while (PendingCommands.TryDequeue(out var pending)) pending.Document.Dispose();
         DataBreakpoints.Clear();
         CustomDebuggerVariables.Clear();
+        Breakpoints.Clear();
         global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0);
     }
 }
