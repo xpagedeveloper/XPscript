@@ -82,7 +82,7 @@ The currently supported transfer-encoding mappings are:
 
 ## Multipart/mixed and attachments
 
-The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model. A direct child that is multipart can also create and mutate its first nested child. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization. Nested entities support `GetChildren()` enumeration and also support custom `CreateHeader(name, value)`, `SetHeaderVal`, `GetNthHeader`, `GetHeaders`, and `RemoveHeaders` operations, including standard `Content-Type` and `Content-Disposition` parameter mutation and readback. The executable regression covers nested `GetParentEntity()`, `GetFirstChildEntity()`, depth-first traversal and sibling traversal after save/reopen.
+The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model. Multipart child entities can also create nested children. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization. Nested entities support `GetChildren()` enumeration and custom `CreateHeader(name, value)`, `SetHeaderVal`, `GetNthHeader`, `GetHeaders`, and `RemoveHeaders` operations, including standard `Content-Type` and `Content-Disposition` parameter mutation and readback. `CreateChildEntity(nextSibling)` requires the supplied sibling to have the same parent as the entity receiving the call. The executable regression covers nested `GetParentEntity()`, `GetFirstChildEntity()`, depth-first traversal and sibling traversal after save/reopen.
 
 Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` resolves the selected entity through Domino's native MIME directory. It scans the documented `MIMESYMBOL` range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.
 
@@ -122,6 +122,25 @@ Encoding `1727` writes the child body using MIME base64 transfer encoding, and t
 
 Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use `GetNthHeader("Content-Disposition")` or `GetNthHeader("Content-Transfer-Encoding")` when header semantics matter.
 
+## Current entity/header surface
+
+| Operation | Root | Direct child | Nested child |
+| --- | :---: | :---: | :---: |
+| Metadata: `ContentType`, `ContentSubType`, `Charset` | yes | yes | yes |
+| Classification: `IsMultipart`, `IsDiscretePart`, `IsMessagePart` | yes | yes | yes |
+| Navigation / parent lookup | yes | yes | yes |
+| `GetChildren()` | yes | yes | yes |
+| `SetContentFromText` / `SetContentFromBytes` | yes | yes | yes |
+| `GetEntityAsText`, `InputStream`, `GetInputStream`, `Reader` | yes | yes | yes |
+| `CreateChildEntity([nextSibling])` | yes | yes, when multipart | yes, when multipart |
+| `GetNthHeader(name [, occurrence])` | yes | yes | yes |
+| Arbitrary custom header lookup/mutation | yes | yes | yes |
+| `GetParamVal` / `SetParamVal` | yes | yes | yes |
+| `Preamble` on multipart entity | yes | yes | yes |
+| `EncodeContent` / `DecodeContent` | yes | yes | yes |
+
+Header occurrences are one-based. Header-name matching is case-insensitive. Root, direct-child and nested header reads use the serialized entity as the stable representation, with native MIME-directory metadata used where appropriate. This is important because Domino can normalize header ordering, quoting and folding during itemization.
+
 ## MIME directory lifetime
 
 Any MIME write changes the note's MIME structure. XPscript therefore closes the cached MIME directory before writeback. Existing wrappers that reference the old directory become invalid immediately.
@@ -130,6 +149,6 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 `NotesDocument.CloseMIMEEntities()` closes the current MIME directory explicitly. `NotesDocument.Save()` and document recycle also release the directory before their native operation.
 
-The verified surface covers the root entity, direct root children, the content operations listed above, the three supported child headers, and MIME directory lifecycle operations.
+The verified surface covers root, direct-child and nested MIME traversal/mutation, arbitrary header lookup, MIME parameter access, content streams/readers, encoding operations, preamble handling, and MIME directory lifecycle. Named document-level MIME items other than `Body` remain outside the supported surface.
 
 See `samples/notes-mime-entity-surface.xps` for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.
