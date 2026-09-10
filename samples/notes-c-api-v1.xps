@@ -69,6 +69,7 @@ Sub Main()
     Set name2 = session.CreateName("\"Ada Lovelace\" <ada@example.com> (Engineering) (Platform) (North)")
     Print "NAME2_LOCALPART=" & name2.Addr822LocalPart
     Print "NAME2_ADDR821=" & name2.Addr821
+    Print "NAME2_PHRASE=" & name2.Addr822Phrase
     Print "NAME2_COMMENT1=" & name2.Addr822Comment1
     Print "NAME2_COMMENT2=" & name2.Addr822Comment2
     Print "NAME2_COMMENT3=" & name2.Addr822Comment3
