@@ -91,7 +91,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Implement and verify `CreateChildEntity(sibling)` to insert a child before an existing sibling
 - [ ] Implement `AppendChildEntity`
 - [x] Implement and verify `RemoveChildEntity`
-- [ ] Implement child enumeration equivalent to JNX `getChildren`
+- [x] Implement and verify child enumeration equivalent to JNX `getChildren`
 - [x] Implement full header enumeration equivalent to JNX `getHeaders()`
 - [x] Implement filtered header enumeration equivalent to JNX `getHeaders(name)`
 - [x] Implement and verify `CreateHeader(name, value)` convenience overload
