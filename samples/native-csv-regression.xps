@@ -58,7 +58,7 @@ Sub Main()
     On Error Resume Next
     Print row.Get("missing")
     errCode = Err
-    errText = Error$
+    errText = Error()
     On Error GoTo 0
     Print "MISSING_ERR=" & CStr(errCode)
     Print "MISSING_TEXT=" & errText
