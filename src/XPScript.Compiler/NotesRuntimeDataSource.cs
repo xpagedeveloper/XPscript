@@ -171,6 +171,11 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     {
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        if (keyValue is LSArray)
+        {
+            var matches = FindArrayKeyMatches(keyValue, exactMatch, 1);
+            return matches.Count == 0 ? null : Database.OpenByNoteId(matches[0]);
+        }
         var ids = Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 1, exactMatch);
         return ids.Count == 0 ? null : Database.OpenByNoteId(ids[0]);
     }
@@ -182,7 +187,43 @@ internal sealed class XPScriptNotesView : XPScriptNotesOwnedObject
     {
         EnsureAlive();
         var exactMatch = XPScriptRuntime.CBool(exactMatchValue);
+        if (keyValue is LSArray)
+            return new XPScriptNotesDocumentCollection(Session, Database, FindArrayKeyMatches(keyValue, exactMatch, 0));
         return new XPScriptNotesDocumentCollection(Session, Database, Session.Api.FindViewByTextKey(_handle, XPScriptRuntime.CStr(keyValue), 0, exactMatch));
+    }
+
+    private IReadOnlyList<uint> FindArrayKeyMatches(object keyValue, bool exactMatch, int maximum)
+    {
+        var keys = keyValue as LSArray ?? throw new XPScriptRuntimeException(13, "View key must be a string or array.");
+        var keyValues = new object?[keys.UBound() - keys.LBound() + 1];
+        for (var i = keys.LBound(); i <= keys.UBound(); i++) keyValues[i - keys.LBound()] = keys.Get(i);
+        var result = new List<uint>();
+        foreach (var row in ReadRows().Where(row => row.IsDocument))
+        {
+            var columns = row.GetColumnValues();
+            if (keyValues.Length > columns.Length) continue;
+            var matched = true;
+            for (var i = 0; i < keyValues.Length; i++)
+            {
+                if (!ViewKeyValueMatches(columns[i], keyValues[i], exactMatch)) { matched = false; break; }
+            }
+            if (!matched) continue;
+            result.Add(row.NoteId);
+            if (maximum > 0 && result.Count >= maximum) break;
+        }
+        return result;
+    }
+
+    private static bool ViewKeyValueMatches(object? columnValue, object? keyValue, bool exactMatch)
+    {
+        if (columnValue is LSArray values)
+            for (var i = values.LBound(); i <= values.UBound(); i++)
+                if (ViewKeyValueMatches(values.Get(i), keyValue, exactMatch)) return true;
+        var column = XPScriptRuntime.CStr(columnValue);
+        var key = XPScriptRuntime.CStr(keyValue);
+        return exactMatch
+            ? string.Equals(column, key, StringComparison.OrdinalIgnoreCase)
+            : column.StartsWith(key, StringComparison.OrdinalIgnoreCase);
     }
 
     public XPScriptNotesDocumentCollection FullTextSearch(object? queryValue) => FullTextSearch(queryValue, 0);
