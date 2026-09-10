@@ -114,7 +114,21 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
             if (symbol < 0) throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
             var value = _mimeDirectoryOwner.EntityHeader(_nativeEntity, symbol);
             if (value is null || !MatchesNativeHeader(name, value))
+            {
+                var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+                var boundary = _mimeDirectoryOwner.TypeParam(_mimeDirectoryOwner.RootEntity, XPScriptNotesConst.MIME_SYMBOL_BOUNDARY).Trim();
+                var nativeType = _mimeDirectoryOwner.EntityHeader(_nativeEntity, ResolveNativeHeaderSymbol("Content-Type"))?.Trim() ?? "";
+                foreach (var candidate in SplitDirectChildren(raw, boundary))
+                {
+                    var candidateHeaders = ParseEntityHeaders(candidate, FindRootBodyOffset(candidate));
+                    var candidateType = candidateHeaders.FirstOrDefault(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value.Trim() ?? "";
+                    if (nativeType.Length > 0 && !candidateType.StartsWith(nativeType.Split(';')[0].Trim(), StringComparison.OrdinalIgnoreCase)) continue;
+                    foreach (var header in candidateHeaders)
+                        if (header.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                            return header;
+                }
                 throw new XPScriptRuntimeException(5, "MIME header is no longer present on the entity.");
+            }
             return new XPScriptNotesMimeHeaderValue(name, value);
         }
 
@@ -162,6 +176,12 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return _api!.GetMimeEntityHeader(entity, symbol);
     }
 
+    internal byte[] EntityHeaders(uint note, nint entity)
+    {
+        EnsureAlive();
+        return _api!.GetMimeEntityHeaders(note, entity);
+    }
+
 """;
 
         if (!source.Contains(ownerMarker, StringComparison.Ordinal))
@@ -181,6 +201,58 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         if (value == 0) return null;
         return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(value);
     }
+
+    internal byte[] GetMimeEntityHeaders(uint note, nint entity)
+    {
+        EnsureInitialized();
+        const uint chunkSize = 60000;
+        // The public reference names these values but does not publish their
+        // numeric assignments. Try the complete byte-sized ABI range and
+        // accept only a buffer that actually contains a MIME header.
+        for (ushort dataType = 0; dataType <= byte.MaxValue; dataType++)
+        {
+            using var output = new MemoryStream();
+            uint offset = 0;
+            while (true)
+            {
+                var status = Resolve<MIMEGetEntityDataDelegate>("MIMEGetEntityData")((long)note, entity, dataType, offset, chunkSize, out var dataHandle, out var dataLength);
+                if (status == ErrMimeNoData || status != 0 || dataLength == 0) break;
+                nint data = 0;
+                try
+                {
+                    data = Resolve<MimeMemoryLockDelegate>("OSLockObject")(dataHandle);
+                    if (data == 0) break;
+                    var bytes = new byte[checked((int)dataLength)];
+                    System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
+                    output.Write(bytes);
+                }
+                finally
+                {
+                    if (data != 0) Resolve<MimeMemoryUnlockDelegate>("OSUnlockObject")(dataHandle);
+                    if (dataHandle != 0) Resolve<MimeMemoryFreeDelegate>("OSMemFree")(dataHandle);
+                }
+                offset += dataLength;
+                if (dataLength < chunkSize) break;
+            }
+            var candidate = output.ToArray();
+            var text = System.Text.Encoding.Latin1.GetString(candidate);
+            if (text.IndexOf("Content-Type:", StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf("Content-Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf("Content-Disposition:", StringComparison.OrdinalIgnoreCase) >= 0)
+                return candidate;
+        }
+        return [];
+    }
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MIMEGetEntityDataDelegate(long note, nint entity, ushort dataType, uint offset, uint requestedLength, out long dataHandle, out uint dataLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate nint MimeMemoryLockDelegate(long handle);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate void MimeMemoryUnlockDelegate(long handle);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MimeMemoryFreeDelegate(long handle);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate nint MIMEEntityGetHeaderDelegate(nint entity, int symbol);
