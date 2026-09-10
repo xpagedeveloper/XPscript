@@ -11,6 +11,15 @@ permissions:
   contents: read
 
 jobs:
+  license-notices:
+    name: Validate license notices
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate direct package notices
+        shell: pwsh
+        run: ./scripts/validate-license-notices.ps1
+
   compile-windows:
     name: Compile Windows
     runs-on: windows-latest
