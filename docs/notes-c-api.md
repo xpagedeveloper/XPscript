@@ -373,13 +373,19 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 | `Addr822Comment1` | String | read-only | First parenthesized RFC 822 comment. |
 | `Addr822Comment2` | String | read-only | Second parenthesized RFC 822 comment. |
 | `Addr822Comment3` | String | read-only | Third parenthesized RFC 822 comment. |
-| `Generation`, `Given`, `Initials`, `Surname` | String | read-only | Parsed hierarchical name components. |
-| `Keyword`, `Language` | String | read-only | Parsed name metadata components when supplied by Domino. |
+| `Generation` | String | read-only | Parsed generation component. |
+| `Given` | String | read-only | Parsed given-name component. |
+| `Initials` | String | read-only | Parsed initials component. |
+| `Surname` | String | read-only | Parsed surname component. |
+| `Keyword` | String | read-only | Parsed name metadata keyword when supplied by Domino. |
+| `Language` | String | read-only | Parsed name language metadata when supplied by Domino. |
 | `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
 
 ### Methods
 
-`NotesName` currently adds no methods beyond `Recycle()`.
+| Member | Return type | Description |
+| --- | --- | --- |
+| `Recycle()` | Void | Invalidates the `NotesName` wrapper. |
 
 ## NotesDateTime
 
@@ -400,8 +406,6 @@ Print value.LocalTime
 | --- | --- | --- | --- |
 | `Parent` | `NotesSession` | read-only | Owning session. |
 | `IsValidDate` | Boolean | read-only | Currently returns `True` for a successfully constructed Notes date/time. |
-| `SetAnyDate()` | Void | method | Sets the date component to the Domino wildcard date. |
-| `SetAnyTime()` | Void | method | Sets the time component to the Domino wildcard time. |
 | `IsDST` | Boolean | read-only | Daylight-saving indicator returned by native time expansion. |
 | `TimeZone` | Integer | read-only | Notes time-zone value returned by native time expansion. |
 | `LocalTime` | String | read-only | Native-formatted local date/time. |
@@ -415,6 +419,8 @@ Print value.LocalTime
 
 | Member | Return type | Description |
 | --- | --- | --- |
+| `SetAnyDate()` | Void | Sets the date component to the Domino wildcard date. |
+| `SetAnyTime()` | Void | Sets the time component to the Domino wildcard time. |
 | `AdjustSecond(amount)` | Void | Adds or subtracts seconds. |
 | `AdjustMinute(amount)` | Void | Adds or subtracts minutes. |
 | `AdjustHour(amount)` | Void | Adds or subtracts hours. |
@@ -433,17 +439,37 @@ Represents an agent design element returned by `NotesDatabase.GetAgent` or `Note
 
 ### Properties
 
-`Parent`, `Name`, `Owner`, `CommonOwner`, `Comment`, `Query`, `ServerName`,
-`ParameterDocID`, `IsNotesAgent`, `IsPublic`, `HasRunSinceModified`, `IsEnabled`,
-`Trigger`, `NotesURL`, and `OnBehalfOf` are exposed.
+| Property | Type | Access | Description |
+| --- | --- | --- | --- |
+| `Parent` | `NotesDatabase` | read-only | Owning database. |
+| `Name` | String | read-only | Agent design name. |
+| `Owner` | String | read-only | Raw agent owner name. |
+| `CommonOwner` | String | read-only | Common-name form of the owner when available. |
+| `Comment` | String | read-only | Agent design comment. |
+| `Query` | String | read-only | Agent query text. |
+| `ServerName` | String | read/write | Agent server name. Changes are persisted by `Save()`. |
+| `ParameterDocID` | String | read-only | Hex Note ID passed to the most recent parameterized run, or an empty string. |
+| `IsNotesAgent` | Boolean | read-only | Always `True` for this wrapper. |
+| `IsPublic` | Boolean | read-only | Indicates whether the agent is public. |
+| `HasRunSinceModified` | Boolean | read-only | Indicates whether the agent has run since its design was modified. |
+| `IsEnabled` | Boolean | read/write | Agent enabled state. Changes are persisted by `Save()`. |
+| `Trigger` | Integer | read-only | Numeric trigger value from the agent design. |
+| `NotesURL` | String | read-only | Notes URL for the agent design note. |
+| `OnBehalfOf` | String | read-only | On-behalf-of value from the agent design. |
+| `ReturnMessage` | String | read-only | Captured output from the most recent agent run. |
 
 ### Methods
 
-`Run`, `RunWithDocumentContext`, `RunOnServer`, `Save`, `Remove`, and `UnLock` are exposed. `RunWithDocumentContext`
-passes an open `NotesDocument` as the agent document context. `RunOnServer`
-accepts an optional document Note ID and passes that document as context.
-`Remove`
-permanently deletes the agent design note when the caller has permission.
+| Member | Return type | Description |
+| --- | --- | --- |
+| `Run()` | Integer | Runs the agent without document context or parameter note and returns 0 on success. |
+| `Run(noteId)` | Integer | Runs the agent with a non-zero hexadecimal parameter Note ID. |
+| `RunWithDocumentContext(document)` | Integer | Runs the agent with an open `NotesDocument` as document context. |
+| `RunWithDocumentContext(document, noteId)` | Integer | Runs with document context and a non-zero hexadecimal parameter Note ID. |
+| `RunOnServer()` | Integer | Runs the agent without a parameter note. |
+| `RunOnServer(noteId)` | Integer | Runs the agent with a non-zero hexadecimal parameter Note ID. |
+| `Save()` | Void | Persists pending enabled/server-name changes or saves the current agent design state. |
+| `Remove()` | Void | Permanently deletes the agent design note when permitted. |
 
 ## NotesAgentResult
 
@@ -460,7 +486,9 @@ Returned by `NotesDatabase.RunAgent`.
 
 ### Methods
 
-`NotesAgentResult` currently adds no methods beyond `Recycle()`.
+| Member | Return type | Description |
+| --- | --- | --- |
+| `Recycle()` | Void | Invalidates the `NotesAgentResult` wrapper. |
 
 ## Object creation rules
 
