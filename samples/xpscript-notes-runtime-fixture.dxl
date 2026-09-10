@@ -19,6 +19,12 @@
     <column itemname="Subject" width="24" sort="ascending" resizable="true" sortnocase="true"><columnheader title="Subject"/><code event="value"><formula>Subject</formula></code></column>
   </view>
 
+  <view name="XPScriptNativeMultiKeyView" publicaccess="false" designerversion="14.5">
+    <code event="selection"><formula>Form = &quot;XPScriptMultiKeyTest&quot;</formula></code>
+    <column itemname="XPScriptGroup" width="18" sort="ascending" resizable="true"><columnheader title="Group"/><code event="value"><formula>XPScriptGroup</formula></code></column>
+    <column itemname="XPScriptNumber" width="12" sort="ascending" resizable="true"><columnheader title="Number"/><code event="value"><formula>XPScriptNumber</formula></code></column>
+  </view>
+
   <agent name="XPScriptTestAgent" publicaccess="false" designerversion="14.5" formulatype="modifydocs"><trigger type="agentlist"/><documentset type="all"/><code event="action"><formula>@True</formula></code></agent>
 
   <agent name="XPScriptFormulaAgent" publicaccess="false" designerversion="8.5.3">
