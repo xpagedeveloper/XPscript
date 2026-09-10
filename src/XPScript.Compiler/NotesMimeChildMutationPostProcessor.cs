@@ -256,6 +256,17 @@ internal static class NotesMimeChildMutationPostProcessor
         return _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
     }
 
+    private string ReadEntityHeadersText(string member, string? names)
+    {
+        EnsureEntityAlive();
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
+        var wanted = (names ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var headers = ParseEntityHeaders(entity, FindRootBodyOffset(entity));
+        if (wanted.Length > 0) headers = headers.Where(h => wanted.Any(n => n.Equals(h.Name, StringComparison.OrdinalIgnoreCase))).ToList();
+        return string.Join("\r\n", headers.Select(h => h.Name + ": " + h.Value));
+    }
+
     private void EncodeEntityContent(int encoding, string member)
     {
         EnsureEntityAlive();

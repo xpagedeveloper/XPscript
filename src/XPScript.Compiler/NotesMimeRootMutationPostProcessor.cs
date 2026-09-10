@@ -57,6 +57,21 @@ internal static class NotesMimeRootMutationPostProcessor
             "MIME entity DecodeContent");
 
         source = ReplaceRequired(source,
+            "    public string Headers { get { EnsureEntityAlive(); throw new System.NotSupportedException(\"NotesMIMEEntity.Headers requires verified Domino MIME entity header access; managed root-stream header parsing is intentionally not used.\"); } }",
+            "    public string Headers { get { EnsureEntityAlive(); return ReadEntityHeadersText(\"Headers\", null); } }",
+            "MIME entity Headers");
+
+        source = ReplaceRequired(source,
+            "            throw new System.NotSupportedException(\"NotesMIMEEntity.HeaderObjects requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "            return GetHeaders();",
+            "MIME entity HeaderObjects");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.GetSomeHeaders requires verified Domino MIME entity header enumeration; managed root-stream header parsing is intentionally not used.\");",
+            "        return ReadEntityHeadersText(\"GetSomeHeaders\", XPScriptRuntime.CStr(headerNamesValue));",
+            "MIME entity GetSomeHeaders");
+
+        source = ReplaceRequired(source,
             "    private static string MimeSymbolText(int symbol) => symbol switch",
             RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
             "root MIME mutation helpers");

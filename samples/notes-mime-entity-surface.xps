@@ -393,6 +393,11 @@ Sub Main()
     Else
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
     End If
+    If InStr(attachmentPart.Headers, "Content-Type:") > 0 And InStr(attachmentPart.GetSomeHeaders("Content-Type"), "Content-Type:") > 0 Then
+        Print "PASS: MIME header text readback"
+    Else
+        Print "FAIL: MIME header text readback"
+    End If
     Set attachmentHeader = attachmentPart.CreateHeader("Content-ID")
     Call attachmentHeader.SetHeaderVal("<probe-id>")
     Set attachmentHeader = attachmentPart.CreateHeader("Content-Location")

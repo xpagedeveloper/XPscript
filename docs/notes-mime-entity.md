@@ -45,6 +45,8 @@ Tree navigation uses the native MIME directory:
 
 The root entity supports `ContentAsText`, `GetContentAsText(stream)`, `GetContentAsBytes(stream)` and `GetEntityAsText(stream)`. `ContentID` and `ContentLocation` expose the native entity values used by inline and related MIME parts. `IsMultipart`, `IsDiscretePart` and `IsMessagePart` report the native Domino MIME entity classification.
 
+`Headers`, `HeaderObjects`, and `GetSomeHeaders(names)` are available for the root and child entity surfaces. Header text is read from the current serialized entity and preserves repeated headers and their order.
+
 Multipart entities support `Preamble` read and write. Child entities also support raw `GetEntityAsText(stream)` access and decoded content stream access. `EncodeContent` and `DecodeContent` rewrite the entity transfer encoding while preserving its content type.
 
 XPscript reads the current `Body` through Domino `MIMEStreamOpen`/`MIMEStreamRead`. `ContentAsText` and `GetContentAsText` decode the transfer encoding and then decode text with the root entity's native charset. `GetContentAsBytes` returns decoded body bytes. `GetEntityAsText` returns the complete root RFC822 MIME stream including headers.
