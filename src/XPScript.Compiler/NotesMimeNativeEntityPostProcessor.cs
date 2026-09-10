@@ -28,7 +28,7 @@ internal static class NotesMimeNativeEntityPostProcessor
 
         source = ReplaceRequired(source,
             "    public string ContentType { get { EnsureEntityAlive(); return _message.ContentType; } }\n    public string ContentSubType { get { EnsureEntityAlive(); return _message.ContentSubType; } }",
-            "    public string ContentType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentTypeSymbol(_nativeEntity)); } }\n    public string ContentSubType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentSubtypeSymbol(_nativeEntity)); } }",
+            "    public string ContentType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentTypeSymbol(_nativeEntity)); } }\n    public string ContentSubType { get { EnsureEntityAlive(); return MimeSymbolText(_mimeDirectoryOwner.ContentSubtypeSymbol(_nativeEntity)); } }\n    public bool IsMultipart { get { EnsureEntityAlive(); return Session.Api.IsMimeEntityMultipart(_nativeEntity); } }",
             "mime-native-content-properties");
 
         source = ReplaceRequired(source,

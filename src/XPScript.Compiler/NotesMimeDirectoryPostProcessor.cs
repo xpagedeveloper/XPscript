@@ -87,6 +87,12 @@ internal sealed partial class XPScriptNotesNativeApi
         return Resolve<MIMEEntityContentSubtypeDelegate>("MIMEEntityContentSubtype")(entity);
     }
 
+    internal bool IsMimeEntityMultipart(nint entity)
+    {
+        EnsureInitialized();
+        return Resolve<MIMEEntityIsMultipartDelegate>("MIMEEntityIsMultiPart")(entity) != 0;
+    }
+
     internal string GetMimeEntityTypeParam(nint entity, int symbol)
     {
         EnsureInitialized();
@@ -142,6 +148,8 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate int MIMEEntityContentTypeDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int MIMEEntityContentSubtypeDelegate(nint entity);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate int MIMEEntityIsMultipartDelegate(nint entity);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEEntityGetTypeParamDelegate(nint entity, int symbol, out uint valueHandle, out uint valueLength);
 }

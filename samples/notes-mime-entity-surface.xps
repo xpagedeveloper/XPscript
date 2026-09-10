@@ -360,6 +360,11 @@ Sub Main()
     Else
         Print "FAIL: multipart root metadata mismatch: " & mime.ContentType & "/" & mime.ContentSubType
     End If
+    If mime.IsMultipart Then
+        Print "PASS: root IsMultipart readback"
+    Else
+        Print "FAIL: root IsMultipart readback"
+    End If
 
     mime.Preamble = "root preamble"
     If mime.Preamble = "root preamble" Then
@@ -382,6 +387,11 @@ Sub Main()
         Print "PASS: attachment child metadata refreshed after base64 writeback"
     Else
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
+    End If
+    If Not attachmentPart.IsMultipart Then
+        Print "PASS: attachment IsMultipart readback"
+    Else
+        Print "FAIL: attachment IsMultipart readback"
     End If
     If attachmentPart.Encoding = 1727 Then
         Print "PASS: attachment Encoding reports base64"
