@@ -47,6 +47,16 @@ internal static class NotesMimeRootMutationPostProcessor
             "root SetContentFromBytes");
 
         source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.EncodeContent requires verified Domino MIME entity encoding support; managed transfer encoding is intentionally not used.\");",
+            "        EncodeEntityContent(XPScriptRuntime.CInt(encodingValue), \"EncodeContent\");",
+            "MIME entity EncodeContent");
+
+        source = ReplaceRequired(source,
+            "        throw new System.NotSupportedException(\"NotesMIMEEntity.DecodeContent requires verified Domino MIME entity decoding support; managed transfer decoding is intentionally not used.\");",
+            "        EncodeEntityContent(1725, \"DecodeContent\");",
+            "MIME entity DecodeContent");
+
+        source = ReplaceRequired(source,
             "    private static string MimeSymbolText(int symbol) => symbol switch",
             RootMutationHelpers + "\n    private static string MimeSymbolText(int symbol) => symbol switch",
             "root MIME mutation helpers");
