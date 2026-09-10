@@ -1,0 +1,5 @@
+Function HelperValue() As Integer
+    Dim result As Integer
+    result = 42
+    HelperValue = result
+End Function
