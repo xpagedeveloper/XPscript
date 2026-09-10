@@ -298,6 +298,18 @@ Sub Main()
         End If
         Set currentEntity = currentEntity.GetNextSibling()
     Loop
+    Set insertedPart = mime.CreateChildEntity(attachmentPart)
+    Call mime.RemoveChildEntity(insertedPart)
+    Print "PASS: RemoveChildEntity removed inserted sibling"
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentPart = currentEntity
+            Exit Do
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
     If mime.ContentType = "multipart" And mime.ContentSubType = "mixed" Then
         Print "PASS: CreateChildEntity promoted root to multipart/mixed"
     Else

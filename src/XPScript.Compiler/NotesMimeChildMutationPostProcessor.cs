@@ -98,6 +98,24 @@ internal static class NotesMimeChildMutationPostProcessor
         RewriteMimeTree(ReplaceSerializedEntity(raw, path, updated), path);
         return WrapNativeEntity(ResolvePath(path.Concat(new[] { insertAt }).ToArray()))!;
     }
+    public void RemoveChildEntity(object? childValue)
+    {
+        EnsureEntityAlive();
+        if (childValue is not XPScriptNotesMIMEEntity child)
+            throw new XPScriptRuntimeException(13, "RemoveChildEntity child must be a NotesMIMEEntity.");
+        var parentPath = GetEntityPath();
+        var childPath = child.GetEntityPath();
+        if (childPath.Length != parentPath.Length + 1 || !childPath[..^1].SequenceEqual(parentPath))
+            throw new XPScriptRuntimeException(5, "RemoveChildEntity child is not a direct child of this entity.");
+        var raw = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
+        var parent = GetSerializedEntity(raw, parentPath);
+        var bodyOffset = FindRootBodyOffset(parent);
+        var headers = ParseEntityHeaders(parent, bodyOffset);
+        var boundary = headers.First(h => h.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Value.Split(';').Skip(1).First(p => p.TrimStart().StartsWith("boundary=", StringComparison.OrdinalIgnoreCase)).Split('=', 2)[1].Trim().Trim('"');
+        var children = SplitDirectChildren(parent, boundary);
+        children.RemoveAt(childPath[^1]);
+        RewriteMimeTree(ReplaceSerializedEntity(raw, parentPath, BuildMultipartRoot(headers, boundary, children)), parentPath);
+    }
 """;
 
     private const string ChildHelpers = """
