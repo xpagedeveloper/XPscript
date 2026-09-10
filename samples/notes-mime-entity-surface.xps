@@ -165,6 +165,29 @@ Sub Main()
     Call attachmentPart.SetContentFromBytes(contentStream, "application/octet-stream; name=""probe.txt""", 1727)
     Set attachmentHeader = attachmentPart.CreateHeader("Content-Disposition")
     Call attachmentHeader.SetHeaderVal("attachment; filename=""probe.txt""")
+    Print "PARAM_FILENAME=" & attachmentHeader.GetParamVal("filename")
+    Call attachmentHeader.SetParamVal("filename", "probe.txt")
+    Print "PARAM_FILENAME_SET=" & attachmentHeader.GetParamVal("filename")
+    Set attachmentHeader = attachmentPart.GetNthHeader("Content-Type")
+    Print "PARAM_NAME=" & attachmentHeader.GetParamVal("name")
+    Call attachmentHeader.SetParamVal("charset", "UTF-8")
+    Print "PARAM_CHARSET=" & attachmentHeader.GetParamVal("charset")
+    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe")
+    Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe", 1)
+    If attachmentHeader Is Nothing Then
+        Print "FAIL: arbitrary MIME header lookup"
+    ElseIf attachmentHeader.HeaderName = "X-XPscript-MIME-Probe" Then
+        Print "PASS: arbitrary MIME header lookup"
+    Else
+        Print "FAIL: arbitrary MIME header name"
+    End If
+    Set attachmentHeader = attachmentPart.CreateHeader("X-XPscript-MIME-Probe")
+    Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe", 2)
+    If attachmentHeader Is Nothing Then
+        Print "FAIL: arbitrary MIME header occurrence lookup"
+    Else
+        Print "PASS: arbitrary MIME header occurrence lookup"
+    End If
     Call contentStream.Recycle()
     Set contentStream = Nothing
 
