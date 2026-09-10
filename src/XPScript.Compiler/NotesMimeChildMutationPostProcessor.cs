@@ -463,8 +463,9 @@ internal static class NotesMimeChildMutationPostProcessor
         var path = GetEntityPath();
         contentType = NormalizeChildContentType(contentType);
         using var input = new System.IO.MemoryStream(raw, writable: false);
-        var message = MimeKit.MimeMessage.Load(input);
-        MimeKit.MimeEntity target = message.Body;
+        var parser = new MimeKit.MimeParser(input, MimeKit.MimeFormat.Entity);
+        var message = parser.ParseEntity();
+        MimeKit.MimeEntity target = message;
         foreach (var index in path)
         {
             if (target is not MimeKit.Multipart multipart || index < 0 || index >= multipart.Count)
