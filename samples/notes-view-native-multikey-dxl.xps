@@ -1,0 +1,48 @@
+' Creates a sorted multi-column view through DXL, then creates matching documents in XPScript.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim importer As NotesDXLImporter
+    Dim doc As NotesDocument
+    Dim view As NotesView
+    Dim docs As NotesDocumentCollection
+    Dim keys As Variant
+    Dim importError As Integer
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    If db Is Nothing Then Error 5, "Unable to open xpscript.nsf"
+
+    Set importer = session.CreateDXLImporter()
+    importer.ExitOnFirstFatalError = True
+    On Error Resume Next
+    Call importer.Import("xpscript-notes-runtime-fixture.dxl", db)
+    importError = Err
+    On Error GoTo 0
+    If importError <> 0 Then Error importError, "DXL view import failed: " & importer.Log
+    Call importer.Recycle()
+
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("Form", "XPScriptMultiKeyTest")
+    Call doc.ReplaceItemValue("XPScriptGroup", "Native MultiKey Group")
+    Call doc.ReplaceItemValue("XPScriptNumber", 42)
+    Call doc.ReplaceItemValue("XPScriptMarker", "native-multikey-dxl")
+    If Not doc.Save(True, True) Then Error 5, "NotesDocument.Save(True, True) returned False"
+
+    Set view = db.OpenView("XPScriptNativeMultiKeyView")
+    If view Is Nothing Then Error 5, "DXL-created multi-key view was not found"
+    keys = Array("Native MultiKey Group", 42)
+    Set docs = view.GetAllDocumentsByKey(keys, True)
+    Print "NATIVE_MULTIKEY_MATCHES=" & CStr(docs.Count)
+    If docs.Count < 1 Then Error 5, "Native multi-column lookup returned no document"
+    Print "NATIVE_MULTIKEY_LOOKUP=PASS"
+
+    Call docs.Recycle()
+    Call view.Recycle()
+    Call doc.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NATIVE-MULTIKEY-DXL-DONE"
+End Sub

@@ -68,6 +68,13 @@ Sub Main()
         Else
             Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
         End If
+
+        Set attachmentHeader = mime.GetNthHeader("Content-Type")
+        If Not attachmentHeader Is Nothing And attachmentHeader.GetHeaderValAndParams() = "text/plain; charset=UTF-8" Then
+            Print "PASS: root Content-Type header lookup"
+        Else
+            Print "FAIL: root Content-Type header lookup"
+        End If
         Set readStream = mime.Reader
         If readStream.ReadText() = EXPECTED_TEXT Then
             Print "PASS: MIME Reader charset readback"

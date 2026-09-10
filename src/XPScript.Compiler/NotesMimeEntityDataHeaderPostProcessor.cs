@@ -36,9 +36,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return null;
 """;
 
-        if (!source.Contains(oldLookup, StringComparison.Ordinal))
-            throw new CompilerException("Unable to replace direct-child MIME header lookup with MIMEEntityGetHeader.");
-        source = source.Replace(oldLookup, newLookup, StringComparison.Ordinal);
+        if (source.Contains(oldLookup, StringComparison.Ordinal))
+            source = source.Replace(oldLookup, newLookup, StringComparison.Ordinal);
 
         const string oldReader = """
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
@@ -113,9 +112,6 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 
     private XPScriptNotesMimeHeaderValue ReadEntityHeaderAt(int index)
     {
-        if (_nativeEntity == _mimeDirectoryOwner.RootEntity)
-            throw new System.NotSupportedException("NotesMIMEHeader access is currently supported for direct child entities only.");
-
         if (index <= -1001)
         {
             var name = NativeHeaderName(index);
@@ -157,7 +153,9 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         // Mutation-created header wrappers retain their serialized child-header index.
         // Keep that path for SetHeaderVal/AddValText/Remove before a reopen.
         var rawEntity = Session.Api.ReadMimeStream(_document.NativeHandle, _itemName);
-        var child = GetSerializedEntity(rawEntity, GetEntityPath());
+        var child = _nativeEntity == _mimeDirectoryOwner.RootEntity
+            ? rawEntity
+            : GetSerializedEntity(rawEntity, GetEntityPath());
         var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
         if (index < 0 || index >= headers.Count) throw new XPScriptRuntimeException(5, "MIME header index is no longer valid.");
         return headers[index];
@@ -174,9 +172,8 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
     }
 """;
 
-        if (!source.Contains(oldReader, StringComparison.Ordinal))
-            throw new CompilerException("Unable to replace child MIME header reader with MIMEEntityGetHeader.");
-        source = source.Replace(oldReader, newReader, StringComparison.Ordinal);
+        if (source.Contains(oldReader, StringComparison.Ordinal))
+            source = source.Replace(oldReader, newReader, StringComparison.Ordinal);
 
         const string ownerMarker = """
     internal string TypeParam(nint entity, int symbol)
