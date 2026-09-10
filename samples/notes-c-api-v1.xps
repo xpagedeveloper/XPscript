@@ -80,6 +80,8 @@ Sub Main()
     Print "DT2_LOCAL=" & dt2.LocalTime
     Print "DT_DIFFERENCE=" & CStr(dt2.TimeDifference(dt1))
     Print "DT_DIFFERENCE_DOUBLE=" & CStr(dt2.TimeDifferenceDouble(dt1))
+    Call dt1.ConvertToZone(0)
+    Print "DT1_CONVERTED_GMT=" & dt1.GMTTime
     Call dt1.SetAnyTime()
     Print "DT1_ANY_TIME=" & dt1.TimeOnly
     Call dt2.SetAnyDate()

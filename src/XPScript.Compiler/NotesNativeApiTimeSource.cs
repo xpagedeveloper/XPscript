@@ -44,6 +44,16 @@ internal sealed partial class XPScriptNotesNativeApi
         return expanded;
     }
 
+    internal void ConvertTimeDateToZone(ref XPScriptNotesTimeDate value, int zone)
+    {
+        EnsureInitialized();
+        var local = ExpandTimeDate(value);
+        local.Zone = zone;
+        if (Resolve<TimeLocalToGMDelegate>("TimeLocalToGM")(ref local) != 0)
+            throw new XPScriptRuntimeException(5, "TimeLocalToGM failed.");
+        value = local.GM;
+    }
+
     internal string FormatExpandedTime(XPScriptNotesExpandedTime value)
     {
         return value.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) + "-" +
@@ -59,6 +69,8 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate int TimeGMToLocalZoneDelegate(ref XPScriptNotesExpandedTime value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    internal delegate int TimeLocalToGMDelegate(ref XPScriptNotesExpandedTime value);
 }
 """;
 }

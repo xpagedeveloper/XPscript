@@ -185,6 +185,12 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     public double TimeDifferenceDouble(object? other) => TimeDifference(other);
 
+    public void ConvertToZone(object? zone)
+    {
+        EnsureAlive();
+        Session.Api.ConvertTimeDateToZone(ref _value, XPScriptRuntime.CInt(zone));
+    }
+
     private void Adjust(int seconds, int minutes, int hours, int days, int months, int years)
     {
         EnsureAlive();

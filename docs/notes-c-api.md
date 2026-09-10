@@ -411,6 +411,7 @@ Print value.LocalTime
 | `SetNow()` | Void | Replaces the value with the current native Notes time/date. |
 | `TimeDifference(other)` | Double | Returns this value minus another `NotesDateTime` in seconds. |
 | `TimeDifferenceDouble(other)` | Double | Alias returning the time difference in seconds as a double. |
+| `ConvertToZone(zone)` | Void | Reinterprets the local date/time in the supplied Domino zone and stores the resulting GMT value. |
 | `Recycle()` | Void | Invalidates the wrapper. |
 
 ## NotesAgent

@@ -110,7 +110,7 @@ Missing / future:
 
 - Validate `TimeZone` sign/semantics against LotusScript on actual Notes clients.
 - Wildcard date/time behavior is implemented through `SetAnyDate`, `SetAnyTime`, and empty-value construction.
-- `ConvertToZone` and locale-specific parsing/formatting compatibility.
+- Locale-specific parsing/formatting compatibility.
 
 ## Agents
 
