@@ -171,6 +171,13 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
         return value;
     }
 
+    internal XPScriptNotesTimeDate TimeDateWildcard()
+    {
+        EnsureInitialized();
+        Resolve<TimeConstantDelegate>("TimeConstant")(2, out var value);
+        return value;
+    }
+
     internal string FormatTimeDate(XPScriptNotesTimeDate value)
     {
         EnsureInitialized();
@@ -371,6 +378,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort ConvertTextToTimeDateDelegate(nint intlFormat, nint textFormat, ref nint text, ushort maxLength, out XPScriptNotesTimeDate output);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate ushort ConvertTimeDateToTextDelegate(nint intlFormat, nint textFormat, ref XPScriptNotesTimeDate value, nint output, ushort outputLength, out ushort textLength);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void OSCurrentTimeDateDelegate(out XPScriptNotesTimeDate value);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void TimeConstantDelegate(ushort type, out XPScriptNotesTimeDate value);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate int TimeDateAdjustDelegate(ref XPScriptNotesTimeDate value, int seconds, int minutes, int hours, int days, int months, int years);
 }
 """;

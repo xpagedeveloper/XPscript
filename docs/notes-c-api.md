@@ -367,6 +367,8 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 
 `NotesDateTime` stores the native C API `TIMEDATE` representation.
 
+An empty value creates the native wildcard date and time. `SetAnyDate` preserves the time while making the date match any date. `SetAnyTime` preserves the date while making the time match any time. These operations use the Domino `TIMEDATE_WILDCARD` representation.
+
 ```xpscript
 Dim value As NotesDateTime
 Set value = session.CreateDateTime("2026-08-25 12:00:00")
@@ -380,6 +382,8 @@ Print value.LocalTime
 | --- | --- | --- | --- |
 | `Parent` | `NotesSession` | read-only | Owning session. |
 | `IsValidDate` | Boolean | read-only | Currently returns `True` for a successfully constructed Notes date/time. |
+| `SetAnyDate()` | Void | method | Sets the date component to the Domino wildcard date. |
+| `SetAnyTime()` | Void | method | Sets the time component to the Domino wildcard time. |
 | `IsDST` | Boolean | read-only | Daylight-saving indicator returned by native time expansion. |
 | `TimeZone` | Integer | read-only | Notes time-zone value returned by native time expansion. |
 | `LocalTime` | String | read-only | Native-formatted local date/time. |

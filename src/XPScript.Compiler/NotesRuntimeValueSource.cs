@@ -91,9 +91,9 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     internal XPScriptNotesDateTime(XPScriptNotesSession session, string value) : base(session)
     {
-        if (value.Trim().Length == 0)
-            throw new XPScriptRuntimeException(5, "NotesDateTime requires a date/time value.");
-        _value = session.Api.ParseTimeDate(value);
+        _value = value.Trim().Length == 0
+            ? session.Api.TimeDateWildcard()
+            : session.Api.ParseTimeDate(value);
     }
 
     private XPScriptNotesDateTime(XPScriptNotesSession session, XPScriptNotesTimeDate value) : base(session) => _value = value;
@@ -105,6 +105,17 @@ internal sealed class XPScriptNotesDateTime : XPScriptNotesObject
 
     public XPScriptNotesSession Parent { get { EnsureAlive(); return Session; } }
     public bool IsValidDate { get { EnsureAlive(); return true; } }
+    public void SetAnyDate()
+    {
+        EnsureAlive();
+        var wildcard = Session.Api.TimeDateWildcard();
+        _value.Innards1 = (_value.Innards1 & 0xFF000000u) | (wildcard.Innards1 & 0x00FFFFFFu);
+    }
+    public void SetAnyTime()
+    {
+        EnsureAlive();
+        _value.Innards0 = Session.Api.TimeDateWildcard().Innards0;
+    }
     public bool IsDST { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Dst != 0; } }
     public int TimeZone { get { EnsureAlive(); return Session.Api.ExpandTimeDate(_value).Zone; } }
     public string LocalTime { get { EnsureAlive(); return Session.Api.FormatTimeDate(_value); } }
