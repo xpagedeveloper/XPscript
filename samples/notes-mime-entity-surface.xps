@@ -168,6 +168,20 @@ Sub Main()
     Call contentStream.Recycle()
     Set contentStream = Nothing
 
+    ' Stage 1: verify the native child immediately after the final header mutation.
+    Set attachmentHeader = attachmentPart.GetNthHeader("Content-Transfer-Encoding")
+    If attachmentHeader Is Nothing Then
+        Print "DIAG: immediate native attachment CTE missing after mutation"
+    Else
+        Print "DIAG: immediate native attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+    End If
+    Set attachmentHeader = attachmentPart.GetNthHeader("Content-Disposition")
+    If attachmentHeader Is Nothing Then
+        Print "DIAG: immediate native attachment Content-Disposition missing after mutation"
+    Else
+        Print "DIAG: immediate native attachment Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+    End If
+
     Set mime = doc.GetMIMEEntity("Body")
     If mime.ContentType = "multipart" And mime.ContentSubType = "mixed" Then
         Print "PASS: CreateChildEntity promoted root to multipart/mixed"
@@ -181,11 +195,35 @@ Sub Main()
         Print "FAIL: attachment child metadata mismatch: " & attachmentPart.ContentType & "/" & attachmentPart.ContentSubType
     End If
 
+    ' Stage 2: close/reopen the MIME directory on the same unsaved note.
     Call doc.CloseMIMEEntities()
     Set textPart = Nothing
     Set attachmentPart = Nothing
     Set attachmentHeader = Nothing
+    Set mime = doc.GetMIMEEntity("Body")
+    Set currentEntity = mime.GetFirstChildEntity()
+    Do While Not currentEntity Is Nothing
+        If currentEntity.ContentType = "application" And currentEntity.ContentSubType = "octet-stream" Then
+            Set attachmentHeader = currentEntity.GetNthHeader("Content-Transfer-Encoding")
+            If attachmentHeader Is Nothing Then
+                Print "DIAG: pre-save reopened-directory attachment CTE missing"
+            Else
+                Print "DIAG: pre-save reopened-directory attachment CTE=" & attachmentHeader.GetHeaderValAndParams()
+            End If
+            Set attachmentHeader = currentEntity.GetNthHeader("Content-Disposition")
+            If attachmentHeader Is Nothing Then
+                Print "DIAG: pre-save reopened-directory Content-Disposition missing"
+            Else
+                Print "DIAG: pre-save reopened-directory Content-Disposition=" & attachmentHeader.GetHeaderValAndParams()
+            End If
+        End If
+        Set currentEntity = currentEntity.GetNextSibling()
+    Loop
+    Call doc.CloseMIMEEntities()
+    Set attachmentHeader = Nothing
+    Set currentEntity = Nothing
     Set mime = Nothing
+
     Call doc.Save()
     multipartUnid = doc.UniversalID
     Print "Saved multipart MIME document: " & multipartUnid
