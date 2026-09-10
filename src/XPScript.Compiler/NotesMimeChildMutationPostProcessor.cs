@@ -52,6 +52,19 @@ internal static class NotesMimeChildMutationPostProcessor
 
     public object?[] GetHeaders() => GetHeaders(null);
 
+    public object?[] GetChildren()
+    {
+        EnsureEntityAlive();
+        var result = new List<object?>();
+        var child = WrapNativeEntity(_mimeDirectoryOwner.FirstSubpart(_nativeEntity));
+        while (child is not null)
+        {
+            result.Add(child);
+            child = child.GetNextSibling();
+        }
+        return result.ToArray();
+    }
+
     public object?[] GetHeaders(object? nameValue)
     {
         EnsureEntityAlive();

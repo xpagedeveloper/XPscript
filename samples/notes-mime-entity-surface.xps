@@ -30,6 +30,7 @@ Sub Main()
     Dim foundNestedAfterReopen As Boolean
     Dim foundSiblingAfterReopen As Boolean
     Dim headerList As Variant
+    Dim childList As Variant
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -216,6 +217,12 @@ Sub Main()
         Print "PASS: nested parent and first-child traversal"
     Else
         Print "FAIL: nested parent and first-child traversal"
+    End If
+    childList = nestedParent.GetChildren()
+    If UBound(childList) - LBound(childList) + 1 = 2 Then
+        Print "PASS: nested child enumeration"
+    Else
+        Print "FAIL: nested child enumeration"
     End If
     Call contentStream.Recycle()
     Set contentStream = Nothing
