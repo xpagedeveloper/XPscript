@@ -52,7 +52,7 @@ Implemented: `Name`, `ColumnNames`, `GetDocumentByKey`, `GetAllDocumentsByKey`, 
 
 Missing / future:
 
-- Multi-column/multi-value key lookup compatible with LotusScript behavior.
+- Multi-column/multi-value key lookup compatible with LotusScript behavior. The current text-key path intentionally supports one text key. Implement this with an `ITEM_TABLE` key buffer and `NIFFindByKey`, preserving sorted-column order and the `FIND_PARTIAL`/case-sensitivity flags described by the [HCL NIFFindByKey documentation](https://opensource.hcltechsw.com/domino-c-api-docs/reference/Func/NIFFindByKey/).
 - Exact validation of all `NIFFindByKey`/collation semantics.
 
 ## NotesDocumentCollection
