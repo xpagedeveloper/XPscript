@@ -32,6 +32,8 @@ Do not create a new page for every small feature. Extend the appropriate referen
 
 Documentation must describe implemented behavior. Verify syntax and parameters against compiler/runtime source and executable tests before documenting them. Do not invent LotusScript-compatible functions simply because a similarly named function exists elsewhere.
 
+Every feature or dependency change that uses external code, documentation, generated material or NuGet packages must include a license review before merge. The review must cover direct and transitive packages, package license and notice files, attribution, redistribution obligations, and the published output. Update [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) in the same change. The development checklist is defined in [development-guidelines.md](../todo/development-guidelines.md).
+
 Implementation checklists under `todo/` may be used to discover implemented areas, but compiler/runtime source and executable regressions remain authoritative for syntax and behavior.
 
 ## Required command/API entry format

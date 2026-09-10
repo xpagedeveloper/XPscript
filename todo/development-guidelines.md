@@ -16,6 +16,18 @@ These rules apply to future compiler, runtime, tooling, web and UI implementatio
 - Pin/centrally manage package versions and update them intentionally.
 - Include dependency vulnerability/update checks in CI or release maintenance where practical so adopted NuGet packages do not silently become stale security liabilities.
 - Avoid abandoned or unmaintained packages for security-sensitive functionality.
+
+## Mandatory license review
+
+License review is required before merging any feature or dependency that uses external code, data, generated source, documentation, or a NuGet package.
+
+- Identify direct and transitive dependencies with `dotnet list <project>.csproj package --include-transitive`.
+- Record each applicable license, copyright holder, source URL, version and required attribution or notice in `THIRD-PARTY-NOTICES.md`.
+- Inspect package `LICENSE`, `NOTICE` and `ThirdPartyNotices` files, including files belonging to native runtime assets.
+- Check whether the license permits the planned source and binary distribution, and record any obligations such as retaining notices, publishing modifications, or providing source.
+- Distinguish implementation references from code or binaries distributed by XPscript. References still require attribution; copied or packaged material also requires its license text and notices to be shipped as required.
+- Verify the final published output for the affected application or runtime and confirm that required notices are present and unrelated optional dependencies are not copied.
+- The feature change, documentation, regression coverage and license record must be reviewed together in the same pull request.
 - For security-critical parsers/protocols, prefer well-tested framework/package implementations over hand-written byte parsing when an appropriate implementation exists.
 - If custom implementation is still required, document why an existing framework/NuGet option was unsuitable and add focused negative, fuzz/adversarial and boundary regression tests where applicable.
 
