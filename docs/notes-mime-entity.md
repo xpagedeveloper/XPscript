@@ -74,9 +74,9 @@ The currently supported transfer-encoding mappings are:
 
 The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model.
 
-Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Native direct-child `GetNthHeader` currently supports occurrence `1` for `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition`; lookup is backed by Domino `MIMEEntityGetHeader` on the selected native child entity.
+Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` and `GetNthHeader(name, occurrence)` read the selected entity's RFC822 header block through Domino `MIMEGetEntityData` and then perform semantic header-name lookup. This preserves complete header values such as `Content-Disposition: attachment; filename="probe.txt"` and avoids depending on Domino-version-specific numeric `MIMESYMBOL` positions.
 
-The HCL documentation publishes the `MIMESYMBOL` ordering, but runtime diagnostics showed that at least one installed Domino runtime maps the content-header symbol IDs differently from the published positions. XPscript therefore resolves the narrow content-header symbol neighborhood at runtime by validating the returned MIME header value rather than assuming fixed numeric IDs. This avoids treating a valid `Content-Disposition: attachment` value as the transfer-encoding header.
+HCL documents `MIME_ENTITY_DATA_BODY`, `MIME_ENTITY_DATA_HEADERS`, `MIME_ENTITY_DATA_RFC822TEXT`, and `MIME_ENTITY_DATA_BOUNDARY` as flag arguments. XPscript probes the four single-bit flag positions and accepts only entity data that actually contains MIME header fields, so the implementation does not depend on undocumented numeric constants.
 
 Example creating a base64 attachment from `NotesStream`:
 
@@ -122,7 +122,7 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 ## Current boundary
 
-Root content readback, direct-root-child mutation, and native direct-child lookup of `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition` are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary per-entity header enumeration remain outside the verified surface.
+Root content readback, direct-root-child mutation, and direct-child header lookup are supported. Nested child mutation remains unsupported. Root header mutation and general arbitrary header enumeration through `HeaderObjects` remain outside the verified surface.
 
 Do not assume the managed MIME parser behavior from earlier prototypes. Multipart mutation uses bounded RFC822 header/boundary framing around the Domino-native MIME directory and the established MIME stream/itemize writeback path.
 
