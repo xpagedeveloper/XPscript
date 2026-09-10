@@ -87,15 +87,12 @@ Missing / future:
 
 ## NotesRichTextItem
 
-Implemented: inherited `Text` property plus `SaveAttachment` for attachments referenced by that rich-text item.
+Implemented: inherited `NotesItem` surface, direct creation, `AppendText`, styled text and paragraph operations, table creation, attachment embedding/extraction, embedded-object enumeration, `ConvertToHTML`, navigator/range operations, and `SaveAttachment`.
 
 Missing / future:
 
-- Create rich-text items directly.
-- Append text, paragraphs, doclinks, tables and sections.
-- Embed/attach files.
-- Enumerate attachments/embedded objects.
-- Rich-text conversion/export APIs.
+- Append doclinks and sections.
+- Mutate existing table rows and table formatting through the high-level wrapper.
 - Full CD-record traversal exposed as higher-level XPscript objects if needed.
 
 ## NotesName
