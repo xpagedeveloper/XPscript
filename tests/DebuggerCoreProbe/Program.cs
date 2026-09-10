@@ -35,8 +35,12 @@ var generated = new XPScriptTranspiler().Transpile(
     """
 Sub Main()
     Dim answer As Integer
+    Dim i As Integer
     answer = 41
     answer = 42
+    For i = 1 To 3
+        Debugger.Print("i=" & CStr(i))
+    Next
     Debugger.Print("answer=" & CStr(answer))
     Debugger.UpdateVar("DocName", "Example")
 End Sub
@@ -46,6 +50,8 @@ End Sub
 
 if (!generated.Contains("XPScriptDebugRuntime.TrackValue(\"answer\", answer);", StringComparison.Ordinal))
     throw new Exception("Simple scalar assignments were not instrumented for debugger value history.");
+if (Count(generated, "XPScriptDebugRuntime.TrackValue(\"i\", i);") < 2)
+    throw new Exception("For loop control variables are not refreshed in debugger locals on each iteration.");
 if (!generated.Contains("XPSourceLineRuntime.Set(", StringComparison.Ordinal))
     throw new Exception("Debugger source-line mapping was not emitted.");
 if (!generated.Contains("internal static class Debugger", StringComparison.Ordinal))
