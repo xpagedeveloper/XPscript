@@ -239,8 +239,6 @@ internal static class NotesMimeChildMutationPostProcessor
         var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
         var bodyOffset = FindRootBodyOffset(entity);
         var body = bodyOffset >= entity.Length ? [] : entity[bodyOffset..];
-        if (body.Length == 0 && _nativeEntity != _mimeDirectoryOwner.RootEntity)
-            body = _mimeDirectoryOwner.EntityBody(_document.NativeDatabaseHandle, _nativeEntity);
         var transferEncoding = GetEntityHeaderValue(entity, bodyOffset, "Content-Transfer-Encoding").Trim();
         if (transferEncoding.Equals("base64", StringComparison.OrdinalIgnoreCase))
         {
@@ -248,6 +246,8 @@ internal static class NotesMimeChildMutationPostProcessor
             catch (FormatException ex) { throw new XPScriptRuntimeException(5, "Invalid base64 MIME entity content: " + ex.Message); }
         }
         if (transferEncoding.Equals("quoted-printable", StringComparison.OrdinalIgnoreCase)) return DecodeEntityQuotedPrintable(body);
+        if (body.Length == 0 && _nativeEntity != _mimeDirectoryOwner.RootEntity)
+            return _mimeDirectoryOwner.EntityDecodedBody(_document.NativeDatabaseHandle, _nativeEntity);
         return body;
     }
 

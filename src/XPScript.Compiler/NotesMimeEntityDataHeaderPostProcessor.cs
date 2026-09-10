@@ -211,6 +211,12 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return _api!.GetMimeEntityBody(note, entity);
     }
 
+    internal byte[] EntityDecodedBody(uint note, nint entity)
+    {
+        EnsureAlive();
+        return _api!.GetMimeDecodedEntityBody(note, entity);
+    }
+
 """;
 
         if (!source.Contains(ownerMarker, StringComparison.Ordinal))
@@ -302,8 +308,41 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return output.ToArray();
     }
 
+    internal byte[] GetMimeDecodedEntityBody(uint note, nint entity)
+    {
+        EnsureInitialized();
+        const uint chunkSize = 60000;
+        using var output = new MemoryStream();
+        uint encodedOffset = 0;
+        while (true)
+        {
+            var status = Resolve<MIMEGetDecodedEntityDataDelegate>("MIMEGetDecodedEntityData")((long)note, entity, encodedOffset, chunkSize, out var dataHandle, out var decodedLength, out var encodedLength);
+            if (status == ErrMimeNoData || status != 0 || decodedLength == 0) break;
+            nint data = 0;
+            try
+            {
+                data = Resolve<MimeMemoryLockDelegate>("OSLockObject")(dataHandle);
+                if (data == 0) break;
+                var bytes = new byte[checked((int)decodedLength)];
+                System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
+                output.Write(bytes);
+            }
+            finally
+            {
+                if (data != 0) Resolve<MimeMemoryUnlockDelegate>("OSUnlockObject")(dataHandle);
+                if (dataHandle != 0) Resolve<MimeMemoryFreeDelegate>("OSMemFree")(dataHandle);
+            }
+            if (encodedLength == 0) break;
+            encodedOffset += encodedLength;
+        }
+        return output.ToArray();
+    }
+
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort MIMEGetEntityDataDelegate(long note, nint entity, ushort dataType, uint offset, uint requestedLength, out long dataHandle, out uint dataLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort MIMEGetDecodedEntityDataDelegate(long note, nint entity, uint encodedOffset, uint chunkLength, out long dataHandle, out uint decodedLength, out uint encodedLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate nint MimeMemoryLockDelegate(long handle);
