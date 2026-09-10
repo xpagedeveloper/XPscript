@@ -239,6 +239,8 @@ internal static class NotesMimeChildMutationPostProcessor
         var entity = _nativeEntity == _mimeDirectoryOwner.RootEntity ? raw : GetSerializedEntity(raw, GetEntityPath());
         var bodyOffset = FindRootBodyOffset(entity);
         var body = bodyOffset >= entity.Length ? [] : entity[bodyOffset..];
+        if (body.Length == 0 && _nativeEntity != _mimeDirectoryOwner.RootEntity)
+            body = _mimeDirectoryOwner.EntityBody(_document.NativeDatabaseHandle, _nativeEntity);
         var transferEncoding = GetEntityHeaderValue(entity, bodyOffset, "Content-Transfer-Encoding").Trim();
         if (transferEncoding.Equals("base64", StringComparison.OrdinalIgnoreCase))
         {

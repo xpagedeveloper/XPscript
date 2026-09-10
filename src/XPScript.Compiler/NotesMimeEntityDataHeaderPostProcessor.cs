@@ -205,6 +205,12 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
         return _api!.GetMimeEntityHeaders(note, entity);
     }
 
+    internal byte[] EntityBody(uint note, nint entity)
+    {
+        EnsureAlive();
+        return _api!.GetMimeEntityBody(note, entity);
+    }
+
 """;
 
         if (!source.Contains(ownerMarker, StringComparison.Ordinal))
@@ -263,6 +269,37 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
                 return candidate;
         }
         return [];
+    }
+
+    internal byte[] GetMimeEntityBody(uint note, nint entity)
+    {
+        EnsureInitialized();
+        const ushort mimeEntityDataBody = 2;
+        const uint chunkSize = 60000;
+        using var output = new MemoryStream();
+        uint offset = 0;
+        while (true)
+        {
+            var status = Resolve<MIMEGetEntityDataDelegate>("MIMEGetEntityData")((long)note, entity, mimeEntityDataBody, offset, chunkSize, out var dataHandle, out var dataLength);
+            if (status == ErrMimeNoData || status != 0 || dataLength == 0) break;
+            nint data = 0;
+            try
+            {
+                data = Resolve<MimeMemoryLockDelegate>("OSLockObject")(dataHandle);
+                if (data == 0) break;
+                var bytes = new byte[checked((int)dataLength)];
+                System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, bytes.Length);
+                output.Write(bytes);
+            }
+            finally
+            {
+                if (data != 0) Resolve<MimeMemoryUnlockDelegate>("OSUnlockObject")(dataHandle);
+                if (dataHandle != 0) Resolve<MimeMemoryFreeDelegate>("OSMemFree")(dataHandle);
+            }
+            offset += dataLength;
+            if (dataLength < chunkSize) break;
+        }
+        return output.ToArray();
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
