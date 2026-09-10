@@ -97,23 +97,21 @@ Missing / future:
 
 ## NotesName
 
-Implemented V1 name parsing/canonical/abbreviated surface.
+Implemented name parsing, canonical/abbreviated values, hierarchical components, and RFC821/RFC822 address fields.
 
 Missing / future:
 
 - Verify every property against LotusScript `NotesName`, including RFC822-specific fields and multi-OU behavior.
-- Replace remaining managed approximations with native name services where that improves compatibility.
 
 ## NotesDateTime
 
-Implemented V1 date/time properties and session creation.
+Implemented native date/time creation, formatting, zone expansion, and adjustment methods.
 
 Missing / future:
 
 - Validate `TimeZone` sign/semantics against LotusScript on actual Notes clients.
 - AnyDate/AnyTime behavior.
-- Zone conversion and additional LotusScript methods.
-- Locale-specific parsing/formatting compatibility.
+- Additional LotusScript methods and locale-specific parsing/formatting compatibility.
 
 ## Agents
 
