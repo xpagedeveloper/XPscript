@@ -68,7 +68,7 @@ The currently supported transfer-encoding mappings are:
 
 ## Multipart/mixed and attachments
 
-The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model. A direct child that is multipart can also create and mutate its first nested child. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization.
+The root entity supports `CreateChildEntity()` for direct child entities. If the root is not already multipart, creating the first child promotes it to `multipart/mixed` and discards the previous root body, matching the Domino NotesMIMEEntity model. A direct child that is multipart can also create and mutate its first nested child. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization. The executable regression covers nested `GetParentEntity()` and `GetFirstChildEntity()` traversal after that rebind.
 
 Direct root children support `SetContentFromText`, `SetContentFromBytes`, `CreateHeader`, `GetNthHeader`, and `NotesMIMEHeader.SetHeaderVal`. Direct-child `GetNthHeader(name)` resolves the selected entity through Domino's native MIME directory. It scans the documented `MIMESYMBOL` range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.
 

@@ -13,6 +13,8 @@ Sub Main()
     Dim currentEntity As NotesMIMEEntity
     Dim textPart As NotesMIMEEntity
     Dim nestedPart As NotesMIMEEntity
+    Dim nestedParent As NotesMIMEEntity
+    Dim firstNested As NotesMIMEEntity
     Dim attachmentPart As NotesMIMEEntity
     Dim attachmentHeader As NotesMIMEHeader
     Dim contentStream As NotesStream
@@ -173,6 +175,14 @@ Sub Main()
         Print "PASS: nested child creation and mutation"
     Else
         Print "FAIL: nested child creation and mutation"
+    End If
+    Set nestedParent = nestedPart.GetParentEntity()
+    Set firstNested = nestedParent.GetFirstChildEntity()
+    If Not nestedParent Is Nothing And nestedParent.ContentSubType = "mixed" And _
+       Not firstNested Is Nothing And firstNested.ContentType = "text" Then
+        Print "PASS: nested parent and first-child traversal"
+    Else
+        Print "FAIL: nested parent and first-child traversal"
     End If
     Call contentStream.Recycle()
     Set contentStream = Nothing
