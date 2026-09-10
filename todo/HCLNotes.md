@@ -81,9 +81,8 @@ Implemented: `DateTimeValue`, `IsAuthors`, `IsEncrypted`, `IsNames`, `IsProtecte
 Missing / future:
 
 - Full support for every Notes item datatype in `Values`.
-- Rich text/composite values beyond `NotesRichTextItem` operations.
 - Object, signature and userdata-specific typed wrappers.
-- Validate all writable item flags against HCL runtime behavior.
+- Extend rich-text/composite value coverage beyond the currently supported wrapper operations.
 
 ## NotesRichTextItem
 
