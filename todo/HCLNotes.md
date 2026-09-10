@@ -83,7 +83,7 @@ Missing / future:
 - Delete document.
 - Response/parent document relationships.
 - Additional note metadata (created, last modified, signer, encrypt-on-send, etc.).
-- MIME support.
+- MIME support is implemented for native `Body` entities, direct and nested child traversal, MIME content read/write, standard header parameters, arbitrary header enumeration, and MIME directory lifecycle. See [notes-mime-entity.md](../docs/notes-mime-entity.md) and `samples/notes-mime-entity-surface.xps`. Named MIME items other than `Body` remain unsupported.
 - Embedded object APIs beyond attachment extraction.
 - Full LotusScript-compatible `GetItemValue` semantics for all native item types.
 
@@ -95,7 +95,7 @@ Missing / future:
 
 - Full support for every Notes item datatype in `Values`.
 - Rich text/composite values beyond `NotesRichTextItem` operations.
-- MIME/object/signature/userdata-specific typed wrappers.
+- Object, signature and userdata-specific typed wrappers.
 - Validate all writable item flags against HCL runtime behavior.
 
 ## NotesRichTextItem
