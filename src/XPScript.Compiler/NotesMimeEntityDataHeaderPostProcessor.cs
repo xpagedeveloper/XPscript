@@ -20,12 +20,18 @@ internal static class NotesMimeEntityDataHeaderPostProcessor
 """;
 
         const string newLookup = """
-        if (occurrence != 1)
-            throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports occurrence 1 for native direct-child headers.");
         var nativeIndex = NativeHeaderIndex(name);
-        if (nativeIndex == 0)
-            throw new System.NotSupportedException("NotesMIMEEntity.GetNthHeader currently supports Content-Type, Content-Transfer-Encoding and Content-Disposition on direct child entities.");
-        return new XPScriptNotesMIMEHeader(this, nativeIndex);
+        if (nativeIndex != 0)
+            return new XPScriptNotesMIMEHeader(this, nativeIndex);
+        var child = ReadCurrentDirectChild("GetNthHeader");
+        var headers = ParseEntityHeaders(child, FindRootBodyOffset(child));
+        var found = 0;
+        for (var i = 0; i < headers.Count; i++)
+        {
+            if (!headers[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
+            if (++found == occurrence) return new XPScriptNotesMIMEHeader(this, i);
+        }
+        return null;
 """;
 
         if (!source.Contains(oldLookup, StringComparison.Ordinal))

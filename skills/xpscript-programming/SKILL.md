@@ -163,7 +163,7 @@ Call disposition.SetHeaderVal("attachment; filename=""file.pdf""")
 
 For real binary attachments, load the binary bytes into the `NotesStream`, rewind it, then use `SetContentFromBytes`. Do not pre-base64 the stream when using encoding `1727`; XPscript performs the MIME base64 transfer encoding.
 
-Direct-child `GetNthHeader` supports `Content-Type`, `Content-Transfer-Encoding`, and `Content-Disposition`; it resolves values through the native MIME directory and serialized child headers, so callers can read `base64` and `attachment; filename="file.pdf"` after mutation and directory reopen. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The wrapper performing a successful supported MIME mutation is rebound to the corresponding native entity so metadata can be read immediately.
+Direct-child `GetNthHeader(name, occurrence)` supports the three standard content headers and arbitrary header names. `NotesMIMEHeader.GetParamVal` and `SetParamVal` support MIME parameters such as `name`, `charset`, and `filename`. Values resolve through the native MIME directory and serialized child headers, so callers can read and update `base64` and `attachment; filename="file.pdf"` after mutation and directory reopen. `CloseMIMEEntities`, save, and document recycle invalidate MIME directory-backed entity handles. The wrapper performing a successful supported MIME mutation is rebound to the corresponding native entity so metadata can be read immediately.
 
 ## HTTP client security
 
