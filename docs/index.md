@@ -2,6 +2,8 @@
 
 XPScript is a BASIC-style programming language implemented on .NET 10. Source files use the `.xps` extension. The same language can be compiled into normal applications, executed directly from the command line, hosted as web routes through Kestrel, FastCGI or CGI, packaged directly for IIS, and used with the shared UIForm model for desktop and web interfaces.
 
+XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See [NOTICE](../NOTICE) and [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for the separate terms and attribution required by dependencies and reference material.
+
 ## Start here
 
 - [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.

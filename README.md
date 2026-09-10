@@ -2,7 +2,9 @@
 
 (c) xpagedeveloper.com 2026
 
-Source available for testing and internal use only. No commercial rights are granted. Commercial use requires a separate written license from the copyright holder.
+XPScript is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Third-party components retain their own license terms. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for dependencies, attribution, license texts and redistribution requirements.
 
 XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 
