@@ -100,7 +100,8 @@ Branch: `feature/notes-mime-entity`
 - [ ] Implement explicit MIME encoding readback
 - [ ] Implement decoded and raw content stream access
 - [ ] Implement text reader access using the entity charset
-- [ ] Add regression coverage for every parity item against the Notes client
+- [ ] Add regression coverage for remaining parity items against the Notes client
+- [x] Add regression coverage for full and filtered MIME header enumeration
 - [ ] Review Domino JNA MIME4J features for applicable HTML and rich-text conversion APIs
 
 - [x] Split the executable regression into separate assertions for `Content-Disposition: attachment` and its `filename` parameter

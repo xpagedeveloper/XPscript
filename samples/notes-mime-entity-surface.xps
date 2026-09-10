@@ -29,6 +29,7 @@ Sub Main()
     Dim foundAttachmentBase64 As Boolean
     Dim foundNestedAfterReopen As Boolean
     Dim foundSiblingAfterReopen As Boolean
+    Dim headerList As Variant
 
     session.ConvertMIME = False
     Set db = session.OpenDatabase("", "mail.nsf")
@@ -251,6 +252,18 @@ Sub Main()
         Print "FAIL: arbitrary MIME header occurrence lookup"
     Else
         Print "PASS: arbitrary MIME header occurrence lookup"
+    End If
+    headerList = attachmentPart.GetHeaders("X-XPscript-MIME-Probe")
+    If UBound(headerList) - LBound(headerList) + 1 = 2 Then
+        Print "PASS: filtered MIME header enumeration"
+    Else
+        Print "FAIL: filtered MIME header enumeration"
+    End If
+    headerList = attachmentPart.GetHeaders()
+    If UBound(headerList) >= 2 Then
+        Print "PASS: full MIME header enumeration"
+    Else
+        Print "FAIL: full MIME header enumeration"
     End If
     Call attachmentPart.RemoveHeaders("X-XPscript-MIME-Probe")
     Set attachmentHeader = attachmentPart.GetNthHeader("X-XPscript-MIME-Probe")
