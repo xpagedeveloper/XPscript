@@ -309,6 +309,15 @@ internal static class XPScriptArchiveExtendedMemoryWriter
                 ?? throw new XPScriptRuntimeException(5, "Unable to create archive writer.");
             try
             {
+                if (format == "7Z" && entries.Count == 0)
+                {
+                    var ensurePlaceholder = writer.GetType().GetMethod(
+                        "EnsurePlaceholderWritten",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                        ?? throw new MissingMethodException("Empty 7z archive finalization is unavailable.");
+                    ensurePlaceholder.Invoke(writer, null);
+                }
+
                 var write = writer.GetType().GetMethod("Write", [typeof(string), typeof(System.IO.Stream), typeof(DateTime?)])
                     ?? writer.GetType().GetInterfaces().SelectMany(x => x.GetMethods()).FirstOrDefault(m => m.Name == "Write" && m.GetParameters().Length == 3)
                     ?? throw new MissingMethodException("Archive writer method was not found.");
