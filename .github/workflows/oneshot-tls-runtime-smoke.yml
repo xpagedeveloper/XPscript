@@ -90,3 +90,4 @@ jobs:
           grep -q 'TLS certificate validation failed' "$TMP/output.txt"
           grep -q 'ALLOW-SELF-SIGNED=OK' "$TMP/output.txt"
           grep -q 'INSECURE=OK' "$TMP/output.txt"
+          # retry after XPAi postprocessor compatibility fix
