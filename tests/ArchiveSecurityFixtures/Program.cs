@@ -1,3 +1,4 @@
+using System.Formats.Tar;
 using System.IO.Compression;
 using System.Text;
 
@@ -54,6 +55,25 @@ CreateZip(Path.Combine(root, "extraction-symlink.zip"), archive =>
     WriteText(archive, "link/escape.txt", "must-not-escape");
 });
 
+CreateTar(Path.Combine(root, "traversal.tar"), writer =>
+{
+    WriteTarText(writer, "../escape.txt", "escape");
+});
+
+CreateTar(Path.Combine(root, "absolute.tar"), writer =>
+{
+    WriteTarText(writer, "/escape.txt", "escape");
+});
+
+CreateTar(Path.Combine(root, "symlink-entry.tar"), writer =>
+{
+    var entry = new PaxTarEntry(TarEntryType.SymbolicLink, "link")
+    {
+        LinkName = "target.txt"
+    };
+    writer.WriteEntry(entry);
+});
+
 var source = Path.Combine(root, "source");
 Directory.CreateDirectory(source);
 File.WriteAllText(Path.Combine(source, "real.txt"), "real", Encoding.UTF8);
@@ -99,6 +119,14 @@ static void CreateZip(string path, Action<ZipArchive> build)
     build(archive);
 }
 
+static void CreateTar(string path, Action<TarWriter> build)
+{
+    if (File.Exists(path)) File.Delete(path);
+    using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+    using var writer = new TarWriter(stream, leaveOpen: false);
+    build(writer);
+}
+
 static void WriteText(ZipArchive archive, string name, string value)
 {
     var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
@@ -111,4 +139,15 @@ static void WriteBytes(ZipArchive archive, string name, byte[] value)
     var entry = archive.CreateEntry(name, CompressionLevel.SmallestSize);
     using var output = entry.Open();
     output.Write(value, 0, value.Length);
+}
+
+static void WriteTarText(TarWriter writer, string name, string value)
+{
+    var data = Encoding.UTF8.GetBytes(value);
+    var entry = new PaxTarEntry(TarEntryType.RegularFile, name)
+    {
+        DataStream = new MemoryStream(data, writable: false)
+    };
+    writer.WriteEntry(entry);
+    entry.DataStream.Dispose();
 }
