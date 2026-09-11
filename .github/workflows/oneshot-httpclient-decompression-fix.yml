@@ -1,0 +1,68 @@
+name: One-shot HTTP client decompression fix
+
+on:
+  push:
+    branches:
+      - fix/httpclient-automatic-decompression
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/httpclient-automatic-decompression
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Patch XPHttpClient automatic decompression
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/XPScript.Compiler/NativeHttpRuntimeSource.cs')
+          text = path.read_text()
+          old = '''            AllowAutoRedirect = false,
+            UseCookies = false
+'''
+          new = '''            AllowAutoRedirect = false,
+            UseCookies = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+'''
+          if old not in text:
+              raise SystemExit('Expected HttpClientHandler initializer not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+
+      - name: Verify decompression flags are present
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/XPScript.Compiler/NativeHttpRuntimeSource.cs').read_text()
+          required = [
+              'AutomaticDecompression = System.Net.DecompressionMethods.GZip',
+              'System.Net.DecompressionMethods.Deflate',
+              'System.Net.DecompressionMethods.Brotli'
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit('Missing decompression flags: ' + ', '.join(missing))
+
+      - name: Build compiler
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/XPScript.Compiler/NativeHttpRuntimeSource.cs
+          git commit -m "Enable automatic HTTP response decompression"
+          git push origin HEAD:fix/httpclient-automatic-decompression
