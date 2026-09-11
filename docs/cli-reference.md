@@ -8,7 +8,9 @@ This page is the searchable reference for the XPScript compiler and host command
 |---|---|---|---|---|
 | compile | `xpscriptc source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout. | [hello.xps](../demo/console/hello.xps) |
 | `run` | `xpscriptc run source.xps [arguments...]` | `source.xps`: program to compile/run; following values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
-| `--info` | `xpscriptc run source.xps --info` | none | Shows run compilation progress, elapsed compile time, program start, and exit code on stderr. Without `--info`, `run` emits only program output and errors. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--info` | `xpscriptc run source.xps --info` | none | Shows run compilation progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--debug` | `xpscript run source.xps --debug` or `xpscript compile source.xps --debug` | none | Enables debug behavior and application dependency security warning mode unless explicitly overridden. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--security` | `--security=off|warn|strict` | security mode. | Controls NuGet application dependency auditing. `warn` reports findings; `strict` also fails when audit data is unavailable and blocks high/critical findings. | [Dependency security and package patching](dependency-security-and-patching.md) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
 | `--runtime` | `--runtime RID` | `RID`: one of the supported runtime identifiers such as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. | Compiles/publishes for an explicit target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `--framework-dependent` | `--framework-dependent` | none | Produces framework-dependent output instead of a self-contained application. | [hello.xps](../demo/console/hello.xps) |
@@ -16,6 +18,22 @@ This page is the searchable reference for the XPScript compiler and host command
 | `--result-format json` | `--result-format json` | none | Emits structured JSON compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format xml` | `--result-format xml` | none | Emits structured XML compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--` | `-- scriptArg1 ...` | all following values are script arguments. | Ends compiler option parsing so option-looking values can be passed to the program. | [application-runtime.xps](../samples/application-runtime.xps) |
+
+## Dependency security and package patch commands
+
+| Command/option | Syntax | Parameters | Description |
+|---|---|---|---|
+| `dependencies` | `xpscript dependencies SOURCE [--runtime RID] [--json]` | XPScript source and optional target RID. | Reports the direct and transitive NuGet graph required by that application. |
+| `security` | `xpscript security SOURCE [--runtime RID] [--json]` | XPScript source and optional target RID. | Checks the application's resolved NuGet graph for known vulnerabilities. Exit code `2` means vulnerabilities were found; `3` means vulnerability data was unavailable. |
+| `patch all --check` | `xpscript patch all --check` | none | Shows compatible same-major/minor stable patch releases without changing patch state. |
+| `patch all` | `xpscript patch all` | none | Downloads and activates eligible compatible patch releases for the current XPScript release line. |
+| `patch PACKAGE` | `xpscript patch PACKAGE [--check]` | NuGet package ID. | Checks or applies a compatible patch for one package. A member of an atomic package group can cause the whole group to be evaluated together. |
+| `--security-only` | `xpscript patch all --security-only` | none | Applies only candidates classified as security patches; maintenance patches and unverifiable security states are skipped. |
+| `patch status` | `xpscript patch status` | none | Shows patch state for the current XPScript version. |
+| `patch list` | `xpscript patch list` | none | Lists the current XPScript version's selected package patches. |
+| `patch remove all` | `xpscript patch remove all` | none | Removes the current XPScript version's selected patch state. |
+
+See [Dependency security and package patching](dependency-security-and-patching.md) for the compatibility policy, security classification and version-scoped cache behavior.
 
 ## `xpscript service` host installation
 

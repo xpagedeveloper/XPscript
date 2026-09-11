@@ -24,6 +24,9 @@ try
     {
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
+        "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
+        "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),
         "new" => XpsScaffolder.Run(args[1..]),
         "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
@@ -431,6 +434,8 @@ One executable is used for compiler, runtime execution, project scaffolding and 
 
 Usage:
   xpscript compile <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
+  xpscript dependencies <source.xps> [--runtime RID] [--json]
+  xpscript security <source.xps> [--runtime RID] [--json]
   xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
   xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
   xpscript new <rest|web|desktop> <directory>

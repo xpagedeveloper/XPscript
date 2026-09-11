@@ -41,6 +41,7 @@ public static class XPScriptCompilerCommandLine
         string? target = null;
         var restricted = false;
         var debug = false;
+        ApplicationSecurityMode? securityMode = null;
         var embedAssets = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
@@ -63,6 +64,10 @@ public static class XPScriptCompilerCommandLine
                     restricted = true;
                 else if (args[i] == "--debug")
                     debug = true;
+                else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                    securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
+                else if (args[i] == "--security" && i + 1 < args.Length)
+                    securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
                 else if (args[i] == "--embed-assets")
                     embedAssets = true;
                 else if (args[i] == "--source-root" && i + 1 < args.Length)
@@ -83,6 +88,8 @@ public static class XPScriptCompilerCommandLine
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
+            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
+            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
@@ -158,6 +165,7 @@ public static class XPScriptCompilerCommandLine
             var parseRunOptions = true;
             var restricted = false;
             var info = false;
+            ApplicationSecurityMode? securityMode = null;
             var sourceRoots = new List<string>();
             var sourcePreprocessors = new List<string>();
 
@@ -180,6 +188,20 @@ public static class XPScriptCompilerCommandLine
                 {
                     debug = true;
                     info = true;
+                    continue;
+                }
+
+                if (parseRunOptions && value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                {
+                    securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);
+                    continue;
+                }
+
+                if (parseRunOptions && value == "--security")
+                {
+                    if (i + 1 >= commandLineArgs.Length)
+                        throw new ArgumentException("--security requires off, warn, or strict.");
+                    securityMode = ApplicationSecurityModeContext.Parse(commandLineArgs[++i]);
                     continue;
                 }
 
@@ -227,6 +249,8 @@ public static class XPScriptCompilerCommandLine
                 scriptArgs.Add(value);
             }
 
+            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
+            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var currentRuntimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
             if (!runtimeIdentifier.Equals(currentRuntimeIdentifier, StringComparison.OrdinalIgnoreCase))
@@ -265,7 +289,7 @@ public static class XPScriptCompilerCommandLine
             var sourceName = Path.GetFileName(sourcePath);
             var executablePath = string.Empty;
 
-            var cacheHit = !debug && runCache.TryGetRunnable(out executablePath);
+            var cacheHit = effectiveSecurityMode == ApplicationSecurityMode.Off && !debug && runCache.TryGetRunnable(out executablePath);
             if (!cacheHit)
             {
                 var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
@@ -470,8 +494,8 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  {runCommand} <source.xps> [--info] [--debug] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -489,6 +513,7 @@ UIForm compile and run operations automatically create a sibling assets/ directo
 --preprocessor may be repeated and runs after the complete Include graph is expanded.
 The compile command reports live progress on one console line while preserving structured result output on stdout.
 The run command stays quiet by default. Use --info to show live compilation status and runtime lifecycle information.
+--info and --debug automatically enable application dependency security auditing in warn mode. Use --security=off to disable it, or --security=strict to fail on high/critical findings.
 Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
 Use --debug as a strict superset of --info: it forces a fresh run compilation, shows the compile timer, includes generated C# diagnostics and physical Program.cs locations, and enables detailed runtime exception tracing for errors that may be handled by On Error.
 The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache. Debug runs bypass an existing run-cache artifact so diagnostics always reflect the current compiler.
