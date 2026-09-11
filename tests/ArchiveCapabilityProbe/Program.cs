@@ -141,23 +141,23 @@ void ExpectIteratorSuccess()
     const string source = """
 Option Declare
 Sub Main()
-    Dim archive As New Archive()
-    archive.Create("zip")
-    archive.AddText("one.txt", "1")
-    archive.AddText("two.txt", "2")
+    Dim archive As New arCHive()
+    archive.cReAtE("zip")
+    archive.aDdTeXt("one.txt", "1")
+    archive.ADDTEXT("two.txt", "2")
 
     Dim count As Integer
     Dim item As Variant
-    ForAll item In archive.Entries
+    ForAll item In archive.eNtRiEs
         count = count + 1
     End ForAll
 
-    Dim entry As ArchiveEntry
-    Set entry = archive.GetFirstEntry()
+    Dim entry As aRcHiVeEnTrY
+    Set entry = archive.gEtFiRsTeNtRy()
     While entry Is Not Nothing
-        If entry.IsFile Then Print entry.FullName
-        If entry.IsFolder Then Print entry.FullName
-        Set entry = archive.GetNextEntry(entry)
+        If entry.iSfIlE Then Print entry.fUlLnAmE
+        If entry.ISFOLDER Then Print entry.FullName
+        Set entry = archive.GETNEXTENTRY(entry)
     Wend
 End Sub
 """;
@@ -166,11 +166,11 @@ End Sub
     if (!generated.Contains("XPScriptArchiveIteratorRuntime.GetFirstEntry", StringComparison.Ordinal)
         || !generated.Contains("XPScriptArchiveIteratorRuntime.GetNextEntry", StringComparison.Ordinal)
         || !generated.Contains("ConditionalWeakTable<object, IteratorState>", StringComparison.Ordinal))
-        throw new Exception("Archive stable iterator runtime was not emitted.");
-    if (generated.Contains(".IsFile", StringComparison.Ordinal)
-        || generated.Contains(".IsFolder", StringComparison.Ordinal))
-        throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to the internal entry type flag.");
-    if (!generated.Contains(".Entries", StringComparison.Ordinal))
+        throw new Exception("Archive stable iterator runtime was not emitted for mixed-case API usage.");
+    if (generated.Contains(".IsFile", StringComparison.OrdinalIgnoreCase)
+        || generated.Contains(".IsFolder", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not case-insensitively lowered to the internal entry type flag.");
+    if (!generated.Contains(".eNtRiEs", StringComparison.OrdinalIgnoreCase))
         throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
 }
 
