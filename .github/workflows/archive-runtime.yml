@@ -38,6 +38,10 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory.xps -o ./out/archive-extended-memory --framework-dependent
           ./out/archive-extended-memory
+      - name: Compile and run extended in-memory write
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory-write.xps -o ./out/archive-extended-memory-write --framework-dependent
+          ./out/archive-extended-memory-write
       - name: Compile and run GZip
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-gzip.xps -o ./out/archive-gzip --framework-dependent
