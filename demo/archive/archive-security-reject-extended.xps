@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 1 Then Error 5, "Extended Archive rejection probe requires a path"
+
+    Dim archive As New Archive(Application.Args(0), True)
+    archive.Open()
+
+    Print "ARCHIVE_SECURITY_REJECT_EXTENDED_UNEXPECTED_SUCCESS"
+End Sub
