@@ -265,6 +265,8 @@ internal static class XPScriptArchiveExtendedMemoryWriter
 {
     public static byte[] Write(string format, IReadOnlyList<XPScriptExtendedMemoryArchiveV2.PendingEntry> entries, int compressionLevel)
     {
+        if (format == "TAR") return WriteRawTar(entries);
+
         try
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
@@ -337,6 +339,30 @@ internal static class XPScriptArchiveExtendedMemoryWriter
         {
             throw new XPScriptRuntimeException(5, "Unable to write extended in-memory archive: " + ex.Message);
         }
+    }
+
+    private static byte[] WriteRawTar(IReadOnlyList<XPScriptExtendedMemoryArchiveV2.PendingEntry> entries)
+    {
+        using var output = new System.IO.MemoryStream();
+        using (var writer = new System.Formats.Tar.TarWriter(output, System.Formats.Tar.TarEntryFormat.Pax, leaveOpen: true))
+        {
+            foreach (var pending in entries)
+            {
+                var entryType = pending.IsDirectory
+                    ? System.Formats.Tar.TarEntryType.Directory
+                    : System.Formats.Tar.TarEntryType.RegularFile;
+                var name = pending.IsDirectory ? pending.Name.TrimEnd('/') + "/" : pending.Name;
+                var entry = new System.Formats.Tar.PaxTarEntry(entryType, name)
+                {
+                    ModificationTime = new DateTimeOffset(pending.Modified.ToUniversalTime())
+                };
+                if (!pending.IsDirectory)
+                    entry.DataStream = new System.IO.MemoryStream(pending.Bytes ?? [], writable: false);
+                writer.WriteEntry(entry);
+                entry.DataStream?.Dispose();
+            }
+        }
+        return output.ToArray();
     }
 }
 """;
