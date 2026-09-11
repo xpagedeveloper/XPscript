@@ -67,6 +67,7 @@ if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar"
 if (!generated.Contains("ProtocolVersion = 6", StringComparison.Ordinal))
     throw new Exception("Debugger protocol v6 is not emitted.");
 if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsGlobalConditionBreakpoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsDebuggerVariables = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsExceptionBreakpoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsConditionalBreakpoints = true", StringComparison.Ordinal) ||
@@ -84,6 +85,11 @@ if (!generated.Contains("TryGetProperty(\"breakpoints\"", StringComparison.Ordin
     !generated.Contains("TryGetProperty(\"hitCondition\"", StringComparison.Ordinal) ||
     !generated.Contains("TryGetProperty(\"logMessage\"", StringComparison.Ordinal))
     throw new Exception("Runtime breakpoint rule payload parsing is incomplete.");
+if (!generated.Contains("case \"setGlobalConditionBreakpoints\"", StringComparison.Ordinal) ||
+    !generated.Contains("GlobalConditionBreakpointRule", StringComparison.Ordinal) ||
+    !generated.Contains("EvaluateGlobalConditionBreakpointsLocked", StringComparison.Ordinal) ||
+    !generated.Contains("_pendingGlobalCondition", StringComparison.Ordinal))
+    throw new Exception("Global condition breakpoint runtime support is missing.");
 if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ordinal))
     throw new Exception("Exception breakpoint protocol command is missing.");
 if (!generated.Contains("case \"debuggerVariables\"", StringComparison.Ordinal))
