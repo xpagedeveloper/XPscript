@@ -46,18 +46,15 @@ jobs:
           Sub Main()
               Dim http As New XPHttpClient
               Dim response As XPHttpResponse
+              Dim errCode As Integer
 
               http.AllowPrivateNetwork = True
               http.CertificateValidation = "Strict"
-              On Error GoTo TlsError
+              On Error Resume Next
               Set response = http.Get("https://127.0.0.1:18443/")
-              Print "STRICT-DID-NOT-FAIL"
-              GoTo AfterStrict
-          TlsError:
-              Print "STRICT-ERR=" & CStr(Err)
-              Print "STRICT-TEXT=" & Error$
-              Resume AfterStrict
-          AfterStrict:
+              errCode = Err
+              Print "STRICT-ERR=" & CStr(errCode)
+              Print Error$
               On Error GoTo 0
 
               http.CertificateValidation = "AllowSelfSigned"
@@ -70,7 +67,6 @@ jobs:
           End Sub
           XPS
           dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run "$TMP/tls.xps" --debug | tee "$TMP/output.txt"
-          ! grep -q 'STRICT-DID-NOT-FAIL' "$TMP/output.txt"
           grep -q 'STRICT-ERR=1201' "$TMP/output.txt"
           grep -q 'TLS certificate validation failed' "$TMP/output.txt"
           grep -q 'ALLOW-STATUS=200' "$TMP/output.txt"
