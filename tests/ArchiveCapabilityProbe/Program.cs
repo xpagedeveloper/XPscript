@@ -69,7 +69,9 @@ foreach (var format in new[] { "rar", "bzip2", "lzip", "xz", "zstd" })
     ExpectUnsupportedCreate(format);
 
 ExpectIteratorSuccess();
+ExpectChainedEntryAliases();
 ExpectRemovedIsDirectory();
+ExpectRemovedChainedIsDirectory();
 ExpectExtendedDiagnosticNormalization();
 
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
@@ -174,6 +176,28 @@ End Sub
         throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
 }
 
+void ExpectChainedEntryAliases()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("one.txt", "1")
+    If archive.GetEntry("one.txt").IsFile Then Print "file"
+    If archive.GetEntry("one.txt").IsFolder Then Print "folder"
+    If archive.GetFirstEntry().IsFile Then Print "first-file"
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "archive-entry-chained-aliases.xps", "win-x64");
+    if (generated.Contains(".IsFile", StringComparison.OrdinalIgnoreCase)
+        || generated.Contains(".IsFolder", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Chained ArchiveEntry IsFile/IsFolder aliases were not lowered.");
+    if (!generated.Contains(".IsDirectory", StringComparison.Ordinal))
+        throw new Exception("Chained ArchiveEntry aliases did not lower to the internal directory flag.");
+}
+
 void ExpectRemovedIsDirectory()
 {
     const string source = """
@@ -188,9 +212,29 @@ Sub Main()
 End Sub
 """;
 
+    ExpectRemovedIsDirectoryDiagnostic("archive-entry-isdirectory.xps", source);
+}
+
+void ExpectRemovedChainedIsDirectory()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("one.txt", "1")
+    If archive.GetEntry("one.txt").IsDirectory Then Print "directory"
+End Sub
+""";
+
+    ExpectRemovedIsDirectoryDiagnostic("archive-entry-chained-isdirectory.xps", source);
+}
+
+void ExpectRemovedIsDirectoryDiagnostic(string fileName, string source)
+{
     try
     {
-        _ = transpiler.Transpile(source, "archive-entry-isdirectory.xps", "win-x64");
+        _ = transpiler.Transpile(source, fileName, "win-x64");
         throw new Exception("ArchiveEntry.IsDirectory unexpectedly remained public.");
     }
     catch (CompilerException ex)
