@@ -236,6 +236,7 @@ internal sealed class AiSessionRuntimePostProcessor
         if (System.Text.Encoding.UTF8.GetByteCount(requestText) > MaxRequestBytes)
             throw new XPScriptRuntimeException(5, "XPAi request body exceeds the 8 MiB limit.");
 
+        _tls.Reset();
         var cancellation = BeginRequest();
         try
         {
@@ -251,6 +252,7 @@ internal sealed class AiSessionRuntimePostProcessor
 """,
                 """
         var requestJson = BuildRequest(messagesValue, stream, modelValue);
+        _tls.Reset();
         var cancellation = BeginRequest();
         try
         {
