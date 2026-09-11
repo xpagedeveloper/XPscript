@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -16,18 +15,7 @@ public static class ApplicationPackagePatchStore
     private const string ManifestFileName = "manifest.json";
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public static string CurrentXPScriptVersion
-    {
-        get
-        {
-            var assembly = typeof(ApplicationPackagePatchStore).Assembly;
-            var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (!string.IsNullOrWhiteSpace(informational))
-                return informational.Split('+', 2)[0];
-            return assembly.GetName().Version?.ToString() ?? "unknown";
-        }
-    }
-
+    public static string CurrentXPScriptVersion => ApplicationDependencyCatalog.XPScriptReleaseVersion;
     public static string RootDirectory => Path.Combine(GetUserDataRoot(), "XPScript", "package-patches", Sanitize(CurrentXPScriptVersion));
     public static string PackageDirectory => Path.Combine(RootDirectory, "packages");
     public static string ManifestPath => Path.Combine(RootDirectory, ManifestFileName);
