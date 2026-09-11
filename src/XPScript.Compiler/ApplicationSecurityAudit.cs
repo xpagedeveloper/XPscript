@@ -10,7 +10,8 @@ internal static class ApplicationSecurityAudit
 
     public static void Report(string buildOutput)
     {
-        if (string.IsNullOrWhiteSpace(buildOutput)) return;
+        var mode = ApplicationSecurityModeContext.Current;
+        if (mode == ApplicationSecurityMode.Off || string.IsNullOrWhiteSpace(buildOutput)) return;
 
         var findings = Parse(buildOutput);
         if (findings.Count == 0) return;
@@ -22,7 +23,7 @@ internal static class ApplicationSecurityAudit
                 $"  {finding.Severity.ToUpperInvariant()}: {finding.Package} {finding.Version} [{finding.Code}] {finding.Advisory}");
         }
 
-        if (!IsStrictMode()) return;
+        if (mode != ApplicationSecurityMode.Strict) return;
         var blocking = findings.Where(f => f.Severity is "high" or "critical").ToArray();
         if (blocking.Length == 0) return;
 
@@ -53,9 +54,6 @@ internal static class ApplicationSecurityAudit
             .ThenBy(f => f.Version, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
-
-    private static bool IsStrictMode() =>
-        string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_SECURITY_MODE"), "strict", StringComparison.OrdinalIgnoreCase);
 
     private static int SeverityRank(string severity) => severity switch
     {
