@@ -7,6 +7,19 @@ internal sealed class ArchiveObjectPreprocessor
     private const string FirstEntryHelper = "XPScriptArchiveIteratorRuntime.GetFirstEntry";
     private const string NextEntryHelper = "XPScriptArchiveIteratorRuntime.GetNextEntry";
 
+    private static readonly string[] ArchiveMembers =
+    [
+        "Path", "Format", "Exists", "ExtendedSupport", "IsEncrypted", "IsReadOnly", "Password", "CompressionLevel",
+        "MaxExtractSize", "MaxEntries", "MaxCompressionRatio", "FileCount", "FolderCount", "CompressedSize", "UncompressedSize",
+        "Entries", "Open", "Close", "Save", "Create", "AddFile", "AddFolder", "AddText", "AddBytes", "Remove", "Rename",
+        "Contains", "GetEntry", "Files", "Folders", "Find", "ReadText", "ReadBytes", "Extract", "ExtractFolder", "ExtractAll", "ToBytes"
+    ];
+
+    private static readonly string[] ArchiveEntryMembers =
+    [
+        "Name", "FullName", "Extension", "Size", "CompressedSize", "CompressionRatio", "Created", "Modified", "IsEncrypted", "CRC"
+    ];
+
     public string Transform(string source)
     {
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
@@ -60,6 +73,9 @@ internal sealed class ArchiveObjectPreprocessor
 
                 var nextPattern = $@"\b{escaped}\s*\.\s*GetNextEntry\s*\(\s*([^()]*)\s*\)";
                 rewritten = Regex.Replace(rewritten, nextPattern, m => $"{NextEntryHelper}({archiveName}, {m.Groups[1].Value.Trim()})", RegexOptions.IgnoreCase);
+
+                foreach (var member in ArchiveMembers)
+                    rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*{Regex.Escape(member)}\b", $"{archiveName}.{member}", RegexOptions.IgnoreCase);
             }
 
             foreach (var entryName in archiveEntryVariables.OrderByDescending(x => x.Length))
@@ -70,6 +86,9 @@ internal sealed class ArchiveObjectPreprocessor
 
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFolder\b", $"{entryName}.IsDirectory", RegexOptions.IgnoreCase);
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFile\b", $"(Not {entryName}.IsDirectory)", RegexOptions.IgnoreCase);
+
+                foreach (var member in ArchiveEntryMembers)
+                    rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*{Regex.Escape(member)}\b", $"{entryName}.{member}", RegexOptions.IgnoreCase);
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
