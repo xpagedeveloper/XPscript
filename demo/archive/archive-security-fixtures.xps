@@ -14,6 +14,17 @@ Sub Main()
     Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/absolute.tar", "extended TAR absolute path")
     Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/symlink-entry.tar", "extended TAR symbolic link entry")
 
+    Dim duplicateArchive As New Archive("./out/archive-security-fixtures/duplicate-names.zip")
+    Dim duplicateEntry As ArchiveEntry
+    Dim duplicateCount As Integer
+    Set duplicateEntry = duplicateArchive.GetFirstEntry()
+    While duplicateEntry Is Not Nothing
+        duplicateCount = duplicateCount + 1
+        If duplicateCount > 2 Then Error 5, "Archive duplicate-name iterator did not terminate"
+        Set duplicateEntry = duplicateArchive.GetNextEntry(duplicateEntry)
+    Wend
+    If duplicateCount <> 2 Then Error 5, "Archive duplicate-name iterator did not return both entries"
+
     Dim output As New Archive("./out/archive-security-fixtures/symlink-source-test.zip")
     output.Create("zip")
     output.AddFolder("./out/archive-security-fixtures/source", "source", True)
