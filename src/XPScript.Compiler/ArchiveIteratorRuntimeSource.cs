@@ -7,12 +7,13 @@ internal static class XPScriptArchiveIteratorRuntime
 {
     private sealed class IteratorState
     {
-        public object Owner { get; }
-        public int Ordinal { get; }
-        public IteratorState(object __xpsIteratorOwner, int __xpsIteratorOrdinal)
+        public System.Collections.Generic.List<object> Entries { get; }
+        public int Ordinal { get; set; }
+
+        public IteratorState(System.Collections.Generic.List<object> __xpsIteratorEntries)
         {
-            Owner = __xpsIteratorOwner;
-            Ordinal = __xpsIteratorOrdinal;
+            Entries = __xpsIteratorEntries;
+            Ordinal = 0;
         }
     }
 
@@ -22,8 +23,10 @@ internal static class XPScriptArchiveIteratorRuntime
     {
         if (__xpsIteratorOwner is null) return null;
         var __xpsIteratorEntries = GetEntries(__xpsIteratorOwner);
+        States.Remove(__xpsIteratorOwner);
         if (__xpsIteratorEntries.Count == 0) return null;
-        return Register(__xpsIteratorOwner, __xpsIteratorEntries[0], 0);
+        States.Add(__xpsIteratorOwner, new IteratorState(__xpsIteratorEntries));
+        return __xpsIteratorEntries[0];
     }
 
     public static object? GetNextEntry(object? __xpsIteratorOwner, object? __xpsIteratorPrevious)
@@ -31,32 +34,35 @@ internal static class XPScriptArchiveIteratorRuntime
         if (__xpsIteratorOwner is null) return null;
         if (__xpsIteratorPrevious is null) return GetFirstEntry(__xpsIteratorOwner);
 
-        var __xpsIteratorEntries = GetEntries(__xpsIteratorOwner);
-        var __xpsIteratorNextOrdinal = ResolveNextOrdinal(__xpsIteratorOwner, __xpsIteratorPrevious, __xpsIteratorEntries);
-        if (__xpsIteratorNextOrdinal < 0 || __xpsIteratorNextOrdinal >= __xpsIteratorEntries.Count) return null;
-        return Register(__xpsIteratorOwner, __xpsIteratorEntries[__xpsIteratorNextOrdinal], __xpsIteratorNextOrdinal);
+        if (!States.TryGetValue(__xpsIteratorOwner, out var __xpsIteratorState))
+            return GetNextWithoutState(__xpsIteratorOwner, __xpsIteratorPrevious);
+
+        var __xpsIteratorNextOrdinal = __xpsIteratorState.Ordinal + 1;
+        if (__xpsIteratorNextOrdinal >= __xpsIteratorState.Entries.Count)
+        {
+            States.Remove(__xpsIteratorOwner);
+            return null;
+        }
+
+        __xpsIteratorState.Ordinal = __xpsIteratorNextOrdinal;
+        return __xpsIteratorState.Entries[__xpsIteratorNextOrdinal];
     }
 
-    private static int ResolveNextOrdinal(object __xpsIteratorOwner, object __xpsIteratorPrevious, System.Collections.Generic.IReadOnlyList<object> __xpsIteratorEntries)
+    private static object? GetNextWithoutState(object __xpsIteratorOwner, object __xpsIteratorPrevious)
     {
-        if (States.TryGetValue(__xpsIteratorPrevious, out var __xpsIteratorState) && object.ReferenceEquals(__xpsIteratorState.Owner, __xpsIteratorOwner))
-            return __xpsIteratorState.Ordinal + 1;
-
+        var __xpsIteratorEntries = GetEntries(__xpsIteratorOwner);
         for (var __xpsIteratorIndex = 0; __xpsIteratorIndex < __xpsIteratorEntries.Count; __xpsIteratorIndex++)
-            if (object.ReferenceEquals(__xpsIteratorEntries[__xpsIteratorIndex], __xpsIteratorPrevious)) return __xpsIteratorIndex + 1;
+            if (object.ReferenceEquals(__xpsIteratorEntries[__xpsIteratorIndex], __xpsIteratorPrevious))
+                return __xpsIteratorIndex + 1 < __xpsIteratorEntries.Count ? __xpsIteratorEntries[__xpsIteratorIndex + 1] : null;
 
         var __xpsIteratorPreviousName = GetFullName(__xpsIteratorPrevious);
-        if (__xpsIteratorPreviousName is null) return -1;
+        if (__xpsIteratorPreviousName is null) return null;
         for (var __xpsIteratorIndex = 0; __xpsIteratorIndex < __xpsIteratorEntries.Count; __xpsIteratorIndex++)
-            if (string.Equals(GetFullName(__xpsIteratorEntries[__xpsIteratorIndex]), __xpsIteratorPreviousName, StringComparison.OrdinalIgnoreCase)) return __xpsIteratorIndex + 1;
-        return -1;
-    }
-
-    private static object Register(object __xpsIteratorOwner, object __xpsIteratorEntry, int __xpsIteratorOrdinal)
-    {
-        States.Remove(__xpsIteratorEntry);
-        States.Add(__xpsIteratorEntry, new IteratorState(__xpsIteratorOwner, __xpsIteratorOrdinal));
-        return __xpsIteratorEntry;
+        {
+            if (!string.Equals(GetFullName(__xpsIteratorEntries[__xpsIteratorIndex]), __xpsIteratorPreviousName, StringComparison.OrdinalIgnoreCase)) continue;
+            return __xpsIteratorIndex + 1 < __xpsIteratorEntries.Count ? __xpsIteratorEntries[__xpsIteratorIndex + 1] : null;
+        }
+        return null;
     }
 
     private static System.Collections.Generic.List<object> GetEntries(object __xpsIteratorOwner)
