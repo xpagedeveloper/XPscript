@@ -87,8 +87,8 @@ if (!generated.Contains("TryGetProperty(\"breakpoints\"", StringComparison.Ordin
     throw new Exception("Runtime breakpoint rule payload parsing is incomplete.");
 if (!generated.Contains("case \"setGlobalConditionBreakpoints\"", StringComparison.Ordinal) ||
     !generated.Contains("GlobalConditionBreakpointRule", StringComparison.Ordinal) ||
-    !generated.Contains("EvaluateGlobalConditionBreakpointsLocked", StringComparison.Ordinal) ||
-    !generated.Contains("_pendingGlobalCondition", StringComparison.Ordinal))
+    !generated.Contains("EvaluateGlobalConditionBreakpoints", StringComparison.Ordinal) ||
+    !generated.Contains("var globalCondition = EvaluateGlobalConditionBreakpoints();", StringComparison.Ordinal))
     throw new Exception("Global condition breakpoint runtime support is missing.");
 if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ordinal))
     throw new Exception("Exception breakpoint protocol command is missing.");
