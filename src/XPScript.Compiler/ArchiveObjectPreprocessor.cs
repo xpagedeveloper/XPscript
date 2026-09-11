@@ -4,11 +4,10 @@ namespace XPScript.Compiler;
 
 internal sealed class ArchiveObjectPreprocessor
 {
-    private static readonly string[] FeatureMarkers = ["Archive", "ArchiveEntry"];
-
     public string Transform(string source)
     {
-        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
+        var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
+        if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, "Archive", "ArchiveEntry")) return source;
 
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 4);
