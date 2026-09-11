@@ -42,4 +42,20 @@ Require(!string.Equals(oldRoot, newRoot, StringComparison.OrdinalIgnoreCase), "d
 Require(oldRoot.Contains("0.9.3-beta", StringComparison.Ordinal), "old patch root must include exact XPScript version");
 Require(newRoot.Contains("0.9.4-beta", StringComparison.Ordinal), "new patch root must include exact XPScript version");
 
+var vulnerable = new ApplicationPackageVersionSecurity(true, 1, "high");
+var secure = new ApplicationPackageVersionSecurity(true, 0);
+var unknown = new ApplicationPackageVersionSecurity(false, 0);
+Require(ApplicationPackagePatchSecurity.Classify(vulnerable, secure, true) == ApplicationPackagePatchSecurityKind.SecurityPatch,
+    "vulnerable baseline fixed by candidate must be a security patch");
+Require(ApplicationPackagePatchSecurity.Classify(secure, secure, true) == ApplicationPackagePatchSecurityKind.MaintenancePatch,
+    "secure baseline with newer secure candidate must be maintenance");
+Require(ApplicationPackagePatchSecurity.Classify(vulnerable, vulnerable, true) == ApplicationPackagePatchSecurityKind.VulnerabilityRemains,
+    "candidate that remains vulnerable must not be called a security patch");
+Require(ApplicationPackagePatchSecurity.Classify(vulnerable, vulnerable, false) == ApplicationPackagePatchSecurityKind.VulnerableNoCompatiblePatch,
+    "vulnerable baseline without a candidate must be reported");
+Require(ApplicationPackagePatchSecurity.Classify(secure, secure, false) == ApplicationPackagePatchSecurityKind.AlreadySecure,
+    "secure baseline without a candidate must be reported as already secure");
+Require(ApplicationPackagePatchSecurity.Classify(unknown, secure, true) == ApplicationPackagePatchSecurityKind.SecurityUnknown,
+    "unavailable security metadata must be reported as unknown");
+
 Console.WriteLine("Application package patch policy probe passed.");
