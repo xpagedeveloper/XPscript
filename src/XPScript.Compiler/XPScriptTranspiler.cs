@@ -79,7 +79,8 @@ public sealed class XPScriptTranspiler
         var usesSqlite = runtimeFeatures.Sqlite || source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
-        var usesArchive = source.Contains("XPScriptArchive", StringComparison.Ordinal);
+        var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
+        var usesArchive = usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
@@ -130,6 +131,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         if (usesArchive) generated += "\n\n" + ArchiveRuntimeSource.Code + "\n";
+        if (usesExtendedArchive) generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresJson || usesAi)
         {
             generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
