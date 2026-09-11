@@ -271,6 +271,23 @@ internal sealed class XPScriptExtendedArchiveV2
 
     private List<RebuildEntry> LoadRebuildEntries()
     {
+        if (Format.Equals("TAR", StringComparison.OrdinalIgnoreCase))
+        {
+            var snapshots = XPScriptArchiveExtendedReader.Snapshots(Path, Format, Password, MaxEntries, MaxExtractSize, MaxCompressionRatio);
+            var tarResult = new List<RebuildEntry>(snapshots.Count);
+            foreach (var entry in snapshots)
+            {
+                if (entry.IsDirectory)
+                {
+                    tarResult.Add(new RebuildEntry(Normalize(entry.FullName.TrimEnd('/') + "/", true), null, entry.Modified, true));
+                    continue;
+                }
+                var bytes = XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, Normalize(entry.FullName, true), MaxExtractSize, MaxCompressionRatio);
+                tarResult.Add(new RebuildEntry(Normalize(entry.FullName, true), bytes, entry.Modified, false));
+            }
+            return tarResult;
+        }
+
         var result = new List<RebuildEntry>();
         var values = _inner.Entries;
         if (!values.IsAllocated) return result;
