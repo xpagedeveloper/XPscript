@@ -164,10 +164,16 @@ internal sealed class XPScriptExtendedMemoryArchive
 
     private string DetectFormat()
     {
+        if (IsSevenZipData()) return "7Z";
         using var reader = OpenReader();
         var type = reader.Value.GetType().GetProperty("Type")?.GetValue(reader.Value)?.ToString();
         return string.IsNullOrWhiteSpace(type) ? "EXTENDED" : type.ToUpperInvariant();
     }
+
+    private bool IsSevenZipData() =>
+        _data.Length >= 6
+        && _data[0] == 0x37 && _data[1] == 0x7A && _data[2] == 0xBC
+        && _data[3] == 0xAF && _data[4] == 0x27 && _data[5] == 0x1C;
 
     private ReaderHandle OpenReader()
     {
@@ -177,14 +183,24 @@ internal sealed class XPScriptExtendedMemoryArchive
             var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
             var options = Activator.CreateInstance(optionsType)!;
             if (!string.IsNullOrEmpty(Password)) optionsType.GetProperty("Password")?.SetValue(options, Password);
-            var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
-            var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .FirstOrDefault(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
-                ?? throw new MissingMethodException("SharpCompress ReaderFactory.OpenReader(Stream, ReaderOptions) was not found.");
             var stream = new System.IO.MemoryStream(_data, writable: false);
             try
             {
-                var reader = method.Invoke(null, [stream, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the in-memory archive reader.");
+                if (IsSevenZipData())
+                {
+                    var archiveFactoryType = assembly.GetType("SharpCompress.Archives.ArchiveFactory", throwOnError: true)!;
+                    var openArchive = archiveFactoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                        .FirstOrDefault(m => m.Name == "OpenArchive" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
+                        ?? throw new MissingMethodException("ArchiveFactory.OpenArchive(Stream, ReaderOptions) was not found.");
+                    var archive = openArchive.Invoke(null, [stream, options]) ?? throw new XPScriptRuntimeException(5, "Unable to open the in-memory 7z archive.");
+                    return new ReaderHandle(new ArchiveReaderAdapter(archive), stream);
+                }
+
+                var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
+                var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    .FirstOrDefault(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
+                    ?? throw new MissingMethodException("ReaderFactory.OpenReader(Stream, ReaderOptions) was not found.");
+                var reader = method.Invoke(null, [stream, options]) ?? throw new XPScriptRuntimeException(5, "Unable to open the in-memory archive reader.");
                 return new ReaderHandle(reader, stream);
             }
             catch { stream.Dispose(); throw; }
@@ -200,8 +216,8 @@ internal sealed class XPScriptExtendedMemoryArchive
     }
 
     private static bool MoveNext(object reader) => Convert.ToBoolean(reader.GetType().GetMethod("MoveToNextEntry", Type.EmptyTypes)?.Invoke(reader, null) ?? false, System.Globalization.CultureInfo.InvariantCulture);
-    private static object CurrentEntry(object reader) => reader.GetType().GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "SharpCompress reader entry is unavailable.");
-    private static System.IO.Stream OpenEntryStream(object reader) => (System.IO.Stream)(reader.GetType().GetMethod("OpenEntryStream", Type.EmptyTypes)?.Invoke(reader, null) ?? throw new XPScriptRuntimeException(5, "SharpCompress entry stream is unavailable."));
+    private static object CurrentEntry(object reader) => reader.GetType().GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "Archive reader entry is unavailable.");
+    private static System.IO.Stream OpenEntryStream(object reader) => (System.IO.Stream)(reader.GetType().GetMethod("OpenEntryStream", Type.EmptyTypes)?.Invoke(reader, null) ?? throw new XPScriptRuntimeException(5, "Archive entry stream is unavailable."));
 
     private static MemoryEntryProxy Proxy(object entry, int index)
     {
@@ -322,6 +338,48 @@ internal sealed class XPScriptExtendedMemoryArchive
         private readonly System.IO.Stream _stream;
         public ReaderHandle(object value, System.IO.Stream stream) { Value = value; _stream = stream; }
         public void Dispose() { if (Value is IDisposable disposable) disposable.Dispose(); _stream.Dispose(); }
+    }
+
+    private sealed class ArchiveReaderAdapter : IDisposable
+    {
+        private readonly object _archive;
+        private readonly System.Collections.IEnumerator _entries;
+        public object? Entry { get; private set; }
+        public string Type => "7Z";
+
+        public ArchiveReaderAdapter(object archive)
+        {
+            _archive = archive;
+            var values = archive.GetType().GetProperty("Entries")?.GetValue(archive) as System.Collections.IEnumerable
+                ?? throw new XPScriptRuntimeException(5, "Unable to enumerate the in-memory 7z archive.");
+            _entries = values.GetEnumerator();
+        }
+
+        public bool MoveToNextEntry()
+        {
+            if (!_entries.MoveNext())
+            {
+                Entry = null;
+                return false;
+            }
+            Entry = _entries.Current;
+            return true;
+        }
+
+        public System.IO.Stream OpenEntryStream()
+        {
+            var entry = Entry ?? throw new XPScriptRuntimeException(5, "Archive reader entry is unavailable.");
+            var method = entry.GetType().GetMethod("OpenEntryStream", Type.EmptyTypes)
+                ?? entry.GetType().GetInterfaces().SelectMany(x => x.GetMethods()).FirstOrDefault(m => m.Name == "OpenEntryStream" && m.GetParameters().Length == 0)
+                ?? throw new XPScriptRuntimeException(5, "Archive entry stream is unavailable.");
+            return (System.IO.Stream)(method.Invoke(entry, null) ?? throw new XPScriptRuntimeException(5, "Archive entry stream is unavailable."));
+        }
+
+        public void Dispose()
+        {
+            if (_entries is IDisposable enumerableDisposable) enumerableDisposable.Dispose();
+            if (_archive is IDisposable archiveDisposable) archiveDisposable.Dispose();
+        }
     }
 
     private sealed class MemoryEntryProxy
