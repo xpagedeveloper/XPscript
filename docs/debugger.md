@@ -58,6 +58,17 @@ Hit-count breakpoints support forms such as:
 > 20
 ```
 
+Global condition breakpoints are exposed by editor integrations as function breakpoints, because they are not tied to a source line. Enter the condition itself as the function-breakpoint name, for example:
+
+```text
+Counter = 10
+Counter >= 100
+Ready = True
+Name = "Example"
+```
+
+The runtime observes scalar value changes and edge-triggers a global condition when it changes from false to true. It does not stop on the assignment itself. Instead it records a pending stop and pauses on the next executable XPscript statement, so the editor highlights the line after the value change. The condition will not repeatedly stop execution while it remains true; it can trigger again after first becoming false and then true again.
+
 Log points write to the Debug Console without stopping. Braced variable names are expanded from the runtime's latest observed values, for example:
 
 ```text
