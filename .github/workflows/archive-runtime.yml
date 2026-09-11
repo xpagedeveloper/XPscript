@@ -35,6 +35,13 @@ jobs:
           dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Inspect generated Archive source
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release -- ./demo/archive/archive-zip.xps ./out/archive-zip-generated.cs
+          grep -n -E '(^|[^A-Za-z0-9_])(object|var|using var)[[:space:]]+archive\b|\barchive[[:space:]]*=' ./out/archive-zip-generated.cs || true
+
       - name: Generate Archive security fixtures
         shell: pwsh
         run: |
