@@ -78,19 +78,34 @@ internal sealed class XPScriptArchive
         EnsureWritable();
         var source = XPScriptFileSystemRuntime.ResolvePath(sourcePath);
         if (!System.IO.Directory.Exists(source)) throw new XPScriptRuntimeException(76, "Archive source folder was not found.");
-        var rootName = archivePath is null ? System.IO.Path.GetFileName(source.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)) : XPScriptRuntime.CStr(archivePath);
+        if ((System.IO.File.GetAttributes(source) & System.IO.FileAttributes.ReparsePoint) != 0)
+            throw new XPScriptRuntimeException(5, "Archive.AddFolder does not allow a symbolic link or reparse point as the source folder.");
+
+        var rootName = archivePath is null
+            ? System.IO.Path.GetFileName(source.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+            : XPScriptRuntime.CStr(archivePath);
         rootName = Normalize(rootName).TrimEnd('/');
-        var search = recursive ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly;
-        foreach (var directory in System.IO.Directory.EnumerateDirectories(source, "*", search))
+        AddDirectoryEntry(rootName + "/");
+        AddFolderTree(source, source, rootName, recursive);
+    }
+
+    private void AddFolderTree(string sourceRoot, string currentDirectory, string archiveRoot, bool recursive)
+    {
+        foreach (var file in System.IO.Directory.EnumerateFiles(currentDirectory, "*", System.IO.SearchOption.TopDirectoryOnly))
+        {
+            if ((System.IO.File.GetAttributes(file) & System.IO.FileAttributes.ReparsePoint) != 0) continue;
+            var relative = System.IO.Path.GetRelativePath(sourceRoot, file).Replace('\\', '/');
+            AddFile(file, Normalize(archiveRoot + "/" + relative));
+        }
+
+        if (!recursive) return;
+
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(currentDirectory, "*", System.IO.SearchOption.TopDirectoryOnly))
         {
             if ((System.IO.File.GetAttributes(directory) & System.IO.FileAttributes.ReparsePoint) != 0) continue;
-            var relative = System.IO.Path.GetRelativePath(source, directory).Replace('\\', '/');
-            AddDirectoryEntry(Normalize(rootName + "/" + relative + "/"));
-        }
-        foreach (var file in System.IO.Directory.EnumerateFiles(source, "*", search))
-        {
-            var relative = System.IO.Path.GetRelativePath(source, file).Replace('\\', '/');
-            AddFile(file, Normalize(rootName + "/" + relative));
+            var relative = System.IO.Path.GetRelativePath(sourceRoot, directory).Replace('\\', '/');
+            AddDirectoryEntry(Normalize(archiveRoot + "/" + relative + "/"));
+            AddFolderTree(sourceRoot, directory, archiveRoot, true);
         }
     }
 
