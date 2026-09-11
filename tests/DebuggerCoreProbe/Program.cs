@@ -64,8 +64,8 @@ if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.Print", St
     throw new Exception("Debugger.Print arguments are not guarded when debugging is disabled.");
 if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar", StringComparison.Ordinal))
     throw new Exception("Debugger.UpdateVar arguments are not guarded when debugging is disabled.");
-if (!generated.Contains("ProtocolVersion = 6", StringComparison.Ordinal))
-    throw new Exception("Debugger protocol v6 is not emitted.");
+if (!generated.Contains("ProtocolVersion = 7", StringComparison.Ordinal))
+    throw new Exception("Debugger protocol v7 is not emitted.");
 if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsGlobalConditionBreakpoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsDebuggerVariables = true", StringComparison.Ordinal) ||
