@@ -45,7 +45,7 @@ Sub Main()
     Print "ARCHIVE_SECURITY_FIXTURES=OK"
 End Sub
 
-Sub ExpectOpenFailure(path As String, maxEntries As Integer, maxSize As Long, maxRatio As Double, label As String)
+Sub ExpectOpenFailure(ByVal path As String, ByVal maxEntries As Integer, ByVal maxSize As Long, ByVal maxRatio As Double, ByVal label As String)
     Dim archive As New Archive(path)
     archive.MaxEntries = maxEntries
     archive.MaxExtractSize = maxSize
@@ -63,7 +63,7 @@ Sub ExpectOpenFailure(path As String, maxEntries As Integer, maxSize As Long, ma
     If Len(openMessage) = 0 Then Error 5, "Archive security fixture returned an empty diagnostic: " & label
 End Sub
 
-Sub ExpectExtendedOpenFailure(path As String, label As String)
+Sub ExpectExtendedOpenFailure(ByVal path As String, ByVal label As String)
     Dim archive As New Archive(path, True)
 
     Dim openErr As Integer
