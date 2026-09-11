@@ -47,11 +47,11 @@ public static class ApplicationPackagePatchSecurity
 
     public static string ToDisplayText(ApplicationPackagePatchSecurityKind kind) => kind switch
     {
-        ApplicationPackagePatchSecurityKind.AlreadySecure => "already secure",
+        ApplicationPackagePatchSecurityKind.AlreadySecure => "no known vulnerabilities",
         ApplicationPackagePatchSecurityKind.SecurityPatch => "security patch",
         ApplicationPackagePatchSecurityKind.MaintenancePatch => "maintenance patch",
-        ApplicationPackagePatchSecurityKind.VulnerabilityRemains => "vulnerability remains",
-        ApplicationPackagePatchSecurityKind.VulnerableNoCompatiblePatch => "vulnerable; no compatible patch",
+        ApplicationPackagePatchSecurityKind.VulnerabilityRemains => "known vulnerability remains",
+        ApplicationPackagePatchSecurityKind.VulnerableNoCompatiblePatch => "known vulnerability; no compatible patch",
         _ => "security status unavailable"
     };
 }
