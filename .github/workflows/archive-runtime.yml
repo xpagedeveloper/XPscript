@@ -63,7 +63,7 @@ jobs:
           Run-XPScript ./demo/archive/archive-memory.xps archive-memory
           Run-XPScript ./demo/archive/archive-iterator.xps archive-iterator
           Run-XPScript ./demo/archive/archive-edge-cases.xps archive-edge-cases
-          Run-XPScript ./demo/archive/archive-security-fixtures.xps archive-security-fixtures
+          Run-XPScript ./demo/archive/archive-security-fixtures.xps archive-security-check
 
           Run-XPScript ./demo/archive/archive-extended-memory.xps archive-extended-memory
           Run-XPScript ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write
