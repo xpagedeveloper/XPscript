@@ -4,8 +4,8 @@ namespace XPScript.Compiler;
 
 internal sealed class ArchiveObjectPreprocessor
 {
-    private const string FirstEntryHelper = "XpsCompilerGeneratedArchiveGetFirstEntry";
-    private const string NextEntryHelper = "XpsCompilerGeneratedArchiveGetNextEntry";
+    private const string FirstEntryHelper = "XPScriptArchiveIteratorRuntime.GetFirstEntry";
+    private const string NextEntryHelper = "XPScriptArchiveIteratorRuntime.GetNextEntry";
 
     public string Transform(string source)
     {
@@ -15,10 +15,9 @@ internal sealed class ArchiveObjectPreprocessor
         new ArchiveCapabilityValidator().Validate(source, "archive.xps");
 
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var output = new List<string>(lines.Length + 32);
+        var output = new List<string>(lines.Length + 16);
         var archiveVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var archiveEntryVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var needsIteratorHelpers = false;
 
         foreach (var raw in lines)
         {
@@ -57,18 +56,10 @@ internal sealed class ArchiveObjectPreprocessor
             {
                 var escaped = Regex.Escape(archiveName);
                 var firstPattern = $@"\b{escaped}\s*\.\s*GetFirstEntry\s*\(\s*\)";
-                if (Regex.IsMatch(rewritten, firstPattern, RegexOptions.IgnoreCase))
-                {
-                    rewritten = Regex.Replace(rewritten, firstPattern, $"{FirstEntryHelper}({archiveName})", RegexOptions.IgnoreCase);
-                    needsIteratorHelpers = true;
-                }
+                rewritten = Regex.Replace(rewritten, firstPattern, $"{FirstEntryHelper}({archiveName})", RegexOptions.IgnoreCase);
 
                 var nextPattern = $@"\b{escaped}\s*\.\s*GetNextEntry\s*\(\s*([^()]*)\s*\)";
-                if (Regex.IsMatch(rewritten, nextPattern, RegexOptions.IgnoreCase))
-                {
-                    rewritten = Regex.Replace(rewritten, nextPattern, m => $"{NextEntryHelper}({archiveName}, {m.Groups[1].Value.Trim()})", RegexOptions.IgnoreCase);
-                    needsIteratorHelpers = true;
-                }
+                rewritten = Regex.Replace(rewritten, nextPattern, m => $"{NextEntryHelper}({archiveName}, {m.Groups[1].Value.Trim()})", RegexOptions.IgnoreCase);
             }
 
             foreach (var entryName in archiveEntryVariables.OrderByDescending(x => x.Length))
@@ -86,51 +77,13 @@ internal sealed class ArchiveObjectPreprocessor
                 || archiveEntryVariables.Contains(set.Groups[1].Value)
                 || set.Groups[2].Value.Contains("XPScriptArchive", StringComparison.Ordinal)
                 || set.Groups[2].Value.Contains("XPScriptExtendedArchive", StringComparison.Ordinal)
-                || set.Groups[2].Value.Contains(FirstEntryHelper, StringComparison.Ordinal)
-                || set.Groups[2].Value.Contains(NextEntryHelper, StringComparison.Ordinal)))
+                || set.Groups[2].Value.Contains("XPScriptArchiveIteratorRuntime", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
         }
 
-        if (needsIteratorHelpers)
-        {
-            output.Add("");
-            output.AddRange(BuildIteratorHelpers());
-        }
-
         return string.Join(Environment.NewLine, output);
-    }
-
-    private static IEnumerable<string> BuildIteratorHelpers()
-    {
-        return new[]
-        {
-            $"Function {FirstEntryHelper}(ByVal archive As Variant) As Variant",
-            "    ForAll candidate In archive.Entries",
-            $"        Set {FirstEntryHelper} = candidate",
-            "        Exit Function",
-            "    End ForAll",
-            $"    Set {FirstEntryHelper} = Nothing",
-            "End Function",
-            "",
-            $"Function {NextEntryHelper}(ByVal archive As Variant, ByVal previousEntry As Variant) As Variant",
-            "    If previousEntry Is Nothing Then",
-            $"        Set {NextEntryHelper} = {FirstEntryHelper}(archive)",
-            "        Exit Function",
-            "    End If",
-            "    Dim foundPrevious As Boolean",
-            "    foundPrevious = False",
-            "    ForAll candidate In archive.Entries",
-            "        If foundPrevious Then",
-            $"            Set {NextEntryHelper} = candidate",
-            "            Exit Function",
-            "        End If",
-            "        If candidate.FullName = previousEntry.FullName Then foundPrevious = True",
-            "    End ForAll",
-            $"    Set {NextEntryHelper} = Nothing",
-            "End Function"
-        };
     }
 
     private static string CreateArchiveExpression(string rawArguments)
