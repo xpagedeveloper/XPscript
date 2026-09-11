@@ -116,6 +116,7 @@ public static class ApplicationPackagePatchStore
             if (common.Count == 0) return null;
         }
 
+        if (common is null || common.Count == 0) return null;
         return common
             .Select(version => (Text: version, Version: Version.Parse(version)))
             .OrderByDescending(candidate => candidate.Version)
