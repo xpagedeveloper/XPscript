@@ -11,33 +11,50 @@ permissions:
   contents: read
 
 jobs:
-  archive-linux:
+  archive-platform-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Archive compiler probes
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
+          dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
+      - name: Compile and run core Archive smoke tests
+        shell: pwsh
+        run: |
+          function Run-XPScript([string] $source, [string] $name) {
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o "./out/$name" --framework-dependent
+            if ($IsWindows) { & "./out/$name.exe" } else { & "./out/$name" }
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          Run-XPScript ./demo/archive/archive-zip.xps archive-zip
+          Run-XPScript ./demo/archive/archive-memory.xps archive-memory
+          Run-XPScript ./demo/archive/archive-iterator.xps archive-iterator
+
+  archive-extended-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Restore compiler
-        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
-        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Verify Archive preprocessing and dependency injection
-        run: dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
-      - name: Verify Archive capability compile errors
-        run: dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
-      - name: Compile and run ZIP
         run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-zip.xps -o ./out/archive-zip --framework-dependent
-          ./out/archive-zip
-      - name: Compile and run Archive iterator API
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-iterator.xps -o ./out/archive-iterator --framework-dependent
-          ./out/archive-iterator
-      - name: Compile and run in-memory ZIP
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-memory.xps -o ./out/archive-memory --framework-dependent
-          ./out/archive-memory
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile and run extended in-memory read
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory.xps -o ./out/archive-extended-memory --framework-dependent
