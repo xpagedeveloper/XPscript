@@ -1,6 +1,7 @@
 namespace XPScript.Compiler;
 
 public sealed record ApplicationPackageReference(string Name, string Version, string Reason);
+public sealed record ApplicationPackagePatchGroup(string Name, IReadOnlyList<string> Packages);
 
 public static class ApplicationDependencyCatalog
 {
@@ -25,6 +26,19 @@ public static class ApplicationDependencyCatalog
         new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"),
         new("MimeKit", MimeKitVersion, "Notes MIME support")
     ];
+
+    public static IReadOnlyList<ApplicationPackagePatchGroup> PatchGroups { get; } =
+    [
+        new("Avalonia", ["Avalonia", "Avalonia.Desktop", "Avalonia.Themes.Fluent", "Avalonia.Controls.WebView"])
+    ];
+
+    public static ApplicationPackagePatchGroup? FindPatchGroup(string packageName) =>
+        PatchGroups.FirstOrDefault(group => group.Packages.Contains(packageName, StringComparer.OrdinalIgnoreCase));
+
+    public static IReadOnlyList<ApplicationPackageReference> GetPatchGroupPackages(ApplicationPackagePatchGroup group) =>
+        group.Packages
+            .Select(name => Defaults.First(package => package.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
 
     public static string ResolveVersion(string packageName, string baselineVersion) =>
         ApplicationPackagePatchStore.ResolveVersion(packageName, baselineVersion);
