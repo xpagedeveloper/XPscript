@@ -65,6 +65,8 @@ Sub Main()
 End Sub
 """);
 
+ExpectIteratorSuccess();
+
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
 
 void ExpectExtendedFailure(string name, string source)
@@ -103,4 +105,41 @@ void ExpectSuccess(string name, string source)
     var generated = transpiler.Transpile(source, name + ".xps", "win-x64");
     if (!generated.Contains("XPScriptExtendedArchiveWriterFactory", StringComparison.Ordinal))
         throw new Exception(name + " did not emit extended Archive support.");
+}
+
+void ExpectIteratorSuccess()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("one.txt", "1")
+    archive.AddText("two.txt", "2")
+
+    Dim count As Integer
+    Dim item As Variant
+    ForAll item In archive.Entries
+        count = count + 1
+    End ForAll
+
+    Dim entry As ArchiveEntry
+    Set entry = archive.GetFirstEntry()
+    While entry Is Not Nothing
+        If entry.IsFile Then Print entry.FullName
+        If entry.IsFolder Then Print entry.FullName
+        Set entry = archive.GetNextEntry(entry)
+    Wend
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "archive-iterator-probe.xps", "win-x64");
+    if (!generated.Contains("XpsCompilerGeneratedArchiveGetFirstEntry", StringComparison.Ordinal)
+        || !generated.Contains("XpsCompilerGeneratedArchiveGetNextEntry", StringComparison.Ordinal))
+        throw new Exception("Archive iterator helpers were not emitted.");
+    if (generated.Contains(".IsFile", StringComparison.Ordinal)
+        || generated.Contains(".IsFolder", StringComparison.Ordinal))
+        throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to IsDirectory.");
+    if (!generated.Contains(".Entries", StringComparison.Ordinal))
+        throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
 }
