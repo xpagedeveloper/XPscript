@@ -136,7 +136,12 @@ public sealed class XPScriptTranspiler
             generated += "\n\n" + ArchiveRuntimeSource.Code + "\n";
             generated += "\n\n" + ArchiveMemoryRuntimeSource.Code + "\n";
         }
-        if (usesExtendedArchive) generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n";
+        if (usesExtendedArchive)
+        {
+            generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveExtendedWriterRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveExtendedWriterFactoryRuntimeSource.Code + "\n";
+        }
         if (runtimeFeatures.RequiresJson || usesAi)
         {
             generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";
