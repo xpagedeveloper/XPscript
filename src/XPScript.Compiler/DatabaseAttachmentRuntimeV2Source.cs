@@ -297,7 +297,13 @@ internal static class XPScriptAttachmentHttpRuntime
             throw new XPScriptRuntimeException(5, "Attachment HTTP URL must be absolute http:// or https://.");
         if (body is not null && body.LongLength > XPScriptAttachmentFileRuntime.MaxAttachmentBytes + 1024 * 1024)
             throw new XPScriptRuntimeException(5, "Attachment HTTP request exceeds the supported size limit.");
-        using var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+        using var handler = new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+        };
         using var client = new System.Net.Http.HttpClient(handler) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
         if (body is not null)

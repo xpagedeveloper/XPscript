@@ -629,7 +629,10 @@ internal sealed class NotesHTTPRequest
         var handler = new System.Net.Http.HttpClientHandler
         {
             AllowAutoRedirect = MaxRedirects > 0,
-            MaxAutomaticRedirections = Math.Max(1, MaxRedirects)
+            MaxAutomaticRedirections = Math.Max(1, MaxRedirects),
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
         };
         if (_proxyHost is null) return handler;
 

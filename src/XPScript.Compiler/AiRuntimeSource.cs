@@ -47,7 +47,13 @@ internal sealed class XPScriptAi : IDisposable
         if (_apiKey.IndexOfAny(['\r', '\n', '\0']) >= 0 || _apiKey.Length > 16 * 1024)
             throw new XPScriptRuntimeException(5, "XPAi API key is invalid.");
 
-        _handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+        _handler = new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+        };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
             Timeout = System.Threading.Timeout.InfiniteTimeSpan

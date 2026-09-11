@@ -9,7 +9,15 @@ namespace XPScript.UI.Desktop;
 internal static class DesktopImageHost
 {
     private const int MaximumImageBytes = 32 * 1024 * 1024;
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly HttpClient Http = new(new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                 System.Net.DecompressionMethods.Deflate |
+                                 System.Net.DecompressionMethods.Brotli
+    })
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
 
     public static Control Create(string source, string altText)
     {
