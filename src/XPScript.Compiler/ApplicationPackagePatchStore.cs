@@ -16,10 +16,13 @@ public static class ApplicationPackagePatchStore
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string CurrentXPScriptVersion => ApplicationDependencyCatalog.XPScriptReleaseVersion;
-    public static string RootDirectory => Path.Combine(GetUserDataRoot(), "XPScript", "package-patches", Sanitize(CurrentXPScriptVersion));
+    public static string RootDirectory => RootDirectoryForVersion(CurrentXPScriptVersion);
     public static string PackageDirectory => Path.Combine(RootDirectory, "packages");
     public static string ManifestPath => Path.Combine(RootDirectory, ManifestFileName);
     public static string? ActivePackageSource => GetPatches().Count == 0 ? null : PackageDirectory;
+
+    public static string RootDirectoryForVersion(string xpscriptVersion) =>
+        Path.Combine(GetUserDataRoot(), "XPScript", "package-patches", Sanitize(xpscriptVersion));
 
     public static IReadOnlyList<ApplicationPackagePatch> GetPatches()
     {
@@ -78,6 +81,46 @@ public static class ApplicationPackagePatchStore
     {
         if (!TryParseStableVersion(baselineVersion, out var baseline) || !TryParseStableVersion(candidateVersion, out var candidate)) return false;
         return baseline.Major == candidate.Major && baseline.Minor == candidate.Minor && candidate >= baseline;
+    }
+
+    public static string? SelectLatestCompatiblePatch(string baselineVersion, IEnumerable<string> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        return candidates
+            .Where(candidate => IsCompatiblePatch(baselineVersion, candidate))
+            .Select(candidate => (Text: candidate, Version: Version.Parse(candidate)))
+            .OrderByDescending(candidate => candidate.Version)
+            .Select(candidate => candidate.Text)
+            .FirstOrDefault();
+    }
+
+    public static string? SelectLatestCommonCompatiblePatch(
+        IReadOnlyList<ApplicationPackageReference> packages,
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>> availableVersions)
+    {
+        ArgumentNullException.ThrowIfNull(packages);
+        ArgumentNullException.ThrowIfNull(availableVersions);
+        if (packages.Count == 0) return null;
+
+        HashSet<string>? common = null;
+        foreach (var package in packages)
+        {
+            if (!availableVersions.TryGetValue(package.Name, out var versions)) return null;
+            var compatible = versions
+                .Where(version => IsCompatiblePatch(package.Version, version))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (common is null)
+                common = compatible;
+            else
+                common.IntersectWith(compatible);
+            if (common.Count == 0) return null;
+        }
+
+        return common
+            .Select(version => (Text: version, Version: Version.Parse(version)))
+            .OrderByDescending(candidate => candidate.Version)
+            .Select(candidate => candidate.Text)
+            .FirstOrDefault();
     }
 
     public static string ComputeSha256(string filePath)
