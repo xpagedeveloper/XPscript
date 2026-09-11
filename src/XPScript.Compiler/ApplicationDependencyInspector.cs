@@ -17,7 +17,9 @@ public sealed record ApplicationResolvedDependency(
 public sealed record ApplicationDependencyInspection(
     string SourceFile,
     string RuntimeIdentifier,
-    IReadOnlyList<ApplicationResolvedDependency> Dependencies)
+    IReadOnlyList<ApplicationResolvedDependency> Dependencies,
+    bool SecurityCheckAvailable = true,
+    string? SecurityCheckMessage = null)
 {
     public IReadOnlyList<ApplicationResolvedDependency> VulnerableDependencies =>
         Dependencies.Where(d => d.Vulnerabilities.Count > 0).ToArray();
@@ -72,11 +74,17 @@ public static class ApplicationDependencyInspector
             if (vulnerabilitiesOnly) args.Add("--vulnerable");
 
             var list = await RunDotnetAsync(tempRoot, args, cancellationToken).ConfigureAwait(false);
-            if (list.ExitCode != 0)
+            var unavailable = vulnerabilitiesOnly ? ApplicationSecurityAudit.ParseUnavailable(list.Output) : null;
+            if (list.ExitCode != 0 && unavailable is null)
                 throw new CompilerException("Unable to inspect application dependencies." + Environment.NewLine + list.Output);
 
-            var dependencies = ParsePackageListJson(list.Stdout, directByName);
-            return new(Path.GetFileName(sourcePath), rid, dependencies);
+            var dependencies = list.ExitCode == 0 ? ParsePackageListJson(list.Stdout, directByName) : [];
+            return new(
+                Path.GetFileName(sourcePath),
+                rid,
+                dependencies,
+                SecurityCheckAvailable: unavailable is null,
+                SecurityCheckMessage: unavailable is null ? null : $"[{unavailable.Code}] {unavailable.Message}");
         }
         finally
         {

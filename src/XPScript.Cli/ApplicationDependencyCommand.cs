@@ -37,6 +37,7 @@ internal static class ApplicationDependencyCommand
         if (json)
         {
             Console.WriteLine(JsonSerializer.Serialize(inspection, new JsonSerializerOptions { WriteIndented = true }));
+            if (securityOnly && !inspection.SecurityCheckAvailable) return 3;
             return securityOnly && inspection.VulnerableDependencies.Count > 0 ? 2 : 0;
         }
 
@@ -45,6 +46,13 @@ internal static class ApplicationDependencyCommand
 
         if (securityOnly)
         {
+            if (!inspection.SecurityCheckAvailable)
+            {
+                Console.WriteLine("Security status: UNAVAILABLE");
+                Console.WriteLine(inspection.SecurityCheckMessage ?? "NuGet vulnerability information could not be retrieved.");
+                return 3;
+            }
+
             if (inspection.VulnerableDependencies.Count == 0)
             {
                 Console.WriteLine("Security status: OK");
@@ -88,6 +96,7 @@ Usage:
 
 Checks known vulnerabilities only in the NuGet dependency graph resolved for this application.
 Returns exit code 2 when one or more vulnerable dependencies are found.
+Returns exit code 3 when NuGet vulnerability information is unavailable.
 """);
             return;
         }

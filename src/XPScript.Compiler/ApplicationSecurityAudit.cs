@@ -4,6 +4,10 @@ namespace XPScript.Compiler;
 
 internal static class ApplicationSecurityAudit
 {
+    private static readonly Regex NuGetAuditUnavailable = new(
+        @"(?:warning|error)\s+(?<code>NU1900|NU1905):\s*(?<message>[^\r\n]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex NuGetAuditWarning = new(
         @"warning\s+(?<code>NU190[1-4]):\s*Package\s+'(?<package>[^']+)'\s+(?<version>[^\s]+)\s+has\s+a\s+known\s+(?<severity>low|moderate|high|critical)\s+severity\s+vulnerability,\s+(?<advisory>https?://\S+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -12,6 +16,15 @@ internal static class ApplicationSecurityAudit
     {
         var mode = ApplicationSecurityModeContext.Current;
         if (mode == ApplicationSecurityMode.Off || string.IsNullOrWhiteSpace(buildOutput)) return;
+
+        var unavailable = ParseUnavailable(buildOutput);
+        if (unavailable is not null)
+        {
+            var message = $"Application dependency security check unavailable [{unavailable.Code}]: {unavailable.Message}";
+            if (mode == ApplicationSecurityMode.Strict)
+                throw new CompilerException(message);
+            Console.Error.WriteLine(message);
+        }
 
         var findings = Parse(buildOutput);
         if (findings.Count == 0) return;
@@ -29,6 +42,15 @@ internal static class ApplicationSecurityAudit
 
         throw new CompilerException(
             $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.");
+    }
+
+    internal static UnavailableFinding? ParseUnavailable(string buildOutput)
+    {
+        var match = NuGetAuditUnavailable.Match(buildOutput ?? string.Empty);
+        if (!match.Success) return null;
+        return new UnavailableFinding(
+            match.Groups["code"].Value.Trim().ToUpperInvariant(),
+            match.Groups["message"].Value.Trim());
     }
 
     internal static IReadOnlyList<Finding> Parse(string buildOutput)
@@ -64,5 +86,6 @@ internal static class ApplicationSecurityAudit
         _ => 0
     };
 
+    internal sealed record UnavailableFinding(string Code, string Message);
     internal sealed record Finding(string Code, string Package, string Version, string Severity, string Advisory);
 }
