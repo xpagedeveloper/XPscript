@@ -44,6 +44,7 @@ VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
 VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyArchiveConstructorModes();
+VerifyArchiveTraversalGuard();
 VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
@@ -195,6 +196,19 @@ void VerifyArchiveConstructorModes()
     }
 
     Console.WriteLine("PREPROCESSOR-ARCHIVE-CONSTRUCTOR-MODES=OK");
+}
+
+void VerifyArchiveTraversalGuard()
+{
+    const string source = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\")\n    a.AddFolder \"data\", \"data\", True\nEnd Sub\n";
+    var generated = transpiler.Transpile(source, "archive-traversal-guard.xps", "win-x64");
+    if (!generated.Contains("AddFolderTree(source, source, rootName, recursive)", StringComparison.Ordinal))
+        throw new Exception("Archive runtime did not emit explicit safe folder traversal.");
+    if (generated.Contains("SearchOption.AllDirectories", StringComparison.Ordinal))
+        throw new Exception("Archive runtime still uses recursive SearchOption.AllDirectories traversal.");
+    if (!generated.Contains("FileAttributes.ReparsePoint", StringComparison.Ordinal))
+        throw new Exception("Archive runtime does not guard reparse points during folder traversal.");
+    Console.WriteLine("PREPROCESSOR-ARCHIVE-TRAVERSAL-GUARD=OK");
 }
 
 void VerifyProfile(
