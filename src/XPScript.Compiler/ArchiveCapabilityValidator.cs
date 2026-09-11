@@ -99,9 +99,8 @@ internal sealed class ArchiveCapabilityValidator
             throw RequiresExtended(sourceName, lineNumber, original, variableName,
                 "Archive.IsEncrypted for ZIP encryption detection");
 
-        var create = Regex.Match(line,
-            $@"\b{prefix}\s*\.\s*Create\s*(?:\(\s*)?\"(?<format>[^\"]+)\"",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var createPattern = $"\\b{prefix}\\s*\\.\\s*Create\\s*(?:\\(\\s*)?\"(?<format>[^\"]+)\"";
+        var create = Regex.Match(line, createPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (create.Success)
         {
             var format = create.Groups["format"].Value.Trim().TrimStart('.');
