@@ -87,7 +87,8 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine("ARCHIVE-SECURITY-SOURCE-SYMLINK-SKIP=" + ex.GetType().Name);
+    Console.WriteLine("ARCHIVE-SECURITY-SOURCE-SYMLINK=" + ex.GetType().Name);
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) throw;
 }
 
 var extractionRoot = Path.Combine(root, "extract-root");
@@ -106,7 +107,8 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine("ARCHIVE-SECURITY-DESTINATION-SYMLINK-SKIP=" + ex.GetType().Name);
+    Console.WriteLine("ARCHIVE-SECURITY-DESTINATION-SYMLINK=" + ex.GetType().Name);
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) throw;
 }
 
 Console.WriteLine("ARCHIVE-SECURITY-FIXTURES=OK");
