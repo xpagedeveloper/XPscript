@@ -45,6 +45,7 @@ VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
 VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyArchiveConstructorModes();
+VerifyArchiveMemorySurface();
 VerifyArchiveTraversalGuard();
 VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
@@ -95,7 +96,8 @@ End Sub
         "internal static class XPScriptNativeHttp",
         "internal sealed class XPScriptDbSupabase",
         "internal sealed class XPScriptArchive",
-        "internal sealed class XPScriptExtendedArchive"
+        "internal sealed class XPScriptExtendedArchive",
+        "internal sealed class XPScriptMemoryArchive"
     };
     foreach (var marker in forbidden)
         if (generated.Contains(marker, StringComparison.Ordinal))
@@ -135,7 +137,7 @@ void VerifyFeatureProfiles()
     VerifyProfile(
         "ARCHIVE",
         "Dim value As Archive",
-        ["internal sealed class XPScriptArchive"],
+        ["internal sealed class XPScriptArchive", "internal sealed class XPScriptMemoryArchive"],
         ["internal sealed class XPScriptExtendedArchive", "internal static class XPScriptNativeHttp", "internal sealed class XPScriptDbSqlite"]);
     VerifyProfile(
         "NOTES",
@@ -173,25 +175,33 @@ void VerifyLegacyNativeNamesDoNotEnableRuntimes()
 
 void VerifyArchiveConstructorModes()
 {
+    const string memory = "Option Declare\nSub Main()\n    Dim a As New Archive()\nEnd Sub\n";
     const string zipDefault = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\")\nEnd Sub\n";
     const string zipExplicit = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\", False)\nEnd Sub\n";
     const string extended = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.rar\", True)\nEnd Sub\n";
 
+    var generatedMemory = transpiler.Transpile(memory, "archive-memory-empty.xps", "win-x64");
     var generatedDefault = transpiler.Transpile(zipDefault, "archive-default.xps", "win-x64");
     var generatedFalse = transpiler.Transpile(zipExplicit, "archive-false.xps", "win-x64");
     var generatedTrue = transpiler.Transpile(extended, "archive-extended.xps", "win-x64");
 
-    if (!generatedDefault.Contains("new XPScriptArchive(\"test.zip\")", StringComparison.Ordinal))
-        throw new Exception("Archive(filename) did not emit ZIP-only constructor form.");
-    if (!generatedFalse.Contains("new XPScriptArchive(\"test.zip\", false)", StringComparison.Ordinal))
-        throw new Exception("Archive(filename, False) did not emit explicit ZIP-only constructor form.");
-    if (!generatedTrue.Contains("new XPScriptExtendedArchive(\"test.rar\")", StringComparison.Ordinal))
-        throw new Exception("Archive(filename, True) did not emit extended-support wrapper form.");
+    if (!generatedMemory.Contains("XPScriptArchiveFactory.Create()", StringComparison.Ordinal))
+        throw new Exception("Archive() did not emit the in-memory factory form.");
+    if (!generatedDefault.Contains("XPScriptArchiveFactory.Create(\"test.zip\")", StringComparison.Ordinal))
+        throw new Exception("Archive(filename) did not emit ZIP path/memory factory form.");
+    if (!generatedFalse.Contains("XPScriptArchiveFactory.Create(\"test.zip\", false)", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, False) did not emit explicit ZIP-only factory form.");
+    if (!generatedTrue.Contains("XPScriptExtendedArchiveFactory.Create(\"test.rar\")", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit extended-support factory form.");
+    if (!generatedMemory.Contains("internal sealed class XPScriptMemoryArchive", StringComparison.Ordinal)
+        || !generatedDefault.Contains("internal sealed class XPScriptMemoryArchive", StringComparison.Ordinal))
+        throw new Exception("ZIP Archive construction did not emit the in-memory ZIP runtime.");
     if (!generatedTrue.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
         || !generatedTrue.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal))
         throw new Exception("Archive(filename, True) did not emit the streaming extended reader fallback runtime.");
     if (generatedDefault.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
-        || generatedFalse.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal))
+        || generatedFalse.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
+        || generatedMemory.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal))
         throw new Exception("ZIP-only Archive unexpectedly emitted extended reader support.");
 
     var invalid = "Option Declare\nSub Main()\n    Dim enabled As Boolean\n    enabled = True\n    Dim a As New Archive(\"test.rar\", enabled)\nEnd Sub\n";
@@ -205,6 +215,33 @@ void VerifyArchiveConstructorModes()
     }
 
     Console.WriteLine("PREPROCESSOR-ARCHIVE-CONSTRUCTOR-MODES=OK");
+}
+
+void VerifyArchiveMemorySurface()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("manifest.txt", "hello")
+    Dim data As Variant
+    data = archive.ToBytes()
+    Dim reopened As New Archive(data)
+    Print reopened.ReadText("manifest.txt")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "archive-memory-roundtrip.xps", "win-x64");
+    if (!generated.Contains("XPScriptArchiveFactory.Create()", StringComparison.Ordinal)
+        || !generated.Contains("XPScriptArchiveFactory.Create(data)", StringComparison.Ordinal))
+        throw new Exception("Archive memory constructors were not emitted through XPScriptArchiveFactory.");
+    if (!generated.Contains("internal sealed class XPScriptMemoryArchive", StringComparison.Ordinal)
+        || !generated.Contains("public LSArray ToBytes()", StringComparison.Ordinal))
+        throw new Exception("Archive memory runtime surface was not emitted.");
+    if (generated.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal))
+        throw new Exception("In-memory ZIP Archive unexpectedly emitted SharpCompress support.");
+    Console.WriteLine("PREPROCESSOR-ARCHIVE-MEMORY-SURFACE=OK");
 }
 
 void VerifyArchiveTraversalGuard()
