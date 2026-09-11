@@ -245,7 +245,7 @@ internal static class XPScriptArchiveExtendedReader
         while (MoveNext(reader.Value))
         {
             if (result.Count >= maxEntries) throw new XPScriptRuntimeException(5, "Archive exceeds MaxEntries.");
-            var entry = CurrentEntry(reader.Value);
+            var entry = WrapEntry(CurrentEntry(reader.Value), path);
             Validate(entry, maxExtractSize, maxCompressionRatio);
             var snapshot = XPScriptArchiveEntry.FromExtended(entry);
             total = checked(total + snapshot.Size);
@@ -260,14 +260,13 @@ internal static class XPScriptArchiveExtendedReader
         using var reader = Open(path, format, password);
         while (MoveNext(reader.Value))
         {
-            var entry = CurrentEntry(reader.Value);
+            var entry = WrapEntry(CurrentEntry(reader.Value), path);
             Validate(entry, maxExtractSize, maxCompressionRatio);
-            var key = Normalize(GetString(entry, "Key"));
-            if (!key.Equals(wanted, StringComparison.OrdinalIgnoreCase)) continue;
-            if (GetBool(entry, "IsDirectory")) throw new XPScriptRuntimeException(5, "Archive entry is a directory.");
+            if (!entry.Key.Equals(wanted, StringComparison.OrdinalIgnoreCase)) continue;
+            if (entry.IsDirectory) throw new XPScriptRuntimeException(5, "Archive entry is a directory.");
             using var input = OpenEntryStream(reader.Value);
             using var output = new System.IO.MemoryStream();
-            CopyLimited(input, output, GetLong(entry, "Size"), maxExtractSize);
+            CopyLimited(input, output, entry.Size, maxExtractSize);
             return output.ToArray();
         }
         throw new XPScriptRuntimeException(53, "Archive entry was not found.");
@@ -281,11 +280,10 @@ internal static class XPScriptArchiveExtendedReader
         while (MoveNext(reader.Value))
         {
             if (++count > maxEntries) throw new XPScriptRuntimeException(5, "Archive exceeds MaxEntries.");
-            var entry = CurrentEntry(reader.Value);
+            var entry = WrapEntry(CurrentEntry(reader.Value), path);
             Validate(entry, maxExtractSize, maxCompressionRatio);
-            var name = Normalize(GetString(entry, "Key"));
-            var target = SafePath(root, name);
-            if (GetBool(entry, "IsDirectory"))
+            var target = SafePath(root, entry.Key);
+            if (entry.IsDirectory)
             {
                 System.IO.Directory.CreateDirectory(target);
                 continue;
@@ -295,7 +293,7 @@ internal static class XPScriptArchiveExtendedReader
             if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
             using var input = OpenEntryStream(reader.Value);
             using var output = new System.IO.FileStream(target, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
-            totalWritten = checked(totalWritten + CopyLimited(input, output, GetLong(entry, "Size"), maxExtractSize));
+            totalWritten = checked(totalWritten + CopyLimited(input, output, entry.Size, maxExtractSize));
             if (totalWritten > maxExtractSize) throw new XPScriptRuntimeException(5, "Archive exceeds MaxExtractSize.");
         }
     }
@@ -330,6 +328,45 @@ internal static class XPScriptArchiveExtendedReader
 
     private static object CurrentEntry(object reader) => reader.GetType().GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "SharpCompress reader entry is unavailable.");
 
+    private static ReaderEntryProxy WrapEntry(object entry, string path)
+    {
+        var key = GetString(entry, "Key");
+        if (string.IsNullOrWhiteSpace(key)) key = FallbackEntryName(path);
+        else key = Normalize(key);
+        return new ReaderEntryProxy(
+            key,
+            GetLong(entry, "Size"),
+            GetLong(entry, "CompressedSize"),
+            GetDate(entry, "CreatedTime"),
+            GetDate(entry, "LastModifiedTime"),
+            GetBool(entry, "IsDirectory"),
+            GetBool(entry, "IsEncrypted"),
+            GetLong(entry, "Crc"),
+            entry.GetType().GetProperty("LinkTarget")?.GetValue(entry)?.ToString());
+    }
+
+    private static string FallbackEntryName(string path)
+    {
+        var name = System.IO.Path.GetFileName(path);
+        var tarAliases = new[] { ".tgz", ".tbz", ".tbz2", ".txz", ".tlz", ".tzst" };
+        foreach (var extension in tarAliases)
+        {
+            if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) continue;
+            name = name[..^extension.Length] + ".tar";
+            return Normalize(string.IsNullOrWhiteSpace(name) ? "content.tar" : name);
+        }
+
+        var singleStreamExtensions = new[] { ".gzip", ".gz", ".bzip2", ".bz2", ".xz", ".lzip", ".lz", ".zstd", ".zst", ".lzw", ".z" };
+        foreach (var extension in singleStreamExtensions)
+        {
+            if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) continue;
+            name = name[..^extension.Length];
+            break;
+        }
+        if (string.IsNullOrWhiteSpace(name)) name = "content";
+        return Normalize(name);
+    }
+
     private static System.IO.Stream OpenEntryStream(object reader)
     {
         try
@@ -343,15 +380,12 @@ internal static class XPScriptArchiveExtendedReader
         }
     }
 
-    private static void Validate(object entry, long maxExtractSize, double maxCompressionRatio)
+    private static void Validate(ReaderEntryProxy entry, long maxExtractSize, double maxCompressionRatio)
     {
-        _ = Normalize(GetString(entry, "Key"));
-        var linkTarget = entry.GetType().GetProperty("LinkTarget")?.GetValue(entry)?.ToString();
-        if (!string.IsNullOrEmpty(linkTarget)) throw new XPScriptRuntimeException(5, "Archive symbolic links are not allowed.");
-        var size = GetLong(entry, "Size");
-        var compressed = GetLong(entry, "CompressedSize");
-        if (size < 0 || size > maxExtractSize) throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxExtractSize.");
-        if (compressed > 0 && size > 0 && (double)size / compressed > maxCompressionRatio)
+        _ = Normalize(entry.Key);
+        if (!string.IsNullOrEmpty(entry.LinkTarget)) throw new XPScriptRuntimeException(5, "Archive symbolic links are not allowed.");
+        if (entry.Size < 0 || entry.Size > maxExtractSize) throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxExtractSize.");
+        if (entry.CompressedSize > 0 && entry.Size > 0 && (double)entry.Size / entry.CompressedSize > maxCompressionRatio)
             throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxCompressionRatio.");
     }
 
@@ -410,6 +444,37 @@ internal static class XPScriptArchiveExtendedReader
     private static string GetString(object value, string property) => value.GetType().GetProperty(property)?.GetValue(value)?.ToString() ?? "";
     private static long GetLong(object value, string property) => Convert.ToInt64(value.GetType().GetProperty(property)?.GetValue(value) ?? 0L, System.Globalization.CultureInfo.InvariantCulture);
     private static bool GetBool(object value, string property) => Convert.ToBoolean(value.GetType().GetProperty(property)?.GetValue(value) ?? false, System.Globalization.CultureInfo.InvariantCulture);
+    private static DateTime? GetDate(object value, string property)
+    {
+        var raw = value.GetType().GetProperty(property)?.GetValue(value);
+        return raw is DateTime date ? date : null;
+    }
+
+    private sealed class ReaderEntryProxy
+    {
+        public string Key { get; }
+        public long Size { get; }
+        public long CompressedSize { get; }
+        public DateTime? CreatedTime { get; }
+        public DateTime? LastModifiedTime { get; }
+        public bool IsDirectory { get; }
+        public bool IsEncrypted { get; }
+        public long Crc { get; }
+        public string? LinkTarget { get; }
+
+        public ReaderEntryProxy(string key, long size, long compressedSize, DateTime? createdTime, DateTime? lastModifiedTime, bool isDirectory, bool isEncrypted, long crc, string? linkTarget)
+        {
+            Key = key;
+            Size = size;
+            CompressedSize = compressedSize;
+            CreatedTime = createdTime;
+            LastModifiedTime = lastModifiedTime;
+            IsDirectory = isDirectory;
+            IsEncrypted = isEncrypted;
+            Crc = crc;
+            LinkTarget = linkTarget;
+        }
+    }
 
     private sealed class ReaderHandle : IDisposable
     {
