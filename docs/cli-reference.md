@@ -33,7 +33,7 @@ This page is the searchable reference for the XPScript compiler and host command
 | `patch list` | `xpscript patch list` | none | Lists the current XPScript version's selected package patches. |
 | `patch remove all` | `xpscript patch remove all` | none | Removes the current XPScript version's selected patch state. |
 
-See [Dependency security and package patching](dependency-security-and-patching.md) for the compatibility policy, security classification, version-scoped cache behavior and SBOM guidance.
+See [Dependency security and package patching](dependency-security-and-patching.md) for the compatibility policy, security classification and version-scoped cache behavior.
 
 ## `xpscript service` host installation
 
