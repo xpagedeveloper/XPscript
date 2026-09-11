@@ -173,7 +173,7 @@ try {
     $packageReferenceLines = foreach ($reference in $generatedPackageReferences) {
         $name = [System.Security.SecurityElement]::Escape([string]$reference.Name)
         $version = [System.Security.SecurityElement]::Escape([string]$reference.Version)
-        "    <PackageReference Include=\"$name\" Version=\"$version\" />"
+        '    <PackageReference Include="{0}" Version="{1}" />' -f $name, $version
     }
 
     $generatedProject = @"
