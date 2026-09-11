@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    If Application.Args.Count < 5 Then Error 5, "Archive ZIP rejection probe requires path and limits"
+
+    Dim path As String
+    Dim maxEntries As Integer
+    Dim maxSize As Long
+    Dim maxRatio As Double
+    path = Application.Args(1)
+    maxEntries = CInt(Application.Args(2))
+    maxSize = CLng(Application.Args(3))
+    maxRatio = CDbl(Application.Args(4))
+
+    Dim archive As New Archive(path)
+    archive.MaxEntries = maxEntries
+    archive.MaxExtractSize = maxSize
+    archive.MaxCompressionRatio = maxRatio
+    archive.Open()
+
+    Print "ARCHIVE_SECURITY_REJECT_ZIP_UNEXPECTED_SUCCESS"
+End Sub
