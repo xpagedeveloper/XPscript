@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class ArchiveExtendedWriterFactoryRuntimeSource
 {
-    public const string Code = """
+    public static string Code => """
 internal static class XPScriptExtendedArchiveWriterFactory
 {
     public static object Create(object? value)
@@ -12,5 +12,5 @@ internal static class XPScriptExtendedArchiveWriterFactory
         return new XPScriptExtendedArchiveV3(value);
     }
 }
-""";
+""" + "\n" + ArchiveCompressedTarRuntimeSource.Code;
 }
