@@ -8,7 +8,7 @@ on:
       - .github/workflows/oneshot-package-security-classification.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -20,6 +20,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Enable NuGet gzip decompression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/XPScript.Cli/PackagePatchCommand.cs')
+          s = p.read_text()
+          old = '''    private static HttpClient CreateHttpClient()\n    {\n        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };\n        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("XPScript", "package-patch"));\n        return client;\n    }'''
+          new = '''    private static HttpClient CreateHttpClient()\n    {\n        var handler = new HttpClientHandler\n        {\n            AutomaticDecompression = System.Net.DecompressionMethods.GZip |\n                                     System.Net.DecompressionMethods.Deflate |\n                                     System.Net.DecompressionMethods.Brotli\n        };\n        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };\n        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("XPScript", "package-patch"));\n        return client;\n    }'''
+          if old not in s:
+              raise SystemExit('CreateHttpClient block not found')
+          p.write_text(s.replace(old, new))
+          PY
       - name: Build CLI
         run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo -p:SkipUnifiedPublish=true
       - name: Run package patch policy probe
@@ -28,3 +40,11 @@ jobs:
         run: dotnet run --project src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- patch all --check
       - name: Check security-only classification against NuGet
         run: dotnet run --project src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- patch all --check --security-only
+      - name: Commit decompression fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/XPScript.Cli/PackagePatchCommand.cs
+          git diff --cached --quiet && exit 0
+          git commit -m "Handle compressed NuGet registration metadata"
+          git push origin HEAD:feature/application-dependency-security
