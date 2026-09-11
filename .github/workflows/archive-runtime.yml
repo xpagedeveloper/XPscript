@@ -79,3 +79,7 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-compressed-tar.xps -o ./out/archive-compressed-tar --framework-dependent
           ./out/archive-compressed-tar
+      - name: Compile and run content format detection
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-format-detection.xps -o ./out/archive-format-detection --framework-dependent
+          ./out/archive-format-detection
