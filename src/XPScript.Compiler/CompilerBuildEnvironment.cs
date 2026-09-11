@@ -14,6 +14,7 @@ internal static class CompilerBuildEnvironment
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
     private const string MySqlConnectorVersion = "2.6.2";
     private const string NpgsqlVersion = "10.0.3";
+    private const string SharpCompressVersion = "0.50.4";
 
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
@@ -157,6 +158,10 @@ internal static class CompilerBuildEnvironment
         var usesMsSql = source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
+        var usesExtendedArchive = Regex.IsMatch(
+            source,
+            @"new\s+XPScriptArchive\s*\([^\r\n;]*,\s*true\s*\)",
+            RegexOptions.CultureInvariant);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
         var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
@@ -190,6 +195,7 @@ internal static class CompilerBuildEnvironment
         if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />\n";
         if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{MySqlConnectorVersion}\" />\n";
         if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{NpgsqlVersion}\" />\n";
+        if (usesExtendedArchive) itemEntries += $"    <PackageReference Include=\"SharpCompress\" Version=\"{SharpCompressVersion}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
         var projectPath = Path.Combine(root, "Generated.csproj");
