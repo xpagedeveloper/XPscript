@@ -10,6 +10,12 @@ Sub Main()
     tarBytes = tar.ToBytes()
     Dim tarRead As New Archive(tarBytes, True)
     If tarRead.ReadText("manifest.txt") <> "memory tar" Then Error 5, "Extended memory TAR round-trip failed"
+    tarRead.AddText("second.txt", "rebuilt tar")
+
+    Dim tarRebuiltBytes As Variant
+    tarRebuiltBytes = tarRead.ToBytes()
+    Dim tarRebuilt As New Archive(tarRebuiltBytes, True)
+    If tarRebuilt.ReadText("second.txt") <> "rebuilt tar" Then Error 5, "Extended memory TAR rebuild failed"
 
     Dim seed7z() As Byte
     Dim seven As New Archive(seed7z, True)
@@ -20,6 +26,12 @@ Sub Main()
     sevenBytes = seven.ToBytes()
     Dim sevenRead As New Archive(sevenBytes, True)
     If sevenRead.ReadText("manifest.txt") <> "memory 7z" Then Error 5, "Extended memory 7z round-trip failed"
+    sevenRead.AddText("second.txt", "rebuilt 7z")
+
+    Dim sevenRebuiltBytes As Variant
+    sevenRebuiltBytes = sevenRead.ToBytes()
+    Dim sevenRebuilt As New Archive(sevenRebuiltBytes, True)
+    If sevenRebuilt.ReadText("second.txt") <> "rebuilt 7z" Then Error 5, "Extended memory 7z rebuild failed"
 
     Print "ARCHIVE_EXTENDED_MEMORY_WRITE=OK"
 End Sub
