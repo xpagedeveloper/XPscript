@@ -69,6 +69,7 @@ foreach (var format in new[] { "rar", "bzip2", "lzip", "xz", "zstd" })
     ExpectUnsupportedCreate(format);
 
 ExpectIteratorSuccess();
+ExpectRemovedIsDirectory();
 
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
 
@@ -169,4 +170,32 @@ End Sub
         throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to the internal entry type flag.");
     if (!generated.Contains(".Entries", StringComparison.Ordinal))
         throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
+}
+
+void ExpectRemovedIsDirectory()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("one.txt", "1")
+    Dim entry As ArchiveEntry
+    Set entry = archive.GetFirstEntry()
+    If entry Is Not Nothing Then Print CStr(entry.IsDirectory)
+End Sub
+""";
+
+    try
+    {
+        _ = transpiler.Transpile(source, "archive-entry-isdirectory.xps", "win-x64");
+        throw new Exception("ArchiveEntry.IsDirectory unexpectedly remained public.");
+    }
+    catch (CompilerException ex)
+    {
+        if (!ex.Message.Contains("ArchiveEntry.IsDirectory is not available", StringComparison.Ordinal)
+            || !ex.Message.Contains("IsFile", StringComparison.Ordinal)
+            || !ex.Message.Contains("IsFolder", StringComparison.Ordinal))
+            throw new Exception("ArchiveEntry.IsDirectory returned the wrong diagnostic: " + ex.Message);
+    }
 }
