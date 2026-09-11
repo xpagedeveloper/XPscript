@@ -116,6 +116,9 @@ if (!generated.Contains("XPScriptDebugRuntime.Complete();", StringComparison.Ord
 if (!generated.Contains("type = \"complete\"", StringComparison.Ordinal) ||
     !generated.Contains("supportsGracefulCompletion = true", StringComparison.Ordinal))
     throw new Exception("Debugger graceful completion protocol is missing.");
+if (!generated.Contains("type = \"programOutput\"", StringComparison.Ordinal) ||
+    !generated.Contains("XPScriptDebugRuntime.ProgramOutput", StringComparison.Ordinal))
+    throw new Exception("Program output is not serialized through the debugger transport.");
 if (!generated.Contains("NormalizeSource(sourcePath)", StringComparison.Ordinal) ||
     !generated.Contains("NormalizeSource(sourceElement.GetString()", StringComparison.Ordinal))
     throw new Exception("Debugger breakpoint source identifiers are not normalized consistently.");
