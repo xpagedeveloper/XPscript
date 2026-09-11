@@ -73,16 +73,65 @@ internal sealed class XPScriptArchive
         Add(name, System.IO.File.ReadAllBytes(source), System.IO.File.GetLastWriteTimeUtc(source));
     }
 
+    public void AddFolder(object? sourcePath, object? archivePath = null, bool recursive = true)
+    {
+        EnsureWritable();
+        var source = XPScriptFileSystemRuntime.ResolvePath(sourcePath);
+        if (!System.IO.Directory.Exists(source)) throw new XPScriptRuntimeException(76, "Archive source folder was not found.");
+        var rootName = archivePath is null ? System.IO.Path.GetFileName(source.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)) : XPScriptRuntime.CStr(archivePath);
+        rootName = Normalize(rootName).TrimEnd('/');
+        var search = recursive ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly;
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(source, "*", search))
+        {
+            if ((System.IO.File.GetAttributes(directory) & System.IO.FileAttributes.ReparsePoint) != 0) continue;
+            var relative = System.IO.Path.GetRelativePath(source, directory).Replace('\\', '/');
+            AddDirectoryEntry(Normalize(rootName + "/" + relative + "/"));
+        }
+        foreach (var file in System.IO.Directory.EnumerateFiles(source, "*", search))
+        {
+            var relative = System.IO.Path.GetRelativePath(source, file).Replace('\\', '/');
+            AddFile(file, Normalize(rootName + "/" + relative));
+        }
+    }
+
     public void AddText(object? archivePath, object? text) =>
         Add(Normalize(XPScriptRuntime.CStr(archivePath)), System.Text.Encoding.UTF8.GetBytes(XPScriptRuntime.CStr(text)), DateTime.UtcNow);
+
+    public void AddBytes(object? archivePath, object? bytes) =>
+        Add(Normalize(XPScriptRuntime.CStr(archivePath)), ToRawBytes(bytes), DateTime.UtcNow);
 
     public bool Remove(object? entryName)
     {
         EnsureWritable();
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        var entry = archive.GetEntry(Normalize(XPScriptRuntime.CStr(entryName)));
-        if (entry is null) return false;
-        entry.Delete();
+        var name = Normalize(XPScriptRuntime.CStr(entryName));
+        var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+        foreach (var entry in matches) entry.Delete();
+        return matches.Count > 0;
+    }
+
+    public bool Rename(object? entryName, object? newName)
+    {
+        EnsureWritable();
+        var oldKey = Normalize(XPScriptRuntime.CStr(entryName));
+        var newKey = Normalize(XPScriptRuntime.CStr(newName));
+        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
+        var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (entries.Count == 0) return false;
+        foreach (var entry in entries)
+        {
+            var suffix = entry.FullName.Length == oldKey.Length ? "" : entry.FullName[oldKey.TrimEnd('/').Length..];
+            var targetName = Normalize(newKey.TrimEnd('/') + suffix + (entry.FullName.EndsWith("/", StringComparison.Ordinal) && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+            var replacement = archive.CreateEntry(targetName, ResolveCompressionLevel());
+            replacement.LastWriteTime = entry.LastWriteTime;
+            if (!entry.FullName.EndsWith("/", StringComparison.Ordinal))
+            {
+                using var input = entry.Open();
+                using var output = replacement.Open();
+                input.CopyTo(output);
+            }
+        }
+        foreach (var entry in entries) entry.Delete();
         return true;
     }
 
@@ -101,8 +150,56 @@ internal sealed class XPScriptArchive
     public LSArray Files() => Pack(Snapshots().Where(x => !x.IsDirectory).Cast<object?>());
     public LSArray Folders() => Pack(Snapshots().Where(x => x.IsDirectory).Cast<object?>());
 
+    public LSArray Find(object? pattern)
+    {
+        var expression = XPScriptRuntime.CStr(pattern).Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(expression)) expression = "*";
+        var regex = "^" + System.Text.RegularExpressions.Regex.Escape(expression).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+        return Pack(Snapshots().Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.FullName, regex, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)).Cast<object?>());
+    }
+
     public string ReadText(object? entryName) => System.Text.Encoding.UTF8.GetString(ReadBytesRaw(entryName));
     public LSArray ReadBytes(object? entryName) => PackBytes(ReadBytesRaw(entryName));
+
+    public void Extract(object? entryName, object? targetPath)
+    {
+        var name = Normalize(XPScriptRuntime.CStr(entryName));
+        var target = XPScriptFileSystemRuntime.ResolvePath(targetPath);
+        var snapshot = GetEntry(name) ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+        if (snapshot.IsDirectory)
+        {
+            System.IO.Directory.CreateDirectory(target);
+            return;
+        }
+        if (System.IO.Directory.Exists(target)) target = System.IO.Path.Combine(target, snapshot.Name);
+        var parent = System.IO.Path.GetDirectoryName(target);
+        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        System.IO.File.WriteAllBytes(target, ReadBytesRaw(name));
+    }
+
+    public void ExtractFolder(object? folderName, object? targetDirectory)
+    {
+        var folder = Normalize(XPScriptRuntime.CStr(folderName)).TrimEnd('/') + "/";
+        var root = XPScriptFileSystemRuntime.ResolvePath(targetDirectory);
+        System.IO.Directory.CreateDirectory(root);
+        var matches = Snapshots().Where(x => x.FullName.StartsWith(folder, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matches.Count == 0) throw new XPScriptRuntimeException(53, "Archive folder was not found.");
+        foreach (var entry in matches)
+        {
+            var relative = entry.FullName[folder.Length..];
+            if (relative.Length == 0) continue;
+            var target = SafePath(root, Normalize(relative));
+            if (entry.IsDirectory)
+            {
+                System.IO.Directory.CreateDirectory(target);
+                continue;
+            }
+            EnsureNoReparseParents(root, target);
+            var parent = System.IO.Path.GetDirectoryName(target);
+            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+            System.IO.File.WriteAllBytes(target, ReadBytesRaw(entry.FullName));
+        }
+    }
 
     public void ExtractAll(object? targetDirectory)
     {
@@ -141,7 +238,7 @@ internal sealed class XPScriptArchive
         return PackBytes(System.IO.File.ReadAllBytes(_path!));
     }
 
-    private bool UseExtendedBackend => !Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) && ExtendedSupport;
+    private bool UseExtendedBackend => ExtendedSupport && (!Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrEmpty(Password));
 
     private void Add(string name, byte[] bytes, DateTime modified)
     {
@@ -149,15 +246,25 @@ internal sealed class XPScriptArchive
         if (!System.IO.File.Exists(_path!)) Create("zip");
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         archive.GetEntry(name)?.Delete();
-        var level = CompressionLevel <= 0 ? System.IO.Compression.CompressionLevel.NoCompression
-            : CompressionLevel <= 3 ? System.IO.Compression.CompressionLevel.Fastest
-            : CompressionLevel >= 9 ? System.IO.Compression.CompressionLevel.SmallestSize
-            : System.IO.Compression.CompressionLevel.Optimal;
-        var entry = archive.CreateEntry(name, level);
+        var entry = archive.CreateEntry(name, ResolveCompressionLevel());
         entry.LastWriteTime = new DateTimeOffset(modified.ToUniversalTime());
         using var output = entry.Open();
         output.Write(bytes, 0, bytes.Length);
     }
+
+    private void AddDirectoryEntry(string name)
+    {
+        EnsureWritable();
+        if (!System.IO.File.Exists(_path!)) Create("zip");
+        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
+        if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+    }
+
+    private System.IO.Compression.CompressionLevel ResolveCompressionLevel() =>
+        CompressionLevel <= 0 ? System.IO.Compression.CompressionLevel.NoCompression
+        : CompressionLevel <= 3 ? System.IO.Compression.CompressionLevel.Fastest
+        : CompressionLevel >= 9 ? System.IO.Compression.CompressionLevel.SmallestSize
+        : System.IO.Compression.CompressionLevel.Optimal;
 
     private byte[] ReadBytesRaw(object? entryName)
     {
@@ -207,7 +314,7 @@ internal sealed class XPScriptArchive
         EnsurePath();
         if (!Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase)) EnsureExtendedEnabled();
         if (!System.IO.File.Exists(_path!)) throw new XPScriptRuntimeException(53, "Archive file was not found.");
-        if (!string.IsNullOrEmpty(Password)) throw new XPScriptRuntimeException(5, "Password-protected ZIP currently requires extended archive support.");
+        if (!string.IsNullOrEmpty(Password)) throw new XPScriptRuntimeException(5, "Password-protected ZIP requires extended archive support.");
         var access = mode == System.IO.Compression.ZipArchiveMode.Read ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite;
         var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Open, access, System.IO.FileShare.None);
         try { return new System.IO.Compression.ZipArchive(stream, mode, false); }
@@ -356,7 +463,7 @@ internal sealed class XPScriptArchive
         }
     }
 
-    private static long CopyLimited(System.IO.Stream input, System.IO.Stream output, long declaredSize)
+    private long CopyLimited(System.IO.Stream input, System.IO.Stream output, long declaredSize)
     {
         const int bufferSize = 128 * 1024;
         var buffer = new byte[bufferSize];
@@ -366,7 +473,7 @@ internal sealed class XPScriptArchive
             var read = input.Read(buffer, 0, buffer.Length);
             if (read <= 0) break;
             written = checked(written + read);
-            if (written > 2L * 1024 * 1024 * 1024) throw new XPScriptRuntimeException(5, "Archive entry exceeds the hard extraction limit.");
+            if (written > MaxExtractSize) throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxExtractSize.");
             output.Write(buffer, 0, read);
         }
         if (declaredSize >= 0 && written > declaredSize + 1024 * 1024)
@@ -386,6 +493,21 @@ internal sealed class XPScriptArchive
         }
     }
 
+    private static byte[] ToRawBytes(object? value)
+    {
+        if (value is byte[] raw) return raw;
+        if (value is LSArray array)
+        {
+            if (!array.IsAllocated) return [];
+            if (array.Rank != 1) throw new XPScriptRuntimeException(13, "Archive.AddBytes requires a one-dimensional Byte array.");
+            var result = new byte[array.UBound() - array.LBound() + 1];
+            var offset = 0;
+            for (var i = array.LBound(); i <= array.UBound(); i++) result[offset++] = Convert.ToByte(array.Get(i), System.Globalization.CultureInfo.InvariantCulture);
+            return result;
+        }
+        throw new XPScriptRuntimeException(13, "Archive.AddBytes requires a Byte array.");
+    }
+
     private static string GetStringProperty(object value, string property) =>
         value.GetType().GetProperty(property)?.GetValue(value)?.ToString() ?? "";
 
@@ -402,12 +524,6 @@ internal sealed class XPScriptArchive
     {
         var raw = value.GetType().GetProperty(property)?.GetValue(value);
         return raw is not null && Convert.ToBoolean(raw, System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    private static DateTime GetDateProperty(object value, string property)
-    {
-        var raw = value.GetType().GetProperty(property)?.GetValue(value);
-        return raw is DateTime date ? date : DateTime.MinValue;
     }
 
     private static string Normalize(string value)
