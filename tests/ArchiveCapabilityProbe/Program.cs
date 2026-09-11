@@ -78,7 +78,7 @@ void ExpectExtendedFailure(string name, string source)
     {
         if (!ex.Message.Contains("requires extended archive support", StringComparison.Ordinal)
             || !ex.Message.Contains("New Archive(..., True)", StringComparison.Ordinal)
-            || !ex.Message.Contains("SharpCompress", StringComparison.Ordinal))
+            || ex.Message.Contains("SharpCompress", StringComparison.OrdinalIgnoreCase))
             throw new Exception(name + " returned the wrong compile diagnostic: " + ex.Message);
     }
 }
@@ -93,7 +93,7 @@ void ExpectUnsupportedEncryptedZipWrite(string name, string source)
     catch (CompilerException ex)
     {
         if (!ex.Message.Contains("Password-protected ZIP writing is not supported", StringComparison.Ordinal)
-            || !ex.Message.Contains("SharpCompress 0.50.4", StringComparison.Ordinal))
+            || ex.Message.Contains("SharpCompress", StringComparison.OrdinalIgnoreCase))
             throw new Exception(name + " returned the wrong encrypted ZIP write diagnostic: " + ex.Message);
     }
 }
