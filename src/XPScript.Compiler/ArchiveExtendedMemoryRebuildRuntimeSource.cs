@@ -19,7 +19,7 @@ internal sealed class XPScriptExtendedMemoryArchiveV3
     public string Format => _inner.Format;
     public bool Exists => _inner.Exists;
     public bool ExtendedSupport => true;
-    public bool IsReadOnly => !_editing && (!CanRebuild || IsEncrypted);
+    public bool IsReadOnly => !_editing && !CanSafelyRebuild;
     public string Password { get => _inner.Password; set => _inner.Password = value ?? ""; }
     public int CompressionLevel { get => _inner.CompressionLevel; set => _inner.CompressionLevel = value; }
     public long MaxExtractSize { get => _inner.MaxExtractSize; set => _inner.MaxExtractSize = value; }
@@ -34,6 +34,15 @@ internal sealed class XPScriptExtendedMemoryArchiveV3
     public LSArray Entries => _inner.Entries;
 
     private bool CanRebuild => DetectWritableFormat() is not null;
+    private bool CanSafelyRebuild
+    {
+        get
+        {
+            if (!CanRebuild || !string.IsNullOrEmpty(Password)) return false;
+            try { return !IsEncrypted; }
+            catch { return false; }
+        }
+    }
 
     public void Open() => _inner.Open();
     public void Close() => _inner.Close();
@@ -100,7 +109,7 @@ internal sealed class XPScriptExtendedMemoryArchiveV3
         var format = DetectWritableFormat();
         if (format is null)
             throw new XPScriptRuntimeException(5, "This extended in-memory archive format is read-only.");
-        if (!string.IsNullOrEmpty(Password) || IsEncrypted)
+        if (!CanSafelyRebuild)
             throw new XPScriptRuntimeException(5, "Encrypted extended in-memory archives are read-only.");
 
         var replacement = new XPScriptExtendedMemoryArchiveV2(new LSArray("Byte", true));
