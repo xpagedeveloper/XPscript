@@ -46,6 +46,7 @@ VerifyFeatureProfiles();
 VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyArchiveConstructorModes();
 VerifyArchiveMemorySurface();
+VerifyArchiveGZipSurface();
 VerifyArchiveTraversalGuard();
 VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
@@ -191,18 +192,20 @@ void VerifyArchiveConstructorModes()
         throw new Exception("Archive(filename) did not emit ZIP path/memory factory form.");
     if (!generatedFalse.Contains("XPScriptArchiveFactory.Create(\"test.zip\", false)", StringComparison.Ordinal))
         throw new Exception("Archive(filename, False) did not emit explicit ZIP-only factory form.");
-    if (!generatedTrue.Contains("XPScriptExtendedArchiveFactory.Create(\"test.rar\")", StringComparison.Ordinal))
-        throw new Exception("Archive(filename, True) did not emit extended-support factory form.");
+    if (!generatedTrue.Contains("XPScriptExtendedArchiveWriterFactory.Create(\"test.rar\")", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit extended writer factory form.");
     if (!generatedMemory.Contains("internal sealed class XPScriptMemoryArchive", StringComparison.Ordinal)
         || !generatedDefault.Contains("internal sealed class XPScriptMemoryArchive", StringComparison.Ordinal))
         throw new Exception("ZIP Archive construction did not emit the in-memory ZIP runtime.");
     if (!generatedTrue.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
-        || !generatedTrue.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal))
-        throw new Exception("Archive(filename, True) did not emit the streaming extended reader fallback runtime.");
+        || !generatedTrue.Contains("internal sealed class XPScriptExtendedArchiveV2", StringComparison.Ordinal)
+        || !generatedTrue.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal)
+        || !generatedTrue.Contains("internal static class XPScriptArchiveGZipWriter", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit the extended reader/writer runtime.");
     if (generatedDefault.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
         || generatedFalse.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
         || generatedMemory.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal))
-        throw new Exception("ZIP-only Archive unexpectedly emitted extended reader support.");
+        throw new Exception("ZIP-only Archive unexpectedly emitted extended archive support.");
 
     var invalid = "Option Declare\nSub Main()\n    Dim enabled As Boolean\n    enabled = True\n    Dim a As New Archive(\"test.rar\", enabled)\nEnd Sub\n";
     try
@@ -242,6 +245,28 @@ End Sub
     if (generated.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal))
         throw new Exception("In-memory ZIP Archive unexpectedly emitted SharpCompress support.");
     Console.WriteLine("PREPROCESSOR-ARCHIVE-MEMORY-SURFACE=OK");
+}
+
+void VerifyArchiveGZipSurface()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive("sample.gz", True)
+    archive.Create("gzip")
+    archive.AddText("sample.txt", "hello")
+    archive.Save()
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "archive-gzip-surface.xps", "win-x64");
+    if (!generated.Contains("XPScriptExtendedArchiveWriterFactory.Create(\"sample.gz\")", StringComparison.Ordinal))
+        throw new Exception("GZip Archive did not use the extended writer factory.");
+    if (!generated.Contains("internal static class XPScriptArchiveGZipWriter", StringComparison.Ordinal)
+        || !generated.Contains("GZip supports exactly one file entry", StringComparison.Ordinal)
+        || !generated.Contains("File.Replace(temp, destination, null)", StringComparison.Ordinal))
+        throw new Exception("GZip writer runtime or atomic replacement guard was not emitted.");
+    Console.WriteLine("PREPROCESSOR-ARCHIVE-GZIP-SURFACE=OK");
 }
 
 void VerifyArchiveTraversalGuard()
