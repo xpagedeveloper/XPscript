@@ -2,6 +2,11 @@ namespace XPScript.Compiler;
 
 internal static class ArchiveExtendedWriterFactoryRuntimeSource
 {
+    private static string ExtendedMemoryWriterCode => ArchiveExtendedMemoryWriterRuntimeSource.Code.Replace(
+        "SharpCompress.Writers.IWriterOptions",
+        "SharpCompress.Common.Options.IWriterOptions",
+        StringComparison.Ordinal);
+
     public static string Code => """
 internal static class XPScriptExtendedArchiveWriterFactory
 {
@@ -12,5 +17,5 @@ internal static class XPScriptExtendedArchiveWriterFactory
         return new XPScriptExtendedArchiveV5(value);
     }
 }
-""" + "\n" + ArchiveCompressedTarRuntimeSource.Code + "\n" + ArchiveDetectedFormatRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRuntimeSource.Code + "\n" + ArchiveExtendedMemoryWriterRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRebuildRuntimeSource.Code + "\n" + ArchiveErrorNormalizationRuntimeSource.Code;
+""" + "\n" + ArchiveCompressedTarRuntimeSource.Code + "\n" + ArchiveDetectedFormatRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRuntimeSource.Code + "\n" + ExtendedMemoryWriterCode + "\n" + ArchiveExtendedMemoryRebuildRuntimeSource.Code + "\n" + ArchiveErrorNormalizationRuntimeSource.Code;
 }
