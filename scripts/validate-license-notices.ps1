@@ -13,30 +13,17 @@ if (-not (Test-Path -LiteralPath $catalogPath)) {
 
 $notice = Get-Content -LiteralPath $noticePath -Raw
 
-# Licenses in this list have been reviewed for XPScript's distribution model.
-# Adding a new identifier is an explicit legal/compliance decision, not merely a build fix.
+# XPScript only permits third-party libraries, NuGet packages and add-ons whose
+# declared SPDX license is MIT or Apache-2.0. Any other license requires the
+# dependency to be rejected or the policy to be changed through an explicit
+# legal/compliance decision.
 $approvedLicenseIdentifiers = @(
     'Apache-2.0',
-    'BSD-2-Clause',
-    'BSD-3-Clause',
-    'ISC',
-    'MIT',
-    'MS-PL',
-    'PostgreSQL',
-    'Unicode-3.0',
-    'Unicode-DFS-2016',
-    'Zlib'
+    'MIT'
 )
 $approvedLicenseSet = @{}
 foreach ($identifier in $approvedLicenseIdentifiers) {
     $approvedLicenseSet[$identifier.ToLowerInvariant()] = $true
-}
-
-# NuGet packages that declare their license using a package file rather than an SPDX expression.
-# Each entry must be reviewed independently before it is added here.
-$approvedLicenseFilePackages = @{
-    'avalonia.angle.windows.natives' = @('LICENSE', 'LICENSE.txt')
-    'microsoft.data.sqlclient.sni.runtime' = @('LICENSE', 'LICENSE.txt')
 }
 
 function Get-StaticPackageNames {
@@ -209,7 +196,7 @@ foreach ($package in ($packages.Keys | Sort-Object)) {
     $packageDirectory = Join-Path (Join-Path $globalPackages $packageName.ToLowerInvariant()) $parts[1]
     $nuspec = Get-ChildItem -LiteralPath $packageDirectory -Filter '*.nuspec' -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $nuspec) {
-        $licenseProblems += "$package has no NuGet metadata file. Manual license review required."
+        $licenseProblems += "$package has no NuGet metadata file. Only MIT and Apache-2.0 dependencies are permitted."
         continue
     }
 
@@ -218,39 +205,21 @@ foreach ($package in ($packages.Keys | Sort-Object)) {
     $licenseText = if ($license) { [string]$license.InnerText } else { '' }
     $licenseType = if ($license) { [string]$license.type } else { '' }
     if ([string]::IsNullOrWhiteSpace($licenseText)) {
-        $licenseProblems += "$package has no declared NuGet license. Manual license review required."
+        $licenseProblems += "$package has no declared NuGet license. Only MIT and Apache-2.0 dependencies are permitted."
         continue
     }
 
     if ($licenseType.Equals('expression', [StringComparison]::OrdinalIgnoreCase)) {
         $expressionProblems = @(Test-LicenseExpression -Expression $licenseText)
         foreach ($problem in $expressionProblems) {
-            $licenseProblems += "$package declares $problem. Manual license review required."
+            $licenseProblems += "$package declares $problem. Only MIT and Apache-2.0 dependencies are permitted."
         }
         continue
     }
 
-    if ($licenseType.Equals('file', [StringComparison]::OrdinalIgnoreCase)) {
-        $packageKey = $packageName.ToLowerInvariant()
-        if (-not $approvedLicenseFilePackages.ContainsKey($packageKey)) {
-            $licenseProblems += "$package uses license file '$licenseText' but the package has not been explicitly approved. Manual license review required."
-            continue
-        }
-
-        $approvedFiles = @($approvedLicenseFilePackages[$packageKey])
-        if ($approvedFiles -notcontains $licenseText) {
-            $licenseProblems += "$package uses unexpected license file '$licenseText'. Approved file names: $($approvedFiles -join ', '). Manual license review required."
-            continue
-        }
-
-        $licenseFilePath = Join-Path $packageDirectory $licenseText
-        if (-not (Test-Path -LiteralPath $licenseFilePath)) {
-            $licenseProblems += "$package declares license file '$licenseText' but the file is missing from the restored package."
-        }
-        continue
-    }
-
-    $licenseProblems += "$package declares unsupported NuGet license type '$licenseType' with value '$licenseText'. Manual license review required."
+    # License-file and URL declarations are intentionally not auto-approved. The
+    # package must expose an SPDX expression that CI can prove is MIT or Apache-2.0.
+    $licenseProblems += "$package declares NuGet license type '$licenseType' with value '$licenseText'. Only SPDX MIT or Apache-2.0 expressions are permitted."
 }
 
 if ($licenseProblems.Count -gt 0) {
@@ -258,4 +227,4 @@ if ($licenseProblems.Count -gt 0) {
 }
 
 Write-Host ("NuGet license policy validation passed for {0} resolved packages." -f $packages.Count)
-Write-Host ("Approved SPDX identifiers: {0}" -f ($approvedLicenseIdentifiers -join ', '))
+Write-Host 'Permitted third-party licenses: MIT, Apache-2.0'
