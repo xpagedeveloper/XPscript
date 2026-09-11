@@ -477,7 +477,10 @@ internal static class XPScriptDebugRuntime
             }
 
             if (triggered.Length == 0 && matched && !rule.LastMatched)
+            {
                 triggered = rule.Condition;
+                Send(new { type = "breakpointDiagnostic", message = "XPscript global condition matched: " + rule.Condition });
+            }
             rule.LastMatched = matched;
         }
         return triggered;
@@ -687,7 +690,12 @@ internal static class XPScriptDebugRuntime
         switch (command)
         {
             case "setBreakpoints": SetBreakpoints(root); Send(new { type = "breakpoints", ok = true }); break;
-            case "setGlobalConditionBreakpoints": SetGlobalConditionBreakpoints(root); Send(new { type = "globalConditionBreakpoints", ok = true, conditions = GlobalConditionBreakpoints.Select(item => item.Condition).ToArray() }); break;
+            case "setGlobalConditionBreakpoints":
+                SetGlobalConditionBreakpoints(root);
+                Send(new { type = "globalConditionBreakpoints", ok = true, conditions = GlobalConditionBreakpoints.Select(item => item.Condition).ToArray() });
+                foreach (var rule in GlobalConditionBreakpoints)
+                    Send(new { type = "breakpointDiagnostic", message = "XPscript runtime global condition: " + rule.Condition });
+                break;
             case "setDataBreakpoints": SetDataBreakpoints(root); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
             case "setExceptionBreakpoints": SetExceptionBreakpoints(root); Send(new { type = "exceptionBreakpoints", ok = true }); break;
             case "stackTrace": Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) }); break;
