@@ -43,6 +43,17 @@ Sub Main()
 End Sub
 """);
 
+ExpectUnsupportedEncryptedZipWrite(
+    "extended-password-write",
+    """
+Option Declare
+Sub Main()
+    Dim archive As New Archive("secure.zip", True)
+    archive.Password = "secret"
+    archive.AddText("payload.txt", "hello")
+End Sub
+""");
+
 ExpectSuccess(
     "extended-gzip",
     """
@@ -69,6 +80,21 @@ void ExpectExtendedFailure(string name, string source)
             || !ex.Message.Contains("New Archive(..., True)", StringComparison.Ordinal)
             || !ex.Message.Contains("SharpCompress", StringComparison.Ordinal))
             throw new Exception(name + " returned the wrong compile diagnostic: " + ex.Message);
+    }
+}
+
+void ExpectUnsupportedEncryptedZipWrite(string name, string source)
+{
+    try
+    {
+        _ = transpiler.Transpile(source, name + ".xps", "win-x64");
+        throw new Exception(name + " unexpectedly compiled password-protected ZIP writing.");
+    }
+    catch (CompilerException ex)
+    {
+        if (!ex.Message.Contains("Password-protected ZIP writing is not supported", StringComparison.Ordinal)
+            || !ex.Message.Contains("SharpCompress 0.50.4", StringComparison.Ordinal))
+            throw new Exception(name + " returned the wrong encrypted ZIP write diagnostic: " + ex.Message);
     }
 }
 
