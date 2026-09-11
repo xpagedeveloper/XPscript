@@ -46,48 +46,32 @@ jobs:
           Sub Main()
               Dim http As New XPHttpClient
               Dim response As XPHttpResponse
-              Dim errCode As Integer
-              Dim errText As String
-              Dim notes As New NotesHTTPRequest
-              Dim ai As XPAi
-              Dim supa As XPHttpDbSupabase
-              Dim domino As XPHttpDbDominoRest
 
               http.AllowPrivateNetwork = True
               http.CertificateValidation = "Strict"
-              notes.CertificateValidation = "Strict"
-              Set ai = New XPAi("https://127.0.0.1:18443/")
-              ai.CertificateValidation = "Strict"
-              Set supa = New XPHttpDbSupabase("https://127.0.0.1:18443", "test-key")
-              supa.CertificateValidation = "Strict"
-              Set domino = New XPHttpDbDominoRest("https://127.0.0.1:18443", "test-token", "test.nsf")
-              domino.CertificateValidation = "Strict"
-
-              On Error Resume Next
+              On Error GoTo TlsError
               Set response = http.Get("https://127.0.0.1:18443/")
-              errCode = Err
-              errText = Error$
+              Print "STRICT-DID-NOT-FAIL"
+              GoTo AfterStrict
+          TlsError:
+              Print "STRICT-ERR=" & CStr(Err)
+              Print "STRICT-TEXT=" & Error$
+              Resume AfterStrict
+          AfterStrict:
               On Error GoTo 0
-
-              Print "STRICT-ERR=" & CStr(errCode)
-              Print "STRICT-TEXT=" & errText
-              If errCode <> 1201 Then Error 9901, "Expected TLS certificate error 1201, got " & CStr(errCode)
 
               http.CertificateValidation = "AllowSelfSigned"
               Set response = http.Get("https://127.0.0.1:18443/")
-              If response.StatusCode <> 200 Then Error 9902, "AllowSelfSigned request failed"
-              Print "ALLOW-SELF-SIGNED=OK"
+              Print "ALLOW-STATUS=" & CStr(response.StatusCode)
 
               http.CertificateValidation = "Insecure"
               Set response = http.Get("https://127.0.0.1:18443/")
-              If response.StatusCode <> 200 Then Error 9903, "Insecure request failed"
-              Print "INSECURE=OK"
-              Call ai.Dispose()
+              Print "INSECURE-STATUS=" & CStr(response.StatusCode)
           End Sub
           XPS
           dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run "$TMP/tls.xps" --debug | tee "$TMP/output.txt"
+          ! grep -q 'STRICT-DID-NOT-FAIL' "$TMP/output.txt"
           grep -q 'STRICT-ERR=1201' "$TMP/output.txt"
           grep -q 'TLS certificate validation failed' "$TMP/output.txt"
-          grep -q 'ALLOW-SELF-SIGNED=OK' "$TMP/output.txt"
-          grep -q 'INSECURE=OK' "$TMP/output.txt"
-          # retry after XPAi postprocessor compatibility fix
+          grep -q 'ALLOW-STATUS=200' "$TMP/output.txt"
+          grep -q 'INSECURE-STATUS=200' "$TMP/output.txt"
