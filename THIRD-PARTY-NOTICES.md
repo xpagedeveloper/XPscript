@@ -42,6 +42,7 @@ The following packages are distributed under the MIT License:
 - [Microsoft.CodeAnalysis](https://github.com/dotnet/roslyn), including `Microsoft.CodeAnalysis.CSharp`, `Common`, and `Analyzers` (`4.14.0` and `3.11.0`)
 - [Microsoft.SqlServer.Server](https://github.com/dotnet/SqlClient) (`1.0.0`)
 - [MimeKit](https://github.com/jstedfast/MimeKit) (`4.17.0`)
+- [SharpCompress](https://github.com/adamhathcock/sharpcompress) (`0.50.4`), included in generated applications only when an `Archive` object is created with extended support enabled
 - [SkiaSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`3.119.4-preview.1.1`)
 - [System.Configuration.ConfigurationManager](https://github.com/dotnet/runtime), `System.Diagnostics.EventLog`, `System.IdentityModel.Tokens.Jwt`, `System.Security.Cryptography.Pkcs`, and `System.Security.Cryptography.ProtectedData` (`9.0.13` or `10.0.0`)
 - [Tmds.DBus.Protocol](https://github.com/tmds/Tmds.DBus) (`0.92.0`)
