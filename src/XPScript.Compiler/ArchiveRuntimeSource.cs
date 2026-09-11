@@ -6,6 +6,10 @@ internal static class ArchiveRuntimeSource
 internal sealed class XPScriptArchive
 {
     private readonly string? _path;
+    private readonly List<PendingArchiveEntry> _pendingEntries = [];
+    private string? _pendingExtendedFormat;
+    private bool _extendedCreateMode;
+    private bool _suppressExtendedAutoSave;
 
     public XPScriptArchive(object? path = null, bool extendedSupport = false)
     {
@@ -16,11 +20,11 @@ internal sealed class XPScriptArchive
     }
 
     public string Path => _path ?? "";
-    public string Format => string.IsNullOrEmpty(_path) ? "" : System.IO.Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
+    public string Format => _pendingExtendedFormat ?? (string.IsNullOrEmpty(_path) ? "" : System.IO.Path.GetExtension(_path).TrimStart('.').ToUpperInvariant());
     public bool Exists => _path is not null && System.IO.File.Exists(_path);
     public bool ExtendedSupport { get; }
     public bool IsEncrypted => Exists && Snapshots().Any(x => x.IsEncrypted);
-    public bool IsReadOnly => !Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase);
+    public bool IsReadOnly => !Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) && !UseExtendedWriteMode;
     public string Password { get; set; } = "";
     public int CompressionLevel { get; set; } = 5;
     public long MaxExtractSize { get; set; } = 2L * 1024 * 1024 * 1024;
@@ -47,21 +51,36 @@ internal sealed class XPScriptArchive
     }
 
     public void Close() { }
-    public void Save() { }
+
+    public void Save()
+    {
+        if (UseExtendedWriteMode) SaveExtendedArchive();
+    }
 
     public void Create(object? format = null)
     {
         EnsurePath();
         var requested = format is null ? Format : XPScriptRuntime.CStr(format).Trim().TrimStart('.').ToUpperInvariant();
         if (string.IsNullOrEmpty(requested)) requested = "ZIP";
-        if (!requested.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
-            throw new XPScriptRuntimeException(5, ExtendedSupport
-                ? "Extended archive creation is not implemented yet."
-                : "Archive creation supports ZIP only. Create the Archive with extendedSupport=True to enable additional formats.");
-        var parent = System.IO.Path.GetDirectoryName(_path!);
-        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
-        using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
-        using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false);
+
+        if (requested.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
+        {
+            _extendedCreateMode = false;
+            _pendingExtendedFormat = null;
+            _pendingEntries.Clear();
+            var parent = System.IO.Path.GetDirectoryName(_path!);
+            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
+            using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false);
+            return;
+        }
+
+        EnsureExtendedEnabled();
+        requested = NormalizeExtendedWriteFormat(requested);
+        _pendingExtendedFormat = requested;
+        _extendedCreateMode = true;
+        _pendingEntries.Clear();
+        SaveExtendedArchive();
     }
 
     public void AddFile(object? sourcePath, object? archivePath = null)
@@ -69,6 +88,8 @@ internal sealed class XPScriptArchive
         EnsureWritable();
         var source = XPScriptFileSystemRuntime.ResolvePath(sourcePath);
         if (!System.IO.File.Exists(source)) throw new XPScriptRuntimeException(53, "Archive source file was not found.");
+        if ((System.IO.File.GetAttributes(source) & System.IO.FileAttributes.ReparsePoint) != 0)
+            throw new XPScriptRuntimeException(5, "Archive.AddFile does not allow symbolic links or reparse points.");
         var name = Normalize(archivePath is null ? System.IO.Path.GetFileName(source) : XPScriptRuntime.CStr(archivePath));
         Add(name, System.IO.File.ReadAllBytes(source), System.IO.File.GetLastWriteTimeUtc(source));
     }
@@ -85,8 +106,22 @@ internal sealed class XPScriptArchive
             ? System.IO.Path.GetFileName(source.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
             : XPScriptRuntime.CStr(archivePath);
         rootName = Normalize(rootName).TrimEnd('/');
-        AddDirectoryEntry(rootName + "/");
-        AddFolderTree(source, source, rootName, recursive);
+
+        var defer = UseExtendedWriteMode;
+        if (defer) _suppressExtendedAutoSave = true;
+        try
+        {
+            AddDirectoryEntry(rootName + "/");
+            AddFolderTree(source, source, rootName, recursive);
+        }
+        finally
+        {
+            if (defer)
+            {
+                _suppressExtendedAutoSave = false;
+                SaveExtendedArchive();
+            }
+        }
     }
 
     private void AddFolderTree(string sourceRoot, string currentDirectory, string archiveRoot, bool recursive)
@@ -118,8 +153,16 @@ internal sealed class XPScriptArchive
     public bool Remove(object? entryName)
     {
         EnsureWritable();
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         var name = Normalize(XPScriptRuntime.CStr(entryName));
+        if (UseExtendedWriteMode)
+        {
+            var prefix = name.TrimEnd('/') + "/";
+            var removed = _pendingEntries.RemoveAll(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            if (removed > 0) SaveExtendedArchive();
+            return removed > 0;
+        }
+
+        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
         foreach (var entry in matches) entry.Delete();
         return matches.Count > 0;
@@ -130,6 +173,22 @@ internal sealed class XPScriptArchive
         EnsureWritable();
         var oldKey = Normalize(XPScriptRuntime.CStr(entryName));
         var newKey = Normalize(XPScriptRuntime.CStr(newName));
+
+        if (UseExtendedWriteMode)
+        {
+            var oldPrefix = oldKey.TrimEnd('/') + "/";
+            var matches = _pendingEntries.Where(x => x.Name.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(oldPrefix, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (matches.Count == 0) return false;
+            foreach (var item in matches)
+            {
+                var suffix = item.Name.Length == oldKey.Length ? "" : item.Name[oldKey.TrimEnd('/').Length..];
+                var renamed = Normalize(newKey.TrimEnd('/') + suffix + (item.IsDirectory && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+                item.Name = renamed;
+            }
+            SaveExtendedArchive();
+            return true;
+        }
+
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
         if (entries.Count == 0) return false;
@@ -254,10 +313,18 @@ internal sealed class XPScriptArchive
     }
 
     private bool UseExtendedBackend => ExtendedSupport && (!Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrEmpty(Password));
+    private bool UseExtendedWriteMode => ExtendedSupport && _extendedCreateMode && IsExtendedWritableFormat(Format);
 
     private void Add(string name, byte[] bytes, DateTime modified)
     {
         EnsureWritable();
+        if (UseExtendedWriteMode)
+        {
+            UpsertPending(new PendingArchiveEntry(name, bytes, modified, false));
+            if (!_suppressExtendedAutoSave) SaveExtendedArchive();
+            return;
+        }
+
         if (!System.IO.File.Exists(_path!)) Create("zip");
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         archive.GetEntry(name)?.Delete();
@@ -270,9 +337,23 @@ internal sealed class XPScriptArchive
     private void AddDirectoryEntry(string name)
     {
         EnsureWritable();
+        name = Normalize(name.TrimEnd('/') + "/");
+        if (UseExtendedWriteMode)
+        {
+            UpsertPending(new PendingArchiveEntry(name, null, DateTime.UtcNow, true));
+            if (!_suppressExtendedAutoSave) SaveExtendedArchive();
+            return;
+        }
+
         if (!System.IO.File.Exists(_path!)) Create("zip");
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
         if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+    }
+
+    private void UpsertPending(PendingArchiveEntry entry)
+    {
+        _pendingEntries.RemoveAll(x => x.Name.Equals(entry.Name, StringComparison.OrdinalIgnoreCase));
+        _pendingEntries.Add(entry);
     }
 
     private System.IO.Compression.CompressionLevel ResolveCompressionLevel() =>
@@ -351,11 +432,101 @@ internal sealed class XPScriptArchive
     private void EnsureWritable()
     {
         EnsurePath();
+        if (UseExtendedWriteMode) return;
         if (!Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
             throw new XPScriptRuntimeException(5, ExtendedSupport
-                ? "This archive format is currently read-only in the XPScript extended backend."
+                ? "This archive format is read-only unless it was created by this Archive object with Create(\"tar\") or Create(\"7z\")."
                 : "Archive supports ZIP only. Create the Archive with extendedSupport=True to enable additional formats.");
         if (!string.IsNullOrEmpty(Password)) throw new XPScriptRuntimeException(5, "Archive passwords are not implemented for ZIP writing yet.");
+    }
+
+    private static string NormalizeExtendedWriteFormat(string format)
+    {
+        var value = format.Trim().TrimStart('.').ToUpperInvariant();
+        return value switch
+        {
+            "TAR" => "TAR",
+            "7Z" or "7ZIP" or "SEVENZIP" => "7Z",
+            _ => throw new XPScriptRuntimeException(5, "Extended archive creation currently supports TAR and 7z. RAR and XZ remain read-only.")
+        };
+    }
+
+    private static bool IsExtendedWritableFormat(string format) =>
+        format.Equals("TAR", StringComparison.OrdinalIgnoreCase) || format.Equals("7Z", StringComparison.OrdinalIgnoreCase);
+
+    private void SaveExtendedArchive()
+    {
+        EnsureExtendedEnabled();
+        EnsurePath();
+        var format = NormalizeExtendedWriteFormat(Format);
+        var parent = System.IO.Path.GetDirectoryName(_path!);
+        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+
+        try
+        {
+            var assembly = System.Reflection.Assembly.Load("SharpCompress");
+            var archiveTypeType = assembly.GetType("SharpCompress.Common.ArchiveType", throwOnError: true)!;
+            var compressionTypeType = assembly.GetType("SharpCompress.Common.CompressionType", throwOnError: true)!;
+            var writerFactoryType = assembly.GetType("SharpCompress.Writers.WriterFactory", throwOnError: true)!;
+
+            object archiveType;
+            object options;
+            if (format.Equals("7Z", StringComparison.OrdinalIgnoreCase))
+            {
+                archiveType = Enum.Parse(archiveTypeType, "SevenZip", true);
+                var optionsType = assembly.GetType("SharpCompress.Writers.SevenZip.SevenZipWriterOptions", throwOnError: true)!;
+                options = Activator.CreateInstance(optionsType)!;
+                optionsType.GetProperty("CompressionLevel")?.SetValue(options, CompressionLevel);
+            }
+            else
+            {
+                archiveType = Enum.Parse(archiveTypeType, "Tar", true);
+                var noneCompression = Enum.Parse(compressionTypeType, "None", true);
+                var optionsType = assembly.GetType("SharpCompress.Writers.Tar.TarWriterOptions", throwOnError: true)!;
+                options = Activator.CreateInstance(optionsType, [noneCompression, true])!;
+            }
+
+            var openWriter = writerFactoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .FirstOrDefault(m => m.Name == "OpenWriter" && m.GetParameters().Length == 3 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
+                ?? throw new MissingMethodException("SharpCompress WriterFactory.OpenWriter(Stream, ArchiveType, IWriterOptions) was not found.");
+
+            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
+            var writer = openWriter.Invoke(null, [stream, archiveType, options])
+                ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to create the archive writer.");
+            try
+            {
+                var writerType = writer.GetType();
+                var writeFile = writerType.GetMethod("Write", [typeof(string), typeof(System.IO.Stream), typeof(DateTime?)])
+                    ?? writer.GetType().GetInterfaces().SelectMany(x => x.GetMethods()).FirstOrDefault(m => m.Name == "Write" && m.GetParameters().Length == 3);
+                var writeDirectory = writerType.GetMethod("WriteDirectory", [typeof(string), typeof(DateTime?)])
+                    ?? writer.GetType().GetInterfaces().SelectMany(x => x.GetMethods()).FirstOrDefault(m => m.Name == "WriteDirectory" && m.GetParameters().Length == 2);
+                if (writeFile is null || writeDirectory is null)
+                    throw new MissingMethodException("SharpCompress writer entry methods were not found.");
+
+                foreach (var entry in _pendingEntries.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (entry.IsDirectory)
+                    {
+                        writeDirectory.Invoke(writer, [entry.Name.TrimEnd('/'), entry.Modified]);
+                        continue;
+                    }
+                    using var input = new System.IO.MemoryStream(entry.Bytes ?? [], writable: false);
+                    writeFile.Invoke(writer, [entry.Name, input, entry.Modified]);
+                }
+            }
+            finally
+            {
+                if (writer is IDisposable disposable) disposable.Dispose();
+            }
+        }
+        catch (System.Reflection.TargetInvocationException ex)
+        {
+            throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + (ex.InnerException?.Message ?? ex.Message));
+        }
+        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        {
+            throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + ex.Message);
+        }
     }
 
     private void ValidateZip(IEnumerable<System.IO.Compression.ZipArchiveEntry> entries)
@@ -579,6 +750,22 @@ internal sealed class XPScriptArchive
         var result = new LSArray("Byte", true, [0], [bytes.Length - 1]);
         for (var i = 0; i < bytes.Length; i++) result.Set(bytes[i], i);
         return result;
+    }
+
+    private sealed class PendingArchiveEntry
+    {
+        public string Name { get; set; }
+        public byte[]? Bytes { get; }
+        public DateTime Modified { get; }
+        public bool IsDirectory { get; }
+
+        public PendingArchiveEntry(string name, byte[]? bytes, DateTime modified, bool isDirectory)
+        {
+            Name = name;
+            Bytes = bytes;
+            Modified = modified;
+            IsDirectory = isDirectory;
+        }
     }
 
     private sealed class ExtendedArchiveHandle : IDisposable
