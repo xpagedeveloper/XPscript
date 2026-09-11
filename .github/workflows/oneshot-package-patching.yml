@@ -45,8 +45,7 @@ jobs:
 
           old_ui = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{AvaloniaWebViewVersion}\\" />\\n";'
           new_ui = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\\" />\\n";'
-          if old_ui in text:
-              text = text.replace(old_ui, new_ui, 1)
+          text = text.replace(old_ui, new_ui, 1)
           replacements = {
               '{MicrosoftDataSqliteVersion}': '{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.Sqlite", ApplicationDependencyCatalog.MicrosoftDataSqliteVersion)}',
               '{MicrosoftDataSqlClientVersion}': '{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.SqlClient", ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion)}',
@@ -59,7 +58,10 @@ jobs:
 
           run = Path('src/XPScript.Compiler/RunCompiler.cs')
           text = run.read_text()
-          text = text.replace('    <PackageReference Include=\\"MimeKit\\" Version=\\"4.17.0\\" />\\n', '    <PackageReference Include=\\"MimeKit\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion)}\\" />\\n', 1)
+          old = '''        var packageItems = usesMimeKit\n            ? "  <ItemGroup>\\n    <PackageReference Include=\\\"MimeKit\\\" Version=\\\"4.17.0\\\" />\\n  </ItemGroup>\\n"\n            : string.Empty;'''
+          new = '''        var mimeKitVersion = ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion);\n        var packageItems = usesMimeKit\n            ? $"  <ItemGroup>\\n    <PackageReference Include=\\\"MimeKit\\\" Version=\\\"{mimeKitVersion}\\\" />\\n  </ItemGroup>\\n"\n            : string.Empty;'''
+          assert old in text
+          text = text.replace(old, new, 1)
           run.write_text(text)
           PY
       - name: Build CLI
