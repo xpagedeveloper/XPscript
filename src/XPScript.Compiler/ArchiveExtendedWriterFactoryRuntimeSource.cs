@@ -9,8 +9,8 @@ internal static class XPScriptExtendedArchiveWriterFactory
     {
         if (value is byte[] || value is LSArray)
             return new XPScriptExtendedMemoryArchiveV3(value);
-        return new XPScriptExtendedArchiveV3(value);
+        return new XPScriptExtendedArchiveV4(value);
     }
 }
-""" + "\n" + ArchiveCompressedTarRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRuntimeSource.Code + "\n" + ArchiveExtendedMemoryWriterRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRebuildRuntimeSource.Code;
+""" + "\n" + ArchiveCompressedTarRuntimeSource.Code + "\n" + ArchiveDetectedFormatRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRuntimeSource.Code + "\n" + ArchiveExtendedMemoryWriterRuntimeSource.Code + "\n" + ArchiveExtendedMemoryRebuildRuntimeSource.Code;
 }
