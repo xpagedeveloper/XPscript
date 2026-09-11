@@ -10,6 +10,10 @@ Sub Main()
     Call ExpectOpenFailure("./out/archive-security-fixtures/max-size.zip", 10000, 100, 1000, "MaxExtractSize")
     Call ExpectOpenFailure("./out/archive-security-fixtures/compression-ratio.zip", 10000, 2147483647, 10, "MaxCompressionRatio")
 
+    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/traversal.tar", "extended TAR path traversal")
+    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/absolute.tar", "extended TAR absolute path")
+    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/symlink-entry.tar", "extended TAR symbolic link entry")
+
     Dim output As New Archive("./out/archive-security-fixtures/symlink-source-test.zip")
     output.Create("zip")
     output.AddFolder("./out/archive-security-fixtures/source", "source", True)
@@ -46,4 +50,19 @@ Sub ExpectOpenFailure(path As String, maxEntries As Integer, maxSize As Long, ma
 
     If openErr = 0 Then Error 5, "Archive security fixture unexpectedly opened: " & label
     If Len(openMessage) = 0 Then Error 5, "Archive security fixture returned an empty diagnostic: " & label
+End Sub
+
+Sub ExpectExtendedOpenFailure(path As String, label As String)
+    Dim archive As New Archive(path, True)
+
+    Dim openErr As Integer
+    Dim openMessage As String
+    On Error Resume Next
+    archive.Open()
+    openErr = Err
+    openMessage = Error$
+    On Error GoTo 0
+
+    If openErr = 0 Then Error 5, "Extended Archive security fixture unexpectedly opened: " & label
+    If Len(openMessage) = 0 Then Error 5, "Extended Archive security fixture returned an empty diagnostic: " & label
 End Sub
