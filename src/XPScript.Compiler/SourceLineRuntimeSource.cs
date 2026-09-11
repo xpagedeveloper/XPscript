@@ -419,6 +419,28 @@ internal static class XPScriptDebugRuntime
         }
     }
 
+    public static bool ProgramOutput(string text, bool isError, bool newLine)
+    {
+        EnsureInitialized();
+        if (!_enabled) return false;
+        lock (Gate)
+        {
+            EnsureConnected();
+            if (_writer is null) return false;
+            Send(new
+            {
+                type = "programOutput",
+                output = text ?? "",
+                category = isError ? "stderr" : "stdout",
+                newLine,
+                source = XPSourceLineRuntime.CurrentSource,
+                line = XPSourceLineRuntime.Current,
+                threadId = 1
+            });
+            return true;
+        }
+    }
+
     public static void Complete()
     {
         EnsureInitialized();
@@ -857,10 +879,32 @@ internal static class Console
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
     public static int Read() => global::System.Console.Read();
     public static string ReadLine() => global::System.Console.ReadLine() ?? string.Empty;
-    public static void Write(object? value) => global::System.Console.Write(XPScriptRuntime.PrintText(value));
-    public static void WriteLine() => global::System.Console.WriteLine();
-    public static void WriteLine(object? value) => global::System.Console.WriteLine(XPScriptRuntime.PrintText(value));
-    public static void WriteError(object? value) => global::System.Console.Error.WriteLine(XPScriptRuntime.PrintText(value));
+    public static void Write(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, false, false))
+            global::System.Console.Write(text);
+    }
+
+    public static void WriteLine()
+    {
+        if (!XPScriptDebugRuntime.ProgramOutput("", false, true))
+            global::System.Console.WriteLine();
+    }
+
+    public static void WriteLine(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, false, true))
+            global::System.Console.WriteLine(text);
+    }
+
+    public static void WriteError(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, true, true))
+            global::System.Console.Error.WriteLine(text);
+    }
     public static void Clear() => global::System.Console.Clear();
 
     public static void ClearLine()
