@@ -54,11 +54,39 @@ jobs:
       - name: Compile and run Archive suite
         shell: pwsh
         run: |
-          function Run-XPScript([string] $source, [string] $name) {
+          function Compile-XPScript([string] $source, [string] $name) {
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o "./out/$name" --framework-dependent
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            if ($IsWindows) { & "./out/$name.exe" } else { & "./out/$name" }
+          }
+
+          function Get-XPScriptExecutable([string] $name) {
+            if ($IsWindows) { return "./out/$name.exe" }
+            return "./out/$name"
+          }
+
+          function Run-XPScript([string] $source, [string] $name) {
+            Compile-XPScript $source $name
+            $exe = Get-XPScriptExecutable $name
+            & $exe
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          function Expect-XPScriptFailure([string] $name, [string[]] $arguments, [string] $label) {
+            $exe = Get-XPScriptExecutable $name
+            $output = (& $exe @arguments 2>&1 | Out-String)
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+              Write-Error "Archive security probe unexpectedly succeeded: $label"
+              exit 1
+            }
+            if ([string]::IsNullOrWhiteSpace($output)) {
+              Write-Error "Archive security probe returned no diagnostic: $label"
+              exit 1
+            }
+            if ($output -match 'SharpCompress') {
+              Write-Error "Archive security diagnostic exposed an implementation detail: $label"
+              exit 1
+            }
           }
 
           Run-XPScript ./demo/archive/archive-zip.xps archive-zip
@@ -66,6 +94,30 @@ jobs:
           Run-XPScript ./demo/archive/archive-iterator.xps archive-iterator
           Run-XPScript ./demo/archive/archive-edge-cases.xps archive-edge-cases
           Run-XPScript ./demo/archive/archive-security-fixtures.xps archive-security-check
+
+          Compile-XPScript ./demo/archive/archive-security-reject-zip.xps archive-security-reject-zip
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/traversal.zip', '10000', '2147483647', '1000') 'path traversal'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-unix.zip', '10000', '2147483647', '1000') 'absolute Unix path'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-windows.zip', '10000', '2147483647', '1000') 'absolute Windows path'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/unc.zip', '10000', '2147483647', '1000') 'UNC path'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/symlink-entry.zip', '10000', '2147483647', '1000') 'symbolic link entry'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-entries.zip', '2', '2147483647', '1000') 'MaxEntries'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-size.zip', '10000', '100', '1000') 'MaxExtractSize'
+          Expect-XPScriptFailure archive-security-reject-zip @('../../out/archive-security-fixtures/compression-ratio.zip', '10000', '2147483647', '10') 'MaxCompressionRatio'
+
+          Compile-XPScript ./demo/archive/archive-security-reject-extended.xps archive-security-reject-extended
+          Expect-XPScriptFailure archive-security-reject-extended @('../../out/archive-security-fixtures/traversal.tar') 'extended TAR path traversal'
+          Expect-XPScriptFailure archive-security-reject-extended @('../../out/archive-security-fixtures/absolute.tar') 'extended TAR absolute path'
+          Expect-XPScriptFailure archive-security-reject-extended @('../../out/archive-security-fixtures/symlink-entry.tar') 'extended TAR symbolic link entry'
+
+          if (Test-Path './out/archive-security-fixtures/extraction-symlink-ready.txt') {
+            Compile-XPScript ./demo/archive/archive-security-reject-extract.xps archive-security-reject-extract
+            Expect-XPScriptFailure archive-security-reject-extract @() 'destination symbolic link extraction'
+            if (Test-Path './out/archive-security-fixtures/outside/escape.txt') {
+              Write-Error 'Archive extraction escaped through a destination symbolic link'
+              exit 1
+            }
+          }
 
           Run-XPScript ./demo/archive/archive-extended-memory.xps archive-extended-memory
           Run-XPScript ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write
