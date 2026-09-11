@@ -42,7 +42,9 @@ internal sealed class ArchiveObjectPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value), RegexOptions.IgnoreCase);
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (archiveVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptArchive", StringComparison.Ordinal)))
+            if (set.Success && (archiveVariables.Contains(set.Groups[1].Value)
+                || set.Groups[2].Value.Contains("XPScriptArchive", StringComparison.Ordinal)
+                || set.Groups[2].Value.Contains("XPScriptExtendedArchive", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
@@ -61,7 +63,7 @@ internal sealed class ArchiveObjectPreprocessor
 
         var extended = args[1].Trim();
         if (extended.Equals("True", StringComparison.OrdinalIgnoreCase))
-            return $"new XPScriptArchive({args[0]}, true)";
+            return $"new XPScriptExtendedArchive({args[0]})";
         if (extended.Equals("False", StringComparison.OrdinalIgnoreCase))
             return $"new XPScriptArchive({args[0]}, false)";
 
