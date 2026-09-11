@@ -20,7 +20,7 @@ internal sealed class XPScriptExtendedArchiveV2
     public string Format => _gzipCreateMode ? "GZIP" : _inner.Format;
     public bool Exists => _inner.Exists;
     public bool ExtendedSupport => true;
-    public bool IsReadOnly => _gzipCreateMode ? false : _inner.IsReadOnly;
+    public bool IsReadOnly => _gzipCreateMode ? false : (CanRebuildExisting ? false : _inner.IsReadOnly);
     public string Password { get => _inner.Password; set => _inner.Password = value ?? ""; }
     public int CompressionLevel { get => _inner.CompressionLevel; set => _inner.CompressionLevel = value; }
     public long MaxExtractSize { get => _inner.MaxExtractSize; set => _inner.MaxExtractSize = value; }
@@ -33,6 +33,8 @@ internal sealed class XPScriptExtendedArchiveV2
     public long CompressedSize => _inner.CompressedSize;
     public long UncompressedSize => _inner.UncompressedSize;
     public LSArray Entries => _inner.Entries;
+
+    private bool CanRebuildExisting => Exists && (Format.Equals("TAR", StringComparison.OrdinalIgnoreCase) || Format.Equals("7Z", StringComparison.OrdinalIgnoreCase));
 
     public void Open() => _inner.Open();
     public void Close() => _inner.Close();
@@ -72,7 +74,7 @@ internal sealed class XPScriptExtendedArchiveV2
 
     public void AddFile(object? sourcePath, object? archivePath = null)
     {
-        if (!_gzipCreateMode)
+        if (!_gzipCreateMode && !CanRebuildExisting)
         {
             _inner.AddFile(sourcePath, archivePath);
             return;
@@ -81,57 +83,128 @@ internal sealed class XPScriptExtendedArchiveV2
         if (!System.IO.File.Exists(source)) throw new XPScriptRuntimeException(53, "Archive source file was not found.");
         if ((System.IO.File.GetAttributes(source) & System.IO.FileAttributes.ReparsePoint) != 0)
             throw new XPScriptRuntimeException(5, "Archive.AddFile does not allow symbolic links or reparse points.");
-        var name = Normalize(archivePath is null ? System.IO.Path.GetFileName(source) : XPScriptRuntime.CStr(archivePath));
-        SetGZipEntry(name, System.IO.File.ReadAllBytes(source), System.IO.File.GetLastWriteTimeUtc(source));
+        var name = Normalize(archivePath is null ? System.IO.Path.GetFileName(source) : XPScriptRuntime.CStr(archivePath), allowFolders: !_gzipCreateMode);
+        var bytes = System.IO.File.ReadAllBytes(source);
+        var modified = System.IO.File.GetLastWriteTimeUtc(source);
+        if (_gzipCreateMode)
+        {
+            SetGZipEntry(name, bytes, modified);
+            return;
+        }
+        RebuildExisting(entries => Upsert(entries, new RebuildEntry(name, bytes, modified, false)));
     }
 
     public void AddFolder(object? sourcePath, object? archivePath = null, bool recursive = true)
     {
         if (_gzipCreateMode) throw new XPScriptRuntimeException(5, "GZip is a single-stream format and does not support folder entries.");
-        _inner.AddFolder(sourcePath, archivePath, recursive);
+        if (!CanRebuildExisting)
+        {
+            _inner.AddFolder(sourcePath, archivePath, recursive);
+            return;
+        }
+
+        var source = XPScriptFileSystemRuntime.ResolvePath(sourcePath);
+        if (!System.IO.Directory.Exists(source)) throw new XPScriptRuntimeException(76, "Archive source folder was not found.");
+        if ((System.IO.File.GetAttributes(source) & System.IO.FileAttributes.ReparsePoint) != 0)
+            throw new XPScriptRuntimeException(5, "Archive.AddFolder does not allow a symbolic link or reparse point as the source folder.");
+        var rootName = archivePath is null
+            ? System.IO.Path.GetFileName(source.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+            : XPScriptRuntime.CStr(archivePath);
+        rootName = Normalize(rootName, true).TrimEnd('/');
+        var additions = new List<RebuildEntry> { new(rootName + "/", null, DateTime.UtcNow, true) };
+        CollectFolderEntries(source, source, rootName, recursive, additions);
+        RebuildExisting(entries =>
+        {
+            foreach (var item in additions) Upsert(entries, item);
+        });
     }
 
     public void AddText(object? archivePath, object? text)
     {
-        if (!_gzipCreateMode)
+        var name = Normalize(XPScriptRuntime.CStr(archivePath), allowFolders: !_gzipCreateMode);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(XPScriptRuntime.CStr(text));
+        if (_gzipCreateMode)
         {
-            _inner.AddText(archivePath, text);
+            SetGZipEntry(name, bytes, DateTime.UtcNow);
             return;
         }
-        SetGZipEntry(Normalize(XPScriptRuntime.CStr(archivePath)), System.Text.Encoding.UTF8.GetBytes(XPScriptRuntime.CStr(text)), DateTime.UtcNow);
+        if (CanRebuildExisting)
+        {
+            RebuildExisting(entries => Upsert(entries, new RebuildEntry(name, bytes, DateTime.UtcNow, false)));
+            return;
+        }
+        _inner.AddText(archivePath, text);
     }
 
     public void AddBytes(object? archivePath, object? bytes)
     {
-        if (!_gzipCreateMode)
+        var name = Normalize(XPScriptRuntime.CStr(archivePath), allowFolders: !_gzipCreateMode);
+        var raw = ToRawBytes(bytes);
+        if (_gzipCreateMode)
         {
-            _inner.AddBytes(archivePath, bytes);
+            SetGZipEntry(name, raw, DateTime.UtcNow);
             return;
         }
-        SetGZipEntry(Normalize(XPScriptRuntime.CStr(archivePath)), ToRawBytes(bytes), DateTime.UtcNow);
+        if (CanRebuildExisting)
+        {
+            RebuildExisting(entries => Upsert(entries, new RebuildEntry(name, raw, DateTime.UtcNow, false)));
+            return;
+        }
+        _inner.AddBytes(archivePath, bytes);
     }
 
     public bool Remove(object? entryName)
     {
-        if (!_gzipCreateMode) return _inner.Remove(entryName);
-        if (_gzipEntryName is null) return false;
-        var wanted = Normalize(XPScriptRuntime.CStr(entryName));
-        if (!_gzipEntryName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return false;
-        _gzipEntryName = null;
-        _gzipEntryBytes = null;
-        if (System.IO.File.Exists(Path)) System.IO.File.Delete(Path);
-        return true;
+        if (_gzipCreateMode)
+        {
+            if (_gzipEntryName is null) return false;
+            var wanted = Normalize(XPScriptRuntime.CStr(entryName), false);
+            if (!_gzipEntryName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return false;
+            _gzipEntryName = null;
+            _gzipEntryBytes = null;
+            if (System.IO.File.Exists(Path)) System.IO.File.Delete(Path);
+            return true;
+        }
+        if (!CanRebuildExisting) return _inner.Remove(entryName);
+
+        var name = Normalize(XPScriptRuntime.CStr(entryName), true).TrimEnd('/');
+        var removed = false;
+        RebuildExisting(entries =>
+        {
+            var prefix = name + "/";
+            removed = entries.RemoveAll(x => x.Name.TrimEnd('/').Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) > 0;
+        }, skipWriteWhenUnchanged: () => !removed);
+        return removed;
     }
 
     public bool Rename(object? entryName, object? newName)
     {
-        if (!_gzipCreateMode) return _inner.Rename(entryName, newName);
-        if (_gzipEntryName is null || _gzipEntryBytes is null) return false;
-        var wanted = Normalize(XPScriptRuntime.CStr(entryName));
-        if (!_gzipEntryName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return false;
-        _gzipEntryName = Normalize(XPScriptRuntime.CStr(newName));
-        Save();
-        return true;
+        if (_gzipCreateMode)
+        {
+            if (_gzipEntryName is null || _gzipEntryBytes is null) return false;
+            var wanted = Normalize(XPScriptRuntime.CStr(entryName), false);
+            if (!_gzipEntryName.Equals(wanted, StringComparison.OrdinalIgnoreCase)) return false;
+            _gzipEntryName = Normalize(XPScriptRuntime.CStr(newName), false);
+            Save();
+            return true;
+        }
+        if (!CanRebuildExisting) return _inner.Rename(entryName, newName);
+
+        var oldKey = Normalize(XPScriptRuntime.CStr(entryName), true).TrimEnd('/');
+        var newKey = Normalize(XPScriptRuntime.CStr(newName), true).TrimEnd('/');
+        var renamed = false;
+        RebuildExisting(entries =>
+        {
+            var prefix = oldKey + "/";
+            foreach (var item in entries.Where(x => x.Name.TrimEnd('/').Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                var sourceName = item.Name.TrimEnd('/');
+                var suffix = sourceName.Length == oldKey.Length ? "" : sourceName[oldKey.Length..];
+                item.Name = Normalize(newKey + suffix + (item.IsDirectory ? "/" : ""), true);
+                renamed = true;
+            }
+        }, skipWriteWhenUnchanged: () => !renamed);
+        return renamed;
     }
 
     public bool Contains(object? entryName) => _inner.Contains(entryName);
@@ -157,6 +230,117 @@ internal sealed class XPScriptExtendedArchiveV2
         Save();
     }
 
+    private void RebuildExisting(Action<List<RebuildEntry>> mutate, Func<bool>? skipWriteWhenUnchanged = null)
+    {
+        if (!CanRebuildExisting) throw new XPScriptRuntimeException(5, "This archive format is read-only.");
+        if (!string.IsNullOrEmpty(Password) || IsEncrypted)
+            throw new XPScriptRuntimeException(5, "Encrypted TAR/7z archives cannot be modified because encryption preservation is not implemented.");
+
+        var entries = LoadRebuildEntries();
+        mutate(entries);
+        if (skipWriteWhenUnchanged?.Invoke() == true) return;
+        if (entries.Count > MaxEntries) throw new XPScriptRuntimeException(5, "Archive exceeds MaxEntries.");
+        long total = 0;
+        foreach (var entry in entries.Where(x => !x.IsDirectory))
+        {
+            total = checked(total + (entry.Bytes?.LongLength ?? 0));
+            if (total > MaxExtractSize) throw new XPScriptRuntimeException(5, "Archive exceeds MaxExtractSize.");
+        }
+
+        var temp = Path + "." + Guid.NewGuid().ToString("N") + ".rebuild.tmp";
+        try
+        {
+            var rebuilt = new XPScriptArchive(temp, true)
+            {
+                CompressionLevel = CompressionLevel,
+                MaxExtractSize = MaxExtractSize,
+                MaxEntries = MaxEntries,
+                MaxCompressionRatio = MaxCompressionRatio
+            };
+            rebuilt.Create(Format);
+            PopulateRebuildArchive(rebuilt, entries);
+            rebuilt.Save();
+            XPScriptArchiveGZipWriter.ReplaceAtomic(temp, Path);
+        }
+        catch
+        {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+            throw;
+        }
+    }
+
+    private List<RebuildEntry> LoadRebuildEntries()
+    {
+        var result = new List<RebuildEntry>();
+        var values = _inner.Entries;
+        if (!values.IsAllocated) return result;
+        for (var i = values.LBound(); i <= values.UBound(); i++)
+        {
+            if (values.Get(i) is not XPScriptArchiveEntry entry) continue;
+            if (entry.IsDirectory)
+            {
+                result.Add(new RebuildEntry(Normalize(entry.FullName.TrimEnd('/') + "/", true), null, entry.Modified, true));
+                continue;
+            }
+            var bytes = ToRawBytes(_inner.ReadBytes(entry.FullName));
+            result.Add(new RebuildEntry(Normalize(entry.FullName, true), bytes, entry.Modified, false));
+        }
+        return result;
+    }
+
+    private static void PopulateRebuildArchive(XPScriptArchive archive, List<RebuildEntry> entries)
+    {
+        var type = typeof(XPScriptArchive);
+        var suppress = type.GetField("_suppressExtendedAutoSave", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new MissingFieldException("Archive rebuild autosave field was not found.");
+        var addFile = type.GetMethod("Add", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new MissingMethodException("Archive rebuild file writer was not found.");
+        var addDirectory = type.GetMethod("AddDirectoryEntry", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new MissingMethodException("Archive rebuild directory writer was not found.");
+        suppress.SetValue(archive, true);
+        try
+        {
+            foreach (var entry in entries.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                if (entry.IsDirectory) addDirectory.Invoke(archive, [entry.Name]);
+                else addFile.Invoke(archive, [entry.Name, entry.Bytes ?? [], entry.Modified]);
+            }
+        }
+        catch (System.Reflection.TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+        finally
+        {
+            suppress.SetValue(archive, false);
+        }
+    }
+
+    private static void Upsert(List<RebuildEntry> entries, RebuildEntry replacement)
+    {
+        entries.RemoveAll(x => x.Name.Equals(replacement.Name, StringComparison.OrdinalIgnoreCase));
+        entries.Add(replacement);
+    }
+
+    private static void CollectFolderEntries(string sourceRoot, string currentDirectory, string archiveRoot, bool recursive, List<RebuildEntry> result)
+    {
+        foreach (var file in System.IO.Directory.EnumerateFiles(currentDirectory, "*", System.IO.SearchOption.TopDirectoryOnly))
+        {
+            if ((System.IO.File.GetAttributes(file) & System.IO.FileAttributes.ReparsePoint) != 0) continue;
+            var relative = System.IO.Path.GetRelativePath(sourceRoot, file).Replace('\\', '/');
+            result.Add(new RebuildEntry(Normalize(archiveRoot + "/" + relative, true), System.IO.File.ReadAllBytes(file), System.IO.File.GetLastWriteTimeUtc(file), false));
+        }
+        if (!recursive) return;
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(currentDirectory, "*", System.IO.SearchOption.TopDirectoryOnly))
+        {
+            if ((System.IO.File.GetAttributes(directory) & System.IO.FileAttributes.ReparsePoint) != 0) continue;
+            var relative = System.IO.Path.GetRelativePath(sourceRoot, directory).Replace('\\', '/');
+            var name = Normalize(archiveRoot + "/" + relative + "/", true);
+            result.Add(new RebuildEntry(name, null, System.IO.Directory.GetLastWriteTimeUtc(directory), true));
+            CollectFolderEntries(sourceRoot, directory, archiveRoot, true, result);
+        }
+    }
+
     private static byte[] ToRawBytes(object? value)
     {
         if (value is byte[] raw) return raw;
@@ -172,18 +356,36 @@ internal sealed class XPScriptExtendedArchiveV2
         throw new XPScriptRuntimeException(13, "Archive.AddBytes requires a Byte array.");
     }
 
-    private static string Normalize(string value)
+    private static string Normalize(string value, bool allowFolders)
     {
         var name = (value ?? "").Replace('\\', '/').Trim();
         if (name.Length == 0) throw new XPScriptRuntimeException(5, "Archive entry name must not be empty.");
         if (name.StartsWith("/", StringComparison.Ordinal) || name.StartsWith("//", StringComparison.Ordinal) || System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z]:"))
             throw new XPScriptRuntimeException(5, "Absolute archive paths are not allowed.");
+        var hadTrailingSlash = name.EndsWith("/", StringComparison.Ordinal);
         var parts = name.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Any(x => x == "..")) throw new XPScriptRuntimeException(5, "Archive path traversal is not allowed.");
         var result = string.Join('/', parts.Where(x => x != "."));
-        if (result.Contains('/', StringComparison.Ordinal))
+        if (!allowFolders && result.Contains('/', StringComparison.Ordinal))
             throw new XPScriptRuntimeException(5, "GZip entry names cannot contain folders. Use TAR.GZip for directory structures.");
+        if (hadTrailingSlash && allowFolders) result += "/";
         return result;
+    }
+
+    private sealed class RebuildEntry
+    {
+        public string Name { get; set; }
+        public byte[]? Bytes { get; }
+        public DateTime Modified { get; }
+        public bool IsDirectory { get; }
+
+        public RebuildEntry(string name, byte[]? bytes, DateTime modified, bool isDirectory)
+        {
+            Name = name;
+            Bytes = bytes;
+            Modified = modified;
+            IsDirectory = isDirectory;
+        }
     }
 }
 
@@ -247,7 +449,7 @@ internal static class XPScriptArchiveGZipWriter
         }
     }
 
-    private static void ReplaceAtomic(string temp, string destination)
+    public static void ReplaceAtomic(string temp, string destination)
     {
         if (!System.IO.File.Exists(destination))
         {
