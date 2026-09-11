@@ -18,8 +18,27 @@ internal sealed class ArchiveCapabilityValidator
         "TAR",
         "GZ", "GZIP",
         "TAR.GZ", "TGZ", "TARGZIP",
-        "TAR.BZ2", "TBZ2", "TARBZIP2",
-        "TAR.LZ", "TARLZIP",
+        "TAR.BZ2", "TBZ", "TBZ2", "TARBZIP2",
+        "TAR.LZ", "TLZ", "TARLZIP",
+        "BZ2", "BZIP2",
+        "LZ", "LZIP",
+        "XZ",
+        "ZST", "ZSTD", "ZSTANDARD"
+    };
+
+    private static readonly HashSet<string> ExtendedWritableFormats = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "7Z", "7ZIP", "SEVENZIP",
+        "TAR",
+        "GZ", "GZIP",
+        "TAR.GZ", "TGZ", "TARGZIP",
+        "TAR.BZ2", "TBZ", "TBZ2", "TARBZIP2",
+        "TAR.LZ", "TLZ", "TARLZIP"
+    };
+
+    private static readonly HashSet<string> ReadOnlyCreateFormats = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "RAR",
         "BZ2", "BZIP2",
         "LZ", "LZIP",
         "XZ",
@@ -78,6 +97,8 @@ internal sealed class ArchiveCapabilityValidator
                 }
 
                 if (item.Value != ArchiveMode.Extended) continue;
+                ValidateExtendedUse(item.Key, line, sourceName, index + 1, original);
+
                 var prefix = Regex.Escape(item.Key);
                 if (Regex.IsMatch(line, $@"\b{prefix}\s*\.\s*Password\s*=", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 {
@@ -118,16 +139,40 @@ internal sealed class ArchiveCapabilityValidator
             throw RequiresExtended(sourceName, lineNumber, original, variableName,
                 "Archive.IsEncrypted for ZIP encryption detection");
 
-        var createPattern = $"\\b{prefix}\\s*\\.\\s*Create\\s*(?:\\(\\s*)?\"(?<format>[^\"]+)\"";
-        var create = Regex.Match(line, createPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (create.Success)
-        {
-            var format = create.Groups["format"].Value.Trim().TrimStart('.');
-            if (!format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) && ExtendedFormats.Contains(format))
-                throw RequiresExtended(sourceName, lineNumber, original, variableName,
-                    $"Archive.Create(\"{format}\")");
-        }
+        var create = MatchCreate(prefix, line);
+        if (!create.Success) return;
+
+        var format = NormalizeFormat(create.Groups["format"].Value);
+        if (ReadOnlyCreateFormats.Contains(format))
+            throw UnsupportedCreate(sourceName, lineNumber, original, format);
+        if (!format.Equals("ZIP", StringComparison.OrdinalIgnoreCase) && ExtendedFormats.Contains(format))
+            throw RequiresExtended(sourceName, lineNumber, original, variableName,
+                $"Archive.Create(\"{format}\")");
     }
+
+    private static void ValidateExtendedUse(string variableName, string line, string sourceName, int lineNumber, string original)
+    {
+        var prefix = Regex.Escape(variableName);
+        var create = MatchCreate(prefix, line);
+        if (!create.Success) return;
+
+        var format = NormalizeFormat(create.Groups["format"].Value);
+        if (ReadOnlyCreateFormats.Contains(format))
+            throw UnsupportedCreate(sourceName, lineNumber, original, format);
+
+        if (!format.Equals("ZIP", StringComparison.OrdinalIgnoreCase)
+            && ExtendedFormats.Contains(format)
+            && !ExtendedWritableFormats.Contains(format))
+            throw UnsupportedCreate(sourceName, lineNumber, original, format);
+    }
+
+    private static Match MatchCreate(string prefix, string line)
+    {
+        var createPattern = $"\\b{prefix}\\s*\\.\\s*Create\\s*(?:\\(\\s*)?\"(?<format>[^\"]+)\"";
+        return Regex.Match(line, createPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string NormalizeFormat(string value) => value.Trim().TrimStart('.').ToUpperInvariant();
 
     private static bool IsZipMutation(string prefix, string line)
     {
@@ -143,6 +188,10 @@ internal sealed class ArchiveCapabilityValidator
     private static CompilerException RequiresExtended(string sourceName, int lineNumber, string original, string variableName, string feature) =>
         Diagnostic(sourceName, lineNumber, original,
             $"{feature} requires extended archive support. Change '{variableName}' to New Archive(..., True).");
+
+    private static CompilerException UnsupportedCreate(string sourceName, int lineNumber, string original, string format) =>
+        Diagnostic(sourceName, lineNumber, original,
+            $"Archive.Create(\"{format}\") is not supported for writing. This format can only be opened/read when supported.");
 
     private static CompilerException Diagnostic(string sourceName, int lineNumber, string original, string description)
     {
