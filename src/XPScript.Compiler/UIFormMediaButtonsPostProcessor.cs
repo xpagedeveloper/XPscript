@@ -19,6 +19,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
     public List<string> Options { get; } = [];
     public string ImageSource { get; set; } = string.Empty;
     public string ImageAltText { get; set; } = string.Empty;
+    public string ImageCertificateValidation { get; set; } = "Strict";
 """,
                 "image-field-state");
         }
@@ -64,6 +65,15 @@ internal sealed class UIFormMediaButtonsPostProcessor
         var field = FindField(name);
         if (field.Type != "Image") throw new XPScriptRuntimeException(5, "UIForm.SetImageAltText requires an Image field.");
         field.ImageAltText = NormalizeMediaText(altText, "image alt text", 1024);
+    }
+    public void SetImageCertificateValidation(object? name, object? mode)
+    {
+        var field = FindField(name);
+        if (field.Type != "Image") throw new XPScriptRuntimeException(5, "UIForm.SetImageCertificateValidation requires an Image field.");
+        var value = XPScriptRuntime.CStr(mode).Trim();
+        if (!(value.Equals("Strict", StringComparison.OrdinalIgnoreCase) || value.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase) || value.Equals("Insecure", StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, "Image certificate validation must be Strict, AllowSelfSigned, or Insecure.");
+        field.ImageCertificateValidation = value;
     }
 
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");

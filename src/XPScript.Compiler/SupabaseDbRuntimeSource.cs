@@ -28,6 +28,11 @@ internal sealed class XPScriptDbSupabase : XPScriptCaseInsensitiveDynamicObject,
     public string Database => _rest is null ? (_connection?.Database ?? "") : "";
     public string BaseUrl => _rest?.BaseUrl ?? "";
     public string Schema => _rest?.Schema ?? "";
+    public string CertificateValidation
+    {
+        get => _rest?.CertificateValidation ?? "Strict";
+        set => RequireRest().CertificateValidation = value;
+    }
 
     public double Timeout
     {

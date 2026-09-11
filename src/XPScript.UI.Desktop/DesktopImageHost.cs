@@ -9,15 +9,36 @@ namespace XPScript.UI.Desktop;
 internal static class DesktopImageHost
 {
     private const int MaximumImageBytes = 32 * 1024 * 1024;
-    private static readonly HttpClient Http = new(new HttpClientHandler
+    private static HttpClient CreateHttpClient(string certificateValidation)
     {
-        AutomaticDecompression = System.Net.DecompressionMethods.GZip |
-                                 System.Net.DecompressionMethods.Deflate |
-                                 System.Net.DecompressionMethods.Brotli
-    })
-    {
-        Timeout = TimeSpan.FromSeconds(15)
-    };
+        var mode = string.IsNullOrWhiteSpace(certificateValidation) ? "Strict" : certificateValidation.Trim();
+        if (!(mode.Equals("Strict", StringComparison.OrdinalIgnoreCase) || mode.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase) || mode.Equals("Insecure", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Image certificate validation must be Strict, AllowSelfSigned, or Insecure.");
+        string tlsError = string.Empty;
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = (request, certificate, chain, errors) =>
+            {
+                if (errors == System.Net.Security.SslPolicyErrors.None) return true;
+                var details = new List<string>();
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0) details.Add("certificate hostname mismatch");
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0) details.Add("server certificate missing");
+                var statuses = chain?.ChainStatus ?? [];
+                foreach (var status in statuses) details.Add(status.StatusInformation.Trim().Length > 0 ? status.StatusInformation.Trim() : status.Status.ToString());
+                tlsError = details.Count > 0 ? string.Join("; ", details) : "certificate is not trusted";
+                if (mode.Equals("Insecure", StringComparison.OrdinalIgnoreCase)) return true;
+                if (mode.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase))
+                    return (errors & (System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch | System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable)) == 0 &&
+                           statuses.Length > 0 && statuses.All(x => x.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError);
+                return false;
+            }
+        };
+        var client = new HttpClient(handler, disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) };
+        return client;
+    }
 
     public static Control Create(string source, string altText)
     {
@@ -36,11 +57,25 @@ internal static class DesktopImageHost
         return image;
     }
 
-    public static string ToWebSource(string source)
+    public static string ToWebSource(string source, string certificateValidation = "Strict")
     {
         var value = (source ?? string.Empty).Trim();
         if (value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)) return value;
-        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https") return value;
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+        {
+            using var http = CreateHttpClient(certificateValidation);
+            try
+            {
+                var remoteBytes = http.GetByteArrayAsync(uri).GetAwaiter().GetResult();
+                ValidateSize(remoteBytes.LongLength);
+                var remoteMime = Path.GetExtension(uri.AbsolutePath).ToLowerInvariant() switch
+                {
+                    ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".gif" => "image/gif", ".webp" => "image/webp", ".bmp" => "image/bmp", ".svg" => "image/svg+xml", _ => "application/octet-stream"
+                };
+                return "data:" + remoteMime + ";base64," + Convert.ToBase64String(remoteBytes);
+            }
+            catch (HttpRequestException ex) { throw new InvalidOperationException("TLS/HTTP image request failed: " + ex.Message, ex); }
+        }
 
         var path = ResolveLocalPath(value);
         var bytes = ReadImageBytes(path);
@@ -74,7 +109,8 @@ internal static class DesktopImageHost
 
         if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
         {
-            var bytes = Http.GetByteArrayAsync(uri).GetAwaiter().GetResult();
+            using var http = CreateHttpClient("Strict");
+            var bytes = http.GetByteArrayAsync(uri).GetAwaiter().GetResult();
             ValidateSize(bytes.LongLength);
             return bytes;
         }

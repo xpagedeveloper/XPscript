@@ -494,6 +494,7 @@ internal sealed class NotesHTTPRequest
     private string? _proxyUser;
     private string? _proxyPassword;
     private string[] _responseHeaders = [];
+    private readonly XPScriptTlsValidationState _tls = new();
 
     public NotesHTTPRequest() => ResetHeaders();
 
@@ -502,6 +503,7 @@ internal sealed class NotesHTTPRequest
     public int MaxRedirects { get; set; } = 0;
     public bool PreferStrings { get; set; }
     public bool PreferJSONNavigator { get; set; }
+    public string CertificateValidation { get => _tls.Mode; set => _tls.Mode = value; }
     public bool PreferUTF8 => !PreferStrings && !PreferJSONNavigator;
 
     public void SetHeaderField(object? name, object? value)
@@ -553,6 +555,7 @@ internal sealed class NotesHTTPRequest
 
     private object? Send(System.Net.Http.HttpMethod method, object? rawUrl, object? data)
     {
+        _tls.Reset();
         var url = XPScriptRuntime.CStr(rawUrl).Trim();
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             throw new XPScriptRuntimeException(5, "Invalid HTTP URL: " + url);
@@ -618,6 +621,11 @@ internal sealed class NotesHTTPRequest
         {
             throw new XPScriptRuntimeException(5, "HTTP request timed out: " + ex.Message);
         }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            if (_tls.LastError.Length > 0) throw _tls.Failure("NotesHTTPRequest");
+            throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
+        }
         catch (Exception ex)
         {
             throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
@@ -632,7 +640,8 @@ internal sealed class NotesHTTPRequest
             MaxAutomaticRedirections = Math.Max(1, MaxRedirects),
             AutomaticDecompression = System.Net.DecompressionMethods.GZip |
                                      System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = _tls.Validate
         };
         if (_proxyHost is null) return handler;
 

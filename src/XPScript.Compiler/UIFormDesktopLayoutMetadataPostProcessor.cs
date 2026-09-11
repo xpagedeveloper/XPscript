@@ -75,6 +75,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 tooltip = field.Tooltip,
                 imageSource = field.ImageSource,
                 imageAltText = field.ImageAltText,
+                imageCertificateValidation = field.ImageCertificateValidation,
                 webViewSource = field.WebViewSource,
                 webViewHtml = field.WebViewHtml,
                 webViewUserAgent = field.WebViewUserAgent,

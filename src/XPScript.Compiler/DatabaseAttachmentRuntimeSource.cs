@@ -161,18 +161,20 @@ internal static class XPScriptAttachmentRuntimeHelpers
 
 internal static class XPScriptAttachmentHttpRuntime
 {
-    public static byte[] Send(System.Net.Http.HttpMethod method, string url, IReadOnlyDictionary<string, string> headers, byte[]? body, string contentType, double timeoutSeconds)
+    public static byte[] Send(System.Net.Http.HttpMethod method, string url, IReadOnlyDictionary<string, string> headers, byte[]? body, string contentType, double timeoutSeconds, string certificateValidation = "Strict")
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new XPScriptRuntimeException(5, "Attachment HTTP URL must be absolute http:// or https://.");
         if (body is not null && body.LongLength > XPScriptAttachmentFileRuntime.MaxAttachmentBytes + 1024 * 1024)
             throw new XPScriptRuntimeException(5, "Attachment HTTP request exceeds the supported size limit.");
+        var tls = new XPScriptTlsValidationState { Mode = certificateValidation };
         using var handler = new System.Net.Http.HttpClientHandler
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = System.Net.DecompressionMethods.GZip |
                                      System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = tls.Validate
         };
         using var client = new System.Net.Http.HttpClient(handler) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
@@ -206,7 +208,7 @@ internal static class XPScriptAttachmentHttpRuntime
         }
         catch (XPScriptRuntimeException) { throw; }
         catch (OperationCanceledException) { throw new XPScriptRuntimeException(5, "Attachment HTTP operation timed out."); }
-        catch (System.Net.Http.HttpRequestException) { throw new XPScriptRuntimeException(5, "Attachment HTTP operation failed."); }
+        catch (System.Net.Http.HttpRequestException) { if (tls.LastError.Length > 0) throw tls.Failure("Attachment HTTP operation"); throw new XPScriptRuntimeException(5, "Attachment HTTP operation failed."); }
         catch (IOException) { throw new XPScriptRuntimeException(5, "Attachment HTTP response could not be read."); }
     }
 

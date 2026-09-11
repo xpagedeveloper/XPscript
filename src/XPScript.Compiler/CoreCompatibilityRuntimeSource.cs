@@ -316,6 +316,81 @@ internal static class LSByRefRuntime
     public static LSByRefValue Create(Func<object?> get, Action<object?> set) => new(get, set);
 }
 
+internal sealed class XPScriptTlsValidationState
+{
+    public const int CertificateErrorNumber = 1201;
+    private string _mode = "Strict";
+    public string LastError { get; private set; } = string.Empty;
+
+    public string Mode
+    {
+        get => _mode;
+        set
+        {
+            var mode = (value ?? string.Empty).Trim();
+            if (mode.Equals("Strict", StringComparison.OrdinalIgnoreCase)) _mode = "Strict";
+            else if (mode.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase)) _mode = "AllowSelfSigned";
+            else if (mode.Equals("Insecure", StringComparison.OrdinalIgnoreCase)) _mode = "Insecure";
+            else throw new XPScriptRuntimeException(5, "CertificateValidation must be Strict, AllowSelfSigned, or Insecure.");
+        }
+    }
+
+    public void Reset() => LastError = string.Empty;
+
+    public bool Validate(System.Net.Http.HttpRequestMessage request,
+        System.Security.Cryptography.X509Certificates.X509Certificate2? certificate,
+        System.Security.Cryptography.X509Certificates.X509Chain? chain,
+        System.Net.Security.SslPolicyErrors errors)
+    {
+        if (errors == System.Net.Security.SslPolicyErrors.None)
+        {
+            LastError = string.Empty;
+            return true;
+        }
+
+        var details = new List<string>();
+        if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0)
+            details.Add("the server did not provide a certificate");
+        if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+            details.Add("the certificate hostname does not match '" + (request.RequestUri?.Host ?? "the requested host") + "'");
+
+        var statuses = chain?.ChainStatus ?? [];
+        foreach (var status in statuses)
+        {
+            var text = status.Status switch
+            {
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot => "the certificate root is not trusted (self-signed certificate or private CA)",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain => "the certificate chain is incomplete or its issuer is not trusted",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NotTimeValid => "the certificate is expired or not yet valid",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.Revoked => "the certificate has been revoked",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.RevocationStatusUnknown => "the certificate revocation status could not be verified",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NotSignatureValid => "the certificate signature is invalid",
+                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.InvalidBasicConstraints => "the certificate has invalid basic constraints",
+                _ => status.StatusInformation.Trim().Length > 0 ? status.StatusInformation.Trim() : status.Status.ToString()
+            };
+            if (text.Length > 0) details.Add(text);
+        }
+        if (details.Count == 0) details.Add("the certificate chain is not trusted");
+        LastError = string.Join("; ", details.Distinct(StringComparer.OrdinalIgnoreCase));
+
+        if (_mode == "Insecure") return true;
+        if (_mode == "AllowSelfSigned")
+        {
+            if ((errors & (System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch | System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable)) != 0)
+                return false;
+            return statuses.Length > 0 && statuses.All(s =>
+                s.Status == System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot ||
+                s.Status == System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain ||
+                s.Status == System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError);
+        }
+        return false;
+    }
+
+    public XPScriptRuntimeException Failure(string operation)
+        => new(CertificateErrorNumber, operation + " TLS certificate validation failed: " +
+            (LastError.Length > 0 ? LastError : "the server certificate was rejected by the operating system trust policy") + ".");
+}
+
 internal sealed class XPScriptRuntimeException : Exception
 {
     public XPScriptRuntimeException(int number, string description) : base(description)

@@ -14,6 +14,7 @@ internal sealed class XPScriptAi : IDisposable
     private readonly object _sync = new();
     private readonly System.Net.Http.HttpClientHandler _handler;
     private readonly System.Net.Http.HttpClient _client;
+    private readonly XPScriptTlsValidationState _tls = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private readonly System.Text.Json.Nodes.JsonArray _messages = [];
     private readonly System.Text.Json.Nodes.JsonObject _options = [];
@@ -52,7 +53,8 @@ internal sealed class XPScriptAi : IDisposable
             AllowAutoRedirect = false,
             AutomaticDecompression = System.Net.DecompressionMethods.GZip |
                                      System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = _tls.Validate
         };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
@@ -61,6 +63,7 @@ internal sealed class XPScriptAi : IDisposable
     }
 
     public string Endpoint => _endpoint.ToString();
+    public string CertificateValidation { get => _tls.Mode; set => _tls.Mode = value; }
     public string Provider => _provider;
 
     public string EndpointPath
@@ -252,6 +255,7 @@ internal sealed class XPScriptAi : IDisposable
         if (System.Text.Encoding.UTF8.GetByteCount(requestText) > MaxRequestBytes)
             throw new XPScriptRuntimeException(5, "XPAi request body exceeds the 8 MiB limit.");
 
+        _tls.Reset();
         var cancellation = BeginRequest();
         try
         {
@@ -272,6 +276,7 @@ internal sealed class XPScriptAi : IDisposable
         }
         catch (System.Net.Http.HttpRequestException)
         {
+            if (_tls.LastError.Length > 0) throw _tls.Failure("XPAi request");
             throw new XPScriptRuntimeException(5, "XPAi HTTP request failed.");
         }
         catch (IOException)

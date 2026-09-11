@@ -43,6 +43,7 @@ public sealed record DesktopFormField(
     public IReadOnlyList<string> Values { get; init; } = Array.Empty<string>();
     public string ImageSource { get; init; } = string.Empty;
     public string ImageAltText { get; init; } = string.Empty;
+    public string ImageCertificateValidation { get; init; } = "Strict";
     public string WebViewSource { get; init; } = "about:blank";
     public string WebViewHtml { get; init; } = string.Empty;
     public string WebViewUserAgent { get; init; } = string.Empty;
@@ -142,7 +143,7 @@ public static class XpsUIDesktopRuntimeBridge
                 Required = false,
                 ReadOnly = true,
                 WebViewSource = "about:blank",
-                WebViewHtml = "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><img src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(field.ImageSource)) + "\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.ImageAltText) + "\" style=\"max-width:100%;max-height:100%;object-fit:contain\"></body></html>"
+                WebViewHtml = "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><img src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(field.ImageSource, field.ImageCertificateValidation)) + "\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.ImageAltText) + "\" style=\"max-width:100%;max-height:100%;object-fit:contain\"></body></html>"
             },
             _ => field
         }).ToArray();
