@@ -24,6 +24,8 @@ jobs:
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Verify Archive preprocessing and dependency injection
         run: dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
+      - name: Verify Archive capability compile errors
+        run: dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
       - name: Compile and run ZIP
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-zip.xps -o ./out/archive-zip --framework-dependent
