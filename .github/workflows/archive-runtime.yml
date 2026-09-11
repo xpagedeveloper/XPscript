@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  archive-platform-smoke:
+  archive-platform:
     strategy:
       fail-fast: false
       matrix:
@@ -22,65 +22,47 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+
       - name: Build compiler
         shell: pwsh
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
       - name: Verify Archive compiler probes
         shell: pwsh
         run: |
           dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
-      - name: Compile and run core Archive smoke tests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Generate Archive security fixtures
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj -c Release -- ./out/archive-security-fixtures
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile and run Archive suite
         shell: pwsh
         run: |
           function Run-XPScript([string] $source, [string] $name) {
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o "./out/$name" --framework-dependent
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             if ($IsWindows) { & "./out/$name.exe" } else { & "./out/$name" }
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+
           Run-XPScript ./demo/archive/archive-zip.xps archive-zip
           Run-XPScript ./demo/archive/archive-memory.xps archive-memory
           Run-XPScript ./demo/archive/archive-iterator.xps archive-iterator
           Run-XPScript ./demo/archive/archive-edge-cases.xps archive-edge-cases
+          Run-XPScript ./demo/archive/archive-security-fixtures.xps archive-security-fixtures
 
-  archive-extended-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.x'
-      - name: Build compiler
-        run: |
-          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
-          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Compile and run extended in-memory read
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory.xps -o ./out/archive-extended-memory --framework-dependent
-          ./out/archive-extended-memory
-      - name: Compile and run extended in-memory write
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory-write.xps -o ./out/archive-extended-memory-write --framework-dependent
-          ./out/archive-extended-memory-write
-      - name: Compile and run GZip
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-gzip.xps -o ./out/archive-gzip --framework-dependent
-          ./out/archive-gzip
-      - name: Compile and run TAR rebuild
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-rebuild.xps -o ./out/archive-rebuild --framework-dependent
-          ./out/archive-rebuild
-      - name: Compile and run TAR.GZip
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-targzip.xps -o ./out/archive-targzip --framework-dependent
-          ./out/archive-targzip
-      - name: Compile and run compressed TAR formats
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-compressed-tar.xps -o ./out/archive-compressed-tar --framework-dependent
-          ./out/archive-compressed-tar
-      - name: Compile and run content format detection
-        run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-format-detection.xps -o ./out/archive-format-detection --framework-dependent
-          ./out/archive-format-detection
+          Run-XPScript ./demo/archive/archive-extended-memory.xps archive-extended-memory
+          Run-XPScript ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write
+          Run-XPScript ./demo/archive/archive-gzip.xps archive-gzip
+          Run-XPScript ./demo/archive/archive-rebuild.xps archive-rebuild
+          Run-XPScript ./demo/archive/archive-targzip.xps archive-targzip
+          Run-XPScript ./demo/archive/archive-compressed-tar.xps archive-compressed-tar
+          Run-XPScript ./demo/archive/archive-format-detection.xps archive-format-detection
