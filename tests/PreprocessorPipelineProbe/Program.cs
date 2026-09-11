@@ -43,6 +43,7 @@ Measure("NOTES", notesSource, 10);
 VerifyVariableNamesDoNotEnableRuntimes();
 VerifyFeatureProfiles();
 VerifyLegacyNativeNamesDoNotEnableRuntimes();
+VerifyArchiveConstructorModes();
 VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
@@ -164,6 +165,36 @@ void VerifyLegacyNativeNamesDoNotEnableRuntimes()
     }
 
     Console.WriteLine("PREPROCESSOR-LEGACY-NATIVE-NAMES=INACTIVE");
+}
+
+void VerifyArchiveConstructorModes()
+{
+    const string zipDefault = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\")\nEnd Sub\n";
+    const string zipExplicit = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\", False)\nEnd Sub\n";
+    const string extended = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.rar\", True)\nEnd Sub\n";
+
+    var generatedDefault = transpiler.Transpile(zipDefault, "archive-default.xps", "win-x64");
+    var generatedFalse = transpiler.Transpile(zipExplicit, "archive-false.xps", "win-x64");
+    var generatedTrue = transpiler.Transpile(extended, "archive-extended.xps", "win-x64");
+
+    if (!generatedDefault.Contains("new XPScriptArchive(\"test.zip\")", StringComparison.Ordinal))
+        throw new Exception("Archive(filename) did not emit ZIP-only constructor form.");
+    if (!generatedFalse.Contains("new XPScriptArchive(\"test.zip\", false)", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, False) did not emit explicit ZIP-only constructor form.");
+    if (!generatedTrue.Contains("new XPScriptArchive(\"test.rar\", true)", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit extended-support constructor form.");
+
+    var invalid = "Option Declare\nSub Main()\n    Dim enabled As Boolean\n    enabled = True\n    Dim a As New Archive(\"test.rar\", enabled)\nEnd Sub\n";
+    try
+    {
+        _ = transpiler.Transpile(invalid, "archive-dynamic-extended.xps", "win-x64");
+        throw new Exception("Archive accepted a non-literal extendedSupport argument.");
+    }
+    catch (CompilerException ex) when (ex.Message.Contains("literal True or False", StringComparison.Ordinal))
+    {
+    }
+
+    Console.WriteLine("PREPROCESSOR-ARCHIVE-CONSTRUCTOR-MODES=OK");
 }
 
 void VerifyProfile(
