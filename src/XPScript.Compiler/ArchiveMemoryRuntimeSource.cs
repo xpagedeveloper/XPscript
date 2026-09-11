@@ -28,7 +28,10 @@ internal static class XPScriptExtendedArchiveFactory
     {
         if (XPScriptArchiveFactory.IsBytes(value))
             throw new XPScriptRuntimeException(5, "Extended in-memory archive support is not implemented yet. Use Archive(bytes) for ZIP or a file path with Archive(path, True) for extended formats.");
-        return new XPScriptExtendedArchive(value);
+        var type = typeof(XPScriptArchive).Assembly.GetType("XPScriptExtendedArchive")
+            ?? throw new XPScriptRuntimeException(5, "Extended Archive runtime was not emitted by the compiler.");
+        return Activator.CreateInstance(type, [value])
+            ?? throw new XPScriptRuntimeException(5, "Extended Archive could not be created.");
     }
 }
 
@@ -39,7 +42,7 @@ internal sealed class XPScriptMemoryArchive
 
     public XPScriptMemoryArchive(object? bytes = null)
     {
-        var raw = bytes is null ? [] : ToRawBytes(bytes);
+        byte[] raw = bytes is null ? [] : ToRawBytes(bytes);
         _data = new System.IO.MemoryStream();
         if (raw.Length > 0)
         {
