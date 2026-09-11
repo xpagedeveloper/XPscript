@@ -30,6 +30,10 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-zip.xps -o ./out/archive-zip --framework-dependent
           ./out/archive-zip
+      - name: Compile and run Archive iterator API
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-iterator.xps -o ./out/archive-iterator --framework-dependent
+          ./out/archive-iterator
       - name: Compile and run in-memory ZIP
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-memory.xps -o ./out/archive-memory --framework-dependent
