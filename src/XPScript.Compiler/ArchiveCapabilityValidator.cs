@@ -87,7 +87,7 @@ internal sealed class ArchiveCapabilityValidator
 
                 if (passwordConfigured.Contains(item.Key) && IsZipMutation(prefix, line))
                     throw Diagnostic(sourceName, index + 1, original,
-                        $"Password-protected ZIP writing is not supported by SharpCompress 0.50.4. '{item.Key}' can use Password for reading encrypted ZIP archives, but creating or modifying an encrypted ZIP is not supported.");
+                        $"Password-protected ZIP writing is not supported. '{item.Key}' can use Password for reading encrypted ZIP archives, but creating or modifying an encrypted ZIP is not supported.");
             }
         }
     }
@@ -142,7 +142,7 @@ internal sealed class ArchiveCapabilityValidator
 
     private static CompilerException RequiresExtended(string sourceName, int lineNumber, string original, string variableName, string feature) =>
         Diagnostic(sourceName, lineNumber, original,
-            $"{feature} requires extended archive support. Change '{variableName}' to New Archive(..., True) so SharpCompress is included in the generated project.");
+            $"{feature} requires extended archive support. Change '{variableName}' to New Archive(..., True).");
 
     private static CompilerException Diagnostic(string sourceName, int lineNumber, string original, string description)
     {
