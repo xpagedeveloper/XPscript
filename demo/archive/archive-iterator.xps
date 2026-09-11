@@ -7,7 +7,6 @@ Sub Main()
     archive.AddText("folder/child.txt", "child")
 
     Dim countFromEntries As Integer
-    Dim item As Variant
     ForAll item In archive.Entries
         countFromEntries = countFromEntries + 1
     End ForAll
