@@ -65,6 +65,9 @@ Sub Main()
 End Sub
 """);
 
+foreach (var format in new[] { "rar", "bzip2", "lzip", "xz", "zstd" })
+    ExpectUnsupportedCreate(format);
+
 ExpectIteratorSuccess();
 
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
@@ -97,6 +100,30 @@ void ExpectUnsupportedEncryptedZipWrite(string name, string source)
         if (!ex.Message.Contains("Password-protected ZIP writing is not supported", StringComparison.Ordinal)
             || ex.Message.Contains("SharpCompress", StringComparison.OrdinalIgnoreCase))
             throw new Exception(name + " returned the wrong encrypted ZIP write diagnostic: " + ex.Message);
+    }
+}
+
+void ExpectUnsupportedCreate(string format)
+{
+    var source = $$"""
+Option Declare
+Sub Main()
+    Dim archive As New Archive("data.{{format}}", True)
+    archive.Create("{{format}}")
+End Sub
+""";
+
+    try
+    {
+        _ = transpiler.Transpile(source, "unsupported-create-" + format + ".xps", "win-x64");
+        throw new Exception(format + " unexpectedly compiled as a writable Archive format.");
+    }
+    catch (CompilerException ex)
+    {
+        if (!ex.Message.Contains("is not supported for writing", StringComparison.Ordinal)
+            || !ex.Message.Contains("can only be opened/read", StringComparison.Ordinal)
+            || ex.Message.Contains("SharpCompress", StringComparison.OrdinalIgnoreCase))
+            throw new Exception(format + " returned the wrong write capability diagnostic: " + ex.Message);
     }
 }
 
@@ -139,7 +166,7 @@ End Sub
         throw new Exception("Archive iterator helpers were not emitted.");
     if (generated.Contains(".IsFile", StringComparison.Ordinal)
         || generated.Contains(".IsFolder", StringComparison.Ordinal))
-        throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to IsDirectory.");
+        throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to the internal entry type flag.");
     if (!generated.Contains(".Entries", StringComparison.Ordinal))
         throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
 }
