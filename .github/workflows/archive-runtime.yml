@@ -1,0 +1,54 @@
+name: Archive Runtime
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Archive preprocessing and dependency injection
+        run: dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
+      - name: Compile and run ZIP
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-zip.xps -o ./out/archive-zip --framework-dependent
+          ./out/archive-zip
+      - name: Compile and run in-memory ZIP
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-memory.xps -o ./out/archive-memory --framework-dependent
+          ./out/archive-memory
+      - name: Compile and run extended in-memory read
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-extended-memory.xps -o ./out/archive-extended-memory --framework-dependent
+          ./out/archive-extended-memory
+      - name: Compile and run GZip
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-gzip.xps -o ./out/archive-gzip --framework-dependent
+          ./out/archive-gzip
+      - name: Compile and run TAR rebuild
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-rebuild.xps -o ./out/archive-rebuild --framework-dependent
+          ./out/archive-rebuild
+      - name: Compile and run TAR.GZip
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-targzip.xps -o ./out/archive-targzip --framework-dependent
+          ./out/archive-targzip
+      - name: Compile and run compressed TAR formats
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-compressed-tar.xps -o ./out/archive-compressed-tar --framework-dependent
+          ./out/archive-compressed-tar
