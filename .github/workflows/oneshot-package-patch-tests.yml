@@ -1,0 +1,28 @@
+name: One-shot package patch tests
+
+on:
+  push:
+    branches:
+      - feature/application-dependency-security
+    paths:
+      - .github/workflows/oneshot-package-patch-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/application-dependency-security
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build CLI
+        run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo
+      - name: Run package patch policy probe
+        run: dotnet run --project tests/ApplicationPackagePatchProbe/ApplicationPackagePatchProbe.csproj -c Release
+      - name: Check live package patch selection
+        run: dotnet run --project src/XPScript.Cli/XPScript.Cli.csproj -c Release -- patch all --check
