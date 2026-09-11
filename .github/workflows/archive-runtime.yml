@@ -60,8 +60,11 @@ jobs:
           }
 
           function Get-XPScriptExecutable([string] $name) {
-            if ($IsWindows) { return "./out/$name.exe" }
-            return "./out/$name"
+            $plain = "./out/$name"
+            if (Test-Path $plain -PathType Leaf) { return $plain }
+            $windows = "$plain.exe"
+            if (Test-Path $windows -PathType Leaf) { return $windows }
+            throw "Compiled XPScript executable was not found for $name"
           }
 
           function Run-XPScript([string] $source, [string] $name) {
