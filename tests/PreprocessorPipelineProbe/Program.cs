@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using XPScript.Compiler;
 
 if (args.Length == 2)
@@ -45,6 +46,7 @@ VerifyFeatureProfiles();
 VerifyLegacyNativeNamesDoNotEnableRuntimes();
 VerifyArchiveConstructorModes();
 VerifyArchiveTraversalGuard();
+VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
 
 void Measure(string label, string source, int iterations)
@@ -211,6 +213,50 @@ void VerifyArchiveTraversalGuard()
     Console.WriteLine("PREPROCESSOR-ARCHIVE-TRAVERSAL-GUARD=OK");
 }
 
+void VerifyArchiveDependencyInjection()
+{
+    const string zipSource = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.zip\")\nEnd Sub\n";
+    const string extendedSource = "Option Declare\nSub Main()\n    Dim a As New Archive(\"test.7z\", True)\nEnd Sub\n";
+
+    var zipGenerated = transpiler.Transpile(zipSource, "archive-dependency-zip.xps", "win-x64");
+    var extendedGenerated = transpiler.Transpile(extendedSource, "archive-dependency-extended.xps", "win-x64");
+    var configureType = typeof(XPScriptTranspiler).Assembly.GetType("XPScript.Compiler.CompilerBuildEnvironment", throwOnError: true)!;
+    var configure = configureType.GetMethod("Configure", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        ?? throw new Exception("CompilerBuildEnvironment.Configure was not found.");
+
+    var root = Path.Combine(Path.GetTempPath(), "xpscript-archive-dependency-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        var zipRoot = Path.Combine(root, "zip");
+        var extendedRoot = Path.Combine(root, "extended");
+        Directory.CreateDirectory(zipRoot);
+        Directory.CreateDirectory(extendedRoot);
+        ConfigureProbe(zipRoot, zipGenerated);
+        ConfigureProbe(extendedRoot, extendedGenerated);
+
+        var zipProps = File.ReadAllText(Path.Combine(zipRoot, "Directory.Build.props"));
+        var extendedProps = File.ReadAllText(Path.Combine(extendedRoot, "Directory.Build.props"));
+        if (zipProps.Contains("SharpCompress", StringComparison.Ordinal))
+            throw new Exception("ZIP-only Archive unexpectedly injected SharpCompress.");
+        if (!extendedProps.Contains("PackageReference Include=\"SharpCompress\" Version=\"0.50.4\"", StringComparison.Ordinal))
+            throw new Exception("Extended Archive did not inject SharpCompress 0.50.4.");
+    }
+    finally
+    {
+        try { Directory.Delete(root, recursive: true); } catch { }
+    }
+
+    Console.WriteLine("PREPROCESSOR-ARCHIVE-DEPENDENCY-INJECTION=OK");
+
+    void ConfigureProbe(string workspace, string generated)
+    {
+        File.WriteAllText(Path.Combine(workspace, "Program.cs"), generated);
+        File.WriteAllText(Path.Combine(workspace, "Generated.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+        var psi = new ProcessStartInfo();
+        configure.Invoke(null, [psi, workspace]);
+    }
+}
+
 void VerifyProfile(
     string label,
     string declaration,
@@ -218,7 +264,7 @@ void VerifyProfile(
     IReadOnlyList<string>? forbiddenMarkers = null)
 {
     var source = "Option Declare\nSub Main()\n    " + declaration + "\nEnd Sub\n";
-    var generated = transpiler.Transpile(source, "preprocessor-" + label.ToLowerInvariant() + "-profile.xps", "win-x64");
+    var generated = transpiler.Transpile(source, "preprocessor-" + label.ToLowerInvariant() + ".xps", "win-x64");
     foreach (var marker in expectedMarkers)
         if (!generated.Contains(marker, StringComparison.Ordinal))
             throw new Exception(label + " feature profile did not include " + marker + ".");
