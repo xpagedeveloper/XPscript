@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim seed() As Byte
+    Dim tar As New Archive(seed, True)
+    tar.Create("tar")
+    tar.AddText("manifest.txt", "memory tar")
+
+    Dim tarBytes As Variant
+    tarBytes = tar.ToBytes()
+    Dim tarRead As New Archive(tarBytes, True)
+    If tarRead.ReadText("manifest.txt") <> "memory tar" Then Error 5, "Extended memory TAR round-trip failed"
+
+    Dim seed7z() As Byte
+    Dim seven As New Archive(seed7z, True)
+    seven.Create("7z")
+    seven.AddText("manifest.txt", "memory 7z")
+
+    Dim sevenBytes As Variant
+    sevenBytes = seven.ToBytes()
+    Dim sevenRead As New Archive(sevenBytes, True)
+    If sevenRead.ReadText("manifest.txt") <> "memory 7z" Then Error 5, "Extended memory 7z round-trip failed"
+
+    Print "ARCHIVE_EXTENDED_MEMORY_WRITE=OK"
+End Sub
