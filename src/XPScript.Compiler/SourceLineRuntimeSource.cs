@@ -76,7 +76,6 @@ internal static class XPScriptDebugRuntime
     private static int _pauseRequested;
     private static int _disconnectRequested;
     private static long _changeSequence;
-    private static string _pendingGlobalCondition = "";
 
     private const int ProtocolVersion = 6;
     private const int ValueHistoryLimit = 20;
@@ -116,9 +115,8 @@ internal static class XPScriptDebugRuntime
             var pauseHit = global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0) != 0;
             var breakpointRule = FindBreakpoint(sourcePath, line);
             var hitBreakpoint = breakpointRule is not null && EvaluateBreakpoint(breakpointRule, sourcePath, line);
-            var globalCondition = _pendingGlobalCondition;
+            var globalCondition = EvaluateGlobalConditionBreakpoints();
             var hitGlobalCondition = globalCondition.Length > 0;
-            if (hitGlobalCondition) _pendingGlobalCondition = "";
             var stepHit = _stepMode switch
             {
                 "into" => true,
@@ -460,16 +458,15 @@ internal static class XPScriptDebugRuntime
             ValueHistoryChars[name] = global::System.Math.Max(0, ValueHistoryChars[name] - EstimateHistoryChars(removed));
         }
 
-        EvaluateGlobalConditionBreakpointsLocked();
-
         if (!DataBreakpoints.Contains(name) || _writer is null) return;
         _stepMode = "";
         Send(new { type = "stopped", reason = "data breakpoint", source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1, frames, dataId = name, description = name + " changed from " + oldValue + " to " + rendered });
         StopLoop(frames.Count);
     }
 
-    private static void EvaluateGlobalConditionBreakpointsLocked()
+    private static string EvaluateGlobalConditionBreakpoints()
     {
+        var triggered = "";
         foreach (var rule in GlobalConditionBreakpoints)
         {
             var matched = EvaluateCondition(rule.Condition, out var error);
@@ -479,10 +476,11 @@ internal static class XPScriptDebugRuntime
                 continue;
             }
 
-            if (matched && !rule.LastMatched && _pendingGlobalCondition.Length == 0)
-                _pendingGlobalCondition = rule.Condition;
+            if (triggered.Length == 0 && matched && !rule.LastMatched)
+                triggered = rule.Condition;
             rule.LastMatched = matched;
         }
+        return triggered;
     }
 
     private static int EstimateHistoryChars(ValueChange change) => change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
@@ -763,7 +761,6 @@ internal static class XPScriptDebugRuntime
     private static void SetGlobalConditionBreakpoints(global::System.Text.Json.JsonElement root)
     {
         GlobalConditionBreakpoints.Clear();
-        _pendingGlobalCondition = "";
         if (!root.TryGetProperty("conditions", out var conditionsElement) || conditionsElement.ValueKind != global::System.Text.Json.JsonValueKind.Array) return;
 
         foreach (var item in conditionsElement.EnumerateArray())
@@ -833,7 +830,6 @@ internal static class XPScriptDebugRuntime
         while (PendingCommands.TryDequeue(out var pending)) pending.Document.Dispose();
         DataBreakpoints.Clear();
         GlobalConditionBreakpoints.Clear();
-        _pendingGlobalCondition = "";
         CustomDebuggerVariables.Clear();
         Breakpoints.Clear();
         global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0);
