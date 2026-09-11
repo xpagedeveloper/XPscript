@@ -63,7 +63,7 @@ internal sealed class ArchiveObjectPreprocessor
 
         var extended = args[1].Trim();
         if (extended.Equals("True", StringComparison.OrdinalIgnoreCase))
-            return $"XPScriptExtendedArchiveFactory.Create({args[0]})";
+            return $"XPScriptExtendedArchiveWriterFactory.Create({args[0]})";
         if (extended.Equals("False", StringComparison.OrdinalIgnoreCase))
             return $"XPScriptArchiveFactory.Create({args[0]}, false)";
 
