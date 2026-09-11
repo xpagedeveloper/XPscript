@@ -145,6 +145,7 @@ public sealed class CompilerDriver
             var stderrTask = process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
             var stdout = await stdoutTask; var stderr = await stderrTask;
+            ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
 
             if (process.ExitCode != 0)
             {
@@ -230,6 +231,7 @@ public sealed class CompilerDriver
             var stderrTask = process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
             var stdout = await stdoutTask; var stderr = await stderrTask;
+            ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
 
             if (process.ExitCode != 0)
             {
@@ -447,6 +449,10 @@ public sealed class CompilerDriver
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
 {publishProperties}  </PropertyGroup>

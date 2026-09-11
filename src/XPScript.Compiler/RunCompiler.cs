@@ -102,12 +102,14 @@ internal static class RunCompiler
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var references = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
-            await File.WriteAllTextAsync(projectPath, BuildProject(references), cancellationToken).ConfigureAwait(false);
+            var usesMimeKit = generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath, generatedSource, cancellationToken).ConfigureAwait(false);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
             var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+            ApplicationSecurityAudit.Report(build.Stdout + Environment.NewLine + build.Stderr);
             if (build.ExitCode != 0)
             {
                 var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
@@ -228,7 +230,7 @@ internal static class RunCompiler
         return result;
     }
 
-    private static string BuildProject(IReadOnlyList<(string Name, string Path)> references)
+    private static string BuildProject(IReadOnlyList<(string Name, string Path)> references, bool usesMimeKit)
     {
         var items = new StringBuilder();
         if (references.Count > 0)
@@ -244,6 +246,10 @@ internal static class RunCompiler
             items.AppendLine("  </ItemGroup>");
         }
 
+        var packageItems = usesMimeKit
+            ? "  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"4.17.0\" />\n  </ItemGroup>\n"
+            : string.Empty;
+
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -254,11 +260,12 @@ internal static class RunCompiler
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <UseAppHost>false</UseAppHost>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="MimeKit" Version="4.17.0" />
-  </ItemGroup>
-{items}</Project>
+{packageItems}{items}</Project>
 """;
     }
 
