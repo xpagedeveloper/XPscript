@@ -85,7 +85,7 @@ jobs:
               Call ai.Dispose()
           End Sub
           XPS
-          dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run "$TMP/tls.xps" | tee "$TMP/output.txt"
+          dotnet src/XPScript.Cli/bin/Release/net10.0/xpscript.dll run "$TMP/tls.xps" --debug | tee "$TMP/output.txt"
           grep -q 'STRICT-ERR=1201' "$TMP/output.txt"
           grep -q 'TLS certificate validation failed' "$TMP/output.txt"
           grep -q 'ALLOW-SELF-SIGNED=OK' "$TMP/output.txt"
