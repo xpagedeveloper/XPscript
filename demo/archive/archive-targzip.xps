@@ -1,0 +1,23 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive("archive-targzip-test.tar.gz", True)
+    archive.Create("tar.gzip")
+    archive.AddText("one.txt", "one")
+    archive.AddText("folder/two.txt", "two")
+    archive.Save()
+
+    Dim reopened As New Archive("archive-targzip-test.tar.gz", True)
+    reopened.Open()
+    If reopened.FileCount <> 2 Then Error 5, "TAR.GZip file count regression"
+    If reopened.ReadText("one.txt") <> "one" Then Error 5, "TAR.GZip first entry regression"
+    If reopened.ReadText("folder/two.txt") <> "two" Then Error 5, "TAR.GZip nested entry regression"
+
+    reopened.Rename("one.txt", "renamed.txt")
+    If reopened.ReadText("renamed.txt") <> "one" Then Error 5, "TAR.GZip rename regression"
+    reopened.Remove("folder/two.txt")
+    If reopened.FileCount <> 1 Then Error 5, "TAR.GZip remove regression"
+
+    Kill "archive-targzip-test.tar.gz"
+    Print "ARCHIVE_TARGZIP_OK"
+End Sub
