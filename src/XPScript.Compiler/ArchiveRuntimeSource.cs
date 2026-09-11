@@ -42,8 +42,8 @@ internal sealed class XPScriptArchive
         EnsurePath();
         if (UseExtendedBackend)
         {
-            using var archive = OpenExtendedArchive();
-            _ = SnapshotExtendedEntries(archive.Value);
+            using var extendedArchive = OpenExtendedArchive();
+            _ = SnapshotExtendedEntries(extendedArchive.Value);
             return;
         }
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Read);
