@@ -28,7 +28,7 @@ See `samples/application-is-debugging.xps` for a complete runnable example.
 
 ## Version 1 capabilities
 
-Protocol version 6 is the current native debugger contract. The runtime advertises and the VS Code adapter validates the protocol version during handshake.
+Protocol version 7 is the current native debugger contract. The runtime advertises and the VS Code adapter validates the protocol version during handshake.
 
 Version 1 supports source breakpoints, conditional breakpoints, hit-count breakpoints, log points, write data breakpoints, Continue, cooperative Pause, Step Into/Over/Out, mapped XPscript call stacks, observed scalar Locals, Debugger Variables, bounded value history, Debug Console output, exception breakpoints, graceful completion, and disconnect/target-exit handling.
 
