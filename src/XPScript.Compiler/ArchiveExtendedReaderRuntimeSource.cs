@@ -3,6 +3,238 @@ namespace XPScript.Compiler;
 internal static class ArchiveExtendedReaderRuntimeSource
 {
     public const string Code = """
+internal sealed class XPScriptExtendedArchive
+{
+    private readonly XPScriptArchive _inner;
+
+    public XPScriptExtendedArchive(object? path = null)
+    {
+        _inner = new XPScriptArchive(path, true);
+    }
+
+    public string Path => _inner.Path;
+    public string Format => _inner.Format;
+    public bool Exists => _inner.Exists;
+    public bool ExtendedSupport => true;
+    public bool IsReadOnly => _inner.IsReadOnly;
+    public string Password { get => _inner.Password; set => _inner.Password = value ?? ""; }
+    public int CompressionLevel { get => _inner.CompressionLevel; set => _inner.CompressionLevel = value; }
+    public long MaxExtractSize { get => _inner.MaxExtractSize; set => _inner.MaxExtractSize = value; }
+    public int MaxEntries { get => _inner.MaxEntries; set => _inner.MaxEntries = value; }
+    public double MaxCompressionRatio { get => _inner.MaxCompressionRatio; set => _inner.MaxCompressionRatio = value; }
+
+    public bool IsEncrypted => Snapshots().Any(x => x.IsEncrypted);
+    public long FileCount => Snapshots().LongCount(x => !x.IsDirectory);
+    public long FolderCount => Snapshots().LongCount(x => x.IsDirectory);
+    public long CompressedSize => Snapshots().Sum(x => x.CompressedSize);
+    public long UncompressedSize => Snapshots().Sum(x => x.Size);
+    public LSArray Entries => Pack(Snapshots().Cast<object?>());
+
+    public void Open()
+    {
+        try { _inner.Open(); }
+        catch (XPScriptRuntimeException) { _ = ReaderSnapshots(); }
+    }
+
+    public void Close() => _inner.Close();
+    public void Save() => _inner.Save();
+    public void Create(object? format = null) => _inner.Create(format);
+    public void AddFile(object? sourcePath, object? archivePath = null) => _inner.AddFile(sourcePath, archivePath);
+    public void AddFolder(object? sourcePath, object? archivePath = null, bool recursive = true) => _inner.AddFolder(sourcePath, archivePath, recursive);
+    public void AddText(object? archivePath, object? text) => _inner.AddText(archivePath, text);
+    public void AddBytes(object? archivePath, object? bytes) => _inner.AddBytes(archivePath, bytes);
+    public bool Remove(object? entryName) => _inner.Remove(entryName);
+    public bool Rename(object? entryName, object? newName) => _inner.Rename(entryName, newName);
+
+    public bool Contains(object? entryName)
+    {
+        var wanted = Normalize(XPScriptRuntime.CStr(entryName));
+        return Snapshots().Any(x => x.FullName.Equals(wanted, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public XPScriptArchiveEntry? GetEntry(object? entryName)
+    {
+        var wanted = Normalize(XPScriptRuntime.CStr(entryName));
+        return Snapshots().FirstOrDefault(x => x.FullName.Equals(wanted, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public LSArray Files() => Pack(Snapshots().Where(x => !x.IsDirectory).Cast<object?>());
+    public LSArray Folders() => Pack(Snapshots().Where(x => x.IsDirectory).Cast<object?>());
+
+    public LSArray Find(object? pattern)
+    {
+        var expression = XPScriptRuntime.CStr(pattern).Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(expression)) expression = "*";
+        var regex = "^" + System.Text.RegularExpressions.Regex.Escape(expression).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+        return Pack(Snapshots().Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.FullName, regex, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)).Cast<object?>());
+    }
+
+    public string ReadText(object? entryName) => System.Text.Encoding.UTF8.GetString(ReadBytesRaw(entryName));
+    public LSArray ReadBytes(object? entryName) => PackBytes(ReadBytesRaw(entryName));
+
+    public void Extract(object? entryName, object? targetPath)
+    {
+        try
+        {
+            _inner.Extract(entryName, targetPath);
+            return;
+        }
+        catch (XPScriptRuntimeException)
+        {
+        }
+
+        var name = Normalize(XPScriptRuntime.CStr(entryName));
+        var snapshot = GetEntry(name) ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+        var target = XPScriptFileSystemRuntime.ResolvePath(targetPath);
+        if (snapshot.IsDirectory)
+        {
+            System.IO.Directory.CreateDirectory(target);
+            return;
+        }
+        if (System.IO.Directory.Exists(target)) target = System.IO.Path.Combine(target, snapshot.Name);
+        var parent = System.IO.Path.GetDirectoryName(target);
+        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        System.IO.File.WriteAllBytes(target, ReaderBytes(name));
+    }
+
+    public void ExtractFolder(object? folderName, object? targetDirectory)
+    {
+        var folder = Normalize(XPScriptRuntime.CStr(folderName)).TrimEnd('/') + "/";
+        var root = XPScriptFileSystemRuntime.ResolvePath(targetDirectory);
+        System.IO.Directory.CreateDirectory(root);
+        var matches = Snapshots().Where(x => x.FullName.StartsWith(folder, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matches.Count == 0) throw new XPScriptRuntimeException(53, "Archive folder was not found.");
+        foreach (var entry in matches)
+        {
+            var relative = entry.FullName[folder.Length..];
+            if (relative.Length == 0) continue;
+            var target = SafePath(root, Normalize(relative));
+            if (entry.IsDirectory)
+            {
+                System.IO.Directory.CreateDirectory(target);
+                continue;
+            }
+            EnsureNoReparseParents(root, target);
+            var parent = System.IO.Path.GetDirectoryName(target);
+            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+            System.IO.File.WriteAllBytes(target, ReadBytesRaw(entry.FullName));
+        }
+    }
+
+    public void ExtractAll(object? targetDirectory)
+    {
+        try
+        {
+            _inner.ExtractAll(targetDirectory);
+            return;
+        }
+        catch (XPScriptRuntimeException)
+        {
+        }
+
+        var root = XPScriptFileSystemRuntime.ResolvePath(targetDirectory);
+        System.IO.Directory.CreateDirectory(root);
+        XPScriptArchiveExtendedReader.ExtractAll(Path, Format, Password, root, MaxEntries, MaxExtractSize, MaxCompressionRatio);
+    }
+
+    public LSArray ToBytes() => _inner.ToBytes();
+
+    private List<XPScriptArchiveEntry> Snapshots()
+    {
+        try
+        {
+            var values = _inner.Entries;
+            var result = new List<XPScriptArchiveEntry>();
+            if (!values.IsAllocated) return result;
+            for (var i = values.LBound(); i <= values.UBound(); i++)
+                if (values.Get(i) is XPScriptArchiveEntry entry) result.Add(entry);
+            return result;
+        }
+        catch (XPScriptRuntimeException)
+        {
+            return ReaderSnapshots();
+        }
+    }
+
+    private List<XPScriptArchiveEntry> ReaderSnapshots()
+    {
+        if (!Exists) return [];
+        return XPScriptArchiveExtendedReader.Snapshots(Path, Format, Password, MaxEntries, MaxExtractSize, MaxCompressionRatio);
+    }
+
+    private byte[] ReadBytesRaw(object? entryName)
+    {
+        try
+        {
+            var values = _inner.ReadBytes(entryName);
+            if (!values.IsAllocated) return [];
+            var result = new byte[values.UBound() - values.LBound() + 1];
+            var offset = 0;
+            for (var i = values.LBound(); i <= values.UBound(); i++) result[offset++] = Convert.ToByte(values.Get(i), System.Globalization.CultureInfo.InvariantCulture);
+            return result;
+        }
+        catch (XPScriptRuntimeException)
+        {
+            return ReaderBytes(Normalize(XPScriptRuntime.CStr(entryName)));
+        }
+    }
+
+    private byte[] ReaderBytes(string entryName) =>
+        XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, entryName, MaxExtractSize, MaxCompressionRatio);
+
+    private static LSArray Pack(IEnumerable<object?> values)
+    {
+        var items = values.ToList();
+        if (items.Count == 0) return new LSArray("Variant", true);
+        var result = new LSArray("Variant", true, [0], [items.Count - 1]);
+        for (var i = 0; i < items.Count; i++) result.Set(items[i], i);
+        return result;
+    }
+
+    private static LSArray PackBytes(byte[] bytes)
+    {
+        if (bytes.Length == 0) return new LSArray("Byte", true);
+        var result = new LSArray("Byte", true, [0], [bytes.Length - 1]);
+        for (var i = 0; i < bytes.Length; i++) result.Set(bytes[i], i);
+        return result;
+    }
+
+    private static string Normalize(string value)
+    {
+        var name = (value ?? "").Replace('\\', '/').Trim();
+        if (name.Length == 0) throw new XPScriptRuntimeException(5, "Archive entry name must not be empty.");
+        if (name.StartsWith("/", StringComparison.Ordinal) || name.StartsWith("//", StringComparison.Ordinal) || System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z]:"))
+            throw new XPScriptRuntimeException(5, "Absolute archive paths are not allowed.");
+        var parts = name.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Any(x => x == "..")) throw new XPScriptRuntimeException(5, "Archive path traversal is not allowed.");
+        var result = string.Join('/', parts.Where(x => x != "."));
+        if (name.EndsWith("/", StringComparison.Ordinal)) result += "/";
+        return result;
+    }
+
+    private static string SafePath(string root, string name)
+    {
+        var rootFull = System.IO.Path.GetFullPath(root);
+        var target = System.IO.Path.GetFullPath(System.IO.Path.Combine(rootFull, name.Replace('/', System.IO.Path.DirectorySeparatorChar)));
+        var prefix = rootFull.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!target.StartsWith(prefix, comparison)) throw new XPScriptRuntimeException(5, "Archive extraction path escapes the target directory.");
+        return target;
+    }
+
+    private static void EnsureNoReparseParents(string root, string target)
+    {
+        var rootFull = System.IO.Path.GetFullPath(root);
+        var current = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(target));
+        while (!string.IsNullOrEmpty(current) && !string.Equals(current, rootFull, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        {
+            if (System.IO.Directory.Exists(current) && (System.IO.File.GetAttributes(current) & System.IO.FileAttributes.ReparsePoint) != 0)
+                throw new XPScriptRuntimeException(5, "Archive extraction through a symbolic link or reparse point is not allowed.");
+            current = System.IO.Path.GetDirectoryName(current);
+        }
+    }
+}
+
 internal static class XPScriptArchiveExtendedReader
 {
     public static List<XPScriptArchiveEntry> Snapshots(string path, string format, string password, int maxEntries, long maxExtractSize, double maxCompressionRatio)
