@@ -1,0 +1,135 @@
+name: One-shot HTTP decompression coverage
+on:
+  push:
+    branches:
+      - fix/httpclient-automatic-decompression
+permissions:
+  contents: write
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/httpclient-automatic-decompression
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Patch all product HTTP handlers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          flags = '''AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli'''
+
+          def replace_one(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if new in s:
+                  return
+              if old not in s:
+                  raise SystemExit(f'Expected pattern not found in {path}')
+              p.write_text(s.replace(old, new, 1))
+
+          # XPAi
+          replace_one(
+              'src/XPScript.Compiler/AiRuntimeSource.cs',
+              '_handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };',
+              '''_handler = new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+        };''')
+
+          # NotesHTTPRequest / JSON HTTP
+          replace_one(
+              'src/XPScript.Compiler/JsonHttpCompatibilityRuntimeSource.cs',
+              '''            AllowAutoRedirect = MaxRedirects > 0,
+            MaxAutomaticRedirections = Math.Max(1, MaxRedirects)
+''',
+              '''            AllowAutoRedirect = MaxRedirects > 0,
+            MaxAutomaticRedirections = Math.Max(1, MaxRedirects),
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+''')
+
+          # Active and legacy attachment transports
+          for path in [
+              'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs',
+              'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs']:
+              replace_one(
+                  path,
+                  'new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false }',
+                  '''new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
+        }''')
+
+          # Desktop image HTTP transport uses a default handler today.
+          p = Path('src/XPScript.UI.Desktop/DesktopImageHost.cs')
+          s = p.read_text()
+          old = 'private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };'
+          new = '''private static readonly HttpClient Http = new(new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                 System.Net.DecompressionMethods.Deflate |
+                                 System.Net.DecompressionMethods.Brotli
+    })
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };'''
+          if new not in s:
+              if old not in s:
+                  raise SystemExit('Expected DesktopImageHost HttpClient initializer not found')
+              p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Verify all production handlers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [
+              'src/XPScript.Compiler/NativeHttpRuntimeSource.cs',
+              'src/XPScript.Compiler/AiRuntimeSource.cs',
+              'src/XPScript.Compiler/JsonHttpCompatibilityRuntimeSource.cs',
+              'src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs',
+              'src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs',
+              'src/XPScript.UI.Desktop/DesktopImageHost.cs']
+          for path in files:
+              text = Path(path).read_text()
+              for token in [
+                  'System.Net.DecompressionMethods.GZip',
+                  'System.Net.DecompressionMethods.Deflate',
+                  'System.Net.DecompressionMethods.Brotli']:
+                  if token not in text:
+                      raise SystemExit(f'{path} missing {token}')
+          print('All HTTP decompression handlers verified.')
+          PY
+      - name: Build compiler
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Build desktop UI
+        run: dotnet build src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj -c Release
+      - name: Commit fixes
+        run: |
+          if git diff --quiet; then
+            echo 'No source changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/XPScript.Compiler/AiRuntimeSource.cs \
+                  src/XPScript.Compiler/JsonHttpCompatibilityRuntimeSource.cs \
+                  src/XPScript.Compiler/DatabaseAttachmentRuntimeV2Source.cs \
+                  src/XPScript.Compiler/DatabaseAttachmentRuntimeSource.cs \
+                  src/XPScript.UI.Desktop/DesktopImageHost.cs
+          git commit -m 'Enable decompression across HTTP transports'
+          git push origin HEAD:fix/httpclient-automatic-decompression
