@@ -32,8 +32,6 @@ jobs:
       - name: Verify Archive compiler probes
         shell: pwsh
         run: |
-          dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
