@@ -1,6 +1,6 @@
 # XPScript
 
-(c) xpagedeveloper.com 2026
+xpagedeveloper.com 2026
 
 XPScript is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
