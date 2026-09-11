@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim source As New Archive()
+    source.Create("zip")
+    source.AddText("manifest.txt", "extended-memory")
+
+    Dim data As Variant
+    data = source.ToBytes()
+
+    Dim archive As New Archive(data, True)
+    archive.Open()
+    If archive.ReadText("manifest.txt") <> "extended-memory" Then Error 5, "Extended in-memory Archive read regression"
+    If Not archive.IsReadOnly Then Error 5, "Extended in-memory Archive should be read-only"
+    Print "ARCHIVE_EXTENDED_MEMORY_OK"
+End Sub
