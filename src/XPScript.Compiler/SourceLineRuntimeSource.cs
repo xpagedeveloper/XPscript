@@ -77,7 +77,7 @@ internal static class XPScriptDebugRuntime
     private static int _disconnectRequested;
     private static long _changeSequence;
 
-    private const int ProtocolVersion = 7;
+    private const int ProtocolVersion = 6;
     private const int ValueHistoryLimit = 20;
     private const int MaxTrackedValueChars = 2048;
     private const int MaxHistoryCharsPerVariable = 32768;
