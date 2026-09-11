@@ -1,0 +1,38 @@
+Option Declare
+
+Sub Main()
+    Call ExpectOpenFailure("./out/archive-security-fixtures/traversal.zip", 10000, 2147483647, 1000, "path traversal")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/absolute-unix.zip", 10000, 2147483647, 1000, "absolute Unix path")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/absolute-windows.zip", 10000, 2147483647, 1000, "absolute Windows path")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/unc.zip", 10000, 2147483647, 1000, "UNC path")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/symlink-entry.zip", 10000, 2147483647, 1000, "symbolic link entry")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/max-entries.zip", 2, 2147483647, 1000, "MaxEntries")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/max-size.zip", 10000, 100, 1000, "MaxExtractSize")
+    Call ExpectOpenFailure("./out/archive-security-fixtures/compression-ratio.zip", 10000, 2147483647, 10, "MaxCompressionRatio")
+
+    Dim output As New Archive("./out/archive-security-fixtures/symlink-source-test.zip")
+    output.Create("zip")
+    output.AddFolder("./out/archive-security-fixtures/source", "source", True)
+    If Not output.Contains("source/real.txt") Then Error 5, "Archive security fixture lost the real source file"
+    If output.Contains("source/link.txt") Then Error 5, "Archive.AddFolder followed a symbolic link"
+
+    Print "ARCHIVE_SECURITY_FIXTURES=OK"
+End Sub
+
+Sub ExpectOpenFailure(path As String, maxEntries As Integer, maxSize As Long, maxRatio As Double, label As String)
+    Dim archive As New Archive(path)
+    archive.MaxEntries = maxEntries
+    archive.MaxExtractSize = maxSize
+    archive.MaxCompressionRatio = maxRatio
+
+    Dim openErr As Integer
+    Dim openMessage As String
+    On Error Resume Next
+    archive.Open()
+    openErr = Err
+    openMessage = Error$
+    On Error GoTo 0
+
+    If openErr = 0 Then Error 5, "Archive security fixture unexpectedly opened: " & label
+    If Len(openMessage) = 0 Then Error 5, "Archive security fixture returned an empty diagnostic: " & label
+End Sub
