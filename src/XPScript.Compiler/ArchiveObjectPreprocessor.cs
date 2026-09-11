@@ -121,13 +121,13 @@ internal sealed class ArchiveObjectPreprocessor
         rewritten = Regex.Replace(
             rewritten,
             callPattern + @"\s*\.\s*IsFolder\b",
-            m => m.Value[..m.Value.LastIndexOf('.', StringComparison.Ordinal)] + ".IsDirectory",
+            m => m.Value[..m.Value.LastIndexOf('.')] + ".IsDirectory",
             RegexOptions.IgnoreCase);
 
         rewritten = Regex.Replace(
             rewritten,
             callPattern + @"\s*\.\s*IsFile\b",
-            m => "(Not " + m.Value[..m.Value.LastIndexOf('.', StringComparison.Ordinal)] + ".IsDirectory)",
+            m => "(Not " + m.Value[..m.Value.LastIndexOf('.')] + ".IsDirectory)",
             RegexOptions.IgnoreCase);
     }
 
