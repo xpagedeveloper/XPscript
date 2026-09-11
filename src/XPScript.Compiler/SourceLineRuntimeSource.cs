@@ -192,17 +192,6 @@ internal static class XPScriptDebugRuntime
             return false;
         }
 
-        if (rule.Condition.Length > 0 || rule.HitCondition.Length > 0)
-        {
-            Send(new
-            {
-                type = "breakpointDiagnostic",
-                message = $"XPscript breakpoint matched {NormalizeSource(sourcePath)}:{line}" +
-                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
-                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCount}" : "")
-            });
-        }
-
         return true;
     }
 
@@ -501,7 +490,6 @@ internal static class XPScriptDebugRuntime
             if (triggered.Length == 0 && matched && !rule.LastMatched)
             {
                 triggered = rule.Condition;
-                Send(new { type = "breakpointDiagnostic", message = "XPscript global condition matched: " + rule.Condition });
             }
             rule.LastMatched = matched;
         }
@@ -715,8 +703,6 @@ internal static class XPScriptDebugRuntime
             case "setGlobalConditionBreakpoints":
                 SetGlobalConditionBreakpoints(root);
                 Send(new { type = "globalConditionBreakpoints", ok = true, conditions = GlobalConditionBreakpoints.Select(item => item.Condition).ToArray() });
-                foreach (var rule in GlobalConditionBreakpoints)
-                    Send(new { type = "breakpointDiagnostic", message = "XPscript runtime global condition: " + rule.Condition });
                 break;
             case "setDataBreakpoints": SetDataBreakpoints(root); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
             case "setExceptionBreakpoints": SetExceptionBreakpoints(root); Send(new { type = "exceptionBreakpoints", ok = true }); break;
@@ -775,17 +761,6 @@ internal static class XPScriptDebugRuntime
         }
 
         Breakpoints[source] = rules;
-        foreach (var rule in rules)
-        {
-            Send(new
-            {
-                type = "breakpointDiagnostic",
-                message = $"XPscript runtime breakpoint {source}:{rule.Line}" +
-                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
-                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCondition}" : "") +
-                    (rule.LogMessage.Length > 0 ? $" logMessage={rule.LogMessage}" : "")
-            });
-        }
     }
 
     private static void SetGlobalConditionBreakpoints(global::System.Text.Json.JsonElement root)
