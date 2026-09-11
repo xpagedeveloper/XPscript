@@ -2,6 +2,14 @@
 
 XPScript is licensed under the Apache License, Version 2.0. The complete license terms are in [LICENSE](LICENSE). Nothing in this document replaces, limits, or expands the rights granted by that license or by the licenses of third-party components.
 
+## No warranty or support
+
+XPScript is provided "AS IS", without warranties or conditions of any kind, express or implied, to the extent permitted by applicable law. Use of XPScript and applications compiled with XPScript is at your own risk.
+
+Unless separately agreed in writing, XPScript is provided without any obligation to provide technical support, maintenance, updates, security fixes, compatibility fixes, service levels, or continued availability. You are responsible for evaluating whether XPScript and any compiled application are suitable for your intended use, including security, reliability, regulatory, licensing, and production requirements.
+
+Nothing in this notice replaces or modifies the warranty disclaimer and limitation of liability contained in the Apache License, Version 2.0.
+
 ## Compiled applications and third-party notices
 
 Applications compiled with XPScript may contain or redistribute third-party libraries, native components, .NET runtime components, or other dependencies selected according to the features used by the application.
