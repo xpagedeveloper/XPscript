@@ -70,6 +70,7 @@ public sealed class XPScriptTranspiler
         var runtimeFeatures = RuntimeFeatures.Detect(source);
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
         source = new ArchiveObjectPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
@@ -80,7 +81,7 @@ public sealed class XPScriptTranspiler
         var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
-        var usesArchive = usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
+        var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
