@@ -135,6 +135,7 @@ public sealed class XPScriptTranspiler
         {
             generated += "\n\n" + ArchiveRuntimeSource.Code + "\n";
             generated += "\n\n" + ArchiveMemoryRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveIteratorRuntimeSource.Code + "\n";
         }
         if (usesExtendedArchive)
         {
@@ -178,127 +179,46 @@ public sealed class XPScriptTranspiler
         }
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
-        generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
-        generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
-        generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
-        generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclSelectedCompatibilityRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
 
-        if (usesAi)
-        {
-            generated = new AiSessionRuntimePostProcessor().Transform(generated);
-            generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
-        }
-        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
-        generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
-        generated = new FileSystemPortabilityPostProcessor().Transform(generated);
+        if (runtimeFeatures.NativeHttpJson)
+            generated += "\n\n" + NativeHttpJsonRuntimeSource.Code + "\n";
+        if (runtimeFeatures.DominoJson)
+            generated += "\n\n" + DominoJsonRuntimeSource.Code + "\n";
+        if (runtimeFeatures.NotesSession)
+            generated += "\n\n" + NotesSessionRuntimeSource.Code + "\n";
+        if (runtimeFeatures.NotesDocument)
+            generated += "\n\n" + NotesDocumentRuntimeSource.Code + "\n";
+        if (runtimeFeatures.NotesMIMEEntity)
+            generated += "\n\n" + NotesMimeEntityRuntimeSource.Code + "\n";
+        if (runtimeFeatures.NotesDatabase)
+            generated += "\n\n" + NotesDatabaseRuntimeSource.Code + "\n";
+        if (runtimeFeatures.NotesDesignElement)
+            generated += "\n\n" + NotesDesignElementRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Ui)
+            generated += "\n\n" + UiRuntimeSource.Code + "\n";
 
-        generated = generated.Replace(
-            "XPScriptRuntime.SetArgs(args);",
-            $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});",
-            StringComparison.Ordinal);
-
-        generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);
-        generated = generated.Replace("byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),", "byte[] requestBytes => System.Text.Encoding.UTF8.GetString(requestBytes),", StringComparison.Ordinal);
-        generated = generated.Replace("using System.Text.RegularExpressions;", "using System.Text.RegularExpressions;\nusing System.Runtime.InteropServices;", StringComparison.Ordinal);
-        generated = Regex.Replace(generated, @"(?m)^\s*__lsErrCtx\.Statement\s*=\s*\d+;\s*\r?$\n?", "");
-        generated = ScopeErrorProtection(generated);
-
-        foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
-        return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        return RestoreStringLiterals(generated, protectedStrings);
     }
 
-    private static string NormalizeEvaluateRuntime(string code) => code
-        .Replace("\"isobject\" when args.Count == 1 => XPScriptRuntime.IsObject(Arg(0)),",
-            "\"isobject\" when args.Count == 1 => XPScriptNullRuntime.IsObject(Arg(0)),", StringComparison.Ordinal)
-        .Replace("\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptRuntime.IsScalar(Arg(0)),",
-            "\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptNullRuntime.IsScalar(Arg(0)),", StringComparison.Ordinal);
+    private static string NormalizeEvaluateRuntime(string runtime) => runtime;
 
-    private static string GetSourceDirectory(string sourceName)
+    private static string ProtectStringLiterals(string source, out List<string> literals)
     {
-        var fullSourcePath = Path.GetFullPath(sourceName);
-        return Path.GetDirectoryName(fullSourcePath) ?? Environment.CurrentDirectory;
+        literals = [];
+        return Regex.Replace(source, @"\"(?:\"\"|[^\"])*\"", match =>
+        {
+            var index = literals.Count;
+            literals.Add(match.Value);
+            return $"__XPS_STRING_LITERAL_{index}__";
+        });
     }
 
-    private static string EscapeCSharpString(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
-
-    public string Transpile(string source) => Transpile(source, "input.xps");
-
-    private static string RewriteListPresenceChecks(string source)
+    private static string RestoreStringLiterals(string source, IReadOnlyList<string> literals)
     {
-        var listNames = Regex.Matches(source, @"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+List\s+As\s+[A-Za-z_]\w*\s*$")
-            .Select(m => m.Groups[1].Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(x => x.Length)
-            .ToArray();
-
-        foreach (var listName in listNames)
-        {
-            source = Regex.Replace(
-                source,
-                $@"\bIsElement\s*\(\s*{Regex.Escape(listName)}\s*\((?<key>[^()]*)\)\s*\)",
-                m => $"{listName}.ContainsTag({m.Groups["key"].Value})",
-                RegexOptions.IgnoreCase);
-        }
+        for (var i = 0; i < literals.Count; i++)
+            source = source.Replace($"__XPS_STRING_LITERAL_{i}__", literals[i], StringComparison.Ordinal);
         return source;
     }
 
-    private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements)
-    {
-        replacements = new Dictionary<string, string>(StringComparer.Ordinal);
-        var output = new StringBuilder(source.Length);
-        for (var i = 0; i < source.Length; i++)
-        {
-            if (source[i] != '"') { output.Append(source[i]); continue; }
-            output.Append('"');
-            var inner = new StringBuilder(); i++;
-            for (; i < source.Length; i++)
-            {
-                if (source[i] == '"')
-                {
-                    if (i + 1 < source.Length && source[i + 1] == '"') { inner.Append("\"\""); i++; continue; }
-                    break;
-                }
-                inner.Append(source[i]);
-            }
-            if (i >= source.Length) throw new CompilerException("Unterminated string literal.");
-            var marker = $"__XPSCRIPT_STRING_{replacements.Count:D6}__";
-            replacements[marker] = EscapeForGeneratedCSharpString(inner.ToString());
-            output.Append(marker).Append('"');
-        }
-        return output.ToString();
-    }
-
-    private static string EscapeForGeneratedCSharpString(string sourceInner)
-    {
-        var decoded = sourceInner.Replace("\"\"", "\"", StringComparison.Ordinal);
-        return decoded.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)
-            .Replace("\r", "\\r", StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal).Replace("\t", "\\t", StringComparison.Ordinal);
-    }
-
-    private static string ScopeErrorProtection(string generated)
-    {
-        var activationIndexes = new[]
-        {
-            generated.IndexOf("LSControlRuntime.SetGoto(__lsErrCtx", StringComparison.Ordinal),
-            generated.IndexOf("LSControlRuntime.SetResumeNext(__lsErrCtx", StringComparison.Ordinal)
-        }.Where(x => x >= 0).ToArray();
-        if (activationIndexes.Length == 0) return generated;
-
-        var activation = activationIndexes.Min(); var prefix = generated[..activation]; var suffix = generated[activation..]; var removedIds = new HashSet<int>();
-        var wrapperPattern = new Regex(@"(?m)^(?<indent>[ \t]*)__ls_stmt_before_(?<id>\d+):;\r?\n[ \t]*try \{ (?<statement>.*) \}\r?\n[ \t]*catch \(Exception __lsEx\) \{.*\}\r?\n[ \t]*__ls_stmt_after_\d+:;\r?\n?", RegexOptions.CultureInvariant);
-        prefix = wrapperPattern.Replace(prefix, match =>
-        {
-            removedIds.Add(int.Parse(match.Groups["id"].Value));
-            return match.Groups["indent"].Value + match.Groups["statement"].Value + Environment.NewLine;
-        });
-        generated = prefix + suffix;
-        foreach (var id in removedIds)
-            generated = Regex.Replace(generated, $@"case\s+{id}:\s+goto\s+__ls_stmt_(?:before|after)_{id};\s*", "", RegexOptions.CultureInvariant);
-        return generated;
-    }
+    private static string RewriteListPresenceChecks(string source) => source;
 }
