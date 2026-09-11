@@ -74,6 +74,9 @@ internal sealed class ArchiveObjectPreprocessor
             foreach (var entryName in archiveEntryVariables.OrderByDescending(x => x.Length))
             {
                 var escaped = Regex.Escape(entryName);
+                if (Regex.IsMatch(rewritten, $@"\b{escaped}\s*\.\s*IsDirectory\b", RegexOptions.IgnoreCase))
+                    throw new CompilerException("ArchiveEntry.IsDirectory is not available. Use ArchiveEntry.IsFile or ArchiveEntry.IsFolder.");
+
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFolder\b", $"{entryName}.IsDirectory", RegexOptions.IgnoreCase);
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFile\b", $"(Not {entryName}.IsDirectory)", RegexOptions.IgnoreCase);
             }
