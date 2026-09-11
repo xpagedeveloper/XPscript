@@ -68,6 +68,11 @@ internal sealed class ArchiveObjectPreprocessor
             foreach (var archiveName in archiveVariables.OrderByDescending(x => x.Length))
             {
                 var escaped = Regex.Escape(archiveName);
+
+                RewriteChainedEntryAliases(ref rewritten, archiveName, escaped, "GetEntry", @"([^()]*)");
+                RewriteChainedEntryAliases(ref rewritten, archiveName, escaped, "GetFirstEntry", @"\s*");
+                RewriteChainedEntryAliases(ref rewritten, archiveName, escaped, "GetNextEntry", @"([^()]*)");
+
                 var firstPattern = $@"\b{escaped}\s*\.\s*GetFirstEntry\s*\(\s*\)";
                 rewritten = Regex.Replace(rewritten, firstPattern, $"{FirstEntryHelper}({archiveName})", RegexOptions.IgnoreCase);
 
@@ -82,7 +87,7 @@ internal sealed class ArchiveObjectPreprocessor
             {
                 var escaped = Regex.Escape(entryName);
                 if (Regex.IsMatch(rewritten, $@"\b{escaped}\s*\.\s*IsDirectory\b", RegexOptions.IgnoreCase))
-                    throw new CompilerException("ArchiveEntry.IsDirectory is not available. Use ArchiveEntry.IsFile or ArchiveEntry.IsFolder.");
+                    throw RemovedIsDirectoryException();
 
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFolder\b", $"{entryName}.IsDirectory", RegexOptions.IgnoreCase);
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*IsFile\b", $"(Not {entryName}.IsDirectory)", RegexOptions.IgnoreCase);
@@ -104,6 +109,30 @@ internal sealed class ArchiveObjectPreprocessor
 
         return string.Join(Environment.NewLine, output);
     }
+
+    private static void RewriteChainedEntryAliases(ref string rewritten, string archiveName, string escapedArchiveName, string methodName, string argumentPattern)
+    {
+        var method = Regex.Escape(methodName);
+        var callPattern = $@"\b{escapedArchiveName}\s*\.\s*{method}\s*\(\s*{argumentPattern}\s*\)";
+
+        if (Regex.IsMatch(rewritten, callPattern + @"\s*\.\s*IsDirectory\b", RegexOptions.IgnoreCase))
+            throw RemovedIsDirectoryException();
+
+        rewritten = Regex.Replace(
+            rewritten,
+            callPattern + @"\s*\.\s*IsFolder\b",
+            m => m.Value[..m.Value.LastIndexOf('.', StringComparison.Ordinal)] + ".IsDirectory",
+            RegexOptions.IgnoreCase);
+
+        rewritten = Regex.Replace(
+            rewritten,
+            callPattern + @"\s*\.\s*IsFile\b",
+            m => "(Not " + m.Value[..m.Value.LastIndexOf('.', StringComparison.Ordinal)] + ".IsDirectory)",
+            RegexOptions.IgnoreCase);
+    }
+
+    private static CompilerException RemovedIsDirectoryException() =>
+        new("ArchiveEntry.IsDirectory is not available. Use ArchiveEntry.IsFile or ArchiveEntry.IsFolder.");
 
     private static string CreateArchiveExpression(string rawArguments)
     {
