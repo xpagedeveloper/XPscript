@@ -75,7 +75,9 @@ Sub Main()
     Dim XPXmlDocument As String
     Dim XPCsvDocument As String
     Dim XPHttpClient As String
+    Dim ArchiveName As String
     Notesdb = "NotesDatabase XPDB JSON XML CSV HTTP"
+    ArchiveName = "Archive"
 End Sub
 """;
 
@@ -87,7 +89,8 @@ End Sub
         "internal static class XPScriptNativeXml",
         "internal static class XPScriptNativeCsv",
         "internal static class XPScriptNativeHttp",
-        "internal sealed class XPScriptDbSupabase"
+        "internal sealed class XPScriptDbSupabase",
+        "internal sealed class XPScriptArchive"
     };
     foreach (var marker in forbidden)
         if (generated.Contains(marker, StringComparison.Ordinal))
@@ -124,6 +127,11 @@ void VerifyFeatureProfiles()
         "HTTPDB",
         "Dim value As XPHttpDbSupabase",
         ["internal sealed class XPScriptHttpDbSupabase"]);
+    VerifyProfile(
+        "ARCHIVE",
+        "Dim value As Archive",
+        ["internal sealed class XPScriptArchive"],
+        ["internal static class XPScriptNativeHttp", "internal sealed class XPScriptDbSqlite"]);
     VerifyProfile(
         "NOTES",
         "Dim value As NotesDatabase",
