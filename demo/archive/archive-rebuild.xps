@@ -12,6 +12,8 @@ Sub Main()
 
     reopened.AddText("second.txt", "two")
     If reopened.ReadText("second.txt") <> "two" Then Error 5, "TAR rebuild add failed"
+    If Not reopened.Contains("first.txt") Then Error 5, "TAR rebuild add lost the existing entry"
+    If reopened.ReadText("first.txt") <> "one" Then Error 5, "TAR rebuild add changed existing content"
 
     If Not reopened.Rename("first.txt", "renamed.txt") Then Error 5, "TAR rebuild rename failed"
     If reopened.ReadText("renamed.txt") <> "one" Then Error 5, "TAR rebuild rename content failed"
