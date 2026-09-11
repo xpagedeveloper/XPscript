@@ -263,101 +263,62 @@ public sealed class CompilerDriver
         }
     }
 
-    private static void StageRunNativeDependencies(
-        string sourcePath,
-        string outputDirectory,
-        IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
-        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> managedNativeDependencies)
+    private static void ValidateNativeDependencies(string sourcePath, IReadOnlyList<NativeDependencyPackager.NativeDependency> dependencies)
     {
-        var sourceDirectory = SourceDirectory(sourcePath);
-        var seenNames = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-
-        foreach (var dependency in nativeDependencies)
-        {
-            var source = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
-            StageRunNativeDependency(source, outputDirectory, dependency.LoadName, seenNames);
-        }
-
-        foreach (var dependency in managedNativeDependencies)
-        {
-            var source = ResolveProjectLocalPath(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
-            StageRunNativeDependency(source, outputDirectory, Path.GetFileName(source), seenNames);
-        }
-    }
-
-    private static void StageRunNativeDependency(string source, string outputDirectory, string fileName, HashSet<string> seenNames)
-    {
-        fileName = Path.GetFileName(fileName);
-        if (string.IsNullOrWhiteSpace(fileName) || !seenNames.Add(fileName))
-            throw new CompilerException("Multiple run dependencies would use the same file name: " + fileName);
-
-        var target = Path.Combine(outputDirectory, fileName);
-        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native dependency");
-        CompilerPathSecurity.HardenTemporaryFile(target);
-    }
-
-    private static void StageRunManagedDependency(string source, string outputDirectory)
-    {
-        if (!File.Exists(source))
-            throw new CompilerException("Required MimeKit runtime assembly was not found: " + source);
-        var target = Path.Combine(outputDirectory, "MimeKit.dll");
-        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Managed runtime dependency");
-        CompilerPathSecurity.HardenTemporaryFile(target);
-    }
-
-    private static void ValidateNativeDependencies(string sourcePath, IReadOnlyList<NativeDependencyPackager.Dependency> dependencies)
-    {
-        if (dependencies.Count == 0) return;
-        var sourceDirectory = SourceDirectory(sourcePath);
-        var seenOutputNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var dependency in dependencies)
         {
-            var resolved = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
-            if (!File.Exists(resolved))
-                throw new CompilerException("Application-local native dependency was not found: " + SafeFileName(dependency.DeclaredPath));
-
-            if (seenOutputNames.TryGetValue(dependency.LoadName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
-                throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + dependency.LoadName + "'. Use unique native library file names for one target.");
-            seenOutputNames[dependency.LoadName] = resolved;
+            if (!dependency.Exists)
+                throw new CompilerException($"Native dependency '{dependency.DeclaredPath}' was not found relative to '{SourceDirectory(sourcePath)}'.");
         }
     }
 
     private static void ValidateManagedReferences(
         string sourcePath,
-        ManagedAssemblyReferencePreprocessor.Result references,
-        IReadOnlyList<NativeDependencyPackager.Dependency> declaredNativeDependencies)
+        ManagedAssemblyReferencePreprocessor.Result managedReferences,
+        IReadOnlyList<NativeDependencyPackager.NativeDependency> nativeDependencies)
     {
         var sourceDirectory = SourceDirectory(sourcePath);
-        var managedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var nativeNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var dependency in declaredNativeDependencies)
-            nativeNames[dependency.LoadName] = ResolveNativeDependencyPath(sourceDirectory, dependency.DeclaredPath);
-
-        foreach (var reference in references.Managed)
+        foreach (var reference in managedReferences.Managed)
         {
             var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "Managed Reference");
             if (!File.Exists(resolved))
-                throw new CompilerException("Managed .NET assembly was not found: " + SafeFileName(reference.DeclaredPath));
-            var fileName = Path.GetFileName(resolved);
-            if (managedNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
-                throw new CompilerException("Multiple managed references use the same file name '" + fileName + "'.");
-            managedNames[fileName] = resolved;
+                throw new CompilerException($"Managed Reference '{reference.DeclaredPath}' was not found relative to '{sourceDirectory}'.");
         }
 
-        foreach (var reference in references.Native)
+        foreach (var native in managedReferences.Native)
         {
-            var resolved = ResolveProjectLocalPath(sourceDirectory, reference.DeclaredPath, "ReferenceNative");
+            var resolved = ResolveNativeDependencyPath(sourceDirectory, native.DeclaredPath);
             if (!File.Exists(resolved))
-                throw new CompilerException("RID-specific native dependency was not found: " + SafeFileName(reference.DeclaredPath));
-            var fileName = Path.GetFileName(resolved);
-            if (string.IsNullOrWhiteSpace(fileName))
-                throw new CompilerException("ReferenceNative path must end with a file name.");
-            if (nativeNames.TryGetValue(fileName, out var existing) && !existing.Equals(resolved, StringComparison.OrdinalIgnoreCase))
-                throw new CompilerException("Multiple native dependencies would be packaged with the same file name '" + fileName + "'.");
-            nativeNames[fileName] = resolved;
+                throw new CompilerException($"Native Reference '{native.DeclaredPath}' was not found relative to '{sourceDirectory}'.");
         }
+    }
+
+    private static void StageRunNativeDependencies(
+        string sourcePath,
+        string runOutputDirectory,
+        IReadOnlyList<NativeDependencyPackager.NativeDependency> dependencies,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> nativeReferences)
+    {
+        foreach (var dependency in dependencies)
+        {
+            var source = ResolveNativeDependencyPath(SourceDirectory(sourcePath), dependency.DeclaredPath);
+            var target = Path.Combine(runOutputDirectory, Path.GetFileName(source));
+            CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native dependency");
+        }
+
+        foreach (var native in nativeReferences)
+        {
+            var source = ResolveNativeDependencyPath(SourceDirectory(sourcePath), native.DeclaredPath);
+            var target = Path.Combine(runOutputDirectory, Path.GetFileName(source));
+            CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native reference");
+        }
+    }
+
+    private static void StageRunManagedDependency(string source, string runOutputDirectory)
+    {
+        if (!File.Exists(source)) return;
+        var target = Path.Combine(runOutputDirectory, Path.GetFileName(source));
+        File.Copy(source, target, overwrite: true);
     }
 
     private static IReadOnlyList<StagedManagedReference> StageManagedReferences(
@@ -481,6 +442,9 @@ public sealed class CompilerDriver
 
         foreach (Match match in sourcePattern.Matches(message))
         {
+            var description = match.Groups["desc"].Value.Trim();
+            if (description.StartsWith("warning ", StringComparison.OrdinalIgnoreCase)) continue;
+
             var line = int.Parse(match.Groups["line"].Value);
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
             var diagnosticSource = match.Groups["file"].Value.Trim();
@@ -488,7 +452,7 @@ public sealed class CompilerDriver
             result.Add(CreateDiagnostic(
                 line,
                 pos,
-                Humanize(match.Groups["desc"].Value.Trim()),
+                Humanize(description),
                 code,
                 Mark(code, pos),
                 DiagnosticFileName(diagnosticSource)));
@@ -618,38 +582,33 @@ public sealed class CompilerDriver
     {
         var convert = Regex.Match(description, @"cannot convert from '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
         if (convert.Success) return $"Unable to use {FriendlyType(convert.Groups[1].Value)} where {FriendlyType(convert.Groups[2].Value)} is required.";
-        var assign = Regex.Match(description, @"Cannot implicitly convert type '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
-        if (assign.Success) return $"Unable to assign {FriendlyType(assign.Groups[1].Value)} to {FriendlyType(assign.Groups[2].Value)}.";
+
+        var missingType = Regex.Match(description, @"The type or namespace name '([^']+)' could not be found", RegexOptions.IgnoreCase);
+        if (missingType.Success)
+        {
+            var typeName = missingType.Groups[1].Value;
+            if (typeName.Equals("LotusScript", StringComparison.OrdinalIgnoreCase))
+                return "The requested language/runtime type is not available in this build.";
+            return $"The type or namespace '{typeName}' is not available in this build.";
+        }
+
         return description;
     }
 
-    private static string FriendlyType(string type) => type.Trim() switch
-    {
-        "string" or "System.String" => "String", "int" or "System.Int32" => "Integer", "long" or "System.Int64" => "Long",
-        "double" or "System.Double" => "Double", "float" or "System.Single" => "Single", "bool" or "System.Boolean" => "Boolean",
-        "byte" or "System.Byte" => "Byte", "decimal" or "System.Decimal" => "Currency", _ => type
-    };
-
-    private static CompileDiagnostic CreateDiagnostic(
-        int line,
-        int pos,
-        string description,
-        string code,
-        string marked,
-        string file = "") => new()
+    private static CompileDiagnostic CreateDiagnostic(int line, int position, string description, string code, string markedCode, string file = "") => new()
     {
         File = file,
-        Line = line,
-        Position = pos,
+        Line = Math.Max(0, line),
+        Position = Math.Max(0, position),
         Description = description,
         Code = code,
-        MarkedCode = marked
+        MarkedCode = markedCode
     };
 
     private static string Mark(string code, int position)
     {
-        if (string.IsNullOrEmpty(code) || position <= 0) return code;
-        var caret = Math.Clamp(position - 1, 0, code.Length);
-        return code + Environment.NewLine + new string(' ', caret) + "^";
+        if (string.IsNullOrEmpty(code)) return "";
+        var safePosition = Math.Clamp(position, 1, code.Length + 1);
+        return code + Environment.NewLine + new string(' ', safePosition - 1) + "^";
     }
 }
