@@ -4,6 +4,7 @@ public sealed record ApplicationPackageReference(string Name, string Version, st
 
 public static class ApplicationDependencyCatalog
 {
+    public const string XPScriptReleaseVersion = "0.9.3-beta";
     public const string AvaloniaVersion = "12.0.3";
     public const string AvaloniaWebViewVersion = "12.0.1";
     public const string MicrosoftDataSqliteVersion = "10.0.11";
