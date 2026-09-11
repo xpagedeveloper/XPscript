@@ -25,9 +25,7 @@ internal sealed class ArchiveObjectPreprocessor
                 archiveVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 var args = dimNew.Groups[2].Value.Trim();
-                output.Add(indent + (args.Length == 0
-                    ? $"{name} = new XPScriptArchive()"
-                    : $"{name} = new XPScriptArchive({args})"));
+                output.Add(indent + $"{name} = {CreateArchiveExpression(args)}");
                 continue;
             }
 
@@ -41,7 +39,7 @@ internal sealed class ArchiveObjectPreprocessor
             }
 
             var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "new XPScriptArchive()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", "new XPScriptArchive($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value), RegexOptions.IgnoreCase);
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && (archiveVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptArchive", StringComparison.Ordinal)))
@@ -51,5 +49,51 @@ internal sealed class ArchiveObjectPreprocessor
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static string CreateArchiveExpression(string rawArguments)
+    {
+        var args = SplitArguments(rawArguments);
+        if (args.Count == 0) return "new XPScriptArchive()";
+        if (args.Count == 1) return $"new XPScriptArchive({args[0]})";
+        if (args.Count != 2)
+            throw new CompilerException("Archive constructor expects filename and optional extendedSupport Boolean.");
+
+        var extended = args[1].Trim();
+        if (extended.Equals("True", StringComparison.OrdinalIgnoreCase))
+            return $"new XPScriptArchive({args[0]}, true)";
+        if (extended.Equals("False", StringComparison.OrdinalIgnoreCase))
+            return $"new XPScriptArchive({args[0]}, false)";
+
+        throw new CompilerException("Archive extendedSupport must be the literal True or False so dependencies can be resolved at compile time.");
+    }
+
+    private static List<string> SplitArguments(string value)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(value)) return result;
+        var start = 0;
+        var depth = 0;
+        var inString = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == ',' && depth == 0)
+            {
+                result.Add(value[start..i].Trim());
+                start = i + 1;
+            }
+        }
+        result.Add(value[start..].Trim());
+        return result;
     }
 }
