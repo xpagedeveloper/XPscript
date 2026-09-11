@@ -43,6 +43,7 @@ jobs:
           Run-XPScript ./demo/archive/archive-zip.xps archive-zip
           Run-XPScript ./demo/archive/archive-memory.xps archive-memory
           Run-XPScript ./demo/archive/archive-iterator.xps archive-iterator
+          Run-XPScript ./demo/archive/archive-edge-cases.xps archive-edge-cases
 
   archive-extended-linux:
     runs-on: ubuntu-latest
