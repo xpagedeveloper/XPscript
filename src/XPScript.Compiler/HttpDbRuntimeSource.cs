@@ -24,6 +24,7 @@ internal sealed class XPScriptHttpDbSupabase
     }
 
     public double Timeout { get => _http.Timeout; set => _http.Timeout = value; }
+    public string CertificateValidation { get => _http.CertificateValidation; set => _http.CertificateValidation = value; }
     public string BaseUrl => _baseUrl;
     public string Schema => _schema;
 
@@ -234,6 +235,7 @@ internal sealed class XPScriptHttpDbDominoRest
     }
 
     public double Timeout { get => _http.Timeout; set => _http.Timeout = value; }
+    public string CertificateValidation { get => _http.CertificateValidation; set => _http.CertificateValidation = value; }
     public string BaseUrl => _serverBaseUrl;
     public string DataSource => _dataSource;
     public string BearerToken => _bearerToken;

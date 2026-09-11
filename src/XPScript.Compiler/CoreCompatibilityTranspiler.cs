@@ -819,7 +819,7 @@ internal sealed class CoreCompatibilityTranspiler
         line = Regex.Replace(line, @"(?<![\w.])Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Err\b", "XPScriptErrorRuntime.Err", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Erl\b", "XPScriptErrorRuntime.Erl", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])Error\$?\b(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"(?<![\w.])(?:Error\$(?![\w])|Error\b)(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\$?\s*\(\s*\)", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\b(?!\s*\()", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         foreach (var fn in new[] { "EOF", "LOF", "Seek", "Loc" })

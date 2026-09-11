@@ -18,7 +18,7 @@ internal sealed class ExtendedCompatibilityTranspiler
         [
             "Get", "Post", "Put", "Patch", "DeleteResource", "SetHeaderField", "ResetHeaders", "GetResponseHeaders",
             "SetProxy", "SetProxyUser", "ResetProxy", "ResponseCode", "TimeoutSec", "MaxRedirects", "PreferStrings",
-            "PreferUTF8", "PreferJSONNavigator"
+            "PreferUTF8", "PreferJSONNavigator", "CertificateValidation"
         ],
         ["NotesJSONNavigator"] =
         [

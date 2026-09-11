@@ -291,18 +291,20 @@ internal static class XPScriptAttachmentRuntimeHelpers
 
 internal static class XPScriptAttachmentHttpRuntime
 {
-    public static byte[] Send(System.Net.Http.HttpMethod method, string url, IReadOnlyDictionary<string, string> headers, byte[]? body, string contentType, double timeoutSeconds)
+    public static byte[] Send(System.Net.Http.HttpMethod method, string url, IReadOnlyDictionary<string, string> headers, byte[]? body, string contentType, double timeoutSeconds, string certificateValidation = "Strict")
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new XPScriptRuntimeException(5, "Attachment HTTP URL must be absolute http:// or https://.");
         if (body is not null && body.LongLength > XPScriptAttachmentFileRuntime.MaxAttachmentBytes + 1024 * 1024)
             throw new XPScriptRuntimeException(5, "Attachment HTTP request exceeds the supported size limit.");
+        var tls = new XPScriptTlsValidationState { Mode = certificateValidation };
         using var handler = new System.Net.Http.HttpClientHandler
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = System.Net.DecompressionMethods.GZip |
                                      System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = tls.Validate
         };
         using var client = new System.Net.Http.HttpClient(handler) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
@@ -342,7 +344,7 @@ internal static class XPScriptAttachmentHttpRuntime
         }
         catch (XPScriptRuntimeException) { throw; }
         catch (OperationCanceledException) { throw new XPScriptRuntimeException(5, "Attachment HTTP operation timed out."); }
-        catch (System.Net.Http.HttpRequestException) { throw new XPScriptRuntimeException(5, "Attachment HTTP operation failed."); }
+        catch (System.Net.Http.HttpRequestException) { if (tls.LastError.Length > 0) throw tls.Failure("Attachment HTTP operation"); throw new XPScriptRuntimeException(5, "Attachment HTTP operation failed."); }
         catch (IOException) { throw new XPScriptRuntimeException(5, "Attachment HTTP response could not be read."); }
     }
 
@@ -503,11 +505,11 @@ internal static partial class XPScriptDatabaseAttachmentRuntime
         var tableName=XPScriptDatabaseDataSourceRuntime.RequiredIdentifier(table,"Supabase attachment owner table");var keyName=XPScriptDatabaseDataSourceRuntime.RequiredIdentifier(keyColumn,"Supabase attachment key column");var ownerKey=XPScriptAttachmentRuntimeHelpers.OwnerKey(keyValue);_=XPScriptHttpDatabaseDataSourceExtensions.GetRow(db,tableName,keyName,keyValue);var bucket=SupabaseConfigs.GetOrCreateValue(db).Bucket;var prefix=tableName+"/"+keyName+"/"+XPScriptAttachmentRuntimeHelpers.Base64Url(ownerKey);var baseUrl=db.BaseUrl.TrimEnd('/')+"/storage/v1";var apiKey=XPScriptAttachmentRuntimeHelpers.PrivateString(db,"_apiKey");var bearer=XPScriptAttachmentRuntimeHelpers.PrivateString(db,"_bearerToken");if(bearer.Length==0)bearer=apiKey;
         Dictionary<string,string> Headers()=>new(StringComparer.OrdinalIgnoreCase){{"apikey",apiKey},{"Authorization","Bearer "+bearer},{"Accept","application/json"}};
         return new XPScriptAttachmentCollection(
-            ()=>ListSupabase(baseUrl,bucket,prefix,Headers(),db.Timeout),
-            (id,name,type,actor,bytes)=>CreateSupabase(baseUrl,bucket,prefix,id,name,type,actor,bytes,Headers(),db.Timeout),
-            (id,name,type,actor,bytes)=>UpdateSupabase(baseUrl,bucket,prefix,id,name,type,actor,bytes,Headers(),db.Timeout),
-            id=>GetSupabase(baseUrl,bucket,prefix,id,Headers(),db.Timeout),
-            id=>DeleteSupabase(baseUrl,bucket,prefix,id,Headers(),db.Timeout));
+            ()=>ListSupabase(baseUrl,bucket,prefix,Headers(),db.Timeout,db.CertificateValidation),
+            (id,name,type,actor,bytes)=>CreateSupabase(baseUrl,bucket,prefix,id,name,type,actor,bytes,Headers(),db.Timeout,db.CertificateValidation),
+            (id,name,type,actor,bytes)=>UpdateSupabase(baseUrl,bucket,prefix,id,name,type,actor,bytes,Headers(),db.Timeout,db.CertificateValidation),
+            id=>GetSupabase(baseUrl,bucket,prefix,id,Headers(),db.Timeout,db.CertificateValidation),
+            id=>DeleteSupabase(baseUrl,bucket,prefix,id,Headers(),db.Timeout,db.CertificateValidation));
     }
 
     private static string EncodePath(string path)=>string.Join("/",path.Split('/').Select(Uri.EscapeDataString));
@@ -515,29 +517,29 @@ internal static partial class XPScriptDatabaseAttachmentRuntime
     private static string SupabaseMetaPath(string prefix,string id)=>prefix+"/"+id+".meta.json";
     private static byte[] JsonBytes(System.Text.Json.Nodes.JsonNode node)=>System.Text.Encoding.UTF8.GetBytes(node.ToJsonString());
 
-    private static XPScriptJsonArray ListSupabase(string baseUrl,string bucket,string prefix,Dictionary<string,string> headers,double timeout)
+    private static XPScriptJsonArray ListSupabase(string baseUrl,string bucket,string prefix,Dictionary<string,string> headers,double timeout,string certificateValidation)
     {
-        var request=new System.Text.Json.Nodes.JsonObject{{"prefix",prefix},{"limit",1000},{"offset",0},{"sortBy",new System.Text.Json.Nodes.JsonObject{{"column","name"},{"order","asc"}}}};var response=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,baseUrl+"/object/list/"+Uri.EscapeDataString(bucket),headers,JsonBytes(request),"application/json",timeout);var doc=XPScriptNativeJson.Parse(System.Text.Encoding.UTF8.GetString(response));if(doc.Node is not System.Text.Json.Nodes.JsonArray source)throw new XPScriptRuntimeException(13,"Supabase attachment list must return a JSON array.");var result=new System.Text.Json.Nodes.JsonArray();foreach(var node in source){if(node is not System.Text.Json.Nodes.JsonObject obj)continue;var name=obj["name"]?.GetValue<string>()??string.Empty;if(!name.EndsWith(".meta.json",StringComparison.OrdinalIgnoreCase))continue;var id=name[..^10];if(!Guid.TryParse(id,out _))continue;try{var meta=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/object/authenticated/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseMetaPath(prefix,id)),headers,null,string.Empty,timeout);var parsed=XPScriptNativeJson.Parse(System.Text.Encoding.UTF8.GetString(meta));if(parsed.Node is System.Text.Json.Nodes.JsonObject m)result.Add(m.DeepClone());}catch(XPScriptRuntimeException){}}
+        var request=new System.Text.Json.Nodes.JsonObject{{"prefix",prefix},{"limit",1000},{"offset",0},{"sortBy",new System.Text.Json.Nodes.JsonObject{{"column","name"},{"order","asc"}}}};var response=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,baseUrl+"/object/list/"+Uri.EscapeDataString(bucket),headers,JsonBytes(request),"application/json",timeout,certificateValidation);var doc=XPScriptNativeJson.Parse(System.Text.Encoding.UTF8.GetString(response));if(doc.Node is not System.Text.Json.Nodes.JsonArray source)throw new XPScriptRuntimeException(13,"Supabase attachment list must return a JSON array.");var result=new System.Text.Json.Nodes.JsonArray();foreach(var node in source){if(node is not System.Text.Json.Nodes.JsonObject obj)continue;var name=obj["name"]?.GetValue<string>()??string.Empty;if(!name.EndsWith(".meta.json",StringComparison.OrdinalIgnoreCase))continue;var id=name[..^10];if(!Guid.TryParse(id,out _))continue;try{var meta=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/object/authenticated/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseMetaPath(prefix,id)),headers,null,string.Empty,timeout,certificateValidation);var parsed=XPScriptNativeJson.Parse(System.Text.Encoding.UTF8.GetString(meta));if(parsed.Node is System.Text.Json.Nodes.JsonObject m)result.Add(m.DeepClone());}catch(XPScriptRuntimeException){}}
         return new XPScriptJsonArray(result);
     }
 
-    private static XPScriptJsonObject CreateSupabase(string baseUrl,string bucket,string prefix,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers,double timeout)
+    private static XPScriptJsonObject CreateSupabase(string baseUrl,string bucket,string prefix,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers,double timeout,string certificateValidation)
     {
-        var now=DateTimeOffset.UtcNow.ToString("O");var checksum=XPScriptAttachmentRuntimeHelpers.Checksum(bytes);var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,now,now,actor,actor,checksum);UploadSupabase(baseUrl,bucket,SupabaseDataPath(prefix,id),bytes,type,headers,timeout,false);UploadSupabase(baseUrl,bucket,SupabaseMetaPath(prefix,id),JsonBytes(metadata),"application/json",headers,timeout,false);return new XPScriptJsonObject(metadata);
+        var now=DateTimeOffset.UtcNow.ToString("O");var checksum=XPScriptAttachmentRuntimeHelpers.Checksum(bytes);var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,now,now,actor,actor,checksum);UploadSupabase(baseUrl,bucket,SupabaseDataPath(prefix,id),bytes,type,headers,timeout,certificateValidation,false);UploadSupabase(baseUrl,bucket,SupabaseMetaPath(prefix,id),JsonBytes(metadata),"application/json",headers,timeout,certificateValidation,false);return new XPScriptJsonObject(metadata);
     }
 
-    private static XPScriptJsonObject UpdateSupabase(string baseUrl,string bucket,string prefix,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers,double timeout)
+    private static XPScriptJsonObject UpdateSupabase(string baseUrl,string bucket,string prefix,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers,double timeout,string certificateValidation)
     {
-        var existing=ListSupabase(baseUrl,bucket,prefix,headers,timeout).Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Supabase attachment was not found.");var now=DateTimeOffset.UtcNow.ToString("O");var checksum=XPScriptAttachmentRuntimeHelpers.Checksum(bytes);var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,existing["created"]!.GetValue<string>(),now,existing["createdBy"]!.GetValue<string>(),actor,checksum);UploadSupabase(baseUrl,bucket,SupabaseDataPath(prefix,id),bytes,type,headers,timeout,true);UploadSupabase(baseUrl,bucket,SupabaseMetaPath(prefix,id),JsonBytes(metadata),"application/json",headers,timeout,true);return new XPScriptJsonObject(metadata);
+        var existing=ListSupabase(baseUrl,bucket,prefix,headers,timeout,certificateValidation).Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Supabase attachment was not found.");var now=DateTimeOffset.UtcNow.ToString("O");var checksum=XPScriptAttachmentRuntimeHelpers.Checksum(bytes);var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,existing["created"]!.GetValue<string>(),now,existing["createdBy"]!.GetValue<string>(),actor,checksum);UploadSupabase(baseUrl,bucket,SupabaseDataPath(prefix,id),bytes,type,headers,timeout,certificateValidation,true);UploadSupabase(baseUrl,bucket,SupabaseMetaPath(prefix,id),JsonBytes(metadata),"application/json",headers,timeout,certificateValidation,true);return new XPScriptJsonObject(metadata);
     }
 
-    private static void UploadSupabase(string baseUrl,string bucket,string objectPath,byte[] bytes,string type,Dictionary<string,string> headers,double timeout,bool upsert)
+    private static void UploadSupabase(string baseUrl,string bucket,string objectPath,byte[] bytes,string type,Dictionary<string,string> headers,double timeout,string certificateValidation,bool upsert)
     {
-        var h=new Dictionary<string,string>(headers,StringComparer.OrdinalIgnoreCase);if(upsert)h["x-upsert"]="true";_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(objectPath),h,bytes,type,timeout);
+        var h=new Dictionary<string,string>(headers,StringComparer.OrdinalIgnoreCase);if(upsert)h["x-upsert"]="true";_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(objectPath),h,bytes,type,timeout,certificateValidation);
     }
 
-    private static byte[] GetSupabase(string baseUrl,string bucket,string prefix,string id,Dictionary<string,string> headers,double timeout)=>XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/object/authenticated/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseDataPath(prefix,id)),headers,null,string.Empty,timeout);
-    private static bool DeleteSupabase(string baseUrl,string bucket,string prefix,string id,Dictionary<string,string> headers,double timeout){_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseDataPath(prefix,id)),headers,null,string.Empty,timeout);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseMetaPath(prefix,id)),headers,null,string.Empty,timeout);return true;}
+    private static byte[] GetSupabase(string baseUrl,string bucket,string prefix,string id,Dictionary<string,string> headers,double timeout,string certificateValidation)=>XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/object/authenticated/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseDataPath(prefix,id)),headers,null,string.Empty,timeout,certificateValidation);
+    private static bool DeleteSupabase(string baseUrl,string bucket,string prefix,string id,Dictionary<string,string> headers,double timeout,string certificateValidation){_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseDataPath(prefix,id)),headers,null,string.Empty,timeout,certificateValidation);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,baseUrl+"/object/"+Uri.EscapeDataString(bucket)+"/"+EncodePath(SupabaseMetaPath(prefix,id)),headers,null,string.Empty,timeout,certificateValidation);return true;}
 
     public static XPScriptAttachmentCollection ForDomino(XPScriptHttpDbDominoRest db, object? unid)=>ForDomino(db,unid,string.Empty);
     public static XPScriptAttachmentCollection ForDomino(XPScriptHttpDbDominoRest db, object? unid, object? fieldName)
@@ -566,17 +568,17 @@ internal static partial class XPScriptDatabaseAttachmentRuntime
 
     private static XPScriptJsonObject CreateDomino(XPScriptHttpDbDominoRest db,string baseUrl,string dataSource,string unid,string field,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers)
     {
-        var storage=DominoStorageName(id,name);var multipart=XPScriptAttachmentHttpRuntime.MultipartFile("filename",storage,type,bytes,out var multipartType);var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,url,headers,multipart,multipartType,db.Timeout);var now=DateTimeOffset.UtcNow.ToString("O");var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,now,now,actor,actor,XPScriptAttachmentRuntimeHelpers.Checksum(bytes));metadata["storageName"]=storage;var list=DominoMetadata(db,unid);list.Node.Add(metadata.DeepClone());SaveDominoMetadata(db,unid,list);metadata.Remove("storageName");return new XPScriptJsonObject(metadata);
+        var storage=DominoStorageName(id,name);var multipart=XPScriptAttachmentHttpRuntime.MultipartFile("filename",storage,type,bytes,out var multipartType);var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,url,headers,multipart,multipartType,db.Timeout,db.CertificateValidation);var now=DateTimeOffset.UtcNow.ToString("O");var metadata=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,now,now,actor,actor,XPScriptAttachmentRuntimeHelpers.Checksum(bytes));metadata["storageName"]=storage;var list=DominoMetadata(db,unid);list.Node.Add(metadata.DeepClone());SaveDominoMetadata(db,unid,list);metadata.Remove("storageName");return new XPScriptJsonObject(metadata);
     }
 
     private static XPScriptJsonObject UpdateDomino(XPScriptHttpDbDominoRest db,string baseUrl,string dataSource,string unid,string field,string id,string name,string type,string actor,byte[] bytes,Dictionary<string,string> headers)
     {
-        var list=DominoMetadata(db,unid);var current=list.Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Domino attachment was not found.");var oldStorage=current["storageName"]?.GetValue<string>()??DominoStorageName(id,current["originalName"]?.GetValue<string>()??name);DeleteDominoBinary(db,baseUrl,dataSource,unid,field,oldStorage,headers);var storage=DominoStorageName(id,name);var multipart=XPScriptAttachmentHttpRuntime.MultipartFile("filename",storage,type,bytes,out var multipartType);var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,url,headers,multipart,multipartType,db.Timeout);var now=DateTimeOffset.UtcNow.ToString("O");var replacement=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,current["created"]!.GetValue<string>(),now,current["createdBy"]!.GetValue<string>(),actor,XPScriptAttachmentRuntimeHelpers.Checksum(bytes));replacement["storageName"]=storage;for(var i=0;i<list.Node.Count;i++)if(list.Node[i] is System.Text.Json.Nodes.JsonObject obj&&string.Equals(obj["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase)){list.Node[i]=replacement.DeepClone();break;}SaveDominoMetadata(db,unid,list);replacement.Remove("storageName");return new XPScriptJsonObject(replacement);
+        var list=DominoMetadata(db,unid);var current=list.Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Domino attachment was not found.");var oldStorage=current["storageName"]?.GetValue<string>()??DominoStorageName(id,current["originalName"]?.GetValue<string>()??name);DeleteDominoBinary(db,baseUrl,dataSource,unid,field,oldStorage,headers);var storage=DominoStorageName(id,name);var multipart=XPScriptAttachmentHttpRuntime.MultipartFile("filename",storage,type,bytes,out var multipartType);var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Post,url,headers,multipart,multipartType,db.Timeout,db.CertificateValidation);var now=DateTimeOffset.UtcNow.ToString("O");var replacement=XPScriptAttachmentRuntimeHelpers.MetadataNode(id,name,type,bytes.LongLength,current["created"]!.GetValue<string>(),now,current["createdBy"]!.GetValue<string>(),actor,XPScriptAttachmentRuntimeHelpers.Checksum(bytes));replacement["storageName"]=storage;for(var i=0;i<list.Node.Count;i++)if(list.Node[i] is System.Text.Json.Nodes.JsonObject obj&&string.Equals(obj["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase)){list.Node[i]=replacement.DeepClone();break;}SaveDominoMetadata(db,unid,list);replacement.Remove("storageName");return new XPScriptJsonObject(replacement);
     }
 
     private static byte[] GetDomino(XPScriptHttpDbDominoRest db,string baseUrl,string dataSource,string unid,string id,Dictionary<string,string> headers)
     {
-        var current=DominoMetadata(db,unid).Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Domino attachment was not found.");var storage=current["storageName"]?.GetValue<string>()??DominoStorageName(id,current["originalName"]?.GetValue<string>()??string.Empty);return XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"/"+Uri.EscapeDataString(storage)+"?dataSource="+Uri.EscapeDataString(dataSource),headers,null,string.Empty,db.Timeout);
+        var current=DominoMetadata(db,unid).Node.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x=>string.Equals(x["attachmentId"]?.GetValue<string>(),id,StringComparison.OrdinalIgnoreCase))??throw new XPScriptRuntimeException(53,"Domino attachment was not found.");var storage=current["storageName"]?.GetValue<string>()??DominoStorageName(id,current["originalName"]?.GetValue<string>()??string.Empty);return XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Get,baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"/"+Uri.EscapeDataString(storage)+"?dataSource="+Uri.EscapeDataString(dataSource),headers,null,string.Empty,db.Timeout,db.CertificateValidation);
     }
 
     private static bool DeleteDomino(XPScriptHttpDbDominoRest db,string baseUrl,string dataSource,string unid,string field,string id,Dictionary<string,string> headers)
@@ -586,7 +588,7 @@ internal static partial class XPScriptDatabaseAttachmentRuntime
 
     private static void DeleteDominoBinary(XPScriptHttpDbDominoRest db,string baseUrl,string dataSource,string unid,string field,string storage,Dictionary<string,string> headers)
     {
-        var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"/"+Uri.EscapeDataString(storage)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,url,headers,null,string.Empty,db.Timeout);
+        var url=baseUrl+"/attachments/"+Uri.EscapeDataString(unid)+"/"+Uri.EscapeDataString(storage)+"?dataSource="+Uri.EscapeDataString(dataSource);if(field.Length>0)url+="&fieldName="+Uri.EscapeDataString(field);_=XPScriptAttachmentHttpRuntime.Send(System.Net.Http.HttpMethod.Delete,url,headers,null,string.Empty,db.Timeout,db.CertificateValidation);
     }
 }
 """;

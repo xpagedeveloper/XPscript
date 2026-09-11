@@ -15,6 +15,7 @@ internal sealed class XPScriptHttpClient : IDisposable
 
     private readonly System.Net.Http.HttpClientHandler _handler;
     private readonly System.Net.Http.HttpClient _client;
+    private readonly XPScriptTlsValidationState _tls = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
     private bool _allowPrivateNetwork;
@@ -28,7 +29,8 @@ internal sealed class XPScriptHttpClient : IDisposable
             UseCookies = false,
             AutomaticDecompression = System.Net.DecompressionMethods.GZip |
                                      System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = _tls.Validate
         };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
@@ -50,6 +52,12 @@ internal sealed class XPScriptHttpClient : IDisposable
                 throw new XPScriptRuntimeException(5, "HttpClient.Timeout is outside the supported range.");
             }
         }
+    }
+
+    public string CertificateValidation
+    {
+        get => _tls.Mode;
+        set => _tls.Mode = value;
     }
 
     public bool AllowPrivateNetwork
@@ -103,6 +111,7 @@ internal sealed class XPScriptHttpClient : IDisposable
     private XPScriptHttpResponse Send(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue)
     {
         EnsureNotDisposed();
+        _tls.Reset();
         var url = XPScriptRuntime.CStr(urlValue).Trim();
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -165,6 +174,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         }
         catch (System.Net.Http.HttpRequestException)
         {
+            if (_tls.LastError.Length > 0) throw _tls.Failure("HTTP request");
             throw new XPScriptRuntimeException(5, "HTTP request failed.");
         }
         catch (IOException)
