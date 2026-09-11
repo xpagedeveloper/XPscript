@@ -81,6 +81,10 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-gzip.xps -o ./out/archive-gzip --framework-dependent
       - name: Run GZip Archive regression
         run: ./out/archive-gzip
+      - name: Compile archive rebuild regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-rebuild.xps -o ./out/archive-rebuild --framework-dependent
+      - name: Run archive rebuild regression
+        run: ./out/archive-rebuild
       - name: Verify debugger core
         run: dotnet run --project ./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release
       - name: Compile ArraySort regression application
