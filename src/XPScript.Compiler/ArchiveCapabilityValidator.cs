@@ -30,6 +30,7 @@ internal sealed class ArchiveCapabilityValidator
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var modes = new Dictionary<string, ArchiveMode>(StringComparer.OrdinalIgnoreCase);
+        var passwordConfigured = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         for (var index = 0; index < lines.Length; index++)
         {
@@ -44,6 +45,7 @@ internal sealed class ArchiveCapabilityValidator
             {
                 var name = dimNew.Groups["name"].Value;
                 modes[name] = DetermineMode(dimNew.Groups["args"].Value, sourceName, index + 1, original);
+                passwordConfigured.Remove(name);
                 continue;
             }
 
@@ -61,14 +63,31 @@ internal sealed class ArchiveCapabilityValidator
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (assignment.Success && modes.ContainsKey(assignment.Groups["name"].Value))
             {
-                modes[assignment.Groups["name"].Value] = DetermineMode(assignment.Groups["args"].Value, sourceName, index + 1, original);
+                var name = assignment.Groups["name"].Value;
+                modes[name] = DetermineMode(assignment.Groups["args"].Value, sourceName, index + 1, original);
+                passwordConfigured.Remove(name);
                 continue;
             }
 
             foreach (var item in modes)
             {
-                if (item.Value != ArchiveMode.ZipOnly) continue;
-                ValidateZipOnlyUse(item.Key, line, sourceName, index + 1, original);
+                if (item.Value == ArchiveMode.ZipOnly)
+                {
+                    ValidateZipOnlyUse(item.Key, line, sourceName, index + 1, original);
+                    continue;
+                }
+
+                if (item.Value != ArchiveMode.Extended) continue;
+                var prefix = Regex.Escape(item.Key);
+                if (Regex.IsMatch(line, $@"\b{prefix}\s*\.\s*Password\s*=", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                {
+                    passwordConfigured.Add(item.Key);
+                    continue;
+                }
+
+                if (passwordConfigured.Contains(item.Key) && IsZipMutation(prefix, line))
+                    throw Diagnostic(sourceName, index + 1, original,
+                        $"Password-protected ZIP writing is not supported by SharpCompress 0.50.4. '{item.Key}' can use Password for reading encrypted ZIP archives, but creating or modifying an encrypted ZIP is not supported.");
             }
         }
     }
@@ -108,6 +127,17 @@ internal sealed class ArchiveCapabilityValidator
                 throw RequiresExtended(sourceName, lineNumber, original, variableName,
                     $"Archive.Create(\"{format}\")");
         }
+    }
+
+    private static bool IsZipMutation(string prefix, string line)
+    {
+        if (Regex.IsMatch(line,
+            $@"\b{prefix}\s*\.\s*(?:AddFile|AddFolder|AddText|AddBytes|Remove|Rename|Save)\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            return true;
+
+        var createPattern = $"\\b{prefix}\\s*\\.\\s*Create\\s*(?:\\(\\s*)?(?:\"ZIP\")?";
+        return Regex.IsMatch(line, createPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static CompilerException RequiresExtended(string sourceName, int lineNumber, string original, string variableName, string feature) =>
