@@ -1,0 +1,24 @@
+name: HTTP decompression fix v2
+on: [push]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch source
+        run: |
+          python3 -c "from pathlib import Path; p=Path('src/XPScript.Compiler/NativeHttpRuntimeSource.cs'); s=p.read_text(); old='            AllowAutoRedirect = false,\n            UseCookies = false\n'; new='            AllowAutoRedirect = false,\n            UseCookies = false,\n            AutomaticDecompression = System.Net.DecompressionMethods.GZip |\n                                     System.Net.DecompressionMethods.Deflate |\n                                     System.Net.DecompressionMethods.Brotli\n'; assert old in s or 'AutomaticDecompression = System.Net.DecompressionMethods.GZip' in s; p.write_text(s if old not in s else s.replace(old,new,1))"
+      - name: Build compiler
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Commit source change
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/XPScript.Compiler/NativeHttpRuntimeSource.cs
+          git commit -m 'Enable automatic HTTP response decompression'
+          git push
