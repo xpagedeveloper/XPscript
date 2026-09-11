@@ -38,12 +38,13 @@ Sub Main()
     Print "ARCHIVE_SECURITY_FIXTURES=OK"
 End Sub
 
+Sub AssertTrappedError(ByVal code As Integer, ByVal message As String, ByVal label As String)
+    If code = 0 Then Error 5, label & " returned no error code"
+    If Len(message) = 0 Then Error 5, label & " returned an empty diagnostic"
+End Sub
+
 Sub ExpectExtractionSymlinkFailure()
     Dim extraction As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
-    Dim extractErr As Integer
-    Dim extractMessage As String
-    extractErr = 0
-    extractMessage = ""
 
     On Error GoTo ExtractRejected
     extraction.ExtractAll("../../out/archive-security-fixtures/extract-root")
@@ -52,11 +53,8 @@ Sub ExpectExtractionSymlinkFailure()
     Exit Sub
 
 ExtractRejected:
-    extractErr = Err
-    extractMessage = Error()
+    Call AssertTrappedError(Err, Error(), "Archive extraction rejection")
     On Error GoTo 0
-    If extractErr = 0 Then Error 5, "Archive extraction rejection returned no error code"
-    If Len(extractMessage) = 0 Then Error 5, "Archive extraction rejection returned an empty diagnostic"
     If FileExists("../../out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
 End Sub
 
@@ -66,10 +64,6 @@ Sub ExpectOpenFailure(ByVal path As String, ByVal maxEntries As Integer, ByVal m
     archive.MaxExtractSize = maxSize
     archive.MaxCompressionRatio = maxRatio
 
-    Dim openErr As Integer
-    Dim openMessage As String
-    openErr = 0
-    openMessage = ""
     On Error GoTo OpenRejected
     archive.Open()
     On Error GoTo 0
@@ -77,20 +71,13 @@ Sub ExpectOpenFailure(ByVal path As String, ByVal maxEntries As Integer, ByVal m
     Exit Sub
 
 OpenRejected:
-    openErr = Err
-    openMessage = Error()
+    Call AssertTrappedError(Err, Error(), "Archive security fixture rejection: " & label)
     On Error GoTo 0
-    If openErr = 0 Then Error 5, "Archive security fixture rejection returned no error code: " & label
-    If Len(openMessage) = 0 Then Error 5, "Archive security fixture returned an empty diagnostic: " & label
 End Sub
 
 Sub ExpectExtendedOpenFailure(ByVal path As String, ByVal label As String)
     Dim archive As New Archive(path, True)
 
-    Dim openErr As Integer
-    Dim openMessage As String
-    openErr = 0
-    openMessage = ""
     On Error GoTo ExtendedOpenRejected
     archive.Open()
     On Error GoTo 0
@@ -98,9 +85,6 @@ Sub ExpectExtendedOpenFailure(ByVal path As String, ByVal label As String)
     Exit Sub
 
 ExtendedOpenRejected:
-    openErr = Err
-    openMessage = Error()
+    Call AssertTrappedError(Err, Error(), "Extended Archive security fixture rejection: " & label)
     On Error GoTo 0
-    If openErr = 0 Then Error 5, "Extended Archive security fixture rejection returned no error code: " & label
-    If Len(openMessage) = 0 Then Error 5, "Extended Archive security fixture returned an empty diagnostic: " & label
 End Sub
