@@ -71,3 +71,4 @@ jobs:
           grep -q 'TLS certificate validation failed' "$TMP/output.txt"
           grep -q 'ALLOW-STATUS=200' "$TMP/output.txt"
           grep -q 'INSECURE-STATUS=200' "$TMP/output.txt"
+# rerun after Error$ compiler fix
