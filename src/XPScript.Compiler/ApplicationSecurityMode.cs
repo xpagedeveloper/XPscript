@@ -17,7 +17,7 @@ public static class ApplicationSecurityModeContext
         {
             if (CurrentMode.Value is { } mode) return mode;
             var environmentMode = Environment.GetEnvironmentVariable("XPSCRIPT_SECURITY_MODE");
-            return Parse(environmentMode, ApplicationSecurityMode.Warn);
+            return Parse(environmentMode, ApplicationSecurityMode.Off);
         }
     }
 
@@ -28,7 +28,7 @@ public static class ApplicationSecurityModeContext
         return new Scope(() => CurrentMode.Value = previous);
     }
 
-    public static ApplicationSecurityMode Parse(string? value, ApplicationSecurityMode defaultMode = ApplicationSecurityMode.Warn)
+    public static ApplicationSecurityMode Parse(string? value, ApplicationSecurityMode defaultMode = ApplicationSecurityMode.Off)
     {
         if (string.IsNullOrWhiteSpace(value)) return defaultMode;
         return value.Trim().ToLowerInvariant() switch
