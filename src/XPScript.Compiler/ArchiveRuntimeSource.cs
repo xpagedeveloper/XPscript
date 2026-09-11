@@ -7,8 +7,9 @@ internal sealed class XPScriptArchive
 {
     private readonly string? _path;
 
-    public XPScriptArchive(object? path = null)
+    public XPScriptArchive(object? path = null, bool extendedSupport = false)
     {
+        ExtendedSupport = extendedSupport;
         if (path is null) return;
         var text = XPScriptRuntime.CStr(path);
         if (!string.IsNullOrWhiteSpace(text)) _path = XPScriptFileSystemRuntime.ResolvePath(text);
@@ -17,6 +18,7 @@ internal sealed class XPScriptArchive
     public string Path => _path ?? "";
     public string Format => string.IsNullOrEmpty(_path) ? "" : System.IO.Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
     public bool Exists => _path is not null && System.IO.File.Exists(_path);
+    public bool ExtendedSupport { get; }
     public bool IsEncrypted => false;
     public bool IsReadOnly => !Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase);
     public string Password { get; set; } = "";
@@ -46,7 +48,9 @@ internal sealed class XPScriptArchive
         var requested = format is null ? Format : XPScriptRuntime.CStr(format).Trim().TrimStart('.').ToUpperInvariant();
         if (string.IsNullOrEmpty(requested)) requested = "ZIP";
         if (!requested.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
-            throw new XPScriptRuntimeException(5, "Archive creation currently supports ZIP only.");
+            throw new XPScriptRuntimeException(5, ExtendedSupport
+                ? "Extended archive creation is not implemented yet."
+                : "Archive creation supports ZIP only. Create the Archive with extendedSupport=True to enable additional formats.");
         var parent = System.IO.Path.GetDirectoryName(_path!);
         if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
         using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
@@ -177,7 +181,9 @@ internal sealed class XPScriptArchive
     {
         EnsurePath();
         if (!Format.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
-            throw new XPScriptRuntimeException(5, "Archive currently supports ZIP only. Other formats will use SharpCompress.");
+            throw new XPScriptRuntimeException(5, ExtendedSupport
+                ? "Extended archive format support is enabled but the SharpCompress backend is not implemented yet."
+                : "Archive supports ZIP only. Create the Archive with extendedSupport=True to enable additional formats.");
         if (!string.IsNullOrEmpty(Password)) throw new XPScriptRuntimeException(5, "Archive passwords are not implemented yet.");
     }
 
