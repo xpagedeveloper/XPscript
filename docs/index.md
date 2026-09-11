@@ -14,7 +14,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Database UI data sources](database-ui-datasources.md): `QueryArray`, `GetRow`, `SaveRow` and shared `XPJsonObject` binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.
 - [Native and managed interop reference](native-interop-reference.md): native declarations plus every OS/RID-specific `Lib`/`Alias` selector and managed/native dependency directive.
 - [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, Kestrel, FastCGI and WebIIS commands/options.
-- [Dependency security and package patching](dependency-security-and-patching.md): application-specific dependency inspection, NuGet vulnerability checks, security modes, version-scoped compatible patches, `patch all`, `--security-only`, and the SBOM model.
+- [Dependency security and package patching](dependency-security-and-patching.md): application-specific dependency inspection, NuGet vulnerability checks, security modes, version-scoped compatible patches, `patch all`, and `--security-only`.
 - [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
 - [Native Notes/Domino C API](notes-c-api.md): `NotesSession`, databases, views, documents, items, names, date/time values, agents and native lifecycle semantics.
 - [Notes MIME](notes-mime-entity.md): native `NotesMIMEEntity`/`NotesMIMEHeader` traversal, nested mutation, headers, parameters, streams and attachment handling.
@@ -31,7 +31,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 7. [Database UI data sources](database-ui-datasources.md), complete list/row/document JSON binding and native save semantics for UIListView and shared UIForm data.
 8. [Native and managed interop reference](native-interop-reference.md), complete native target selectors and reference directives.
 9. [Compiler and host CLI reference](cli-reference.md), complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.
-10. [Dependency security and package patching](dependency-security-and-patching.md), application dependency graphs, vulnerability auditing, security modes, compatible package patching and SBOM guidance.
+10. [Dependency security and package patching](dependency-security-and-patching.md), application dependency graphs, vulnerability auditing, security modes and compatible package patching.
 11. [Runtime API reference](api-reference.md), HTTP/JSON/native Notes/database/AI/UI/web runtime members with parameters and executable examples.
 12. [Native Notes/Domino C API](notes-c-api.md), Notes object model, native view lookup, document save semantics, names and date/time values.
 13. [Notes MIME](notes-mime-entity.md), root/direct/nested MIME entities, headers, parameters, streams, encoding and lifecycle.
