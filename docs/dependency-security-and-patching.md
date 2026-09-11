@@ -164,21 +164,6 @@ An application using SQL Server resolves the selected `7.0.3` version. An applic
 
 The dependency inspector and security audit operate on the resolved application graph, so their output reflects the version actually selected for the application rather than only the original XPScript baseline.
 
-## SBOM
-
-SBOM means **Software Bill of Materials**. It is a machine-readable inventory of the software components included in a built application. A useful XPScript SBOM would contain the actual resolved package IDs and versions, transitive dependencies, package hashes and relevant provenance/license information.
-
-For example, after a compatible patch, an SBOM should record the resolved package version rather than only the original XPScript baseline:
-
-```text
-Microsoft.Data.SqlClient
-  XPScript baseline: 7.0.2
-  resolved version:  7.0.3
-  source:            NuGet
-```
-
-SBOM generation is a natural extension of the dependency inspector and patch manifest. It is documented here as the intended model; the current dependency/security/patch commands should not be confused with a completed SBOM export command unless such a command is added separately.
-
 ## Recommended workflows
 
 For development, use `xpscript run app.xps --info` to get the normal informational output plus dependency security warnings. Before release, run `xpscript security app.xps` for each target RID that matters to the deployment. Use `xpscript patch all --check` to review compatible maintenance and security patches before applying them.
