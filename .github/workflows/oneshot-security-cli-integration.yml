@@ -1,0 +1,112 @@
+name: One-shot security CLI integration
+
+on:
+  push:
+    branches:
+      - feature/application-dependency-security
+    paths:
+      - .github/workflows/oneshot-security-cli-integration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/application-dependency-security
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Patch CLI security integration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"pattern not found in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          # NuGet audit must truly be disabled when security mode is off.
+          for path in [
+              'src/XPScript.Compiler/CompilerDriver.cs',
+              'src/XPScript.Compiler/RunCompiler.cs',
+          ]:
+              replace_once(
+                  path,
+                  '    <NuGetAudit>true</NuGetAudit>\n',
+                  '    <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>\n')
+
+          cmd = 'src/XPScript.Compiler/XPScriptCompilerCommandLine.cs'
+          replace_once(
+              cmd,
+              '        var debug = false;\n        var embedAssets = false;',
+              '        var debug = false;\n        ApplicationSecurityMode? securityMode = null;\n        var embedAssets = false;')
+          replace_once(
+              cmd,
+              '                else if (args[i] == "--debug")\n                    debug = true;\n                else if (args[i] == "--embed-assets")',
+              '                else if (args[i] == "--debug")\n                    debug = true;\n                else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))\n                    securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);\n                else if (args[i] == "--security" && i + 1 < args.Length)\n                    securityMode = ApplicationSecurityModeContext.Parse(args[++i]);\n                else if (args[i] == "--embed-assets")')
+          replace_once(
+              cmd,
+              '            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\n            var timer = Stopwatch.StartNew();',
+              '            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);\n            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\n            var timer = Stopwatch.StartNew();')
+
+          replace_once(
+              cmd,
+              '            var restricted = false;\n            var info = false;\n            var sourceRoots = new List<string>();',
+              '            var restricted = false;\n            var info = false;\n            ApplicationSecurityMode? securityMode = null;\n            var sourceRoots = new List<string>();')
+          replace_once(
+              cmd,
+              '                if (parseRunOptions && value == "--debug")\n                {\n                    debug = true;\n                    info = true;\n                    continue;\n                }\n\n                if (parseRunOptions && (value == "--runtime" || value == "--rid" || value == "--platform"))',
+              '                if (parseRunOptions && value == "--debug")\n                {\n                    debug = true;\n                    info = true;\n                    continue;\n                }\n\n                if (parseRunOptions && value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))\n                {\n                    securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);\n                    continue;\n                }\n\n                if (parseRunOptions && value == "--security")\n                {\n                    if (i + 1 >= commandLineArgs.Length)\n                        throw new ArgumentException("--security requires off, warn, or strict.");\n                    securityMode = ApplicationSecurityModeContext.Parse(commandLineArgs[++i]);\n                    continue;\n                }\n\n                if (parseRunOptions && (value == "--runtime" || value == "--rid" || value == "--platform"))')
+          replace_once(
+              cmd,
+              '            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\n            var currentRuntimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();',
+              '            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);\n            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\n            var currentRuntimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();')
+          replace_once(
+              cmd,
+              '            var cacheHit = !debug && runCache.TryGetRunnable(out executablePath);',
+              '            var cacheHit = effectiveSecurityMode == ApplicationSecurityMode.Off && !debug && runCache.TryGetRunnable(out executablePath);')
+
+          # Document new command-line semantics in compiler help.
+          replace_once(
+              cmd,
+              '  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--restricted]',
+              '  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted]')
+          replace_once(
+              cmd,
+              '  {runCommand} <source.xps> [--info] [--debug] [--runtime RID] [--restricted]',
+              '  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--runtime RID] [--restricted]')
+          replace_once(
+              cmd,
+              'The run command stays quiet by default. Use --info to show live compilation status and runtime lifecycle information.\n',
+              'The run command stays quiet by default. Use --info to show live compilation status and runtime lifecycle information.\n--info and --debug automatically enable application dependency security auditing in warn mode. Use --security=off to disable it, or --security=strict to fail on high/critical findings.\n')
+
+          # Wire explicit inspection commands into the top-level CLI.
+          program = 'src/XPScript.Cli/Program.cs'
+          replace_once(
+              program,
+              '        "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),\n        "new" => XpsScaffolder.Run(args[1..]),',
+              '        "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),\n        "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),\n        "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),\n        "new" => XpsScaffolder.Run(args[1..]),')
+
+          p = Path(program)
+          text = p.read_text()
+          marker = '  xpscript compile <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]'
+          if marker in text:
+              text = text.replace(marker, marker + '\n  xpscript dependencies <source.xps> [--runtime RID] [--json]\n  xpscript security <source.xps> [--runtime RID] [--json]', 1)
+          p.write_text(text)
+      - name: Build CLI
+        run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/XPScript.Compiler src/XPScript.Cli
+          git commit -m "Integrate automatic application security checks into CLI"
+          git push origin HEAD:feature/application-dependency-security
