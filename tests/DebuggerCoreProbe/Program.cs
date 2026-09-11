@@ -67,6 +67,7 @@ if (!generated.Contains("if (XPScriptDebugRuntime.IsEnabled) Debugger.UpdateVar"
 if (!generated.Contains("ProtocolVersion = 6", StringComparison.Ordinal))
     throw new Exception("Debugger protocol v6 is not emitted.");
 if (!generated.Contains("supportsDebuggerApi = true", StringComparison.Ordinal) ||
+    !generated.Contains("supportsGlobalConditionBreakpoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsDebuggerVariables = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsExceptionBreakpoints = true", StringComparison.Ordinal) ||
     !generated.Contains("supportsConditionalBreakpoints = true", StringComparison.Ordinal) ||
@@ -84,6 +85,11 @@ if (!generated.Contains("TryGetProperty(\"breakpoints\"", StringComparison.Ordin
     !generated.Contains("TryGetProperty(\"hitCondition\"", StringComparison.Ordinal) ||
     !generated.Contains("TryGetProperty(\"logMessage\"", StringComparison.Ordinal))
     throw new Exception("Runtime breakpoint rule payload parsing is incomplete.");
+if (!generated.Contains("case \"setGlobalConditionBreakpoints\"", StringComparison.Ordinal) ||
+    !generated.Contains("GlobalConditionBreakpointRule", StringComparison.Ordinal) ||
+    !generated.Contains("EvaluateGlobalConditionBreakpoints", StringComparison.Ordinal) ||
+    !generated.Contains("var globalCondition = EvaluateGlobalConditionBreakpoints();", StringComparison.Ordinal))
+    throw new Exception("Global condition breakpoint runtime support is missing.");
 if (!generated.Contains("case \"setExceptionBreakpoints\"", StringComparison.Ordinal))
     throw new Exception("Exception breakpoint protocol command is missing.");
 if (!generated.Contains("case \"debuggerVariables\"", StringComparison.Ordinal))
@@ -110,6 +116,9 @@ if (!generated.Contains("XPScriptDebugRuntime.Complete();", StringComparison.Ord
 if (!generated.Contains("type = \"complete\"", StringComparison.Ordinal) ||
     !generated.Contains("supportsGracefulCompletion = true", StringComparison.Ordinal))
     throw new Exception("Debugger graceful completion protocol is missing.");
+if (!generated.Contains("type = \"programOutput\"", StringComparison.Ordinal) ||
+    !generated.Contains("XPScriptDebugRuntime.ProgramOutput", StringComparison.Ordinal))
+    throw new Exception("Program output is not serialized through the debugger transport.");
 if (!generated.Contains("NormalizeSource(sourcePath)", StringComparison.Ordinal) ||
     !generated.Contains("NormalizeSource(sourceElement.GetString()", StringComparison.Ordinal))
     throw new Exception("Debugger breakpoint source identifiers are not normalized consistently.");

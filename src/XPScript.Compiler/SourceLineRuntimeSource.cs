@@ -42,10 +42,17 @@ internal static class XPScriptDebugRuntime
         public int HitCount { get; set; }
     }
 
+    private sealed class GlobalConditionBreakpointRule
+    {
+        public string Condition { get; init; } = "";
+        public bool LastMatched { get; set; }
+    }
+
     private static readonly object Gate = new();
     private static readonly object WriteGate = new();
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.List<BreakpointRule>> Breakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.HashSet<string> DataBreakpoints = new(global::System.StringComparer.OrdinalIgnoreCase);
+    private static readonly global::System.Collections.Generic.List<GlobalConditionBreakpointRule> GlobalConditionBreakpoints = new();
     private static readonly global::System.Collections.Generic.HashSet<string> CustomDebuggerVariables = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, string> LastValues = new(global::System.StringComparer.OrdinalIgnoreCase);
     private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Queue<ValueChange>> ValueHistory = new(global::System.StringComparer.OrdinalIgnoreCase);
@@ -108,6 +115,8 @@ internal static class XPScriptDebugRuntime
             var pauseHit = global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0) != 0;
             var breakpointRule = FindBreakpoint(sourcePath, line);
             var hitBreakpoint = breakpointRule is not null && EvaluateBreakpoint(breakpointRule, sourcePath, line);
+            var globalCondition = EvaluateGlobalConditionBreakpoints();
+            var hitGlobalCondition = globalCondition.Length > 0;
             var stepHit = _stepMode switch
             {
                 "into" => true,
@@ -116,12 +125,21 @@ internal static class XPScriptDebugRuntime
                 _ => false
             };
 
-            if (!_stopOnEntry && !pauseHit && !stepHit && !hitBreakpoint) return;
+            if (!_stopOnEntry && !pauseHit && !stepHit && !hitBreakpoint && !hitGlobalCondition) return;
 
-            var reason = _stopOnEntry ? "entry" : pauseHit ? "pause" : hitBreakpoint ? "breakpoint" : "step";
+            var reason = _stopOnEntry ? "entry" : pauseHit ? "pause" : (hitBreakpoint || hitGlobalCondition) ? "breakpoint" : "step";
             _stopOnEntry = false;
             _stepMode = "";
-            Send(new { type = "stopped", reason, source = sourcePath, line, threadId = 1, frames });
+            Send(new
+            {
+                type = "stopped",
+                reason,
+                source = sourcePath,
+                line,
+                threadId = 1,
+                frames,
+                description = hitGlobalCondition ? "Global condition matched: " + globalCondition : null
+            });
             StopLoop(depth);
         }
     }
@@ -172,17 +190,6 @@ internal static class XPScriptDebugRuntime
                 threadId = 1
             });
             return false;
-        }
-
-        if (rule.Condition.Length > 0 || rule.HitCondition.Length > 0)
-        {
-            Send(new
-            {
-                type = "breakpointDiagnostic",
-                message = $"XPscript breakpoint matched {NormalizeSource(sourcePath)}:{line}" +
-                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
-                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCount}" : "")
-            });
         }
 
         return true;
@@ -401,6 +408,28 @@ internal static class XPScriptDebugRuntime
         }
     }
 
+    public static bool ProgramOutput(string text, bool isError, bool newLine)
+    {
+        EnsureInitialized();
+        if (!_enabled) return false;
+        lock (Gate)
+        {
+            EnsureConnected();
+            if (_writer is null) return false;
+            Send(new
+            {
+                type = "programOutput",
+                output = text ?? "",
+                category = isError ? "stderr" : "stdout",
+                newLine,
+                source = XPSourceLineRuntime.CurrentSource,
+                line = XPSourceLineRuntime.Current,
+                threadId = 1
+            });
+            return true;
+        }
+    }
+
     public static void Complete()
     {
         EnsureInitialized();
@@ -444,6 +473,27 @@ internal static class XPScriptDebugRuntime
         _stepMode = "";
         Send(new { type = "stopped", reason = "data breakpoint", source = XPSourceLineRuntime.CurrentSource, line = XPSourceLineRuntime.Current, threadId = 1, frames, dataId = name, description = name + " changed from " + oldValue + " to " + rendered });
         StopLoop(frames.Count);
+    }
+
+    private static string EvaluateGlobalConditionBreakpoints()
+    {
+        var triggered = "";
+        foreach (var rule in GlobalConditionBreakpoints)
+        {
+            var matched = EvaluateCondition(rule.Condition, out var error);
+            if (error.Length > 0)
+            {
+                rule.LastMatched = false;
+                continue;
+            }
+
+            if (triggered.Length == 0 && matched && !rule.LastMatched)
+            {
+                triggered = rule.Condition;
+            }
+            rule.LastMatched = matched;
+        }
+        return triggered;
     }
 
     private static int EstimateHistoryChars(ValueChange change) => change.OldValue.Length + change.NewValue.Length + change.Source.Length + change.Procedure.Length + change.Name.Length + 64;
@@ -535,7 +585,7 @@ internal static class XPScriptDebugRuntime
         var stream = _client.GetStream();
         _reader = new global::System.IO.StreamReader(stream, global::System.Text.Encoding.UTF8, false, 4096, true);
         _writer = new global::System.IO.StreamWriter(stream, new global::System.Text.UTF8Encoding(false), 4096, true) { AutoFlush = true };
-        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsConditionalBreakpoints = true, supportsHitConditionalBreakpoints = true, supportsLogPoints = true, supportsPause = true, supportsGracefulCompletion = true, commandTransport = "single-reader" });
+        Send(new { type = "hello", protocol = ProtocolVersion, runtime = "xpscript", pid = global::System.Environment.ProcessId, valueHistoryLimit = ValueHistoryLimit, maxTrackedValueChars = MaxTrackedValueChars, maxHistoryCharsPerVariable = MaxHistoryCharsPerVariable, supportsDataBreakpoints = true, supportsGlobalConditionBreakpoints = true, supportsDebuggerApi = true, supportsDebuggerVariables = true, supportsExceptionBreakpoints = true, supportsConditionalBreakpoints = true, supportsHitConditionalBreakpoints = true, supportsLogPoints = true, supportsPause = true, supportsGracefulCompletion = true, commandTransport = "single-reader" });
         _readerThread = new global::System.Threading.Thread(ReaderLoop) { IsBackground = true, Name = "XPscript Debugger Command Reader" };
         _readerThread.Start();
     }
@@ -650,6 +700,10 @@ internal static class XPScriptDebugRuntime
         switch (command)
         {
             case "setBreakpoints": SetBreakpoints(root); Send(new { type = "breakpoints", ok = true }); break;
+            case "setGlobalConditionBreakpoints":
+                SetGlobalConditionBreakpoints(root);
+                Send(new { type = "globalConditionBreakpoints", ok = true, conditions = GlobalConditionBreakpoints.Select(item => item.Condition).ToArray() });
+                break;
             case "setDataBreakpoints": SetDataBreakpoints(root); Send(new { type = "dataBreakpoints", ok = true, names = DataBreakpoints.ToArray() }); break;
             case "setExceptionBreakpoints": SetExceptionBreakpoints(root); Send(new { type = "exceptionBreakpoints", ok = true }); break;
             case "stackTrace": Send(new { type = "stackTrace", frames = CaptureFrames(XPSourceLineRuntime.CurrentSource, XPSourceLineRuntime.Current) }); break;
@@ -707,16 +761,22 @@ internal static class XPScriptDebugRuntime
         }
 
         Breakpoints[source] = rules;
-        foreach (var rule in rules)
+    }
+
+    private static void SetGlobalConditionBreakpoints(global::System.Text.Json.JsonElement root)
+    {
+        GlobalConditionBreakpoints.Clear();
+        if (!root.TryGetProperty("conditions", out var conditionsElement) || conditionsElement.ValueKind != global::System.Text.Json.JsonValueKind.Array) return;
+
+        foreach (var item in conditionsElement.EnumerateArray())
         {
-            Send(new
-            {
-                type = "breakpointDiagnostic",
-                message = $"XPscript runtime breakpoint {source}:{rule.Line}" +
-                    (rule.Condition.Length > 0 ? $" condition={rule.Condition}" : "") +
-                    (rule.HitCondition.Length > 0 ? $" hitCount={rule.HitCondition}" : "") +
-                    (rule.LogMessage.Length > 0 ? $" logMessage={rule.LogMessage}" : "")
-            });
+            var condition = item.GetString()?.Trim() ?? "";
+            if (condition.Length == 0) continue;
+
+            var rule = new GlobalConditionBreakpointRule { Condition = condition };
+            var matched = EvaluateCondition(condition, out var error);
+            if (error.Length == 0) rule.LastMatched = matched;
+            GlobalConditionBreakpoints.Add(rule);
         }
     }
 
@@ -774,6 +834,7 @@ internal static class XPScriptDebugRuntime
         _listener = null;
         while (PendingCommands.TryDequeue(out var pending)) pending.Document.Dispose();
         DataBreakpoints.Clear();
+        GlobalConditionBreakpoints.Clear();
         CustomDebuggerVariables.Clear();
         Breakpoints.Clear();
         global::System.Threading.Interlocked.Exchange(ref _pauseRequested, 0);
@@ -793,10 +854,32 @@ internal static class Console
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
     public static int Read() => global::System.Console.Read();
     public static string ReadLine() => global::System.Console.ReadLine() ?? string.Empty;
-    public static void Write(object? value) => global::System.Console.Write(XPScriptRuntime.PrintText(value));
-    public static void WriteLine() => global::System.Console.WriteLine();
-    public static void WriteLine(object? value) => global::System.Console.WriteLine(XPScriptRuntime.PrintText(value));
-    public static void WriteError(object? value) => global::System.Console.Error.WriteLine(XPScriptRuntime.PrintText(value));
+    public static void Write(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, false, false))
+            global::System.Console.Write(text);
+    }
+
+    public static void WriteLine()
+    {
+        if (!XPScriptDebugRuntime.ProgramOutput("", false, true))
+            global::System.Console.WriteLine();
+    }
+
+    public static void WriteLine(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, false, true))
+            global::System.Console.WriteLine(text);
+    }
+
+    public static void WriteError(object? value)
+    {
+        var text = XPScriptRuntime.PrintText(value);
+        if (!XPScriptDebugRuntime.ProgramOutput(text, true, true))
+            global::System.Console.Error.WriteLine(text);
+    }
     public static void Clear() => global::System.Console.Clear();
 
     public static void ClearLine()
