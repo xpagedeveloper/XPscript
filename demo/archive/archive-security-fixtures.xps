@@ -32,17 +32,30 @@ Sub Main()
     If output.Contains("source/link.txt") Then Error 5, "Archive.AddFolder followed a symbolic link"
 
     If FileExists("../../out/archive-security-fixtures/extraction-symlink-ready.txt") Then
-        Dim extraction As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
-        Dim extractErr As Integer
-        On Error Resume Next
-        extraction.ExtractAll("../../out/archive-security-fixtures/extract-root")
-        extractErr = Err
-        On Error GoTo 0
-        If extractErr = 0 Then Error 5, "Archive extraction followed a destination symbolic link"
-        If FileExists("../../out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
+        Call ExpectExtractionSymlinkFailure()
     End If
 
     Print "ARCHIVE_SECURITY_FIXTURES=OK"
+End Sub
+
+Sub ExpectExtractionSymlinkFailure()
+    Dim extraction As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
+    Dim extractErr As Integer
+    Dim extractMessage As String
+
+    On Error GoTo ExtractRejected
+    extraction.ExtractAll("../../out/archive-security-fixtures/extract-root")
+    On Error GoTo 0
+    Error 5, "Archive extraction followed a destination symbolic link"
+    Exit Sub
+
+ExtractRejected:
+    extractErr = Err
+    extractMessage = Error()
+    On Error GoTo 0
+    If extractErr = 0 Then Error 5, "Archive extraction rejection returned no error code"
+    If Len(extractMessage) = 0 Then Error 5, "Archive extraction rejection returned an empty diagnostic"
+    If FileExists("../../out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
 End Sub
 
 Sub ExpectOpenFailure(ByVal path As String, ByVal maxEntries As Integer, ByVal maxSize As Long, ByVal maxRatio As Double, ByVal label As String)
@@ -53,13 +66,17 @@ Sub ExpectOpenFailure(ByVal path As String, ByVal maxEntries As Integer, ByVal m
 
     Dim openErr As Integer
     Dim openMessage As String
-    On Error Resume Next
+    On Error GoTo OpenRejected
     archive.Open()
+    On Error GoTo 0
+    Error 5, "Archive security fixture unexpectedly opened: " & label
+    Exit Sub
+
+OpenRejected:
     openErr = Err
     openMessage = Error()
     On Error GoTo 0
-
-    If openErr = 0 Then Error 5, "Archive security fixture unexpectedly opened: " & label
+    If openErr = 0 Then Error 5, "Archive security fixture rejection returned no error code: " & label
     If Len(openMessage) = 0 Then Error 5, "Archive security fixture returned an empty diagnostic: " & label
 End Sub
 
@@ -68,12 +85,16 @@ Sub ExpectExtendedOpenFailure(ByVal path As String, ByVal label As String)
 
     Dim openErr As Integer
     Dim openMessage As String
-    On Error Resume Next
+    On Error GoTo ExtendedOpenRejected
     archive.Open()
+    On Error GoTo 0
+    Error 5, "Extended Archive security fixture unexpectedly opened: " & label
+    Exit Sub
+
+ExtendedOpenRejected:
     openErr = Err
     openMessage = Error()
     On Error GoTo 0
-
-    If openErr = 0 Then Error 5, "Extended Archive security fixture unexpectedly opened: " & label
+    If openErr = 0 Then Error 5, "Extended Archive security fixture rejection returned no error code: " & label
     If Len(openMessage) = 0 Then Error 5, "Extended Archive security fixture returned an empty diagnostic: " & label
 End Sub
