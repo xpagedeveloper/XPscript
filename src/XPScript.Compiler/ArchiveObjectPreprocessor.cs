@@ -9,6 +9,8 @@ internal sealed class ArchiveObjectPreprocessor
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, "Archive", "ArchiveEntry")) return source;
 
+        new ArchiveCapabilityValidator().Validate(source, "archive.xps");
+
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 4);
         var archiveVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
