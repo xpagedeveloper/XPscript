@@ -38,7 +38,7 @@ internal sealed class ArchiveObjectPreprocessor
                 continue;
             }
 
-            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "new XPScriptArchive()", RegexOptions.IgnoreCase);
+            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value), RegexOptions.IgnoreCase);
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
@@ -56,16 +56,16 @@ internal sealed class ArchiveObjectPreprocessor
     private static string CreateArchiveExpression(string rawArguments)
     {
         var args = SplitArguments(rawArguments);
-        if (args.Count == 0) return "new XPScriptArchive()";
-        if (args.Count == 1) return $"new XPScriptArchive({args[0]})";
+        if (args.Count == 0) return "XPScriptArchiveFactory.Create()";
+        if (args.Count == 1) return $"XPScriptArchiveFactory.Create({args[0]})";
         if (args.Count != 2)
-            throw new CompilerException("Archive constructor expects filename and optional extendedSupport Boolean.");
+            throw new CompilerException("Archive constructor expects filename or Byte array and optional extendedSupport Boolean.");
 
         var extended = args[1].Trim();
         if (extended.Equals("True", StringComparison.OrdinalIgnoreCase))
-            return $"new XPScriptExtendedArchive({args[0]})";
+            return $"XPScriptExtendedArchiveFactory.Create({args[0]})";
         if (extended.Equals("False", StringComparison.OrdinalIgnoreCase))
-            return $"new XPScriptArchive({args[0]}, false)";
+            return $"XPScriptArchiveFactory.Create({args[0]}, false)";
 
         throw new CompilerException("Archive extendedSupport must be the literal True or False so dependencies can be resolved at compile time.");
     }
