@@ -26,3 +26,4 @@ jobs:
         run: dotnet run --project tests/ApplicationPackagePatchProbe/ApplicationPackagePatchProbe.csproj -c Release
       - name: Check live package patch selection
         run: dotnet run --project src/XPScript.Cli/XPScript.Cli.csproj -c Release -- patch all --check
+      # One-shot validation only; remove this workflow after a successful run.
