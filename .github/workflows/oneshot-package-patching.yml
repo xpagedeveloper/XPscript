@@ -20,418 +20,56 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Implement package patching
-        shell: python
+      - name: Wire patch store into compiler and CLI
         run: |
+          python <<'PY'
           from pathlib import Path
-
-          catalog = Path('src/XPScript.Compiler/ApplicationDependencyCatalog.cs')
-          catalog.write_text(r'''namespace XPScript.Compiler;
-
-public sealed record ApplicationPackageReference(string Name, string Version, string Reason);
-
-public static class ApplicationDependencyCatalog
-{
-    public const string AvaloniaVersion = "12.0.3";
-    public const string AvaloniaWebViewVersion = "12.0.1";
-    public const string MicrosoftDataSqliteVersion = "10.0.11";
-    public const string MicrosoftDataSqlClientVersion = "7.0.2";
-    public const string MySqlConnectorVersion = "2.6.2";
-    public const string NpgsqlVersion = "10.0.3";
-    public const string MimeKitVersion = "4.17.0";
-
-    public static IReadOnlyList<ApplicationPackageReference> Defaults { get; } =
-    [
-        new("Avalonia", AvaloniaVersion, "Desktop UI"),
-        new("Avalonia.Desktop", AvaloniaVersion, "Desktop UI"),
-        new("Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI"),
-        new("Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView"),
-        new("Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database"),
-        new("Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database"),
-        new("MySqlConnector", MySqlConnectorVersion, "MySQL database"),
-        new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"),
-        new("MimeKit", MimeKitVersion, "Notes MIME support")
-    ];
-
-    public static string ResolveVersion(string packageName, string baselineVersion) =>
-        ApplicationPackagePatchStore.ResolveVersion(packageName, baselineVersion);
-
-    public static IReadOnlyList<ApplicationPackageReference> Detect(string generatedSource)
-    {
-        ArgumentNullException.ThrowIfNull(generatedSource);
-        var result = new List<ApplicationPackageReference>();
-        var usesUi = generatedSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-                     generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
-                     generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
-        if (usesUi)
-        {
-            Add(result, "Avalonia", AvaloniaVersion, "Desktop UI");
-            Add(result, "Avalonia.Desktop", AvaloniaVersion, "Desktop UI");
-            Add(result, "Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI");
-            Add(result, "Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView");
-        }
-        if (generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal))
-            Add(result, "Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database");
-        if (generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal))
-            Add(result, "Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database");
-        if (generatedSource.Contains("XPScriptDbMySql", StringComparison.Ordinal))
-            Add(result, "MySqlConnector", MySqlConnectorVersion, "MySQL database");
-        if (generatedSource.Contains("XPScriptDbSupabase", StringComparison.Ordinal))
-            Add(result, "Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database");
-        if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal) || generatedSource.Contains("NotesMIMEEntity", StringComparison.Ordinal))
-            Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
-        return result;
-    }
-
-    private static void Add(List<ApplicationPackageReference> result, string name, string baselineVersion, string reason) =>
-        result.Add(new(name, ResolveVersion(name, baselineVersion), reason));
-}
-''')
-
-          store = Path('src/XPScript.Compiler/ApplicationPackagePatchStore.cs')
-          store.write_text(r'''using System.Reflection;
-using System.Security.Cryptography;
-using System.Text.Json;
-
-namespace XPScript.Compiler;
-
-public sealed record ApplicationPackagePatch(
-    string Name,
-    string BaselineVersion,
-    string PatchedVersion,
-    string PackageFile,
-    string Sha256);
-
-public static class ApplicationPackagePatchStore
-{
-    private const string ManifestFileName = "manifest.json";
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
-    public static string CurrentXPScriptVersion
-    {
-        get
-        {
-            var assembly = typeof(ApplicationPackagePatchStore).Assembly;
-            var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (!string.IsNullOrWhiteSpace(informational))
-                return informational.Split('+', 2)[0];
-            return assembly.GetName().Version?.ToString() ?? "unknown";
-        }
-    }
-
-    public static string RootDirectory => Path.Combine(GetUserDataRoot(), "XPScript", "package-patches", Sanitize(CurrentXPScriptVersion));
-    public static string PackageDirectory => Path.Combine(RootDirectory, "packages");
-    public static string ManifestPath => Path.Combine(RootDirectory, ManifestFileName);
-
-    public static string? ActivePackageSource => GetPatches().Count == 0 ? null : PackageDirectory;
-
-    public static IReadOnlyList<ApplicationPackagePatch> GetPatches()
-    {
-        if (!File.Exists(ManifestPath)) return [];
-        try
-        {
-            var manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(ManifestPath), JsonOptions);
-            if (manifest is null || !string.Equals(manifest.XPScriptVersion, CurrentXPScriptVersion, StringComparison.Ordinal))
-                return [];
-            return manifest.Patches ?? [];
-        }
-        catch (JsonException ex)
-        {
-            throw new CompilerException("XPScript package patch manifest is invalid: " + ex.Message);
-        }
-    }
-
-    public static string ResolveVersion(string packageName, string baselineVersion)
-    {
-        var patch = GetPatches().FirstOrDefault(p =>
-            p.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase) &&
-            p.BaselineVersion.Equals(baselineVersion, StringComparison.OrdinalIgnoreCase));
-        if (patch is null) return baselineVersion;
-        if (!IsCompatiblePatch(baselineVersion, patch.PatchedVersion))
-            throw new CompilerException($"Package patch {packageName} {patch.PatchedVersion} is outside the allowed {MajorMinor(baselineVersion)} patch line.");
-
-        var packagePath = Path.Combine(PackageDirectory, patch.PackageFile);
-        if (!File.Exists(packagePath))
-            throw new CompilerException("Patched package file is missing: " + patch.PackageFile);
-        var actualHash = ComputeSha256(packagePath);
-        if (!actualHash.Equals(patch.Sha256, StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException("Patched package checksum does not match the XPScript patch manifest: " + patch.PackageFile);
-        return patch.PatchedVersion;
-    }
-
-    public static void SavePatches(IEnumerable<ApplicationPackagePatch> patches)
-    {
-        var normalized = patches
-            .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.Last())
-            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        Directory.CreateDirectory(PackageDirectory);
-        var manifest = new PatchManifest(CurrentXPScriptVersion, DateTimeOffset.UtcNow, normalized);
-        var temp = ManifestPath + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(manifest, JsonOptions));
-        File.Move(temp, ManifestPath, true);
-    }
-
-    public static void Clear()
-    {
-        if (Directory.Exists(RootDirectory)) Directory.Delete(RootDirectory, recursive: true);
-    }
-
-    public static bool IsCompatiblePatch(string baselineVersion, string candidateVersion)
-    {
-        if (!TryParseStableVersion(baselineVersion, out var baseline) || !TryParseStableVersion(candidateVersion, out var candidate)) return false;
-        return baseline.Major == candidate.Major &&
-               baseline.Minor == candidate.Minor &&
-               candidate >= baseline;
-    }
-
-    public static string ComputeSha256(string filePath)
-    {
-        using var stream = File.OpenRead(filePath);
-        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-    }
-
-    private static bool TryParseStableVersion(string value, out Version version)
-    {
-        version = new Version();
-        if (value.Contains('-', StringComparison.Ordinal)) return false;
-        return Version.TryParse(value, out version!);
-    }
-
-    private static string MajorMinor(string value) =>
-        Version.TryParse(value.Split('-', 2)[0], out var version) ? $"{version.Major}.{version.Minor}.x" : value;
-
-    private static string GetUserDataRoot()
-    {
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (!string.IsNullOrWhiteSpace(local)) return local;
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (!string.IsNullOrWhiteSpace(home)) return Path.Combine(home, ".local", "share");
-        return Path.GetTempPath();
-    }
-
-    private static string Sanitize(string value)
-    {
-        foreach (var c in Path.GetInvalidFileNameChars()) value = value.Replace(c, '_');
-        return value;
-    }
-
-    private sealed record PatchManifest(string XPScriptVersion, DateTimeOffset UpdatedAtUtc, ApplicationPackagePatch[] Patches);
-}
-''')
-
-          cmd = Path('src/XPScript.Cli/PackagePatchCommand.cs')
-          cmd.write_text(r'''using System.Net.Http.Headers;
-using System.Text.Json;
-using XPScript.Compiler;
-
-namespace XPScript.Cli;
-
-internal static class PackagePatchCommand
-{
-    private static readonly HttpClient Http = CreateHttpClient();
-
-    public static async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
-    {
-        if (args.Length == 0 || args[0] is "--help" or "-h")
-        {
-            WriteHelp();
-            return 0;
-        }
-
-        var action = args[0];
-        var checkOnly = args.Skip(1).Any(a => a.Equals("--check", StringComparison.OrdinalIgnoreCase));
-        if (action.Equals("status", StringComparison.OrdinalIgnoreCase) || action.Equals("list", StringComparison.OrdinalIgnoreCase))
-            return WriteStatus();
-        if (action.Equals("remove", StringComparison.OrdinalIgnoreCase))
-        {
-            if (args.Length < 2 || !args[1].Equals("all", StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException("Usage: xpscript patch remove all");
-            ApplicationPackagePatchStore.Clear();
-            Console.WriteLine($"Removed package patches for XPScript {ApplicationPackagePatchStore.CurrentXPScriptVersion}.");
-            return 0;
-        }
-
-        IReadOnlyList<ApplicationPackageReference> targets;
-        if (action.Equals("all", StringComparison.OrdinalIgnoreCase))
-        {
-            targets = ApplicationDependencyCatalog.Defaults;
-        }
-        else
-        {
-            var match = ApplicationDependencyCatalog.Defaults.FirstOrDefault(p => p.Name.Equals(action, StringComparison.OrdinalIgnoreCase));
-            if (match is null) throw new ArgumentException("Unknown XPScript package: " + action);
-            targets = [match];
-        }
-
-        var existing = ApplicationPackagePatchStore.GetPatches().ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-        var next = new Dictionary<string, ApplicationPackagePatch>(existing, StringComparer.OrdinalIgnoreCase);
-        var changes = 0;
-        Console.WriteLine($"XPScript package patch line: {ApplicationPackagePatchStore.CurrentXPScriptVersion}");
-
-        foreach (var target in targets)
-        {
-            var candidate = await FindLatestCompatiblePatchAsync(target.Name, target.Version, cancellationToken).ConfigureAwait(false);
-            if (candidate is null || candidate.Equals(target.Version, StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine($"{target.Name}: {target.Version} - no newer compatible patch.");
-                continue;
-            }
-
-            if (existing.TryGetValue(target.Name, out var current) &&
-                current.BaselineVersion.Equals(target.Version, StringComparison.OrdinalIgnoreCase) &&
-                current.PatchedVersion.Equals(candidate, StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine($"{target.Name}: {target.Version} -> {candidate} - already active.");
-                continue;
-            }
-
-            Console.WriteLine($"{target.Name}: {target.Version} -> {candidate}{(checkOnly ? " - available" : "")}");
-            changes++;
-            if (checkOnly) continue;
-
-            Directory.CreateDirectory(ApplicationPackagePatchStore.PackageDirectory);
-            var packageFile = $"{target.Name.ToLowerInvariant()}.{candidate}.nupkg";
-            var destination = Path.Combine(ApplicationPackagePatchStore.PackageDirectory, packageFile);
-            await DownloadPackageAsync(target.Name, candidate, destination, cancellationToken).ConfigureAwait(false);
-            var hash = ApplicationPackagePatchStore.ComputeSha256(destination);
-            next[target.Name] = new(target.Name, target.Version, candidate, packageFile, hash);
-        }
-
-        if (checkOnly)
-        {
-            Console.WriteLine(changes == 0 ? "No compatible patch updates found." : $"{changes} compatible patch update(s) found. No changes made.");
-            return 0;
-        }
-
-        ApplicationPackagePatchStore.SavePatches(next.Values);
-        Console.WriteLine(changes == 0 ? "Package patch set unchanged." : $"Applied {changes} package patch update(s).");
-        Console.WriteLine("Patches are scoped to this exact XPScript release and will not be reused by a different XPScript version.");
-        return 0;
-    }
-
-    private static int WriteStatus()
-    {
-        var patches = ApplicationPackagePatchStore.GetPatches();
-        Console.WriteLine($"XPScript version: {ApplicationPackagePatchStore.CurrentXPScriptVersion}");
-        if (patches.Count == 0)
-        {
-            Console.WriteLine("No active package patches.");
-            return 0;
-        }
-        foreach (var patch in patches)
-            Console.WriteLine($"{patch.Name}: {patch.BaselineVersion} -> {patch.PatchedVersion}  sha256:{patch.Sha256[..Math.Min(12, patch.Sha256.Length)]}");
-        Console.WriteLine("Package source: " + ApplicationPackagePatchStore.PackageDirectory);
-        return 0;
-    }
-
-    private static async Task<string?> FindLatestCompatiblePatchAsync(string packageName, string baselineVersion, CancellationToken cancellationToken)
-    {
-        var lower = packageName.ToLowerInvariant();
-        var url = $"https://api.nuget.org/v3-flatcontainer/{Uri.EscapeDataString(lower)}/index.json";
-        using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (!json.RootElement.TryGetProperty("versions", out var versions) || versions.ValueKind != JsonValueKind.Array)
-            return null;
-
-        if (!Version.TryParse(baselineVersion.Split('-', 2)[0], out var baseline)) return null;
-        Version? best = null;
-        string? bestText = null;
-        foreach (var element in versions.EnumerateArray())
-        {
-            var text = element.GetString();
-            if (string.IsNullOrWhiteSpace(text) || text.Contains('-', StringComparison.Ordinal)) continue;
-            if (!Version.TryParse(text, out var version)) continue;
-            if (version.Major != baseline.Major || version.Minor != baseline.Minor || version < baseline) continue;
-            if (best is null || version > best)
-            {
-                best = version;
-                bestText = text;
-            }
-        }
-        return bestText;
-    }
-
-    private static async Task DownloadPackageAsync(string packageName, string version, string destination, CancellationToken cancellationToken)
-    {
-        var lower = packageName.ToLowerInvariant();
-        var url = $"https://api.nuget.org/v3-flatcontainer/{Uri.EscapeDataString(lower)}/{Uri.EscapeDataString(version.ToLowerInvariant())}/{Uri.EscapeDataString(lower)}.{Uri.EscapeDataString(version.ToLowerInvariant())}.nupkg";
-        var temp = destination + ".download";
-        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-        await using (var target = File.Create(temp))
-            await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
-        File.Move(temp, destination, true);
-    }
-
-    private static HttpClient CreateHttpClient()
-    {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("XPScript", "package-patch"));
-        return client;
-    }
-
-    private static void WriteHelp()
-    {
-        Console.WriteLine("XPScript package patch commands:");
-        Console.WriteLine("  xpscript patch all [--check]");
-        Console.WriteLine("  xpscript patch <package> [--check]");
-        Console.WriteLine("  xpscript patch status");
-        Console.WriteLine("  xpscript patch remove all");
-        Console.WriteLine();
-        Console.WriteLine("Only newer stable patch versions in the same major.minor line are eligible.");
-    }
-}
-''')
 
           program = Path('src/XPScript.Cli/Program.cs')
           text = program.read_text()
           needle = '        "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),\n'
-          assert needle in text
-          text = text.replace(needle, needle + '        "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),\n', 1)
+          if '"patch" => await XPScript.Cli.PackagePatchCommand.RunAsync' not in text:
+              assert needle in text
+              text = text.replace(needle, needle + '        "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),\n', 1)
           program.write_text(text)
 
           env = Path('src/XPScript.Compiler/CompilerBuildEnvironment.cs')
           text = env.read_text()
           constants = '''    private const string AvaloniaVersion = "12.0.3";\n    private const string AvaloniaWebViewVersion = "12.0.1";\n    private const string MicrosoftDataSqliteVersion = "10.0.11";\n    private const string MicrosoftDataSqlClientVersion = "7.0.2";\n    private const string MySqlConnectorVersion = "2.6.2";\n    private const string NpgsqlVersion = "10.0.3";\n\n'''
-          assert constants in text
           text = text.replace(constants, '', 1)
-          needle = '        ConfigureGeneratedDependencies(startInfo, root);\n'
-          assert needle in text
-          text = text.replace(needle, needle + '''        var patchSource = ApplicationPackagePatchStore.ActivePackageSource;\n        if (patchSource is not null && startInfo.ArgumentList.Count > 0 &&\n            (startInfo.ArgumentList[0].Equals("build", StringComparison.OrdinalIgnoreCase) ||\n             startInfo.ArgumentList[0].Equals("restore", StringComparison.OrdinalIgnoreCase) ||\n             startInfo.ArgumentList[0].Equals("publish", StringComparison.OrdinalIgnoreCase)))\n            startInfo.ArgumentList.Add("-p:RestoreAdditionalProjectSources=" + patchSource);\n''', 1)
-          old = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{AvaloniaWebViewVersion}\\" />\\n";'
-          new = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\\" />\\n";'
-          assert old in text
-          text = text.replace(old, new, 1)
+          marker = '        ConfigureGeneratedDependencies(startInfo, root);\n'
+          insertion = '''        var patchSource = ApplicationPackagePatchStore.ActivePackageSource;\n        if (patchSource is not null && startInfo.ArgumentList.Count > 0 &&\n            (startInfo.ArgumentList[0].Equals("build", StringComparison.OrdinalIgnoreCase) ||\n             startInfo.ArgumentList[0].Equals("restore", StringComparison.OrdinalIgnoreCase) ||\n             startInfo.ArgumentList[0].Equals("publish", StringComparison.OrdinalIgnoreCase)))\n            startInfo.ArgumentList.Add("-p:RestoreAdditionalProjectSources=" + patchSource);\n'''
+          if 'RestoreAdditionalProjectSources=' not in text:
+              assert marker in text
+              text = text.replace(marker, marker + insertion, 1)
+
+          old_ui = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{AvaloniaVersion}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{AvaloniaWebViewVersion}\\" />\\n";'
+          new_ui = '    <PackageReference Include=\\"Avalonia\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Desktop\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Themes.Fluent\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\\" />\\n    <PackageReference Include=\\"Avalonia.Controls.WebView\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\\" />\\n";'
+          if old_ui in text:
+              text = text.replace(old_ui, new_ui, 1)
           replacements = {
               '{MicrosoftDataSqliteVersion}': '{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.Sqlite", ApplicationDependencyCatalog.MicrosoftDataSqliteVersion)}',
               '{MicrosoftDataSqlClientVersion}': '{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.SqlClient", ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion)}',
               '{MySqlConnectorVersion}': '{ApplicationDependencyCatalog.ResolveVersion("MySqlConnector", ApplicationDependencyCatalog.MySqlConnectorVersion)}',
               '{NpgsqlVersion}': '{ApplicationDependencyCatalog.ResolveVersion("Npgsql", ApplicationDependencyCatalog.NpgsqlVersion)}'
           }
-          for old_token, new_token in replacements.items():
-              assert old_token in text
-              text = text.replace(old_token, new_token)
+          for old, new in replacements.items():
+              text = text.replace(old, new)
           env.write_text(text)
 
           run = Path('src/XPScript.Compiler/RunCompiler.cs')
           text = run.read_text()
-          old = '    <PackageReference Include=\\"MimeKit\\" Version=\\"4.17.0\\" />\\n'
-          new = '    <PackageReference Include=\\"MimeKit\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion)}\\" />\\n'
-          assert old in text
-          run.write_text(text.replace(old, new, 1))
+          text = text.replace('    <PackageReference Include=\\"MimeKit\\" Version=\\"4.17.0\\" />\\n', '    <PackageReference Include=\\"MimeKit\\" Version=\\"{ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion)}\\" />\\n', 1)
+          run.write_text(text)
+          PY
       - name: Build CLI
         run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj -c Release --nologo
-      - name: Smoke test patch help
+      - name: Smoke test patch command
         run: dotnet run --project src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -- patch --help
       - name: Commit implementation
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/XPScript.Compiler/ApplicationDependencyCatalog.cs src/XPScript.Compiler/ApplicationPackagePatchStore.cs src/XPScript.Compiler/CompilerBuildEnvironment.cs src/XPScript.Compiler/RunCompiler.cs src/XPScript.Cli/PackagePatchCommand.cs src/XPScript.Cli/Program.cs
-          git commit -m "Add version-scoped package patching"
+          git add src/XPScript.Compiler/CompilerBuildEnvironment.cs src/XPScript.Compiler/RunCompiler.cs src/XPScript.Cli/Program.cs
+          git commit -m "Wire package patches into generated builds"
           git push origin HEAD:feature/application-dependency-security
