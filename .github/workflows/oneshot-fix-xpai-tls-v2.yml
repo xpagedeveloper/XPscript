@@ -1,0 +1,23 @@
+name: Fix XPAi TLS postprocessor v2
+on:
+  push:
+    branches:
+      - feature/per-client-tls-validation
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/per-client-tls-validation
+          fetch-depth: 0
+      - run: python3 scripts/fix-xpai-tls-postprocessor.py
+      - run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/XPScript.Compiler/AiSessionRuntimePostProcessor.cs
+          git commit -m 'Preserve TLS state in XPAi tool-loop postprocessor'
+          git push origin HEAD:feature/per-client-tls-validation
