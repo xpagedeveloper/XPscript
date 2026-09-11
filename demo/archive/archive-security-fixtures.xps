@@ -1,20 +1,20 @@
 Option Declare
 
 Sub Main()
-    Call ExpectOpenFailure("./out/archive-security-fixtures/traversal.zip", 10000, 2147483647, 1000, "path traversal")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/absolute-unix.zip", 10000, 2147483647, 1000, "absolute Unix path")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/absolute-windows.zip", 10000, 2147483647, 1000, "absolute Windows path")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/unc.zip", 10000, 2147483647, 1000, "UNC path")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/symlink-entry.zip", 10000, 2147483647, 1000, "symbolic link entry")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/max-entries.zip", 2, 2147483647, 1000, "MaxEntries")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/max-size.zip", 10000, 100, 1000, "MaxExtractSize")
-    Call ExpectOpenFailure("./out/archive-security-fixtures/compression-ratio.zip", 10000, 2147483647, 10, "MaxCompressionRatio")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/traversal.zip", 10000, 2147483647, 1000, "path traversal")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/absolute-unix.zip", 10000, 2147483647, 1000, "absolute Unix path")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/absolute-windows.zip", 10000, 2147483647, 1000, "absolute Windows path")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/unc.zip", 10000, 2147483647, 1000, "UNC path")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/symlink-entry.zip", 10000, 2147483647, 1000, "symbolic link entry")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/max-entries.zip", 2, 2147483647, 1000, "MaxEntries")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/max-size.zip", 10000, 100, 1000, "MaxExtractSize")
+    Call ExpectOpenFailure("../../out/archive-security-fixtures/compression-ratio.zip", 10000, 2147483647, 10, "MaxCompressionRatio")
 
-    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/traversal.tar", "extended TAR path traversal")
-    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/absolute.tar", "extended TAR absolute path")
-    Call ExpectExtendedOpenFailure("./out/archive-security-fixtures/symlink-entry.tar", "extended TAR symbolic link entry")
+    Call ExpectExtendedOpenFailure("../../out/archive-security-fixtures/traversal.tar", "extended TAR path traversal")
+    Call ExpectExtendedOpenFailure("../../out/archive-security-fixtures/absolute.tar", "extended TAR absolute path")
+    Call ExpectExtendedOpenFailure("../../out/archive-security-fixtures/symlink-entry.tar", "extended TAR symbolic link entry")
 
-    Dim duplicateArchive As New Archive("./out/archive-security-fixtures/duplicate-names.zip")
+    Dim duplicateArchive As New Archive("../../out/archive-security-fixtures/duplicate-names.zip")
     Dim duplicateEntry As ArchiveEntry
     Dim duplicateCount As Integer
     Set duplicateEntry = duplicateArchive.GetFirstEntry()
@@ -25,21 +25,21 @@ Sub Main()
     Wend
     If duplicateCount <> 2 Then Error 5, "Archive duplicate-name iterator did not return both entries"
 
-    Dim output As New Archive("./out/archive-security-fixtures/symlink-source-test.zip")
+    Dim output As New Archive("../../out/archive-security-fixtures/symlink-source-test.zip")
     output.Create("zip")
-    output.AddFolder("./out/archive-security-fixtures/source", "source", True)
+    output.AddFolder("../../out/archive-security-fixtures/source", "source", True)
     If Not output.Contains("source/real.txt") Then Error 5, "Archive security fixture lost the real source file"
     If output.Contains("source/link.txt") Then Error 5, "Archive.AddFolder followed a symbolic link"
 
-    If FileExists("./out/archive-security-fixtures/extraction-symlink-ready.txt") Then
-        Dim extraction As New Archive("./out/archive-security-fixtures/extraction-symlink.zip")
+    If FileExists("../../out/archive-security-fixtures/extraction-symlink-ready.txt") Then
+        Dim extraction As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
         Dim extractErr As Integer
         On Error Resume Next
-        extraction.ExtractAll("./out/archive-security-fixtures/extract-root")
+        extraction.ExtractAll("../../out/archive-security-fixtures/extract-root")
         extractErr = Err
         On Error GoTo 0
         If extractErr = 0 Then Error 5, "Archive extraction followed a destination symbolic link"
-        If FileExists("./out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
+        If FileExists("../../out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
     End If
 
     Print "ARCHIVE_SECURITY_FIXTURES=OK"
