@@ -17,6 +17,26 @@ Sub Main()
     Dim tarRebuilt As New Archive(tarRebuiltBytes, True)
     If tarRebuilt.ReadText("second.txt") <> "rebuilt tar" Then Error 5, "Extended memory TAR rebuild failed"
 
+    Dim seedEmptyTar() As Byte
+    Dim emptyTar As New Archive(seedEmptyTar, True)
+    emptyTar.Create("tar")
+    emptyTar.AddText("only.txt", "remove me")
+    Dim populatedEmptyTarBytes As Variant
+    populatedEmptyTarBytes = emptyTar.ToBytes()
+
+    Dim emptyTarEdit As New Archive(populatedEmptyTarBytes, True)
+    If Not emptyTarEdit.Remove("only.txt") Then Error 5, "Extended memory TAR final-entry remove failed"
+    Dim emptyTarBytes As Variant
+    emptyTarBytes = emptyTarEdit.ToBytes()
+
+    Dim emptyTarRead As New Archive(emptyTarBytes, True)
+    If emptyTarRead.Format <> "TAR" Then Error 5, "Extended memory empty TAR format detection failed"
+    If emptyTarRead.FileCount <> 0 Then Error 5, "Extended memory empty TAR should contain zero files"
+    If emptyTarRead.FolderCount <> 0 Then Error 5, "Extended memory empty TAR should contain zero folders"
+    If emptyTarRead.IsReadOnly Then Error 5, "Extended memory empty TAR should remain rebuildable"
+    emptyTarRead.AddText("after-empty.txt", "tar reopened")
+    If emptyTarRead.ReadText("after-empty.txt") <> "tar reopened" Then Error 5, "Extended memory empty TAR reopen failed"
+
     Dim seed7z() As Byte
     Dim seven As New Archive(seed7z, True)
     seven.Create("7z")
