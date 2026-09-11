@@ -369,7 +369,7 @@ internal sealed class XPScriptExtendedMemoryArchive
         public System.IO.Stream OpenEntryStream()
         {
             var entry = Entry ?? throw new XPScriptRuntimeException(5, "Archive reader entry is unavailable.");
-            var method = entry.GetType().GetMethod("OpenEntryStream", Type.EmptyTypes)
+            var method = entry.GetType().GetMethod("OpenEntryStream", System.Type.EmptyTypes)
                 ?? entry.GetType().GetInterfaces().SelectMany(x => x.GetMethods()).FirstOrDefault(m => m.Name == "OpenEntryStream" && m.GetParameters().Length == 0)
                 ?? throw new XPScriptRuntimeException(5, "Archive entry stream is unavailable.");
             return (System.IO.Stream)(method.Invoke(entry, null) ?? throw new XPScriptRuntimeException(5, "Archive entry stream is unavailable."));
