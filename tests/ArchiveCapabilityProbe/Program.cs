@@ -70,6 +70,7 @@ foreach (var format in new[] { "rar", "bzip2", "lzip", "xz", "zstd" })
 
 ExpectIteratorSuccess();
 ExpectRemovedIsDirectory();
+ExpectExtendedDiagnosticNormalization();
 
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
 
@@ -162,9 +163,10 @@ End Sub
 """;
 
     var generated = transpiler.Transpile(source, "archive-iterator-probe.xps", "win-x64");
-    if (!generated.Contains("XpsCompilerGeneratedArchiveGetFirstEntry", StringComparison.Ordinal)
-        || !generated.Contains("XpsCompilerGeneratedArchiveGetNextEntry", StringComparison.Ordinal))
-        throw new Exception("Archive iterator helpers were not emitted.");
+    if (!generated.Contains("XPScriptArchiveIteratorRuntime.GetFirstEntry", StringComparison.Ordinal)
+        || !generated.Contains("XPScriptArchiveIteratorRuntime.GetNextEntry", StringComparison.Ordinal)
+        || !generated.Contains("ConditionalWeakTable<object, IteratorState>", StringComparison.Ordinal))
+        throw new Exception("Archive stable iterator runtime was not emitted.");
     if (generated.Contains(".IsFile", StringComparison.Ordinal)
         || generated.Contains(".IsFolder", StringComparison.Ordinal))
         throw new Exception("ArchiveEntry IsFile/IsFolder aliases were not lowered to the internal entry type flag.");
@@ -198,4 +200,22 @@ End Sub
             || !ex.Message.Contains("IsFolder", StringComparison.Ordinal))
             throw new Exception("ArchiveEntry.IsDirectory returned the wrong diagnostic: " + ex.Message);
     }
+}
+
+void ExpectExtendedDiagnosticNormalization()
+{
+    const string source = """
+Option Declare
+Sub Main()
+    Dim archive As New Archive("data.7z", True)
+    archive.Open()
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "archive-diagnostic-normalization.xps", "win-x64");
+    if (!generated.Contains("return new XPScriptExtendedArchiveV5(value);", StringComparison.Ordinal)
+        || !generated.Contains("return new XPScriptExtendedMemoryArchiveV4(value);", StringComparison.Ordinal)
+        || !generated.Contains("message.Contains(\"SharpCompress\"", StringComparison.Ordinal)
+        || !generated.Contains("Unable to process the extended archive.", StringComparison.Ordinal))
+        throw new Exception("Extended Archive diagnostic normalization is not wired through the public factory.");
 }
