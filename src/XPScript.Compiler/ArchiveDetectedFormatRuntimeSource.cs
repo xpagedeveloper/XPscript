@@ -6,6 +6,7 @@ internal static class ArchiveDetectedFormatRuntimeSource
 internal sealed class XPScriptExtendedArchiveV4
 {
     private readonly XPScriptExtendedArchiveV3 _inner;
+    private bool _rebuildAutoSaveMode;
 
     public XPScriptExtendedArchiveV4(object? path = null)
     {
@@ -32,8 +33,20 @@ internal sealed class XPScriptExtendedArchiveV4
 
     public void Open() => _inner.Open();
     public void Close() => _inner.Close();
-    public void Save() => _inner.Save();
-    public void Create(object? format = null) => _inner.Create(format);
+    public void Save()
+    {
+        if (_rebuildAutoSaveMode) return;
+        _inner.Save();
+    }
+    public void Create(object? format = null)
+    {
+        _inner.Create(format);
+        var createdFormat = _inner.Format;
+        _rebuildAutoSaveMode = createdFormat.Equals("TAR", StringComparison.OrdinalIgnoreCase)
+            || createdFormat.Equals("7Z", StringComparison.OrdinalIgnoreCase)
+            || createdFormat.Equals("7ZIP", StringComparison.OrdinalIgnoreCase)
+            || createdFormat.Equals("SEVENZIP", StringComparison.OrdinalIgnoreCase);
+    }
     public void AddFile(object? sourcePath, object? archivePath = null) => _inner.AddFile(sourcePath, archivePath);
     public void AddFolder(object? sourcePath, object? archivePath = null, bool recursive = true) => _inner.AddFolder(sourcePath, archivePath, recursive);
     public void AddText(object? archivePath, object? text) => _inner.AddText(archivePath, text);
