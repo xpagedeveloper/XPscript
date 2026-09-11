@@ -25,7 +25,10 @@ internal sealed class XPScriptHttpClient : IDisposable
         _handler = new System.Net.Http.HttpClientHandler
         {
             AllowAutoRedirect = false,
-            UseCookies = false
+            UseCookies = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli
         };
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
