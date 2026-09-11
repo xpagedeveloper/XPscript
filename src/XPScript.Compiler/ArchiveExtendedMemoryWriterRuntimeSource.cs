@@ -352,6 +352,8 @@ internal static class XPScriptArchiveExtendedMemoryWriter
 
     private static byte[] WriteRawTar(IReadOnlyList<XPScriptExtendedMemoryArchiveV2.PendingEntry> entries)
     {
+        if (entries.Count == 0) return new byte[1024];
+
         using var output = new System.IO.MemoryStream();
         using (var writer = new System.Formats.Tar.TarWriter(output, System.Formats.Tar.TarEntryFormat.Pax, leaveOpen: true))
         {
