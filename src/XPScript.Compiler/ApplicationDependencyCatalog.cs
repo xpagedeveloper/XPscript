@@ -12,6 +12,22 @@ public static class ApplicationDependencyCatalog
     public const string NpgsqlVersion = "10.0.3";
     public const string MimeKitVersion = "4.17.0";
 
+    public static IReadOnlyList<ApplicationPackageReference> Defaults { get; } =
+    [
+        new("Avalonia", AvaloniaVersion, "Desktop UI"),
+        new("Avalonia.Desktop", AvaloniaVersion, "Desktop UI"),
+        new("Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI"),
+        new("Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView"),
+        new("Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database"),
+        new("Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database"),
+        new("MySqlConnector", MySqlConnectorVersion, "MySQL database"),
+        new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"),
+        new("MimeKit", MimeKitVersion, "Notes MIME support")
+    ];
+
+    public static string ResolveVersion(string packageName, string baselineVersion) =>
+        ApplicationPackagePatchStore.ResolveVersion(packageName, baselineVersion);
+
     public static IReadOnlyList<ApplicationPackageReference> Detect(string generatedSource)
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
@@ -21,21 +37,24 @@ public static class ApplicationDependencyCatalog
                      generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         if (usesUi)
         {
-            result.Add(new("Avalonia", AvaloniaVersion, "Desktop UI"));
-            result.Add(new("Avalonia.Desktop", AvaloniaVersion, "Desktop UI"));
-            result.Add(new("Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI"));
-            result.Add(new("Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView"));
+            Add(result, "Avalonia", AvaloniaVersion, "Desktop UI");
+            Add(result, "Avalonia.Desktop", AvaloniaVersion, "Desktop UI");
+            Add(result, "Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI");
+            Add(result, "Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView");
         }
         if (generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal))
-            result.Add(new("Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database"));
+            Add(result, "Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database");
         if (generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal))
-            result.Add(new("Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database"));
+            Add(result, "Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database");
         if (generatedSource.Contains("XPScriptDbMySql", StringComparison.Ordinal))
-            result.Add(new("MySqlConnector", MySqlConnectorVersion, "MySQL database"));
+            Add(result, "MySqlConnector", MySqlConnectorVersion, "MySQL database");
         if (generatedSource.Contains("XPScriptDbSupabase", StringComparison.Ordinal))
-            result.Add(new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"));
+            Add(result, "Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database");
         if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal) || generatedSource.Contains("NotesMIMEEntity", StringComparison.Ordinal))
-            result.Add(new("MimeKit", MimeKitVersion, "Notes MIME support"));
+            Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
         return result;
     }
+
+    private static void Add(List<ApplicationPackageReference> result, string name, string baselineVersion, string reason) =>
+        result.Add(new(name, ResolveVersion(name, baselineVersion), reason));
 }
