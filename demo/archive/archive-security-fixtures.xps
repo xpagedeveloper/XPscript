@@ -16,6 +16,17 @@ Sub Main()
     If Not output.Contains("source/real.txt") Then Error 5, "Archive security fixture lost the real source file"
     If output.Contains("source/link.txt") Then Error 5, "Archive.AddFolder followed a symbolic link"
 
+    If FileExists("./out/archive-security-fixtures/extraction-symlink-ready.txt") Then
+        Dim extraction As New Archive("./out/archive-security-fixtures/extraction-symlink.zip")
+        Dim extractErr As Integer
+        On Error Resume Next
+        extraction.ExtractAll("./out/archive-security-fixtures/extract-root")
+        extractErr = Err
+        On Error GoTo 0
+        If extractErr = 0 Then Error 5, "Archive extraction followed a destination symbolic link"
+        If FileExists("./out/archive-security-fixtures/outside/escape.txt") Then Error 5, "Archive extraction escaped through a destination symbolic link"
+    End If
+
     Print "ARCHIVE_SECURITY_FIXTURES=OK"
 End Sub
 
