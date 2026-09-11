@@ -94,7 +94,8 @@ End Sub
         "internal static class XPScriptNativeCsv",
         "internal static class XPScriptNativeHttp",
         "internal sealed class XPScriptDbSupabase",
-        "internal sealed class XPScriptArchive"
+        "internal sealed class XPScriptArchive",
+        "internal sealed class XPScriptExtendedArchive"
     };
     foreach (var marker in forbidden)
         if (generated.Contains(marker, StringComparison.Ordinal))
@@ -135,7 +136,7 @@ void VerifyFeatureProfiles()
         "ARCHIVE",
         "Dim value As Archive",
         ["internal sealed class XPScriptArchive"],
-        ["internal static class XPScriptNativeHttp", "internal sealed class XPScriptDbSqlite"]);
+        ["internal sealed class XPScriptExtendedArchive", "internal static class XPScriptNativeHttp", "internal sealed class XPScriptDbSqlite"]);
     VerifyProfile(
         "NOTES",
         "Dim value As NotesDatabase",
@@ -184,8 +185,14 @@ void VerifyArchiveConstructorModes()
         throw new Exception("Archive(filename) did not emit ZIP-only constructor form.");
     if (!generatedFalse.Contains("new XPScriptArchive(\"test.zip\", false)", StringComparison.Ordinal))
         throw new Exception("Archive(filename, False) did not emit explicit ZIP-only constructor form.");
-    if (!generatedTrue.Contains("new XPScriptArchive(\"test.rar\", true)", StringComparison.Ordinal))
-        throw new Exception("Archive(filename, True) did not emit extended-support constructor form.");
+    if (!generatedTrue.Contains("new XPScriptExtendedArchive(\"test.rar\")", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit extended-support wrapper form.");
+    if (!generatedTrue.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
+        || !generatedTrue.Contains("SharpCompress.Readers.ReaderFactory", StringComparison.Ordinal))
+        throw new Exception("Archive(filename, True) did not emit the streaming extended reader fallback runtime.");
+    if (generatedDefault.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal)
+        || generatedFalse.Contains("internal sealed class XPScriptExtendedArchive", StringComparison.Ordinal))
+        throw new Exception("ZIP-only Archive unexpectedly emitted extended reader support.");
 
     var invalid = "Option Declare\nSub Main()\n    Dim enabled As Boolean\n    enabled = True\n    Dim a As New Archive(\"test.rar\", enabled)\nEnd Sub\n";
     try
