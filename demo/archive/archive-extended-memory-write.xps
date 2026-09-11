@@ -33,5 +33,21 @@ Sub Main()
     Dim sevenRebuilt As New Archive(sevenRebuiltBytes, True)
     If sevenRebuilt.ReadText("second.txt") <> "rebuilt 7z" Then Error 5, "Extended memory 7z rebuild failed"
 
+    Dim seedEmpty7z() As Byte
+    Dim emptySeven As New Archive(seedEmpty7z, True)
+    emptySeven.Create("7z")
+    emptySeven.AddText("only.txt", "remove me")
+    Dim populatedEmptyBytes As Variant
+    populatedEmptyBytes = emptySeven.ToBytes()
+
+    Dim emptySevenEdit As New Archive(populatedEmptyBytes, True)
+    If Not emptySevenEdit.Remove("only.txt") Then Error 5, "Extended memory 7z final-entry remove failed"
+    Dim emptySevenBytes As Variant
+    emptySevenBytes = emptySevenEdit.ToBytes()
+
+    Dim emptySevenRead As New Archive(emptySevenBytes, True)
+    If emptySevenRead.FileCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero files"
+    If emptySevenRead.FolderCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero folders"
+
     Print "ARCHIVE_EXTENDED_MEMORY_WRITE=OK"
 End Sub
