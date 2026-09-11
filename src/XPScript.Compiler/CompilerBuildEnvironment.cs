@@ -8,13 +8,6 @@ namespace XPScript.Compiler;
 
 internal static class CompilerBuildEnvironment
 {
-    private const string AvaloniaVersion = "12.0.3";
-    private const string AvaloniaWebViewVersion = "12.0.1";
-    private const string MicrosoftDataSqliteVersion = "10.0.11";
-    private const string MicrosoftDataSqlClientVersion = "7.0.2";
-    private const string MySqlConnectorVersion = "2.6.2";
-    private const string NpgsqlVersion = "10.0.3";
-
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
@@ -32,6 +25,12 @@ internal static class CompilerBuildEnvironment
         var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
         ConfigureGeneratedDependencies(startInfo, root);
+        var patchSource = ApplicationPackagePatchStore.ActivePackageSource;
+        if (patchSource is not null && startInfo.ArgumentList.Count > 0 &&
+            (startInfo.ArgumentList[0].Equals("build", StringComparison.OrdinalIgnoreCase) ||
+             startInfo.ArgumentList[0].Equals("restore", StringComparison.OrdinalIgnoreCase) ||
+             startInfo.ArgumentList[0].Equals("publish", StringComparison.OrdinalIgnoreCase)))
+            startInfo.ArgumentList.Add("-p:RestoreAdditionalProjectSources=" + patchSource);
         if (usePersistentRunCache) ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
         startInfo.Environment["TEMP"] = processTemp;
@@ -185,11 +184,11 @@ internal static class CompilerBuildEnvironment
         if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
         var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
-        if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{AvaloniaVersion}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{AvaloniaWebViewVersion}\" />\n";
-        if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />\n";
-        if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />\n";
-        if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{MySqlConnectorVersion}\" />\n";
-        if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{NpgsqlVersion}\" />\n";
+        if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\" />\n";
+        if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.Sqlite", ApplicationDependencyCatalog.MicrosoftDataSqliteVersion)}\" />\n";
+        if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.SqlClient", ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion)}\" />\n";
+        if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("MySqlConnector", ApplicationDependencyCatalog.MySqlConnectorVersion)}\" />\n";
+        if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Npgsql", ApplicationDependencyCatalog.NpgsqlVersion)}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
         var projectPath = Path.Combine(root, "Generated.csproj");

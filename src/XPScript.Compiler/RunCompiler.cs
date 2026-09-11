@@ -246,8 +246,9 @@ internal static class RunCompiler
             items.AppendLine("  </ItemGroup>");
         }
 
+        var mimeKitVersion = ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion);
         var packageItems = usesMimeKit
-            ? "  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"4.17.0\" />\n  </ItemGroup>\n"
+            ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n  </ItemGroup>\n"
             : string.Empty;
 
         return $"""

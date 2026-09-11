@@ -26,6 +26,7 @@ try
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
+        "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),
         "new" => XpsScaffolder.Run(args[1..]),
         "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
