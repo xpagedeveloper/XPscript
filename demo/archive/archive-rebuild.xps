@@ -1,0 +1,24 @@
+Option Declare
+
+Sub Main()
+    Dim original As New Archive("archive-rebuild-test.tar", True)
+    original.Create("tar")
+    original.AddText("first.txt", "one")
+    original.Save()
+
+    Dim reopened As New Archive("archive-rebuild-test.tar", True)
+    reopened.Open()
+    If reopened.IsReadOnly Then Error 5, "Existing TAR should be rebuild-writable"
+
+    reopened.AddText("second.txt", "two")
+    If reopened.ReadText("second.txt") <> "two" Then Error 5, "TAR rebuild add failed"
+
+    If Not reopened.Rename("first.txt", "renamed.txt") Then Error 5, "TAR rebuild rename failed"
+    If reopened.ReadText("renamed.txt") <> "one" Then Error 5, "TAR rebuild rename content failed"
+
+    If Not reopened.Remove("second.txt") Then Error 5, "TAR rebuild remove failed"
+    If reopened.Contains("second.txt") Then Error 5, "TAR rebuild remove did not persist"
+
+    Kill "archive-rebuild-test.tar"
+    Print "ARCHIVE_REBUILD_OK"
+End Sub
