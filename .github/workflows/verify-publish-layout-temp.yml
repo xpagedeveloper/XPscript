@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CLI="src/XPScript.Compiler/bin/Release/net10.0/XPScript.Compiler.dll"
+          CLI="src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"
           test -f "$CLI"
 
           compile_case() {
@@ -45,24 +45,17 @@ jobs:
           compile_case multi_no_runtime --single-file=false --runtime=false
           compile_case multi_runtime --single-file=false --runtime=true
 
-          # Default: single file, no bundled runtime. The native apphost is the only generated app file.
           test "$(find /tmp/xps-layout-test/default -maxdepth 1 -type f | wc -l)" -eq 1
-
-          # Self-contained single file should also remain one generated app file.
           test "$(find /tmp/xps-layout-test/single_runtime -maxdepth 1 -type f | wc -l)" -eq 1
 
-          # Multi-file framework-dependent output must carry named managed sidecars.
           test -f /tmp/xps-layout-test/multi_no_runtime/multi_no_runtime.dll
           test -f /tmp/xps-layout-test/multi_no_runtime/multi_no_runtime.deps.json
           test -f /tmp/xps-layout-test/multi_no_runtime/multi_no_runtime.runtimeconfig.json
 
-          # Multi-file self-contained output must carry named app assembly plus a substantial runtime closure.
           test -f /tmp/xps-layout-test/multi_runtime/multi_runtime.dll
           test "$(find /tmp/xps-layout-test/multi_runtime -maxdepth 1 -type f | wc -l)" -gt 20
 
-          # Framework-dependent apphost contains a runtimeconfig requesting .NET 10 in the multi-file case.
           grep -q 'net10.0' /tmp/xps-layout-test/multi_no_runtime/multi_no_runtime.runtimeconfig.json || grep -q '10.0' /tmp/xps-layout-test/multi_no_runtime/multi_no_runtime.runtimeconfig.json
 
-          # Old publish flag and old platform-overloaded runtime syntax must be rejected.
           if dotnet "$CLI" compile /tmp/xps-layout-test/hello.xps -o /tmp/xps-layout-test/oldflag --framework-dependent; then exit 1; fi
           if dotnet "$CLI" compile /tmp/xps-layout-test/hello.xps -o /tmp/xps-layout-test/oldruntime --runtime linux-x64; then exit 1; fi
