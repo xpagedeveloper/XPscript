@@ -1,4 +1,4 @@
-' Compile-only surface probe for the HCL Notes/Domino C API wrapper.
+' Compile-only surface probe for the Notes/Domino C API wrapper.
 ' Main does not create NotesSession, so CI does not require an installed Notes runtime.
 
 Option Declare
