@@ -63,7 +63,7 @@ internal static class NotesMimeStreamAbiPostProcessor
     internal void WriteMimeStream(nint note, string itemName, byte[] data)
     {
         EnsureInitialized();
-        // HCL nsfmime.h: MIME_PART_BODY = 2, MIME_PART_HAS_HEADERS = 2.
+        // nsfmime.h: MIME_PART_BODY = 2, MIME_PART_HAS_HEADERS = 2.
         // Closing with bUpdate=TRUE flushes the context and creates TYPE_MIME_PART.
         const ushort mimePartBody = 2;
         const uint mimePartHasHeaders = 2u;
@@ -133,7 +133,7 @@ internal static class NotesMimeStreamAbiPostProcessor
     }
 """;
 
-        // Mirror HCL JNX JNAMimeWriter's BODY-only branch exactly at the native
+        // Mirror JNX JNAMimeWriter's BODY-only branch exactly at the native
         // operation level: itemize on an unsaved temporary note, remove old target
         // Body items, then copy every generated Body and $file item by BLOCKID.
         const string jnxBodyWriter = """
