@@ -1,0 +1,97 @@
+' NetworkTools native .NET 10 compile-surface regression.
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim pingResult As NetworkPingResult
+    Dim dnsResult As NetworkDnsResult
+    Dim portResult As NetworkPortResult
+    Dim udpResult As NetworkUdpResult
+    Dim httpResult As NetworkHttpResult
+    Dim tlsResult As NetworkTlsResult
+    Dim hop As NetworkTraceHop
+    Dim iface As NetworkInterfaceInfo
+    Dim endpoint As NetworkEndpointInfo
+    Dim values As Variant
+
+    Set pingResult = net.Ping("127.0.0.1")
+    Print pingResult.Success
+    Print pingResult.Host
+    Print pingResult.Address
+    Print pingResult.Status
+    Print pingResult.RoundTripTime
+    Print pingResult.Ttl
+    Print pingResult.Error
+
+    values = net.TraceRoute("127.0.0.1", 4, 500)
+    Forall hop In values
+        Print hop.Hop & ":" & hop.Address & ":" & hop.Status & ":" & hop.RoundTripTime & ":" & hop.Error
+    End Forall
+
+    values = net.DnsLookup("localhost")
+    Forall dnsResult In values
+        Print dnsResult.Query & ":" & dnsResult.Type & ":" & dnsResult.Value & ":" & dnsResult.Error
+    End Forall
+
+    Set dnsResult = net.ReverseDns("127.0.0.1")
+    Print dnsResult.Value
+
+    Set portResult = net.CheckTcpPort("127.0.0.1", 9, 100)
+    Print portResult.Host & ":" & portResult.Address & ":" & portResult.Port & ":" & portResult.Open & ":" & portResult.RoundTripTime & ":" & portResult.Error
+
+    Set udpResult = net.SendUdp("127.0.0.1", 9, "xpscript")
+    Print udpResult.Host & ":" & udpResult.Port & ":" & udpResult.BytesSent & ":" & udpResult.Success & ":" & udpResult.Error
+
+    Set httpResult = net.CheckHttp("https://example.com", 1000)
+    Print httpResult.Url & ":" & httpResult.FinalUrl & ":" & httpResult.StatusCode & ":" & httpResult.ReasonPhrase & ":" & httpResult.Success & ":" & httpResult.RoundTripTime & ":" & httpResult.ContentType & ":" & httpResult.Error
+
+    Set tlsResult = net.CheckTls("example.com", 443, 1000)
+    Print tlsResult.Host & ":" & tlsResult.Port & ":" & tlsResult.Success & ":" & tlsResult.Protocol & ":" & tlsResult.CipherSuite
+    Print tlsResult.CertificateValid & ":" & tlsResult.CertificateSubject & ":" & tlsResult.CertificateIssuer & ":" & tlsResult.CertificateThumbprint
+    Print tlsResult.CertificateNotBefore & ":" & tlsResult.CertificateNotAfter & ":" & tlsResult.RoundTripTime & ":" & tlsResult.CertificateErrors & ":" & tlsResult.Error
+
+    values = net.GetLocalAddresses()
+    Forall address In values
+        Print address
+    End Forall
+
+    values = net.GetDnsServers()
+    Forall address In values
+        Print address
+    End Forall
+
+    values = net.GetDefaultGateways()
+    Forall address In values
+        Print address
+    End Forall
+
+    values = net.GetInterfaces()
+    Forall iface In values
+        Print iface.Name & ":" & iface.Description & ":" & iface.Id & ":" & iface.Type & ":" & iface.Status & ":" & iface.Speed & ":" & iface.MacAddress
+        Print iface.SupportsIPv4 & ":" & iface.SupportsIPv6
+        Forall address In iface.Addresses
+            Print address
+        End Forall
+        Forall address In iface.Gateways
+            Print address
+        End Forall
+        Forall address In iface.DnsServers
+            Print address
+        End Forall
+    End Forall
+
+    values = net.GetTcpConnections()
+    Forall endpoint In values
+        Print endpoint.Protocol & ":" & endpoint.LocalAddress & ":" & endpoint.LocalPort & ":" & endpoint.RemoteAddress & ":" & endpoint.RemotePort & ":" & endpoint.State
+    End Forall
+
+    values = net.GetTcpListeners()
+    Forall endpoint In values
+        Print endpoint.LocalAddress & ":" & endpoint.LocalPort
+    End Forall
+
+    values = net.GetUdpListeners()
+    Forall endpoint In values
+        Print endpoint.LocalAddress & ":" & endpoint.LocalPort
+    End Forall
+End Sub
