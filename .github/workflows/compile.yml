@@ -35,17 +35,23 @@ jobs:
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --runtime=false
+      - name: Verify generated license notice
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ./out/Third-party-license.txt)) { throw 'Missing Third-party-license.txt' }
+          $notice = Get-Content ./out/Third-party-license.txt -Raw
+          if ($notice -notmatch 'Apache License') { throw 'Generated notice does not contain the XPScript Apache license.' }
       - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --runtime=false
       - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom.exe --runtime=false
       - name: Run native XML DOM regression
         run: ./out/native-xml-dom.exe
       - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --runtime=false
       - name: Compile web application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext.exe
       - name: Compile Notes MIME surface
@@ -68,28 +74,28 @@ jobs:
       - name: Verify debugger core
         run: dotnet run --project ./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release
       - name: Compile ArraySort regression application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/array-sort-regression.xps -o ./out/array-sort-regression --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/array-sort-regression.xps -o ./out/array-sort-regression --runtime=false
       - name: Run ArraySort regression application
         run: ./out/array-sort-regression
       - name: Compile CSV regression application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-csv-regression.xps -o ./out/native-csv-regression --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-csv-regression.xps -o ./out/native-csv-regression --runtime=false
       - name: Run CSV regression application
         run: ./out/native-csv-regression
       - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --runtime=false
       - name: Run native XML DOM regression
         run: ./out/native-xml-dom
       - name: Verify UIForm asset packaging
         shell: bash
         run: |
           rm -rf ./samples/assets ./out/assets
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-create --framework-dependent
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-create --runtime=false
           test -d ./samples/assets
           printf 'embedded-asset-payload' > ./samples/assets/embed-test.txt
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-external --framework-dependent
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-external --runtime=false
           test "$(cat ./out/assets/embed-test.txt)" = "embedded-asset-payload"
           rm -rf ./out/assets
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-embedded --framework-dependent --embed-assets
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-embedded --runtime=false --embed-assets
           rm -rf ./out/assets
           ./out/uiform-assets-embedded | grep -q UIFORM_ASSETS_OK
           test "$(cat ./out/assets/embed-test.txt)" = "embedded-asset-payload"
@@ -106,13 +112,18 @@ jobs:
       - name: Verify OpenAPI unified CLI import
         run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
       - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
+      - name: Verify generated license notice
+        shell: bash
+        run: |
+          test -f ./out/Third-party-license.txt
+          grep -q 'Apache License' ./out/Third-party-license.txt
       - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
       - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
       - name: Compile web application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
       - name: Compile Notes MIME surface
@@ -133,17 +144,21 @@ jobs:
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
+      - name: Verify generated license notice
+        run: |
+          test -f ./out/Third-party-license.txt
+          grep -q 'Apache License' ./out/Third-party-license.txt
       - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
       - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --runtime=false
       - name: Run native XML DOM regression
         run: ./out/native-xml-dom
       - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --framework-dependent
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
       - name: Compile web application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --framework-dependent --output ./out/web
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
       - name: Compile Notes rich-text surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
       - name: Compile Notes MIME surface
