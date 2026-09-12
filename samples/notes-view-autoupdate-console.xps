@@ -1,4 +1,4 @@
-' HCL Notes/Domino NotesView AutoUpdate console sample.
+' Notes/Domino NotesView AutoUpdate console sample.
 ' Demonstrates two independent NotesView objects against the same view.
 
 Option Declare

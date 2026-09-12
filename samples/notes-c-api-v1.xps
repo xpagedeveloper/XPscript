@@ -1,4 +1,4 @@
-' HCL Notes/Domino C API wrapper V1 manual test.
+' Notes/Domino C API wrapper V1 manual test.
 ' Requires a local Notes or Domino installation and valid Notes configuration.
 ' Update the values below for your environment before running.
 

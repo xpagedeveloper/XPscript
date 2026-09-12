@@ -10,9 +10,9 @@ internal static class BrowserWasmPublishEnvironment
 #pragma warning restore CA2255
     {
         // XPscript-generated browser code relies on dynamic dispatch. The WebAssembly
-        // trimmer cannot safely analyze Microsoft.CSharp.RuntimeBinder call sites and
-        // can remove members required at runtime. MSBuild imports environment variables
-        // as properties, so child `dotnet publish` processes inherit this setting.
+        // trimmer cannot safely analyze dynamic binder call sites and can remove
+        // members required at runtime. MSBuild imports environment variables as
+        // properties, so child `dotnet publish` processes inherit this setting.
         Environment.SetEnvironmentVariable("PublishTrimmed", "false");
     }
 }

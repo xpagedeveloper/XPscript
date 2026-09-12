@@ -1,4 +1,4 @@
-' Minimal HCL Notes console example.
+' Minimal Notes console example.
 ' Change NOTES_RUNTIME if Notes is installed elsewhere.
 
 Option Declare
