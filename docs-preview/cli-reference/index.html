@@ -85,7 +85,96 @@
 
 
 
-<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td>compile</td><td><code>xpscriptc source.xps -o output [options]</code></td><td><code>source.xps</code>: source file; <code>output</code>: generated application path.</td><td>Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>run</code></td><td><code>xpscriptc run source.xps [arguments...]</code></td><td><code>source.xps</code>: program to compile/run; following values are exposed through <code>Application.Args</code>.</td><td>Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>--info</code></td><td><code>xpscriptc run source.xps --info</code></td><td>none</td><td>Shows run compilation progress, elapsed compile time, program start, and exit code on stderr. Without <code>--info</code>, <code>run</code> emits only program output and errors.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>-o</code></td><td><code>-o path</code></td><td><code>path</code>: output executable/application path.</td><td>Selects the compiler output path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>--runtime</code></td><td><code>--runtime RID</code></td><td><code>RID</code>: one of the supported runtime identifiers such as <code>win-x64</code>, <code>win-arm64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>osx-x64</code>, <code>osx-arm64</code>.</td><td>Compiles/publishes for an explicit target operating system and architecture.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/platform-shell.xps">platform-shell.xps</a></td></tr><tr><td><code>--framework-dependent</code></td><td><code>--framework-dependent</code></td><td>none</td><td>Produces framework-dependent output instead of a self-contained application.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>--result-format text</code></td><td><code>--result-format text</code></td><td>none</td><td>Emits human-readable compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format json</code></td><td><code>--result-format json</code></td><td>none</td><td>Emits structured JSON compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format xml</code></td><td><code>--result-format xml</code></td><td>none</td><td>Emits structured XML compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--</code></td><td><code>-- scriptArg1 ...</code></td><td>all following values are script arguments.</td><td>Ends compiler option parsing so option-looking values can be passed to the program.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td>compile</td><td><code>xpscriptc source.xps -o output [options]</code></td><td><code>source.xps</code>: source file; <code>output</code>: generated application path.</td><td>Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>run</code></td><td><code>xpscriptc run source.xps [arguments...]</code></td><td><code>source.xps</code>: program to compile/run; following values are exposed through <code>Application.Args</code>.</td><td>Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>--info</code></td><td><code>xpscriptc run source.xps --info</code></td><td>none</td><td>Shows run compilation progress and automatically enables application dependency security warning mode unless <code>--security=off</code> is explicit.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>--debug</code></td><td><code>xpscript run source.xps --debug</code> or <code>xpscript compile source.xps --debug</code></td><td>none</td><td>Enables debug behavior and application dependency security warning mode unless explicitly overridden.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr><tr><td><code>--security</code></td><td>`—security=off</td><td>warn</td><td>strict`</td><td>security mode.</td></tr><tr><td><code>-o</code></td><td><code>-o path</code></td><td><code>path</code>: output executable/application path.</td><td>Selects the compiler output path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/console/hello.xps">hello.xps</a></td></tr><tr><td><code>--platform</code> / <code>--rid</code></td><td><code>--platform RID</code> or <code>--rid RID</code></td><td><code>RID</code>: one of the supported runtime identifiers such as <code>win-x64</code>, <code>win-arm64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>osx-x64</code>, <code>osx-arm64</code>.</td><td>Compiles/publishes for an explicit target operating system and architecture.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/platform-shell.xps">platform-shell.xps</a></td></tr><tr><td><code>--runtime</code></td><td>`—runtime=true</td><td>false`</td><td>boolean</td><td>Includes (<code>true</code>) or excludes (<code>false</code>, default) the .NET 10 runtime from the published application.</td></tr><tr><td><code>--single-file</code></td><td>`—single-file=true</td><td>false`</td><td>boolean</td><td>Bundles application-managed files into the executable when <code>true</code> (default); emits them as separate files when <code>false</code>.</td></tr><tr><td><code>--result-format text</code></td><td><code>--result-format text</code></td><td>none</td><td>Emits human-readable compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format json</code></td><td><code>--result-format json</code></td><td>none</td><td>Emits structured JSON compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--result-format xml</code></td><td><code>--result-format xml</code></td><td>none</td><td>Emits structured XML compiler results and diagnostics.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/compiler-errors.xps">compiler-errors.xps</a></td></tr><tr><td><code>--</code></td><td><code>-- scriptArg1 ...</code></td><td>all following values are script arguments.</td><td>Ends compiler option parsing so option-looking values can be passed to the program.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-runtime.xps">application-runtime.xps</a></td></tr></tbody></table>
+<h2 id="dependency-security-and-package-patch-commands">Dependency security and package patch commands</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th></tr></thead><tbody><tr><td><code>dependencies</code></td><td><code>xpscript dependencies SOURCE [--platform RID] [--json]</code></td><td>XPScript source and optional target RID.</td><td>Reports the direct and transitive NuGet graph required by that application.</td></tr><tr><td><code>security</code></td><td><code>xpscript security SOURCE [--platform RID] [--json]</code></td><td>XPScript source and optional target RID.</td><td>Checks the application’s resolved NuGet graph for known vulnerabilities. Exit code <code>2</code> means vulnerabilities were found; <code>3</code> means vulnerability data was unavailable.</td></tr><tr><td><code>patch all --check</code></td><td><code>xpscript patch all --check</code></td><td>none</td><td>Shows compatible same-major/minor stable patch releases without changing patch state.</td></tr><tr><td><code>patch all</code></td><td><code>xpscript patch all</code></td><td>none</td><td>Downloads and activates eligible compatible patch releases for the current XPScript release line.</td></tr><tr><td><code>patch PACKAGE</code></td><td><code>xpscript patch PACKAGE [--check]</code></td><td>NuGet package ID.</td><td>Checks or applies a compatible patch for one package. A member of an atomic package group can cause the whole group to be evaluated together.</td></tr><tr><td><code>--security-only</code></td><td><code>xpscript patch all --security-only</code></td><td>none</td><td>Applies only candidates classified as security patches; maintenance patches and unverifiable security states are skipped.</td></tr><tr><td><code>patch status</code></td><td><code>xpscript patch status</code></td><td>none</td><td>Shows patch state for the current XPScript version.</td></tr><tr><td><code>patch list</code></td><td><code>xpscript patch list</code></td><td>none</td><td>Lists the current XPScript version’s selected package patches.</td></tr><tr><td><code>patch remove all</code></td><td><code>xpscript patch remove all</code></td><td>none</td><td>Removes the current XPScript version’s selected patch state.</td></tr></tbody></table>
+<p>See <a href="../dependency-security-and-patching/">Dependency security and package patching</a> for the compatibility policy, security classification and version-scoped cache behavior.</p>
 <h2 id="xpscript-service-host-installation"><code>xpscript service</code> host installation</h2>
 
 
@@ -423,7 +512,7 @@
 
 
 
-<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>compile</code></td><td><code>xpscript compile main.xps --target webiis [options]</code></td><td><code>main.xps</code>: mandatory WebIIS build entry.</td><td>Builds an IIS-deployable XPScript application package.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td><code>--target webiis</code></td><td><code>--target webiis</code></td><td>target value <code>webiis</code>.</td><td>Selects the direct IIS deployment package target.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>--framework-dependent</code></td><td><code>--framework-dependent</code></td><td>none</td><td>Builds a WebIIS package that requires the matching .NET runtime/hosting bundle on the server.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>-o</code></td><td><code>-o PATH</code></td><td><code>PATH</code>: deployment output directory outside the source application directory.</td><td>Selects the WebIIS package output directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr></tbody></table>
+<table><thead><tr><th>Command/option</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>compile</code></td><td><code>xpscript compile main.xps --target webiis [options]</code></td><td><code>main.xps</code>: mandatory WebIIS build entry.</td><td>Builds an IIS-deployable XPScript application package.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td><code>--target webiis</code></td><td><code>--target webiis</code></td><td>target value <code>webiis</code>.</td><td>Selects the direct IIS deployment package target.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>--runtime=false</code></td><td><code>--runtime=false</code></td><td>none</td><td>Builds a WebIIS package that requires the matching .NET runtime/hosting bundle on the server.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr><tr><td>WebIIS <code>-o</code></td><td><code>-o PATH</code></td><td><code>PATH</code>: deployment output directory outside the source application directory.</td><td>Selects the WebIIS package output directory.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/demo/webiis/main.xps">main.xps</a></td></tr></tbody></table>
 <p>For the generated IIS package layout, permissions, ASP.NET Core Module V2 requirements, and deployment workflow, see <a href="../webiis/">WebIIS deployment target</a>.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {

@@ -14,6 +14,8 @@
 <li><code>native-interop-reference.md</code>, complete native declaration selectors plus managed/native reference directives.</li>
 <li><code>cli-reference.md</code>, complete compiler, Kestrel, FastCGI and WebIIS command-line reference.</li>
 <li><code>api-reference.md</code>, complete searchable runtime-object API reference.</li>
+<li><code>notes-c-api.md</code>, authoritative native Notes/Domino object-model reference.</li>
+<li><code>notes-mime-entity.md</code>, authoritative Notes MIME traversal/mutation reference.</li>
 <li><code>commands.md</code>, compact compatibility/quick command index.</li>
 <li><code>command-examples.md</code>, small runnable examples for common core language commands.</li>
 <li><code>date-time.md</code>, Date/date-time command details.</li>
@@ -27,6 +29,8 @@
 <p>Do not create a new page for every small feature. Extend the appropriate reference or topical page unless the subject is large enough to need its own navigable page. File I/O, native interop and the compiler/host CLI are intentionally separated because each surface is large and independently searchable.</p>
 <h2 id="source-of-truth">Source of truth</h2>
 <p>Documentation must describe implemented behavior. Verify syntax and parameters against compiler/runtime source and executable tests before documenting them. Do not invent LotusScript-compatible functions simply because a similarly named function exists elsewhere.</p>
+<p>Every feature or dependency change that uses external code, documentation, generated material or NuGet packages must include a license review before merge. The review must cover direct and transitive packages, package license and notice files, attribution, redistribution obligations, and the published output. Update <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> in the same change. The development checklist is defined in <a href="https://github.com/xpagedeveloper/XPscript/blob/main/todo/development-guidelines.md">development-guidelines.md</a>.</p>
+<p>The selected license must permit commercial use and distribution under XPscript’s intended distribution model. Non-commercial, evaluation-only, field-of-use restricted or otherwise incompatible licenses are not acceptable dependencies. Unclear commercial-use rights block adoption until they are resolved and documented.</p>
 <p>Implementation checklists under <code>todo/</code> may be used to discover implemented areas, but compiler/runtime source and executable regressions remain authoritative for syntax and behavior.</p>
 <h2 id="required-commandapi-entry-format">Required command/API entry format</h2>
 <p>Every user-callable command, built-in function, runtime method/property, route rule or compiler command that belongs in a reference must have these five fields:</p>
@@ -43,7 +47,7 @@
 <li><code>file-io-reference.md</code> owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands.</li>
 <li><code>native-interop-reference.md</code> owns <code>Declare ... Lib</code>, every OS/RID-specific <code>Lib</code>/<code>Alias</code> selector, <code>Reference</code> and <code>ReferenceNative</code>.</li>
 <li><code>cli-reference.md</code> owns compiler, Kestrel, FastCGI and WebIIS command-line commands/options.</li>
-<li><code>api-reference.md</code> owns runtime objects such as HTTP, JSON, databases, XPAi/AITool, UIForm/UIListView and web state.</li>
+<li><code>api-reference.md</code> owns runtime objects such as HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web state.</li>
 </ul>
 <p>Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.</p>
 <h2 id="when-a-language-command-changes">When a language command changes</h2>
@@ -57,7 +61,11 @@
 <li>XPAi/AITool/session memory: <code>ai.md</code>, <code>ai-tools-sessions.md</code> and <code>api-reference.md</code>.</li>
 <li>UIForm/UIListView: <code>uiform.md</code>, <code>uiform-fields.md</code> and <code>api-reference.md</code>.</li>
 <li>Web/REST/Session/Application/RequestScope: <code>web.md</code>, <code>rest-api.md</code> and <code>api-reference.md</code>.</li>
+<li>Native Notes/Domino: <code>notes-c-api.md</code> plus <code>api-reference.md</code>; MIME changes also require <code>notes-mime-entity.md</code>. The VS Code extension synchronizes native Notes IntelliSense from <code>notes-c-api.md</code>, so each public Notes property or method must occupy its own machine-readable table row. Do not group several member names into one cell.</li>
 </ul>
+<h2 id="xpscript-programming-skill-synchronization">XPscript programming skill synchronization</h2>
+<p>When a change affects how an LLM should write XPscript — including public runtime classes, constructors, member signatures, lifecycle rules, supported overloads, native Notes/Domino behavior, filesystem APIs, database/AI/XML APIs, iteration semantics, or recommended idioms — review <code>skills/xpscript-programming/SKILL.md</code> in the same change. Update it when the new behavior changes valid generated XPscript. The skill is operational guidance, not the exhaustive reference; it must point to the authoritative documentation and must not claim behavior that is only planned or partially implemented.</p>
+<p>A TODO/checklist update is not a substitute for reference documentation or skill synchronization. The separate <code>XPScript-visual-code-plugin</code> repository also consumes the canonical documentation; its scheduled sync/release workflow is expected to publish a new patch release when generated IntelliSense metadata changes.</p>
 <h2 id="when-a-web-feature-changes">When a web feature changes</h2>
 <p>Update <code>web.md</code> for route rules, Request/Response/Session/Application members, HTTP methods, precompile/cache semantics, CGI variables, security behavior or transport-independent behavior. Update <code>rest-api.md</code> for REST binding/validation/response helpers. Update <code>getting-started.md</code> when host configuration changes and <code>cli-reference.md</code> when a host command/option changes.</p>
 <h2 id="when-ui-changes">When UI changes</h2>
@@ -85,7 +93,7 @@
 <h2 id="links-and-navigation">Links and navigation</h2>
 <p><code>index.md</code> is the documentation entry point. The demo catalog and all primary references must be visible near the top of that page. Every primary topical page must be reachable from <code>index.md</code>.</p>
 <h2 id="review-checklist">Review checklist</h2>
-<p>Before merging a documentation change, verify that names and casing match source, examples compile where CI coverage exists, parameters match current CLI/runtime code, reference/example links resolve, obsolete behavior has been removed, and the documentation does not claim unimplemented compatibility.</p>  </article> </main> </div> <script>
+<p>Before merging a documentation change, verify that names and casing match source, examples compile where CI coverage exists, parameters match current CLI/runtime code, reference/example links resolve, obsolete behavior has been removed, and the documentation does not claim unimplemented compatibility. For user-visible runtime changes, also verify that the relevant topical page, <code>api-reference.md</code>, executable regression/sample, and <code>skills/xpscript-programming/SKILL.md</code> have all been reviewed.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);

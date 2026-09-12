@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Archive | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="archive">Archive</h1>
+<p><code>Archive</code> provides ZIP support by default and optional extended archive support when the constructor’s second argument is the literal <code>True</code>.</p>
+<pre><code class="language-xpscript">Dim zip As New Archive("backup.zip")
+Dim extended As New Archive("backup.7z", True)
+</code></pre>
+<p>The <code>True</code>/<code>False</code> argument must be a compile-time literal so XPScript can include only the dependencies required by the application.</p>
+<h2 id="iterating-entries">Iterating entries</h2>
+<p>Existing collection APIs remain available:</p>
+<pre><code class="language-xpscript">ForAll entry In archive.Entries
+    Print entry.FullName
+End ForAll
+
+ForAll entry In archive.Files()
+    Print entry.FullName
+End ForAll
+
+ForAll entry In archive.Folders()
+    Print entry.FullName
+End ForAll
+</code></pre>
+<p>An iterator-style API is also available:</p>
+<pre><code class="language-xpscript">Dim entry As ArchiveEntry
+Set entry = archive.GetFirstEntry()
+
+While entry Is Not Nothing
+    If entry.IsFile Then
+        Print "File: " &#x26; entry.FullName
+    ElseIf entry.IsFolder Then
+        Print "Folder: " &#x26; entry.FullName
+    End If
+
+    Set entry = archive.GetNextEntry(entry)
+Wend
+</code></pre>
+<p><code>IsFile</code> and <code>IsFolder</code> are mutually exclusive. Every <code>ArchiveEntry</code> is one or the other. <code>IsDirectory</code> is not part of the public XPScript API.</p>
+<h2 id="archiveentry-properties">ArchiveEntry properties</h2>
+<p>The public entry surface includes:</p>
+<ul>
+<li><code>Name</code></li>
+<li><code>FullName</code></li>
+<li><code>Extension</code></li>
+<li><code>Size</code></li>
+<li><code>CompressedSize</code></li>
+<li><code>CompressionRatio</code></li>
+<li><code>Created</code></li>
+<li><code>Modified</code></li>
+<li><code>CRC</code></li>
+<li><code>IsFile</code></li>
+<li><code>IsFolder</code></li>
+<li><code>IsEncrypted</code></li>
+</ul>
+<h2 id="format-capability-matrix">Format capability matrix</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Format</th><th>Default Archive</th><th><code>Archive(..., True)</code> read</th><th><code>Archive(..., True)</code> write</th><th>Notes</th></tr></thead><tbody><tr><td>ZIP</td><td>Read/write</td><td>Read/write</td><td>Read/write</td><td>Password-protected ZIP read requires <code>True</code>; encrypted ZIP writing is not supported.</td></tr><tr><td>7z</td><td>No</td><td>Yes</td><td>Yes</td><td>Existing archives can be rebuilt when modified.</td></tr><tr><td>TAR</td><td>No</td><td>Yes</td><td>Yes</td><td>Existing archives can be rebuilt when modified.</td></tr><tr><td>GZip</td><td>No</td><td>Yes</td><td>Yes</td><td>Single-entry format.</td></tr><tr><td>TAR.GZip / TGZ</td><td>No</td><td>Yes</td><td>Yes</td><td>Multi-entry compressed TAR.</td></tr><tr><td>TAR.BZip2</td><td>No</td><td>Yes</td><td>Yes</td><td>Multi-entry compressed TAR.</td></tr><tr><td>TAR.LZip</td><td>No</td><td>Yes</td><td>Yes</td><td>Multi-entry compressed TAR.</td></tr><tr><td>RAR</td><td>No</td><td>Yes</td><td>No</td><td>Read/extract only.</td></tr><tr><td>BZip2</td><td>No</td><td>Yes</td><td>No</td><td>Raw single-stream write is not exposed.</td></tr><tr><td>LZip</td><td>No</td><td>Yes</td><td>No</td><td>Raw single-stream write is not exposed.</td></tr><tr><td>XZ</td><td>No</td><td>Yes</td><td>No</td><td>Read-only.</td></tr><tr><td>Zstandard</td><td>No</td><td>Yes</td><td>No</td><td>Read-only.</td></tr><tr><td>ARC / ARJ / ACE / LZW and other supported legacy readers</td><td>No</td><td>Where supported</td><td>No</td><td>Read-only.</td></tr></tbody></table>
+<p>When the compiler can determine that a requested operation is unsupported, it reports that at compile time instead of deferring the failure to runtime.</p>
+<h2 id="passwords">Passwords</h2>
+<p><code>Password</code> is currently a read/decryption capability.</p>
+<pre><code class="language-xpscript">Dim archive As New Archive("secure.zip", True)
+archive.Password = "secret"
+archive.Open()
+</code></pre>
+<p>Creating or modifying a password-protected ZIP is not supported. XPScript reports this at compile time when it can determine the invalid write sequence.</p>
+<h2 id="in-memory-archives">In-memory archives</h2>
+<p>ZIP can be created entirely in memory without extended support:</p>
+<pre><code class="language-xpscript">Dim archive As New Archive()
+archive.Create("zip")
+archive.AddText("manifest.txt", "hello")
+
+Dim data As Variant
+data = archive.ToBytes()
+</code></pre>
+<p>Extended in-memory archives are opened with <code>True</code>. TAR, 7z and supported compressed-TAR formats can also be created and rebuilt in memory.</p>
+<pre><code class="language-xpscript">Dim seed() As Byte
+Dim archive As New Archive(seed, True)
+archive.Create("7z")
+archive.AddText("manifest.txt", "hello")
+
+Dim data As Variant
+data = archive.ToBytes()
+</code></pre>
+<h2 id="platform-status">Platform status</h2>
+<p>Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions currently run in the Linux Archive workflow. Android, iOS and browser/WASM require separate runtime/AOT/trimming validation before they should be considered fully supported.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

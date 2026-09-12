@@ -96,7 +96,7 @@ foreach ($name in $requiredInterop) {
 
 $cli = Get-Content -LiteralPath (Join-Path $root 'docs/cli-reference.md') -Raw
 $requiredCli = @(
-    'xpscriptc', 'run', '-o', '--runtime', '--framework-dependent', '--result-format',
+    'xpscriptc', 'run', '-o', '--runtime', '--single-file', '--platform', '--rid', '--result-format',
     'xpscript web', '--root', '--default-document', '--address', '--bind', '--port', '--host', '--allowed-host',
     '--https-cert', '--https-cert-password-env', '--protocols', '--health', '--metrics', '--sessions',
     '--session-cookie', '--session-timeout-seconds', '--session-same-site', '--session-secure', '--operational-external',

@@ -173,7 +173,74 @@
 
 
 
-<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Title</code></td><td><code>Application.Title = value</code></td><td><code>value</code>: application/window title.</td><td>Gets or sets the application title metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Icon</code></td><td><code>Application.Icon = path</code></td><td><code>path</code>: icon path/value. A literal <code>.ico</code> path is build-validated when the compiler can resolve it.</td><td>Gets or sets application icon metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Width</code></td><td><code>Application.Width = value</code></td><td><code>value</code>: preferred application/window width.</td><td>Gets or sets width metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Height</code></td><td><code>Application.Height = value</code></td><td><code>value</code>: preferred application/window height.</td><td>Gets or sets height metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr></tbody></table>
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Id</code></td><td><code>Application.Id = value</code></td><td><code>value</code>: stable application identifier.</td><td>Gets or sets the application identity. <code>Application.Secrets</code> requires it before credential-store access and binds to the first value used.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Title</code></td><td><code>Application.Title = value</code></td><td><code>value</code>: application/window title.</td><td>Gets or sets the application title metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Icon</code></td><td><code>Application.Icon = path</code></td><td><code>path</code>: icon path/value.</td><td>Compatibility alias for <code>Application.Executable.Icon</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Width</code></td><td><code>Application.Width = value</code></td><td><code>value</code>: preferred application/window width.</td><td>Gets or sets width metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr><tr><td><code>Application.Height</code></td><td><code>Application.Height = value</code></td><td><code>value</code>: preferred application/window height.</td><td>Gets or sets height metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-object.xps">application-object.xps</a></td></tr></tbody></table>
+<h2 id="executable-metadata">Executable metadata</h2>
+<p><code>Application.Executable</code> exposes metadata that the compiler writes into the generated application. Assign string literals when you want the values embedded in the build output. The same values are also readable through the XPScript application state during execution.</p>
+<p><code>Application.Icon</code> and <code>Application.Executable.Icon</code> address the same icon value. <code>Application.Icon</code> remains available as a compatibility alias.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Executable.Icon</code></td><td><code>Application.Executable.Icon = path</code></td><td><code>path</code>: icon path. Windows executable icons must use an <code>.ico</code> file.</td><td>Sets executable icon metadata. On Windows the compiler stages the <code>.ico</code> file and supplies it as the generated project’s application icon.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Executable.FileDescription</code></td><td><code>Application.Executable.FileDescription = value</code></td><td><code>value</code>: file description.</td><td>Sets the generated executable/assembly description. If omitted, the default is <code>Application compiled with XPScript</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Executable.Product</code></td><td><code>Application.Executable.Product = value</code></td><td><code>value</code>: product name.</td><td>Sets the generated executable/assembly product metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Executable.Company</code></td><td><code>Application.Executable.Company = value</code></td><td><code>value</code>: company name.</td><td>Sets the generated executable/assembly company metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Executable.Version</code></td><td><code>Application.Executable.Version = value</code></td><td><code>value</code>: version string.</td><td>Sets version metadata used for the generated assembly and file version.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr><tr><td><code>Application.Executable.Copyright</code></td><td><code>Application.Executable.Copyright = value</code></td><td><code>value</code>: copyright text.</td><td>Sets the generated executable/assembly copyright metadata.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-executable-metadata.xps">application-executable-metadata.xps</a></td></tr></tbody></table>
+<p>Generated applications receive fixed compiler identification metadata. Assembly metadata contains <code>XPScriptCompiler = XPScript</code>, <code>XPScriptWebsite = https://xpagedeveloper.com</code> and <code>Compiled With = XPScript - XPageDeveloper.com</code>. If <code>Application.Executable.FileDescription</code> is not set, the file description defaults to <code>Application compiled with XPScript</code>.</p>
+<p>Executable metadata is emitted through the generated MSBuild project, so assembly metadata is retained for Windows, Linux and macOS targets. The native Windows executable icon is Windows-specific and requires an <code>.ico</code> source file. Custom assembly metadata such as <code>Compiled With</code> is embedded metadata and is not guaranteed to appear as a custom row in Windows Explorer’s Details tab.</p>
 <h2 id="state-scopes">State scopes</h2>
 
 
@@ -348,10 +415,24 @@
 
 
 
-<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Registry.User.Get</code></td><td><code>Application.Registry.User.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a current-user persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.User.Set</code></td><td><code>Application.Registry.User.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a current-user setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Get</code></td><td><code>Application.Registry.System.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a machine-wide persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Set</code></td><td><code>Application.Registry.System.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a machine-wide persistent setting and may require elevated OS permissions.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Get</code></td><td><code>Application.Secrets.Get(service, account)</code></td><td>service/application identifier and account</td><td>Reads a secret from Credential Manager, Keychain or Linux Secret Service.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Set</code></td><td><code>Application.Secrets.Set(service, account, secret)</code></td><td>service/application identifier, account and secret</td><td>Adds or replaces a secret in the operating-system credential store.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr></tbody></table>
-<p>Windows registry values support <code>String</code>, <code>ExpandString</code>, <code>Binary</code>, <code>DWord</code>, <code>MultiString</code> and <code>QWord</code>. Linux and macOS preserve equivalent type metadata in their file-backed application settings. See <a href="../application-registry-secrets/">Application Registry and Secrets</a> for the platform paths, type mapping, Linux Secret Service requirements and security details.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>Application.Registry.User.Get</code></td><td><code>Application.Registry.User.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a current-user persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.User.Set</code></td><td><code>Application.Registry.User.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a current-user setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Get</code></td><td><code>Application.Registry.System.Get(path, name)</code></td><td>registry/config path and value name</td><td>Reads a machine-wide persistent setting.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Registry.System.Set</code></td><td><code>Application.Registry.System.Set(path, name, value [, type])</code></td><td>registry/config path, name, value and optional registry type</td><td>Writes a machine-wide persistent setting and may require elevated OS permissions.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Get</code></td><td><code>Application.Secrets.Get(service, account)</code></td><td>service identifier and account</td><td>Reads a secret from the current <code>Application.Id</code> namespace in Credential Manager, Keychain or Linux Secret Service.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Set</code></td><td><code>Application.Secrets.Set(service, account, secret)</code></td><td>service identifier, account and secret</td><td>Adds or replaces a secret in the current <code>Application.Id</code> namespace.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Backup</code></td><td><code>Application.Secrets.Backup(file, password)</code></td><td>backup file and password</td><td>Creates an encrypted backup containing only secrets indexed for the current <code>Application.Id</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr><tr><td><code>Application.Secrets.Restore</code></td><td><code>Application.Secrets.Restore(file, password)</code></td><td>backup file and password</td><td>Restores an encrypted backup only when its embedded application ID matches the current <code>Application.Id</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">application-registry-secrets.xps</a></td></tr></tbody></table>
+<p><code>Application.Secrets</code> requires <code>Application.Id</code> before any credential-store operation. There is no executable-name fallback. Windows registry values support <code>String</code>, <code>ExpandString</code>, <code>Binary</code>, <code>DWord</code>, <code>MultiString</code> and <code>QWord</code>. Linux and macOS preserve equivalent type metadata in their file-backed application settings. See <a href="../application-registry-secrets/">Application Registry and Secrets</a> for the platform paths, type mapping, Linux Secret Service requirements and security details.</p>
 <h2 id="read-only-runtime-properties">Read-only runtime properties</h2>
-<p><code>Application.Args</code>, <code>ArgCount</code>, <code>CommandLine</code>, <code>ExecutablePath</code>, <code>ExecutableFileName</code>, <code>ExecutableDirectory</code>, <code>TempPath</code>, <code>TempFolder</code>, <code>Path</code> and <code>FileName</code> are read-only. Assignments to them are rejected by the compiler. <code>Application.ExitCode</code> is writable and defaults to <code>0</code>. <code>Application.Title</code>, <code>Icon</code>, <code>Width</code> and <code>Height</code> are intentionally writable metadata properties.</p>  </article> </main> </div> <script>
+<p><code>Application.Args</code>, <code>ArgCount</code>, <code>CommandLine</code>, <code>ExecutablePath</code>, <code>ExecutableFileName</code>, <code>ExecutableDirectory</code>, <code>TempPath</code>, <code>TempFolder</code>, <code>Path</code> and <code>FileName</code> are read-only. Assignments to them are rejected by the compiler. <code>Application.ExitCode</code> is writable and defaults to <code>0</code>. <code>Application.Id</code>, <code>Title</code>, <code>Icon</code>, <code>Executable.Icon</code>, <code>Executable.FileDescription</code>, <code>Executable.Product</code>, <code>Executable.Company</code>, <code>Executable.Version</code>, <code>Executable.Copyright</code>, <code>Width</code> and <code>Height</code> are intentionally writable metadata properties.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);

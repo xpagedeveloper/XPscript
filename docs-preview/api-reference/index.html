@@ -9,6 +9,7 @@
 <li><a href="#native-http-client">Native HTTP client</a></li>
 <li><a href="#http-response">HTTP response</a></li>
 <li><a href="#native-json">Native JSON</a></li>
+<li><a href="#native-notesdomino">Native Notes/Domino</a></li>
 <li><a href="#sqlite">SQLite</a></li>
 <li><a href="#sql-server">SQL Server</a></li>
 <li><a href="#supabase-http-database">Supabase HTTP database</a></li>
@@ -452,6 +453,112 @@
 
 
 <table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>XPJsonDocument.Parse</code></td><td><code>XPJsonDocument.Parse(text)</code></td><td>JSON <code>text</code>.</td><td>Parses JSON into a <code>XPJsonDocument</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonDocument.Stringify</code></td><td><code>document.Stringify()</code></td><td>none</td><td>Serializes the document.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonObject.Get</code></td><td><code>obj.Get(name)</code></td><td>property <code>name</code>.</td><td>Returns a property value or runtime null.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonObject.Set</code></td><td><code>obj.Set(name, value)</code></td><td>property <code>name</code>, JSON-compatible <code>value</code>.</td><td>Adds or replaces a property.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonObject.Remove</code></td><td><code>obj.Remove(name)</code></td><td>property <code>name</code>.</td><td>Removes a property.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonObject.Contains</code></td><td><code>obj.Contains(name)</code></td><td>property <code>name</code>.</td><td>Tests whether the property exists.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonObject.Count</code></td><td><code>obj.Count</code></td><td>none</td><td>Number of properties.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonArray.Add</code></td><td><code>arr.Add(value)</code></td><td>JSON-compatible <code>value</code>.</td><td>Appends a value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonArray.Get</code></td><td><code>arr.Get(index)</code></td><td>zero-based <code>index</code>.</td><td>Returns one array value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonArray.Set</code></td><td><code>arr.Set(index, value)</code></td><td><code>index</code>, replacement <code>value</code>.</td><td>Replaces one array element.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonArray.RemoveAt</code></td><td><code>arr.RemoveAt(index)</code></td><td>zero-based <code>index</code>.</td><td>Removes one array element.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonArray.Count</code></td><td><code>arr.Count</code></td><td>none</td><td>Number of array elements.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>XPJsonElement.Type</code></td><td><code>element.Type</code></td><td>none</td><td>Returns the JSON element type name.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-json-regression.xps">native-json-regression.xps</a></td></tr><tr><td><code>XPJsonElement.Value</code></td><td><code>element.Value</code></td><td>none</td><td>Returns the scalar runtime value where applicable.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-json-regression.xps">native-json-regression.xps</a></td></tr><tr><td><code>JsonParse</code></td><td><code>JsonParse(text)</code></td><td>JSON <code>text</code>.</td><td>Parses JSON.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>JsonStringify</code></td><td><code>JsonStringify(value)</code></td><td>JSON-compatible <code>value</code>.</td><td>Serializes a value as JSON.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>JsonEncode</code></td><td><code>JsonEncode(value)</code></td><td>JSON-compatible <code>value</code>.</td><td>Serializes with native JSON conversion rules.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr><tr><td><code>JsonDecode</code></td><td><code>JsonDecode(text)</code></td><td>JSON <code>text</code>.</td><td>Parses JSON and returns <code>XPJsonDocument</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/native-http-json.xps">native-http-json.xps</a></td></tr></tbody></table>
+<h2 id="native-notesdomino">Native Notes/Domino</h2>
+<p>See <a href="../notes-c-api/">Native Notes C API runtime</a> for the complete Notes object model and <a href="../notes-mime-entity/">NotesMIMEEntity</a> for MIME-specific behavior, lifecycle and attachment handling.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Syntax</th><th>Parameters</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>NotesSession.OpenDatabase</code></td><td><code>session.OpenDatabase(server, filePath)</code></td><td>Notes server and NSF path.</td><td>Opens a native Notes/Domino database. Use an empty server for a local NSF.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps">notes-c-api-v1.xps</a></td></tr><tr><td><code>NotesView.GetFirstDocumentByKey</code></td><td><code>view.GetFirstDocumentByKey(key [, exactMatch])</code></td><td>Scalar key or one-dimensional key array; optional exact/partial mode.</td><td>Scalar text keys search the first sorted column. Array keys match successive sorted columns. Arrays containing numeric or <code>NotesDateTime</code> keys use native <code>NIFFindByKey</code>; text-only arrays use the managed comparison path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-view-native-multikey-dxl.xps">notes-view-native-multikey-dxl.xps</a></td></tr><tr><td><code>NotesView.GetAllDocumentsByKey</code></td><td><code>view.GetAllDocumentsByKey(key [, exactMatch])</code></td><td>Same key forms as above.</td><td>Returns all documents matching the supplied scalar or multi-column key.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-view-native-multikey-dxl.xps">notes-view-native-multikey-dxl.xps</a></td></tr><tr><td><code>NotesDocument.Save</code></td><td><code>doc.Save()</code></td><td>none</td><td>Saves through the normal native update path and raises native failures as XPscript runtime errors.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps">notes-c-api-v1.xps</a></td></tr><tr><td><code>NotesDocument.Save</code></td><td><code>doc.Save(force [, createResponse [, markRead]])</code></td><td>Boolean-compatible flags.</td><td>Boolean overloads apply force-update semantics and optionally mark the saved document read. <code>createResponse</code> is currently accepted for call-shape compatibility but does not create a conflict response document.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-view-native-multikey-dxl.xps">notes-view-native-multikey-dxl.xps</a></td></tr><tr><td><code>NotesSession.CreateName</code></td><td><code>session.CreateName(value)</code></td><td>Notes hierarchical or Internet/RFC822-style name.</td><td>Returns <code>NotesName</code> with canonical/abbreviated forms, hierarchical components, RFC821/RFC822 address parts and comments.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps">notes-c-api-v1.xps</a></td></tr><tr><td><code>NotesDateTime.TimeDifference</code></td><td><code>value.TimeDifference(other)</code></td><td>another <code>NotesDateTime</code>.</td><td>Returns this value minus the other value in seconds. Wildcard values are rejected.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps">notes-c-api-v1.xps</a></td></tr><tr><td><code>NotesDateTime.ConvertToZone</code></td><td><code>value.ConvertToZone(zone)</code></td><td>Domino zone integer.</td><td>Reinterprets the local date/time in the supplied Domino zone and stores the resulting GMT value.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-c-api-v1.xps">notes-c-api-v1.xps</a></td></tr><tr><td><code>NotesDocument.GetMIMEEntity</code></td><td><code>doc.GetMIMEEntity("Body")</code></td><td>MIME item name.</td><td>Opens the native MIME root. The document-level implementation currently supports the <code>Body</code> item.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-mime-entity-surface.xps">notes-mime-entity-surface.xps</a></td></tr><tr><td><code>NotesMIMEEntity.CreateChildEntity</code></td><td><code>entity.CreateChildEntity([nextSibling])</code></td><td>optional sibling entity.</td><td>Creates direct or nested multipart children within the currently supported MIME tree mutation surface.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-mime-entity-surface.xps">notes-mime-entity-surface.xps</a></td></tr><tr><td><code>NotesMIMEEntity.GetNthHeader</code></td><td><code>entity.GetNthHeader(name [, occurrence])</code></td><td>header name and one-based occurrence.</td><td>Finds standard or arbitrary MIME headers on root/direct/nested entities using native and serialized entity state.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-mime-entity-surface.xps">notes-mime-entity-surface.xps</a></td></tr><tr><td><code>NotesMIMEHeader.GetParamVal</code></td><td><code>header.GetParamVal(name)</code></td><td>MIME parameter name.</td><td>Reads parameters such as <code>charset</code>, <code>name</code> and <code>filename</code>.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-mime-entity-surface.xps">notes-mime-entity-surface.xps</a></td></tr><tr><td><code>NotesMIMEHeader.SetParamVal</code></td><td><code>header.SetParamVal(name, value)</code></td><td>parameter name and value.</td><td>Replaces or adds a MIME header parameter on the supported entity mutation path.</td><td><a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/notes-mime-entity-surface.xps">notes-mime-entity-surface.xps</a></td></tr></tbody></table>
 <h2 id="sqlite">SQLite</h2>
 <p>See <a href="../sqlite/">SQLite database</a> for path/security rules.</p>
 

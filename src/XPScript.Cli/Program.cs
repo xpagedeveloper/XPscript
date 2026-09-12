@@ -433,11 +433,11 @@ XPScript CLI
 One executable is used for compiler, runtime execution, project scaffolding and web hosting.
 
 Usage:
-  xpscript compile <source.xps> [-o output] [--runtime RID] [--framework-dependent] [--result-format text|json|xml]
-  xpscript dependencies <source.xps> [--runtime RID] [--json]
-  xpscript security <source.xps> [--runtime RID] [--json]
-  xpscript run <source.xps> [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
-  xpscript <source.xps> [-o output] [--runtime RID] [compiler options...]
+  xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
+  xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
+  xpscript security <source.xps> [--platform RID|--rid RID] [--json]
+  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
   xpscript new <rest|web|desktop> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
@@ -482,7 +482,7 @@ Examples:
   xpscript openapi generate ./openapi.yaml
   xpscript openapi generate ./petstore.yaml -o ./generated/petstore.xps
   xpscript compile hello.xps
-  xpscript compile hello.xps --runtime linux-x64 -o hello
+  xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
   xpscript run hello.xps -- --runtime passed-to-script
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto

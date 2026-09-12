@@ -49,15 +49,15 @@ xpscriptc hello.xps -o hello
 Target another runtime:
 
 ```text
-xpscriptc hello.xps --runtime win-x64 -o hello.exe
-xpscriptc hello.xps --runtime linux-x64 -o hello
-xpscriptc hello.xps --runtime osx-arm64 -o hello
+xpscriptc hello.xps --platform win-x64 -o hello.exe
+xpscriptc hello.xps --platform linux-x64 -o hello
+xpscriptc hello.xps --platform osx-arm64 -o hello
 ```
 
 Cross-compilation is supported. For example, on a Linux machine you can create a self-contained Windows x64 console application:
 
 ```bash
-xpscript compile app.xps --runtime win-x64 -o app.exe
+xpscript compile app.xps --platform win-x64 -o app.exe
 ```
 
 The resulting Windows application includes the required .NET runtime and does not require .NET 10 to be installed on the target computer.
@@ -65,7 +65,7 @@ The resulting Windows application includes the required .NET runtime and does no
 The default desktop compile is single-file and framework-dependent: application libraries are bundled, but .NET 10 must already be installed. To state that explicitly:
 
 ```bash
-xpscript compile app.xps --runtime win-x64 --runtime=false -o app.exe
+xpscript compile app.xps --platform win-x64 --runtime=false -o app.exe
 ```
 
 The host operating system and target runtime are independent. The same Linux installation of `xpscript` can target Windows, Linux or macOS by selecting the appropriate runtime identifier.

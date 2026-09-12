@@ -21,7 +21,7 @@ internal static class ApplicationDependencyCommand
         var json = false;
         for (var i = 1; i < args.Length; i++)
         {
-            if ((args[i] is "--runtime" or "--rid" or "--platform") && i + 1 < args.Length)
+            if ((args[i] is "--rid" or "--platform") && i + 1 < args.Length)
                 runtimeIdentifier = args[++i];
             else if (args[i] == "--json")
                 json = true;
@@ -92,7 +92,7 @@ internal static class ApplicationDependencyCommand
         {
             Console.WriteLine("""
 Usage:
-  xpscript security <source.xps> [--runtime RID] [--json]
+  xpscript security <source.xps> [--platform RID|--rid RID] [--json]
 
 Checks known vulnerabilities only in the NuGet dependency graph resolved for this application.
 Returns exit code 2 when one or more vulnerable dependencies are found.
@@ -103,7 +103,7 @@ Returns exit code 3 when NuGet vulnerability information is unavailable.
 
         Console.WriteLine("""
 Usage:
-  xpscript dependencies <source.xps> [--runtime RID] [--json]
+  xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
 
 Lists direct and transitive NuGet dependencies resolved for this application.
 Unused XPScript capabilities are not included.

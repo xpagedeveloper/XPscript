@@ -21,7 +21,7 @@ End Sub
 try {
     Push-Location $repoRoot
     try {
-        dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -- compile $source -o $output --runtime win-x64
+        dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -- compile $source -o $output --platform win-x64
         if ($LASTEXITCODE -ne 0) { throw "XPScript compile failed with exit code $LASTEXITCODE." }
     }
     finally {

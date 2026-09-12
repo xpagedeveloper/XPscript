@@ -11,7 +11,7 @@ Status:
 
 ## Compiler targets
 
-- [x] support explicit `--runtime` / `--rid` target selection
+- [x] support explicit `--platform` / `--rid` target selection
 - [x] supported targets are explicitly advertised as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`; architecture execution coverage is tracked separately in the quality/native gates below
 - [x] default target follows the compiler host OS + architecture when no RID is supplied
 - [x] Windows output defaults to `.exe`; Linux/macOS output defaults to no extension

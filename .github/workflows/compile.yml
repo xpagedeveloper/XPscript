@@ -21,6 +21,9 @@ jobs:
       - name: Validate direct package notices
         shell: pwsh
         run: ./scripts/validate-license-notices.ps1
+      - name: Validate removed CLI syntax
+        shell: pwsh
+        run: ./scripts/validate-no-legacy-cli-options.ps1
 
   compile-windows:
     name: Compile Windows
