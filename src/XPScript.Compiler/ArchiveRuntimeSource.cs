@@ -66,7 +66,7 @@ internal sealed class XPScriptArchive
         if (requested.Equals("ZIP", StringComparison.OrdinalIgnoreCase))
         {
             _extendedCreateMode = false;
-            _pendingExtendedFormat = null;
+            _pendingExtendedFormat = "ZIP";
             _pendingEntries.Clear();
             var parent = System.IO.Path.GetDirectoryName(_path!);
             if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
