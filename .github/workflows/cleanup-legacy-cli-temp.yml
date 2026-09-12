@@ -22,99 +22,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-
-      - name: Migrate legacy CLI syntax
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $extensions = @('.md','.cs','.ps1','.yml','.yaml','.html','.txt')
-          $files = Get-ChildItem -Recurse -File | Where-Object {
-            $extensions -contains $_.Extension.ToLowerInvariant() -and
-            $_.FullName -notmatch '[\\/](\.git|node_modules|bin|obj)[\\/]'
-          }
-          $ridValues = @('win-x64','win-arm64','linux-x64','linux-arm64','osx-x64','osx-arm64')
-          foreach ($file in $files) {
-            $text = Get-Content -LiteralPath $file.FullName -Raw
-            $updated = $text.Replace('--framework-dependent', '--runtime=false')
-            $updated = $updated.Replace('--runtime RID', '--platform RID')
-            foreach ($rid in $ridValues) {
-              $updated = $updated.Replace("--runtime $rid", "--platform $rid")
-            }
-            $updated = $updated.Replace('support explicit `--runtime` / `--rid` target selection', 'support explicit `--platform` / `--rid` target selection')
-            $updated = $updated.Replace('| `--runtime` | `--platform RID` |', '| `--platform` / `--rid` | `--platform RID` or `--rid RID` |')
-            $updated = $updated.Replace('| `--runtime` | `--platform win-x64` | RID | Selects target runtime.', '| `--platform` / `--rid` | `--platform win-x64` or `--rid win-x64` | RID | Selects target operating system and architecture.')
-            $updated = $updated.Replace('| `--runtime=false` | `--runtime=false` | none | Produces framework-dependent output instead of a self-contained application.', '| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime from the published application.')
-            $updated = $updated.Replace('| `--runtime=false` | `--runtime=false` | none | Creates framework-dependent output.', '| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime.')
-            if ($file.FullName.EndsWith('src/XPScript.Cli/Program.cs')) {
-              $updated = $updated.Replace('xpscript compile <source.xps> [-o output] [--platform RID] [--runtime=false] [--result-format text|json|xml]', 'xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]')
-              $updated = $updated.Replace('xpscript dependencies <source.xps> [--platform RID] [--json]', 'xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]')
-              $updated = $updated.Replace('xpscript security <source.xps> [--platform RID] [--json]', 'xpscript security <source.xps> [--platform RID|--rid RID] [--json]')
-              $updated = $updated.Replace('xpscript run <source.xps> [--platform RID] [--restricted]', 'xpscript run <source.xps> [--platform RID|--rid RID] [--restricted]')
-              $updated = $updated.Replace('xpscript <source.xps> [-o output] [--platform RID] [compiler options...]', 'xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]')
-            }
-            if ($updated -ne $text) {
-              Set-Content -LiteralPath $file.FullName -Value $updated -Encoding utf8 -NoNewline
-            }
-          }
-
-          $validator = 'scripts/validate-docs-demos.ps1'
-          $text = Get-Content -LiteralPath $validator -Raw
-          $text = $text.Replace("'xpscriptc', 'run', '-o', '--runtime', '--runtime=false', '--result-format',", "'xpscriptc', 'run', '-o', '--runtime', '--single-file', '--platform', '--rid', '--result-format',")
-          if ($text -notmatch 'legacy CLI syntax') {
-            $needle = "foreach (`$name in `$requiredCli) {`n    if (`$cli -notmatch [regex]::Escape(`$name)) {`n        `$errors.Add(\"CLI reference is missing required command/option: `$name\")`n    }`n}`n"
-            $guard = @'
-foreach ($legacy in @('--framework-dependent', '--runtime RID', '--runtime win-x64', '--runtime linux-x64', '--runtime linux-arm64', '--runtime osx-x64', '--runtime osx-arm64')) {
-    if ($cli -match [regex]::Escape($legacy)) {
-        $errors.Add("CLI reference still contains removed legacy CLI syntax: $legacy")
-    }
-}
-'@
-            $text = $text.Replace($needle, $needle + $guard)
-          }
-          Set-Content -LiteralPath $validator -Value $text -Encoding utf8 -NoNewline
-
-          @'
-$ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$legacy = @(
-    '--framework' + '-dependent',
-    '--runtime ' + 'RID',
-    '--runtime ' + 'win-x64',
-    '--runtime ' + 'win-arm64',
-    '--runtime ' + 'linux-x64',
-    '--runtime ' + 'linux-arm64',
-    '--runtime ' + 'osx-x64',
-    '--runtime ' + 'osx-arm64'
-)
-$extensions = @('.md','.cs','.ps1','.yml','.yaml','.html','.txt')
-$failures = [System.Collections.Generic.List[string]]::new()
-Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object {
-    $extensions -contains $_.Extension.ToLowerInvariant() -and
-    $_.FullName -notmatch '[\\/](\.git|node_modules|bin|obj)[\\/]' -and
-    $_.FullName -notlike '*validate-no-legacy-cli-options.ps1'
-} | ForEach-Object {
-    $content = Get-Content -LiteralPath $_.FullName -Raw
-    foreach ($pattern in $legacy) {
-        if ($content.Contains($pattern, [StringComparison]::OrdinalIgnoreCase)) {
-            $relative = [IO.Path]::GetRelativePath($root, $_.FullName)
-            $failures.Add("$relative contains removed syntax: $pattern")
-        }
-    }
-}
-if ($failures.Count -gt 0) {
-    $failures | ForEach-Object { Write-Host "ERROR: $_" }
-    throw "Removed legacy CLI syntax remains in $($failures.Count) location(s)."
-}
-Write-Host 'LEGACY-CLI-SYNTAX=NONE'
-'@ | Set-Content -LiteralPath 'scripts/validate-no-legacy-cli-options.ps1' -Encoding utf8
-
-          $compileWorkflow = '.github/workflows/compile.yml'
-          $compile = Get-Content -LiteralPath $compileWorkflow -Raw
-          if ($compile -notmatch 'Validate removed CLI syntax') {
-            $compile = $compile.Replace("      - name: Validate direct package notices`n        shell: pwsh`n        run: ./scripts/validate-license-notices.ps1", "      - name: Validate direct package notices`n        shell: pwsh`n        run: ./scripts/validate-license-notices.ps1`n      - name: Validate removed CLI syntax`n        shell: pwsh`n        run: ./scripts/validate-no-legacy-cli-options.ps1")
-            Set-Content -LiteralPath $compileWorkflow -Value $compile -Encoding utf8 -NoNewline
-          }
-
+      - name: Apply cleanup
+        run: python3 ./scripts/cleanup-legacy-cli-temp.py
       - name: Rebuild documentation preview
         working-directory: docs-site
         run: |
@@ -125,18 +34,17 @@ Write-Host 'LEGACY-CLI-SYNTAX=NONE'
           mkdir -p docs-preview
           cp -R docs-site/dist/. docs-preview/
           touch docs-preview/.nojekyll
-
       - name: Verify cleanup and build
         shell: pwsh
         run: |
           ./scripts/validate-no-legacy-cli-options.ps1
           ./scripts/validate-docs-demos.ps1
           dotnet build ./XPScriptCompiler.slnx -c Release --nologo
-
       - name: Commit cleanup
         shell: bash
         run: |
           rm -f .github/workflows/cleanup-legacy-cli-temp.yml
+          rm -f scripts/cleanup-legacy-cli-temp.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
