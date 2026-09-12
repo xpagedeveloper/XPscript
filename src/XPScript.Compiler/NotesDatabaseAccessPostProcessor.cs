@@ -6,11 +6,23 @@ internal static class NotesDatabaseAccessPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(
-            source,
-            "    public int CurrentAccessLevel { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseCurrentAccessLevel(_handle) : 0; } }",
-            "    public int CurrentAccessLevel { get { EnsureAlive(); return IsOpen ? Session.Api.GetDatabaseCurrentAccessLevel(_handle) : 0; } }\n\n    public XPScriptNotesDatabaseAccess QueryAccess() => QueryAccess(null);\n\n    public XPScriptNotesDatabaseAccess QueryAccess(object? userNameValue)\n    {\n        EnsureAlive();\n        if (!IsOpen) throw new XPScriptRuntimeException(91, \"NotesDatabase is not open.\");\n        var userName = userNameValue is null ? Session.Username : XPScriptRuntime.CStr(userNameValue).Trim();\n        if (userName.Length == 0) userName = Session.Username;\n        var data = Session.Api.QueryDatabaseAccess(_handle, userName);\n        return new XPScriptNotesDatabaseAccess(Session, this, data);\n    }",
-            "database-query-access");
+        const string databaseAnchor = "    public string OpenError { get { EnsureAlive(); return _openError; } }";
+        const string databaseSurface = """
+    public string OpenError { get { EnsureAlive(); return _openError; } }
+
+    public XPScriptNotesDatabaseAccess QueryAccess() => QueryAccess(null);
+
+    public XPScriptNotesDatabaseAccess QueryAccess(object? userNameValue)
+    {
+        EnsureAlive();
+        if (!IsOpen) throw new XPScriptRuntimeException(91, "NotesDatabase is not open.");
+        var userName = userNameValue is null ? Session.Username : XPScriptRuntime.CStr(userNameValue).Trim();
+        if (userName.Length == 0) userName = Session.Username;
+        var data = Session.Api.QueryDatabaseAccess(_handle, userName);
+        return new XPScriptNotesDatabaseAccess(Session, this, data);
+    }
+""";
+        source = ReplaceRequired(source, databaseAnchor, databaseSurface, "database-query-access");
 
         source += """
 
