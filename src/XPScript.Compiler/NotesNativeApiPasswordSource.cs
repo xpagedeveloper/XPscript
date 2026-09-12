@@ -125,6 +125,16 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    internal void SetEnvironmentVariable(string name, string value)
+    {
+        EnsureInitialized();
+        using var variableName = ToLmbcs(name);
+        using var variableValue = ToLmbcs(value);
+        Resolve<OSSetEnvironmentVariableDelegate>("OSSetEnvironmentVariable")(
+            variableName.Pointer,
+            variableValue.Pointer);
+    }
+
     // Kept as a no-op so session cleanup remains source-compatible with the
     // earlier password-hook implementation. Password authentication no longer
     // registers an Extension Manager hook in a standalone C API process.
@@ -134,6 +144,9 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate int OSGetEnvironmentStringDelegate(nint variableName, nint returnValueBuffer, ushort bufferLength);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate void OSSetEnvironmentVariableDelegate(nint variableName, nint value);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort SECKFMSwitchToIDFileDelegate(
