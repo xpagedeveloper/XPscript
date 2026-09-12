@@ -13,6 +13,8 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
 };
 foreach (var samplePath in samplePaths)
@@ -45,7 +47,7 @@ var classes = new[]
 {
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
-    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)"QueryAccess"),
     (Runtime: "XPScriptNotesDatabaseAccess", Surface: "NotesDatabaseAccess", Anchor: (string?)null),
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
     (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
@@ -66,6 +68,18 @@ var classes = new[]
     (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null)
 };
 
+var requestedSurfaces = new HashSet<string>(args, StringComparer.OrdinalIgnoreCase);
+if (requestedSurfaces.Count != 0)
+{
+    var knownSurfaces = classes.Select(item => item.Surface).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var unknownSurfaces = requestedSurfaces.Where(surface => !knownSurfaces.Contains(surface)).OrderBy(surface => surface).ToArray();
+    if (unknownSurfaces.Length != 0)
+        throw new InvalidOperationException("Unknown Notes surface audit target(s): " + string.Join(", ", unknownSurfaces));
+}
+var selectedClasses = requestedSurfaces.Count == 0
+    ? classes
+    : classes.Where(item => requestedSurfaces.Contains(item.Surface)).ToArray();
+
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
     "Dispose", "TryGetMember", "TrySetMember", "TryInvokeMember"
@@ -79,11 +93,12 @@ var allClassDeclarations = root.DescendantNodes()
     .Where(c => c.Parent is CompilationUnitSyntax)
     .ToArray();
 
-foreach (var item in classes)
+foreach (var item in selectedClasses)
 {
     var declarations = item.Anchor is null
         ? allClassDeclarations.Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal)).ToArray()
         : allClassDeclarations
+            .Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal))
             .Where(c => c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
             .Where(c => item.Surface != "NotesDocument" || c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals("NoteIdHex", StringComparison.OrdinalIgnoreCase) == true))
             .ToArray();

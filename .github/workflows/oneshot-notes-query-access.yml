@@ -29,5 +29,5 @@ jobs:
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile NotesDatabase QueryAccess sample
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-database-query-access-runtime-test.xps ./out/notes-query-access
-      - name: Audit Notes runtime surface
-        run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release
+      - name: Audit QueryAccess Notes surfaces
+        run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release -- NotesDatabase NotesDatabaseAccess
