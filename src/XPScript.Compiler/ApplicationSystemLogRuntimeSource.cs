@@ -58,7 +58,7 @@ internal static class XPScriptApplicationSystemLogRuntime
             };
             var strings = new[] { message };
             if (!ReportEventW(handle, type, 0, unchecked((uint)eventId), IntPtr.Zero, 1, 0, strings, IntPtr.Zero))
-                throw new XPScriptRuntimeException(5, "Unable to write to the system log.");
+                throw new XPScriptRuntimeException(5, "Unable to write to Windows Event Log.");
         }
         finally
         {
