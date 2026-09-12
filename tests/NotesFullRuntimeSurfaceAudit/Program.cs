@@ -12,6 +12,7 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
 };
 foreach (var samplePath in samplePaths)
@@ -45,6 +46,7 @@ var classes = new[]
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDatabaseAccess", Surface: "NotesDatabaseAccess", Anchor: (string?)null),
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
     (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocumentCollection", Surface: "NotesDocumentCollection", Anchor: (string?)null),
@@ -72,7 +74,10 @@ var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 var missing = new List<string>();
 var placeholders = new List<string>();
 var suspiciousConstants = new List<string>();
-var allClassDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
+var allClassDeclarations = root.DescendantNodes()
+    .OfType<ClassDeclarationSyntax>()
+    .Where(c => c.Parent is CompilationUnitSyntax)
+    .ToArray();
 
 foreach (var item in classes)
 {

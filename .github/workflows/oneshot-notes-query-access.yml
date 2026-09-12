@@ -1,0 +1,33 @@
+name: Notes Database QueryAccess
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/oneshot-notes-query-access.yml
+      - samples/notes-database-query-access-runtime-test.xps
+      - tests/NotesFullRuntimeSurfaceAudit/**
+      - src/XPScript.Compiler/**
+      - src/XPScript.Compiler.Core/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  query-access-surface:
+    name: Compile and audit QueryAccess
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile NotesDatabase QueryAccess sample
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-database-query-access-runtime-test.xps ./out/notes-query-access
+      - name: Audit Notes runtime surface
+        run: dotnet run --project ./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj -c Release

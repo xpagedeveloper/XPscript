@@ -1,0 +1,87 @@
+' NotesDatabase.QueryAccess regression coverage.
+' Requires a local HCL Notes/Domino runtime and xpscript.nsf to execute.
+Option Declare
+
+Sub Main()
+    Const DATABASE_PATH = "xpscript.nsf"
+
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim access As NotesDatabaseAccess
+    Dim explicitAccess As NotesDatabaseAccess
+    Dim failures As Integer
+
+    failures = 0
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", DATABASE_PATH)
+
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES-DATABASE-QUERY-ACCESS=FAIL database not open"
+        If Not db Is Nothing Then Call db.Recycle()
+        Call session.Recycle()
+        Exit Sub
+    End If
+
+    ' No parameter means the current Notes user.
+    Set access = db.QueryAccess()
+    If access Is Nothing Then
+        Print "FAIL QueryAccess() returned Nothing"
+        failures = failures + 1
+    Else
+        Print "UserName=" & access.UserName
+        Print "Level=" & CStr(access.Level)
+        Print "LevelName=" & access.LevelName
+        Print "AccessFlags=" & CStr(access.AccessFlags)
+        Print "CannotCreateDocuments=" & CStr(access.CannotCreateDocuments)
+        Print "CannotDeleteDocuments=" & CStr(access.CannotDeleteDocuments)
+        Print "CanCreatePersonalAgents=" & CStr(access.CanCreatePersonalAgents)
+        Print "CanCreatePersonalFolders=" & CStr(access.CanCreatePersonalFolders)
+        Print "CanCreateSharedFolders=" & CStr(access.CanCreateSharedFolders)
+        Print "CanCreateLotusScriptAgents=" & CStr(access.CanCreateLotusScriptAgents)
+        Print "IsPublicReader=" & CStr(access.IsPublicReader)
+        Print "IsPublicWriter=" & CStr(access.IsPublicWriter)
+        Print "CannotReplicateOrCopy=" & CStr(access.CannotReplicateOrCopy)
+        Print "IsPersonEntry=" & CStr(access.IsPersonEntry)
+        Print "IsGroupEntry=" & CStr(access.IsGroupEntry)
+        Print "IsServerEntry=" & CStr(access.IsServerEntry)
+        Print "Parent=" & access.Parent.FilePath
+
+        If access.Level <> db.CurrentAccessLevel Then
+            Print "FAIL QueryAccess() level differs from CurrentAccessLevel"
+            failures = failures + 1
+        End If
+
+        Forall nameEntry In access.NamesList
+            Print "Name=" & CStr(nameEntry)
+        End Forall
+        Forall groupEntry In access.Groups
+            Print "Group=" & CStr(groupEntry)
+        End Forall
+        Forall roleEntry In access.Roles
+            Print "Role=" & CStr(roleEntry)
+        End Forall
+    End If
+
+    ' An explicit current username must resolve to the same effective level.
+    Set explicitAccess = db.QueryAccess(session.UserName)
+    If explicitAccess Is Nothing Then
+        Print "FAIL QueryAccess(userName) returned Nothing"
+        failures = failures + 1
+    ElseIf Not access Is Nothing Then
+        If explicitAccess.Level <> access.Level Then
+            Print "FAIL explicit current-user access level differs from default lookup"
+            failures = failures + 1
+        End If
+    End If
+
+    If Not explicitAccess Is Nothing Then Call explicitAccess.Recycle()
+    If Not access Is Nothing Then Call access.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+
+    If failures = 0 Then
+        Print "NOTES-DATABASE-QUERY-ACCESS=PASS"
+    Else
+        Print "NOTES-DATABASE-QUERY-ACCESS=FAIL COUNT=" & CStr(failures)
+    End If
+End Sub
