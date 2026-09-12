@@ -21,6 +21,7 @@ internal static class NotesRuntimeSource
         source = NotesConstPostProcessor.Apply(source);
         source = NotesDocumentCollectionPostProcessor.Apply(source);
         source = NotesDatabaseLotusScriptSurfacePostProcessor.Apply(source);
+        source = NotesDatabaseAccessPostProcessor.Apply(source);
         source = NotesDatabaseLifecyclePostProcessor.Apply(source);
         source = NotesDbDirectoryPostProcessor.Apply(source);
         source = NotesViewColumnNamesPostProcessor.Apply(source);
