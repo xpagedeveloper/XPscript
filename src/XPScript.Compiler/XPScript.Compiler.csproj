@@ -18,9 +18,6 @@
   <ItemGroup>
     <PackageReference Include="MimeKit" Version="4.17.0" />
     <Compile Include="Program.cs" />
-    <Compile Include="ThirdPartyLicenseNoticeGenerator.cs" />
     <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
-    <EmbeddedResource Include="../../LICENSE" LogicalName="XPScript.LICENSE" />
-    <EmbeddedResource Include="../../NOTICE" LogicalName="XPScript.NOTICE" Condition="Exists('../../NOTICE')" />
   </ItemGroup>
 </Project>
