@@ -73,3 +73,13 @@ Desktop compilation has two independent options:
 The default is `--single-file=true --runtime=false`. Use `--platform` (or `--rid`) for the target RID, for example `--platform win-x64`. The old `--framework-dependent` option and the old `--runtime RID` platform syntax are no longer accepted.
 
 Framework-dependent builds (`--runtime=false`) keep the native .NET apphost. If .NET 10 is missing, startup fails before managed XPScript code runs and the .NET host reports the missing framework together with Microsoft's installation/download link.
+
+## Generated third-party license file
+
+Every compiled application is published with `Third-party-license.txt` beside the executable. This file is deliberately kept as a sidecar even for single-file builds so redistribution notices remain directly readable.
+
+The compiler builds the file from the exact NuGet dependency graph restored for the application, including transitive packages. For each restored package it reads the package's NuGet license metadata and available package-local license, NOTICE and third-party notice material.
+
+The file starts with XPScript's Apache License 2.0 redistribution requirements, the complete Apache 2.0 license text and XPScript NOTICE content. When `--runtime=true` is used, it also includes the .NET runtime license and the .NET third-party notices from the SDK/runtime installation used for publishing.
+
+`Third-party-license.txt` must be distributed with the compiled application. Any additional license or notice files that a dependency explicitly requires to remain separate must also be preserved.
