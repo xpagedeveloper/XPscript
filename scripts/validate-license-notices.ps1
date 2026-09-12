@@ -14,12 +14,14 @@ if (-not (Test-Path -LiteralPath $catalogPath)) {
 $notice = Get-Content -LiteralPath $noticePath -Raw
 
 # XPScript only permits third-party libraries, NuGet packages and add-ons whose
-# declared SPDX license is MIT or Apache-2.0. Any other license requires the
-# dependency to be rejected or the policy to be changed through an explicit
-# legal/compliance decision.
+# declared SPDX license is MIT, Apache-2.0, PostgreSQL, or BSD-3-Clause. Any other
+# license requires the dependency to be rejected or the policy to be changed
+# through an explicit legal/compliance decision.
 $approvedLicenseIdentifiers = @(
     'Apache-2.0',
-    'MIT'
+    'BSD-3-Clause',
+    'MIT',
+    'PostgreSQL'
 )
 $approvedLicenseSet = @{}
 foreach ($identifier in $approvedLicenseIdentifiers) {
@@ -196,7 +198,7 @@ foreach ($package in ($packages.Keys | Sort-Object)) {
     $packageDirectory = Join-Path (Join-Path $globalPackages $packageName.ToLowerInvariant()) $parts[1]
     $nuspec = Get-ChildItem -LiteralPath $packageDirectory -Filter '*.nuspec' -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $nuspec) {
-        $licenseProblems += "$package has no NuGet metadata file. Only MIT and Apache-2.0 dependencies are permitted."
+        $licenseProblems += "$package has no NuGet metadata file. Only MIT, Apache-2.0, PostgreSQL, and BSD-3-Clause dependencies are permitted."
         continue
     }
 
@@ -205,21 +207,21 @@ foreach ($package in ($packages.Keys | Sort-Object)) {
     $licenseText = if ($license) { [string]$license.InnerText } else { '' }
     $licenseType = if ($license) { [string]$license.type } else { '' }
     if ([string]::IsNullOrWhiteSpace($licenseText)) {
-        $licenseProblems += "$package has no declared NuGet license. Only MIT and Apache-2.0 dependencies are permitted."
+        $licenseProblems += "$package has no declared NuGet license. Only MIT, Apache-2.0, PostgreSQL, and BSD-3-Clause dependencies are permitted."
         continue
     }
 
     if ($licenseType.Equals('expression', [StringComparison]::OrdinalIgnoreCase)) {
         $expressionProblems = @(Test-LicenseExpression -Expression $licenseText)
         foreach ($problem in $expressionProblems) {
-            $licenseProblems += "$package declares $problem. Only MIT and Apache-2.0 dependencies are permitted."
+            $licenseProblems += "$package declares $problem. Only MIT, Apache-2.0, PostgreSQL, and BSD-3-Clause dependencies are permitted."
         }
         continue
     }
 
-    # License-file and URL declarations are intentionally not auto-approved. The
-    # package must expose an SPDX expression that CI can prove is MIT or Apache-2.0.
-    $licenseProblems += "$package declares NuGet license type '$licenseType' with value '$licenseText'. Only SPDX MIT or Apache-2.0 expressions are permitted."
+    # License-file and URL declarations are intentionally not auto-approved. The package
+    # must expose an SPDX expression that CI can prove uses only an approved license.
+    $licenseProblems += "$package declares NuGet license type '$licenseType' with value '$licenseText'. Only SPDX MIT, Apache-2.0, PostgreSQL, or BSD-3-Clause expressions are permitted."
 }
 
 if ($licenseProblems.Count -gt 0) {
@@ -227,4 +229,4 @@ if ($licenseProblems.Count -gt 0) {
 }
 
 Write-Host ("NuGet license policy validation passed for {0} resolved packages." -f $packages.Count)
-Write-Host 'Permitted third-party licenses: MIT, Apache-2.0'
+Write-Host 'Permitted third-party licenses: MIT, Apache-2.0, PostgreSQL, BSD-3-Clause'
