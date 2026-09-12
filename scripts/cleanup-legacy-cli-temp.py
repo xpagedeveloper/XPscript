@@ -35,6 +35,24 @@ for path in ROOT.rglob('*'):
         '| `--runtime=false` | `--runtime=false` | none | Creates framework-dependent output.',
         '| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime.')
 
+    if path.as_posix().endswith('docs/cli-reference.md'):
+        runtime_row = '| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime from the published application. | [hello.xps](../demo/console/hello.xps) |'
+        single_row = '| `--single-file` | `--single-file=true|false` | boolean | Bundles application-managed files into the executable when `true` (default); emits them as separate files when `false`. | [hello.xps](../demo/console/hello.xps) |'
+        if runtime_row in updated and single_row not in updated:
+            updated = updated.replace(runtime_row, runtime_row + '\n' + single_row)
+
+    if path.as_posix().endswith('docs/commands.md'):
+        runtime_row = '| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime. | [hello.xps](../samples/hello.xps) |'
+        single_row = '| `--single-file` | `--single-file=true|false` | boolean | Bundles application libraries into the executable when `true` (default); emits separate application files when `false`. | [hello.xps](../samples/hello.xps) |'
+        if runtime_row in updated and single_row not in updated:
+            updated = updated.replace(runtime_row, runtime_row + '\n' + single_row)
+
+    if path.as_posix().endswith('docs/language-reference.md'):
+        runtime_row = '| `--runtime` | `--runtime=true|false` | boolean runtime inclusion. | Controls whether .NET 10 is included in publish output. | [hello.xps](../demo/console/hello.xps) |'
+        single_row = '| `--single-file` | `--single-file=true|false` | boolean packaging mode. | Controls whether application libraries are bundled into one executable. | [hello.xps](../demo/console/hello.xps) |'
+        if runtime_row in updated and single_row not in updated:
+            updated = updated.replace(runtime_row, runtime_row + '\n' + single_row)
+
     if path.as_posix().endswith('src/XPScript.Cli/Program.cs'):
         updated = updated.replace(
             'xpscript compile <source.xps> [-o output] [--platform RID] [--runtime=false] [--result-format text|json|xml]',
