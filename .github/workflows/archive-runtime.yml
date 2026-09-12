@@ -44,39 +44,83 @@ jobs:
       - name: Compile and run Archive suite
         shell: pwsh
         run: |
+          $processTimeoutMilliseconds = 120000
+
           function Compile-XPScript([string] $source, [string] $name) {
+            Write-Host "ARCHIVE_CI_COMPILE=$name"
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o "./out/$name" --framework-dependent
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
           function Get-XPScriptExecutable([string] $name) {
             $plain = "./out/$name"
-            if (Test-Path $plain -PathType Leaf) { return $plain }
+            if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }
             $windows = "$plain.exe"
-            if (Test-Path $windows -PathType Leaf) { return $windows }
+            if (Test-Path $windows -PathType Leaf) { return (Resolve-Path $windows).Path }
             throw "Compiled XPScript executable was not found for $name"
+          }
+
+          function Invoke-XPScriptExecutable([string] $exe, [string[]] $arguments, [string] $label) {
+            Write-Host "ARCHIVE_CI_RUN=$label"
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $exe
+            $startInfo.UseShellExecute = $false
+            $startInfo.RedirectStandardOutput = $true
+            $startInfo.RedirectStandardError = $true
+            foreach ($argument in $arguments) {
+              [void] $startInfo.ArgumentList.Add([string] $argument)
+            }
+
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            try {
+              if (-not $process.Start()) {
+                throw "Unable to start Archive regression: $label"
+              }
+              $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+              $stderrTask = $process.StandardError.ReadToEndAsync()
+              if (-not $process.WaitForExit($processTimeoutMilliseconds)) {
+                try { $process.Kill($true) } catch { }
+                try { $process.WaitForExit() } catch { }
+                Write-Error "Archive regression timed out after 120 seconds: $label"
+                exit 124
+              }
+              $stdout = $stdoutTask.GetAwaiter().GetResult()
+              $stderr = $stderrTask.GetAwaiter().GetResult()
+              if (-not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout.TrimEnd() }
+              if (-not [string]::IsNullOrEmpty($stderr)) { Write-Host $stderr.TrimEnd() }
+              return [pscustomobject]@{
+                ExitCode = $process.ExitCode
+                Output = $stdout + $stderr
+              }
+            }
+            finally {
+              $process.Dispose()
+            }
           }
 
           function Run-XPScript([string] $source, [string] $name) {
             Compile-XPScript $source $name
             $exe = Get-XPScriptExecutable $name
-            & $exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $result = Invoke-XPScriptExecutable $exe @() $name
+            if ($result.ExitCode -ne 0) {
+              Write-Error "Archive regression failed with exit code $($result.ExitCode): $name"
+              exit $result.ExitCode
+            }
           }
 
           function Expect-XPScriptFailure([string] $name, [string[]] $arguments, [string] $label) {
             $exe = Get-XPScriptExecutable $name
-            $output = (& $exe @arguments 2>&1 | Out-String)
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -eq 0) {
+            $result = Invoke-XPScriptExecutable $exe $arguments "security: $label"
+            if ($result.ExitCode -eq 0) {
               Write-Error "Archive security probe unexpectedly succeeded: $label"
               exit 1
             }
-            if ([string]::IsNullOrWhiteSpace($output)) {
+            if ([string]::IsNullOrWhiteSpace($result.Output)) {
               Write-Error "Archive security probe returned no diagnostic: $label"
               exit 1
             }
-            if ($output -match 'SharpCompress') {
+            if ($result.Output -match 'SharpCompress') {
               Write-Error "Archive security diagnostic exposed an implementation detail: $label"
               exit 1
             }
