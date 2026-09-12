@@ -70,6 +70,8 @@ public sealed class XPScriptTranspiler
         var runtimeFeatures = RuntimeFeatures.Detect(source);
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
+        var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
+        source = new ArchiveObjectPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
@@ -78,12 +80,16 @@ public sealed class XPScriptTranspiler
         var usesSqlite = runtimeFeatures.Sqlite || source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
+        var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
+        var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDbMsSql is not available for browser-wasm targets.");
         if (usesAi && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
+        if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
@@ -125,6 +131,18 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
+        if (usesArchive)
+        {
+            generated += "\n\n" + ArchiveRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveMemoryRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveIteratorRuntimeSource.Code + "\n";
+        }
+        if (usesExtendedArchive)
+        {
+            generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveExtendedWriterRuntimeSource.Code + "\n";
+            generated += "\n\n" + ArchiveExtendedWriterFactoryRuntimeSource.Code + "\n";
+        }
         if (runtimeFeatures.RequiresJson || usesAi)
         {
             generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n";

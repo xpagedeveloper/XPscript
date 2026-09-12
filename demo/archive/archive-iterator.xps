@@ -1,0 +1,29 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New arCHive()
+    archive.cReAtE("zip")
+    archive.aDdTeXt("root.txt", "root")
+    archive.ADDTEXT("folder/child.txt", "child")
+
+    Dim countFromEntries As Integer
+    ForAll item In archive.eNtRiEs
+        countFromEntries = countFromEntries + 1
+    End ForAll
+
+    Dim entry As aRcHiVeEnTrY
+    Dim countFromIterator As Integer
+    Set entry = archive.gEtFiRsTeNtRy()
+    While entry Is Not Nothing
+        If entry.iSfIlE Then
+            Print "FILE=" & entry.fUlLnAmE
+        ElseIf entry.ISFOLDER Then
+            Print "FOLDER=" & entry.FULLNAME
+        End If
+        countFromIterator = countFromIterator + 1
+        Set entry = archive.GETNEXTENTRY(entry)
+    Wend
+
+    If countFromIterator <> countFromEntries Then Error 5, "Archive iterator count mismatch"
+    Print "ARCHIVE_ITERATOR=OK"
+End Sub

@@ -1,0 +1,73 @@
+Option Declare
+
+Sub Main()
+    Dim seed() As Byte
+    Dim tar As New Archive(seed, True)
+    tar.Create("tar")
+    tar.AddText("manifest.txt", "memory tar")
+
+    Dim tarBytes As Variant
+    tarBytes = tar.ToBytes()
+    Dim tarRead As New Archive(tarBytes, True)
+    If tarRead.ReadText("manifest.txt") <> "memory tar" Then Error 5, "Extended memory TAR round-trip failed"
+    tarRead.AddText("second.txt", "rebuilt tar")
+
+    Dim tarRebuiltBytes As Variant
+    tarRebuiltBytes = tarRead.ToBytes()
+    Dim tarRebuilt As New Archive(tarRebuiltBytes, True)
+    If tarRebuilt.ReadText("second.txt") <> "rebuilt tar" Then Error 5, "Extended memory TAR rebuild failed"
+
+    Dim seedEmptyTar() As Byte
+    Dim emptyTar As New Archive(seedEmptyTar, True)
+    emptyTar.Create("tar")
+    emptyTar.AddText("only.txt", "remove me")
+    Dim populatedEmptyTarBytes As Variant
+    populatedEmptyTarBytes = emptyTar.ToBytes()
+
+    Dim emptyTarEdit As New Archive(populatedEmptyTarBytes, True)
+    If Not emptyTarEdit.Remove("only.txt") Then Error 5, "Extended memory TAR final-entry remove failed"
+    Dim emptyTarBytes As Variant
+    emptyTarBytes = emptyTarEdit.ToBytes()
+
+    Dim emptyTarRead As New Archive(emptyTarBytes, True)
+    If emptyTarRead.Format <> "TAR" Then Error 5, "Extended memory empty TAR format detection failed"
+    If emptyTarRead.FileCount <> 0 Then Error 5, "Extended memory empty TAR should contain zero files"
+    If emptyTarRead.FolderCount <> 0 Then Error 5, "Extended memory empty TAR should contain zero folders"
+    If emptyTarRead.IsReadOnly Then Error 5, "Extended memory empty TAR should remain rebuildable"
+    emptyTarRead.AddText("after-empty.txt", "tar reopened")
+    If emptyTarRead.ReadText("after-empty.txt") <> "tar reopened" Then Error 5, "Extended memory empty TAR reopen failed"
+
+    Dim seed7z() As Byte
+    Dim seven As New Archive(seed7z, True)
+    seven.Create("7z")
+    seven.AddText("manifest.txt", "memory 7z")
+
+    Dim sevenBytes As Variant
+    sevenBytes = seven.ToBytes()
+    Dim sevenRead As New Archive(sevenBytes, True)
+    If sevenRead.ReadText("manifest.txt") <> "memory 7z" Then Error 5, "Extended memory 7z round-trip failed"
+    sevenRead.AddText("second.txt", "rebuilt 7z")
+
+    Dim sevenRebuiltBytes As Variant
+    sevenRebuiltBytes = sevenRead.ToBytes()
+    Dim sevenRebuilt As New Archive(sevenRebuiltBytes, True)
+    If sevenRebuilt.ReadText("second.txt") <> "rebuilt 7z" Then Error 5, "Extended memory 7z rebuild failed"
+
+    Dim seedEmpty7z() As Byte
+    Dim emptySeven As New Archive(seedEmpty7z, True)
+    emptySeven.Create("7z")
+    emptySeven.AddText("only.txt", "remove me")
+    Dim populatedEmptyBytes As Variant
+    populatedEmptyBytes = emptySeven.ToBytes()
+
+    Dim emptySevenEdit As New Archive(populatedEmptyBytes, True)
+    If Not emptySevenEdit.Remove("only.txt") Then Error 5, "Extended memory 7z final-entry remove failed"
+    Dim emptySevenBytes As Variant
+    emptySevenBytes = emptySevenEdit.ToBytes()
+
+    Dim emptySevenRead As New Archive(emptySevenBytes, True)
+    If emptySevenRead.FileCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero files"
+    If emptySevenRead.FolderCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero folders"
+
+    Print "ARCHIVE_EXTENDED_MEMORY_WRITE=OK"
+End Sub

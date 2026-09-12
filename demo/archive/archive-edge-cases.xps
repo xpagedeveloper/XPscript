@@ -1,0 +1,26 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+
+    Dim unicodeName As String
+    unicodeName = "mapp/åäö-文件-😀.txt"
+    archive.AddText(unicodeName, "första")
+    If archive.ReadText(unicodeName) <> "första" Then Error 5, "Unicode Archive entry round-trip failed"
+
+    archive.AddText("empty.txt", "")
+    If archive.ReadText("empty.txt") <> "" Then Error 5, "Empty Archive entry round-trip failed"
+
+    archive.AddText("duplicate.txt", "old")
+    archive.AddText("duplicate.txt", "new")
+    If archive.ReadText("duplicate.txt") <> "new" Then Error 5, "Duplicate Archive entry replacement failed"
+
+    Dim entry As ArchiveEntry
+    Set entry = archive.GetEntry(unicodeName)
+    If entry Is Nothing Then Error 5, "Unicode Archive entry lookup failed"
+    If Not entry.IsFile Then Error 5, "ArchiveEntry.IsFile failed"
+    If entry.IsFolder Then Error 5, "ArchiveEntry IsFile/IsFolder must be mutually exclusive"
+
+    Print "ARCHIVE_EDGE_CASES=OK"
+End Sub

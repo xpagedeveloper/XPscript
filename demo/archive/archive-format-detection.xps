@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim zip As New Archive("archive-format-zip.bin", True)
+    zip.Create("zip")
+    zip.AddText("payload.txt", "zip")
+    If zip.Format <> "ZIP" Then Error 5, "ZIP content format detection failed: " & zip.Format
+
+    Dim seven As New Archive("archive-format-7z.bin", True)
+    seven.Create("7z")
+    seven.AddText("payload.txt", "7z")
+    If seven.Format <> "7Z" Then Error 5, "7z content format detection failed: " & seven.Format
+
+    Dim tar As New Archive("archive-format-tar.bin", True)
+    tar.Create("tar")
+    tar.AddText("payload.txt", "tar")
+    If tar.Format <> "TAR" Then Error 5, "TAR content format detection failed: " & tar.Format
+
+    Dim gzip As New Archive("archive-format-gzip.bin", True)
+    gzip.Create("gzip")
+    gzip.AddText("payload.txt", "gzip")
+    If gzip.Format <> "GZIP" Then Error 5, "GZip content format detection failed: " & gzip.Format
+
+    Print "ARCHIVE_FORMAT_DETECTION=OK"
+End Sub
