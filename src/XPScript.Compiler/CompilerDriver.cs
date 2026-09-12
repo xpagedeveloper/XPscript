@@ -121,8 +121,9 @@ public sealed class CompilerDriver
                 rid,
                 selfContained,
                 stagedManagedReferences,
-                publishSingleFile: true,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
+                publishSingleFile: CompilePublishLayoutContext.IsConfigured ? CompilePublishLayoutContext.SingleFile : true,
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                assemblyName: OutputAssemblyName(outputPath));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -153,17 +154,31 @@ public sealed class CompilerDriver
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
-            var generatedExecutable = FindPublishedExecutable(publishDir, rid);
+            var generatedExecutable = FindPublishedExecutable(publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
-            CompilerOutputPublisher.Publish(
-                generatedExecutable,
-                outputPath,
-                sourcePath,
-                nativeDependencies,
-                managedReferences.Native,
-                makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            if (CompilePublishLayoutContext.IsConfigured && !CompilePublishLayoutContext.SingleFile)
+            {
+                CompilerOutputPublisher.PublishDirectory(
+                    publishDir,
+                    generatedExecutable,
+                    outputPath,
+                    sourcePath,
+                    nativeDependencies,
+                    managedReferences.Native,
+                    makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            }
+            else
+            {
+                CompilerOutputPublisher.Publish(
+                    generatedExecutable,
+                    outputPath,
+                    sourcePath,
+                    nativeDependencies,
+                    managedReferences.Native,
+                    makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            }
         }
         finally
         {
@@ -208,7 +223,8 @@ public sealed class CompilerDriver
                 selfContained: false,
                 stagedManagedReferences,
                 publishSingleFile: false,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                assemblyName: "Generated");
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -243,7 +259,7 @@ public sealed class CompilerDriver
             if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
                 StageRunManagedDependency(Path.Combine(Path.GetDirectoryName(typeof(CompilerDriver).Assembly.Location) ?? "", "MimeKit.dll"), runOutputDirectory);
 
-            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid);
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
 
@@ -411,7 +427,8 @@ public sealed class CompilerDriver
         bool selfContained,
         IReadOnlyList<StagedManagedReference> references,
         bool publishSingleFile,
-        bool usesMimeKit)
+        bool usesMimeKit,
+        string assemblyName)
     {
         var itemGroup = new StringBuilder();
         if (references.Count > 0)
@@ -446,6 +463,7 @@ public sealed class CompilerDriver
     <OutputType>Exe</OutputType>
     <StartupObject>Program</StartupObject>
     <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -455,9 +473,16 @@ public sealed class CompilerDriver
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
+    <UseAppHost>true</UseAppHost>
 {publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
+    }
+
+    private static string OutputAssemblyName(string outputPath)
+    {
+        var name = Path.GetFileNameWithoutExtension(outputPath);
+        return string.IsNullOrWhiteSpace(name) ? "XPScriptApp" : name;
     }
 
     private static string EscapeXml(string value) => value
@@ -467,8 +492,14 @@ public sealed class CompilerDriver
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("'", "&apos;", StringComparison.Ordinal);
 
-    private static string? FindPublishedExecutable(string publishDirectory, string rid)
+    private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
     {
+        var expectedName = rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase)
+            ? assemblyName + ".exe"
+            : assemblyName;
+        var expectedPath = Path.Combine(publishDirectory, expectedName);
+        if (File.Exists(expectedPath)) return expectedPath;
+
         if (rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase))
             return Directory.EnumerateFiles(publishDirectory, "*.exe", SearchOption.TopDirectoryOnly).SingleOrDefault();
 
@@ -476,7 +507,7 @@ public sealed class CompilerDriver
             .Where(path => !Path.HasExtension(path))
             .Where(path => !Path.GetFileName(path).EndsWith(".dbg", StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        return candidates.Length == 1 ? candidates[0] : candidates.FirstOrDefault(path => Path.GetFileName(path).Equals("Generated", StringComparison.OrdinalIgnoreCase));
+        return candidates.Length == 1 ? candidates[0] : null;
     }
 
     private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source)

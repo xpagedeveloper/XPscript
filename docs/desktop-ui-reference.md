@@ -29,5 +29,5 @@ End Sub
 Compile a desktop program with:
 
 ```powershell
-xpscriptc .\demo\desktop-ui\customer-form.xps -o .\out\desktop-ui-demo.exe --framework-dependent
+xpscriptc .\demo\desktop-ui\customer-form.xps -o .\out\desktop-ui-demo.exe --runtime=false
 ```

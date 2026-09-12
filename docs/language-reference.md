@@ -305,8 +305,8 @@ See [Getting started](getting-started.md) for hosting commands and deployment pa
 | compile source | `xpscriptc source.xps -o output` | source file and output path. | Compiles XPScript. | [hello.xps](../demo/console/hello.xps) |
 | run source | `xpscriptc run source.xps [-- scriptArgs...]` | source plus optional script arguments. | Compiles in isolated temp output and runs immediately. | [hello.xps](../demo/console/hello.xps) |
 | `-o` | `-o path` | output path. | Selects compiler output. | [hello.xps](../demo/console/hello.xps) |
-| `--runtime` | `--runtime RID` | runtime identifier such as `win-x64`, `linux-x64`, `osx-arm64`. | Selects target runtime. | [platform-shell.xps](../samples/platform-shell.xps) |
-| `--framework-dependent` | `--framework-dependent` | none | Produces framework-dependent output. | [hello.xps](../demo/console/hello.xps) |
+| `--runtime` | `--platform RID` | runtime identifier such as `win-x64`, `linux-x64`, `osx-arm64`. | Selects target runtime. | [platform-shell.xps](../samples/platform-shell.xps) |
+| `--runtime=false` | `--runtime=false` | none | Produces framework-dependent output. | [hello.xps](../demo/console/hello.xps) |
 | `--result-format` | `--result-format text|json|xml` | result serialization format. | Selects compiler diagnostics/result format. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--` | `-- scriptArg1 ...` | remaining values passed to script. | Ends compiler option parsing. | [application-runtime.xps](../samples/application-runtime.xps) |
 | Kestrel `web` | `xpscript web --root PATH [options]` | web root plus host options. | Starts Kestrel web host. | [index.xps](../demo/kestrel/index.xps) |

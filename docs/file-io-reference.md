@@ -136,8 +136,8 @@ For the broadest text/Binary/locking demonstration, copy [samples/file-io-extens
 Compile them with:
 
 ```powershell
-xpscriptc .\samples\file-io-extensions.xps -o .\out\file-io-demo.exe --framework-dependent
-xpscriptc .\samples\file-position-reset.xps -o .\out\file-position-demo.exe --framework-dependent
+xpscriptc .\samples\file-io-extensions.xps -o .\out\file-io-demo.exe --runtime=false
+xpscriptc .\samples\file-position-reset.xps -o .\out\file-position-demo.exe --runtime=false
 ```
 
 

@@ -12,8 +12,8 @@ This page is the searchable reference for the XPScript compiler and host command
 | `--debug` | `xpscript run source.xps --debug` or `xpscript compile source.xps --debug` | none | Enables debug behavior and application dependency security warning mode unless explicitly overridden. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--security` | `--security=off|warn|strict` | security mode. | Controls NuGet application dependency auditing. `warn` reports findings; `strict` also fails when audit data is unavailable and blocks high/critical findings. | [Dependency security and package patching](dependency-security-and-patching.md) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
-| `--runtime` | `--runtime RID` | `RID`: one of the supported runtime identifiers such as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. | Compiles/publishes for an explicit target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
-| `--framework-dependent` | `--framework-dependent` | none | Produces framework-dependent output instead of a self-contained application. | [hello.xps](../demo/console/hello.xps) |
+| `--runtime` | `--platform RID` | `RID`: one of the supported runtime identifiers such as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. | Compiles/publishes for an explicit target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
+| `--runtime=false` | `--runtime=false` | none | Produces framework-dependent output instead of a self-contained application. | [hello.xps](../demo/console/hello.xps) |
 | `--result-format text` | `--result-format text` | none | Emits human-readable compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format json` | `--result-format json` | none | Emits structured JSON compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format xml` | `--result-format xml` | none | Emits structured XML compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
@@ -23,8 +23,8 @@ This page is the searchable reference for the XPScript compiler and host command
 
 | Command/option | Syntax | Parameters | Description |
 |---|---|---|---|
-| `dependencies` | `xpscript dependencies SOURCE [--runtime RID] [--json]` | XPScript source and optional target RID. | Reports the direct and transitive NuGet graph required by that application. |
-| `security` | `xpscript security SOURCE [--runtime RID] [--json]` | XPScript source and optional target RID. | Checks the application's resolved NuGet graph for known vulnerabilities. Exit code `2` means vulnerabilities were found; `3` means vulnerability data was unavailable. |
+| `dependencies` | `xpscript dependencies SOURCE [--platform RID] [--json]` | XPScript source and optional target RID. | Reports the direct and transitive NuGet graph required by that application. |
+| `security` | `xpscript security SOURCE [--platform RID] [--json]` | XPScript source and optional target RID. | Checks the application's resolved NuGet graph for known vulnerabilities. Exit code `2` means vulnerabilities were found; `3` means vulnerability data was unavailable. |
 | `patch all --check` | `xpscript patch all --check` | none | Shows compatible same-major/minor stable patch releases without changing patch state. |
 | `patch all` | `xpscript patch all` | none | Downloads and activates eligible compatible patch releases for the current XPScript release line. |
 | `patch PACKAGE` | `xpscript patch PACKAGE [--check]` | NuGet package ID. | Checks or applies a compatible patch for one package. A member of an atomic package group can cause the whole group to be evaluated together. |
@@ -96,7 +96,7 @@ FastCGI should normally listen on a private loopback address or Unix socket behi
 |---|---|---|---|---|
 | `compile` | `xpscript compile main.xps --target webiis [options]` | `main.xps`: mandatory WebIIS build entry. | Builds an IIS-deployable XPScript application package. | [main.xps](../demo/webiis/main.xps) |
 | `--target webiis` | `--target webiis` | target value `webiis`. | Selects the direct IIS deployment package target. | [main.xps](../demo/webiis/main.xps) |
-| WebIIS `--framework-dependent` | `--framework-dependent` | none | Builds a WebIIS package that requires the matching .NET runtime/hosting bundle on the server. | [main.xps](../demo/webiis/main.xps) |
+| WebIIS `--runtime=false` | `--runtime=false` | none | Builds a WebIIS package that requires the matching .NET runtime/hosting bundle on the server. | [main.xps](../demo/webiis/main.xps) |
 | WebIIS `-o` | `-o PATH` | `PATH`: deployment output directory outside the source application directory. | Selects the WebIIS package output directory. | [main.xps](../demo/webiis/main.xps) |
 
 For the generated IIS package layout, permissions, ASP.NET Core Module V2 requirements, and deployment workflow, see [WebIIS deployment target](webiis.md).

@@ -45,6 +45,139 @@ internal static class CompilerOutputPublisher
         PublishStaged(generatedExecutable, outputFullPath, dependencies, makeExecutable);
     }
 
+    public static void PublishDirectory(
+        string publishDirectory,
+        string generatedExecutable,
+        string outputPath,
+        string sourcePath,
+        IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.NativeReference> managedNativeDependencies,
+        bool makeExecutable)
+    {
+        var sourceFullPath = Path.GetFullPath(sourcePath);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        if (PathsEqual(sourceFullPath, outputFullPath))
+            throw new CompilerException("Compiler output path may not overwrite the XPScript source file.");
+        RejectProtectedCompilerTarget(outputFullPath);
+
+        var publishFullPath = Path.GetFullPath(publishDirectory);
+        var generatedExecutableFullPath = Path.GetFullPath(generatedExecutable);
+        if (!Directory.Exists(publishFullPath) || !File.Exists(generatedExecutableFullPath))
+            throw new CompilerException("Compiler publish output is incomplete.");
+        if (!generatedExecutableFullPath.StartsWith(publishFullPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("Generated executable is outside the compiler publish directory.");
+
+        var outputDirectory = Path.GetDirectoryName(outputFullPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(outputDirectory);
+        RejectLinkedDestinationPath(outputDirectory);
+        RejectLinkedTarget(outputFullPath);
+
+        var stageDirectory = Path.Combine(outputDirectory, ".xpscript-publish-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(stageDirectory);
+        CompilerPathSecurity.HardenTemporaryDirectory(stageDirectory);
+
+        try
+        {
+            var outputExecutableName = Path.GetFileName(outputFullPath);
+            if (string.IsNullOrWhiteSpace(outputExecutableName))
+                throw new CompilerException("Compiler output path must end with a file name.");
+
+            var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var seenNames = new HashSet<string>(comparer);
+            var operations = new List<(string Stage, string Target)>();
+            (string Stage, string Target)? executableOperation = null;
+
+            foreach (var publishedFile in Directory.EnumerateFiles(publishFullPath, "*", SearchOption.TopDirectoryOnly))
+            {
+                var isExecutable = PathsEqual(publishedFile, generatedExecutableFullPath);
+                var fileName = isExecutable ? outputExecutableName : Path.GetFileName(publishedFile);
+                if (string.IsNullOrWhiteSpace(fileName) || !seenNames.Add(fileName))
+                    throw new CompilerException("Multiple compiler outputs would use the same file name: " + fileName);
+
+                var target = isExecutable ? outputFullPath : Path.Combine(outputDirectory, fileName);
+                RejectProtectedCompilerTarget(target);
+                RejectLinkedTarget(target);
+
+                var staged = Path.Combine(stageDirectory, fileName);
+                File.Copy(publishedFile, staged, overwrite: false);
+                CompilerPathSecurity.HardenTemporaryFile(staged);
+
+                if (isExecutable && makeExecutable && !OperatingSystem.IsWindows())
+                {
+                    try
+                    {
+                        var mode = File.GetUnixFileMode(staged);
+                        File.SetUnixFileMode(staged, mode | UnixFileMode.UserExecute);
+                    }
+                    catch (PlatformNotSupportedException) { }
+                }
+
+                if (isExecutable) executableOperation = (staged, target);
+                else operations.Add((staged, target));
+            }
+
+            if (executableOperation is null)
+                throw new CompilerException("Compiler publish output did not contain the generated executable.");
+
+            var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(sourceFullPath) ?? Environment.CurrentDirectory);
+            foreach (var dependency in nativeDependencies)
+            {
+                StageAdditionalDependency(
+                    CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, dependency.DeclaredPath),
+                    dependency.LoadName,
+                    outputDirectory,
+                    stageDirectory,
+                    seenNames,
+                    operations);
+            }
+            foreach (var dependency in managedNativeDependencies)
+            {
+                var sourceFile = CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, dependency.DeclaredPath, "ReferenceNative");
+                StageAdditionalDependency(
+                    sourceFile,
+                    Path.GetFileName(sourceFile),
+                    outputDirectory,
+                    stageDirectory,
+                    seenNames,
+                    operations);
+            }
+
+            // The executable is committed last so an interrupted publication never exposes a new
+            // apphost before its managed/runtime closure has been installed.
+            operations.Add(executableOperation.Value);
+            CommitBatch(stageDirectory, operations);
+        }
+        finally
+        {
+            try { DeleteStageDirectory(stageDirectory); } catch { }
+        }
+    }
+
+    private static void StageAdditionalDependency(
+        string sourcePath,
+        string fileName,
+        string outputDirectory,
+        string stageDirectory,
+        HashSet<string> seenNames,
+        List<(string Stage, string Target)> operations)
+    {
+        fileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new CompilerException("Dependency output name must be a file name.");
+        if (!seenNames.Add(fileName))
+            throw new CompilerException("Multiple compiler outputs would use the same file name: " + fileName);
+
+        var target = Path.Combine(outputDirectory, fileName);
+        RejectProtectedCompilerTarget(target);
+        RejectLinkedTarget(target);
+        if (PathsEqual(sourcePath, target)) return;
+
+        var staged = Path.Combine(stageDirectory, fileName);
+        CompilerSecureFileCopy.CopyValidatedRegularFile(sourcePath, staged, "Native dependency");
+        CompilerPathSecurity.HardenTemporaryFile(staged);
+        operations.Add((staged, target));
+    }
+
     private static void PublishStaged(
         string generatedExecutable,
         string outputPath,

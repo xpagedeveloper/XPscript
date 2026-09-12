@@ -12,6 +12,6 @@ $samples = @(
 New-Item -ItemType Directory -Force './out/notes-extended' | Out-Null
 foreach ($sample in $samples) {
   $name = [IO.Path]::GetFileNameWithoutExtension($sample)
-  dotnet run --project $project -c Release -- $sample --framework-dependent -o "./out/notes-extended/$name"
+  dotnet run --project $project -c Release -- $sample --runtime=false -o "./out/notes-extended/$name"
   if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $sample" }
 }
