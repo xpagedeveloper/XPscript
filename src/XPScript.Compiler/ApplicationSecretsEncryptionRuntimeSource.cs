@@ -17,7 +17,7 @@ internal static class XPScriptApplicationSecretsEncryptionRuntime
     public static string Get(object? serviceValue, object? accountValue)
     {
         var stored = XPScriptApplicationSecretsBackupRuntime.Get(serviceValue, accountValue);
-        if (IsEncrypted(stored))
+        if (IsEncryptedValue(stored))
             throw new XPScriptRuntimeException(5, "Application.Secrets credential is additionally encrypted. Supply the encryption password to Get(service, account, password).");
         return stored;
     }
@@ -26,7 +26,7 @@ internal static class XPScriptApplicationSecretsEncryptionRuntime
     {
         var stored = XPScriptApplicationSecretsBackupRuntime.Get(serviceValue, accountValue);
         if (stored.Length == 0) return "";
-        if (!IsEncrypted(stored))
+        if (!IsEncryptedValue(stored))
             throw new XPScriptRuntimeException(5, "Application.Secrets credential is not additionally encrypted. Store it with Set(service, account, secret, password) first.");
 
         var applicationId = RequireApplicationId();
@@ -34,6 +34,12 @@ internal static class XPScriptApplicationSecretsEncryptionRuntime
         var account = Required(accountValue, "account");
         var password = RequiredPassword(passwordValue);
         return Decrypt(stored, password, applicationId, service, account);
+    }
+
+    public static bool IsEncrypted(object? serviceValue, object? accountValue)
+    {
+        var stored = XPScriptApplicationSecretsBackupRuntime.Get(serviceValue, accountValue);
+        return IsEncryptedValue(stored);
     }
 
     public static void Set(object? serviceValue, object? accountValue, object? secretValue)
@@ -193,7 +199,7 @@ internal static class XPScriptApplicationSecretsEncryptionRuntime
         return bytes;
     }
 
-    private static bool IsEncrypted(string value) => value.StartsWith(Prefix, StringComparison.Ordinal);
+    private static bool IsEncryptedValue(string value) => value.StartsWith(Prefix, StringComparison.Ordinal);
 
     private static string RequireApplicationId()
     {
