@@ -17,16 +17,35 @@ internal static class XPScriptArchiveErrorNormalizer
         return ex;
     }
 
+    private static bool IsBackendException(Exception ex)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+        {
+            var typeName = current.GetType().FullName ?? "";
+            if (typeName.StartsWith("SharpCompress.", StringComparison.Ordinal)) return true;
+            if ((current.Message ?? "").Contains("SharpCompress", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
     public static T Run<T>(Func<T> action)
     {
         try { return action(); }
         catch (XPScriptRuntimeException ex) { throw Normalize(ex); }
+        catch (Exception ex) when (IsBackendException(ex))
+        {
+            throw new XPScriptRuntimeException(5, "Unable to process the extended archive.");
+        }
     }
 
     public static void Run(Action action)
     {
         try { action(); }
         catch (XPScriptRuntimeException ex) { throw Normalize(ex); }
+        catch (Exception ex) when (IsBackendException(ex))
+        {
+            throw new XPScriptRuntimeException(5, "Unable to process the extended archive.");
+        }
     }
 }
 
