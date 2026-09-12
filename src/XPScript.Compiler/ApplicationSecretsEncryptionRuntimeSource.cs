@@ -26,7 +26,8 @@ internal static class XPScriptApplicationSecretsEncryptionRuntime
     {
         var stored = XPScriptApplicationSecretsBackupRuntime.Get(serviceValue, accountValue);
         if (stored.Length == 0) return "";
-        if (!IsEncrypted(stored)) return stored;
+        if (!IsEncrypted(stored))
+            throw new XPScriptRuntimeException(5, "Application.Secrets credential is not additionally encrypted. Store it with Set(service, account, secret, password) first.");
 
         var applicationId = RequireApplicationId();
         var service = Required(serviceValue, "service");
