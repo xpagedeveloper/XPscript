@@ -47,6 +47,15 @@ Sub Main()
         failures = failures + 1
     End If
 
+    Forall addressBook In session.AddressBooks
+        Print "AddressBook=" & addressBook.Server & "!!" & addressBook.FilePath
+        If addressBook.IsOpen Then
+            Print "FAIL AddressBooks must return closed NotesDatabase objects"
+            failures = failures + 1
+        End If
+        Call addressBook.Recycle()
+    End Forall
+
     Call session.Recycle()
     If Not session.IsRecycled Then
         Print "FAIL IsRecycled expected True after Recycle"
