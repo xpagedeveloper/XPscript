@@ -16,6 +16,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Fix compile-only migration anchor
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/apply-publish-layout-rework.py')
+          s = p.read_text(encoding='utf-8')
+          old = '''replace_exact(path,\n''' + "'''            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);'''" + ''',\n''' + "'''            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\\n            using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);''')"
+          new = '''replace_exact(path,\n''' + "'''            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\\n            var timer = Stopwatch.StartNew();'''" + ''',\n''' + "'''            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);\\n            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);\\n            using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);\\n            var timer = Stopwatch.StartNew();''')"
+          if old not in s:
+              raise SystemExit('compile-only migration anchor not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
       - name: Apply source and documentation changes
         run: python3 scripts/apply-publish-layout-rework.py
       - name: Remove one-time migration files
