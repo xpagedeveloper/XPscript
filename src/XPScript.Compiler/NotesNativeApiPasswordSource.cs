@@ -6,6 +6,7 @@ internal static class NotesNativeApiPasswordSource
 internal sealed partial class XPScriptNotesNativeApi
 {
     private const uint KfmSwitchIdDontSetEnvVar = 0x00000008;
+    private const int PasswordDigestCapacity = 2048;
 
     internal void Initialize(string? notesIni, string? idPassword)
     {
@@ -47,6 +48,62 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    internal string HashPassword(string password)
+    {
+        EnsureInitialized();
+        using var passwordText = ToLmbcs(password);
+        if (passwordText.Length > ushort.MaxValue)
+            throw new XPScriptRuntimeException(5, "Password is too long for NotesSession.HashPassword.");
+
+        var digest = System.Runtime.InteropServices.Marshal.AllocHGlobal(PasswordDigestCapacity);
+        try
+        {
+            Zero(digest, PasswordDigestCapacity);
+            var status = Resolve<SECHashPasswordDelegate>("SECHashPassword")(
+                checked((ushort)passwordText.Length),
+                passwordText.Pointer,
+                checked((ushort)PasswordDigestCapacity),
+                out var digestLength,
+                digest,
+                0,
+                0);
+            Check(status, "SECHashPassword");
+            if (digestLength >= PasswordDigestCapacity)
+                throw new XPScriptRuntimeException(5, "SECHashPassword returned an invalid digest length.");
+            return FromLmbcs(digest, digestLength);
+        }
+        finally
+        {
+            Zero(passwordText.Pointer, passwordText.Length + 1);
+            Zero(digest, PasswordDigestCapacity);
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(digest);
+        }
+    }
+
+    internal bool VerifyPassword(string password, string hashedPassword)
+    {
+        EnsureInitialized();
+        using var passwordText = ToLmbcs(password);
+        using var digestText = ToLmbcs(hashedPassword);
+        if (passwordText.Length > ushort.MaxValue || digestText.Length > ushort.MaxValue)
+            return false;
+
+        try
+        {
+            return Resolve<SECVerifyPasswordDelegate>("SECVerifyPassword")(
+                checked((ushort)passwordText.Length),
+                passwordText.Pointer,
+                checked((ushort)digestText.Length),
+                digestText.Pointer,
+                0,
+                0) == 0;
+        }
+        finally
+        {
+            Zero(passwordText.Pointer, passwordText.Length + 1);
+        }
+    }
+
     internal string GetEnvironmentString(string name)
     {
         EnsureInitialized();
@@ -68,6 +125,16 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
+    internal void SetEnvironmentVariable(string name, string value)
+    {
+        EnsureInitialized();
+        using var variableName = ToLmbcs(name);
+        using var variableValue = ToLmbcs(value);
+        Resolve<OSSetEnvironmentVariableDelegate>("OSSetEnvironmentVariable")(
+            variableName.Pointer,
+            variableValue.Pointer);
+    }
+
     // Kept as a no-op so session cleanup remains source-compatible with the
     // earlier password-hook implementation. Password authentication no longer
     // registers an Extension Manager hook in a standalone C API process.
@@ -79,12 +146,34 @@ internal sealed partial class XPScriptNotesNativeApi
     private delegate int OSGetEnvironmentStringDelegate(nint variableName, nint returnValueBuffer, ushort bufferLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate void OSSetEnvironmentVariableDelegate(nint variableName, nint value);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     private delegate ushort SECKFMSwitchToIDFileDelegate(
         nint idFileName,
         nint password,
         nint userName,
         ushort maxUserNameLength,
         uint flags,
+        nint reserved);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort SECHashPasswordDelegate(
+        ushort passwordLength,
+        nint password,
+        ushort maximumDigestLength,
+        out ushort digestLength,
+        nint digest,
+        uint reservedFlags,
+        nint reserved);
+
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
+    private delegate ushort SECVerifyPasswordDelegate(
+        ushort passwordLength,
+        nint password,
+        ushort digestLength,
+        nint digest,
+        uint reservedFlags,
         nint reserved);
 }
 """;

@@ -4,6 +4,9 @@ Option Declare
 Sub Main()
     Dim session As NotesSession
     Dim failures As Integer
+    Dim hashedPassword As String
+    Dim oldStringEnvironmentValue As String
+    Dim oldNumberEnvironmentValue As String
 
     failures = 0
     Set session = New NotesSession()
@@ -29,6 +32,53 @@ Sub Main()
         Print "FAIL ConvertMIME expected True after assignment"
         failures = failures + 1
     End If
+
+    oldStringEnvironmentValue = session.GetEnvironmentString("XPScriptEnvironmentStringTest")
+    oldNumberEnvironmentValue = session.GetEnvironmentString("XPScriptEnvironmentNumberTest")
+
+    Call session.SetEnvironmentVar("XPScriptEnvironmentStringTest", "notes.ini-value")
+    If session.GetEnvironmentString("XPScriptEnvironmentStringTest") <> "notes.ini-value" Then
+        Print "FAIL SetEnvironmentVar/GetEnvironmentString string roundtrip"
+        failures = failures + 1
+    End If
+
+    Call session.SetEnvironmentVar("XPScriptEnvironmentNumberTest", 4711)
+    If session.GetEnvironmentValue("XPScriptEnvironmentNumberTest") <> 4711 Then
+        Print "FAIL SetEnvironmentVar/GetEnvironmentValue numeric roundtrip"
+        failures = failures + 1
+    End If
+    If session.GetEnvironmentString("XPScriptEnvironmentNumberTest") <> "4711" Then
+        Print "FAIL GetEnvironmentString must also read numeric values"
+        failures = failures + 1
+    End If
+
+    Call session.SetEnvironmentVar("XPScriptEnvironmentStringTest", oldStringEnvironmentValue)
+    Call session.SetEnvironmentVar("XPScriptEnvironmentNumberTest", oldNumberEnvironmentValue)
+
+    hashedPassword = session.HashPassword("XPscript-password-test")
+    If hashedPassword = "" Then
+        Print "FAIL HashPassword returned an empty digest"
+        failures = failures + 1
+    End If
+
+    If Not session.VerifyPassword("XPscript-password-test", hashedPassword) Then
+        Print "FAIL VerifyPassword rejected the correct password"
+        failures = failures + 1
+    End If
+
+    If session.VerifyPassword("XPscript-password-test-wrong", hashedPassword) Then
+        Print "FAIL VerifyPassword accepted an incorrect password"
+        failures = failures + 1
+    End If
+
+    Forall addressBook In session.AddressBooks
+        Print "AddressBook=" & addressBook.Server & "!!" & addressBook.FilePath
+        If addressBook.IsOpen Then
+            Print "FAIL AddressBooks must return closed NotesDatabase objects"
+            failures = failures + 1
+        End If
+        Call addressBook.Recycle()
+    End Forall
 
     Call session.Recycle()
     If Not session.IsRecycled Then
