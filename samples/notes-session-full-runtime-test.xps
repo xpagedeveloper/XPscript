@@ -5,6 +5,8 @@ Sub Main()
     Dim session As NotesSession
     Dim failures As Integer
     Dim hashedPassword As String
+    Dim oldStringEnvironmentValue As String
+    Dim oldNumberEnvironmentValue As String
 
     failures = 0
     Set session = New NotesSession()
@@ -31,6 +33,9 @@ Sub Main()
         failures = failures + 1
     End If
 
+    oldStringEnvironmentValue = session.GetEnvironmentString("XPScriptEnvironmentStringTest")
+    oldNumberEnvironmentValue = session.GetEnvironmentString("XPScriptEnvironmentNumberTest")
+
     Call session.SetEnvironmentVar("XPScriptEnvironmentStringTest", "notes.ini-value")
     If session.GetEnvironmentString("XPScriptEnvironmentStringTest") <> "notes.ini-value" Then
         Print "FAIL SetEnvironmentVar/GetEnvironmentString string roundtrip"
@@ -46,6 +51,9 @@ Sub Main()
         Print "FAIL GetEnvironmentString must also read numeric values"
         failures = failures + 1
     End If
+
+    Call session.SetEnvironmentVar("XPScriptEnvironmentStringTest", oldStringEnvironmentValue)
+    Call session.SetEnvironmentVar("XPScriptEnvironmentNumberTest", oldNumberEnvironmentValue)
 
     hashedPassword = session.HashPassword("XPscript-password-test")
     If hashedPassword = "" Then
