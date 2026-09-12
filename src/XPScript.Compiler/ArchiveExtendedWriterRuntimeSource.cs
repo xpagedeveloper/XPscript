@@ -7,6 +7,7 @@ internal sealed class XPScriptExtendedArchiveV2
 {
     private readonly XPScriptExtendedArchive _inner;
     private bool _gzipCreateMode;
+    private bool _createdExtendedSession;
     private string? _gzipEntryName;
     private byte[]? _gzipEntryBytes;
     private DateTime _gzipModified;
@@ -34,7 +35,7 @@ internal sealed class XPScriptExtendedArchiveV2
     public long UncompressedSize => _inner.UncompressedSize;
     public LSArray Entries => _inner.Entries;
 
-    private bool CanRebuildExisting => Exists && (Format.Equals("TAR", StringComparison.OrdinalIgnoreCase) || Format.Equals("7Z", StringComparison.OrdinalIgnoreCase));
+    private bool CanRebuildExisting => Exists && !_createdExtendedSession && (Format.Equals("TAR", StringComparison.OrdinalIgnoreCase) || Format.Equals("7Z", StringComparison.OrdinalIgnoreCase));
 
     public void Open() => _inner.Open();
     public void Close() => _inner.Close();
@@ -47,6 +48,7 @@ internal sealed class XPScriptExtendedArchiveV2
             if (string.IsNullOrWhiteSpace(Path)) throw new XPScriptRuntimeException(5, "GZip creation requires a file path.");
             if (!string.IsNullOrEmpty(Password)) throw new XPScriptRuntimeException(5, "Password-protected GZip writing is not supported.");
             _gzipCreateMode = true;
+            _createdExtendedSession = false;
             _gzipEntryName = null;
             _gzipEntryBytes = null;
             _gzipModified = DateTime.UtcNow;
@@ -58,6 +60,10 @@ internal sealed class XPScriptExtendedArchiveV2
         _gzipEntryName = null;
         _gzipEntryBytes = null;
         _inner.Create(format);
+        _createdExtendedSession = requested.Equals("TAR", StringComparison.OrdinalIgnoreCase)
+            || requested.Equals("7Z", StringComparison.OrdinalIgnoreCase)
+            || requested.Equals("7ZIP", StringComparison.OrdinalIgnoreCase)
+            || requested.Equals("SEVENZIP", StringComparison.OrdinalIgnoreCase);
     }
 
     public void Save()
