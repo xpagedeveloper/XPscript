@@ -154,7 +154,7 @@ public sealed class CompilerDriver
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
-            var generatedExecutable = FindPublishedExecutable(publishDir, rid);
+            var generatedExecutable = FindPublishedExecutable(publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
@@ -259,7 +259,7 @@ public sealed class CompilerDriver
             if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
                 StageRunManagedDependency(Path.Combine(Path.GetDirectoryName(typeof(CompilerDriver).Assembly.Location) ?? "", "MimeKit.dll"), runOutputDirectory);
 
-            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid);
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
 
@@ -492,8 +492,14 @@ public sealed class CompilerDriver
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("'", "&apos;", StringComparison.Ordinal);
 
-    private static string? FindPublishedExecutable(string publishDirectory, string rid)
+    private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
     {
+        var expectedName = rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase)
+            ? assemblyName + ".exe"
+            : assemblyName;
+        var expectedPath = Path.Combine(publishDirectory, expectedName);
+        if (File.Exists(expectedPath)) return expectedPath;
+
         if (rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase))
             return Directory.EnumerateFiles(publishDirectory, "*.exe", SearchOption.TopDirectoryOnly).SingleOrDefault();
 
@@ -501,7 +507,7 @@ public sealed class CompilerDriver
             .Where(path => !Path.HasExtension(path))
             .Where(path => !Path.GetFileName(path).EndsWith(".dbg", StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        return candidates.Length == 1 ? candidates[0] : candidates.FirstOrDefault(path => Path.GetFileName(path).Equals("Generated", StringComparison.OrdinalIgnoreCase));
+        return candidates.Length == 1 ? candidates[0] : null;
     }
 
     private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source)
