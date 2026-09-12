@@ -158,6 +158,10 @@ public sealed class CompilerDriver
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
+            var licenseNoticePath = Path.Combine(publishDir, ThirdPartyLicenseNoticeGenerator.OutputFileName);
+            await File.WriteAllTextAsync(licenseNoticePath, ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, selfContained));
+            CompilerPathSecurity.HardenTemporaryFile(licenseNoticePath);
+
             if (CompilePublishLayoutContext.IsConfigured && !CompilePublishLayoutContext.SingleFile)
             {
                 CompilerOutputPublisher.PublishDirectory(
@@ -178,6 +182,7 @@ public sealed class CompilerDriver
                     nativeDependencies,
                     managedReferences.Native,
                     makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+                ThirdPartyLicenseNoticeGenerator.PublishSidecar(licenseNoticePath, outputPath);
             }
         }
         finally
