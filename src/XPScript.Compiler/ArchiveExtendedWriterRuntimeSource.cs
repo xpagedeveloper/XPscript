@@ -283,6 +283,10 @@ internal sealed class XPScriptExtendedArchiveV2
                     continue;
                 }
                 var bytes = XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, Normalize(entry.FullName, true), MaxExtractSize, MaxCompressionRatio);
+                if (bytes.LongLength < entry.Size)
+                    throw new XPScriptRuntimeException(5, "Archive entry ended before its declared size.");
+                if (bytes.LongLength > entry.Size)
+                    Array.Resize(ref bytes, checked((int)entry.Size));
                 tarResult.Add(new RebuildEntry(Normalize(entry.FullName, true), bytes, entry.Modified, false));
             }
             return tarResult;
