@@ -4,6 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class ApplicationObjectPreprocessor
 {
+    private const string IdStateKey = "__xps_application_id";
     private const string TitleStateKey = "__xps_application_title";
     private const string IconStateKey = "__xps_application_icon";
     private const string ProductStateKey = "__xps_application_executable_product";
@@ -33,6 +34,7 @@ internal sealed class ApplicationObjectPreprocessor
 
         RejectWrites(source);
 
+        source = RewriteWritableApplicationProperty(source, "Id", IdStateKey);
         source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey);
         source = RewriteWritableApplicationProperty(source, "Executable.Icon", IconStateKey, BuildIconMarker, resolvePath: true);
         source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, BuildIconMarker, resolvePath: true);
