@@ -4,6 +4,7 @@ Option Declare
 Sub Main()
     Dim session As NotesSession
     Dim failures As Integer
+    Dim hashedPassword As String
 
     failures = 0
     Set session = New NotesSession()
@@ -27,6 +28,22 @@ Sub Main()
     session.ConvertMIME = True
     If Not session.ConvertMIME Then
         Print "FAIL ConvertMIME expected True after assignment"
+        failures = failures + 1
+    End If
+
+    hashedPassword = session.HashPassword("XPscript-password-test")
+    If hashedPassword = "" Then
+        Print "FAIL HashPassword returned an empty digest"
+        failures = failures + 1
+    End If
+
+    If Not session.VerifyPassword("XPscript-password-test", hashedPassword) Then
+        Print "FAIL VerifyPassword rejected the correct password"
+        failures = failures + 1
+    End If
+
+    If session.VerifyPassword("XPscript-password-test-wrong", hashedPassword) Then
+        Print "FAIL VerifyPassword accepted an incorrect password"
         failures = failures + 1
     End If
 
