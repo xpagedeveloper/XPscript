@@ -17,6 +17,30 @@ secret = Application.Secrets.Get("Database", "Production")
 
 In this mode the operating system protects the value using Windows Credential Manager, macOS Keychain or Linux Secret Service.
 
+## JSON values
+
+`Application.Secrets` treats the secret as a UTF-8 string. JSON is therefore supported directly, including quotes, braces, arrays, Unicode characters and embedded line breaks.
+
+```xpscript
+Dim jsonValue As String
+jsonValue = "{""token"":""abc"",""expires"":3600,""meta"":{""name"":""Åäö""}}"
+
+Call Application.Secrets.Set("OAuth", "Production", jsonValue)
+jsonValue = Application.Secrets.Get("OAuth", "Production")
+```
+
+JSON can also use the optional additional encryption layer:
+
+```xpscript
+Call Application.Secrets.Set( _
+    "OAuth", _
+    "Production", _
+    jsonValue, _
+    "a-long-unique-encryption-password")
+```
+
+Windows Credential Manager and macOS Keychain store and return the UTF-8 payload byte-for-byte. The current Linux `secret-tool` adapter removes trailing CR/LF characters returned by `secret-tool`. This does not change the meaning of valid JSON because trailing JSON whitespace is insignificant, but callers that require byte-for-byte preservation of trailing line endings should not rely on those trailing line endings on Linux.
+
 ## Additional value encryption
 
 Supply a fourth argument to `Set` and a third argument to `Get` to encrypt the value before it reaches the native credential store:
