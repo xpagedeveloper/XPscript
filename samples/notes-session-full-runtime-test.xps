@@ -31,6 +31,22 @@ Sub Main()
         failures = failures + 1
     End If
 
+    Call session.SetEnvironmentVar("XPScriptEnvironmentStringTest", "notes.ini-value")
+    If session.GetEnvironmentString("XPScriptEnvironmentStringTest") <> "notes.ini-value" Then
+        Print "FAIL SetEnvironmentVar/GetEnvironmentString string roundtrip"
+        failures = failures + 1
+    End If
+
+    Call session.SetEnvironmentVar("XPScriptEnvironmentNumberTest", 4711)
+    If session.GetEnvironmentValue("XPScriptEnvironmentNumberTest") <> 4711 Then
+        Print "FAIL SetEnvironmentVar/GetEnvironmentValue numeric roundtrip"
+        failures = failures + 1
+    End If
+    If session.GetEnvironmentString("XPScriptEnvironmentNumberTest") <> "4711" Then
+        Print "FAIL GetEnvironmentString must also read numeric values"
+        failures = failures + 1
+    End If
+
     hashedPassword = session.HashPassword("XPscript-password-test")
     If hashedPassword = "" Then
         Print "FAIL HashPassword returned an empty digest"
