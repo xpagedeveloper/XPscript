@@ -7,7 +7,7 @@ internal static class CliFrameworkLogging
     {
         // The xpscript CLI owns its console output. Suppress ASP.NET Core / hosting
         // framework categories so users see XPScript startup information and
-        // XPScript diagnostics instead of Microsoft.Hosting/Microsoft.AspNetCore logs.
+        // XPScript diagnostics instead of framework hosting logs.
         Environment.SetEnvironmentVariable("Logging__LogLevel__Microsoft", "None");
     }
 }
