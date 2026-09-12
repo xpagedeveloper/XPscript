@@ -50,8 +50,8 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = Regex.Replace(source, @"\bApplication\.Registry\.User\b", "XPScriptApplicationRegistryRuntime.User", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Registry\.System\b", "XPScriptApplicationRegistryRuntime.System", RegexOptions.IgnoreCase);
-        source = Regex.Replace(source, @"\bApplication\.Secrets\.Get\b", "XPScriptApplicationSecretsBackupRuntime.Get", RegexOptions.IgnoreCase);
-        source = Regex.Replace(source, @"\bApplication\.Secrets\.Set\b", "XPScriptApplicationSecretsBackupRuntime.Set", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.Secrets\.Get\b", "XPScriptApplicationSecretsEncryptionRuntime.Get", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.Secrets\.Set\b", "XPScriptApplicationSecretsEncryptionRuntime.Set", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\.Backup\b", "XPScriptApplicationSecretsBackupRuntime.Backup", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\.Restore\b", "XPScriptApplicationSecretsBackupRuntime.Restore", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\b", "XPScriptApplicationSecretsRuntime", RegexOptions.IgnoreCase);
@@ -181,7 +181,7 @@ internal sealed class ApplicationObjectPreprocessor
         {
             if (line[i] == '"')
             {
-                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
+                if (inString && i + 1 < lines.Length && line[i + 1] == '"') { i++; continue; }
                 inString = !inString;
                 continue;
             }
