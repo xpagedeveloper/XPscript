@@ -11,11 +11,14 @@ Sub Main()
     If reopened.IsReadOnly Then Error 5, "Existing TAR should be rebuild-writable"
 
     reopened.AddText("second.txt", "two")
+    Print "ARCHIVE_REBUILD_STAGE=READ_SECOND"
     If reopened.ReadText("second.txt") <> "two" Then Error 5, "TAR rebuild add failed"
     If Not reopened.Contains("first.txt") Then Error 5, "TAR rebuild add lost the existing entry"
+    Print "ARCHIVE_REBUILD_STAGE=READ_FIRST"
     If reopened.ReadText("first.txt") <> "one" Then Error 5, "TAR rebuild add changed existing content"
 
     If Not reopened.Rename("first.txt", "renamed.txt") Then Error 5, "TAR rebuild rename failed"
+    Print "ARCHIVE_REBUILD_STAGE=READ_RENAMED"
     If reopened.ReadText("renamed.txt") <> "one" Then Error 5, "TAR rebuild rename content failed"
 
     If Not reopened.Remove("second.txt") Then Error 5, "TAR rebuild remove failed"
