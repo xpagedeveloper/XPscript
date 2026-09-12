@@ -39,10 +39,10 @@ jobs:
         run: |
           ./scripts/validate-no-legacy-cli-options.ps1
           dotnet build ./XPScriptCompiler.slnx -c Release --nologo
-      - name: Commit cleanup
+      - name: Commit non-workflow cleanup
         shell: bash
         run: |
-          rm -f .github/workflows/cleanup-legacy-cli-temp.yml
+          git checkout HEAD -- .github/workflows
           rm -f scripts/cleanup-legacy-cli-temp.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
