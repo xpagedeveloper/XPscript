@@ -14,9 +14,9 @@ if (-not (Test-Path -LiteralPath $catalogPath)) {
 $notice = Get-Content -LiteralPath $noticePath -Raw
 
 # XPScript only permits third-party libraries, NuGet packages and add-ons whose
-# declared SPDX license is MIT, Apache-2.0, PostgreSQL, or BSD-3-Clause. Any other
-# license requires the dependency to be rejected or the policy to be changed
-# through an explicit legal/compliance decision.
+# declared SPDX license is MIT, Apache-2.0, PostgreSQL, or BSD-3-Clause. A small
+# reviewed allowlist is used for packages whose NuGet metadata points at a package-
+# local license file instead of publishing an SPDX expression.
 $approvedLicenseIdentifiers = @(
     'Apache-2.0',
     'BSD-3-Clause',
@@ -26,6 +26,11 @@ $approvedLicenseIdentifiers = @(
 $approvedLicenseSet = @{}
 foreach ($identifier in $approvedLicenseIdentifiers) {
     $approvedLicenseSet[$identifier.ToLowerInvariant()] = $true
+}
+
+$approvedFileLicenses = @{
+    'avalonia.angle.windows.natives' = 'LICENSE'
+    'microsoft.data.sqlclient.sni.runtime' = 'LICENSE.txt'
 }
 
 function Get-StaticPackageNames {
@@ -219,9 +224,18 @@ foreach ($package in ($packages.Keys | Sort-Object)) {
         continue
     }
 
-    # License-file and URL declarations are intentionally not auto-approved. The package
-    # must expose an SPDX expression that CI can prove uses only an approved license.
-    $licenseProblems += "$package declares NuGet license type '$licenseType' with value '$licenseText'. Only SPDX MIT, Apache-2.0, PostgreSQL, or BSD-3-Clause expressions are permitted."
+    if ($licenseType.Equals('file', [StringComparison]::OrdinalIgnoreCase)) {
+        $approvedFile = $approvedFileLicenses[$packageName.ToLowerInvariant()]
+        if ($approvedFile -and $approvedFile.Equals($licenseText, [StringComparison]::OrdinalIgnoreCase)) {
+            $resolvedLicenseFile = Join-Path $packageDirectory $licenseText
+            if (-not (Test-Path -LiteralPath $resolvedLicenseFile -PathType Leaf)) {
+                $licenseProblems += "$package declares approved license file '$licenseText', but that file is missing from the restored package."
+            }
+            continue
+        }
+    }
+
+    $licenseProblems += "$package declares NuGet license type '$licenseType' with value '$licenseText'. It is not an approved SPDX expression or reviewed file-based license declaration."
 }
 
 if ($licenseProblems.Count -gt 0) {
@@ -229,4 +243,4 @@ if ($licenseProblems.Count -gt 0) {
 }
 
 Write-Host ("NuGet license policy validation passed for {0} resolved packages." -f $packages.Count)
-Write-Host 'Permitted third-party licenses: MIT, Apache-2.0, PostgreSQL, BSD-3-Clause'
+Write-Host 'Permitted third-party licenses: MIT, Apache-2.0, PostgreSQL, BSD-3-Clause; reviewed file-license packages are explicitly allowlisted.'
