@@ -181,7 +181,7 @@ internal sealed class ApplicationObjectPreprocessor
         {
             if (line[i] == '"')
             {
-                if (inString && i + 1 < lines.Length && line[i + 1] == '"') { i++; continue; }
+                if (inString && i + 1 < line.Length && line[i + 1] == '"') { i++; continue; }
                 inString = !inString;
                 continue;
             }
