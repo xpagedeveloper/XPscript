@@ -79,13 +79,11 @@ internal sealed class XPScriptExtendedArchiveV4
     private byte[] ReadTarBytes(object? entryName)
     {
         var wanted = NormalizeEntryName(XPScriptRuntime.CStr(entryName));
-        var snapshots = XPScriptArchiveExtendedReader.Snapshots(Path, Format, Password, MaxEntries, MaxExtractSize, MaxCompressionRatio);
-        var entry = snapshots.FirstOrDefault(x => x.FullName.Equals(wanted, StringComparison.OrdinalIgnoreCase))
-            ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+        var entry = _inner.GetEntry(wanted) ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
         if (entry.IsDirectory) throw new XPScriptRuntimeException(5, "Archive entry is a directory.");
         if (entry.Size < 0 || entry.Size > MaxExtractSize) throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxExtractSize.");
 
-        var bytes = XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, wanted, MaxExtractSize, MaxCompressionRatio);
+        var bytes = ToRawBytes(_inner.ReadBytes(wanted));
         if (bytes.LongLength < entry.Size)
             throw new XPScriptRuntimeException(5, "Archive entry ended before its declared size.");
         if (bytes.LongLength > entry.Size)
@@ -107,6 +105,16 @@ internal sealed class XPScriptExtendedArchiveV4
         if (parts.Any(x => x == "..")) throw new XPScriptRuntimeException(5, "Archive path traversal is not allowed.");
         var result = string.Join('/', parts.Where(x => x != "."));
         if (name.EndsWith("/", StringComparison.Ordinal)) result += "/";
+        return result;
+    }
+
+    private static byte[] ToRawBytes(LSArray array)
+    {
+        if (!array.IsAllocated) return [];
+        if (array.Rank != 1) throw new XPScriptRuntimeException(13, "Archive requires a one-dimensional Byte array.");
+        var result = new byte[array.UBound() - array.LBound() + 1];
+        var offset = 0;
+        for (var i = array.LBound(); i <= array.UBound(); i++) result[offset++] = Convert.ToByte(array.Get(i), System.Globalization.CultureInfo.InvariantCulture);
         return result;
     }
 
