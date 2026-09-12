@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: archive-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   archive-platform:
     strategy:
