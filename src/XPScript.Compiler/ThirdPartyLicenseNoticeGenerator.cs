@@ -20,6 +20,47 @@ internal static class ThirdPartyLicenseNoticeGenerator
         return builder.ToString().TrimEnd() + Environment.NewLine;
     }
 
+    public static void PublishSidecar(string generatedNoticePath, string outputExecutablePath)
+    {
+        var outputDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(outputExecutablePath)) ?? Environment.CurrentDirectory);
+        var target = Path.Combine(outputDirectory, OutputFileName);
+        if (Directory.Exists(target))
+            throw new CompilerException("Third-party license output path identifies a directory.");
+
+        if (File.Exists(target))
+        {
+            var info = new FileInfo(target);
+            if (info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new CompilerException("Third-party license output may not replace a linked file.");
+        }
+
+        var staged = Path.Combine(outputDirectory, ".xpscript-license-" + Guid.NewGuid().ToString("N") + ".tmp");
+        var backup = Path.Combine(outputDirectory, ".xpscript-license-" + Guid.NewGuid().ToString("N") + ".bak");
+        try
+        {
+            CompilerSecureFileCopy.CopyValidatedRegularFile(generatedNoticePath, staged, "Third-party license notice");
+            CompilerPathSecurity.HardenTemporaryFile(staged);
+            var hadExisting = File.Exists(target);
+            if (hadExisting) File.Move(target, backup);
+            try
+            {
+                File.Move(staged, target);
+                if (hadExisting && File.Exists(backup)) File.Delete(backup);
+            }
+            catch
+            {
+                if (File.Exists(target)) File.Delete(target);
+                if (hadExisting && File.Exists(backup)) File.Move(backup, target);
+                throw;
+            }
+        }
+        finally
+        {
+            try { if (File.Exists(staged)) File.Delete(staged); } catch { }
+            try { if (File.Exists(backup)) File.Delete(backup); } catch { }
+        }
+    }
+
     private static void AppendXPScriptLicense(StringBuilder builder)
     {
         builder.AppendLine("XPSCRIPT AND THIRD-PARTY LICENSE NOTICES");
