@@ -1,0 +1,32 @@
+name: Apply publish layout follow-up
+
+on:
+  push:
+    branches:
+      - publish-layout-rework
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[publish-layout-followup-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply follow-up changes
+        run: python3 scripts/apply-publish-layout-followup.py
+      - name: Remove one-time migration files
+        run: |
+          rm scripts/apply-publish-layout-followup.py
+          rm .github/workflows/apply-publish-layout-followup.yml
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --exit-code && exit 0
+          git commit -m "Harden multi-file publish naming [publish-layout-followup-applied]"
+          git push origin HEAD:publish-layout-rework
