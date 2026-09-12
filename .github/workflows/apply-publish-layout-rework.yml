@@ -1,0 +1,32 @@
+name: Apply publish layout rework
+
+on:
+  push:
+    branches:
+      - publish-layout-rework
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[publish-layout-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply source and documentation changes
+        run: python3 scripts/apply-publish-layout-rework.py
+      - name: Remove one-time migration files
+        run: |
+          rm scripts/apply-publish-layout-rework.py
+          rm .github/workflows/apply-publish-layout-rework.yml
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --exit-code && exit 0
+          git commit -m "Rework compile single-file and runtime options [publish-layout-applied]"
+          git push origin HEAD:publish-layout-rework
