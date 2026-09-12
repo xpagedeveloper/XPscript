@@ -17,26 +17,31 @@ internal static class XPScriptApplicationSecretsBackupRuntime
     private const int MaxEntries = 10000;
     private static readonly byte[] Magic = System.Text.Encoding.ASCII.GetBytes("XPSSECRETS");
     private static readonly object IndexSync = new();
+    private static readonly object ApplicationIdSync = new();
+    private static string? BoundApplicationId;
 
     public static string Get(object? serviceValue, object? accountValue)
     {
+        var applicationId = RequireApplicationId();
         var service = Required(serviceValue, "service");
         var account = Required(accountValue, "account");
-        var secret = XPScriptApplicationSecretsRuntime.Get(service, account);
+        var secret = XPScriptApplicationSecretsRuntime.Get(ScopedService(applicationId, service), account);
         Track(service, account);
         return secret;
     }
 
     public static void Set(object? serviceValue, object? accountValue, object? secretValue)
     {
+        var applicationId = RequireApplicationId();
         var service = Required(serviceValue, "service");
         var account = Required(accountValue, "account");
-        XPScriptApplicationSecretsRuntime.Set(service, account, secretValue);
+        XPScriptApplicationSecretsRuntime.Set(ScopedService(applicationId, service), account, secretValue);
         Track(service, account);
     }
 
     public static void Backup(object? fileValue, object? passwordValue)
     {
+        var applicationId = RequireApplicationId();
         var path = RequiredPath(fileValue);
         var password = RequiredPassword(passwordValue);
         byte[]? plaintext = null;
@@ -51,12 +56,13 @@ internal static class XPScriptApplicationSecretsBackupRuntime
             {
                 using var writer = new System.IO.BinaryWriter(payloadStream, new System.Text.UTF8Encoding(false), leaveOpen: true);
                 writer.Write(FormatVersion);
+                writer.Write(applicationId);
                 writer.Write(entries.Count);
                 foreach (var entry in entries)
                 {
                     writer.Write(entry.Service);
                     writer.Write(entry.Account);
-                    writer.Write(XPScriptApplicationSecretsRuntime.Get(entry.Service, entry.Account));
+                    writer.Write(XPScriptApplicationSecretsRuntime.Get(ScopedService(applicationId, entry.Service), entry.Account));
                 }
                 writer.Flush();
                 plaintext = payloadStream.ToArray();
@@ -115,6 +121,7 @@ internal static class XPScriptApplicationSecretsBackupRuntime
 
     public static void Restore(object? fileValue, object? passwordValue)
     {
+        var applicationId = RequireApplicationId();
         var path = RequiredPath(fileValue);
         var password = RequiredPassword(passwordValue);
         byte[]? plaintext = null;
@@ -190,10 +197,10 @@ internal static class XPScriptApplicationSecretsBackupRuntime
                 throw new XPScriptRuntimeException(5, "Application.Secrets restore failed: the password is incorrect or the backup file was modified.");
             }
 
-            var entries = ReadPayload(plaintext);
+            var entries = ReadPayload(plaintext, applicationId);
             foreach (var entry in entries)
             {
-                XPScriptApplicationSecretsRuntime.Set(entry.Service, entry.Account, entry.Secret);
+                XPScriptApplicationSecretsRuntime.Set(ScopedService(applicationId, entry.Service), entry.Account, entry.Secret);
                 Track(entry.Service, entry.Account);
             }
         }
@@ -213,13 +220,16 @@ internal static class XPScriptApplicationSecretsBackupRuntime
         }
     }
 
-    private static System.Collections.Generic.List<BackupEntry> ReadPayload(byte[] plaintext)
+    private static System.Collections.Generic.List<BackupEntry> ReadPayload(byte[] plaintext, string expectedApplicationId)
     {
         using var stream = new System.IO.MemoryStream(plaintext, writable: false);
         using var reader = new System.IO.BinaryReader(stream, new System.Text.UTF8Encoding(false, true), leaveOpen: true);
         var payloadVersion = reader.ReadInt32();
         if (payloadVersion != FormatVersion)
             throw new XPScriptRuntimeException(5, "Unsupported Application.Secrets backup payload version: " + payloadVersion + ".");
+        var backupApplicationId = reader.ReadString();
+        if (!string.Equals(backupApplicationId, expectedApplicationId, StringComparison.Ordinal))
+            throw new XPScriptRuntimeException(5, "Application.Secrets backup belongs to a different Application.Id.");
         var count = reader.ReadInt32();
         if (count < 0 || count > MaxEntries)
             throw new XPScriptRuntimeException(5, "Application.Secrets backup entry count is invalid.");
@@ -312,10 +322,38 @@ internal static class XPScriptApplicationSecretsBackupRuntime
 
     private static string IndexPath()
     {
-        var app = System.IO.Path.GetFileNameWithoutExtension(XPScriptApplicationRuntime.ExecutableFileName);
-        if (string.IsNullOrWhiteSpace(app)) app = "xpscript";
-        var encoded = System.Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(app));
+        var encoded = System.Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(RequireApplicationId()));
         return "Software/XPscript/Applications/" + encoded + "/Secrets";
+    }
+
+    private static string ScopedService(string applicationId, string service)
+    {
+        var app = System.Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(applicationId));
+        return "app:" + app + ":" + service;
+    }
+
+    private static string RequireApplicationId()
+    {
+        var value = XPScriptApplicationRuntime.State.Get("__xps_application_id");
+        var applicationId = XPScriptRuntime.CStr(value).Trim();
+        if (applicationId.Length == 0)
+            throw new XPScriptRuntimeException(5, "Application.Secrets requires Application.Id to be set before the credential store can be used.");
+        if (applicationId.Length > 256)
+            throw new XPScriptRuntimeException(5, "Application.Id cannot exceed 256 characters when used with Application.Secrets.");
+        if (applicationId.IndexOf('\0') >= 0)
+            throw new XPScriptRuntimeException(5, "Application.Id cannot contain NUL.");
+
+        lock (ApplicationIdSync)
+        {
+            if (BoundApplicationId is null)
+            {
+                BoundApplicationId = applicationId;
+                return applicationId;
+            }
+            if (!string.Equals(BoundApplicationId, applicationId, StringComparison.Ordinal))
+                throw new XPScriptRuntimeException(5, "Application.Id cannot be changed after Application.Secrets has been used.");
+            return BoundApplicationId;
+        }
     }
 
     private static string Encode(string value) => System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
