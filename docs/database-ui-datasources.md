@@ -198,7 +198,7 @@ End Sub
 Compile a complete runnable version with:
 
 ```text
-xpscriptc samples/database-uiform-datasource.xps -o database-uiform-datasource --framework-dependent
+xpscriptc samples/database-uiform-datasource.xps -o database-uiform-datasource --runtime=false
 ```
 
 ## UIListView example

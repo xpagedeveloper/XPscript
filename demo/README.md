@@ -18,7 +18,7 @@ The commands below assume `xpscriptc` and `xpscript` are available on `PATH`. Du
 Source: [`console/hello.xps`](console/hello.xps)
 
 ```powershell
-xpscriptc .\demo\console\hello.xps -o .\out\demo-console.exe --framework-dependent
+xpscriptc .\demo\console\hello.xps -o .\out\demo-console.exe --runtime=false
 .\out\demo-console.exe
 ```
 
@@ -29,7 +29,7 @@ Demonstrates variables, a `For` loop, `Print`, `CStr` and `UCase`.
 Source: [`desktop-ui/customer-form.xps`](desktop-ui/customer-form.xps)
 
 ```powershell
-xpscriptc .\demo\desktop-ui\customer-form.xps -o .\out\demo-desktop.exe --framework-dependent
+xpscriptc .\demo\desktop-ui\customer-form.xps -o .\out\demo-desktop.exe --runtime=false
 .\out\demo-desktop.exe
 ```
 
@@ -40,7 +40,7 @@ Demonstrates a native UIForm with text fields and required validation.
 Source: [`desktop-ui/themed-form.xps`](desktop-ui/themed-form.xps)
 
 ```powershell
-xpscriptc .\demo\desktop-ui\themed-form.xps -o .\out\demo-desktop-themed.exe --framework-dependent
+xpscriptc .\demo\desktop-ui\themed-form.xps -o .\out\demo-desktop-themed.exe --runtime=false
 .\out\demo-desktop-themed.exe
 ```
 
@@ -142,7 +142,7 @@ This demonstrates the direct IIS deployment target. See `docs/webiis.md` for pac
 Source: [`sqlite/sqlite-demo.xps`](sqlite/sqlite-demo.xps)
 
 ```powershell
-xpscriptc .\demo\sqlite\sqlite-demo.xps -o .\out\demo-sqlite.exe --framework-dependent
+xpscriptc .\demo\sqlite\sqlite-demo.xps -o .\out\demo-sqlite.exe --runtime=false
 .\out\demo-sqlite.exe
 ```
 
@@ -156,7 +156,7 @@ Set a connection string first:
 
 ```powershell
 $env:XPSCRIPT_MSSQL_CONNECTION = 'Server=.\SQLEXPRESS;Database=master;Integrated Security=true;TrustServerCertificate=true'
-xpscriptc .\demo\mssql\mssql-demo.xps -o .\out\demo-mssql.exe --framework-dependent
+xpscriptc .\demo\mssql\mssql-demo.xps -o .\out\demo-mssql.exe --runtime=false
 .\out\demo-mssql.exe
 ```
 
@@ -167,7 +167,7 @@ The demo uses a temporary SQL Server table and parameterized SQL.
 Source: [`httpdb/httpdb-demo.xps`](httpdb/httpdb-demo.xps)
 
 ```powershell
-xpscriptc .\demo\httpdb\httpdb-demo.xps -o .\out\demo-httpdb.exe --framework-dependent
+xpscriptc .\demo\httpdb\httpdb-demo.xps -o .\out\demo-httpdb.exe --runtime=false
 .\out\demo-httpdb.exe
 ```
 
@@ -181,7 +181,7 @@ Start the Kestrel demo first, then in another terminal:
 
 ```powershell
 $env:XPSCRIPT_DEMO_HTTP_URL = 'http://127.0.0.1:8080/'
-xpscriptc .\demo\http\http-client.xps -o .\out\demo-http.exe --framework-dependent
+xpscriptc .\demo\http\http-client.xps -o .\out\demo-http.exe --runtime=false
 .\out\demo-http.exe
 ```
 
@@ -201,7 +201,7 @@ In another terminal:
 
 ```powershell
 $env:XPSCRIPT_AI_COMPAT_BASE = 'http://127.0.0.1:18765'
-xpscriptc .\demo\ai\ai-tool-demo.xps -o .\out\demo-ai.exe --framework-dependent
+xpscriptc .\demo\ai\ai-tool-demo.xps -o .\out\demo-ai.exe --runtime=false
 .\out\demo-ai.exe
 ```
 
@@ -215,7 +215,7 @@ The managed-reference example is [`../samples/managed-reference.xps`](../samples
 dotnet build .\tests\ManagedReferenceFixture\ManagedReferenceFixture.csproj -c Release
 New-Item -ItemType Directory -Force .\samples\managed-reference | Out-Null
 Copy-Item .\tests\ManagedReferenceFixture\bin\Release\net10.0\ManagedReferenceFixture.dll .\samples\managed-reference\ManagedReferenceFixture.dll -Force
-xpscriptc .\samples\managed-reference.xps -o .\out\demo-managed-reference.exe --framework-dependent
+xpscriptc .\samples\managed-reference.xps -o .\out\demo-managed-reference.exe --runtime=false
 .\out\demo-managed-reference.exe
 ```
 

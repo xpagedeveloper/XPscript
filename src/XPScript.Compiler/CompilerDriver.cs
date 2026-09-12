@@ -121,7 +121,7 @@ public sealed class CompilerDriver
                 rid,
                 selfContained,
                 stagedManagedReferences,
-                publishSingleFile: true,
+                publishSingleFile: CompilePublishLayoutContext.IsConfigured ? CompilePublishLayoutContext.SingleFile : true,
                 usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
@@ -157,13 +157,27 @@ public sealed class CompilerDriver
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
-            CompilerOutputPublisher.Publish(
-                generatedExecutable,
-                outputPath,
-                sourcePath,
-                nativeDependencies,
-                managedReferences.Native,
-                makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            if (CompilePublishLayoutContext.IsConfigured && !CompilePublishLayoutContext.SingleFile)
+            {
+                CompilerOutputPublisher.PublishDirectory(
+                    publishDir,
+                    generatedExecutable,
+                    outputPath,
+                    sourcePath,
+                    nativeDependencies,
+                    managedReferences.Native,
+                    makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            }
+            else
+            {
+                CompilerOutputPublisher.Publish(
+                    generatedExecutable,
+                    outputPath,
+                    sourcePath,
+                    nativeDependencies,
+                    managedReferences.Native,
+                    makeExecutable: !rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows());
+            }
         }
         finally
         {
@@ -455,6 +469,7 @@ public sealed class CompilerDriver
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
+    <UseAppHost>true</UseAppHost>
 {publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;

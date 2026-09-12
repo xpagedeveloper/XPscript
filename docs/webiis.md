@@ -15,13 +15,13 @@ xpscript compile main.xps --target webiis
 Framework-dependent package:
 
 ```text
-xpscript compile main.xps --target webiis --framework-dependent
+xpscript compile main.xps --target webiis --runtime=false
 ```
 
 Explicit output directory:
 
 ```text
-xpscript compile main.xps --target webiis --framework-dependent -o C:\deploy\myapp
+xpscript compile main.xps --target webiis --runtime=false -o C:\deploy\myapp
 ```
 
 The output directory must be outside the XPscript source directory.

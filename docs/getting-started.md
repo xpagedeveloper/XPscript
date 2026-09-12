@@ -62,10 +62,10 @@ xpscript compile app.xps --runtime win-x64 -o app.exe
 
 The resulting Windows application includes the required .NET runtime and does not require .NET 10 to be installed on the target computer.
 
-To create a smaller Windows x64 application that requires .NET 10 on the target computer, add `--framework-dependent`:
+The default desktop compile is single-file and framework-dependent: application libraries are bundled, but .NET 10 must already be installed. To state that explicitly:
 
 ```bash
-xpscript compile app.xps --runtime win-x64 --framework-dependent -o app.exe
+xpscript compile app.xps --runtime win-x64 --runtime=false -o app.exe
 ```
 
 The host operating system and target runtime are independent. The same Linux installation of `xpscript` can target Windows, Linux or macOS by selecting the appropriate runtime identifier.
@@ -79,8 +79,8 @@ Supported deployment RIDs include `win-x64`, `win-arm64`, `linux-x64`, `linux-ar
 | `source.xps` | Source file to compile. |
 | `run source.xps` | Compile to an isolated temporary directory and run immediately. |
 | `-o path` | Output executable/path. |
-| `--runtime RID` | Select target runtime. |
-| `--framework-dependent` | Require a compatible .NET runtime on the target instead of producing self-contained output. |
+| `--platform RID` | Select target runtime. |
+| `--runtime=false` | Require a compatible .NET runtime on the target instead of producing self-contained output. |
 | `--result-format text` | Human-readable compiler result. |
 | `--result-format json` | Structured JSON result. |
 | `--result-format xml` | Structured XML result. |

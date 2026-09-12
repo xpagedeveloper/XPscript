@@ -35,7 +35,8 @@ public static class XPScriptCompilerCommandLine
 
         var sourcePath = Path.GetFullPath(args[0]);
         string? outputPath = null;
-        var selfContained = true;
+        var selfContained = false;
+        var singleFile = true;
         var resultFormat = "text";
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         string? target = null;
@@ -52,12 +53,22 @@ public static class XPScriptCompilerCommandLine
             {
                 if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
                     outputPath = Path.GetFullPath(args[++i]);
-                else if ((args[i] == "--runtime" || args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
+                else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
+                    selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
+                else if (args[i] == "--runtime" && i + 1 < args.Length)
+                    selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
+                else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+                    singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
+                else if (args[i] == "--single-file" && i + 1 < args.Length)
+                    singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+                else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+                    singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
+                else if (args[i] == "--singlefile" && i + 1 < args.Length)
+                    singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
                 else if (args[i] == "--target" && i + 1 < args.Length)
                     target = args[++i].ToLowerInvariant();
-                else if (args[i] == "--framework-dependent")
-                    selfContained = false;
                 else if (args[i] == "--result-format" && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
                 else if (args[i] == "--restricted")
@@ -91,6 +102,7 @@ public static class XPScriptCompilerCommandLine
             var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
             WriteProgress($"Started to compile {sourceName}");
@@ -122,7 +134,7 @@ public static class XPScriptCompilerCommandLine
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
-            var mode = selfContained ? "self-contained" : "framework-dependent";
+            var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
             var result = await WaitWithProgressAsync(
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
@@ -205,7 +217,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && (value == "--runtime" || value == "--rid" || value == "--platform"))
+                if (parseRunOptions && (value == "--rid" || value == "--platform"))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException(value + " requires a runtime identifier.");
@@ -431,6 +443,12 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
+    private static bool ParseBooleanCompileOption(string optionName, string value)
+    {
+        if (bool.TryParse(value, out var result)) return result;
+        throw new ArgumentException(optionName + " must be true or false.");
+    }
+
     private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status)
     {
         var nextReportAt = TimeSpan.Zero;
@@ -494,8 +512,8 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--runtime RID] [--framework-dependent] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--runtime RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -503,8 +521,12 @@ Supported runtime identifiers:
 Compiler targets:
   webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
 
-If --runtime is omitted, XPScript targets the current operating system and process architecture.
-For --target webiis, --framework-dependent creates a .NET 10 Hosting Bundle dependent package. The default is self-contained win-x64.
+If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
+Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while .NET 10 must be installed on the target computer.
+--single-file=false publishes the executable and application libraries as separate files in the output directory.
+--runtime=true includes the .NET 10 runtime; --runtime=false requires a compatible installed .NET 10 runtime.
+When --runtime=false and .NET 10 is missing, the native .NET apphost reports the missing framework and provides Microsoft's install/download link before managed application code starts.
+For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a .NET 10 Hosting Bundle dependent package.
 --embed-assets embeds a UIForm application's assets/ tree into a desktop executable. Embedded assets are materialized beside the executable at startup so existing assets/... paths continue to work.
 Without --embed-assets, UIForm assets are copied next to the compiled desktop executable.
 UIForm compile and run operations automatically create a sibling assets/ directory when it does not exist.

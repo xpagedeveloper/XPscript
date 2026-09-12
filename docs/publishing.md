@@ -57,3 +57,19 @@ The default output root is `publish/xpscript`. `-OutputRoot` can override it.
 ## CI releases
 
 The normal distribution workflow uploads one `xpscript-toolchain` artifact. The RID matrix produces one unified ZIP plus a SHA-256 manifest for each supported RID.
+
+
+## Compiled application layout
+
+Desktop compilation has two independent options:
+
+| `--single-file` | `--runtime` | Output |
+| --- | --- | --- |
+| `true` | `false` | **Default.** Application/managed libraries are bundled into the executable. .NET 10 must already be installed. |
+| `true` | `true` | Application libraries and the .NET 10 runtime are bundled into the single-file application. |
+| `false` | `false` | Executable, managed libraries, `.deps.json` and `.runtimeconfig.json` are emitted as separate files. .NET 10 must already be installed. |
+| `false` | `true` | Executable, managed libraries and the self-contained .NET 10 runtime are emitted as separate files. |
+
+The default is `--single-file=true --runtime=false`. Use `--platform` (or `--rid`) for the target RID, for example `--platform win-x64`. The old `--framework-dependent` option and the old `--runtime RID` platform syntax are no longer accepted.
+
+Framework-dependent builds (`--runtime=false`) keep the native .NET apphost. If .NET 10 is missing, startup fails before managed XPScript code runs and the .NET host reports the missing framework together with Microsoft's installation/download link.
