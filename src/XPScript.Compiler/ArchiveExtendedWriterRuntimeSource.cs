@@ -271,30 +271,10 @@ internal sealed class XPScriptExtendedArchiveV2
 
     private List<RebuildEntry> LoadRebuildEntries()
     {
-        if (Format.Equals("TAR", StringComparison.OrdinalIgnoreCase))
-        {
-            var snapshots = XPScriptArchiveExtendedReader.Snapshots(Path, Format, Password, MaxEntries, MaxExtractSize, MaxCompressionRatio);
-            var tarResult = new List<RebuildEntry>(snapshots.Count);
-            foreach (var entry in snapshots)
-            {
-                if (entry.IsDirectory)
-                {
-                    tarResult.Add(new RebuildEntry(Normalize(entry.FullName.TrimEnd('/') + "/", true), null, entry.Modified, true));
-                    continue;
-                }
-                var bytes = XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, Normalize(entry.FullName, true), MaxExtractSize, MaxCompressionRatio);
-                if (bytes.LongLength < entry.Size)
-                    throw new XPScriptRuntimeException(5, "Archive entry ended before its declared size.");
-                if (bytes.LongLength > entry.Size)
-                    Array.Resize(ref bytes, checked((int)entry.Size));
-                tarResult.Add(new RebuildEntry(Normalize(entry.FullName, true), bytes, entry.Modified, false));
-            }
-            return tarResult;
-        }
-
         var result = new List<RebuildEntry>();
         var values = _inner.Entries;
         if (!values.IsAllocated) return result;
+        var isTar = Format.Equals("TAR", StringComparison.OrdinalIgnoreCase);
         for (var i = values.LBound(); i <= values.UBound(); i++)
         {
             if (values.Get(i) is not XPScriptArchiveEntry entry) continue;
@@ -304,6 +284,13 @@ internal sealed class XPScriptExtendedArchiveV2
                 continue;
             }
             var bytes = ToRawBytes(_inner.ReadBytes(entry.FullName));
+            if (isTar)
+            {
+                if (bytes.LongLength < entry.Size)
+                    throw new XPScriptRuntimeException(5, "Archive entry ended before its declared size.");
+                if (bytes.LongLength > entry.Size)
+                    Array.Resize(ref bytes, checked((int)entry.Size));
+            }
             result.Add(new RebuildEntry(Normalize(entry.FullName, true), bytes, entry.Modified, false));
         }
         return result;
