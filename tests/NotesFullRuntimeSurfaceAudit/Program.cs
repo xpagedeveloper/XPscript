@@ -68,6 +68,18 @@ var classes = new[]
     (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null)
 };
 
+var requestedSurfaces = new HashSet<string>(args, StringComparer.OrdinalIgnoreCase);
+if (requestedSurfaces.Count != 0)
+{
+    var knownSurfaces = classes.Select(item => item.Surface).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var unknownSurfaces = requestedSurfaces.Where(surface => !knownSurfaces.Contains(surface)).OrderBy(surface => surface).ToArray();
+    if (unknownSurfaces.Length != 0)
+        throw new InvalidOperationException("Unknown Notes surface audit target(s): " + string.Join(", ", unknownSurfaces));
+}
+var selectedClasses = requestedSurfaces.Count == 0
+    ? classes
+    : classes.Where(item => requestedSurfaces.Contains(item.Surface)).ToArray();
+
 var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
     "Dispose", "TryGetMember", "TrySetMember", "TryInvokeMember"
@@ -81,7 +93,7 @@ var allClassDeclarations = root.DescendantNodes()
     .Where(c => c.Parent is CompilationUnitSyntax)
     .ToArray();
 
-foreach (var item in classes)
+foreach (var item in selectedClasses)
 {
     var declarations = item.Anchor is null
         ? allClassDeclarations.Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal)).ToArray()
