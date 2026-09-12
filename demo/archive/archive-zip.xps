@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive("example.zip")
+
+    archive.Create()
+    archive.AddText("hello.txt", "Hello from XPScript")
+
+    Print "Format: " & archive.Format
+    Print "Extended support: " & CStr(archive.ExtendedSupport)
+    Print "Files: " & CStr(archive.FileCount)
+    Print archive.ReadText("hello.txt")
+End Sub

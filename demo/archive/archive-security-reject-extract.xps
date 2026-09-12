@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
+    archive.ExtractAll("../../out/archive-security-fixtures/extract-root")
+    Print "ARCHIVE_SECURITY_REJECT_EXTRACT_UNEXPECTED_SUCCESS"
+End Sub

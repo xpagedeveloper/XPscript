@@ -1,0 +1,18 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive("example.rar", True)
+
+    archive.Open()
+
+    Print "Format: " & archive.Format
+    Print "Extended support: " & CStr(archive.ExtendedSupport)
+    Print "Files: " & CStr(archive.FileCount)
+    Print "Folders: " & CStr(archive.FolderCount)
+
+    ForAll entry In archive.Entries
+        If Not entry.IsDirectory Then
+            Print entry.FullName & " " & CStr(entry.Size)
+        End If
+    End ForAll
+End Sub

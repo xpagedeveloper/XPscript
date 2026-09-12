@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim tgz As New Archive("archive-compressed-test.tar.gz", True)
+    tgz.Create("tar.gzip")
+    tgz.AddText("manifest.txt", "gzip")
+    tgz.Save()
+    Print tgz.ReadText("manifest.txt")
+
+    Dim tbz As New Archive("archive-compressed-test.tar.bz2", True)
+    tbz.Create("tar.bzip2")
+    tbz.AddText("manifest.txt", "bzip2")
+    tbz.Save()
+    Print tbz.ReadText("manifest.txt")
+
+    Dim tlz As New Archive("archive-compressed-test.tar.lz", True)
+    tlz.Create("tar.lzip")
+    tlz.AddText("manifest.txt", "lzip")
+    tlz.Save()
+    Print tlz.ReadText("manifest.txt")
+
+    Kill "archive-compressed-test.tar.gz"
+    Kill "archive-compressed-test.tar.bz2"
+    Kill "archive-compressed-test.tar.lz"
+End Sub

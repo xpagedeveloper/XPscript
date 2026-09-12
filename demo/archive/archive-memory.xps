@@ -1,0 +1,18 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("manifest.txt", "hello from memory")
+    archive.AddText("config/settings.txt", "enabled=true")
+
+    Dim data As Variant
+    data = archive.ToBytes()
+
+    Dim reopened As New Archive(data)
+    reopened.Open()
+
+    Print "Format: " & reopened.Format
+    Print "Files: " & CStr(reopened.FileCount)
+    Print reopened.ReadText("manifest.txt")
+End Sub

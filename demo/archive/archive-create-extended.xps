@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Dim tar As New Archive("backup.tar", True)
+    tar.Create("tar")
+    tar.AddText("manifest.txt", "created by XPScript")
+    tar.AddFolder("data", "data", True)
+    tar.Save()
+    Print "Created " & tar.Path
+
+    Dim seven As New Archive("backup.7z", True)
+    seven.Create("7z")
+    seven.AddText("manifest.txt", "created by XPScript")
+    seven.AddFolder("data", "data", True)
+    seven.Save()
+    Print "Created " & seven.Path
+End Sub

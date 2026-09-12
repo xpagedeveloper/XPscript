@@ -1,0 +1,14 @@
+Option Declare
+
+Sub Main()
+    Dim archive As New Archive("archive-gzip-test.gz", True)
+    archive.Create("gzip")
+    archive.AddText("payload.txt", "Hello from GZip")
+    archive.Save()
+
+    Dim reopened As New Archive("archive-gzip-test.gz", True)
+    reopened.Open()
+    Print reopened.ReadText("payload.txt")
+
+    Kill "archive-gzip-test.gz"
+End Sub
