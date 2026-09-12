@@ -6,7 +6,7 @@ internal static class NotesFullTextReadMaskPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // HCL Domino C API READ_MASK values. 0x0800 is SERETFLAGS, not INDEXPOSITION.
+        // Domino C API READ_MASK values. 0x0800 is SERETFLAGS, not INDEXPOSITION.
         source = ReplaceRequired(
             source,
             "    private const uint ReadMaskIndexPosition = 0x00000800;",
