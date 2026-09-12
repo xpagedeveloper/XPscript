@@ -1,0 +1,60 @@
+name: NetworkTools Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/networktools-runtime.yml
+      - samples/networktools-native-*.xps
+      - docs/networktools.md
+      - src/XPScript.Compiler/NetworkTools*.cs
+      - src/XPScript.Compiler/XPScriptTranspiler.cs
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: networktools-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  networktools-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile NetworkTools full surface
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-native-runtime-test.xps -o ./out/networktools-surface --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile NetworkTools local smoke
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-native-local-smoke.xps -o ./out/networktools-local-smoke --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run NetworkTools local smoke
+        shell: pwsh
+        run: |
+          $exe = './out/networktools-local-smoke'
+          if ($IsWindows) { $exe = './out/networktools-local-smoke.exe' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
