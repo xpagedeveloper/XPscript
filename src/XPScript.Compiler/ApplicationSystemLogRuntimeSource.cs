@@ -58,7 +58,7 @@ internal static class XPScriptApplicationSystemLogRuntime
             };
             var strings = new[] { message };
             if (!ReportEventW(handle, type, 0, unchecked((uint)eventId), IntPtr.Zero, 1, 0, strings, IntPtr.Zero))
-                throw new XPScriptRuntimeException(5, "Unable to write to Windows Event Log.");
+                throw new XPScriptRuntimeException(5, "Unable to write to the system log.");
         }
         finally
         {
@@ -132,5 +132,5 @@ internal static class XPScriptApplicationSystemLogRuntime
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool DeregisterEventSource(IntPtr eventLog);
 }
-""" + ApplicationSecretsBackupRuntimeSource.Code;
+""" + ApplicationSecretsBackupRuntimeSource.Code + ApplicationSecretsEncryptionRuntimeSource.Code;
 }
