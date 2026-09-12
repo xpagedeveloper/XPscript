@@ -44,7 +44,7 @@ jobs:
       - name: Compile and run Archive suite
         shell: pwsh
         run: |
-          $processTimeoutMilliseconds = 120000
+          $processTimeoutMilliseconds = 30000
 
           function Compile-XPScript([string] $source, [string] $name) {
             Write-Host "ARCHIVE_CI_COMPILE=$name"
@@ -82,7 +82,7 @@ jobs:
               if (-not $process.WaitForExit($processTimeoutMilliseconds)) {
                 try { $process.Kill($true) } catch { }
                 try { $process.WaitForExit() } catch { }
-                Write-Error "Archive regression timed out after 120 seconds: $label"
+                Write-Error "Archive regression timed out after 30 seconds: $label"
                 exit 124
               }
               $stdout = $stdoutTask.GetAwaiter().GetResult()
