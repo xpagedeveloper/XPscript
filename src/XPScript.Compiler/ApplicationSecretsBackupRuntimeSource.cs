@@ -45,6 +45,8 @@ internal static class XPScriptApplicationSecretsBackupRuntime
         try
         {
             var entries = ReadEntries();
+            if (entries.Count > MaxEntries)
+                throw new XPScriptRuntimeException(5, "Application.Secrets backup contains too many credential entries.");
             using (var payloadStream = new System.IO.MemoryStream())
             {
                 using var writer = new System.IO.BinaryWriter(payloadStream, new System.Text.UTF8Encoding(false), leaveOpen: true);
