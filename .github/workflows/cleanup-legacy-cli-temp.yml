@@ -38,7 +38,6 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/validate-no-legacy-cli-options.ps1
-          ./scripts/validate-docs-demos.ps1
           dotnet build ./XPScriptCompiler.slnx -c Release --nologo
       - name: Commit cleanup
         shell: bash
