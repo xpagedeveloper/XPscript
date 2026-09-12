@@ -48,6 +48,25 @@ The additional encryption layer uses only cryptography built into .NET:
 
 The encrypted envelope is versioned so future XPscript versions can introduce new algorithms without making existing encrypted credentials unreadable.
 
+## Check whether a credential is additionally encrypted
+
+Use `Application.Secrets.IsEncrypted(service, account)` to inspect the stored credential format without decrypting it and without supplying the encryption password:
+
+```xpscript
+Dim encrypted As Boolean
+encrypted = Application.Secrets.IsEncrypted("Database", "Production")
+
+If encrypted Then
+    Print "Credential has XPscript value encryption"
+Else
+    Print "Credential uses only the operating-system credential store"
+End If
+```
+
+`IsEncrypted` returns `True` only when the stored value uses XPscript's versioned encrypted credential envelope. A missing or ordinary unencrypted credential returns `False`.
+
+The method still requires `Application.Id`, because it addresses the credential through the current application's namespace.
+
 ## Binding to the credential identity
 
 AES-GCM authenticated data binds the encrypted value to:
