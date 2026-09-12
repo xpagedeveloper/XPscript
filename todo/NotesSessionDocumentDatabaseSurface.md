@@ -6,7 +6,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 
 ## Current XPscript surface
 
-- NotesSession: 26 public members, fulltest-covered.
+- NotesSession: 28 public members, fulltest-covered.
 - NotesDocument: 55 public members, fulltest-covered across `notes-full-domino-runtime-test.xps` and `notes-document-metadata-runtime-test.xps`.
 - NotesDatabase: 47 public members, fulltest-covered.
 - No obvious `NotImplementedException`, `NotSupportedException`, `Unsupported`, or constant-placeholder bodies were found by the generated-runtime audit.
@@ -60,13 +60,13 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] GetOIDCAccessToken
 - [ ] GetPropertyBroker
 - [ ] GetUserPolicySettings
-- [ ] HashPassword
+- [x] HashPassword
 - [ ] ResetUserPassword
 - [ ] Resolve
 - [ ] SendConsoleCommand
 - [ ] SetEnvironmentVar
 - [ ] UpdateProcessedDoc
-- [ ] VerifyPassword
+- [x] VerifyPassword
 
 ### Platform/API-specific members to classify before implementing
 
