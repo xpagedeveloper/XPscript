@@ -13,6 +13,8 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
 };
 foreach (var samplePath in samplePaths)
@@ -45,7 +47,7 @@ var classes = new[]
 {
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
-    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)"QueryAccess"),
     (Runtime: "XPScriptNotesDatabaseAccess", Surface: "NotesDatabaseAccess", Anchor: (string?)null),
     (Runtime: "XPScriptNotesItem", Surface: "NotesItem", Anchor: (string?)null),
     (Runtime: "XPScriptNotesView", Surface: "NotesView", Anchor: (string?)null),
@@ -84,6 +86,7 @@ foreach (var item in classes)
     var declarations = item.Anchor is null
         ? allClassDeclarations.Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal)).ToArray()
         : allClassDeclarations
+            .Where(c => c.Identifier.ValueText.Equals(item.Runtime, StringComparison.Ordinal))
             .Where(c => c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals(item.Anchor, StringComparison.OrdinalIgnoreCase) == true))
             .Where(c => item.Surface != "NotesDocument" || c.Members.Any(member => member.Modifiers.Any(SyntaxKind.PublicKeyword) && GetMemberName(member)?.Equals("NoteIdHex", StringComparison.OrdinalIgnoreCase) == true))
             .ToArray();
