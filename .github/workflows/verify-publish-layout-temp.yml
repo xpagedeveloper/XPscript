@@ -59,3 +59,5 @@ jobs:
 
           if dotnet "$CLI" compile /tmp/xps-layout-test/hello.xps -o /tmp/xps-layout-test/oldflag --framework-dependent; then exit 1; fi
           if dotnet "$CLI" compile /tmp/xps-layout-test/hello.xps -o /tmp/xps-layout-test/oldruntime --runtime linux-x64; then exit 1; fi
+
+          echo "All four publish layouts verified."
