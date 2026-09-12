@@ -141,16 +141,60 @@ The platform mapping is:
 
 A missing credential returns an empty string. Other credential-store failures raise an XPscript runtime error.
 
+XPscript keeps a metadata-only index of credentials accessed through `Application.Secrets.Get` or written through `Application.Secrets.Set`. The index contains only the service and account identifiers. Secret values remain in the operating-system credential store.
+
+### Encrypted backup
+
+Use `Backup` to create a password-protected `.xpssecrets` file containing the XPscript-managed credentials in the current application's index:
+
+```xpscript
+Call Application.Secrets.Backup("application.xpssecrets", "a-long-unique-backup-password")
+```
+
+The backup format is versioned and algorithm-agile. Version 1 uses only cryptography built into .NET:
+
+- PBKDF2-HMAC-SHA256 for password-based key derivation.
+- A random 256-bit salt.
+- 600,000 PBKDF2 iterations.
+- AES-256-GCM authenticated encryption.
+- A unique 96-bit nonce for each backup.
+- A 128-bit authentication tag.
+- Authenticated format and KDF metadata so tampering is detected.
+
+The service name, account name and secret value are all inside the encrypted payload. The backup file does not expose credential identifiers in plaintext.
+
+The file stores the format version, algorithm identifiers and KDF parameters needed to restore old backups if XPscript adopts newer cryptographic defaults in the future.
+
+Backup files are limited to 16 MiB and 10,000 credential entries.
+
+### Restore
+
+Restore imports all credentials from a valid backup into the current operating-system credential store:
+
+```xpscript
+Call Application.Secrets.Restore("application.xpssecrets", "a-long-unique-backup-password")
+```
+
+Existing credentials with the same service/account identifiers are updated using the normal `Application.Secrets.Set` behavior of the platform backend. Restored credentials are added to the current application's managed-secret index.
+
+Restore rejects unsupported format versions, unsupported algorithms, malformed or truncated files, unreasonable KDF parameters, invalid entry counts, modified ciphertext and incorrect passwords. Authentication failure is reported without distinguishing between a wrong password and a modified backup.
+
+A backup is portable across Windows, Linux and macOS because the `.xpssecrets` container is independent of the native credential-store format. Restore writes each credential through the destination platform's normal credential-store backend.
+
+Treat `.xpssecrets` files as sensitive encrypted backups. Use a long unique password and keep a separate protected copy of that password. If the password is lost, XPscript cannot recover the encrypted secrets.
+
 ### Linux requirements
 
 Linux secret storage requires `secret-tool` from libsecret and an available Secret Service provider, for example GNOME Keyring or another compatible provider. The secret value is passed to `secret-tool` through standard input and is never included in the process command line.
 
-A graphical Linux desktop commonly provides a Secret Service session automatically. A headless server, including a Domino server, may not have a D-Bus user session or Secret Service provider. In that case `Application.Secrets.Get` and `.Set` return a clear runtime error rather than falling back to an unencrypted file.
+A graphical Linux desktop commonly provides a Secret Service session automatically. A headless server, including a Domino server, may not have a D-Bus user session or Secret Service provider. In that case `Application.Secrets.Get`, `.Set`, `.Backup` and `.Restore` return a clear runtime error when the operation needs the unavailable credential store rather than falling back to an unencrypted file.
 
 ## Security and permissions
 
 `Application.Registry.System.Set` can require administrator/root permissions. XPscript does not elevate the process automatically.
 
 `Application.Secrets` uses the access-control behavior of the operating system credential store. macOS Keychain can prompt the user depending on Keychain access policy. Windows Credential Manager and Linux Secret Service likewise use the current user's credential-store context.
+
+Secrets are never deliberately written to the XPscript metadata index. Backup encryption keys and decrypted payload byte buffers are cleared with `CryptographicOperations.ZeroMemory` after use where .NET exposes mutable buffers. Managed `String` values cannot be reliably zeroed by an application and should therefore not be retained longer than necessary.
 
 The runnable registry sample and compile-time secrets surface are in [samples/application-registry-secrets.xps](../samples/application-registry-secrets.xps).
