@@ -432,7 +432,17 @@ Set view = db.OpenView("People")
 
 
 
-<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstDocumentByKey(key)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first matching document using an exact text-key match. V1 lookup targets the first sorted text column.</td></tr><tr><td><code>GetFirstDocumentByKey(key, exactMatch)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first document by text key and controls exact versus partial matching.</td></tr><tr><td><code>GetAllDocumentsByKey(key)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns all exact text-key matches.</td></tr><tr><td><code>GetAllDocumentsByKey(key, exactMatch)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns text-key matches and controls exact versus partial matching.</td></tr><tr><td><code>FTSearch(query)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a full-text search scoped to the view.</td></tr><tr><td><code>FTSearch(query, maxResults)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a view full-text search with a result limit.</td></tr><tr><td><code>GetFirstDocument()</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Starts navigation from the beginning of the view and returns the first document.</td></tr><tr><td><code>GetNextDocument(document)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Locates <code>document</code> in the current view state and returns the immediate next document. Returns <code>Nothing</code> if the supplied document is no longer present or is the last document.</td></tr><tr><td><code>Refresh()</code></td><td>Void</td><td>Calls the native collection update and rebuilds the view navigation snapshot.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native NIF collection handle.</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstDocumentByKey(key)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first matching document using an exact text-key match. A scalar key targets the first sorted text column.</td></tr><tr><td><code>GetFirstDocumentByKey(key, exactMatch)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Finds the first document by text key and controls exact versus partial matching.</td></tr><tr><td><code>GetFirstDocumentByKey(keys, exactMatch)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>When <code>keys</code> is an XPScript array, matches the supplied keys against successive sorted view columns. Arrays containing numeric or <code>NotesDateTime</code> values use native <code>NIFFindByKey</code>; text-only arrays use the managed comparison path.</td></tr><tr><td><code>GetAllDocumentsByKey(key)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns all exact text-key matches.</td></tr><tr><td><code>GetAllDocumentsByKey(key, exactMatch)</code></td><td><code>NotesDocumentCollection</code></td><td>Returns text-key matches and controls exact versus partial matching.</td></tr><tr><td><code>GetAllDocumentsByKey(keys, exactMatch)</code></td><td><code>NotesDocumentCollection</code></td><td>When <code>keys</code> is an XPScript array, returns documents matching all supplied keys across successive sorted view columns. Arrays containing numeric or <code>NotesDateTime</code> values use native <code>NIFFindByKey</code>; text-only arrays use the managed comparison path.</td></tr><tr><td><code>FTSearch(query)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a full-text search scoped to the view.</td></tr><tr><td><code>FTSearch(query, maxResults)</code></td><td><code>NotesDocumentCollection</code></td><td>Runs a view full-text search with a result limit.</td></tr><tr><td><code>GetFirstDocument()</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Starts navigation from the beginning of the view and returns the first document.</td></tr><tr><td><code>GetNextDocument(document)</code></td><td><code>NotesDocument</code> or <code>Nothing</code></td><td>Locates <code>document</code> in the current view state and returns the immediate next document. Returns <code>Nothing</code> if the supplied document is no longer present or is the last document.</td></tr><tr><td><code>Refresh()</code></td><td>Void</td><td>Calls the native collection update and rebuilds the view navigation snapshot.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native NIF collection handle.</td></tr></tbody></table>
 <h3 id="autoupdate-navigation-semantics">AutoUpdate navigation semantics</h3>
 <p>Each <code>NotesView</code> instance has independent navigation state, even when two objects point to the same underlying view design.</p>
 <p>With <code>AutoUpdate = True</code>, <code>GetFirstDocument()</code> and <code>GetNextDocument(doc)</code> update the collection and read the current view order before returning a document. <code>GetNextDocument</code> finds the supplied document by Note ID in that current order.</p>
@@ -678,7 +688,28 @@ End If
 
 
 
-<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstItem(itemName)</code></td><td><code>NotesItem</code>, <code>NotesRichTextItem</code>, or <code>Nothing</code></td><td>Returns the first matching item. Composite items are returned as <code>NotesRichTextItem</code>.</td></tr><tr><td><code>CreateNotesItem(itemName)</code></td><td><code>NotesItem</code></td><td>Creates an empty text item and returns its wrapper. Item name cannot be empty.</td></tr><tr><td><code>ReplaceItemValue(itemName, value)</code></td><td><code>NotesItem</code></td><td>Creates the item if necessary, replaces its value, and returns the resulting item wrapper.</td></tr><tr><td><code>HasItem(itemName)</code></td><td>Boolean</td><td>Tests whether an item exists.</td></tr><tr><td><code>GetValue(itemName)</code></td><td>Variant</td><td>Returns the native item value through the basic V1 value conversion.</td></tr><tr><td><code>GetItemValue(itemName)</code></td><td>Variant array</td><td>XPscript indexed-value surface. Returns all values as a one-dimensional array.</td></tr><tr><td><code>GetItemValue(itemName)(index)</code></td><td>Variant</td><td>Returns one zero-based value from a text, number, time, or corresponding list/range item. Out-of-range access raises runtime error 9.</td></tr><tr><td><code>GetString(itemName)</code></td><td>String</td><td>Returns a text value.</td></tr><tr><td><code>GetNumber(itemName)</code></td><td>Double</td><td>Returns a numeric value.</td></tr><tr><td><code>GetDateTime(itemName)</code></td><td><code>NotesDateTime</code></td><td>Returns a Notes time/date item as a new <code>NotesDateTime</code> wrapper.</td></tr><tr><td><code>SetValue(itemName, value)</code></td><td>Void</td><td>Writes a value using the generic native item setter.</td></tr><tr><td><code>SetString(itemName, value)</code></td><td>Void</td><td>Writes a text item.</td></tr><tr><td><code>SetNumber(itemName, value)</code></td><td>Void</td><td>Writes a numeric item.</td></tr><tr><td><code>SetDateTime(itemName, value)</code></td><td>Void</td><td>Writes a <code>NotesDateTime</code>. Other value types raise runtime error 13.</td></tr><tr><td><code>RemoveItem(itemName)</code></td><td>Void</td><td>Removes an item by name.</td></tr><tr><td><code>SaveAttachment(attachmentName, path)</code></td><td>Boolean</td><td>Extracts an attachment from the document to <code>path</code>. Returns <code>False</code> when it cannot be saved.</td></tr><tr><td><code>Save()</code></td><td>Void</td><td>Saves the note and refreshes its Note ID.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native note handle.</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>GetFirstItem(itemName)</code></td><td><code>NotesItem</code>, <code>NotesRichTextItem</code>, or <code>Nothing</code></td><td>Returns the first matching item. Composite items are returned as <code>NotesRichTextItem</code>.</td></tr><tr><td><code>CreateNotesItem(itemName)</code></td><td><code>NotesItem</code></td><td>Creates an empty text item and returns its wrapper. Item name cannot be empty.</td></tr><tr><td><code>ReplaceItemValue(itemName, value)</code></td><td><code>NotesItem</code></td><td>Creates the item if necessary, replaces its value, and returns the resulting item wrapper.</td></tr><tr><td><code>HasItem(itemName)</code></td><td>Boolean</td><td>Tests whether an item exists.</td></tr><tr><td><code>GetValue(itemName)</code></td><td>Variant</td><td>Returns the native item value through the basic V1 value conversion.</td></tr><tr><td><code>GetItemValue(itemName)</code></td><td>Variant array</td><td>XPscript indexed-value surface. Returns all values as a one-dimensional array.</td></tr><tr><td><code>GetItemValue(itemName)(index)</code></td><td>Variant</td><td>Returns one zero-based value from a text, number, time, or corresponding list/range item. Out-of-range access raises runtime error 9.</td></tr><tr><td><code>GetString(itemName)</code></td><td>String</td><td>Returns a text value.</td></tr><tr><td><code>GetNumber(itemName)</code></td><td>Double</td><td>Returns a numeric value.</td></tr><tr><td><code>GetDateTime(itemName)</code></td><td><code>NotesDateTime</code></td><td>Returns a Notes time/date item as a new <code>NotesDateTime</code> wrapper.</td></tr><tr><td><code>SetValue(itemName, value)</code></td><td>Void</td><td>Writes a value using the generic native item setter.</td></tr><tr><td><code>SetString(itemName, value)</code></td><td>Void</td><td>Writes a text item.</td></tr><tr><td><code>SetNumber(itemName, value)</code></td><td>Void</td><td>Writes a numeric item.</td></tr><tr><td><code>SetDateTime(itemName, value)</code></td><td>Void</td><td>Writes a <code>NotesDateTime</code>. Other value types raise runtime error 13.</td></tr><tr><td><code>RemoveItem(itemName)</code></td><td>Void</td><td>Removes an item by name.</td></tr><tr><td><code>SaveAttachment(attachmentName, path)</code></td><td>Boolean</td><td>Extracts an attachment from the document to <code>path</code>. Returns <code>False</code> when it cannot be saved.</td></tr><tr><td><code>Save()</code></td><td>Void</td><td>Saves the note with the normal native update path and refreshes its Note ID. Native update errors are raised as XPscript runtime errors.</td></tr><tr><td><code>Save(force)</code></td><td>Boolean</td><td>Saves with optional native force/update-conflict overwrite semantics. Returns <code>False</code> for a non-forced update conflict that the runtime can identify; other native errors are raised.</td></tr><tr><td><code>Save(force, createResponse)</code></td><td>Boolean</td><td>Signature-compatible overload. <code>force</code> is applied. <code>createResponse</code> is currently accepted for compatibility but does not yet create a conflict response document.</td></tr><tr><td><code>Save(force, createResponse, markRead)</code></td><td>Boolean</td><td>Same as the two-argument overload; when <code>markRead</code> is <code>True</code>, the saved document is marked read for the current Notes user after a successful save.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Closes the native note handle.</td></tr></tbody></table>
+<h3 id="save-overload-semantics">Save overload semantics</h3>
+<p>The Boolean overloads mirror the LotusScript call shape, but not every LotusScript conflict-handling side effect is implemented yet. <code>force</code> maps to the native force-update flag. <code>markRead=True</code> clears the unread mark for the current user after a successful update. <code>createResponse</code> is accepted so existing call sites compile, but XPscript currently does not synthesize a conflict response document from that argument. Do not rely on <code>createResponse=True</code> for response-document creation until that behavior is explicitly implemented and covered by a runtime regression.</p>
+<pre><code class="language-xpscript">If Not doc.Save(True, False, True) Then
+    Error 5, "Document was not saved"
+End If
+</code></pre>
 <h3 id="item-name-rules">Item-name rules</h3>
 <p>Item names used for creation and replacement cannot be empty. Indexed <code>GetItemValue</code> access also rejects <code>Nothing</code> and empty item names with runtime error 5. Values themselves may be empty.</p>
 <h3 id="generic-item-values">Generic item values</h3>
@@ -1046,11 +1077,81 @@ Set name = session.CreateName("CN=Ada Lovelace/O=Example")
 
 
 
-<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesSession</code></td><td>read-only</td><td>Owning session.</td></tr><tr><td><code>Source</code></td><td>String</td><td>read-only</td><td>Original trimmed input text.</td></tr><tr><td><code>Canonical</code></td><td>String</td><td>read-only</td><td>Native canonical Notes name.</td></tr><tr><td><code>Abbreviated</code></td><td>String</td><td>read-only</td><td>Native abbreviated Notes name.</td></tr><tr><td><code>IsHierarchical</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> when the canonical representation is hierarchical.</td></tr><tr><td><code>Common</code></td><td>String</td><td>read-only</td><td><code>CN</code> component.</td></tr><tr><td><code>Country</code></td><td>String</td><td>read-only</td><td><code>C</code> component.</td></tr><tr><td><code>Organization</code></td><td>String</td><td>read-only</td><td><code>O</code> component.</td></tr><tr><td><code>OrgUnit1</code></td><td>String</td><td>read-only</td><td>First <code>OU</code> component.</td></tr><tr><td><code>OrgUnit2</code></td><td>String</td><td>read-only</td><td>Second <code>OU</code> component.</td></tr><tr><td><code>OrgUnit3</code></td><td>String</td><td>read-only</td><td>Third <code>OU</code> component.</td></tr><tr><td><code>OrgUnit4</code></td><td>String</td><td>read-only</td><td>Fourth <code>OU</code> component.</td></tr><tr><td><code>ADMD</code></td><td>String</td><td>read-only</td><td><code>A</code> component.</td></tr><tr><td><code>PRMD</code></td><td>String</td><td>read-only</td><td><code>P</code> component.</td></tr><tr><td><code>Addr821</code></td><td>String</td><td>read-only</td><td>Parsed Internet/RFC821-style address when present.</td></tr><tr><td><code>Addr822LocalPart</code></td><td>String</td><td>read-only</td><td>Parsed local part of an Internet address.</td></tr><tr><td><code>Addr822Phrase</code></td><td>String</td><td>read-only</td><td>Parsed display phrase from an Internet address.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesSession</code></td><td>read-only</td><td>Owning session.</td></tr><tr><td><code>Source</code></td><td>String</td><td>read-only</td><td>Original trimmed input text.</td></tr><tr><td><code>Canonical</code></td><td>String</td><td>read-only</td><td>Native canonical Notes name.</td></tr><tr><td><code>Abbreviated</code></td><td>String</td><td>read-only</td><td>Native abbreviated Notes name.</td></tr><tr><td><code>IsHierarchical</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> when the canonical representation is hierarchical.</td></tr><tr><td><code>Common</code></td><td>String</td><td>read-only</td><td><code>CN</code> component.</td></tr><tr><td><code>Country</code></td><td>String</td><td>read-only</td><td><code>C</code> component.</td></tr><tr><td><code>Organization</code></td><td>String</td><td>read-only</td><td><code>O</code> component.</td></tr><tr><td><code>OrgUnit1</code></td><td>String</td><td>read-only</td><td>First <code>OU</code> component.</td></tr><tr><td><code>OrgUnit2</code></td><td>String</td><td>read-only</td><td>Second <code>OU</code> component.</td></tr><tr><td><code>OrgUnit3</code></td><td>String</td><td>read-only</td><td>Third <code>OU</code> component.</td></tr><tr><td><code>OrgUnit4</code></td><td>String</td><td>read-only</td><td>Fourth <code>OU</code> component.</td></tr><tr><td><code>ADMD</code></td><td>String</td><td>read-only</td><td><code>A</code> component.</td></tr><tr><td><code>PRMD</code></td><td>String</td><td>read-only</td><td><code>P</code> component.</td></tr><tr><td><code>Addr821</code></td><td>String</td><td>read-only</td><td>Parsed Internet/RFC821-style address when present.</td></tr><tr><td><code>Addr822LocalPart</code></td><td>String</td><td>read-only</td><td>Parsed local part of an Internet address.</td></tr><tr><td><code>Addr822Phrase</code></td><td>String</td><td>read-only</td><td>Parsed display phrase from an Internet address.</td></tr><tr><td><code>Addr822Comment1</code></td><td>String</td><td>read-only</td><td>First parenthesized RFC 822 comment.</td></tr><tr><td><code>Addr822Comment2</code></td><td>String</td><td>read-only</td><td>Second parenthesized RFC 822 comment.</td></tr><tr><td><code>Addr822Comment3</code></td><td>String</td><td>read-only</td><td>Third parenthesized RFC 822 comment.</td></tr><tr><td><code>Generation</code></td><td>String</td><td>read-only</td><td>Parsed generation component.</td></tr><tr><td><code>Given</code></td><td>String</td><td>read-only</td><td>Parsed given-name component.</td></tr><tr><td><code>Initials</code></td><td>String</td><td>read-only</td><td>Parsed initials component.</td></tr><tr><td><code>Surname</code></td><td>String</td><td>read-only</td><td>Parsed surname component.</td></tr><tr><td><code>Keyword</code></td><td>String</td><td>read-only</td><td>Parsed name metadata keyword when supplied by Domino.</td></tr><tr><td><code>Language</code></td><td>String</td><td>read-only</td><td>Parsed name language metadata when supplied by Domino.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
 <h3 id="methods">Methods</h3>
-<p><code>NotesName</code> currently adds no methods beyond <code>Recycle()</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the <code>NotesName</code> wrapper.</td></tr></tbody></table>
 <h2 id="notesdatetime">NotesDateTime</h2>
 <p><code>NotesDateTime</code> stores the native C API <code>TIMEDATE</code> representation.</p>
+<p>An empty value creates the native wildcard date and time. <code>SetAnyDate</code> preserves the time while making the date match any date. <code>SetAnyTime</code> preserves the date while making the time match any time. These operations use the Domino <code>TIMEDATE_WILDCARD</code> representation.</p>
 <pre><code class="language-xpscript">Dim value As NotesDateTime
 Set value = session.CreateDateTime("2026-08-25 12:00:00")
 Call value.AdjustDay(1)
@@ -1175,20 +1276,200 @@ Print value.LocalTime
 
 
 
-<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>AdjustSecond(amount)</code></td><td>Void</td><td>Adds or subtracts seconds.</td></tr><tr><td><code>AdjustMinute(amount)</code></td><td>Void</td><td>Adds or subtracts minutes.</td></tr><tr><td><code>AdjustHour(amount)</code></td><td>Void</td><td>Adds or subtracts hours.</td></tr><tr><td><code>AdjustDay(amount)</code></td><td>Void</td><td>Adds or subtracts days.</td></tr><tr><td><code>AdjustMonth(amount)</code></td><td>Void</td><td>Adds or subtracts months.</td></tr><tr><td><code>AdjustYear(amount)</code></td><td>Void</td><td>Adds or subtracts years.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the wrapper.</td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>SetAnyDate()</code></td><td>Void</td><td>Sets the date component to the Domino wildcard date.</td></tr><tr><td><code>SetAnyTime()</code></td><td>Void</td><td>Sets the time component to the Domino wildcard time.</td></tr><tr><td><code>AdjustSecond(amount)</code></td><td>Void</td><td>Adds or subtracts seconds.</td></tr><tr><td><code>AdjustMinute(amount)</code></td><td>Void</td><td>Adds or subtracts minutes.</td></tr><tr><td><code>AdjustHour(amount)</code></td><td>Void</td><td>Adds or subtracts hours.</td></tr><tr><td><code>AdjustDay(amount)</code></td><td>Void</td><td>Adds or subtracts days.</td></tr><tr><td><code>AdjustMonth(amount)</code></td><td>Void</td><td>Adds or subtracts months.</td></tr><tr><td><code>AdjustYear(amount)</code></td><td>Void</td><td>Adds or subtracts years.</td></tr><tr><td><code>SetNow()</code></td><td>Void</td><td>Replaces the value with the current native Notes time/date.</td></tr><tr><td><code>TimeDifference(other)</code></td><td>Double</td><td>Returns this value minus another <code>NotesDateTime</code> in seconds.</td></tr><tr><td><code>TimeDifferenceDouble(other)</code></td><td>Double</td><td>Alias returning the time difference in seconds as a double.</td></tr><tr><td><code>ConvertToZone(zone)</code></td><td>Void</td><td>Reinterprets the local date/time in the supplied Domino zone and stores the resulting GMT value.</td></tr><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the wrapper.</td></tr></tbody></table>
 <h2 id="notesagent">NotesAgent</h2>
 <p>Represents an agent design element returned by <code>NotesDatabase.GetAgent</code> or <code>NotesDatabase.Agents</code>.</p>
 <h3 id="properties-8">Properties</h3>
-<p><code>Parent</code>, <code>Name</code>, <code>Owner</code>, <code>CommonOwner</code>, <code>Comment</code>, <code>Query</code>, <code>ServerName</code>,
-<code>ParameterDocID</code>, <code>IsNotesAgent</code>, <code>IsPublic</code>, <code>IsWebAgent</code>, <code>IsActivatable</code>,
-<code>HasRunSinceModified</code>, <code>ProhibitDesignUpdate</code>, <code>IsEnabled</code>, <code>Trigger</code>, <code>Target</code>,
-<code>NotesURL</code>, <code>HttpURL</code>, and <code>OnBehalfOf</code> are exposed.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Parent</code></td><td><code>NotesDatabase</code></td><td>read-only</td><td>Owning database.</td></tr><tr><td><code>Name</code></td><td>String</td><td>read-only</td><td>Agent design name.</td></tr><tr><td><code>Owner</code></td><td>String</td><td>read-only</td><td>Raw agent owner name.</td></tr><tr><td><code>CommonOwner</code></td><td>String</td><td>read-only</td><td>Common-name form of the owner when available.</td></tr><tr><td><code>Comment</code></td><td>String</td><td>read-only</td><td>Agent design comment.</td></tr><tr><td><code>Query</code></td><td>String</td><td>read-only</td><td>Agent query text.</td></tr><tr><td><code>ServerName</code></td><td>String</td><td>read/write</td><td>Agent server name. Changes are persisted by <code>Save()</code>.</td></tr><tr><td><code>ParameterDocID</code></td><td>String</td><td>read-only</td><td>Hex Note ID passed to the most recent parameterized run, or an empty string.</td></tr><tr><td><code>IsNotesAgent</code></td><td>Boolean</td><td>read-only</td><td>Always <code>True</code> for this wrapper.</td></tr><tr><td><code>IsPublic</code></td><td>Boolean</td><td>read-only</td><td>Indicates whether the agent is public.</td></tr><tr><td><code>HasRunSinceModified</code></td><td>Boolean</td><td>read-only</td><td>Indicates whether the agent has run since its design was modified.</td></tr><tr><td><code>IsEnabled</code></td><td>Boolean</td><td>read/write</td><td>Agent enabled state. Changes are persisted by <code>Save()</code>.</td></tr><tr><td><code>Trigger</code></td><td>Integer</td><td>read-only</td><td>Numeric trigger value from the agent design.</td></tr><tr><td><code>NotesURL</code></td><td>String</td><td>read-only</td><td>Notes URL for the agent design note.</td></tr><tr><td><code>OnBehalfOf</code></td><td>String</td><td>read-only</td><td>On-behalf-of value from the agent design.</td></tr><tr><td><code>ReturnMessage</code></td><td>String</td><td>read-only</td><td>Captured output from the most recent agent run.</td></tr></tbody></table>
 <h3 id="methods-1">Methods</h3>
-<p><code>Run</code>, <code>RunWithDocumentContext</code>, <code>RunOnServer</code>, <code>Save</code>, <code>Remove</code>, and <code>UnLock</code> are exposed. <code>RunWithDocumentContext</code>
-passes an open <code>NotesDocument</code> as the agent document context. <code>RunOnServer</code>
-accepts an optional document Note ID and passes that document as context.
-<code>Remove</code>
-permanently deletes the agent design note when the caller has permission.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>Run()</code></td><td>Integer</td><td>Runs the agent without document context or parameter note and returns 0 on success.</td></tr><tr><td><code>Run(noteId)</code></td><td>Integer</td><td>Runs the agent with a non-zero hexadecimal parameter Note ID.</td></tr><tr><td><code>RunWithDocumentContext(document)</code></td><td>Integer</td><td>Runs the agent with an open <code>NotesDocument</code> as document context.</td></tr><tr><td><code>RunWithDocumentContext(document, noteId)</code></td><td>Integer</td><td>Runs with document context and a non-zero hexadecimal parameter Note ID.</td></tr><tr><td><code>RunOnServer()</code></td><td>Integer</td><td>Runs the agent without a parameter note.</td></tr><tr><td><code>RunOnServer(noteId)</code></td><td>Integer</td><td>Runs the agent with a non-zero hexadecimal parameter Note ID.</td></tr><tr><td><code>Save()</code></td><td>Void</td><td>Persists pending enabled/server-name changes or saves the current agent design state.</td></tr><tr><td><code>Remove()</code></td><td>Void</td><td>Permanently deletes the agent design note when permitted.</td></tr></tbody></table>
 <h2 id="notesagentresult">NotesAgentResult</h2>
 <p>Returned by <code>NotesDatabase.RunAgent</code>.</p>
 <h3 id="properties-9">Properties</h3>
@@ -1229,7 +1510,22 @@ permanently deletes the agent design note when the caller has permission.</p>
 
 <table><thead><tr><th>Property</th><th>Type</th><th>Access</th><th>Description</th></tr></thead><tbody><tr><td><code>Success</code></td><td>Boolean</td><td>read-only</td><td>Currently <code>True</code> for a successfully returned agent run result. Native execution failures raise an XPscript runtime error instead of returning a failed result object.</td></tr><tr><td><code>Status</code></td><td>Integer</td><td>read-only</td><td>Currently <code>0</code> for a successfully returned agent run result.</td></tr><tr><td><code>Output</code></td><td>String</td><td>read-only</td><td>Captured agent stdout/output text.</td></tr><tr><td><code>IsRecycled</code></td><td>Boolean</td><td>read-only</td><td><code>True</code> after the wrapper has been recycled.</td></tr></tbody></table>
 <h3 id="methods-2">Methods</h3>
-<p><code>NotesAgentResult</code> currently adds no methods beyond <code>Recycle()</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Member</th><th>Return type</th><th>Description</th></tr></thead><tbody><tr><td><code>Recycle()</code></td><td>Void</td><td>Invalidates the <code>NotesAgentResult</code> wrapper.</td></tr></tbody></table>
 <h2 id="object-creation-rules">Object creation rules</h2>
 <p>Only <code>NotesSession</code> is constructed with <code>New</code>.</p>
 <p>These classes must be obtained from the owning Notes object:</p>

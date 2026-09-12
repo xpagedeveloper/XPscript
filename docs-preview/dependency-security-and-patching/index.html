@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Dependency Security And Patching | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="dependency-security-and-package-patching">Dependency security and package patching</h1>
+<p>XPScript can inspect the NuGet dependency graph used by an application, report known package vulnerabilities, and maintain version-scoped compatible package patches. The important rule is that application security checks are based on the dependencies the generated application actually uses. A vulnerability in an unused database or UI package does not create a warning for an application that does not include that package.</p>
+<h2 id="application-dependency-inspection">Application dependency inspection</h2>
+<p>Use <code>dependencies</code> to inspect the resolved dependency graph for an XPScript source file:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript dependencies app.xps</span></span>
+<span class="line"><span>xpscript dependencies app.xps --platform win-x64</span></span>
+<span class="line"><span>xpscript dependencies app.xps --json</span></span></code></pre>
+<p>XPScript first compiles/transpiles the source far enough to determine which optional application features are present. It then creates a temporary NuGet project containing only the required direct package references, restores it, and asks NuGet for the resolved top-level and transitive dependency graph.</p>
+<p>For example, an application that does not use SQL Server does not receive <code>Microsoft.Data.SqlClient</code> merely because XPScript supports SQL Server.</p>
+<h2 id="vulnerability-inspection">Vulnerability inspection</h2>
+<p>Use <code>security</code> to check the resolved application dependencies against NuGet vulnerability information:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript security app.xps</span></span>
+<span class="line"><span>xpscript security app.xps --platform linux-x64</span></span>
+<span class="line"><span>xpscript security app.xps --json</span></span></code></pre>
+<p>Exit codes are:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Exit code</th><th>Meaning</th></tr></thead><tbody><tr><td><code>0</code></td><td>The check completed and no known vulnerable dependency was found.</td></tr><tr><td><code>2</code></td><td>One or more vulnerable dependencies were found.</td></tr><tr><td><code>3</code></td><td>Vulnerability information was unavailable, so XPScript cannot claim that the dependency graph is clean.</td></tr></tbody></table>
+<p>NuGet advisory data is obtained at check time. A newly published advisory can therefore be detected without requiring a new XPScript release, provided the configured NuGet audit source is reachable and supplies vulnerability information.</p>
+<p><code>no known vulnerabilities</code> means exactly that: no vulnerability was reported by the available advisory data. It is not a guarantee that a package contains no undiscovered vulnerability.</p>
+<h2 id="automatic-checks-during-compile-and-run">Automatic checks during compile and run</h2>
+<p>Normal execution keeps dependency security checking off to preserve the fast path:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript run app.xps</span></span></code></pre>
+<p><code>--info</code> and <code>--debug</code> automatically enable warning mode:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript run app.xps --info</span></span>
+<span class="line"><span>xpscript run app.xps --debug</span></span>
+<span class="line"><span>xpscript compile app.xps --debug</span></span></code></pre>
+<p>The behavior can be selected explicitly:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>--security=off</span></span>
+<span class="line"><span>--security=warn</span></span>
+<span class="line"><span>--security=strict</span></span></code></pre>
+<p><code>off</code> disables the application dependency audit. <code>warn</code> reports vulnerability and audit-availability warnings without intentionally blocking the build. <code>strict</code> also treats unavailable vulnerability information as a failure and blocks on high/critical application dependency findings.</p>
+<p>An explicit <code>--security=off</code> overrides the automatic security check enabled by <code>--info</code> or <code>--debug</code>.</p>
+<h2 id="compatible-package-patching">Compatible package patching</h2>
+<p>XPScript can use newer official NuGet patch releases without moving an application to a different major or minor dependency line.</p>
+<p>If the XPScript baseline is <code>7.0.2</code>, compatible candidates include:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>7.0.3   allowed</span></span>
+<span class="line"><span>7.0.9   allowed</span></span>
+<span class="line"><span>7.1.0   not allowed</span></span>
+<span class="line"><span>8.0.0   not allowed</span></span>
+<span class="line"><span>7.0.3-preview.1   not allowed</span></span></code></pre>
+<p>A candidate must be stable, newer than the baseline, and have the same major and minor version. This deliberately conservative policy reduces the risk of introducing behavioral or binary incompatibilities through automatic dependency updates.</p>
+<h2 id="patch-commands">Patch commands</h2>
+<p>Check what is available without changing the local patch state:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript patch all --check</span></span>
+<span class="line"><span>xpscript patch Microsoft.Data.SqlClient --check</span></span></code></pre>
+<p>Apply compatible patches:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript patch all</span></span>
+<span class="line"><span>xpscript patch Microsoft.Data.SqlClient</span></span></code></pre>
+<p>Inspect or remove the current XPScript version’s patch state:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript patch status</span></span>
+<span class="line"><span>xpscript patch list</span></span>
+<span class="line"><span>xpscript patch remove all</span></span></code></pre>
+<p>Downloaded package files are hashed with SHA-256 and recorded in the patch manifest.</p>
+<h2 id="security-only-patching">Security-only patching</h2>
+<p>Use <code>--security-only</code> when maintenance updates should be ignored:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript patch all --check --security-only</span></span>
+<span class="line"><span>xpscript patch all --security-only</span></span>
+<span class="line"><span>xpscript patch Microsoft.Data.SqlClient --security-only</span></span></code></pre>
+<p>XPScript classifies a candidate using current vulnerability metadata:</p>
+<ul>
+<li><code>security patch</code>: the baseline is reported vulnerable and the compatible candidate is not reported vulnerable.</li>
+<li><code>maintenance patch</code>: a newer compatible patch exists but the baseline is not currently reported vulnerable.</li>
+<li><code>no known vulnerabilities</code>: no known vulnerability is reported and no applicable security action is required.</li>
+<li><code>known vulnerability remains</code>: both baseline and candidate are reported vulnerable.</li>
+<li><code>known vulnerability; no compatible patch</code>: the baseline is vulnerable but there is no eligible same-major/minor patch release.</li>
+<li><code>security status unavailable</code>: the vulnerability metadata required for the classification could not be obtained.</li>
+</ul>
+<p><code>--security-only</code> applies only candidates classified as security patches. It does not automatically apply maintenance patches, and it does not apply a package when the security status cannot be verified.</p>
+<h2 id="dependency-groups">Dependency groups</h2>
+<p>Some package families must remain synchronized. Avalonia packages are treated as an atomic compatibility group rather than patched independently. XPScript looks for a stable version in the same version line that is available for every package in the group. If no common compatible version exists, the group is left unchanged.</p>
+<p>This prevents an update from creating a mixed Avalonia dependency set merely because one package published a patch release before the others.</p>
+<h2 id="patches-are-scoped-to-the-xpscript-version">Patches are scoped to the XPScript version</h2>
+<p>Patch state is isolated by the exact XPScript release line. Conceptually the cache is organized as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>XPScript/</span></span>
+<span class="line"><span>  package-patches/</span></span>
+<span class="line"><span>    0.9.3-beta/</span></span>
+<span class="line"><span>      manifest.json</span></span>
+<span class="line"><span>      packages/</span></span></code></pre>
+<p>A patch selected while running XPScript <code>0.9.3-beta</code> is not automatically used by XPScript <code>0.9.4</code>. Old patch data may remain on disk for rollback or cleanup, but a different XPScript release uses a different patch namespace.</p>
+<p>This makes the XPScript release plus its selected patch manifest a reproducible dependency baseline and avoids silently carrying old compatibility decisions into a new XPScript release.</p>
+<h2 id="application-specific-behavior">Application-specific behavior</h2>
+<p>Patch availability is global to the dependency baseline, but generated applications still include only the package families they use. For example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>XPScript baseline: Microsoft.Data.SqlClient 7.0.2</span></span>
+<span class="line"><span>Selected patch:    Microsoft.Data.SqlClient 7.0.3</span></span></code></pre>
+<p>An application using SQL Server resolves the selected <code>7.0.3</code> version. An application that does not use SQL Server does not gain the package because a patch exists.</p>
+<p>The dependency inspector and security audit operate on the resolved application graph, so their output reflects the version actually selected for the application rather than only the original XPScript baseline.</p>
+<h2 id="recommended-workflows">Recommended workflows</h2>
+<p>For development, use <code>xpscript run app.xps --info</code> to get the normal informational output plus dependency security warnings. Before release, run <code>xpscript security app.xps</code> for each target RID that matters to the deployment. Use <code>xpscript patch all --check</code> to review compatible maintenance and security patches before applying them.</p>
+<p>For a security-focused maintenance operation, use <code>xpscript patch all --check --security-only</code> first, review the classifications, and then run <code>xpscript patch all --security-only</code> if the proposed security patches are acceptable. Rebuild and test the application after changing its dependency patch state.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Debugger | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="xpscript-debugger">XPscript debugger</h1>
+<p>The debugger is implemented as a runtime capability and exposed to editor integrations through a small authenticated transport protocol.</p>
+<h2 id="enabling-debugging">Enabling debugging</h2>
+<p>Native CLI, desktop and server-side web processes enable the debugger with:</p>
+<ul>
+<li><code>XPSCRIPT_DEBUG_PORT</code> - loopback TCP port used by the debugger transport.</li>
+<li><code>XPSCRIPT_DEBUG_TOKEN</code> - optional authentication token. When configured, every debugger command must contain the token.</li>
+<li><code>XPSCRIPT_DEBUG_STOP_ON_ENTRY</code> - <code>1</code> to hold the first XPscript statement, <code>0</code> to run immediately.</li>
+</ul>
+<p>The listener binds only to loopback. Remote debugging should use a local tunnel or authenticated relay rather than exposing the runtime port publicly.</p>
+<p>When these settings are absent, debugger runtime hooks are effectively disabled. <code>Debugger.Print(...)</code> and <code>Debugger.UpdateVar(...)</code> are compiler-guarded so their argument expressions are not evaluated outside a debug session.</p>
+<h2 id="detecting-a-debugger-session">Detecting a debugger session</h2>
+<p><code>Application.IsDebugging</code> is a read-only Boolean runtime property. It is <code>True</code> when the application is running with the XPscript debugger enabled and <code>False</code> during a normal run. It reflects runtime debugger state, not whether the executable contains debug symbols or was built with debug optimization settings.</p>
+<pre><code class="language-xpscript">If Application.IsDebugging Then
+    Debugger.Print("Extra diagnostics enabled")
+End If
+</code></pre>
+<p>See <code>samples/application-is-debugging.xps</code> for a complete runnable example.</p>
+<h2 id="version-1-capabilities">Version 1 capabilities</h2>
+<p>Protocol version 6 is the current native debugger contract. The runtime advertises and the VS Code adapter validates the protocol version during handshake.</p>
+<p>Version 1 supports source breakpoints, conditional breakpoints, hit-count breakpoints, log points, write data breakpoints, Continue, cooperative Pause, Step Into/Over/Out, mapped XPscript call stacks, observed scalar Locals, Debugger Variables, bounded value history, Debug Console output, exception breakpoints, graceful completion, and disconnect/target-exit handling.</p>
+<p>Stepping is call-depth aware. Portable PDB sequence points and XPscript source directives are used to recover mapped XPscript stack frames.</p>
+<h2 id="breakpoint-behavior">Breakpoint behavior</h2>
+<p>Breakpoint rules are evaluated inside the XPscript runtime before a <code>stopped</code> event is sent to the editor. This avoids a stop/query/continue round trip for every false condition.</p>
+<p>A conditional breakpoint can reference automatically observed scalar variables and names published with <code>Debugger.UpdateVar</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Counter == 10</span></span>
+<span class="line"><span>Counter >= 25</span></span>
+<span class="line"><span>Ready == true</span></span>
+<span class="line"><span>Name == "Example"</span></span></code></pre>
+<p>Supported comparison operators are <code>=</code>, <code>==</code>, <code>!=</code>, <code>&#x3C;</code>, <code>&#x3C;=</code>, <code>></code> and <code>>=</code>. Bare variable names are treated as Boolean/truthy conditions.</p>
+<p>Hit-count breakpoints support forms such as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>10</span></span>
+<span class="line"><span>== 10</span></span>
+<span class="line"><span>>= 10</span></span>
+<span class="line"><span>> 20</span></span></code></pre>
+<p>Global condition breakpoints are exposed by editor integrations as function breakpoints, because they are not tied to a source line. Enter the condition itself as the function-breakpoint name, for example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Counter = 10</span></span>
+<span class="line"><span>Counter >= 100</span></span>
+<span class="line"><span>Ready = True</span></span>
+<span class="line"><span>Name = "Example"</span></span></code></pre>
+<p>The runtime observes scalar value changes and edge-triggers a global condition when it changes from false to true. It does not stop on the assignment itself. Instead it records a pending stop and pauses on the next executable XPscript statement, so the editor highlights the line after the value change. The condition will not repeatedly stop execution while it remains true; it can trigger again after first becoming false and then true again.</p>
+<p>Log points write to the Debug Console without stopping. Braced variable names are expanded from the runtime’s latest observed values, for example:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Counter is {Counter}</span></span></code></pre>
+<p>Breakpoint source identifiers are normalized to their source file name for matching, while the editor keeps the full source path for navigation.</p>
+<h2 id="locals-and-internal-objects">Locals and internal objects</h2>
+<p>The debugger deliberately does not recursively inspect XPscript runtime objects, Notes objects, arrays, collection internals, generated CLR implementation objects, object properties or ByRef wrapper internals. Simple scalar assignments can be observed automatically. Complex or internal values are exposed only when the application explicitly publishes a useful scalar representation with <code>Debugger.UpdateVar</code>.</p>
+<h2 id="debugger-api">Debugger API</h2>
+<h3 id="debuggerprint">Debugger.Print</h3>
+<p>Writes a rendered value to the attached debugger’s Debug Console:</p>
+<pre><code class="language-xpscript">Debugger.Print("Processing document " &#x26; CStr(doc.NoteID))
+</code></pre>
+<p>The output includes the current mapped XPscript source file and line when available. When debugging is disabled, the entire call is skipped and the argument expression is not evaluated.</p>
+<h3 id="debuggerupdatevar">Debugger.UpdateVar</h3>
+<p>Publishes an application-defined debugger variable:</p>
+<pre><code class="language-xpscript">Debugger.UpdateVar("DocName", doc.GetItemValue("DocName")(0))
+</code></pre>
+<p>The variable appears under <code>Debugger Variables</code> in VS Code and participates in value history, conditional breakpoints and write data breakpoints. The supplied name must not collide with an automatically observed application scalar. When debugging is disabled, the entire call is skipped and the value expression is not evaluated.</p>
+<h2 id="value-history">Value history</h2>
+<p>The debugger keeps at most the latest 20 observed changes for each tracked scalar or explicit debugger variable. Each rendered value is limited to 2,048 characters and each variable has a maximum history budget of 32,768 characters. Byte arrays and streams are represented without retaining their full contents.</p>
+<p>In the VS Code Debug Console, history can be queried with <code>history(variableName)</code> or <code>@history variableName</code>.</p>
+<h2 id="data-and-exception-breakpoints">Data and exception breakpoints</h2>
+<p>Write data breakpoints are supported for observed scalar values and names published by <code>Debugger.UpdateVar</code>. Internal arrays, object properties and ByRef implementation objects are not automatically exposed as data ids.</p>
+<p>Exception breakpoints hook XPscript’s normal runtime error capture path. VS Code exposes <code>Uncaught XPscript exceptions</code> and <code>All XPscript exceptions</code>. Continuing from an exception stop does not alter normal XPscript error semantics.</p>
+<h2 id="pause-and-command-transport">Pause and command transport</h2>
+<p>The native runtime uses a single-reader command transport. One dedicated background thread owns debugger TCP reads. <code>Pause</code> is an atomic signal and execution stops at the next mapped XPscript statement. The XPscript execution thread never polls or reads the socket while running.</p>
+<p>When the script finishes, the generated entry point calls the debugger runtime’s completion hook from <code>finally</code>. The runtime sends a <code>complete</code> frame, flushes the writer, and performs a graceful socket shutdown so late Debug Console output is not lost.</p>
+<h2 id="targets">Targets</h2>
+<p>CLI and desktop applications use the native runtime debugger hook. Server-side web processes can use the loopback transport when explicitly enabled. Browser WASM does not open the native TCP listener; its debugger bridge remains future work.</p>
+<h2 id="source-mapping">Source mapping</h2>
+<p>Debugger hooks use the same source mapping markers as compiler diagnostics. Included XPscript files retain their original source path and source line when execution stops.</p>
+<h2 id="ci">CI</h2>
+<p><code>tests/DebuggerCoreProbe</code> validates debugger source mapping, scalar instrumentation, disabled-debug guards, protocol capabilities, runtime conditional breakpoint support, Pause transport, exception hooks, graceful completion, bounded history and the rule that complex internal objects are not automatically inspected.</p>
+<h2 id="security">Security</h2>
+<ul>
+<li>Native transport listens on loopback only.</li>
+<li>VS Code launch generates an ephemeral random token.</li>
+<li>Runtime authentication uses fixed-time token comparison.</li>
+<li>Web deployments should keep debugging disabled unless explicitly enabled for a development session.</li>
+<li>Debugger history is memory-only and bounded.</li>
+</ul>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

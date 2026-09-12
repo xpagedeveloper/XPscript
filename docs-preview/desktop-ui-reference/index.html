@@ -62,7 +62,7 @@ Sub Main()
 End Sub
 </code></pre>
 <p>Compile a desktop program with:</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">xpscriptc .\demo\desktop</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">ui\customer</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">form.xps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o .\out\</span><span style="color:#79B8FF">desktop-ui-demo.exe</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">framework</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">dependent</span></span></code></pre>  </article> </main> </div> <script>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="powershell"><code><span class="line"><span style="color:#E1E4E8">xpscriptc .\demo\desktop</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">ui\customer</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">form.xps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">o .\out\</span><span style="color:#79B8FF">desktop-ui-demo.exe</span><span style="color:#F97583"> --</span><span style="color:#E1E4E8">runtime</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">false</span></span></code></pre>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);

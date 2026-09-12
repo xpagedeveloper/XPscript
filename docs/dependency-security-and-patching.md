@@ -8,7 +8,7 @@ Use `dependencies` to inspect the resolved dependency graph for an XPScript sour
 
 ```text
 xpscript dependencies app.xps
-xpscript dependencies app.xps --runtime win-x64
+xpscript dependencies app.xps --platform win-x64
 xpscript dependencies app.xps --json
 ```
 
@@ -22,7 +22,7 @@ Use `security` to check the resolved application dependencies against NuGet vuln
 
 ```text
 xpscript security app.xps
-xpscript security app.xps --runtime linux-x64
+xpscript security app.xps --platform linux-x64
 xpscript security app.xps --json
 ```
 

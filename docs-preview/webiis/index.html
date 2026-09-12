@@ -7,9 +7,9 @@
 <p>Self-contained Windows package:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis</span></span></code></pre>
 <p>Framework-dependent package:</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --framework-dependent</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --runtime=false</span></span></code></pre>
 <p>Explicit output directory:</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --framework-dependent -o C:\deploy\myapp</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>xpscript compile main.xps --target webiis --runtime=false -o C:\deploy\myapp</span></span></code></pre>
 <p>The output directory must be outside the XPscript source directory.</p>
 <p><code>main.xps</code> is the build entry. It is not the HTTP default document.</p>
 <p>The HTTP default document is <code>index.xps</code>.</p>

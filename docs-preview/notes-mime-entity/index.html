@@ -1,0 +1,226 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v6.4.8"><title>Notes Mime Entity | XPScript</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0d1117;color:#e6edf3}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.site-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 24px;border-bottom:1px solid #30363d;background:#0d1117f5;backdrop-filter:blur(8px)}.brand{color:#f0f6fc;font-weight:700}.site-status{color:#8b949e;font-size:.875rem}.page-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{padding:24px 16px;border-right:1px solid #21262d}.sidebar nav{position:sticky;top:80px;display:grid;gap:4px}.sidebar a{display:block;padding:8px 10px;border-radius:6px;color:#c9d1d9}.sidebar a:hover{background:#161b22;color:#f0f6fc;text-decoration:none}.content{width:min(100%,1040px);padding:48px clamp(24px,5vw,72px) 96px}.structured-header{margin-bottom:28px}.structured-header h1{margin-bottom:8px}.structured-header p{margin:0;color:#8b949e;font-size:1.1rem}.doc-body{line-height:1.65}.doc-body h1,.doc-body h2,.doc-body h3,.doc-body h4{color:#f0f6fc;line-height:1.25}.doc-body h1{margin-top:0;font-size:clamp(2rem,5vw,2.7rem)}.doc-body h2{margin-top:2.4rem;padding-bottom:.35rem;border-bottom:1px solid #21262d}.doc-body table{display:block;width:100%;overflow-x:auto;border-collapse:collapse}.doc-body th,.doc-body td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.doc-body th{background:#161b22}.doc-body code:not(pre code){padding:.15em .35em;border-radius:4px;background:#161b22;font-size:.9em}.code-block{position:relative;margin:1.25rem 0}.code-block pre{margin:0;overflow-x:auto;padding:44px 18px 18px;border:1px solid #30363d;border-radius:8px}.copy-code{position:absolute;top:8px;right:8px;z-index:2;padding:5px 9px;border:1px solid #484f58;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font:inherit;font-size:.8rem}.copy-code:hover{background:#30363d;color:#f0f6fc}@media(max-width:820px){.site-status{display:none}.page-shell{display:block}.sidebar{border-right:0;border-bottom:1px solid #21262d}.sidebar nav{position:static;display:flex;flex-wrap:wrap}.content{padding-top:32px}}
+.structured-kind{margin:0 0 8px;color:#8b949e;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.reference-details{margin-bottom:2.5rem}.reference-meta{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 2rem}.reference-meta>div{min-width:140px;padding:12px 14px;border:1px solid #30363d;border-radius:8px;background:#161b22}.reference-meta dt{margin-bottom:4px;color:#8b949e;font-size:.75rem;font-weight:700;text-transform:uppercase}.reference-meta dd{margin:0}.reference-table-wrap{width:100%;overflow-x:auto}.reference-table{width:100%;border-collapse:collapse}.reference-table th,.reference-table td{padding:10px 12px;border:1px solid #30363d;text-align:left;vertical-align:top}.reference-table th{background:#161b22}.reference-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.reference-card{display:grid;gap:5px;padding:14px 16px;border:1px solid #30363d;border-radius:8px;background:#161b22;color:#f0f6fc}.reference-card:hover{border-color:#58a6ff;text-decoration:none}.reference-card span{color:#8b949e;font-size:.9rem}
+</style></head> <body> <header class="site-header"> <a class="brand" href="../">XPScript Documentation</a> <span class="site-status">Documentation preview</span> </header> <div class="page-shell"> <aside class="sidebar" aria-label="Documentation navigation"> <nav> <a href="../">Overview</a> <a href="../getting-started/">Getting Started</a> <a href="../language/">Language</a> <a href="../functions/">Functions</a> <a href="../language-reference/">Language Reference</a> <a href="../api-reference/">Runtime API</a> </nav> </aside> <main class="content" data-pagefind-body>  <article class="doc-body">    <h1 id="notesmimeentity">NotesMIMEEntity</h1>
+<p>XPscript exposes <code>NotesMIMEEntity</code> through the native HCL Notes/Domino MIME directory and MIME stream APIs.</p>
+<p>Set <code>NotesSession.ConvertMIME = False</code> before opening documents when MIME items must remain native <code>TYPE_MIME_PART</code> items.</p>
+<p>Nested entity content mutation uses MimeKit 4.17.0 to parse and serialize the complete MIME tree before writing it through the Notes MIME stream. MimeKit is distributed under the MIT License. <code>MimeKit.dll</code> is staged beside the compiled application only when its source uses <code>NotesMIMEEntity</code>.</p>
+<p>The MIME implementation also uses <a href="https://github.com/HCL-TECH-SOFTWARE/domino-jnx">HCL Domino JNX</a> and <a href="https://github.com/klehmann/domino-jna">Domino JNA</a> as implementation references for native Notes API mapping and MIME stream writeback. Both reference projects are licensed under the Apache License, Version 2.0. XPscript does not distribute their source code or binaries. The attribution and future copying requirements are recorded in <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a>.</p>
+<p>The <a href="https://opensource.hcltechsw.com/domino-c-api-docs/">HCL Domino C API documentation</a> is the primary source for the native MIME ABI and is listed by HCL under the Apache License, Version 2.0. XPscript does not redistribute the HCL C API toolkit or the commercial Notes/Domino runtime. Its attribution and license handling are recorded in <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a>.</p>
+<h2 id="open-or-create-the-root-entity">Open or create the root entity</h2>
+<p>The current native implementation supports the <code>Body</code> item for document-level MIME access:</p>
+<pre><code class="language-xpscript">Dim session As New NotesSession()
+Dim db As NotesDatabase
+Dim doc As NotesDocument
+Dim mime As NotesMIMEEntity
+
+session.ConvertMIME = False
+Set db = session.OpenDatabase("", "mail.nsf")
+Set doc = db.CreateDocument()
+Set mime = doc.CreateMIMEEntity("Body")
+</code></pre>
+<p><code>NotesDocument.GetMIMEEntity("Body")</code> returns the native MIME root entity when <code>Body</code> is MIME.</p>
+<p>Named MIME items other than <code>Body</code> are currently unsupported because Domino <code>MIMEOpenDirectory</code> is note-level and does not accept an item name.</p>
+<h2 id="root-metadata-and-traversal">Root metadata and traversal</h2>
+<p>The following properties are backed by the Domino MIME directory:</p>
+<ul>
+<li><code>ContentType</code></li>
+<li><code>ContentSubType</code></li>
+<li><code>Charset</code></li>
+</ul>
+<p>Tree navigation uses the native MIME directory:</p>
+<ul>
+<li><code>GetFirstChildEntity()</code></li>
+<li><code>GetNextSibling()</code></li>
+<li><code>GetNextEntity()</code></li>
+<li><code>GetNextEntity(SEARCH_DEPTH)</code></li>
+</ul>
+<p><code>SEARCH_DEPTH</code> is the supported traversal mode for <code>GetNextEntity(search)</code>.</p>
+<h2 id="root-content-readback">Root content readback</h2>
+<p>The root entity supports <code>ContentAsText</code>, <code>GetContentAsText(stream)</code>, <code>GetContentAsBytes(stream)</code> and <code>GetEntityAsText(stream)</code>. <code>ContentID</code> and <code>ContentLocation</code> expose the native entity values used by inline and related MIME parts. <code>IsMultipart</code>, <code>IsDiscretePart</code> and <code>IsMessagePart</code> report the native Domino MIME entity classification.</p>
+<p><code>Headers</code>, <code>HeaderObjects</code>, and <code>GetSomeHeaders(names)</code> are available for the root and child entity surfaces. Header text is read from the current serialized entity and preserves repeated headers and their order.</p>
+<p>Multipart entities support <code>Preamble</code> read and write. Child entities also support raw <code>GetEntityAsText(stream)</code> access and decoded content stream access. <code>EncodeContent</code> and <code>DecodeContent</code> rewrite the entity transfer encoding while preserving its content type.</p>
+<p><code>InputStream</code> returns a new <code>NotesStream</code> containing decoded entity bytes. <code>GetInputStream(False)</code> returns the stored transport representation, while <code>GetInputStream(True)</code> returns decoded bytes. Each returned stream is positioned at zero and must be recycled by the caller.</p>
+<p><code>Reader</code> returns a <code>NotesStream</code> containing decoded text and applies the entity’s <code>charset</code> parameter when present. The returned stream is positioned at zero and must be recycled by the caller.</p>
+<p>XPscript reads the current <code>Body</code> through Domino <code>MIMEStreamOpen</code>/<code>MIMEStreamRead</code>. <code>ContentAsText</code> and <code>GetContentAsText</code> decode the transfer encoding and then decode text with the root entity’s native charset. <code>GetContentAsBytes</code> returns decoded body bytes. <code>GetEntityAsText</code> returns the complete root RFC822 MIME stream including headers.</p>
+<p>Supported transfer decoding includes <code>base64</code>, <code>quoted-printable</code>, <code>7bit</code>, <code>8bit</code> and <code>binary</code> content. A root entity with no charset is decoded as UTF-8.</p>
+<h2 id="root-mutation">Root mutation</h2>
+<p><code>SetContentFromText(stream, contentType, encoding)</code> and <code>SetContentFromBytes(stream, contentType, encoding)</code> support the root entity.</p>
+<p>The runtime writes a complete MIME stream to a temporary note, itemizes it with the Domino MIME stream API, removes the previous target items, then copies the generated <code>Body</code> and <code>$file</code> items to the destination note. This follows the existing JNX-style BODY writeback path used by XPscript.</p>
+<p><code>SetContentFromText</code> and <code>SetContentFromBytes</code> read from the stream’s current position. Rewind the stream when the content was just written to it.</p>
+<p>The content type value must not contain CR or LF characters. An empty content type falls back to <code>application/octet-stream</code>.</p>
+<p>The currently supported transfer-encoding mappings are:</p>
+<ul>
+<li><code>1725</code> and other default values: <code>8bit</code></li>
+<li><code>1726</code>: <code>quoted-printable</code></li>
+<li><code>1727</code>: <code>base64</code></li>
+<li><code>1730</code>: <code>binary</code></li>
+</ul>
+<h2 id="multipartmixed-and-attachments">Multipart/mixed and attachments</h2>
+<p>The root entity supports <code>CreateChildEntity()</code> for direct child entities. If the root is not already multipart, creating the first child promotes it to <code>multipart/mixed</code> and discards the previous root body, matching the Domino NotesMIMEEntity model. Multipart child entities can also create nested children. Nested content writes preserve the surrounding multipart boundaries and refresh the native entity binding after serialization. Nested entities support <code>GetChildren()</code> enumeration and custom <code>CreateHeader(name, value)</code>, <code>SetHeaderVal</code>, <code>GetNthHeader</code>, <code>GetHeaders</code>, and <code>RemoveHeaders</code> operations, including standard <code>Content-Type</code> and <code>Content-Disposition</code> parameter mutation and readback. <code>CreateChildEntity(nextSibling)</code> requires the supplied sibling to have the same parent as the entity receiving the call. The executable regression covers nested <code>GetParentEntity()</code>, <code>GetFirstChildEntity()</code>, depth-first traversal and sibling traversal after save/reopen.</p>
+<p>Direct root children support <code>SetContentFromText</code>, <code>SetContentFromBytes</code>, <code>CreateHeader</code>, <code>GetNthHeader</code>, and <code>NotesMIMEHeader.SetHeaderVal</code>. Direct-child <code>GetNthHeader(name)</code> resolves the selected entity through Domino’s native MIME directory. It scans the documented <code>MIMESYMBOL</code> range and validates returned values by header semantics, then uses the serialized child header when the directory does not expose a complete value. This avoids depending on the published numeric positions used by a particular Domino installation.</p>
+<p>Direct-child <code>GetNthHeader(name, occurrence)</code> also finds arbitrary MIME headers by case-insensitive name and occurrence. <code>NotesMIMEHeader.GetParamVal(name)</code> reads a semicolon-delimited parameter and <code>SetParamVal(name, value)</code> replaces or adds a quoted parameter. These parameter operations are verified for <code>Content-Type</code> parameters such as <code>name</code> and <code>charset</code>, and for the <code>Content-Disposition</code> <code>filename</code> parameter.</p>
+<p>On the tested Domino installation, the native directory returns the main <code>Content-Disposition</code> value and the MIME <code>Content-Type</code> name parameter supplies the attachment filename. <code>GetNthHeader("Content-Disposition").GetHeaderValAndParams()</code> therefore returns the complete semantic value, including <code>filename</code>, after mutation and after directory reopen. The CTE lookup returns the serialized transfer encoding, including <code>base64</code> for encoding <code>1727</code>.</p>
+<p>Example creating a base64 attachment from <code>NotesStream</code>:</p>
+<pre><code class="language-xpscript">Dim body As NotesMIMEEntity
+Dim textPart As NotesMIMEEntity
+Dim attachment As NotesMIMEEntity
+Dim disposition As NotesMIMEHeader
+Dim stream As NotesStream
+
+Set body = doc.CreateMIMEEntity("Body")
+
+Set textPart = body.CreateChildEntity()
+Set stream = session.CreateStream()
+stream.Charset = "UTF-8"
+Call stream.WriteText("Message body")
+stream.Position = 0
+Call textPart.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
+Call stream.Truncate()
+
+Set body = doc.GetMIMEEntity("Body")
+Set attachment = body.CreateChildEntity()
+Call stream.WriteText("attachment bytes")
+stream.Position = 0
+Call attachment.SetContentFromBytes(stream, "application/octet-stream; name=""probe.txt""", 1727)
+Set disposition = attachment.CreateHeader("Content-Disposition")
+Call disposition.SetHeaderVal("attachment; filename=""probe.txt""")
+</code></pre>
+<p>Encoding <code>1727</code> writes the child body using MIME base64 transfer encoding, and the child <code>Encoding</code> property reports <code>1727</code> after readback. <code>Content-Disposition: attachment</code> supplies attachment semantics and the filename. For real binary files, populate the <code>NotesStream</code> with the file bytes and rewind it before <code>SetContentFromBytes</code>.</p>
+<p>Domino may normalize quoting, folding, and other RFC822 serialization details when it itemizes and later re-emits a MIME stream. Do not verify attachment headers by comparing the complete root RFC822 text byte-for-byte. Traverse to the attachment child and use <code>GetNthHeader("Content-Disposition")</code> or <code>GetNthHeader("Content-Transfer-Encoding")</code> when header semantics matter.</p>
+<h2 id="current-entityheader-surface">Current entity/header surface</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Operation</th><th align="center">Root</th><th align="center">Direct child</th><th align="center">Nested child</th></tr></thead><tbody><tr><td>Metadata: <code>ContentType</code>, <code>ContentSubType</code>, <code>Charset</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td>Classification: <code>IsMultipart</code>, <code>IsDiscretePart</code>, <code>IsMessagePart</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td>Navigation / parent lookup</td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>GetChildren()</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>SetContentFromText</code> / <code>SetContentFromBytes</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>GetEntityAsText</code>, <code>InputStream</code>, <code>GetInputStream</code>, <code>Reader</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>CreateChildEntity([nextSibling])</code></td><td align="center">yes</td><td align="center">yes, when multipart</td><td align="center">yes, when multipart</td></tr><tr><td><code>GetNthHeader(name [, occurrence])</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td>Arbitrary custom header lookup/mutation</td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>GetParamVal</code> / <code>SetParamVal</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>Preamble</code> on multipart entity</td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr><tr><td><code>EncodeContent</code> / <code>DecodeContent</code></td><td align="center">yes</td><td align="center">yes</td><td align="center">yes</td></tr></tbody></table>
+<p>Header occurrences are one-based. Header-name matching is case-insensitive. Root, direct-child and nested header reads use the serialized entity as the stable representation, with native MIME-directory metadata used where appropriate. This is important because Domino can normalize header ordering, quoting and folding during itemization.</p>
+<h2 id="mime-directory-lifetime">MIME directory lifetime</h2>
+<p>Any MIME write changes the note’s MIME structure. XPscript therefore closes the cached MIME directory before writeback. Existing wrappers that reference the old directory become invalid immediately.</p>
+<p>The wrapper performing a successful root or direct-child content/header mutation reopens the MIME directory and rebinds itself to the corresponding native entity so metadata reads immediately observe the new MIME content. Reacquire the root with <code>doc.GetMIMEEntity("Body")</code> before subsequent root operations after mutating a child.</p>
+<p><code>NotesDocument.CloseMIMEEntities()</code> closes the current MIME directory explicitly. <code>NotesDocument.Save()</code> and document recycle also release the directory before their native operation.</p>
+<p>The verified surface covers root, direct-child and nested MIME traversal/mutation, arbitrary header lookup, MIME parameter access, content streams/readers, encoding operations, preamble handling, and MIME directory lifecycle. Named document-level MIME items other than <code>Body</code> remain outside the supported surface.</p>
+<p>See <code>samples/notes-mime-entity-surface.xps</code> for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.</p>  </article> </main> </div> <script>
+      const copyText = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      };
+
+      document.querySelectorAll(".doc-body pre").forEach((pre) => {
+        if (pre.parentElement?.classList.contains("code-block")) return;
+
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block";
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", "Copy code to clipboard");
+
+        button.addEventListener("click", async () => {
+          await copyText(code.textContent ?? "");
+          button.textContent = "Copied";
+          window.setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1500);
+        });
+
+        wrapper.appendChild(button);
+      });
+    </script> </body> </html>

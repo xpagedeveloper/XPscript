@@ -11,7 +11,7 @@ Set doc = view.GetDocumentByKey("Ada Lovelace")
 <p>The overloads are:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>NotesView.GetDocumentByKey(key) As NotesDocument</span></span>
 <span class="line"><span>NotesView.GetDocumentByKey(key, exactMatch) As NotesDocument</span></span></code></pre>
-<p>The one-argument form performs an exact match. The two-argument form controls exact versus partial text-key matching.</p>
+<p>The one-argument form performs a partial match, equivalent to <code>exactMatch = False</code>, matching LotusScript semantics. Pass <code>True</code> as the second argument to require an exact match.</p>
 <p><code>GetFirstDocumentByKey</code> was the previous XPscript name and is no longer supported. Code using it produces a compiler error directing callers to <code>GetDocumentByKey</code>.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {

@@ -119,6 +119,17 @@ Call Application.Registry.User.Set("Software/MyCompany/MyApp", "Servers", server
 <p>On Windows the requested type is stored as the corresponding native Registry value kind. On Linux and macOS XPscript stores equivalent type metadata with the value, so values retain their XPscript type when read back.</p>
 <h2 id="secrets">Secrets</h2>
 <p>The API is intentionally separate from <code>Application.Registry</code>. Secrets must not be placed in normal registry/config files.</p>
+<h3 id="application-identity-is-required">Application identity is required</h3>
+<p><code>Application.Secrets</code> cannot use the operating-system credential store until <code>Application.Id</code> has been set. There is no executable-name fallback.</p>
+<p>Use a stable identifier that belongs to the application, preferably a reverse-domain style value:</p>
+<pre><code class="language-xpscript">Application.Id = "com.example.accounting"
+</code></pre>
+<p><code>Application.Id</code> must be set before the first call to <code>Application.Secrets.Get</code>, <code>.Set</code>, <code>.Backup</code> or <code>.Restore</code>. Once the secrets API has been used, changing <code>Application.Id</code> during the same process is rejected.</p>
+<p>The application ID is part of XPscript’s internal credential namespace. Two applications can therefore use the same service and account names without sharing credentials:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>com.example.accounting + Database + Production</span></span>
+<span class="line"><span>com.example.hr         + Database + Production</span></span></code></pre>
+<p>These resolve to different native credential-store entries. The public <code>service</code> and <code>account</code> values are not expected to contain the application ID themselves.</p>
+<p>XPscript does not expose an API for enumerating arbitrary credentials from Windows Credential Manager, macOS Keychain or Linux Secret Service. <code>Application.Secrets</code> operates only on credentials addressed through the current <code>Application.Id</code> namespace.</p>
 <h3 id="set">Set</h3>
 <pre><code class="language-xpscript">Call Application.Secrets.Set(service, account, secret)
 </code></pre>
@@ -126,10 +137,11 @@ Call Application.Registry.User.Set("Software/MyCompany/MyApp", "Servers", server
 <pre><code class="language-xpscript">secret = Application.Secrets.Get(service, account)
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-xpscript">Call Application.Secrets.Set("MyApplication", "ApiUser", "very-secret-value")
+<pre><code class="language-xpscript">Application.Id = "com.example.myapplication"
+Call Application.Secrets.Set("Database", "ApiUser", "very-secret-value")
 
 Dim secret As String
-secret = Application.Secrets.Get("MyApplication", "ApiUser")
+secret = Application.Secrets.Get("Database", "ApiUser")
 </code></pre>
 <p>The platform mapping is:</p>
 
@@ -155,12 +167,43 @@ secret = Application.Secrets.Get("MyApplication", "ApiUser")
 
 <table><thead><tr><th>Platform</th><th>Backend</th></tr></thead><tbody><tr><td>Windows</td><td>Windows Credential Manager, Generic Credentials</td></tr><tr><td>macOS</td><td>macOS Keychain, generic password item</td></tr><tr><td>Linux</td><td>freedesktop Secret Service through <code>secret-tool</code> / libsecret</td></tr></tbody></table>
 <p>A missing credential returns an empty string. Other credential-store failures raise an XPscript runtime error.</p>
+<p>XPscript keeps a metadata-only index for each <code>Application.Id</code> of credentials accessed through <code>Application.Secrets.Get</code> or written through <code>Application.Secrets.Set</code>. The index contains only the public service and account identifiers. Secret values remain in the operating-system credential store.</p>
+<h3 id="encrypted-backup">Encrypted backup</h3>
+<p>Use <code>Backup</code> to create a password-protected <code>.xpssecrets</code> file containing the XPscript-managed credentials belonging to the current <code>Application.Id</code>:</p>
+<pre><code class="language-xpscript">Application.Id = "com.example.myapplication"
+Call Application.Secrets.Backup("application.xpssecrets", "a-long-unique-backup-password")
+</code></pre>
+<p>The backup format is versioned and algorithm-agile. Version 1 uses only cryptography built into .NET:</p>
+<ul>
+<li>PBKDF2-HMAC-SHA256 for password-based key derivation.</li>
+<li>A random 256-bit salt.</li>
+<li>600,000 PBKDF2 iterations.</li>
+<li>AES-256-GCM authenticated encryption.</li>
+<li>A unique 96-bit nonce for each backup.</li>
+<li>A 128-bit authentication tag.</li>
+<li>Authenticated format and KDF metadata so tampering is detected.</li>
+</ul>
+<p>The application ID, service name, account name and secret value are all inside the encrypted payload. The backup file does not expose those identifiers in plaintext.</p>
+<p>The file stores the format version, algorithm identifiers and KDF parameters needed to restore old backups if XPscript adopts newer cryptographic defaults in the future.</p>
+<p>Backup files are limited to 16 MiB and 10,000 credential entries.</p>
+<h3 id="restore">Restore</h3>
+<p>Restore imports all credentials from a valid backup into the current operating-system credential store:</p>
+<pre><code class="language-xpscript">Application.Id = "com.example.myapplication"
+Call Application.Secrets.Restore("application.xpssecrets", "a-long-unique-backup-password")
+</code></pre>
+<p>The encrypted backup contains its source <code>Application.Id</code>. Restore rejects the file if that ID differs from the currently configured <code>Application.Id</code>. This prevents a backup from one XPscript application from being accidentally imported into another application’s credential namespace.</p>
+<p>Existing credentials with the same service/account identifiers inside the same application namespace are updated using the normal <code>Application.Secrets.Set</code> behavior of the platform backend. Restored credentials are added to that application’s managed-secret index.</p>
+<p>Restore rejects unsupported format versions, unsupported algorithms, malformed or truncated files, unreasonable KDF parameters, invalid entry counts, modified ciphertext and incorrect passwords. Authentication failure is reported without distinguishing between a wrong password and a modified backup.</p>
+<p>A backup is portable across Windows, Linux and macOS because the <code>.xpssecrets</code> container is independent of the native credential-store format. Restore writes each credential through the destination platform’s normal credential-store backend.</p>
+<p>Treat <code>.xpssecrets</code> files as sensitive encrypted backups. Use a long unique password and keep a separate protected copy of that password. If the password is lost, XPscript cannot recover the encrypted secrets.</p>
 <h3 id="linux-requirements">Linux requirements</h3>
 <p>Linux secret storage requires <code>secret-tool</code> from libsecret and an available Secret Service provider, for example GNOME Keyring or another compatible provider. The secret value is passed to <code>secret-tool</code> through standard input and is never included in the process command line.</p>
-<p>A graphical Linux desktop commonly provides a Secret Service session automatically. A headless server, including a Domino server, may not have a D-Bus user session or Secret Service provider. In that case <code>Application.Secrets.Get</code> and <code>.Set</code> return a clear runtime error rather than falling back to an unencrypted file.</p>
+<p>A graphical Linux desktop commonly provides a Secret Service session automatically. A headless server, including a Domino server, may not have a D-Bus user session or Secret Service provider. In that case <code>Application.Secrets.Get</code>, <code>.Set</code>, <code>.Backup</code> and <code>.Restore</code> return a clear runtime error when the operation needs the unavailable credential store rather than falling back to an unencrypted file.</p>
 <h2 id="security-and-permissions">Security and permissions</h2>
 <p><code>Application.Registry.System.Set</code> can require administrator/root permissions. XPscript does not elevate the process automatically.</p>
-<p><code>Application.Secrets</code> uses the access-control behavior of the operating system credential store. macOS Keychain can prompt the user depending on Keychain access policy. Windows Credential Manager and Linux Secret Service likewise use the current user’s credential-store context.</p>
+<p><code>Application.Secrets</code> uses the access-control behavior of the operating system credential store in addition to XPscript’s <code>Application.Id</code> namespace. macOS Keychain can prompt the user depending on Keychain access policy. Windows Credential Manager and Linux Secret Service likewise use the current user’s credential-store context.</p>
+<p><code>Application.Id</code> provides XPscript application isolation, but it is not intended to replace operating-system user/process security. Another program running with sufficient privileges as the same operating-system user may still be able to access that user’s native credential store according to the platform’s security model.</p>
+<p>Secrets are never deliberately written to the XPscript metadata index. Backup encryption keys and decrypted payload byte buffers are cleared with <code>CryptographicOperations.ZeroMemory</code> after use where .NET exposes mutable buffers. Managed <code>String</code> values cannot be reliably zeroed by an application and should therefore not be retained longer than necessary.</p>
 <p>The runnable registry sample and compile-time secrets surface are in <a href="https://github.com/xpagedeveloper/XPscript/blob/main/samples/application-registry-secrets.xps">samples/application-registry-secrets.xps</a>.</p>  </article> </main> </div> <script>
       const copyText = async (text) => {
         if (navigator.clipboard && window.isSecureContext) {

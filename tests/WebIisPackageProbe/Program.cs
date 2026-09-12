@@ -19,7 +19,7 @@ try
     var exitCode = await XPScriptCompilerCommandLine.CompileAsync([
         Path.Combine(app, "main.xps"),
         "--target", "webiis",
-        "--framework-dependent",
+        "--runtime=false",
         "--output", output
     ]);
     Require(exitCode == 0, "webiis compiler target returned an error");
@@ -72,7 +72,7 @@ try
     var invalidExit = await XPScriptCompilerCommandLine.CompileAsync([
         Path.Combine(invalidApp, "index.xps"),
         "--target", "webiis",
-        "--framework-dependent",
+        "--runtime=false",
         "--output", invalidOutput
     ]);
     Require(invalidExit != 0, "webiis accepted index.xps as the build entry instead of requiring main.xps");

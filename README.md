@@ -54,11 +54,11 @@ xpscriptc program.xps -o program
 Compile for a specific runtime:
 
 ```powershell
-xpscriptc program.xps --runtime win-x64 -o program.exe
-xpscriptc program.xps --runtime linux-x64 -o program
-xpscriptc program.xps --runtime linux-arm64 -o program
-xpscriptc program.xps --runtime osx-x64 -o program
-xpscriptc program.xps --runtime osx-arm64 -o program
+xpscriptc program.xps --platform win-x64 -o program.exe
+xpscriptc program.xps --platform linux-x64 -o program
+xpscriptc program.xps --platform linux-arm64 -o program
+xpscriptc program.xps --platform osx-x64 -o program
+xpscriptc program.xps --platform osx-arm64 -o program
 ```
 
 Compiler result formats:

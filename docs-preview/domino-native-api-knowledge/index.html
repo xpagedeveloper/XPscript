@@ -8,12 +8,16 @@
 <li><a href="https://opensource.hcltechsw.com/domino-c-api-docs/">HCL Domino C API Documentation</a></li>
 </ul>
 <p>Use the C API documentation as the primary authority before adding or changing native Notes/Domino interop. Do not infer signatures, flags, structure layouts, ownership semantics, or behavior when the C API documentation can verify them.</p>
+<p>The HCL open source catalog lists <code>domino-c-api-docs</code> under the Apache License, Version 2.0. XPscript uses the documentation as a reference and does not redistribute the documentation or the HCL C API toolkit. See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for the project attribution and license handling.</p>
 <h2 id="hcl-domino-jnx">HCL Domino JNX</h2>
 <p>HCL’s Java/JNI implementation over the Domino native API, useful as an implementation reference for how HCL maps higher-level Notes/Domino behavior onto the native C API:</p>
 <ul>
 <li><a href="https://github.com/HCL-TECH-SOFTWARE/domino-jnx">HCL Domino JNX</a></li>
 </ul>
 <p>JNX is a reference implementation, not a substitute for the C API contract. When implementing XPscript Notes classes, use it to cross-check native calls, flag combinations, memory/resource handling, data conversion, and higher-level behavior. If JNX and assumptions in XPscript differ, verify the behavior against the C API documentation and the relevant HCL LotusScript/Designer documentation before implementing.</p>
+<p>JNX is an Apache License, Version 2.0 project. XPscript uses it as a reference and does not distribute JNX source or binaries. See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for attribution and the requirements that apply if reference code is copied in the future.</p>
+<h2 id="domino-jna">Domino JNA</h2>
+<p><a href="https://github.com/klehmann/domino-jna">Domino JNA</a> is an Apache License, Version 2.0 implementation reference used to compare native Notes API calls and MIME stream serialization. It is not a dependency of XPscript. See <a href="https://github.com/xpagedeveloper/XPscript/blob/main/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for attribution and future copying requirements.</p>
 <h2 id="notesdocumentcomputewithform">NotesDocument.ComputeWithForm</h2>
 <p>XPscript implements the normal LotusScript-compatible two-argument form and adds an XPscript-specific third ByRef Variant parameter:</p>
 <pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="vb"><code><span class="line"><span style="color:#F97583">Dim</span><span style="color:#E1E4E8"> failedFields </span><span style="color:#F97583">As</span><span style="color:#79B8FF"> Variant</span></span>

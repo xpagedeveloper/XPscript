@@ -152,7 +152,7 @@ Process StartCompilerProcess(string compilerAssembly, string source, string outp
     psi.ArgumentList.Add(source);
     psi.ArgumentList.Add("-o");
     psi.ArgumentList.Add(output);
-    psi.ArgumentList.Add("--framework-dependent");
+    psi.ArgumentList.Add("--runtime=false");
     return Process.Start(psi) ?? throw new Exception("Unable to start compiler child process.");
 }
 

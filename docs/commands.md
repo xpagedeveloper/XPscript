@@ -216,8 +216,9 @@ This is the compact reference for XPScript language commands, functions, runtime
 |---|---|---|---|---|
 | Compile | `xpscriptc source.xps -o output` | source, output | Compiles an XPScript source file. | [hello.xps](../samples/hello.xps) |
 | Run | `xpscriptc run source.xps` | source, script arguments | Compiles and runs a source file. | [hello.xps](../samples/hello.xps) |
-| `--runtime` | `--runtime win-x64` | RID | Selects target runtime. | [platform-shell.xps](../samples/platform-shell.xps) |
-| `--runtime=false` | `--runtime=false` | none | Creates framework-dependent output. | [hello.xps](../samples/hello.xps) |
+| `--platform` / `--rid` | `--platform win-x64` or `--rid win-x64` | RID | Selects target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
+| `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime. | [hello.xps](../samples/hello.xps) |
+| `--single-file` | `--single-file=true|false` | boolean | Bundles application libraries into the executable when `true` (default); emits separate application files when `false`. | [hello.xps](../samples/hello.xps) |
 | `--result-format` | `--result-format text|json|xml` | format | Selects compiler result serialization. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 
 For hosting parameters and web runtime objects, see [Getting started](getting-started.md) and [Web](web.md). For class details, see [Classes and types](classes.md). For dynamic evaluation, see [Evaluate](evaluate.md).
