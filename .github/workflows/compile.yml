@@ -118,6 +118,14 @@ jobs:
         run: |
           test -f ./out/Third-party-license.txt
           grep -q 'Apache License' ./out/Third-party-license.txt
+      - name: Compile self-contained license notice probe
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out-selfcontained/ordinary --runtime=true
+      - name: Verify self-contained .NET notices
+        shell: bash
+        run: |
+          test -f ./out-selfcontained/Third-party-license.txt
+          grep -q 'Microsoft .NET runtime bundled with this application' ./out-selfcontained/Third-party-license.txt
+          grep -q '.NET third-party notices' ./out-selfcontained/Third-party-license.txt
       - name: Compile XPAi structured output
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
       - name: Compile UIForm application
