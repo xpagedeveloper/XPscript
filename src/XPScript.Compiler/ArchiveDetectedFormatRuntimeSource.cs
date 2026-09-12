@@ -58,12 +58,65 @@ internal sealed class XPScriptExtendedArchiveV4
     public LSArray Files() => _inner.Files();
     public LSArray Folders() => _inner.Folders();
     public LSArray Find(object? pattern) => _inner.Find(pattern);
-    public string ReadText(object? entryName) => _inner.ReadText(entryName);
-    public LSArray ReadBytes(object? entryName) => _inner.ReadBytes(entryName);
+
+    public string ReadText(object? entryName)
+    {
+        if (!IsTarFormat(Format)) return _inner.ReadText(entryName);
+        return System.Text.Encoding.UTF8.GetString(ReadTarBytes(entryName));
+    }
+
+    public LSArray ReadBytes(object? entryName)
+    {
+        if (!IsTarFormat(Format)) return _inner.ReadBytes(entryName);
+        return PackBytes(ReadTarBytes(entryName));
+    }
+
     public void Extract(object? entryName, object? targetPath) => _inner.Extract(entryName, targetPath);
     public void ExtractFolder(object? folderName, object? targetDirectory) => _inner.ExtractFolder(folderName, targetDirectory);
     public void ExtractAll(object? targetDirectory) => _inner.ExtractAll(targetDirectory);
     public LSArray ToBytes() => _inner.ToBytes();
+
+    private byte[] ReadTarBytes(object? entryName)
+    {
+        var wanted = NormalizeEntryName(XPScriptRuntime.CStr(entryName));
+        var snapshots = XPScriptArchiveExtendedReader.Snapshots(Path, Format, Password, MaxEntries, MaxExtractSize, MaxCompressionRatio);
+        var entry = snapshots.FirstOrDefault(x => x.FullName.Equals(wanted, StringComparison.OrdinalIgnoreCase))
+            ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+        if (entry.IsDirectory) throw new XPScriptRuntimeException(5, "Archive entry is a directory.");
+        if (entry.Size < 0 || entry.Size > MaxExtractSize) throw new XPScriptRuntimeException(5, "Archive entry exceeds MaxExtractSize.");
+
+        var bytes = XPScriptArchiveExtendedReader.ReadEntry(Path, Format, Password, wanted, MaxExtractSize, MaxCompressionRatio);
+        if (bytes.LongLength < entry.Size)
+            throw new XPScriptRuntimeException(5, "Archive entry ended before its declared size.");
+        if (bytes.LongLength > entry.Size)
+            Array.Resize(ref bytes, checked((int)entry.Size));
+        return bytes;
+    }
+
+    private static bool IsTarFormat(string format) =>
+        format.Equals("TAR", StringComparison.OrdinalIgnoreCase) ||
+        format.StartsWith("TAR.", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeEntryName(string value)
+    {
+        var name = (value ?? "").Replace('\\', '/').Trim();
+        if (name.Length == 0) throw new XPScriptRuntimeException(5, "Archive entry name must not be empty.");
+        if (name.StartsWith("/", StringComparison.Ordinal) || name.StartsWith("//", StringComparison.Ordinal) || System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z]:"))
+            throw new XPScriptRuntimeException(5, "Absolute archive paths are not allowed.");
+        var parts = name.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Any(x => x == "..")) throw new XPScriptRuntimeException(5, "Archive path traversal is not allowed.");
+        var result = string.Join('/', parts.Where(x => x != "."));
+        if (name.EndsWith("/", StringComparison.Ordinal)) result += "/";
+        return result;
+    }
+
+    private static LSArray PackBytes(byte[] bytes)
+    {
+        if (bytes.Length == 0) return new LSArray("Byte", true);
+        var result = new LSArray("Byte", true, [0], [bytes.Length - 1]);
+        for (var i = 0; i < bytes.Length; i++) result.Set(bytes[i], i);
+        return result;
+    }
 
     private static string? DetectFormat(string path)
     {
