@@ -71,6 +71,14 @@ The Apache License 2.0 text is available at [apache.org/licenses/LICENSE-2.0](ht
 
 The complete package dependency graph can change when package versions are updated. Re-run `dotnet list <project>.csproj package --include-transitive` and refresh this section whenever dependencies change.
 
+## Generated application license notices
+
+The XPScript compiler creates `Third-party-license.txt` beside every compiled application. The generated file is based on the exact NuGet package graph restored for that application, including transitive packages, and collects package license metadata plus available package-local license, NOTICE, and third-party notice material.
+
+The generated file begins with XPScript's Apache License 2.0 redistribution requirements, the complete Apache 2.0 license text, and XPScript NOTICE content. For self-contained applications compiled with `--runtime=true`, the compiler additionally includes the .NET runtime license and third-party notices from the .NET SDK/runtime installation used for publishing.
+
+Distributors of compiled XPScript applications must keep `Third-party-license.txt` with the application. Any dependency that explicitly requires an additional license or notice file to remain separate must still have that file preserved.
+
 ## .NET runtime and SDK
 
 XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and uses the .NET SDK, runtime libraries, ASP.NET Core components, and standard library implementations supplied by Microsoft. These components are generally distributed under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT), with additional third-party notices included in the .NET installation and publish output. Self-contained applications must retain the notices shipped with the corresponding .NET runtime used to build them.
