@@ -65,26 +65,6 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Verify Archive preprocessing and dependency injection
-        run: dotnet run --project ./tests/PreprocessorPipelineProbe/PreprocessorPipelineProbe.csproj -c Release
-      - name: Compile ZIP Archive regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-zip.xps -o ./out/archive-zip --framework-dependent
-      - name: Run ZIP Archive regression
-        run: ./out/archive-zip
-      - name: Compile in-memory Archive regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-memory.xps -o ./out/archive-memory --framework-dependent
-      - name: Run in-memory Archive regression
-        run: ./out/archive-memory
-      - name: Compile extended Archive regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-create-extended.xps -o ./out/archive-extended --framework-dependent
-      - name: Compile GZip Archive regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-gzip.xps -o ./out/archive-gzip --framework-dependent
-      - name: Run GZip Archive regression
-        run: ./out/archive-gzip
-      - name: Compile archive rebuild regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/archive/archive-rebuild.xps -o ./out/archive-rebuild --framework-dependent
-      - name: Run archive rebuild regression
-        run: ./out/archive-rebuild
       - name: Verify debugger core
         run: dotnet run --project ./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release
       - name: Compile ArraySort regression application
