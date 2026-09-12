@@ -132,5 +132,5 @@ internal static class XPScriptApplicationSystemLogRuntime
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool DeregisterEventSource(IntPtr eventLog);
 }
-""";
+""" + ApplicationSecretsBackupRuntimeSource.Code;
 }
