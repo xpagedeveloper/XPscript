@@ -19,13 +19,14 @@ internal static class CompilePublishLayoutContext
 
     private sealed class Scope(Settings? previous) : IDisposable
     {
-        private Settings? previousValue = previous;
+        private readonly Settings? previousValue = previous;
+        private bool disposed;
 
         public void Dispose()
         {
-            if (previousValue is null && CurrentSettings.Value is null) return;
+            if (disposed) return;
+            disposed = true;
             CurrentSettings.Value = previousValue;
-            previousValue = null;
         }
     }
 }

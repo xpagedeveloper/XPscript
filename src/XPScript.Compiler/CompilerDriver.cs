@@ -122,7 +122,8 @@ public sealed class CompilerDriver
                 selfContained,
                 stagedManagedReferences,
                 publishSingleFile: CompilePublishLayoutContext.IsConfigured ? CompilePublishLayoutContext.SingleFile : true,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                assemblyName: OutputAssemblyName(outputPath));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -222,7 +223,8 @@ public sealed class CompilerDriver
                 selfContained: false,
                 stagedManagedReferences,
                 publishSingleFile: false,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal));
+                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                assemblyName: "Generated");
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -425,7 +427,8 @@ public sealed class CompilerDriver
         bool selfContained,
         IReadOnlyList<StagedManagedReference> references,
         bool publishSingleFile,
-        bool usesMimeKit)
+        bool usesMimeKit,
+        string assemblyName)
     {
         var itemGroup = new StringBuilder();
         if (references.Count > 0)
@@ -460,6 +463,7 @@ public sealed class CompilerDriver
     <OutputType>Exe</OutputType>
     <StartupObject>Program</StartupObject>
     <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -473,6 +477,12 @@ public sealed class CompilerDriver
 {publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
+    }
+
+    private static string OutputAssemblyName(string outputPath)
+    {
+        var name = Path.GetFileNameWithoutExtension(outputPath);
+        return string.IsNullOrWhiteSpace(name) ? "XPScriptApp" : name;
     }
 
     private static string EscapeXml(string value) => value
