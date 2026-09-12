@@ -74,7 +74,10 @@ var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 var missing = new List<string>();
 var placeholders = new List<string>();
 var suspiciousConstants = new List<string>();
-var allClassDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
+var allClassDeclarations = root.DescendantNodes()
+    .OfType<ClassDeclarationSyntax>()
+    .Where(c => c.Parent is CompilationUnitSyntax)
+    .ToArray();
 
 foreach (var item in classes)
 {
