@@ -48,12 +48,46 @@ jobs:
       - name: Compile and run Archive suite
         shell: pwsh
         run: |
-          $processTimeoutMilliseconds = 30000
+          $runtimeTimeoutMilliseconds = 30000
+          $compileTimeoutMilliseconds = 60000
+
+          function Invoke-ProcessWithTimeout([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $fileName
+            $startInfo.UseShellExecute = $false
+            $startInfo.RedirectStandardOutput = $true
+            $startInfo.RedirectStandardError = $true
+            foreach ($argument in $arguments) { [void] $startInfo.ArgumentList.Add([string] $argument) }
+
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            try {
+              if (-not $process.Start()) { throw "Unable to start process: $label" }
+              $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+              $stderrTask = $process.StandardError.ReadToEndAsync()
+              if (-not $process.WaitForExit($timeoutMilliseconds)) {
+                try { $process.Kill($true) } catch { }
+                try { $process.WaitForExit() } catch { }
+                Write-Error "Archive CI process timed out: $label"
+                exit 124
+              }
+              $stdout = $stdoutTask.GetAwaiter().GetResult()
+              $stderr = $stderrTask.GetAwaiter().GetResult()
+              if (-not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout.TrimEnd() }
+              if (-not [string]::IsNullOrEmpty($stderr)) { Write-Host $stderr.TrimEnd() }
+              return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $stdout + $stderr }
+            }
+            finally { $process.Dispose() }
+          }
 
           function Compile-XPScript([string] $source, [string] $name) {
             Write-Host "ARCHIVE_CI_COMPILE=$name"
-            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- $source -o "./out/$name" --framework-dependent
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $arguments = @('run','--project','./src/XPScript.Compiler/XPScript.Compiler.csproj','-c','Release','--no-build','--',$source,'-o',"./out/$name",'--framework-dependent')
+            $result = Invoke-ProcessWithTimeout 'dotnet' $arguments $compileTimeoutMilliseconds "compile: $name"
+            if ($result.ExitCode -ne 0) {
+              Write-Error "Archive compilation failed with exit code $($result.ExitCode): $name"
+              exit $result.ExitCode
+            }
           }
 
           function Get-XPScriptExecutable([string] $name) {
@@ -66,41 +100,7 @@ jobs:
 
           function Invoke-XPScriptExecutable([string] $exe, [string[]] $arguments, [string] $label) {
             Write-Host "ARCHIVE_CI_RUN=$label"
-            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-            $startInfo.FileName = $exe
-            $startInfo.UseShellExecute = $false
-            $startInfo.RedirectStandardOutput = $true
-            $startInfo.RedirectStandardError = $true
-            foreach ($argument in $arguments) {
-              [void] $startInfo.ArgumentList.Add([string] $argument)
-            }
-
-            $process = [System.Diagnostics.Process]::new()
-            $process.StartInfo = $startInfo
-            try {
-              if (-not $process.Start()) {
-                throw "Unable to start Archive regression: $label"
-              }
-              $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-              $stderrTask = $process.StandardError.ReadToEndAsync()
-              if (-not $process.WaitForExit($processTimeoutMilliseconds)) {
-                try { $process.Kill($true) } catch { }
-                try { $process.WaitForExit() } catch { }
-                Write-Error "Archive regression timed out after 30 seconds: $label"
-                exit 124
-              }
-              $stdout = $stdoutTask.GetAwaiter().GetResult()
-              $stderr = $stderrTask.GetAwaiter().GetResult()
-              if (-not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout.TrimEnd() }
-              if (-not [string]::IsNullOrEmpty($stderr)) { Write-Host $stderr.TrimEnd() }
-              return [pscustomobject]@{
-                ExitCode = $process.ExitCode
-                Output = $stdout + $stderr
-              }
-            }
-            finally {
-              $process.Dispose()
-            }
+            return Invoke-ProcessWithTimeout $exe $arguments $runtimeTimeoutMilliseconds "run: $label"
           }
 
           function Run-XPScript([string] $source, [string] $name) {
@@ -116,18 +116,9 @@ jobs:
           function Expect-XPScriptFailure([string] $name, [string[]] $arguments, [string] $label) {
             $exe = Get-XPScriptExecutable $name
             $result = Invoke-XPScriptExecutable $exe $arguments "security: $label"
-            if ($result.ExitCode -eq 0) {
-              Write-Error "Archive security probe unexpectedly succeeded: $label"
-              exit 1
-            }
-            if ([string]::IsNullOrWhiteSpace($result.Output)) {
-              Write-Error "Archive security probe returned no diagnostic: $label"
-              exit 1
-            }
-            if ($result.Output -match 'SharpCompress') {
-              Write-Error "Archive security diagnostic exposed an implementation detail: $label"
-              exit 1
-            }
+            if ($result.ExitCode -eq 0) { Write-Error "Archive security probe unexpectedly succeeded: $label"; exit 1 }
+            if ([string]::IsNullOrWhiteSpace($result.Output)) { Write-Error "Archive security probe returned no diagnostic: $label"; exit 1 }
+            if ($result.Output -match 'SharpCompress') { Write-Error "Archive security diagnostic exposed an implementation detail: $label"; exit 1 }
           }
 
           Run-XPScript ./demo/archive/archive-zip.xps archive-zip
@@ -154,10 +145,7 @@ jobs:
           if (Test-Path './out/archive-security-fixtures/extraction-symlink-ready.txt') {
             Compile-XPScript ./demo/archive/archive-security-reject-extract.xps archive-security-reject-extract
             Expect-XPScriptFailure archive-security-reject-extract @() 'destination symbolic link extraction'
-            if (Test-Path './out/archive-security-fixtures/outside/escape.txt') {
-              Write-Error 'Archive extraction escaped through a destination symbolic link'
-              exit 1
-            }
+            if (Test-Path './out/archive-security-fixtures/outside/escape.txt') { Write-Error 'Archive extraction escaped through a destination symbolic link'; exit 1 }
           }
 
           Run-XPScript ./demo/archive/archive-extended-memory.xps archive-extended-memory
