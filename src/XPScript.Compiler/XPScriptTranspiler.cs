@@ -72,6 +72,11 @@ public sealed class XPScriptTranspiler
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
         source = new ArchiveObjectPreprocessor().Transform(source);
+        var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(
+            PreprocessorFeatureGate.CodeOnly(source),
+            "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
+            "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo");
+        source = new NetworkToolsObjectPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
@@ -82,6 +87,7 @@ public sealed class XPScriptTranspiler
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
+        var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
@@ -90,6 +96,8 @@ public sealed class XPScriptTranspiler
             throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
         if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
+        if (usesNetworkTools && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("NetworkTools is not available for browser-wasm targets because browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
@@ -131,6 +139,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
+        if (usesNetworkTools) generated += "\n\n" + NetworkToolsRuntimeSource.Code + "\n";
         if (usesArchive)
         {
             generated += "\n\n" + ArchiveRuntimeSource.Code + "\n";
