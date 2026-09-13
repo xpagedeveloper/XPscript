@@ -8,6 +8,8 @@ var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../..
 var samplePaths = new[]
 {
     Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-base.xps"),
+    Path.Combine(repoRoot, "samples", "notes-full-domino-recent-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-document-metadata-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
