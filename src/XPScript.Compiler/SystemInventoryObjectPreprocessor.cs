@@ -11,10 +11,21 @@ internal sealed class SystemInventoryObjectPreprocessor
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
     ];
 
+    private static readonly Regex WebExecutionMarker = new(
+        @"(?im)^\s*\[(?:Platform\s*:\s*browser-wasm|Route(?:Prefix)?\s*:|Anonymous\s*\]|Authenticated\s*\]|Role\s*:|GET\s*\]|HEAD\s*\]|POST\s*\]|PUT\s*\]|DELETE\s*\]|PATCH\s*\]|OPTIONS\s*\])",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public string Transform(string source)
     {
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, Types)) return source;
+
+        if (WebExecutionMarker.IsMatch(source))
+        {
+            Console.Error.WriteLine(
+                "warning: SystemInventory executes on the server for this web target. " +
+                "The returned inventory describes the server host, not the client device.");
+        }
 
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
