@@ -1,0 +1,89 @@
+' NetworkTools Phase 2 compile-surface regression.
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim host As NetworkHostResult
+    Dim subnet As NetworkSubnetInfo
+    Dim cert As NetworkCertificateResult
+    Dim headers As NetworkHttpHeadersResult
+    Dim security As NetworkHttpSecurityHeadersResult
+    Dim banner As NetworkBannerResult
+    Dim values As Variant
+    Dim ports As Variant
+
+    Set host = net.ResolveHost("localhost")
+    Print host.Query & ":" & host.HostName & ":" & host.Error
+    Forall address In host.IPv4Addresses
+        Print address
+    End Forall
+    Forall address In host.IPv6Addresses
+        Print address
+    End Forall
+
+    ports = Array(22, 80, 443)
+    values = net.CheckTcpPorts("127.0.0.1", ports, 250, 4)
+    Forall portResult In values
+        Print portResult.Port & ":" & portResult.Open & ":" & portResult.Error
+    End Forall
+
+    Print net.IsPrivateAddress("10.0.0.1")
+    Print net.IsLoopbackAddress("127.0.0.1")
+    Print net.IsLinkLocalAddress("169.254.1.1")
+    Print net.IsMulticastAddress("224.0.0.1")
+    Print net.GetAddressFamily("::1")
+    Print net.IsInSubnet("10.20.30.40", "10.20.0.0/16")
+
+    Set subnet = net.ParseSubnet("192.168.10.0/24")
+    Print subnet.Cidr & ":" & subnet.NetworkAddress & ":" & subnet.BroadcastAddress
+    Print subnet.PrefixLength & ":" & subnet.SubnetMask & ":" & subnet.FirstAddress & ":" & subnet.LastAddress & ":" & subnet.AddressCount
+    Print subnet.Contains("192.168.10.50")
+
+    values = net.CheckTlsVersions("example.com", 443, 1000)
+    Forall tlsVersion In values
+        Print tlsVersion.Version & ":" & tlsVersion.Supported & ":" & tlsVersion.NegotiatedProtocol & ":" & tlsVersion.Error
+    End Forall
+
+    Set cert = net.CheckCertificate("example.com", 443, 1000)
+    Print cert.Success & ":" & cert.Subject & ":" & cert.Issuer & ":" & cert.Thumbprint
+    Print cert.SerialNumber & ":" & cert.SignatureAlgorithm & ":" & cert.PublicKeyAlgorithm & ":" & cert.PublicKeySize
+    Print cert.NotBefore & ":" & cert.NotAfter & ":" & cert.DaysRemaining & ":" & cert.Expired & ":" & cert.NotYetValid
+    Print cert.HostNameValid & ":" & cert.ChainValid & ":" & cert.PolicyErrors & ":" & cert.Error
+    Forall dnsName In cert.DnsNames
+        Print dnsName
+    End Forall
+    Forall chainError In cert.ChainErrors
+        Print chainError
+    End Forall
+
+    Set headers = net.GetHttpHeaders("https://example.com", 1000)
+    Print headers.Url & ":" & headers.FinalUrl & ":" & headers.StatusCode & ":" & headers.Error
+    Print headers.GetHeader("Content-Type")
+    Forall header In headers.Headers
+        Print header
+    End Forall
+
+    Set security = net.CheckHttpSecurityHeaders("https://example.com", 1000)
+    Print security.HasHsts & ":" & security.Hsts & ":" & security.HstsMaxAge
+    Print security.HasContentSecurityPolicy & ":" & security.ContentSecurityPolicy
+    Print security.HasXContentTypeOptions & ":" & security.XContentTypeOptions
+    Print security.HasReferrerPolicy & ":" & security.ReferrerPolicy
+    Print security.HasPermissionsPolicy & ":" & security.PermissionsPolicy
+    Print security.HasCrossOriginOpenerPolicy & ":" & security.CrossOriginOpenerPolicy
+    Print security.HasCrossOriginResourcePolicy & ":" & security.CrossOriginResourcePolicy
+
+    values = net.CheckRedirects("https://example.com", 1000, 5)
+    Forall redirect In values
+        Print redirect.Url & ":" & redirect.StatusCode & ":" & redirect.Location & ":" & redirect.IsRedirect & ":" & redirect.Error
+    End Forall
+
+    Set banner = net.GrabBanner("127.0.0.1", 25, 250, 1024)
+    Print banner.Host & ":" & banner.Address & ":" & banner.Port & ":" & banner.Success
+    Print banner.Banner & ":" & banner.BytesRead & ":" & banner.Truncated & ":" & banner.RoundTripTime & ":" & banner.Error
+
+    values = net.GetLocalPortExposure()
+    Forall exposure In values
+        Print exposure.Protocol & ":" & exposure.LocalAddress & ":" & exposure.LocalPort & ":" & exposure.AddressFamily
+        Print exposure.Exposure & ":" & exposure.IsLoopback & ":" & exposure.IsWildcard
+    End Forall
+End Sub
