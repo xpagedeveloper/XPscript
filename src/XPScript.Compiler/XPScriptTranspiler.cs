@@ -72,6 +72,9 @@ public sealed class XPScriptTranspiler
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
         source = new ArchiveObjectPreprocessor().Transform(source);
+        var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(
+            PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
+        source = new SpreadsheetObjectPreprocessor().Transform(source);
         var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(
             PreprocessorFeatureGate.CodeOnly(source),
             "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
@@ -87,6 +90,7 @@ public sealed class XPScriptTranspiler
         var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
+        var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
@@ -96,6 +100,8 @@ public sealed class XPScriptTranspiler
             throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
         if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
+        if (usesSpreadsheet && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException("XPSpreadsheet file operations are not available for browser-wasm targets in the basic implementation.");
         if (usesNetworkTools && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("NetworkTools is not available for browser-wasm targets because browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
@@ -139,6 +145,7 @@ public sealed class XPScriptTranspiler
         generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
         generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
+        if (usesSpreadsheet) generated += "\n\n" + SpreadsheetRuntimeSource.Code + "\n";
         if (usesNetworkTools) generated += "\n\n" + NetworkToolsRuntimeSource.Code + "\n";
         if (usesArchive)
         {
