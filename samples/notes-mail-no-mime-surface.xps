@@ -1,0 +1,24 @@
+Sub Main()
+    Dim session As NotesSession
+    Dim mail As NotesMail
+    Dim recipients(1) As String
+
+    Set session = New NotesSession(".")
+    Set mail = session.CreateMail()
+
+    recipients(0) = "one@example.com"
+    recipients(1) = "two@example.com"
+    mail.SendTo = recipients
+    mail.CopyTo = "copy@example.com"
+    mail.Subject = "NotesMail no MIME surface"
+    mail.Body = "Plain text body"
+    Call mail.SetBodyText("Second plain text body")
+    Print mail.Sender
+
+    If False Then
+        Call mail.Send()
+    End If
+
+    Call mail.Recycle()
+    Call session.Recycle()
+End Sub
