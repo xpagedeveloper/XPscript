@@ -2,7 +2,31 @@
 
 `SystemInventory` provides read-only host inventory for XPscript applications. It is intended for enterprise inventory, diagnostics and compliance checks. The implementation uses native .NET 10 APIs and OS metadata sources and does not add any third-party NuGet package.
 
-`SystemInventory` is not available for `browser-wasm` because browser sandboxes do not expose host hardware, registry, package databases or machine-wide inventory APIs.
+## Web and Browser-WASM execution
+
+`SystemInventory` always inventories the machine where the inventory code actually executes.
+
+For desktop/native applications that is the local machine running the XPscript executable. For server-rendered web applications, web UIForm, CGI and FastCGI it is the web/application server host.
+
+Browser-WASM client code cannot inspect the client's hardware, registry, installed applications or machine-wide package databases. In a Browser-WASM application, use `SystemInventory` inside a `[ServerSide]` procedure. The server companion executes the inventory and the returned information describes the server host, never the browser client device.
+
+```vb
+[Platform:browser-wasm]
+
+[ServerSide]
+Function GetServerInfo() As Variant
+    Dim inventory As New SystemInventory
+    Set GetServerInfo = inventory.GetSystemInfo()
+End Function
+```
+
+When `SystemInventory` is used by a web target, the compiler emits:
+
+```text
+warning: SystemInventory executes on the server for this web target. The returned inventory describes the server host, not the client device.
+```
+
+Direct use from Browser-WASM client code is rejected with an error instructing the developer to move the inventory work into a `[ServerSide]` procedure.
 
 ## Example
 
