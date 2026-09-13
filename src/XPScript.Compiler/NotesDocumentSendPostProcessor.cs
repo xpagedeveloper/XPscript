@@ -30,8 +30,9 @@ internal static class NotesDocumentSendPostProcessor
     public void Send(object? attachFormValue, object? recipientsValue)
     {
         EnsureAlive();
+        _ = XPScriptRuntime.CBool(attachFormValue);
         var recipients = NormalizeMailRecipients(recipientsValue);
-        Session.Api.SendNote(_handle, Database.Handle, XPScriptRuntime.CBool(attachFormValue), recipients);
+        Session.Api.SendNote(_handle, recipients);
     }
 
     private static string[]? NormalizeMailRecipients(object? recipientsValue)
