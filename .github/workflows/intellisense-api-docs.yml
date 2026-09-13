@@ -25,3 +25,26 @@ jobs:
       - name: Validate IntelliSense API contract
         shell: pwsh
         run: ./scripts/validate-intellisense-api-docs.ps1
+
+  trigger-plugin-sync:
+    name: Trigger VS Code IntelliSense synchronization
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch plugin catalog synchronization
+        env:
+          GH_TOKEN: ${{ secrets.PLUGIN_SYNC_TOKEN }}
+          XP_SCRIPT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Repository secret PLUGIN_SYNC_TOKEN is required. Use a fine-grained token with Actions write access to xpagedeveloper/XPScript-visual-code-plugin."
+            exit 1
+          fi
+          gh api \
+            --method POST \
+            repos/xpagedeveloper/XPScript-visual-code-plugin/dispatches \
+            -f event_type=xpscript-api-updated \
+            -F "client_payload[xpscript_sha]=$XP_SCRIPT_SHA"
