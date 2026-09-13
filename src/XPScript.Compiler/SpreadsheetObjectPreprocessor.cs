@@ -8,7 +8,7 @@ internal sealed class SpreadsheetObjectPreprocessor
     [
         "Path", "WorksheetCount", "CreatedByXPScript", "XPScriptFormatVersion", "CanUpdate",
         "AddWorksheet", "Worksheet", "RemoveWorksheet", "RenameWorksheet",
-        "Open", "Save", "SaveAs", "SaveAsSimple", "Close", "ToBytes"
+        "Open", "FromBytes", "Save", "SaveAs", "SaveAsSimple", "Close", "ToBytes"
     ];
 
     private static readonly string[] WorksheetMembers =
