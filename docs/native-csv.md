@@ -250,6 +250,23 @@ or:
 Set doc = XPCsvDocument.ParseBytes(data, "utf-8", ",")
 ```
 
+An existing `XPCsvDocument` can also be populated from bytes. `FromBytes(bytes)` uses the document's current `Encoding`, `Delimiter`, and `HasHeaders` settings:
+
+```xpscript
+Dim csv As New XPCsvDocument
+csv.Encoding = "windows-1252"
+csv.Delimiter = ";"
+csv.FromBytes(data)
+```
+
+Pass an encoding to override only the input decoding for that call:
+
+```xpscript
+csv.FromBytes(data, "utf-8")
+```
+
+`FromBytes()` replaces the document's current rows and headers with the parsed byte content.
+
 Supported encoding names are:
 
 - `utf-8`
@@ -292,6 +309,7 @@ Characters that cannot be represented in Windows-1252 cause a trap-able runtime 
 - `AddRow()`
 - `Sort(column)`
 - `Stringify()`
+- `FromBytes(bytes [, encoding])`
 - `ToBytes([encoding])`
 - `Save(path [, encoding])`
 - `SaveFile(path [, encoding])`
