@@ -10,7 +10,9 @@ internal static class SystemInventoryRuntimePostProcessor
         if (!generated.Contains(Marker, StringComparison.Ordinal)) return generated;
 
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException("SystemInventory is not available for browser-wasm targets because browser sandboxes do not expose host hardware, registry, package databases, or machine inventory APIs.");
+            throw new CompilerException(
+                "SystemInventory cannot execute in browser client code. Use SystemInventory inside a [ServerSide] procedure. " +
+                "The inventory will describe the server host, not the client device.");
 
         if (generated.Contains("internal sealed class XPScriptSystemInventory", StringComparison.Ordinal)) return generated;
         generated += Environment.NewLine + Environment.NewLine + SystemInventoryRuntimeSource.Code + Environment.NewLine;
