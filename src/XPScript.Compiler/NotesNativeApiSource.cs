@@ -12,6 +12,7 @@ internal static class NotesNativeApiSource
         NotesNativeApiReplicaSource.Code + "\n\n" +
         NotesNativeApiDocumentSource.Code + "\n\n" +
         NotesNativeApiDocumentLotusScriptSource.Code + "\n\n" +
+        NotesNativeApiMailSource.Code + "\n\n" +
         NotesNativeApiComputeWithFormSource.Code + "\n\n" +
         NotesNativeApiItemSource.Code + "\n\n" +
         NotesNativeApiAttachmentSource.Code + "\n\n" +
