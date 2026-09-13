@@ -33,5 +33,14 @@ Sub Main()
     Set cell = verify.Worksheet("Sales").Cell("B2")
     If CDbl(cell.Value) <> 15000 Then Error 5, "XPSpreadsheet update failed"
 
+    Dim bytes As Variant
+    bytes = verify.ToBytes()
+
+    Dim memoryBook As New XPSpreadsheet()
+    memoryBook.FromBytes(bytes)
+    If memoryBook.Path <> "" Then Error 5, "XPSpreadsheet FromBytes unexpectedly assigned a file path"
+    If Not memoryBook.CreatedByXPScript Then Error 5, "XPSpreadsheet FromBytes lost XPScript workbook marker"
+    If memoryBook.Worksheet("Sales").Cell("A2").Text <> "ACME AB" Then Error 5, "XPSpreadsheet byte round-trip failed"
+
     Print "XPSPREADSHEET-BASIC=OK"
 End Sub
