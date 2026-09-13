@@ -1,0 +1,70 @@
+name: SystemInventory Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/systeminventory-runtime.yml
+      - samples/systeminventory-*.xps
+      - docs/systeminventory.md
+      - src/XPScript.Compiler/SystemInventory*.cs
+      - src/XPScript.Compiler/NetworkToolsObjectPreprocessor.cs
+      - src/XPScript.Compiler/BrowserWasmHttpCsrfPostProcessor.cs
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: systeminventory-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  systeminventory-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Compile SystemInventory full surface
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/systeminventory-runtime-test.xps -o ./out/systeminventory-surface --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile SystemInventory local smoke
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/systeminventory-local-smoke.xps -o ./out/systeminventory-local-smoke --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run SystemInventory local smoke
+        shell: pwsh
+        run: |
+          $plain = './out/systeminventory-local-smoke'
+          $windows = './out/systeminventory-local-smoke.exe'
+          if (Test-Path $plain -PathType Leaf) {
+            $exe = (Resolve-Path $plain).Path
+          }
+          elseif (Test-Path $windows -PathType Leaf) {
+            $exe = (Resolve-Path $windows).Path
+          }
+          else {
+            throw 'Compiled SystemInventory local smoke executable was not found.'
+          }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
