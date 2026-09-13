@@ -20,6 +20,7 @@ internal sealed class BrowserWasmHttpCsrfPostProcessor
             .Replace("cert.GetRSAPublicKey()", "System.Security.Cryptography.X509Certificates.RSACertificateExtensions.GetRSAPublicKey(cert)", StringComparison.Ordinal)
             .Replace("cert.GetECDsaPublicKey()", "System.Security.Cryptography.X509Certificates.ECDsaCertificateExtensions.GetECDsaPublicKey(cert)", StringComparison.Ordinal)
             .Replace("cert.GetDSAPublicKey()", "System.Security.Cryptography.X509Certificates.DSACertificateExtensions.GetDSAPublicKey(cert)", StringComparison.Ordinal);
+        generated = SystemInventoryRuntimePostProcessor.Transform(generated, _runtimeIdentifier);
         if (!_runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) return generated;
         if (!generated.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal)) return generated;
         if (generated.Contains("__xpscriptCsrfRetryToken", StringComparison.Ordinal)) return generated;
