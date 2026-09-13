@@ -117,6 +117,28 @@ The reader accepts normal XLSX string storage forms, including shared strings an
 
 Reading does not require the workbook to have been created by XPScript.
 
+## Read and write XLSX bytes
+
+`ToBytes()` serializes an XPScript-created workbook to an in-memory byte array. `FromBytes()` loads XLSX data directly from a byte array or enumerable byte values without creating a temporary file.
+
+```xpscript
+Dim source As New XPSpreadsheet("sales.xlsx")
+Dim data As Variant
+
+data = source.ToBytes()
+
+Dim copy As New XPSpreadsheet()
+copy.FromBytes(data)
+
+Print copy.Worksheet("Sales").Cell("A2").Text
+```
+
+`FromBytes()` runs the same XLSX package validation and reads the same `XPScriptWorkbookVersion` marker as `Open()`. The resulting workbook has an empty `Path`, because it was not loaded from a file.
+
+An external/unmarked XLSX can also be loaded with `FromBytes()` for reading. The same safety rule applies: `CanUpdate` is `False`, and normal `Save()`, `SaveAs()`, and `ToBytes()` are blocked until the workbook is intentionally converted with `SaveAsSimple()`.
+
+The in-memory XLSX input is subject to the same package and part size limits as file input.
+
 ## Update an XPScript workbook
 
 ```xpscript
@@ -158,6 +180,7 @@ Methods:
 - `RemoveWorksheet(nameOrIndex)`
 - `RenameWorksheet(nameOrIndex, newName)`
 - `Open(filename)`
+- `FromBytes(bytes)`
 - `Save()`
 - `SaveAs(filename)`
 - `SaveAsSimple(filename)`
