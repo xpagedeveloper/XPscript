@@ -1,0 +1,51 @@
+' SystemInventory full compile-surface sample.
+Option Declare
+
+Sub Main()
+    Dim inventory As New SystemInventory
+    Dim snapshot As SystemInventorySnapshot
+    Dim systemInfo As SystemInventorySystemInfo
+    Dim cpu As SystemInventoryCpuInfo
+    Dim memory As SystemInventoryMemoryInfo
+    Dim disk As SystemInventoryPhysicalDiskInfo
+    Dim volume As SystemInventoryVolumeInfo
+    Dim gpu As SystemInventoryGraphicsAdapterInfo
+    Dim nic As SystemInventoryNetworkAdapterInfo
+    Dim software As InstalledSoftwareInfo
+    Dim values As Variant
+
+    Set snapshot = inventory.GetSnapshot()
+    Set systemInfo = inventory.GetSystemInfo()
+    Set cpu = inventory.GetCpuInfo()
+    Set memory = inventory.GetMemoryInfo()
+
+    values = inventory.GetPhysicalDisks()
+    Forall diskEntry In values
+        Set disk = diskEntry
+        Print disk.Name & " " & disk.Model
+    End Forall
+
+    values = inventory.GetVolumes()
+    Forall volumeEntry In values
+        Set volume = volumeEntry
+        Print volume.Name & " " & CStr(volume.TotalSize)
+    End Forall
+
+    values = inventory.GetGraphicsAdapters()
+    Forall gpuEntry In values
+        Set gpu = gpuEntry
+        Print gpu.Name
+    End Forall
+
+    values = inventory.GetNetworkAdapters()
+    Forall nicEntry In values
+        Set nic = nicEntry
+        Print nic.Name
+    End Forall
+
+    values = inventory.GetInstalledApplications()
+    values = inventory.GetInstalledPackages()
+    values = inventory.FindInstalledSoftware("dotnet")
+    Print CStr(inventory.IsSoftwareInstalled("dotnet"))
+    Print systemInfo.MachineName & " " & cpu.Architecture & " " & CStr(memory.TotalPhysicalMemory)
+End Sub
