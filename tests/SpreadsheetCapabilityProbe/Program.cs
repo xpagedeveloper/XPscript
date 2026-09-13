@@ -14,6 +14,9 @@ Sub Main()
     Print CStr(book.cReAtEdByXpScRiPt)
     Print CStr(book.xPsCrIpTfOrMaTvErSiOn)
     Print CStr(book.cAnUpDaTe)
+    Dim data As Variant
+    data = book.tObYtEs()
+    book.fRoMbYtEs(data)
     book.sAvEaS("probe.xlsx")
 End Sub
 """;
@@ -29,6 +32,8 @@ if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
     || !generated.Contains(".CreatedByXPScript", StringComparison.Ordinal)
     || !generated.Contains(".XPScriptFormatVersion", StringComparison.Ordinal)
     || !generated.Contains(".CanUpdate", StringComparison.Ordinal)
+    || !generated.Contains(".ToBytes(", StringComparison.Ordinal)
+    || !generated.Contains(".FromBytes(", StringComparison.Ordinal)
     || !generated.Contains(".SaveAs(", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet members were not normalized case-insensitively.");
 
@@ -36,6 +41,24 @@ if (!generated.Contains("XPScriptWorkbookVersion", StringComparison.Ordinal)
     || !generated.Contains("docProps/custom.xml", StringComparison.Ordinal)
     || !generated.Contains("SaveAsSimple", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet origin marker or safe conversion support was not emitted.");
+
+const string csvSource = """
+Option Declare
+Sub Main()
+    Dim csv As New XPCsvDocument
+    csv.Encoding = "utf-8"
+    Dim data As Variant
+    data = csv.ToBytes()
+    csv.FromBytes(data)
+    csv.FromBytes(data, "utf-8")
+End Sub
+""";
+
+var csvGenerated = transpiler.Transpile(csvSource, "csv-bytes-probe.xps", "win-x64");
+if (!csvGenerated.Contains(".ToBytes()", StringComparison.Ordinal)
+    || !csvGenerated.Contains("XPScriptNativeCsv.ParseBytes", StringComparison.Ordinal)
+    || csvGenerated.Contains(".FromBytes(", StringComparison.OrdinalIgnoreCase))
+    throw new Exception("XPCsvDocument byte methods were not lowered correctly.");
 
 const string unrelated = """
 Option Declare
